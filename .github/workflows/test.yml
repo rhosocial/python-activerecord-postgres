@@ -1,0 +1,124 @@
+# .github/workflows/test.yml
+name: Python Test and Coverage with postgres
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/v**'
+      - 'maint/**'
+  pull_request:
+    branches:
+      - main
+      - 'release/v**'
+      - 'maint/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { python-version: '3.8', postgres-version: '9' }
+          - { python-version: '3.8', postgres-version: '10' }
+          - { python-version: '3.9', postgres-version: '11' }
+          - { python-version: '3.10', postgres-version: '12' }
+          - { python-version: '3.11', postgres-version: '13' }
+          - { python-version: '3.12', postgres-version: '14' }
+          - { python-version: '3.13', postgres-version: '15' }
+          - { python-version: '3.13', postgres-version: '16' }
+          - { python-version: '3.14', postgres-version: '17' }
+          - { python-version: '3.14', postgres-version: '18' }
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Options to wait for postgres to be healthy before starting the job
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Install activerecord from git
+      run: |
+        pip install git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev13#egg=rhosocial-activerecord
+
+    - name: Install testsuite package from git
+      run: |
+        pip install git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev3#egg=rhosocial-activerecord-testsuite
+
+    - name: Create postgres scenario config
+      run: |
+        cat > postgres_scenarios.yaml << EOF
+        scenarios:
+          postgres_default:
+            host: 127.0.0.1
+            port: 5432
+            database: test_db
+            username: root
+            password: password
+        EOF
+        echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
+
+    - name: Install postgres client for health check
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes postgresql-client
+
+    - name: Wait for postgres service
+      run: |
+        until pg_isready -h 127.0.0.1 -p 5432 -U root; do
+          echo "Waiting for postgres..."
+          sleep 2
+        done
+        echo "postgres is ready!"
+
+    - name: Run tests
+      run: |
+        export PYTHONPATH=src
+        python -m pytest tests/ --tb=short
+
+    - name: Run tests with coverage
+      # Only run coverage on the job with the latest postgres version to avoid redundant reports
+      if: matrix.postgres-version == '18'
+      run: |
+        export PYTHONPATH=src
+        pip install codecov
+        coverage run -m pytest tests/ --tb=short
+        coverage xml
+
+    - name: Upload coverage to Codecov
+      if: matrix.postgres-version == '18'
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        flags: unittests,python-${{ matrix.python-version }},postgres-${{ matrix.postgres-version }}
+        name: codecov-postgres-${{ matrix.python-version }}-${{ matrix.postgres-version }}
+        fail_ci_if_error: false
