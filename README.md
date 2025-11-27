@@ -1,4 +1,4 @@
-# rhosocial ActiveRecord postgres Backend ($\rho_{\mathbf{AR}}^{postgres}$)
+# rhosocial-activerecord-postgres ($\rho_{\mathbf{AR}\text{-postgres}}$)
 
 [![PyPI version](https://badge.fury.io/py/rhosocial-activerecord-postgres.svg)](https://badge.fury.io/py/rhosocial-activerecord-postgres)
 [![Python](https://img.shields.io/pypi/pyversions/rhosocial-activerecord-postgres.svg)](https://pypi.org/project/rhosocial-activerecord-postgres/)
@@ -12,7 +12,7 @@
     <p>postgres backend implementation for rhosocial-activerecord, providing a robust and optimized postgres database support.</p>
 </div>
 
-# postgres Backend Implementation Guide
+# Postgres Backend Implementation Guide
 
 ## Overview
 
