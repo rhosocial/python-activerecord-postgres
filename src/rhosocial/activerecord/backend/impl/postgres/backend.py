@@ -478,6 +478,24 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
             self.log(logging.INFO, f"Connected to postgres version {'.'.join(map(str, version))}")
 
+            # --- ADDED SECTION for SSL/TLS Status Logging ---
+            cursor = self._connection.cursor()
+            cursor.execute("SELECT ssl, version, cipher FROM pg_stat_ssl s JOIN pg_stat_activity a ON s.pid = a.pid WHERE a.pid = pg_backend_pid();")
+            result = cursor.fetchone()
+            cursor.close()
+
+            if result:
+                ssl_enabled = result[0]
+                ssl_version = result[1]
+                ssl_cipher = result[2]
+                if ssl_enabled:
+                    self.log(logging.INFO, f"SSL/TLS is ENABLED for this connection. Version: {ssl_version}, Cipher: {ssl_cipher}")
+                else:
+                    self.log(logging.INFO, "SSL/TLS is DISABLED for this connection.")
+            else:
+                self.log(logging.INFO, "Could not retrieve SSL/TLS status from pg_stat_ssl.")
+            # --- END ADDITION ---
+
         except PsycopgError as e:
             error_msg = f"Failed to connect to postgres: {str(e)}"
             self.log(logging.ERROR, error_msg)
@@ -664,6 +682,24 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             version = await self.get_server_version()
 
             self.log(logging.INFO, f"Connected to postgres version {'.'.join(map(str, version))}")
+
+            # --- ADDED SECTION for SSL/TLS Status Logging ---
+            cursor = self._connection.cursor()
+            await cursor.execute("SELECT ssl, version, cipher FROM pg_stat_ssl s JOIN pg_stat_activity a ON s.pid = a.pid WHERE a.pid = pg_backend_pid();")
+            result = await cursor.fetchone()
+            await cursor.close()
+
+            if result:
+                ssl_enabled = result[0]
+                ssl_version = result[1]
+                ssl_cipher = result[2]
+                if ssl_enabled:
+                    self.log(logging.INFO, f"SSL/TLS is ENABLED for this connection. Version: {ssl_version}, Cipher: {ssl_cipher}")
+                else:
+                    self.log(logging.INFO, "SSL/TLS is DISABLED for this connection.")
+            else:
+                self.log(logging.INFO, "Could not retrieve SSL/TLS status from pg_stat_ssl.")
+            # --- END ADDITION ---
 
         except PsycopgError as e:
             error_msg = f"Failed to connect to postgres: {str(e)}"
