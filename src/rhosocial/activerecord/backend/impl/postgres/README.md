@@ -1,4 +1,4 @@
-# $\rho_{AR}^{postgres}$ - PostgreSQL Backend Quick Execution Tool
+# $\mathcal{B}_{\text{postgres}}^{\rho}$ - PostgreSQL Backend Quick Execution Tool
 
 This `__main__.py` script provides a command-line interface to quickly execute SQL queries against a PostgreSQL database using the `rhosocial-activerecord` PostgreSQL backend implementation. It supports both synchronous and asynchronous execution modes.
 
