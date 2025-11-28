@@ -1,6 +1,14 @@
 name: Python Package Publish
 
 on:
+  # 当测试工作流成功完成时自动触发发布审批流程
+  workflow_run:
+    workflows: ["Python Test and Coverage"]
+    types:
+      - completed
+    branches:
+      - main
+
   # 手动触发发布工作流
   workflow_dispatch:
     inputs:
@@ -18,10 +26,23 @@ permissions:
   packages: write
 
 jobs:
+  # 检查测试工作流是否成功完成
+  check-tests:
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Success check
+        run: echo "前置测试通过，可以继续执行发布流程"
+
   # 发布到TestPyPI
   publish-testpypi:
     name: Publish to TestPyPI
-    if: github.event.inputs.destination == 'testpypi'
+    needs: check-tests
+    if: >
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.destination == 'testpypi')
     runs-on: ubuntu-latest
     environment: publish-testpypi  # 使用需要审批的环境
     permissions:
@@ -55,7 +76,8 @@ jobs:
   # 发布到PyPI
   publish-pypi:
     name: Publish to PyPI
-    if: github.event.inputs.destination == 'pypi'
+    needs: check-tests
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.destination == 'pypi'
     runs-on: ubuntu-latest
     environment: publish-pypi  # 使用需要严格审批的环境
     permissions:
