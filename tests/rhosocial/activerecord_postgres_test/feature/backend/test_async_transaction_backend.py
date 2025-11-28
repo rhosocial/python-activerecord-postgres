@@ -85,3 +85,47 @@ async def test_transaction_get_cursor(async_postgres_backend):
             await cursor.close()
     finally:
         await async_postgres_backend._connection.set_autocommit(original_autocommit_state)
+
+@pytest.mark.asyncio
+async def test_nested_transaction_rollback_inner(async_postgres_backend, setup_test_table):
+    """Test rolling back a nested async transaction while committing the outer one."""
+    async with async_postgres_backend.transaction():
+        # Outer transaction statement
+        await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 40))
+
+        try:
+            async with async_postgres_backend.transaction():
+                # Inner transaction statement
+                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 50))
+                raise ValueError("Rollback inner transaction")
+        except ValueError:
+            # Expected exception
+            pass
+
+    # The outer transaction should be committed, but the inner one rolled back.
+    rows = await async_postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY name")
+    assert len(rows) == 1
+    assert rows[0]['name'] == "outer"
+
+
+@pytest.mark.asyncio
+async def test_nested_transaction_rollback_outer(async_postgres_backend, setup_test_table):
+    """Test rolling back the outer async transaction after a nested one completes."""
+    try:
+        async with async_postgres_backend.transaction():
+            # Outer transaction statement
+            await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 60))
+
+            async with async_postgres_backend.transaction():
+                # Inner transaction statement, this should be released to the outer savepoint
+                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 70))
+            
+            # This will cause the entire transaction, including the inner "committed" part, to be rolled back.
+            raise ValueError("Rollback outer transaction")
+    except ValueError:
+        # Expected exception
+        pass
+
+    # Nothing should have been committed.
+    count = await async_postgres_backend.fetch_one("SELECT COUNT(*) FROM test_table")
+    assert count['count'] == 0

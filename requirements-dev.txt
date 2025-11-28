@@ -4,3 +4,4 @@ rhosocial-activerecord-testsuite
 pytest-asyncio
 pydantic[email]
 pytest-timeout
+pytest-mock
