@@ -4,6 +4,6 @@ CREATE TABLE "searchable_items" (
     "id" SERIAL PRIMARY KEY,
     "name" VARCHAR(255),
     "tags" TEXT,
-    "created_at" TIMESTAMPTZ,
-    "updated_at" TIMESTAMPTZ
+    "created_at" TIMESTAMP,
+    "updated_at" TIMESTAMP
 );
