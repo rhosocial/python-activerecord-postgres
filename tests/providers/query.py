@@ -151,6 +151,16 @@ class QueryProvider(IQueryProvider):
             (SearchableItem, "searchable_items"),
         ], scenario_name)
 
+    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+        """Sets up the database for MappedUser, MappedPost, and MappedComment models."""
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import MappedUser, MappedPost, MappedComment
+        return self._setup_multiple_models([
+            (MappedUser, "users"),
+            (MappedPost, "posts"),
+            (MappedComment, "comments")
+        ], scenario_name)
+
+
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""
         # Schemas are stored in the centralized location for query feature.
@@ -165,11 +175,15 @@ class QueryProvider(IQueryProvider):
         Performs cleanup after a test. This uses the same backend instance
         that was used for setup to ensure proper cleanup with foreign key constraints.
         """
+        tables_to_drop = [
+            'users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes',
+            'extended_orders', 'extended_order_items', 'searchable_items'
+        ]
         for backend_instance in self._active_backends:
             try:
                 # Drop all tables that might have been created for query tests
                 # Use CASCADE to handle foreign key dependencies
-                for table_name in ['users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes', 'extended_orders', 'extended_order_items']:
+                for table_name in tables_to_drop:
                     try:
                         backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:

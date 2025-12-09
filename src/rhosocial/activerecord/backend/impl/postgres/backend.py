@@ -422,6 +422,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                data: Dict,
                returning: Optional[Union[bool, List[str], ReturningOptions]] = None,
                column_adapters: Optional[Dict] = None,
+               column_mapping: Optional[Dict[str, str]] = None,
                auto_commit: Optional[bool] = True,
                primary_key: Optional[str] = None) -> QueryResult:
         """Insert record and force returning the primary key.
@@ -429,10 +430,15 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         Overrides the base implementation to ignore the incorrect `returning=False`
         passed from the base model class.
         """
+        # psycopg3 doesn't handle None for SERIAL columns, so we pop the pk if it's None.
+        if primary_key and data.get(primary_key) is None:
+            data.pop(primary_key, None)
+
         # Force returning the primary key, overriding the faulty value from the base class
         final_returning = [primary_key] if primary_key else None
         return super().insert(
             table, data, returning=final_returning, column_adapters=column_adapters,
+            column_mapping=column_mapping,
             auto_commit=auto_commit, primary_key=primary_key
         )
     @property
@@ -617,6 +623,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
                      data: Dict,
                      returning: Optional[Union[bool, List[str], ReturningOptions]] = None,
                      column_adapters: Optional[Dict] = None,
+                     column_mapping: Optional[Dict[str, str]] = None,
                      auto_commit: Optional[bool] = True,
                      primary_key: Optional[str] = None) -> QueryResult:
         """Insert record and force returning the primary key asynchronously.
@@ -624,10 +631,15 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
         Overrides the base implementation to ignore the incorrect `returning=False`
         passed from the base model class.
         """
+        # psycopg3 doesn't handle None for SERIAL columns, so we pop the pk if it's None.
+        if primary_key and data.get(primary_key) is None:
+            data.pop(primary_key, None)
+            
         # Force returning the primary key, overriding the faulty value from the base class
         final_returning = [primary_key] if primary_key else None
         return await super().insert(
             table, data, returning=final_returning, column_adapters=column_adapters,
+            column_mapping=column_mapping,
             auto_commit=auto_commit, primary_key=primary_key
         )
 

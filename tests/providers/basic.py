@@ -11,7 +11,7 @@ Its main responsibilities are:
 3.  Cleaning up any resources after a test runs.
 """
 import os
-from typing import Type, List
+from typing import Type, List, Tuple
 
 from rhosocial.activerecord.model import ActiveRecord
 from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
@@ -64,6 +64,14 @@ class BasicProvider(IBasicProvider):
 
         return model_class
 
+    def _setup_multiple_models(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+        """Helper to set up multiple related models for a test."""
+        result = []
+        for model_class, table_name in model_classes:
+            configured_model = self._setup_model(model_class, scenario_name, table_name)
+            result.append(configured_model)
+        return tuple(result)
+
     # --- Implementation of the IBasicProvider interface ---
 
     def setup_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
@@ -91,6 +99,23 @@ class BasicProvider(IBasicProvider):
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import ValidatedUser
         return self._setup_model(ValidatedUser, scenario_name, "validated_users")
 
+    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+        """Sets up the database for MappedUser, MappedPost, and MappedComment models."""
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import MappedUser, MappedPost, MappedComment
+        return self._setup_multiple_models([
+            (MappedUser, "users"),
+            (MappedPost, "posts"),
+            (MappedComment, "comments")
+        ], scenario_name)
+
+    def setup_mixed_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+        """Sets up the database for ColumnMappingModel and MixedAnnotationModel."""
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import ColumnMappingModel, MixedAnnotationModel
+        return self._setup_multiple_models([
+            (ColumnMappingModel, "column_mapping_items"),
+            (MixedAnnotationModel, "mixed_annotation_items")
+        ], scenario_name)
+
     def setup_type_adapter_model_and_schema(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for the `TypeAdapterTest` model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import TypeAdapterTest
@@ -115,10 +140,15 @@ class BasicProvider(IBasicProvider):
         Performs cleanup after a test. This now iterates through the backends
         that were created during setup, drops tables, and explicitly disconnects them.
         """
+        tables_to_drop = [
+            'users', 'type_cases', 'type_tests', 'validated_field_users',
+            'validated_users', 'type_adapter_tests', 'posts', 'comments',
+            'column_mapping_items', 'mixed_annotation_items'
+        ]
         for backend_instance in self._active_backends:
             try:
                 # Drop all tables that might have been created for basic tests
-                for table_name in ['users', 'type_cases', 'type_tests', 'validated_field_users', 'validated_users', 'type_adapter_tests']:
+                for table_name in tables_to_drop:
                     try:
                         backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:
