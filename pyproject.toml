@@ -35,8 +35,8 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "psycopg>=3.2.12",
-    "psycopg-binary>=3.2.12"
+    "psycopg[binary]",
+    "rhosocial-activerecord"
 ]
 
 [project.optional-dependencies]
