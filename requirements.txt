@@ -1,4 +1,2 @@
-psycopg>=3.2.12
-psycopg-binary
-psycopg-pool
+psycopg[binary]
 rhosocial-activerecord
