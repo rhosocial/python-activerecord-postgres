@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rhosocial_activerecord_postgres"
-version = "1.0.0.dev2"
+version = "1.0.0.dev3"
 description = "postgres backend implementation for rhosocial-activerecord, providing a robust and optimized postgres database support."
 readme = "README.md"
 license = { file = "LICENSE" }
