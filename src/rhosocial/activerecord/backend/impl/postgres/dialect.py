@@ -938,14 +938,22 @@ class PostgresDialect(SQLDialectBase):
         return f'"{identifier}"'
 
     def format_limit_offset(self, limit: Optional[int] = None,
-                            offset: Optional[int] = None) -> str:
+                            offset: Optional[int] = None) -> Optional[Tuple[str, List[Any]]]:
         """Format LIMIT and OFFSET clause"""
-        parts = []
+        params = []
+        sql_parts = []
+
         if limit is not None:
-            parts.append(f"LIMIT {limit}")
+            sql_parts.append("LIMIT %s")
+            params.append(limit)
         if offset is not None:
-            parts.append(f"OFFSET {offset}")
-        return " ".join(parts)
+            sql_parts.append("OFFSET %s")
+            params.append(offset)
+
+        if not sql_parts:
+            return None, []
+
+        return " ".join(sql_parts), params
 
     def get_parameter_placeholder(self, position: int) -> str:
         """Get postgres parameter placeholder
