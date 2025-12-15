@@ -938,7 +938,7 @@ class PostgresDialect(SQLDialectBase):
         return f'"{identifier}"'
 
     def format_limit_offset(self, limit: Optional[int] = None,
-                            offset: Optional[int] = None) -> Optional[Tuple[str, List[Any]]]:
+                            offset: Optional[int] = None) -> Tuple[Optional[str], List[Any]]:
         """Format LIMIT and OFFSET clause"""
         params = []
         sql_parts = []
