@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Type, Union, Optional
 from psycopg.types.json import Jsonb
 
 from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
-from rhosocial.activerecord.backend.typing import DatabaseType
+from rhosocial.activerecord.backend.schema import DatabaseType
 
 
 class PostgresJSONBAdapter(SQLTypeAdapter):

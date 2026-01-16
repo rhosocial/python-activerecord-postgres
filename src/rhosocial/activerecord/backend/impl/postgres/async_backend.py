@@ -1,30 +1,19 @@
-# src/rhosocial/activerecord/backend/impl/postgres/backend.py
+# src/rhosocial/activerecord/backend/impl/postgres/async_backend.py
 """
-PostgreSQL backend implementation with sync and async support.
+Asynchronous PostgreSQL backend implementation using psycopg's async functionality.
 
-This module provides both synchronous and asynchronous PostgreSQL implementations:
-- PostgreSQL synchronous backend with connection management and query execution
-- PostgreSQL asynchronous backend for async/await workflows
-- PostgreSQL-specific connection configuration
-- Type mapping and value conversion
-- Transaction management with savepoint support (sync and async)
-- PostgreSQL dialect and expression handling
-- PostgreSQL-specific type definitions and mappings
-
-Architecture:
-- PostgreSQLBackend: Synchronous implementation using psycopg
-- AsyncPostgreSQLBackend: Asynchronous implementation using psycopg
-- Both share common logic through PostgreSQLBackendMixin
-- Independent from ORM frameworks - uses only native drivers
+This module provides an async implementation for interacting with PostgreSQL databases,
+handling connections, queries, transactions, and type adaptations tailored for PostgreSQL's
+specific behaviors and SQL dialect. The async backend mirrors the functionality of
+the synchronous backend but uses async/await for I/O operations.
 """
 import datetime
 import logging
-import re
-from typing import Optional, Tuple, List, Any, Dict, Union, Type
+from typing import Dict, List, Optional, Tuple, Type, Union
 
-# Import psycopg for both sync and async
 import psycopg
-from psycopg import Connection
+import psycopg.pq
+from psycopg import AsyncConnection
 from psycopg.errors import Error as PsycopgError
 from psycopg.errors import (
     IntegrityError as PsycopgIntegrityError,
@@ -34,7 +23,7 @@ from psycopg.errors import (
 )
 from psycopg.types.json import Jsonb
 
-from rhosocial.activerecord.backend.base import StorageBackend
+from rhosocial.activerecord.backend.base import AsyncStorageBackend
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
@@ -44,21 +33,16 @@ from rhosocial.activerecord.backend.errors import (
     QueryError,
 )
 from rhosocial.activerecord.backend.result import QueryResult
-from rhosocial.activerecord.backend.config import ConnectionConfig
-from .adapters import (
-    PostgresJSONBAdapter,
-    PostgresNetworkAddressAdapter,
-)
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
-from .transaction import PostgresTransactionManager
+from .async_transaction import AsyncPostgresTransactionManager
 
 
-class PostgresBackend(StorageBackend):
-    """PostgreSQL-specific backend implementation."""
+class AsyncPostgresBackend(AsyncStorageBackend):
+    """Asynchronous PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
-        """Initialize PostgreSQL backend with connection configuration."""
+        """Initialize async PostgreSQL backend with connection configuration."""
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get('connection_config')
         
@@ -97,15 +81,20 @@ class PostgresBackend(StorageBackend):
         
         # Initialize PostgreSQL-specific components
         self._dialect = PostgresDialect(self.get_server_version())
-        self._transaction_manager = PostgresTransactionManager(self)
+        self._transaction_manager = AsyncPostgresTransactionManager(self)
 
-        # Register PostgreSQL-specific type adapters
+        # Register PostgreSQL-specific type adapters (same as sync backend)
         self._register_postgres_adapters()
 
-        self.log(logging.INFO, "PostgreSQLBackend initialized")
+        self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
 
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters."""
+        from .adapters import (
+            PostgresJSONBAdapter,
+            PostgresNetworkAddressAdapter,
+        )
+        
         pg_adapters = [
             PostgresJSONBAdapter(),
             PostgresNetworkAddressAdapter(),
@@ -125,11 +114,11 @@ class PostgresBackend(StorageBackend):
 
     @property
     def transaction_manager(self):
-        """Get the PostgreSQL transaction manager."""
+        """Get the async PostgreSQL transaction manager."""
         return self._transaction_manager
 
-    def connect(self):
-        """Establish connection to PostgreSQL database."""
+    async def connect(self):
+        """Establish async connection to PostgreSQL database."""
         try:
             # Prepare connection parameters from config
             conn_params = {
@@ -170,45 +159,45 @@ class PostgresBackend(StorageBackend):
             if ssl_params:
                 conn_params.update(ssl_params)
 
-            self._connection = psycopg.connect(**conn_params)
+            self._connection = await AsyncConnection.connect(**conn_params)
             
             self.log(logging.INFO, f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}")
         except PsycopgError as e:
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
             raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}")
 
-    def disconnect(self):
-        """Close connection to PostgreSQL database."""
+    async def disconnect(self):
+        """Close async connection to PostgreSQL database."""
         if self._connection:
             try:
                 # Rollback any active transaction
                 if self.transaction_manager.is_active:
-                    self.transaction_manager.rollback()
+                    await self.transaction_manager.rollback()
                 
-                self._connection.close()
+                await self._connection.close()
                 self._connection = None
                 self.log(logging.INFO, "Disconnected from PostgreSQL database")
             except PsycopgError as e:
                 self.log(logging.ERROR, f"Error during disconnection: {str(e)}")
                 raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}")
 
-    def _get_cursor(self):
+    async def _get_cursor(self):
         """Get a database cursor, ensuring connection is active."""
         if not self._connection:
-            self.connect()
+            await self.connect()
         
         return self._connection.cursor()
 
-    def execute(self, sql: str, params: Optional[Tuple] = None) -> QueryResult:
-        """Execute a SQL statement with optional parameters."""
+    async def execute(self, sql: str, params: Optional[Tuple] = None) -> QueryResult:
+        """Execute a SQL statement with optional parameters asynchronously."""
         if not self._connection:
-            self.connect()
+            await self.connect()
         
         cursor = None
         start_time = datetime.datetime.now()
         
         try:
-            cursor = self._get_cursor()
+            cursor = await self._get_cursor()
             
             # Log the query if logging is enabled
             if getattr(self.config, 'log_queries', False):
@@ -218,16 +207,16 @@ class PostgresBackend(StorageBackend):
             
             # Execute the query
             if params:
-                cursor.execute(sql, params)
+                await cursor.execute(sql, params)
             else:
-                cursor.execute(sql)
+                await cursor.execute(sql)
             
             # Get results
             duration = (datetime.datetime.now() - start_time).total_seconds()
             
             # For SELECT queries, fetch results
             if sql.strip().upper().startswith(('SELECT', 'WITH', 'VALUES', 'TABLE', 'SHOW', 'EXPLAIN')):
-                rows = cursor.fetchall()
+                rows = await cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description] if cursor.description else []
                 data = [dict(zip(columns, row)) for row in rows] if rows else []
             else:
@@ -256,18 +245,18 @@ class PostgresBackend(StorageBackend):
             raise QueryError(str(e))
         finally:
             if cursor:
-                cursor.close()
+                await cursor.close()
 
-    def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
-        """Execute the same SQL statement multiple times with different parameters."""
+    async def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
+        """Execute the same SQL statement multiple times with different parameters asynchronously."""
         if not self._connection:
-            self.connect()
+            await self.connect()
         
         cursor = None
         start_time = datetime.datetime.now()
         
         try:
-            cursor = self._get_cursor()
+            cursor = await self._get_cursor()
             
             # Log the batch operation if logging is enabled
             if getattr(self.config, 'log_queries', False):
@@ -277,7 +266,7 @@ class PostgresBackend(StorageBackend):
             # Execute multiple statements
             affected_rows = 0
             for params in params_list:
-                cursor.execute(sql, params)
+                await cursor.execute(sql, params)
                 affected_rows += cursor.rowcount
             
             duration = (datetime.datetime.now() - start_time).total_seconds()
@@ -302,18 +291,19 @@ class PostgresBackend(StorageBackend):
             raise QueryError(str(e))
         finally:
             if cursor:
-                cursor.close()
+                await cursor.close()
 
-    def get_server_version(self) -> tuple:
-        """Get PostgreSQL server version."""
+    async def get_server_version(self) -> tuple:
+        """Get PostgreSQL server version asynchronously."""
         if not self._connection:
-            self.connect()
+            await self.connect()
         
         cursor = None
         try:
-            cursor = self._get_cursor()
-            cursor.execute("SELECT version()")
-            version_str = cursor.fetchone()[0]
+            cursor = await self._get_cursor()
+            await cursor.execute("SELECT version()")
+            version_row = await cursor.fetchone()
+            version_str = version_row[0] if version_row else "13.0.0"
             
             # Extract version from string like "PostgreSQL 13.2..."
             import re
@@ -332,7 +322,7 @@ class PostgresBackend(StorageBackend):
             return (13, 0, 0)  # Default to a recent version
         finally:
             if cursor:
-                cursor.close()
+                await cursor.close()
 
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""

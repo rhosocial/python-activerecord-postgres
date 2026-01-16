@@ -1,8 +1,8 @@
 # src/rhosocial/activerecord/backend/impl/postgres/types.py
 from typing import Dict, Optional, Any
 
-from rhosocial.activerecord.backend.dialect import TypeMapping
-from rhosocial.activerecord.backend import DatabaseType
+from rhosocial.activerecord.backend.schema import TypeMapping
+from rhosocial.activerecord.backend.schema import DatabaseType
 from rhosocial.activerecord.backend.helpers import format_with_length
 
 def format_decimal(base_type: str, params: Dict[str, Any]) -> str:
