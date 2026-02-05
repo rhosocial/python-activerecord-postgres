@@ -14,13 +14,19 @@ ensuring postgres backend compatibility.
 # the fixtures here makes the dependency clear and can help with test discovery
 # in some IDEs. These fixtures are defined in the testsuite package and are
 # parameterized to run against the scenarios defined in `providers/scenarios.py`.
-from rhosocial.activerecord_postgres_test.feature.query.conftest import (
+from rhosocial.activerecord.testsuite.feature.query.conftest import (
     order_fixtures,
     blog_fixtures,
     json_user_fixture,
     tree_fixtures,
     combined_fixtures,
-    extended_order_fixtures
+    extended_order_fixtures,
+    async_order_fixtures,
+    async_blog_fixtures,
+    async_json_user_fixture,
+    async_tree_fixtures,
+    async_combined_fixtures,
+    async_extended_order_fixtures
 )
 
 # Import shared tests from testsuite package
