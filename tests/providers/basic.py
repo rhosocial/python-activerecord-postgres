@@ -116,9 +116,11 @@ class BasicProvider(IBasicProvider):
             (MixedAnnotationModel, "mixed_annotation_items")
         ], scenario_name)
 
-    def setup_type_adapter_model_and_schema(self, scenario_name: str) -> Type[ActiveRecord]:
+    def setup_type_adapter_model_and_schema(self) -> Type[ActiveRecord]:
         """Sets up the database for the `TypeAdapterTest` model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import TypeAdapterTest
+        # Use default scenario for this method as per interface
+        scenario_name = self.get_test_scenarios()[0] if self.get_test_scenarios() else "default"
         return self._setup_model(TypeAdapterTest, scenario_name, "type_adapter_tests")
 
     def get_yes_no_adapter(self) -> 'BaseSQLTypeAdapter':
@@ -179,6 +181,8 @@ class BasicProvider(IBasicProvider):
         """
         Performs async cleanup after a test, dropping all tables and disconnecting backends.
         """
+        # For PostgreSQL, we can reuse the sync version since it doesn't involve async I/O operations
+        # that require special handling
         self.cleanup_after_test(scenario_name)
 
     def _load_postgres_schema(self, filename: str) -> str:

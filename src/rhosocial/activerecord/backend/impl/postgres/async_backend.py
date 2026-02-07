@@ -188,64 +188,6 @@ class AsyncPostgresBackend(AsyncStorageBackend):
         
         return self._connection.cursor()
 
-    async def execute(self, sql: str, params: Optional[Tuple] = None) -> QueryResult:
-        """Execute a SQL statement with optional parameters asynchronously."""
-        if not self._connection:
-            await self.connect()
-        
-        cursor = None
-        start_time = datetime.datetime.now()
-        
-        try:
-            cursor = await self._get_cursor()
-            
-            # Log the query if logging is enabled
-            if getattr(self.config, 'log_queries', False):
-                self.log(logging.DEBUG, f"Executing SQL: {sql}")
-                if params:
-                    self.log(logging.DEBUG, f"With params: {params}")
-            
-            # Execute the query
-            if params:
-                await cursor.execute(sql, params)
-            else:
-                await cursor.execute(sql)
-            
-            # Get results
-            duration = (datetime.datetime.now() - start_time).total_seconds()
-            
-            # For SELECT queries, fetch results
-            if sql.strip().upper().startswith(('SELECT', 'WITH', 'VALUES', 'TABLE', 'SHOW', 'EXPLAIN')):
-                rows = await cursor.fetchall()
-                columns = [desc[0] for desc in cursor.description] if cursor.description else []
-                data = [dict(zip(columns, row)) for row in rows] if rows else []
-            else:
-                data = None
-            
-            result = QueryResult(
-                affected_rows=cursor.rowcount,
-                data=data,
-                duration=duration
-            )
-            
-            self.log(logging.INFO, f"Query executed successfully, affected {cursor.rowcount} rows, duration={duration:.3f}s")
-            return result
-            
-        except PsycopgIntegrityError as e:
-            self.log(logging.ERROR, f"Integrity error: {str(e)}")
-            raise IntegrityError(str(e))
-        except PsycopgDeadlockError as e:
-            self.log(logging.ERROR, f"Deadlock error: {str(e)}")
-            raise DeadlockError(str(e))
-        except PsycopgError as e:
-            self.log(logging.ERROR, f"PostgreSQL error: {str(e)}")
-            raise DatabaseError(str(e))
-        except Exception as e:
-            self.log(logging.ERROR, f"Unexpected error during execution: {str(e)}")
-            raise QueryError(str(e))
-        finally:
-            if cursor:
-                await cursor.close()
 
     async def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
         """Execute the same SQL statement multiple times with different parameters asynchronously."""
@@ -327,6 +269,96 @@ class AsyncPostgresBackend(AsyncStorageBackend):
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""
         return not getattr(self.config, 'autocommit', False)
+
+    async def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, **kwargs) -> QueryResult:
+        """Execute a SQL statement with optional parameters asynchronously."""
+        from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
+        
+        # If no options provided, create default options from kwargs
+        if options is None:
+            # Determine statement type based on SQL
+            sql_upper = sql.strip().upper()
+            if sql_upper.startswith(('SELECT', 'WITH', 'SHOW', 'DESCRIBE', 'EXPLAIN')):
+                stmt_type = StatementType.DQL
+            elif sql_upper.startswith(('INSERT', 'UPDATE', 'DELETE', 'UPSERT')):
+                stmt_type = StatementType.DML
+            else:
+                stmt_type = StatementType.DDL
+                
+            # Extract column_mapping and column_adapters from kwargs if present
+            column_mapping = kwargs.get('column_mapping')
+            column_adapters = kwargs.get('column_adapters')
+            
+            options = ExecutionOptions(
+                stmt_type=stmt_type,
+                process_result_set=None,  # Let the base logic determine this based on stmt_type
+                column_adapters=column_adapters,
+                column_mapping=column_mapping
+            )
+        else:
+            # If options is provided but column_mapping or column_adapters are explicitly passed in kwargs,
+            # update the options with these values
+            if 'column_mapping' in kwargs:
+                options.column_mapping = kwargs['column_mapping']
+            if 'column_adapters' in kwargs:
+                options.column_adapters = kwargs['column_adapters']
+        
+        return await super().execute(sql, params, options=options)
+
+    def create_expression(self, expression_str: str):
+        """Create an expression object for raw SQL expressions."""
+        from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+        return RawSQLExpression(self.dialect, expression_str)
+
+    async def ping(self, reconnect: bool = True) -> bool:
+        """Ping the PostgreSQL server to check if the async connection is alive."""
+        try:
+            if not self._connection:
+                if reconnect:
+                    await self.connect()
+                    return True
+                else:
+                    return False
+
+            # Execute a simple query to check connection
+            cursor = await self._get_cursor()
+            await cursor.execute("SELECT 1")
+            await cursor.fetchone()
+            await cursor.close()
+
+            return True
+        except psycopg.Error as e:
+            self.log(logging.WARNING, f"PostgreSQL async connection ping failed: {str(e)}")
+            if reconnect:
+                try:
+                    await self.disconnect()
+                    await self.connect()
+                    return True
+                except Exception as connect_error:
+                    self.log(logging.ERROR, f"Failed to reconnect after ping failure: {str(connect_error)}")
+                    return False
+            return False
+
+    async def _handle_error(self, error: Exception) -> None:
+        """Handle PostgreSQL-specific errors asynchronously."""
+        if isinstance(error, PsycopgIntegrityError):
+            self.log(logging.ERROR, f"Integrity error: {str(error)}")
+            raise IntegrityError(str(error)) from error
+        elif isinstance(error, PsycopgOperationalError):
+            self.log(logging.ERROR, f"Operational error: {str(error)}")
+            raise OperationalError(str(error)) from error
+        elif isinstance(error, PsycopgProgrammingError):
+            self.log(logging.ERROR, f"Programming error: {str(error)}")
+            raise QueryError(str(error)) from error
+        elif isinstance(error, PsycopgDeadlockError):
+            self.log(logging.ERROR, f"Deadlock error: {str(error)}")
+            raise DeadlockError(str(error)) from error
+        elif isinstance(error, PsycopgError):
+            self.log(logging.ERROR, f"PostgreSQL error: {str(error)}")
+            raise DatabaseError(str(error)) from error
+        else:
+            self.log(logging.ERROR, f"Unexpected error: {str(error)}")
+            raise error
 
     def log(self, level: int, message: str):
         """Log a message with the specified level."""

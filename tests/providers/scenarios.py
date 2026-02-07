@@ -3,7 +3,7 @@
 
 import os
 from typing import Dict, Any, Tuple, Type
-from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 # Scenario name -> configuration dictionary mapping table (postgres only)

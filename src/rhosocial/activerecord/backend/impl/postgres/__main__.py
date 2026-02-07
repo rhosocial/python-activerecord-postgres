@@ -5,7 +5,7 @@ import logging
 import os
 import sys
 
-from .backend import PostgresBackend, AsyncPostgresBackend
+from . import PostgresBackend, AsyncPostgresBackend
 from .config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.output import JsonOutputProvider, CsvOutputProvider, TsvOutputProvider

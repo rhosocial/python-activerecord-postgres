@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import patch
 
-from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend, AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
 
 
 @pytest.fixture(autouse=True)
