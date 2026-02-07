@@ -45,7 +45,7 @@ class AsyncPostgresBackend(AsyncStorageBackend):
         """Initialize async PostgreSQL backend with connection configuration."""
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get('connection_config')
-        
+
         if connection_config is None:
             # Extract PostgreSQL-specific parameters from kwargs
             config_params = {}
@@ -77,14 +77,20 @@ class AsyncPostgresBackend(AsyncStorageBackend):
 
             kwargs['connection_config'] = PostgresConnectionConfig(**config_params)
 
+        # Initialize the base class first to ensure all base properties are set
         super().__init__(**kwargs)
-        
-        # Initialize PostgreSQL-specific components
-        self._dialect = PostgresDialect(self.get_server_version())
-        self._transaction_manager = AsyncPostgresTransactionManager(self)
 
+        # Initialize PostgreSQL-specific components
+        # Note: We delay initializing dialect until connect() is called to avoid async issues during construction
+        self._dialect = None  # Will be initialized in connect method
+        
         # Register PostgreSQL-specific type adapters (same as sync backend)
         self._register_postgres_adapters()
+
+        # Initialize transaction manager with connection (will be set when connected)
+        # Pass None for connection initially, it will be updated later
+        # Use the logger from the base class
+        self._transaction_manager = AsyncPostgresTransactionManager(None, self.logger)
 
         self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
 
@@ -115,6 +121,9 @@ class AsyncPostgresBackend(AsyncStorageBackend):
     @property
     def transaction_manager(self):
         """Get the async PostgreSQL transaction manager."""
+        # Update the transaction manager's connection if needed
+        if self._transaction_manager:
+            self._transaction_manager._connection = self._connection
         return self._transaction_manager
 
     async def connect(self):
@@ -140,7 +149,7 @@ class AsyncPostgresBackend(AsyncStorageBackend):
                 'tcp_keepalives_count', 'load_balance_hosts',
                 'keepalives', 'keepalives_idle', 'keepalives_interval', 'keepalives_count'
             ]
-            
+
             for param in additional_params:
                 if hasattr(self.config, param):
                     conn_params[param] = getattr(self.config, param)
@@ -160,7 +169,11 @@ class AsyncPostgresBackend(AsyncStorageBackend):
                 conn_params.update(ssl_params)
 
             self._connection = await AsyncConnection.connect(**conn_params)
-            
+
+            # Initialize dialect after connection is established
+            if self._dialect is None:
+                self._dialect = PostgresDialect(await self.get_server_version())
+
             self.log(logging.INFO, f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}")
         except PsycopgError as e:
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
@@ -341,24 +354,133 @@ class AsyncPostgresBackend(AsyncStorageBackend):
 
     async def _handle_error(self, error: Exception) -> None:
         """Handle PostgreSQL-specific errors asynchronously."""
+        error_msg = str(error)
+
         if isinstance(error, PsycopgIntegrityError):
-            self.log(logging.ERROR, f"Integrity error: {str(error)}")
-            raise IntegrityError(str(error)) from error
+            if "duplicate key value violates unique constraint" in error_msg.lower():
+                self.log(logging.ERROR, f"Unique constraint violation: {error_msg}")
+                raise IntegrityError(f"Unique constraint violation: {error_msg}")
+            elif "violates foreign key constraint" in error_msg.lower():
+                self.log(logging.ERROR, f"Foreign key constraint violation: {error_msg}")
+                raise IntegrityError(f"Foreign key constraint violation: {error_msg}")
+            self.log(logging.ERROR, f"Integrity error: {error_msg}")
+            raise IntegrityError(error_msg)
         elif isinstance(error, PsycopgOperationalError):
-            self.log(logging.ERROR, f"Operational error: {str(error)}")
-            raise OperationalError(str(error)) from error
+            if "deadlock detected" in error_msg.lower():
+                self.log(logging.ERROR, f"Deadlock error: {error_msg}")
+                raise DeadlockError(error_msg)
+            self.log(logging.ERROR, f"Operational error: {error_msg}")
+            raise OperationalError(error_msg)
         elif isinstance(error, PsycopgProgrammingError):
-            self.log(logging.ERROR, f"Programming error: {str(error)}")
-            raise QueryError(str(error)) from error
+            self.log(logging.ERROR, f"Programming error: {error_msg}")
+            raise QueryError(error_msg)
         elif isinstance(error, PsycopgDeadlockError):
-            self.log(logging.ERROR, f"Deadlock error: {str(error)}")
-            raise DeadlockError(str(error)) from error
+            self.log(logging.ERROR, f"Deadlock error: {error_msg}")
+            raise DeadlockError(error_msg)
         elif isinstance(error, PsycopgError):
-            self.log(logging.ERROR, f"PostgreSQL error: {str(error)}")
-            raise DatabaseError(str(error)) from error
+            self.log(logging.ERROR, f"PostgreSQL error: {error_msg}")
+            raise DatabaseError(error_msg)
         else:
-            self.log(logging.ERROR, f"Unexpected error: {str(error)}")
+            self.log(logging.ERROR, f"Unexpected error: {error_msg}")
             raise error
+
+    async def _handle_auto_commit(self) -> None:
+        """Handle auto commit based on PostgreSQL connection and transaction state asynchronously.
+
+        This method will commit the current connection if:
+        1. The connection exists and is open
+        2. There is no active transaction managed by transaction_manager
+
+        It's used by insert/update/delete operations to ensure changes are
+        persisted immediately when auto_commit=True is specified.
+        """
+        try:
+            # Check if connection exists
+            if not self._connection:
+                return
+
+            # Check if we're not in an active transaction
+            if not self._transaction_manager or not self._transaction_manager.is_active:
+                # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
+                if not getattr(self.config, 'autocommit', False):
+                    await self._connection.commit()
+                    self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
+        except Exception as e:
+            # Just log the error but don't raise - this is a convenience feature
+            self.log(logging.WARNING, f"Failed to auto-commit: {str(e)}")
+
+    async def _handle_auto_commit_if_needed(self) -> None:
+        """
+        Handle auto-commit for PostgreSQL asynchronously.
+
+        PostgreSQL respects the autocommit setting, but we also need to handle explicit commits.
+        """
+        if not self.in_transaction and self._connection:
+            if not getattr(self.config, 'autocommit', False):
+                await self._connection.commit()
+                self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
+
+    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple['SQLTypeAdapter', Type]]:
+        """
+        [Backend Implementation] Provides default type adapter suggestions for PostgreSQL.
+
+        This method defines a curated set of type adapter suggestions for common Python
+        types, mapping them to their typical PostgreSQL-compatible representations as
+        demonstrated in test fixtures. It explicitly retrieves necessary `SQLTypeAdapter`
+        instances from the backend's `adapter_registry`. If an adapter for a specific
+        (Python type, DB driver type) pair is not registered, no suggestion will be
+        made for that Python type.
+
+        Returns:
+            Dict[Type, Tuple[SQLTypeAdapter, Type]]: A dictionary where keys are
+            original Python types (`TypeRegistry`'s `py_type`), and values are
+            tuples containing a `SQLTypeAdapter` instance and the target
+            Python type (`TypeRegistry`'s `db_type`) expected by the driver.
+        """
+        suggestions: Dict[Type, Tuple['SQLTypeAdapter', Type]] = {}
+
+        # Define a list of desired Python type to DB driver type mappings.
+        # This list reflects types seen in test fixtures and common usage,
+        # along with their preferred database-compatible Python types for the driver.
+        # Types that are natively compatible with the DB driver (e.g., Python str, int, float)
+        # and for which no specific conversion logic is needed are omitted from this list.
+        # The consuming layer should assume pass-through behavior for any Python type
+        # that does not have an explicit adapter suggestion.
+        #
+        # Exception: If a user requires specific processing for a natively compatible type
+        # (e.g., custom serialization/deserialization for JSON strings beyond basic conversion),
+        # they would need to implement and register their own specialized adapter.
+        # This backend's default suggestions do not cater to such advanced processing needs.
+        from datetime import date, datetime, time
+        from decimal import Decimal
+        from uuid import UUID
+        from enum import Enum
+
+        type_mappings = [
+            (bool, bool),        # Python bool -> DB driver bool (PostgreSQL BOOLEAN)
+            # Why str for date/time?
+            # PostgreSQL has native DATE, TIME, TIMESTAMP types but accepts string representations
+            (datetime, str),    # Python datetime -> DB driver str (PostgreSQL TIMESTAMP)
+            (date, str),        # Python date -> DB driver str (PostgreSQL DATE)
+            (time, str),        # Python time -> DB driver str (PostgreSQL TIME)
+            (Decimal, Decimal),   # Python Decimal -> DB driver Decimal (PostgreSQL NUMERIC/DECIMAL)
+            (UUID, str),        # Python UUID -> DB driver str (PostgreSQL UUID type)
+            (dict, str),        # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
+            (list, str),        # Python list -> DB driver str (PostgreSQL JSON/JSONB)
+            (Enum, str),        # Python Enum -> DB driver str (PostgreSQL TEXT)
+        ]
+
+        # Iterate through the defined mappings and retrieve adapters from the registry.
+        for py_type, db_type in type_mappings:
+            adapter = self.adapter_registry.get_adapter(py_type, db_type)
+            if adapter:
+                suggestions[py_type] = (adapter, db_type)
+            else:
+                # Log a debug message if a specific adapter is expected but not found.
+                self.log(logging.DEBUG, f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
+                                      "Suggestion will not be provided for this type.")
+
+        return suggestions
 
     def log(self, level: int, message: str):
         """Log a message with the specified level."""
