@@ -30,39 +30,58 @@ class BasicProvider(IBasicProvider):
     """
 
     def __init__(self):
-        # This list will track the backend instances created during the setup phase.
         self._active_backends = []
+        self._active_async_backends = []
 
     def get_test_scenarios(self) -> List[str]:
         """Returns a list of names for all enabled scenarios for this backend."""
         return list(get_enabled_scenarios().keys())
 
+    def _track_backend(self, backend_instance, collection: List) -> None:
+        if backend_instance not in collection:
+            collection.append(backend_instance)
+
     def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
         """A generic helper method to handle the setup for any given model."""
-        # 1. Get the backend class (PostgresBackend) and connection config for the requested scenario.
         backend_class, config = get_scenario(scenario_name)
-
-        # 2. Configure the generic model class with our specific backend and config.
         model_class.configure(config, backend_class)
 
         backend_instance = model_class.__backend__
-        if backend_instance not in self._active_backends:
-            self._active_backends.append(backend_instance)
+        self._track_backend(backend_instance, self._active_backends)
 
-        # 3. Prepare the database schema.
+        self._reset_table_sync(model_class, table_name)
+        return model_class
+
+    async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+        """A generic helper method to handle the setup for any given async model."""
+        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+
+        _, config = get_scenario(scenario_name)
+        model_class.configure(config, AsyncPostgresBackend)
+
+        backend_instance = model_class.__backend__
+        self._track_backend(backend_instance, self._active_async_backends)
+
+        await self._reset_table_async(model_class, table_name)
+        return model_class
+
+    def _reset_table_sync(self, model_class: Type[ActiveRecord], table_name: str) -> None:
         try:
-            # Drop the table if it exists, with cascade to handle dependencies.
             model_class.__backend__.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
         except Exception as e:
-            # Ignore errors if the table didn't exist, but print for debugging.
             print(f"Could not drop table {table_name}: {e}")
-            pass
 
-        # Execute the schema SQL to create the table.
         schema_sql = self._load_postgres_schema(f"{table_name}.sql")
         model_class.__backend__.execute(schema_sql)
 
-        return model_class
+    async def _reset_table_async(self, model_class: Type[ActiveRecord], table_name: str) -> None:
+        try:
+            await model_class.__backend__.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        except Exception as e:
+            print(f"Could not drop table {table_name}: {e}")
+
+        schema_sql = self._load_postgres_schema(f"{table_name}.sql")
+        await model_class.__backend__.execute(schema_sql)
 
     def _setup_multiple_models(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
         """Helper to set up multiple related models for a test."""
@@ -133,32 +152,32 @@ class BasicProvider(IBasicProvider):
     async def setup_async_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for async user model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncUser
-        return self._setup_model(AsyncUser, scenario_name, "users")
+        return await self._setup_async_model(AsyncUser, scenario_name, "users")
 
     async def setup_async_type_case_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for async type case model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncTypeCase
-        return self._setup_model(AsyncTypeCase, scenario_name, "type_cases")
+        return await self._setup_async_model(AsyncTypeCase, scenario_name, "type_cases")
 
     async def setup_async_type_test_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for async type test model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncTypeTestModel
-        return self._setup_model(AsyncTypeTestModel, scenario_name, "type_tests")
+        return await self._setup_async_model(AsyncTypeTestModel, scenario_name, "type_tests")
 
     async def setup_async_validated_field_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for async validated field user model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncValidatedFieldUser
-        return self._setup_model(AsyncValidatedFieldUser, scenario_name, "validated_field_users")
+        return await self._setup_async_model(AsyncValidatedFieldUser, scenario_name, "validated_field_users")
 
     async def setup_async_validated_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for async validated user model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncValidatedUser
-        return self._setup_model(AsyncValidatedUser, scenario_name, "validated_users")
+        return await self._setup_async_model(AsyncValidatedUser, scenario_name, "validated_users")
 
     async def setup_async_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
         """Sets up the database for AsyncMappedUser, AsyncMappedPost, and AsyncMappedComment models."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncMappedUser, AsyncMappedPost, AsyncMappedComment
-        return self._setup_multiple_models([
+        return await self._setup_multiple_models_async([
             (AsyncMappedUser, "users"),
             (AsyncMappedPost, "posts"),
             (AsyncMappedComment, "comments")
@@ -167,7 +186,7 @@ class BasicProvider(IBasicProvider):
     async def setup_async_mixed_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
         """Sets up the database for AsyncColumnMappingModel and AsyncMixedAnnotationModel."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncColumnMappingModel, AsyncMixedAnnotationModel
-        return self._setup_multiple_models([
+        return await self._setup_multiple_models_async([
             (AsyncColumnMappingModel, "column_mapping_items"),
             (AsyncMixedAnnotationModel, "mixed_annotation_items")
         ], scenario_name)
@@ -175,15 +194,39 @@ class BasicProvider(IBasicProvider):
     async def setup_async_type_adapter_model_and_schema(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for the `AsyncTypeAdapterTest` model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncTypeAdapterTest
-        return self._setup_model(AsyncTypeAdapterTest, scenario_name, "type_adapter_tests")
+        return await self._setup_async_model(AsyncTypeAdapterTest, scenario_name, "type_adapter_tests")
+
+    async def _setup_multiple_models_async(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+        """Helper to set up multiple related async models for a test."""
+        result = []
+        for model_class, table_name in model_classes:
+            configured_model = await self._setup_async_model(model_class, scenario_name, table_name)
+            result.append(configured_model)
+        return tuple(result)
 
     async def cleanup_after_test_async(self, scenario_name: str):
         """
-        Performs async cleanup after a test, dropping all tables and disconnecting backends.
+        Performs async cleanup after a test, dropping all tables and disconnecting async backends.
         """
-        # For PostgreSQL, we can reuse the sync version since it doesn't involve async I/O operations
-        # that require special handling
-        self.cleanup_after_test(scenario_name)
+        tables_to_drop = [
+            'users', 'type_cases', 'type_tests', 'validated_field_users',
+            'validated_users', 'type_adapter_tests', 'posts', 'comments',
+            'column_mapping_items', 'mixed_annotation_items'
+        ]
+        for backend_instance in self._active_async_backends:
+            try:
+                for table_name in tables_to_drop:
+                    try:
+                        await backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    await backend_instance.disconnect()
+                except:
+                    pass
+
+        self._active_async_backends.clear()
 
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""

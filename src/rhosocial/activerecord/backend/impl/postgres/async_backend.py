@@ -318,6 +318,23 @@ class AsyncPostgresBackend(AsyncStorageBackend):
         
         return await super().execute(sql, params, options=options)
 
+    async def _prepare_sql_and_params(
+        self,
+        sql: str,
+        params: Optional[Tuple]
+    ) -> Tuple[str, Optional[Tuple]]:
+        """
+        Prepare SQL and parameters for PostgreSQL execution.
+
+        Converts the generic '?' placeholder to PostgreSQL-compatible '%s' placeholder.
+        """
+        if params is None:
+            return sql, None
+
+        # Replace '?' placeholders with '%s' for PostgreSQL
+        prepared_sql = sql.replace('?', '%s')
+        return prepared_sql, params
+
     def create_expression(self, expression_str: str):
         """Create an expression object for raw SQL expressions."""
         from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
