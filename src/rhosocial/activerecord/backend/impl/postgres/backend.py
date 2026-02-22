@@ -46,6 +46,7 @@ from rhosocial.activerecord.backend.errors import (
 from rhosocial.activerecord.backend.result import QueryResult
 from rhosocial.activerecord.backend.config import ConnectionConfig
 from .adapters import (
+    PostgresListAdapter,
     PostgresJSONBAdapter,
     PostgresNetworkAddressAdapter,
 )
@@ -109,6 +110,7 @@ class PostgresBackend(StorageBackend):
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters."""
         pg_adapters = [
+            PostgresListAdapter(),
             PostgresJSONBAdapter(),
             PostgresNetworkAddressAdapter(),
         ]
@@ -498,7 +500,7 @@ class PostgresBackend(StorageBackend):
             (Decimal, Decimal),   # Python Decimal -> DB driver Decimal (PostgreSQL NUMERIC/DECIMAL)
             (UUID, str),        # Python UUID -> DB driver str (PostgreSQL UUID type)
             (dict, str),        # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
-            (list, str),        # Python list -> DB driver str (PostgreSQL JSON/JSONB)
+            (list, list),       # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
             (Enum, str),        # Python Enum -> DB driver str (PostgreSQL TEXT)
         ]
 

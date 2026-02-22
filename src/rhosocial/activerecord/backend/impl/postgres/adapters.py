@@ -11,13 +11,38 @@ from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
 from rhosocial.activerecord.backend.schema import DatabaseType
 
 
-class PostgresJSONBAdapter(SQLTypeAdapter):
+class PostgresListAdapter(SQLTypeAdapter):
     """
-    Adapts Python dict/list to PostgreSQL JSONB and vice-versa.
+    Adapts Python list to PostgreSQL array types.
+    
+    This adapter does not perform any conversion - psycopg handles
+    Python lists natively for PostgreSQL array types.
     """
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
-        return {dict: [Jsonb], list: [Jsonb]}
+        return {list: [list]}
+
+    def to_database(self, value: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+        if value is None:
+            return None
+        # psycopg handles list natively for PostgreSQL arrays
+        return value
+
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
+        if value is None:
+            return None
+        if isinstance(value, list):
+            return value
+        raise TypeError(f"Cannot convert {type(value).__name__} to list")
+
+
+class PostgresJSONBAdapter(SQLTypeAdapter):
+    """
+    Adapts Python dict to PostgreSQL JSONB and vice-versa.
+    """
+    @property
+    def supported_types(self) -> Dict[Type, List[Any]]:
+        return {dict: [Jsonb]}
 
     def to_database(self, value: Union[dict, list], target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         if value is None:
@@ -27,7 +52,9 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
     def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
         if value is None:
             return None
-        if isinstance(value, (dict, list)):
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
             return value
         # In case it's a string representation
         return json.loads(value)

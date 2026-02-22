@@ -21,8 +21,7 @@ from .backend import PostgresBackend
 from .async_backend import AsyncPostgresBackend
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
-from .transaction import PostgresTransactionManager
-from .async_transaction import AsyncPostgresTransactionManager
+from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
 from .types import (
     PostgresTypes,
     PostgresColumnType,

@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.errors import (
 from rhosocial.activerecord.backend.result import QueryResult
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
-from .async_transaction import AsyncPostgresTransactionManager
+from .transaction import AsyncPostgresTransactionManager
 
 
 class AsyncPostgresBackend(AsyncStorageBackend):
@@ -152,7 +152,18 @@ class AsyncPostgresBackend(AsyncStorageBackend):
 
             for param in additional_params:
                 if hasattr(self.config, param):
-                    conn_params[param] = getattr(self.config, param)
+                    value = getattr(self.config, param)
+                    if value is not None:  # Only add the parameter if it's not None
+                        conn_params[param] = value
+            
+            # Handle 'options' parameter specially as it should be a string, not a dict
+            if hasattr(self.config, 'options') and self.config.options is not None:
+                options_value = self.config.options
+                if isinstance(options_value, dict):
+                    options_str = ' '.join([f"-c {k}={v}" for k, v in options_value.items()])
+                    conn_params['options'] = options_str
+                else:
+                    conn_params['options'] = options_value
 
             # Add SSL parameters if provided
             ssl_params = {}
@@ -318,7 +329,7 @@ class AsyncPostgresBackend(AsyncStorageBackend):
         
         return await super().execute(sql, params, options=options)
 
-    async def _prepare_sql_and_params(
+    def _prepare_sql_and_params(
         self,
         sql: str,
         params: Optional[Tuple]
@@ -483,7 +494,7 @@ class AsyncPostgresBackend(AsyncStorageBackend):
             (Decimal, Decimal),   # Python Decimal -> DB driver Decimal (PostgreSQL NUMERIC/DECIMAL)
             (UUID, str),        # Python UUID -> DB driver str (PostgreSQL UUID type)
             (dict, str),        # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
-            (list, str),        # Python list -> DB driver str (PostgreSQL JSON/JSONB)
+            (list, list),      # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
             (Enum, str),        # Python Enum -> DB driver str (PostgreSQL TEXT)
         ]
 

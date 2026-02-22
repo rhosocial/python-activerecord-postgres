@@ -135,12 +135,19 @@ class BasicProvider(IBasicProvider):
             (MixedAnnotationModel, "mixed_annotation_items")
         ], scenario_name)
 
-    def setup_type_adapter_model_and_schema(self) -> Type[ActiveRecord]:
+    def setup_type_adapter_model_and_schema(self, scenario_name: str = None) -> Type[ActiveRecord]:
         """Sets up the database for the `TypeAdapterTest` model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import TypeAdapterTest
-        # Use default scenario for this method as per interface
-        scenario_name = self.get_test_scenarios()[0] if self.get_test_scenarios() else "default"
+        if scenario_name is None:
+            scenario_name = self.get_test_scenarios()[0] if self.get_test_scenarios() else "default"
         return self._setup_model(TypeAdapterTest, scenario_name, "type_adapter_tests")
+
+    async def setup_async_type_adapter_model_and_schema(self, scenario_name: str = None) -> Type[ActiveRecord]:
+        """Sets up the database for the `AsyncTypeAdapterTest` model tests."""
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncTypeAdapterTest
+        if scenario_name is None:
+            scenario_name = self.get_test_scenarios()[0] if self.get_test_scenarios() else "default"
+        return await self._setup_async_model(AsyncTypeAdapterTest, scenario_name, "type_adapter_tests")
 
     def get_yes_no_adapter(self) -> 'BaseSQLTypeAdapter':
         """Returns an instance of the YesOrNoBooleanAdapter."""
