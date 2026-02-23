@@ -83,12 +83,54 @@ class BasicProvider(IBasicProvider):
         schema_sql = self._load_postgres_schema(f"{table_name}.sql")
         await model_class.__backend__.execute(schema_sql)
 
+    def _initialize_model_schema(self, model_class: Type[ActiveRecord], table_name: str) -> None:
+        """Initialize schema for a model that shares backend with another model."""
+        self._reset_table_sync(model_class, table_name)
+
+    async def _initialize_async_model_schema(self, model_class: Type[ActiveRecord], table_name: str) -> None:
+        """Initialize schema for an async model that shares backend with another model."""
+        await self._reset_table_async(model_class, table_name)
+
     def _setup_multiple_models(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
-        """Helper to set up multiple related models for a test."""
-        result = []
-        for model_class, table_name in model_classes:
-            configured_model = self._setup_model(model_class, scenario_name, table_name)
-            result.append(configured_model)
+        """Helper to set up multiple related models for a test, sharing a single backend."""
+        if not model_classes:
+            return tuple()
+
+        first_model_class, first_table_name = model_classes[0]
+        first_model = self._setup_model(first_model_class, scenario_name, first_table_name)
+        shared_backend = first_model.__backend__
+
+        result = [first_model]
+
+        for model_class, table_name in model_classes[1:]:
+            model_class.__connection_config__ = first_model.__connection_config__
+            model_class.__backend_class__ = first_model.__backend_class__
+            model_class.__backend__ = shared_backend
+            self._track_backend(shared_backend, self._active_backends)
+            self._initialize_model_schema(model_class, table_name)
+            result.append(model_class)
+
+        return tuple(result)
+
+    async def _setup_multiple_models_async(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+        """Helper to set up multiple related async models for a test, sharing a single backend."""
+        if not model_classes:
+            return tuple()
+
+        first_model_class, first_table_name = model_classes[0]
+        first_model = await self._setup_async_model(first_model_class, scenario_name, first_table_name)
+        shared_backend = first_model.__backend__
+
+        result = [first_model]
+
+        for model_class, table_name in model_classes[1:]:
+            model_class.__connection_config__ = first_model.__connection_config__
+            model_class.__backend_class__ = first_model.__backend_class__
+            model_class.__backend__ = shared_backend
+            self._track_backend(shared_backend, self._active_async_backends)
+            await self._initialize_async_model_schema(model_class, table_name)
+            result.append(model_class)
+
         return tuple(result)
 
     # --- Implementation of the IBasicProvider interface ---
@@ -129,10 +171,11 @@ class BasicProvider(IBasicProvider):
 
     def setup_mixed_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
         """Sets up the database for ColumnMappingModel and MixedAnnotationModel."""
-        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import ColumnMappingModel, MixedAnnotationModel
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import ColumnMappingModel
+        from rhosocial.activerecord_postgres_test.feature.basic.fixtures.models import PostgresMixedAnnotationModel
         return self._setup_multiple_models([
             (ColumnMappingModel, "column_mapping_items"),
-            (MixedAnnotationModel, "mixed_annotation_items")
+            (PostgresMixedAnnotationModel, "mixed_annotation_items")
         ], scenario_name)
 
     def setup_type_adapter_model_and_schema(self, scenario_name: str = None) -> Type[ActiveRecord]:
@@ -192,24 +235,17 @@ class BasicProvider(IBasicProvider):
 
     async def setup_async_mixed_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
         """Sets up the database for AsyncColumnMappingModel and AsyncMixedAnnotationModel."""
-        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncColumnMappingModel, AsyncMixedAnnotationModel
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncColumnMappingModel
+        from rhosocial.activerecord_postgres_test.feature.basic.fixtures.models import AsyncPostgresMixedAnnotationModel
         return await self._setup_multiple_models_async([
             (AsyncColumnMappingModel, "column_mapping_items"),
-            (AsyncMixedAnnotationModel, "mixed_annotation_items")
+            (AsyncPostgresMixedAnnotationModel, "mixed_annotation_items")
         ], scenario_name)
 
     async def setup_async_type_adapter_model_and_schema(self, scenario_name: str) -> Type[ActiveRecord]:
         """Sets up the database for the `AsyncTypeAdapterTest` model tests."""
         from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncTypeAdapterTest
         return await self._setup_async_model(AsyncTypeAdapterTest, scenario_name, "type_adapter_tests")
-
-    async def _setup_multiple_models_async(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
-        """Helper to set up multiple related async models for a test."""
-        result = []
-        for model_class, table_name in model_classes:
-            configured_model = await self._setup_async_model(model_class, scenario_name, table_name)
-            result.append(configured_model)
-        return tuple(result)
 
     async def cleanup_after_test_async(self, scenario_name: str):
         """
