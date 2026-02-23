@@ -30,14 +30,20 @@ article = Article(
 )
 
 # 使用数组操作符查询
-Article.query().where("tags @> ?", (['python', 'database'],))
+# 包含：tags 包含 'python'
+Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+
+# 包含多个：tags 同时包含 'python' 和 'database'
+Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
 
 # 任意元素匹配
-Article.query().where("? = ANY(tags)", ('python',))
+Article.query().where("? = ANY(tags)", ('python',)).all()
 
-# 所有元素匹配
-Article.query().where("tags <@ ?", (['python'],))
+# 所有元素满足条件
+Article.query().where("? = ALL(tags)", ('python',)).all()
 ```
+
+> **注意**：详细示例和测试验证请参阅[数组类型对比](./array_comparison.md)。
 
 ## 多维数组
 

@@ -8,6 +8,7 @@
 - **[自定义类型适配器](./custom.md)**: 扩展类型支持
 - **[时区处理](./timezone.md)**: TIMESTAMP WITH TIME ZONE
 - **[数组类型处理](./arrays.md)**: PostgreSQL 数组支持
+- **[数组类型对比](./array_comparison.md)**: PostgreSQL 与 MySQL/SQLite 数组处理对比
 
 ## 内置适配器
 

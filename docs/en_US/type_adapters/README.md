@@ -8,6 +8,7 @@ Type adapters handle conversion between Python and PostgreSQL types.
 - **[Custom Type Adapters](./custom.md)**: Extending type support
 - **[Timezone Handling](./timezone.md)**: TIMESTAMP WITH TIME ZONE
 - **[Array Type Handling](./arrays.md)**: PostgreSQL array support
+- **[Array Type Comparison](./array_comparison.md)**: PostgreSQL vs MySQL/SQLite array handling
 
 ## Built-in Adapters
 

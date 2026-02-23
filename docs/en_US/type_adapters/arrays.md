@@ -30,14 +30,20 @@ article = Article(
 )
 
 # Query with array operators
-Article.query().where("tags @> ?", (['python', 'database'],))
+# Contains: tags contains 'python'
+Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+
+# Contains multiple: tags contains both 'python' AND 'database'
+Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
 
 # Any element match
-Article.query().where("? = ANY(tags)", ('python',))
+Article.query().where("? = ANY(tags)", ('python',)).all()
 
-# All elements match
-Article.query().where("tags <@ ?", (['python'],))
+# All elements satisfy condition
+Article.query().where("? = ALL(tags)", ('python',)).all()
 ```
+
+> **Note**: See [Array Type Comparison](./array_comparison.md) for detailed examples and test verification.
 
 ## Multi-dimensional Arrays
 
