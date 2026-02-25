@@ -39,6 +39,10 @@ class PostgresListAdapter(SQLTypeAdapter):
 class PostgresJSONBAdapter(SQLTypeAdapter):
     """
     Adapts Python dict to PostgreSQL JSONB and vice-versa.
+    
+    Note: psycopg automatically serializes/deserializes JSON, so dict <-> JSON.
+    When reading from DB, psycopg returns dict. When target type is str,
+    we need to serialize back to JSON string.
     """
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
@@ -52,6 +56,14 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
     def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
         if value is None:
             return None
+        # For string target type, serialize dict/list back to JSON string
+        # This is needed because psycopg auto-deserializes JSON to dict,
+        # but model fields may be defined as str type
+        if target_type == str:
+            if isinstance(value, (dict, list)):
+                return json.dumps(value)
+            return value
+        # For dict/list target types, return as-is
         if isinstance(value, dict):
             return value
         if isinstance(value, list):

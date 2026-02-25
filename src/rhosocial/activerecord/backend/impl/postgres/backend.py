@@ -390,6 +390,10 @@ class PostgresBackend(StorageBackend):
         """Handle PostgreSQL-specific errors."""
         error_msg = str(error)
 
+        # Try to rollback transaction to recover from aborted state
+        # PostgreSQL requires explicit ROLLBACK after errors in a transaction
+        self._try_rollback_transaction()
+
         if isinstance(error, PsycopgIntegrityError):
             if "duplicate key value violates unique constraint" in error_msg.lower():
                 self.log(logging.ERROR, f"Unique constraint violation: {error_msg}")
@@ -417,6 +421,30 @@ class PostgresBackend(StorageBackend):
         else:
             self.log(logging.ERROR, f"Unexpected error: {error_msg}")
             raise error
+
+    def _try_rollback_transaction(self) -> None:
+        """Attempt to rollback transaction to recover from aborted state.
+        
+        PostgreSQL requires explicit ROLLBACK after query errors in a transaction.
+        This method attempts to recover by rolling back the transaction, regardless
+        of the transaction manager's state.
+        """
+        try:
+            # First, try the transaction manager if active
+            if self._transaction_manager and self._transaction_manager.is_active:
+                self.log(logging.INFO, "Attempting to rollback transaction after error")
+                self._transaction_manager.rollback()
+            
+            # Also try direct connection rollback to handle edge cases
+            # This ensures we recover from aborted transaction state
+            if self._connection and not self._connection.closed:
+                try:
+                    self._connection.rollback()
+                    self.log(logging.INFO, "Direct connection rollback completed")
+                except Exception as direct_error:
+                    self.log(logging.DEBUG, f"Direct rollback not needed or failed: {direct_error}")
+        except Exception as rollback_error:
+            self.log(logging.WARNING, f"Failed to rollback transaction: {rollback_error}")
 
     def _handle_auto_commit(self) -> None:
         """Handle auto commit based on PostgreSQL connection and transaction state.
