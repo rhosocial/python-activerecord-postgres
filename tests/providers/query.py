@@ -69,7 +69,7 @@ class QueryProvider(IQueryProvider):
         _, config = get_scenario(scenario_name)
 
         if shared_backend is None:
-            model_class.configure(config, AsyncPostgresBackend)
+            await model_class.configure(config, AsyncPostgresBackend)
         else:
             model_class.__connection_config__ = config
             model_class.__backend_class__ = AsyncPostgresBackend
