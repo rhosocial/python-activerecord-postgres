@@ -57,7 +57,7 @@ class BasicProvider(IBasicProvider):
         from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 
         _, config = get_scenario(scenario_name)
-        model_class.configure(config, AsyncPostgresBackend)
+        await model_class.configure(config, AsyncPostgresBackend)
 
         backend_instance = model_class.__backend__
         self._track_backend(backend_instance, self._active_async_backends)

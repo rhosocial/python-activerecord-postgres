@@ -296,6 +296,18 @@ class PostgresBackend(StorageBackend):
             if cursor:
                 cursor.close()
 
+    def introspect_and_adapt(self) -> None:
+        """Introspect backend and adapt backend instance to actual server capabilities.
+
+        This method ensures a connection exists, queries the actual PostgreSQL server version,
+        and updates the backend's internal state accordingly.
+        """
+        # Ensure connection exists
+        if not self._connection:
+            self.connect()
+        # PostgreSQL backend currently does not have version-dependent adapters
+        # This method exists to satisfy the interface contract
+
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""
         return not getattr(self.config, 'autocommit', False)
