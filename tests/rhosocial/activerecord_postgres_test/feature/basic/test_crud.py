@@ -19,24 +19,12 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
     type_case_class,
     type_test_model,
     validated_user_class,
-    validated_user
+    validated_user,
+    async_user_class,
+    async_type_case_class,
+    async_validated_user_class,
+    async_validated_user
 )
 
 # Import shared tests from testsuite package
-from rhosocial.activerecord.testsuite.feature.basic.test_crud import (
-    test_create_user,
-    test_create_user_with_invalid_data,
-    test_find_user,
-    test_find_nonexistent_user,
-    test_update_user,
-    test_update_with_invalid_data,
-    test_delete_user,
-    test_save_after_delete,
-    test_bulk_operations,
-    test_dirty_tracking,
-    test_type_case_crud,
-    test_validated_user_crud,
-    test_transaction_crud,
-    test_refresh_record,
-    test_query_methods
-)
+from rhosocial.activerecord.testsuite.feature.basic.test_crud import *

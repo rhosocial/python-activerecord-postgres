@@ -376,8 +376,141 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
             raise TransactionError(error_msg)
 
 
-class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransactionManager):
+class AsyncPostgresTransactionMixin:
+    """Async version of shared logic for postgres transaction management.
+
+    Contains non-I/O logic shared between sync and async implementations:
+    - Isolation level mapping
+    - Savepoint name generation
+    - SQL statement building
+    """
+
+    # postgres supported isolation level mappings
+    _ISOLATION_LEVELS: Dict[IsolationLevel, str] = {
+        IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
+        IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # postgres default
+        IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
+        IsolationLevel.SERIALIZABLE: "SERIALIZABLE"
+    }
+
+    def __init__(self, connection, logger=None):
+        """Initialize transaction manager.
+
+        Args:
+            connection: postgres database connection
+            logger: Optional logger instance
+        """
+        self._active_savepoint = None
+        self._savepoint_counter = 0
+        self._deferred_constraints: List[str] = []
+        self._is_deferrable: Optional[bool] = None
+        self._active_transaction = False
+        self._state = TransactionState.INACTIVE
+
+    def _get_savepoint_name(self, level: int) -> str:
+        """Generate savepoint name for nested transactions.
+
+        Args:
+            level: Transaction nesting level
+
+        Returns:
+            Savepoint name
+        """
+        return f"SP_{level}"
+
+    def _build_begin_statement(self) -> str:
+        """Build BEGIN statement with isolation level and deferrable mode.
+
+        Returns:
+            SQL BEGIN statement
+        """
+        sql_parts = ["BEGIN"]
+
+        # Add isolation level
+        if self._isolation_level:
+            level = self._ISOLATION_LEVELS.get(self._isolation_level)
+            if level:
+                sql_parts.append(f"ISOLATION LEVEL {level}")
+
+        # Add deferrable mode for SERIALIZABLE transactions
+        if (self._isolation_level == IsolationLevel.SERIALIZABLE and
+                self._is_deferrable is not None):
+            sql_parts.append(
+                "DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE"
+            )
+
+        return " ".join(sql_parts)
+
+    async def set_deferrable(self, deferrable: bool = True) -> None:
+        """Set transaction deferrable mode.
+
+        In postgres, DEFERRABLE only affects SERIALIZABLE transactions.
+
+        Args:
+            deferrable: Whether constraints should be deferrable
+
+        Raises:
+            TransactionError: If called on active transaction
+        """
+        self._is_deferrable = deferrable
+        if self.is_active:
+            error_msg = "Cannot change deferrable mode of active transaction"
+            self.log(logging.ERROR, error_msg)
+            raise TransactionError(error_msg)
+        self.log(logging.DEBUG, f"Set deferrable mode to {deferrable}")
+
+    def get_active_savepoint(self) -> Optional[str]:
+        """Get name of active savepoint.
+
+        Returns:
+            Active savepoint name or None
+        """
+        return self._active_savepoint
+
+    def get_deferred_constraints(self) -> List[str]:
+        """Get list of currently deferred constraints.
+
+        Returns:
+            Names of deferred constraints
+        """
+        return self._deferred_constraints.copy()
+
+    async def supports_savepoint(self) -> bool:
+        """Check if savepoints are supported.
+
+        Returns:
+            Always True for postgres
+        """
+        return True
+
+    @property
+    def is_active(self) -> bool:
+        """Check if transaction is active.
+
+        Returns:
+            True if in transaction
+        """
+        if not self._connection or self._connection.closed:
+            return False
+
+        # Check based on autocommit mode
+        if self._connection.autocommit:
+            return False
+
+        # If we've explicitly tracked transaction state, use that
+        return self._active_transaction
+
+
+class AsyncPostgresTransactionManager(AsyncTransactionManager):
     """Asynchronous postgres transaction manager implementation."""
+
+    # postgres supported isolation level mappings
+    _ISOLATION_LEVELS: Dict[IsolationLevel, str] = {
+        IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
+        IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # postgres default
+        IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
+        IsolationLevel.SERIALIZABLE: "SERIALIZABLE"
+    }
 
     def __init__(self, connection, logger=None):
         """Initialize async transaction manager.
@@ -386,8 +519,14 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             connection: postgres database connection (async)
             logger: Optional logger instance
         """
-        AsyncTransactionManager.__init__(self, connection, logger)
-        PostgresTransactionMixin.__init__(self, connection, logger)
+        super().__init__(connection, logger)
+        self._active_savepoint = None
+        self._savepoint_counter = 0
+        self._deferred_constraints: List[str] = []
+        self._is_deferrable: Optional[bool] = None
+        self._active_transaction = False
+        self._state = TransactionState.INACTIVE
+        self._isolation_level: Optional[IsolationLevel] = None
 
     async def _set_isolation_level(self) -> None:
         """Set transaction isolation level asynchronously.
@@ -434,6 +573,29 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             error_msg = f"Failed to defer constraint {constraint_name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
             raise TransactionError(error_msg)
+
+    def _build_begin_statement(self) -> str:
+        """Build BEGIN statement with isolation level and deferrable mode.
+
+        Returns:
+            SQL BEGIN statement
+        """
+        sql_parts = ["BEGIN"]
+
+        # Add isolation level
+        if self._isolation_level:
+            level = self._ISOLATION_LEVELS.get(self._isolation_level)
+            if level:
+                sql_parts.append(f"ISOLATION LEVEL {level}")
+
+        # Add deferrable mode for SERIALIZABLE transactions
+        if (self._isolation_level == IsolationLevel.SERIALIZABLE and
+                self._is_deferrable is not None):
+            sql_parts.append(
+                "DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE"
+            )
+
+        return " ".join(sql_parts)
 
     async def _do_begin(self) -> None:
         """Begin postgres transaction asynchronously.
@@ -581,6 +743,14 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             error_msg = f"Failed to rollback to savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
             raise TransactionError(error_msg)
+
+    async def supports_savepoint(self) -> bool:
+        """Check if savepoints are supported.
+
+        Returns:
+            Always True for postgres
+        """
+        return True
 
     async def get_current_isolation_level(self) -> IsolationLevel:
         """Get current transaction isolation level asynchronously.

@@ -6,6 +6,6 @@ CREATE TABLE IF NOT EXISTS type_adapter_tests (
     last_login TIMESTAMP WITH TIME ZONE,
     is_premium BOOLEAN,
     unsupported_union VARCHAR(255),
-    custom_bool VARCHAR(3),
-    optional_custom_bool VARCHAR(3)
+    custom_bool VARCHAR(10),
+    optional_custom_bool VARCHAR(10)
 );

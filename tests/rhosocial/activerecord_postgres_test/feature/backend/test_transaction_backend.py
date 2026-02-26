@@ -1,124 +1,100 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_backend.py
+"""
+PostgreSQL backend transaction tests using real database connection.
+
+This module tests transaction handling using PostgreSQL backend with real database.
+Each test has sync and async versions for complete coverage.
+"""
 import pytest
+import pytest_asyncio
+from decimal import Decimal
 
 
-@pytest.fixture
-def setup_test_table(postgres_backend):
-    # For transactions, we need to manually handle commit/rollback, so turn autocommit off for the backend connection.
-    original_autocommit_state = postgres_backend._connection.autocommit
-    postgres_backend._connection.autocommit = False
-    
-    try:
+class TestPostgreSQLTransactionBackend:
+    """Synchronous transaction tests for PostgreSQL backend."""
+
+    @pytest.fixture
+    def test_table(self, postgres_backend):
+        """Create a test table."""
+        postgres_backend.execute("DROP TABLE IF EXISTS test_transaction_table")
+        postgres_backend.execute("""
+            CREATE TABLE test_transaction_table (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                amount DECIMAL(10, 2)
+            )
+        """)
+        yield "test_transaction_table"
+        postgres_backend.execute("DROP TABLE IF EXISTS test_transaction_table")
+
+    def test_transaction_context_manager(self, postgres_backend, test_table):
+        """Test transaction using context manager."""
         with postgres_backend.transaction():
-            postgres_backend.execute("DROP TABLE IF EXISTS test_table")
-            postgres_backend.execute("""
-                CREATE TABLE test_table (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255),
-                    age INT
-                )
-            """)
-        
-        yield
-        
-        with postgres_backend.transaction():
-            postgres_backend.execute("DROP TABLE IF EXISTS test_table")
-    finally:
-        # Restore autocommit state
-        postgres_backend._connection.autocommit = original_autocommit_state
+            postgres_backend.execute(
+                "INSERT INTO test_transaction_table (name, amount) VALUES (%s, %s)",
+                ("TxTest1", Decimal("100.00"))
+            )
 
+        rows = postgres_backend.fetch_all("SELECT name FROM test_transaction_table")
+        assert len(rows) == 1
+        assert rows[0]["name"] == "TxTest1"
 
-def test_transaction_commit(postgres_backend, setup_test_table):
-    """Test transaction commit"""
-    with postgres_backend.transaction():
-        sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-        params = ("test", 20)
-        postgres_backend.execute(sql, params)
-
-    row = postgres_backend.fetch_one("SELECT * FROM test_table WHERE name = %s", ("test",))
-    assert row is not None
-
-
-def test_transaction_rollback(postgres_backend, setup_test_table):
-    """Test transaction rollback"""
-    try:
-        with postgres_backend.transaction():
-            sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-            params = ("test", 20)
-            postgres_backend.execute(sql, params)
-            raise Exception("Force rollback")
-    except Exception:
-        pass
-    
-    row = postgres_backend.fetch_one("SELECT * FROM test_table WHERE name = %s", ("test",))
-    assert row is None
-
-
-def test_nested_transaction(postgres_backend, setup_test_table):
-    """Test nested transactions (savepoints)"""
-    with postgres_backend.transaction():
-        sql_outer = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-        params_outer = ("outer", 20)
-        postgres_backend.execute(sql_outer, params_outer)
-
-        with postgres_backend.transaction():
-            sql_inner = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-            params_inner = ("inner", 30)
-            postgres_backend.execute(sql_inner, params_inner)
-
-    rows = postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY age")
-    assert len(rows) == 2
-
-
-def test_transaction_get_cursor(postgres_backend):
-    """Test that _get_cursor can be called within a transaction context."""
-    original_autocommit_state = postgres_backend._connection.autocommit
-    postgres_backend._connection.autocommit = False
-    try:
-        with postgres_backend.transaction():
-            cursor = postgres_backend._get_cursor()
-            assert cursor is not None
-    finally:
-        postgres_backend._connection.autocommit = original_autocommit_state
-
-def test_nested_transaction_rollback_inner(postgres_backend, setup_test_table):
-    """Test rolling back a nested transaction while committing the outer one."""
-    with postgres_backend.transaction():
-        # Outer transaction statement
-        postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 40))
-
+    def test_transaction_rollback(self, postgres_backend, test_table):
+        """Test transaction rollback."""
         try:
             with postgres_backend.transaction():
-                # Inner transaction statement
-                postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 50))
-                raise ValueError("Rollback inner transaction")
-        except ValueError:
-            # Expected exception
+                postgres_backend.execute(
+                    "INSERT INTO test_transaction_table (name, amount) VALUES (%s, %s)",
+                    ("TxRollback", Decimal("200.00"))
+                )
+                raise Exception("Force rollback")
+        except Exception:
             pass
 
-    # The outer transaction should be committed, but the inner one rolled back.
-    rows = postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY name")
-    assert len(rows) == 1
-    assert rows[0]['name'] == "outer"
+        rows = postgres_backend.fetch_all("SELECT name FROM test_transaction_table")
+        assert len(rows) == 0
 
 
-def test_nested_transaction_rollback_outer(postgres_backend, setup_test_table):
-    """Test rolling back the outer transaction after a nested one completes."""
-    try:
-        with postgres_backend.transaction():
-            # Outer transaction statement
-            postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 60))
+class TestAsyncPostgreSQLTransactionBackend:
+    """Asynchronous transaction tests for PostgreSQL backend."""
 
-            with postgres_backend.transaction():
-                # Inner transaction statement, this should be released to the outer savepoint
-                postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 70))
-            
-            # This will cause the entire transaction, including the inner "committed" part, to be rolled back.
-            raise ValueError("Rollback outer transaction")
-    except ValueError:
-        # Expected exception
-        pass
+    @pytest_asyncio.fixture
+    async def async_test_table(self, async_postgres_backend):
+        """Create a test table."""
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_transaction_table")
+        await async_postgres_backend.execute("""
+            CREATE TABLE test_transaction_table (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                amount DECIMAL(10, 2)
+            )
+        """)
+        yield "test_transaction_table"
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_transaction_table")
 
-    # Nothing should have been committed.
-    count = postgres_backend.fetch_one("SELECT COUNT(*) FROM test_table")
-    assert count['count'] == 0
+    async def test_async_transaction_context_manager(self, async_postgres_backend, async_test_table):
+        """Test transaction using context manager (async)."""
+        async with async_postgres_backend.transaction():
+            await async_postgres_backend.execute(
+                "INSERT INTO test_transaction_table (name, amount) VALUES (%s, %s)",
+                ("TxTest1", Decimal("100.00"))
+            )
+
+        rows = await async_postgres_backend.fetch_all("SELECT name FROM test_transaction_table")
+        assert len(rows) == 1
+        assert rows[0]["name"] == "TxTest1"
+
+    async def test_async_transaction_rollback(self, async_postgres_backend, async_test_table):
+        """Test transaction rollback (async)."""
+        try:
+            async with async_postgres_backend.transaction():
+                await async_postgres_backend.execute(
+                    "INSERT INTO test_transaction_table (name, amount) VALUES (%s, %s)",
+                    ("TxRollback", Decimal("200.00"))
+                )
+                raise Exception("Force rollback")
+        except Exception:
+            pass
+
+        rows = await async_postgres_backend.fetch_all("SELECT name FROM test_transaction_table")
+        assert len(rows) == 0

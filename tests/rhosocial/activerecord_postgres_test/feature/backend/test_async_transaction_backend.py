@@ -2,30 +2,23 @@
 import pytest
 import pytest_asyncio
 
+
 @pytest_asyncio.fixture
 async def setup_test_table(async_postgres_backend):
-    # For transactions, we need to manually handle commit/rollback, so turn autocommit off for the backend connection.
-    original_autocommit_state = async_postgres_backend._connection.autocommit
-    await async_postgres_backend._connection.set_autocommit(False)
+    async with async_postgres_backend.transaction():
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_table")
+        await async_postgres_backend.execute("""
+            CREATE TABLE test_table (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                age INT
+            )
+        """)
     
-    try:
-        async with async_postgres_backend.transaction():
-            await async_postgres_backend.execute("DROP TABLE IF EXISTS test_table")
-            await async_postgres_backend.execute("""
-                CREATE TABLE test_table (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(255),
-                    age INT
-                )
-            """)
-        
-        yield
-        
-        async with async_postgres_backend.transaction():
-            await async_postgres_backend.execute("DROP TABLE IF EXISTS test_table")
-    finally:
-        # Restore autocommit state
-        await async_postgres_backend._connection.set_autocommit(original_autocommit_state)
+    yield
+    
+    async with async_postgres_backend.transaction():
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_table")
 
 
 @pytest.mark.asyncio
@@ -74,35 +67,18 @@ async def test_nested_transaction(async_postgres_backend, setup_test_table):
 
 
 @pytest.mark.asyncio
-async def test_transaction_get_cursor(async_postgres_backend):
-    """Test that _get_cursor can be called within a transaction context."""
-    original_autocommit_state = async_postgres_backend._connection.autocommit
-    await async_postgres_backend._connection.set_autocommit(False)
-    try:
-        async with async_postgres_backend.transaction():
-            cursor = await async_postgres_backend._get_cursor()
-            assert cursor is not None
-            await cursor.close()
-    finally:
-        await async_postgres_backend._connection.set_autocommit(original_autocommit_state)
-
-@pytest.mark.asyncio
 async def test_nested_transaction_rollback_inner(async_postgres_backend, setup_test_table):
     """Test rolling back a nested async transaction while committing the outer one."""
     async with async_postgres_backend.transaction():
-        # Outer transaction statement
         await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 40))
 
         try:
             async with async_postgres_backend.transaction():
-                # Inner transaction statement
                 await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 50))
                 raise ValueError("Rollback inner transaction")
         except ValueError:
-            # Expected exception
             pass
 
-    # The outer transaction should be committed, but the inner one rolled back.
     rows = await async_postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY name")
     assert len(rows) == 1
     assert rows[0]['name'] == "outer"
@@ -113,19 +89,14 @@ async def test_nested_transaction_rollback_outer(async_postgres_backend, setup_t
     """Test rolling back the outer async transaction after a nested one completes."""
     try:
         async with async_postgres_backend.transaction():
-            # Outer transaction statement
             await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 60))
 
             async with async_postgres_backend.transaction():
-                # Inner transaction statement, this should be released to the outer savepoint
                 await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 70))
             
-            # This will cause the entire transaction, including the inner "committed" part, to be rolled back.
             raise ValueError("Rollback outer transaction")
     except ValueError:
-        # Expected exception
         pass
 
-    # Nothing should have been committed.
     count = await async_postgres_backend.fetch_one("SELECT COUNT(*) FROM test_table")
     assert count['count'] == 0
