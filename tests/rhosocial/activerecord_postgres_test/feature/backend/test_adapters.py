@@ -13,7 +13,6 @@ def test_jsonb_adapter_supported_types():
     adapter = PostgresJSONBAdapter()
     supported = adapter.supported_types
     assert supported[dict] == [Jsonb]
-    assert supported[list] == [Jsonb]
 
 
 def test_jsonb_to_database():

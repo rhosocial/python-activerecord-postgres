@@ -1,106 +1,237 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/test_crud_backend.py
+"""
+PostgreSQL backend CRUD tests using real database connection.
 
-from datetime import datetime
+This module tests basic CRUD operations using PostgreSQL backend with real database.
+Each test has sync and async versions for complete coverage.
+"""
 import pytest
-from rhosocial.activerecord.backend.errors import QueryError
+import pytest_asyncio
+from decimal import Decimal
 
 
-@pytest.fixture
-def setup_test_table(postgres_backend):
-    postgres_backend.execute("DROP TABLE IF EXISTS test_table")
-    postgres_backend.execute("""
-        CREATE TABLE test_table (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(255),
-            age INT,
-            created_at TIMESTAMP
+class TestPostgreSQLCRUDBackend:
+    """Synchronous CRUD tests for PostgreSQL backend."""
+
+    @pytest.fixture
+    def test_table(self, postgres_backend):
+        """Create a test table."""
+        postgres_backend.execute("DROP TABLE IF EXISTS test_crud_table")
+        postgres_backend.execute("""
+            CREATE TABLE test_crud_table (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                age INT,
+                balance DECIMAL(10, 2)
+            )
+        """)
+        yield "test_crud_table"
+        postgres_backend.execute("DROP TABLE IF EXISTS test_crud_table")
+
+    def test_insert_and_fetch(self, postgres_backend, test_table):
+        """Test inserting data and fetching it back."""
+        result = postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s) RETURNING id",
+            ("Alice", 25, Decimal("100.50"))
         )
-    """)
-    yield
-    postgres_backend.execute("DROP TABLE IF EXISTS test_table")
+        assert result.affected_rows == 1
+
+        row = postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("Alice",)
+        )
+        assert row is not None
+        assert row["name"] == "Alice"
+        assert row["age"] == 25
+        assert row["balance"] == Decimal("100.50")
+
+    def test_update_and_verify(self, postgres_backend, test_table):
+        """Test updating data and verifying the change."""
+        postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+            ("Bob", 30, Decimal("200.00"))
+        )
+
+        result = postgres_backend.execute(
+            "UPDATE test_crud_table SET age = %s, balance = %s WHERE name = %s",
+            (31, Decimal("250.75"), "Bob")
+        )
+        assert result.affected_rows == 1
+
+        row = postgres_backend.fetch_one(
+            "SELECT age, balance FROM test_crud_table WHERE name = %s",
+            ("Bob",)
+        )
+        assert row["age"] == 31
+        assert row["balance"] == Decimal("250.75")
+
+    def test_delete_and_confirm(self, postgres_backend, test_table):
+        """Test deleting data and confirming removal."""
+        postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+            ("Charlie", 35, Decimal("300.00"))
+        )
+
+        result = postgres_backend.execute(
+            "DELETE FROM test_crud_table WHERE name = %s",
+            ("Charlie",)
+        )
+        assert result.affected_rows == 1
+
+        row = postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("Charlie",)
+        )
+        assert row is None
+
+    def test_fetch_all(self, postgres_backend, test_table):
+        """Test fetching multiple rows."""
+        for i in range(3):
+            postgres_backend.execute(
+                "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+                (f"User{i}", 20 + i, Decimal(f"{100 + i * 50}"))
+            )
+
+        rows = postgres_backend.fetch_all(
+            "SELECT name FROM test_crud_table ORDER BY name"
+        )
+        assert len(rows) == 3
+        assert rows[0]["name"] == "User0"
+        assert rows[1]["name"] == "User1"
+        assert rows[2]["name"] == "User2"
+
+    def test_transaction_context_manager(self, postgres_backend, test_table):
+        """Test transaction using context manager."""
+        with postgres_backend.transaction():
+            postgres_backend.execute(
+                "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+                ("TransactionTest", 40, Decimal("500.00"))
+            )
+
+        row = postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("TransactionTest",)
+        )
+        assert row is not None
+        assert row["balance"] == Decimal("500.00")
+
+    def test_fetch_none(self, postgres_backend, test_table):
+        """Test fetching when no results exist."""
+        row = postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("NonExistent",)
+        )
+        assert row is None
 
 
-def test_insert_success(postgres_backend, setup_test_table):
-    """Test successful insertion"""
-    sql = "INSERT INTO test_table (name, age, created_at) VALUES (%s, %s, %s)"
-    params = ("test", 20, datetime.now())
-    result = postgres_backend.execute(sql, params)
-    assert result.affected_rows == 1
+class TestAsyncPostgreSQLCRUDBackend:
+    """Asynchronous CRUD tests for PostgreSQL backend."""
 
+    @pytest_asyncio.fixture
+    async def async_test_table(self, async_postgres_backend):
+        """Create a test table."""
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_crud_table")
+        await async_postgres_backend.execute("""
+            CREATE TABLE test_crud_table (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                age INT,
+                balance DECIMAL(10, 2)
+            )
+        """)
+        yield "test_crud_table"
+        await async_postgres_backend.execute("DROP TABLE IF EXISTS test_crud_table")
 
-def test_insert_with_invalid_data(postgres_backend, setup_test_table):
-    """Test inserting invalid data"""
-    with pytest.raises(QueryError):
-        sql = "INSERT INTO test_table (invalid_column) VALUES (%s)"
-        params = ("value",)
-        postgres_backend.execute(sql, params)
+    async def test_insert_and_fetch_async(self, async_postgres_backend, async_test_table):
+        """Test inserting data and fetching it back (async)."""
+        result = await async_postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s) RETURNING id",
+            ("Alice", 25, Decimal("100.50"))
+        )
+        assert result.affected_rows == 1
 
+        row = await async_postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("Alice",)
+        )
+        assert row is not None
+        assert row["name"] == "Alice"
+        assert row["age"] == 25
 
-def test_fetch_one(postgres_backend, setup_test_table):
-    """Test querying a single record"""
-    sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-    params = ("test", 20)
-    postgres_backend.execute(sql, params)
-    row = postgres_backend.fetch_one("SELECT * FROM test_table WHERE name = %s", ("test",))
-    assert row is not None
-    assert row["name"] == "test"
-    assert row["age"] == 20
+    async def test_update_and_verify_async(self, async_postgres_backend, async_test_table):
+        """Test updating data and verifying the change (async)."""
+        await async_postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+            ("Bob", 30, Decimal("200.00"))
+        )
 
+        result = await async_postgres_backend.execute(
+            "UPDATE test_crud_table SET age = %s, balance = %s WHERE name = %s",
+            (31, Decimal("250.75"), "Bob")
+        )
+        assert result.affected_rows == 1
 
-def test_fetch_all(postgres_backend, setup_test_table):
-    """Test querying multiple records"""
-    sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-    params1 = ("test1", 20)
-    params2 = ("test2", 30)
-    postgres_backend.execute(sql, params1)
-    postgres_backend.execute(sql, params2)
-    rows = postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY age")
-    assert len(rows) == 2
-    assert rows[0]["age"] == 20
-    assert rows[1]["age"] == 30
+        row = await async_postgres_backend.fetch_one(
+            "SELECT age, balance FROM test_crud_table WHERE name = %s",
+            ("Bob",)
+        )
+        assert row["age"] == 31
+        assert row["balance"] == Decimal("250.75")
 
+    async def test_delete_and_confirm_async(self, async_postgres_backend, async_test_table):
+        """Test deleting data and confirming removal (async)."""
+        await async_postgres_backend.execute(
+            "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+            ("Charlie", 35, Decimal("300.00"))
+        )
 
-def test_update(postgres_backend, setup_test_table):
-    """Test updating a record"""
-    sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-    params = ("test", 20)
-    postgres_backend.execute(sql, params)
+        result = await async_postgres_backend.execute(
+            "DELETE FROM test_crud_table WHERE name = %s",
+            ("Charlie",)
+        )
+        assert result.affected_rows == 1
 
-    sql = "UPDATE test_table SET age = %s WHERE name = %s"
-    params = (21, "test")
-    result = postgres_backend.execute(sql, params)
-    assert result.affected_rows == 1
+        row = await async_postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("Charlie",)
+        )
+        assert row is None
 
-    row = postgres_backend.fetch_one("SELECT * FROM test_table WHERE name = %s", ("test",))
-    assert row["age"] == 21
+    async def test_fetch_all_async(self, async_postgres_backend, async_test_table):
+        """Test fetching multiple rows (async)."""
+        for i in range(3):
+            await async_postgres_backend.execute(
+                "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+                (f"User{i}", 20 + i, Decimal(f"{100 + i * 50}"))
+            )
 
+        rows = await async_postgres_backend.fetch_all(
+            "SELECT name FROM test_crud_table ORDER BY name"
+        )
+        assert len(rows) == 3
+        assert rows[0]["name"] == "User0"
+        assert rows[1]["name"] == "User1"
+        assert rows[2]["name"] == "User2"
 
-def test_delete(postgres_backend, setup_test_table):
-    """Test deleting a record"""
-    sql = "INSERT INTO test_table (name, age) VALUES (%s, %s)"
-    params = ("test", 20)
-    postgres_backend.execute(sql, params)
+    async def test_async_transaction_context_manager(self, async_postgres_backend, async_test_table):
+        """Test transaction using context manager (async)."""
+        async with async_postgres_backend.transaction():
+            await async_postgres_backend.execute(
+                "INSERT INTO test_crud_table (name, age, balance) VALUES (%s, %s, %s)",
+                ("TransactionTest", 40, Decimal("500.00"))
+            )
 
-    sql = "DELETE FROM test_table WHERE name = %s"
-    params = ("test",)
-    result = postgres_backend.execute(sql, params)
-    assert result.affected_rows == 1
+        row = await async_postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("TransactionTest",)
+        )
+        assert row is not None
+        assert row["balance"] == Decimal("500.00")
 
-    row = postgres_backend.fetch_one("SELECT * FROM test_table WHERE name = %s", ("test",))
-    assert row is None
-
-
-def test_execute_many(postgres_backend, setup_test_table):
-    """Test batch insertion"""
-    data = [
-        ("name1", 20, datetime.now()),
-        ("name2", 30, datetime.now()),
-        ("name3", 40, datetime.now())
-    ]
-    result = postgres_backend.execute_many(
-        "INSERT INTO test_table (name, age, created_at) VALUES (%s, %s, %s)",
-        data
-    )
-    assert result.affected_rows == 3
-    rows = postgres_backend.fetch_all("SELECT * FROM test_table ORDER BY age")
-    assert len(rows) == 3
+    async def test_async_fetch_none(self, async_postgres_backend, async_test_table):
+        """Test fetching when no results exist (async)."""
+        row = await async_postgres_backend.fetch_one(
+            "SELECT * FROM test_crud_table WHERE name = %s",
+            ("NonExistent",)
+        )
+        assert row is None

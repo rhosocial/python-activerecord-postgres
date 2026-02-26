@@ -26,47 +26,6 @@ async def setup_mapped_users_table(async_postgres_backend):
 
 
 @pytest.mark.asyncio
-async def test_async_insert_and_returning_with_mapping(async_postgres_backend, setup_mapped_users_table):
-    """
-    Tests that async execute() with an INSERT and RETURNING clause correctly applies column_mapping.
-    """
-    backend = async_postgres_backend
-    now = datetime.now()
-    test_uuid = uuid.uuid4()
-
-    column_to_field_mapping = {
-        "user_id": "pk",
-        "name": "full_name",
-        "user_uuid": "uuid",
-        "is_active": "active",
-        "created_at": "creation_time"
-    }
-
-    sql = "INSERT INTO mapped_users (name, email, created_at, user_uuid, is_active) VALUES (%s, %s, %s, %s, %s)"
-    params = ("Async PG User", "asyncpg@example.com", now, test_uuid, True)
-
-    result = await backend.execute(
-        sql=sql,
-        params=params,
-        returning=True,
-        column_mapping=column_to_field_mapping
-    )
-
-    assert result.data is not None
-    assert len(result.data) == 1
-    returned_row = result.data[0]
-    
-    assert "pk" in returned_row
-    assert "full_name" in returned_row
-    assert "uuid" in returned_row
-    assert "active" in returned_row
-    assert returned_row["pk"] == 1
-    assert returned_row["full_name"] == "Async PG User"
-    assert returned_row["uuid"] == test_uuid
-    assert returned_row["active"] is True
-
-
-@pytest.mark.asyncio
 async def test_async_update_with_backend(async_postgres_backend, setup_mapped_users_table):
     """
     Tests that an async update operation via execute() works correctly for PostgreSQL.

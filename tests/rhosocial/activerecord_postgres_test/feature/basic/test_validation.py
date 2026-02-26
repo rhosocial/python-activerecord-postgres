@@ -15,19 +15,9 @@ ensuring postgres backend compatibility.
 # in some IDEs. These fixtures are defined in the testsuite package and are
 # parameterized to run against the scenarios defined in `providers/scenarios.py`.
 from rhosocial.activerecord.testsuite.feature.basic.conftest import (
-    user_class,
-    type_case_class,
-    type_test_model,
-    validated_user_class,
-    validated_user
+    validated_user,
+    async_validated_user
 )
 
 # Import shared tests from testsuite package
-from rhosocial.activerecord.testsuite.feature.basic.test_validation import (
-    validated_user_data,
-    test_field_validation,
-    test_business_rule_validation,
-    test_validation_on_update,
-    test_null_field_validation,
-    test_multiple_validation_errors
-)
+from rhosocial.activerecord.testsuite.feature.basic.test_validation import *
