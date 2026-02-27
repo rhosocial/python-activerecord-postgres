@@ -117,7 +117,7 @@ disallow_untyped_defs = true
 check_untyped_defs = true
 
 [tool.towncrier]
-package = "rhosocial_activerecord_postgres"
+package = "rhosocial.activerecord.backend.impl.postgres"
 package_dir = "src"
 filename = "CHANGELOG.md"
 directory = "changelog.d"
