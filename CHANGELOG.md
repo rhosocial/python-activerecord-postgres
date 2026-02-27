@@ -1,3 +1,11 @@
+## [v1.0.0.dev4] - 2026-02-27
+
+### Added
+
+- PostgreSQL backend adaptation to new expression-dialect architecture. ([#4](https://github.com/rhosocial/python-activerecord-postgres/issues/4))
+- Implemented `introspect_and_adapt()` in PostgreSQL backends to achieve full sync/async symmetry with the core backend interface. ([#5](https://github.com/rhosocial/python-activerecord-postgres/issues/5))
+
+
 ## [1.0.0.dev2] - 2025-12-11
 
 ### Added
