@@ -27,6 +27,11 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     LateralJoinSupport,
     WildcardSupport,
     JoinSupport,
+    ViewSupport,
+    SchemaSupport,
+    IndexSupport,
+    SequenceSupport,
+    TableSupport,
 )
 from rhosocial.activerecord.backend.dialect.mixins import (
     CTEMixin,
@@ -46,6 +51,11 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
+    ViewMixin,
+    SchemaMixin,
+    IndexMixin,
+    SequenceMixin,
+    TableMixin,
 )
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -70,6 +80,11 @@ class PostgresDialect(
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
+    ViewMixin,
+    SchemaMixin,
+    IndexMixin,
+    SequenceMixin,
+    TableMixin,
     # Protocols for type checking
     CTESupport,
     FilterClauseSupport,
@@ -89,6 +104,11 @@ class PostgresDialect(
     LateralJoinSupport,
     WildcardSupport,
     JoinSupport,
+    ViewSupport,
+    SchemaSupport,
+    IndexSupport,
+    SequenceSupport,
+    TableSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
@@ -292,4 +312,220 @@ class PostgresDialect(
     def supports_jsonb(self) -> bool:
         """Check if PostgreSQL version supports JSONB type (introduced in 9.4)."""
         return self.version >= (9, 4, 0)
+
+    # region View Support
+    def supports_or_replace_view(self) -> bool:
+        """Whether CREATE OR REPLACE VIEW is supported."""
+        return True  # PostgreSQL supports OR REPLACE
+
+    def supports_temporary_view(self) -> bool:
+        """Whether TEMPORARY views are supported."""
+        return True  # PostgreSQL supports TEMPORARY views
+
+    def supports_materialized_view(self) -> bool:
+        """Whether materialized views are supported."""
+        return True  # PostgreSQL supports materialized views since 9.3
+
+    def supports_refresh_materialized_view(self) -> bool:
+        """Whether REFRESH MATERIALIZED VIEW is supported."""
+        return True  # PostgreSQL supports REFRESH MATERIALIZED VIEW
+
+    def supports_materialized_view_concurrent_refresh(self) -> bool:
+        """Whether concurrent refresh for materialized views is supported."""
+        return self.version >= (9, 4, 0)  # CONCURRENTLY added in 9.4
+
+    def supports_materialized_view_tablespace(self) -> bool:
+        """Whether tablespace specification for materialized views is supported."""
+        return True
+
+    def supports_materialized_view_storage_options(self) -> bool:
+        """Whether storage options for materialized views are supported."""
+        return True
+
+    def supports_if_exists_view(self) -> bool:
+        """Whether DROP VIEW IF EXISTS is supported."""
+        return True  # PostgreSQL supports IF EXISTS
+
+    def supports_view_check_option(self) -> bool:
+        """Whether WITH CHECK OPTION is supported."""
+        return True  # PostgreSQL supports WITH CHECK OPTION
+
+    def supports_cascade_view(self) -> bool:
+        """Whether DROP VIEW CASCADE is supported."""
+        return True  # PostgreSQL supports CASCADE
+
+    def format_create_view_statement(
+        self, expr: "CreateViewExpression"
+    ) -> Tuple[str, tuple]:
+        """Format CREATE VIEW statement for PostgreSQL."""
+        parts = ["CREATE"]
+
+        if expr.temporary:
+            parts.append("TEMPORARY")
+
+        if expr.replace:
+            parts.append("OR REPLACE")
+
+        parts.append("VIEW")
+        parts.append(self.format_identifier(expr.view_name))
+
+        if expr.column_aliases:
+            cols = ', '.join(self.format_identifier(c) for c in expr.column_aliases)
+            parts.append(f"({cols})")
+
+        query_sql, query_params = expr.query.to_sql()
+        parts.append(f"AS {query_sql}")
+
+        if expr.options and expr.options.check_option:
+            check_option = expr.options.check_option.value
+            parts.append(f"WITH {check_option} CHECK OPTION")
+
+        return ' '.join(parts), query_params
+
+    def format_drop_view_statement(
+        self, expr: "DropViewExpression"
+    ) -> Tuple[str, tuple]:
+        """Format DROP VIEW statement for PostgreSQL."""
+        parts = ["DROP VIEW"]
+        if expr.if_exists:
+            parts.append("IF EXISTS")
+        parts.append(self.format_identifier(expr.view_name))
+        if expr.cascade:
+            parts.append("CASCADE")
+        return ' '.join(parts), ()
+
+    def format_create_materialized_view_statement(
+        self, expr: "CreateMaterializedViewExpression"
+    ) -> Tuple[str, tuple]:
+        """Format CREATE MATERIALIZED VIEW statement for PostgreSQL."""
+        parts = ["CREATE MATERIALIZED VIEW"]
+        parts.append(self.format_identifier(expr.view_name))
+
+        if expr.column_aliases:
+            cols = ', '.join(self.format_identifier(c) for c in expr.column_aliases)
+            parts.append(f"({cols})")
+
+        if expr.tablespace and self.supports_materialized_view_tablespace():
+            parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
+
+        if expr.storage_options and self.supports_materialized_view_storage_options():
+            storage_parts = []
+            for key, value in expr.storage_options.items():
+                storage_parts.append(f"{key.upper()} = {value}")
+            parts.append(f"WITH ({', '.join(storage_parts)})")
+
+        query_sql, query_params = expr.query.to_sql()
+        parts.append(f"AS {query_sql}")
+
+        if expr.with_data:
+            parts.append("WITH DATA")
+        else:
+            parts.append("WITH NO DATA")
+
+        return ' '.join(parts), query_params
+
+    def format_drop_materialized_view_statement(
+        self, expr: "DropMaterializedViewExpression"
+    ) -> Tuple[str, tuple]:
+        """Format DROP MATERIALIZED VIEW statement for PostgreSQL."""
+        parts = ["DROP MATERIALIZED VIEW"]
+        if expr.if_exists:
+            parts.append("IF EXISTS")
+        parts.append(self.format_identifier(expr.view_name))
+        if expr.cascade:
+            parts.append("CASCADE")
+        return ' '.join(parts), ()
+
+    def format_refresh_materialized_view_statement(
+        self, expr: "RefreshMaterializedViewExpression"
+    ) -> Tuple[str, tuple]:
+        """Format REFRESH MATERIALIZED VIEW statement for PostgreSQL."""
+        parts = ["REFRESH MATERIALIZED VIEW"]
+        if expr.concurrent and self.supports_materialized_view_concurrent_refresh():
+            parts.append("CONCURRENTLY")
+        parts.append(self.format_identifier(expr.view_name))
+        if expr.with_data is not None:
+            parts.append("WITH DATA" if expr.with_data else "WITH NO DATA")
+        return ' '.join(parts), ()
+    # endregion
+
+    # region Schema Support
+    def supports_create_schema(self) -> bool:
+        """Whether CREATE SCHEMA is supported."""
+        return True
+
+    def supports_drop_schema(self) -> bool:
+        """Whether DROP SCHEMA is supported."""
+        return True
+
+    def supports_schema_if_not_exists(self) -> bool:
+        """Whether CREATE SCHEMA IF NOT EXISTS is supported."""
+        return True  # PostgreSQL 9.3+ supports IF NOT EXISTS
+
+    def supports_schema_if_exists(self) -> bool:
+        """Whether DROP SCHEMA IF EXISTS is supported."""
+        return True
+
+    def supports_schema_cascade(self) -> bool:
+        """Whether DROP SCHEMA CASCADE is supported."""
+        return True
+    # endregion
+
+    # region Index Support
+    def supports_create_index(self) -> bool:
+        """Whether CREATE INDEX is supported."""
+        return True
+
+    def supports_drop_index(self) -> bool:
+        """Whether DROP INDEX is supported."""
+        return True
+
+    def supports_unique_index(self) -> bool:
+        """Whether UNIQUE indexes are supported."""
+        return True
+
+    def supports_index_if_not_exists(self) -> bool:
+        """Whether CREATE INDEX IF NOT EXISTS is supported."""
+        return True  # PostgreSQL 9.5+ supports IF NOT EXISTS
+
+    def supports_index_if_exists(self) -> bool:
+        """Whether DROP INDEX IF EXISTS is supported."""
+        return True
+    # endregion
+
+    # region Sequence Support
+    def supports_create_sequence(self) -> bool:
+        """Whether CREATE SEQUENCE is supported."""
+        return True
+
+    def supports_drop_sequence(self) -> bool:
+        """Whether DROP SEQUENCE is supported."""
+        return True
+    # endregion
+
+    # region Table Support
+    def supports_if_not_exists_table(self) -> bool:
+        """Whether CREATE TABLE IF NOT EXISTS is supported."""
+        return True
+
+    def supports_if_exists_table(self) -> bool:
+        """Whether DROP TABLE IF EXISTS is supported."""
+        return True
+
+    def supports_temporary_table(self) -> bool:
+        """Whether TEMPORARY tables are supported."""
+        return True
+
+    def supports_table_inheritance(self) -> bool:
+        """Whether table inheritance is supported."""
+        return True  # PostgreSQL supports INHERITS
+
+    def supports_table_partitioning(self) -> bool:
+        """Whether table partitioning is supported."""
+        return True  # PostgreSQL supports partitioning
+
+    def supports_table_tablespace(self) -> bool:
+        """Whether tablespace specification is supported."""
+        return True
+    # endregion
     # endregion
