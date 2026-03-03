@@ -1,30 +1,24 @@
 # src/rhosocial/activerecord/backend/impl/postgres/backend.py
 """
-PostgreSQL backend implementation with sync and async support.
+PostgreSQL backend implementation with sync support.
 
-This module provides both synchronous and asynchronous PostgreSQL implementations:
+This module provides a synchronous PostgreSQL implementation:
 - PostgreSQL synchronous backend with connection management and query execution
-- PostgreSQL asynchronous backend for async/await workflows
 - PostgreSQL-specific connection configuration
 - Type mapping and value conversion
-- Transaction management with savepoint support (sync and async)
+- Transaction management with savepoint support
 - PostgreSQL dialect and expression handling
 - PostgreSQL-specific type definitions and mappings
 
 Architecture:
 - PostgreSQLBackend: Synchronous implementation using psycopg
-- AsyncPostgreSQLBackend: Asynchronous implementation using psycopg
-- Both share common logic through PostgreSQLBackendMixin
 - Independent from ORM frameworks - uses only native drivers
 """
 import datetime
 import logging
-import re
-from typing import Optional, Tuple, List, Any, Dict, Union, Type
+from typing import Dict, List, Optional, Tuple
 
-# Import psycopg for both sync and async
 import psycopg
-from psycopg import Connection
 from psycopg.errors import Error as PsycopgError
 from psycopg.errors import (
     IntegrityError as PsycopgIntegrityError,
@@ -32,7 +26,6 @@ from psycopg.errors import (
     ProgrammingError as PsycopgProgrammingError,
     DeadlockDetected as PsycopgDeadlockError
 )
-from psycopg.types.json import Jsonb
 
 from rhosocial.activerecord.backend.base import StorageBackend
 from rhosocial.activerecord.backend.errors import (
@@ -44,7 +37,6 @@ from rhosocial.activerecord.backend.errors import (
     QueryError,
 )
 from rhosocial.activerecord.backend.result import QueryResult
-from rhosocial.activerecord.backend.config import ConnectionConfig
 from .adapters import (
     PostgresListAdapter,
     PostgresJSONBAdapter,
@@ -52,17 +44,25 @@ from .adapters import (
 )
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
+from .mixins import PostgresBackendMixin
+from .protocols import PostgresExtensionInfo
 from .transaction import PostgresTransactionManager
 
 
-class PostgresBackend(StorageBackend):
+class PostgresBackend(PostgresBackendMixin, StorageBackend):
     """PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
-        """Initialize PostgreSQL backend with connection configuration."""
+        """Initialize PostgreSQL backend with connection configuration.
+
+        Note:
+            The dialect is initialized with a default version (9.6.0) and no plugins
+            are enabled. Call introspect_and_adapt() after connecting to detect
+            the actual server version and installed extensions.
+        """
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get('connection_config')
-        
+
         if connection_config is None:
             # Extract PostgreSQL-specific parameters from kwargs
             config_params = {}
@@ -94,16 +94,20 @@ class PostgresBackend(StorageBackend):
 
             kwargs['connection_config'] = PostgresConnectionConfig(**config_params)
 
+        # Initialize the base class first to ensure all base properties are set
         super().__init__(**kwargs)
 
         # Initialize PostgreSQL-specific components
-        self._dialect = PostgresDialect(self.get_server_version())
+        # Use default version (9.6.0) - actual version detected via introspect_and_adapt()
+        self._dialect = PostgresDialect((9, 6, 0))
+
+        # Register PostgreSQL-specific type adapters (same as async backend)
+        self._register_postgres_adapters()
+
         # Initialize transaction manager with connection (will be set when connected)
         # Pass None for connection initially, it will be updated later
+        # Use the logger from the base class
         self._transaction_manager = PostgresTransactionManager(None, self.logger)
-
-        # Register PostgreSQL-specific type adapters
-        self._register_postgres_adapters()
 
         self.log(logging.INFO, "PostgreSQLBackend initialized")
 
@@ -150,7 +154,7 @@ class PostgresBackend(StorageBackend):
             # Add additional parameters if they exist in config
             additional_params = [
                 'application_name', 'fallback_application_name', 'connect_timeout',
-                'service', 'target_session_attrs',
+                'options', 'service', 'target_session_attrs',
                 'gssencmode', 'channel_binding', 'replication', 'assume_role',
                 'role', 'search_path', 'row_security', 'datestyle', 'intervalstyle',
                 'timezone', 'extra_float_digits', 'client_encoding',
@@ -299,18 +303,75 @@ class PostgresBackend(StorageBackend):
     def introspect_and_adapt(self) -> None:
         """Introspect backend and adapt backend instance to actual server capabilities.
 
-        This method ensures a connection exists, queries the actual PostgreSQL server version,
-        and updates the backend's internal state accordingly.
+        This method ensures a connection exists, queries the actual PostgreSQL server version
+        and installed extensions, and updates the backend's internal state.
+
+        Introspection includes:
+        1. Server version: affects version-dependent feature support checks
+        2. Installed extensions: queries pg_extension system table to determine plugin availability
+
+        After detection, the dialect instance caches extension information,
+        which can be queried via is_extension_installed().
         """
         # Ensure connection exists
         if not self._connection:
             self.connect()
-        # PostgreSQL backend currently does not have version-dependent adapters
-        # This method exists to satisfy the interface contract
 
-    def requires_manual_commit(self) -> bool:
-        """Check if manual commit is required for this database."""
-        return not getattr(self.config, 'autocommit', False)
+        # Get server version
+        actual_version = self.get_server_version()
+        cached_version = getattr(self, '_server_version_cache', None)
+        version_changed = cached_version != actual_version
+
+        if version_changed:
+            self._server_version_cache = actual_version
+            self._dialect = PostgresDialect(actual_version)
+
+        # Detect installed extensions
+        extensions = self._detect_extensions()
+        self._dialect._extensions = extensions
+
+        # Log detected extensions
+        installed_exts = [
+            f"{k}={v.version}"
+            for k, v in extensions.items()
+            if v.installed
+        ]
+        ext_info = ', '.join(installed_exts) if installed_exts else 'none'
+
+        if version_changed:
+            self.log(logging.INFO, f"Adapted to PostgreSQL {actual_version}, extensions: {ext_info}")
+        else:
+            self.log(logging.DEBUG, f"Extensions detected: {ext_info}")
+
+    def _detect_extensions(self) -> Dict[str, PostgresExtensionInfo]:
+        """Detect installed extensions."""
+        with self._connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT extname, extversion, nspname as schema_name
+                FROM pg_extension
+                JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
+            """)
+            rows = cursor.fetchall()
+
+            extensions = {}
+            for row in rows:
+                ext_name = row[0]
+                extensions[ext_name] = PostgresExtensionInfo(
+                    name=ext_name,
+                    installed=True,
+                    version=row[1],
+                    schema=row[2]
+                )
+
+            # Add known but not installed extensions
+            for known_ext in PostgresDialect.KNOWN_EXTENSIONS:
+                if known_ext not in extensions:
+                    extensions[known_ext] = PostgresExtensionInfo(
+                        name=known_ext,
+                        installed=False
+                    )
+
+            return extensions
 
     def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, **kwargs) -> QueryResult:
         """Execute a SQL statement with optional parameters."""
@@ -346,28 +407,6 @@ class PostgresBackend(StorageBackend):
                 options.column_adapters = kwargs['column_adapters']
         
         return super().execute(sql, params, options=options)
-
-    def _prepare_sql_and_params(
-        self,
-        sql: str,
-        params: Optional[Tuple]
-    ) -> Tuple[str, Optional[Tuple]]:
-        """
-        Prepare SQL and parameters for PostgreSQL execution.
-
-        Converts the generic '?' placeholder to PostgreSQL-compatible '%s' placeholder.
-        """
-        if params is None:
-            return sql, None
-
-        # Replace '?' placeholders with '%s' for PostgreSQL
-        prepared_sql = sql.replace('?', '%s')
-        return prepared_sql, params
-
-    def create_expression(self, expression_str: str):
-        """Create an expression object for raw SQL expressions."""
-        from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
-        return RawSQLExpression(self.dialect, expression_str)
 
     def ping(self, reconnect: bool = True) -> bool:
         """Ping the PostgreSQL server to check if the connection is alive."""
@@ -492,69 +531,7 @@ class PostgresBackend(StorageBackend):
         if not self.in_transaction and self._connection:
             if not getattr(self.config, 'autocommit', False):
                 self._connection.commit()
-                self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
-
-    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple['SQLTypeAdapter', Type]]:
-        """
-        [Backend Implementation] Provides default type adapter suggestions for PostgreSQL.
-
-        This method defines a curated set of type adapter suggestions for common Python
-        types, mapping them to their typical PostgreSQL-compatible representations as
-        demonstrated in test fixtures. It explicitly retrieves necessary `SQLTypeAdapter`
-        instances from the backend's `adapter_registry`. If an adapter for a specific
-        (Python type, DB driver type) pair is not registered, no suggestion will be
-        made for that Python type.
-
-        Returns:
-            Dict[Type, Tuple[SQLTypeAdapter, Type]]: A dictionary where keys are
-            original Python types (`TypeRegistry`'s `py_type`), and values are
-            tuples containing a `SQLTypeAdapter` instance and the target
-            Python type (`TypeRegistry`'s `db_type`) expected by the driver.
-        """
-        suggestions: Dict[Type, Tuple['SQLTypeAdapter', Type]] = {}
-
-        # Define a list of desired Python type to DB driver type mappings.
-        # This list reflects types seen in test fixtures and common usage,
-        # along with their preferred database-compatible Python types for the driver.
-        # Types that are natively compatible with the DB driver (e.g., Python str, int, float)
-        # and for which no specific conversion logic is needed are omitted from this list.
-        # The consuming layer should assume pass-through behavior for any Python type
-        # that does not have an explicit adapter suggestion.
-        #
-        # Exception: If a user requires specific processing for a natively compatible type
-        # (e.g., custom serialization/deserialization for JSON strings beyond basic conversion),
-        # they would need to implement and register their own specialized adapter.
-        # This backend's default suggestions do not cater to such advanced processing needs.
-        from datetime import date, datetime, time
-        from decimal import Decimal
-        from uuid import UUID
-        from enum import Enum
-
-        type_mappings = [
-            (bool, bool),        # Python bool -> DB driver bool (PostgreSQL BOOLEAN)
-            # Why str for date/time?
-            # PostgreSQL has native DATE, TIME, TIMESTAMP types but accepts string representations
-            (datetime, str),    # Python datetime -> DB driver str (PostgreSQL TIMESTAMP)
-            (date, str),        # Python date -> DB driver str (PostgreSQL DATE)
-            (time, str),        # Python time -> DB driver str (PostgreSQL TIME)
-            (Decimal, Decimal),   # Python Decimal -> DB driver Decimal (PostgreSQL NUMERIC/DECIMAL)
-            (UUID, str),        # Python UUID -> DB driver str (PostgreSQL UUID type)
-            (dict, str),        # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
-            (list, list),       # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
-            (Enum, str),        # Python Enum -> DB driver str (PostgreSQL TEXT)
-        ]
-
-        # Iterate through the defined mappings and retrieve adapters from the registry.
-        for py_type, db_type in type_mappings:
-            adapter = self.adapter_registry.get_adapter(py_type, db_type)
-            if adapter:
-                suggestions[py_type] = (adapter, db_type)
-            else:
-                # Log a debug message if a specific adapter is expected but not found.
-                self.log(logging.DEBUG, f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
-                                      "Suggestion will not be provided for this type.")
-
-        return suggestions
+            self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 
     def log(self, level: int, message: str):
         """Log a message with the specified level."""
