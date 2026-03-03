@@ -9,107 +9,55 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.protocols import (
-    CTESupport,
-    FilterClauseSupport,
-    WindowFunctionSupport,
-    JSONSupport,
-    ReturningSupport,
-    AdvancedGroupingSupport,
-    ArraySupport,
-    ExplainSupport,
-    GraphSupport,
-    LockingSupport,
-    MergeSupport,
-    OrderedSetAggregationSupport,
-    QualifyClauseSupport,
-    TemporalTableSupport,
-    UpsertSupport,
-    LateralJoinSupport,
-    WildcardSupport,
-    JoinSupport,
-    ViewSupport,
-    SchemaSupport,
-    IndexSupport,
-    SequenceSupport,
-    TableSupport,
+    CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport,
+    ReturningSupport, AdvancedGroupingSupport, ArraySupport, ExplainSupport,
+    GraphSupport, LockingSupport, MergeSupport, OrderedSetAggregationSupport,
+    QualifyClauseSupport, TemporalTableSupport, UpsertSupport, LateralJoinSupport,
+    WildcardSupport, JoinSupport, ViewSupport, SchemaSupport, IndexSupport,
+    SequenceSupport, TableSupport,
 )
 from rhosocial.activerecord.backend.dialect.mixins import (
-    CTEMixin,
-    FilterClauseMixin,
-    WindowFunctionMixin,
-    JSONMixin,
-    ReturningMixin,
-    AdvancedGroupingMixin,
-    ArrayMixin,
-    ExplainMixin,
-    GraphMixin,
-    LockingMixin,
-    MergeMixin,
-    OrderedSetAggregationMixin,
-    QualifyClauseMixin,
-    TemporalTableMixin,
-    UpsertMixin,
-    LateralJoinMixin,
-    JoinMixin,
-    ViewMixin,
-    SchemaMixin,
-    IndexMixin,
-    SequenceMixin,
-    TableMixin,
+    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
+    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
+    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
+    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
+    SequenceMixin, TableMixin,
 )
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
+# PostgreSQL-specific imports
+from .protocols import (
+    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
+    PostgresVectorSupport, PostgresSpatialSupport, PostgresTrigramSupport,
+    PostgresHstoreSupport,
+)
+from .mixins import (
+    PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
+    PostgresVectorMixin, PostgresSpatialMixin, PostgresTrigramMixin, PostgresHstoreMixin,
+)
 
 
 class PostgresDialect(
     SQLDialectBase,
     # Include mixins for features that PostgreSQL supports (with version-dependent implementations)
-    CTEMixin,
-    FilterClauseMixin,
-    WindowFunctionMixin,
-    JSONMixin,
-    ReturningMixin,
-    AdvancedGroupingMixin,
-    ArrayMixin,
-    ExplainMixin,
-    GraphMixin,
-    LockingMixin,
-    MergeMixin,
-    OrderedSetAggregationMixin,
-    QualifyClauseMixin,
-    TemporalTableMixin,
-    UpsertMixin,
-    LateralJoinMixin,
-    JoinMixin,
-    ViewMixin,
-    SchemaMixin,
-    IndexMixin,
-    SequenceMixin,
-    TableMixin,
+    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
+    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
+    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
+    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
+    SequenceMixin, TableMixin,
+    # PostgreSQL-specific extension mixins (PostgresExtensionMixin must come first)
+    PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
+    PostgresVectorMixin, PostgresSpatialMixin, PostgresTrigramMixin, PostgresHstoreMixin,
     # Protocols for type checking
-    CTESupport,
-    FilterClauseSupport,
-    WindowFunctionSupport,
-    JSONSupport,
-    ReturningSupport,
-    AdvancedGroupingSupport,
-    ArraySupport,
-    ExplainSupport,
-    GraphSupport,
-    LockingSupport,
-    MergeSupport,
-    OrderedSetAggregationSupport,
-    QualifyClauseSupport,
-    TemporalTableSupport,
-    UpsertSupport,
-    LateralJoinSupport,
-    WildcardSupport,
-    JoinSupport,
-    ViewSupport,
-    SchemaSupport,
-    IndexSupport,
-    SequenceSupport,
-    TableSupport,
-):
+    CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
+    AdvancedGroupingSupport, ArraySupport, ExplainSupport, GraphSupport, LockingSupport,
+    MergeSupport, OrderedSetAggregationSupport, QualifyClauseSupport, TemporalTableSupport,
+    UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
+    SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
+    # PostgreSQL-specific protocols
+    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
+    PostgresVectorSupport, PostgresSpatialSupport, PostgresTrigramSupport, PostgresHstoreSupport,
+    ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
 
@@ -124,6 +72,14 @@ class PostgresDialect(
     - Advanced grouping (CUBE, ROLLUP, GROUPING SETS) (since 9.5)
     - Array types (since early versions)
     - LATERAL joins (since 9.3)
+
+    PostgreSQL-specific features:
+    - Table inheritance (INHERITS)
+    - CONCURRENTLY refresh for materialized views (since 9.4)
+    - Extension detection (PostGIS, pgvector, pg_trgm, hstore, etc.)
+
+    Note: Extension features require the extension to be installed in the database.
+    Use introspect_and_adapt() to detect installed extensions automatically.
     """
 
     def __init__(self, version: Tuple[int, int, int] = (13, 0, 0)):
