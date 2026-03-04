@@ -173,4 +173,5 @@ cython_debug/
 
 *.pem
 *.crt
-.env*
+.env*coverage*.json
+htmlcov/
