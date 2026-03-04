@@ -360,3 +360,278 @@ class PostgresHstoreMixin:
     def supports_hstore_operators(self) -> bool:
         """Check if hstore extension is installed."""
         return self.is_extension_installed('hstore')
+
+
+# =============================================================================
+# Native Feature Mixins (PostgreSQL Built-in Features)
+# =============================================================================
+
+
+class PostgresPartitionMixin:
+    """PostgreSQL partitioning enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_hash_partitioning(self) -> bool:
+        """HASH partitioning is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_default_partition(self) -> bool:
+        """DEFAULT partition is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_partition_key_update(self) -> bool:
+        """Partition key row movement is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_concurrent_detach(self) -> bool:
+        """Concurrent DETACH is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_partition_bounds_expression(self) -> bool:
+        """Partition bounds expression is native feature, PG 12+."""
+        return self.version >= (12, 0, 0)
+
+    def supports_partitionwise_join(self) -> bool:
+        """Partitionwise join is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_partitionwise_aggregate(self) -> bool:
+        """Partitionwise aggregate is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+
+class PostgresIndexMixin:
+    """PostgreSQL index enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_safe_hash_index(self) -> bool:
+        """Hash index WAL logging is native feature, PG 10+."""
+        return self.version >= (10, 0, 0)
+
+    def supports_parallel_create_index(self) -> bool:
+        """Parallel index build is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_gist_include(self) -> bool:
+        """GiST INCLUDE is native feature, PG 12+."""
+        return self.version >= (12, 0, 0)
+
+    def supports_reindex_concurrently(self) -> bool:
+        """REINDEX CONCURRENTLY is native feature, PG 12+."""
+        return self.version >= (12, 0, 0)
+
+    def supports_btree_deduplication(self) -> bool:
+        """B-tree deduplication is native feature, PG 13+."""
+        return self.version >= (13, 0, 0)
+
+    def supports_brin_multivalue(self) -> bool:
+        """BRIN multivalue is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_brin_bloom(self) -> bool:
+        """BRIN bloom filter is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_spgist_include(self) -> bool:
+        """SP-GiST INCLUDE is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+
+class PostgresVacuumMixin:
+    """PostgreSQL VACUUM enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_parallel_vacuum(self) -> bool:
+        """Parallel VACUUM is native feature, PG 13+."""
+        return self.version >= (13, 0, 0)
+
+    def supports_index_cleanup_auto(self) -> bool:
+        """INDEX_CLEANUP AUTO is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_vacuum_process_toast(self) -> bool:
+        """PROCESS_TOAST control is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+
+class PostgresQueryOptimizationMixin:
+    """PostgreSQL query optimization implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_jit(self) -> bool:
+        """JIT compilation is native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_incremental_sort(self) -> bool:
+        """Incremental sort is native feature, PG 13+."""
+        return self.version >= (13, 0, 0)
+
+    def supports_memoize(self) -> bool:
+        """Memoize is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_async_foreign_scan(self) -> bool:
+        """Async foreign scan is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+
+class PostgresDataTypeMixin:
+    """PostgreSQL data type enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_multirange_type(self) -> bool:
+        """Multirange is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_domain_arrays(self) -> bool:
+        """Domain arrays are native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_composite_domains(self) -> bool:
+        """Composite domains are native feature, PG 11+."""
+        return self.version >= (11, 0, 0)
+
+    def supports_jsonb_subscript(self) -> bool:
+        """JSONB subscript is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_numeric_infinity(self) -> bool:
+        """Numeric Infinity is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_nondeterministic_collation(self) -> bool:
+        """Nondeterministic ICU collation is native feature, PG 12+."""
+        return self.version >= (12, 0, 0)
+
+    def supports_xid8_type(self) -> bool:
+        """xid8 type is native feature, PG 13+."""
+        return self.version >= (13, 0, 0)
+
+
+class PostgresSQLSyntaxMixin:
+    """PostgreSQL SQL syntax enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_generated_columns(self) -> bool:
+        """Generated columns are native feature, PG 12+."""
+        return self.version >= (12, 0, 0)
+
+    def supports_cte_search_cycle(self) -> bool:
+        """CTE SEARCH/CYCLE is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_fetch_with_ties(self) -> bool:
+        """FETCH WITH TIES is native feature, PG 13+."""
+        return self.version >= (13, 0, 0)
+
+
+class PostgresLogicalReplicationMixin:
+    """PostgreSQL logical replication enhancements implementation.
+
+    All features are native, using version number for detection.
+    """
+
+    def supports_commit_timestamp(self) -> bool:
+        """Commit timestamp is native feature, PG 10+."""
+        return self.version >= (10, 0, 0)
+
+    def supports_streaming_transactions(self) -> bool:
+        """Streaming transactions is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_two_phase_decoding(self) -> bool:
+        """Two-phase decoding is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+    def supports_binary_replication(self) -> bool:
+        """Binary replication is native feature, PG 14+."""
+        return self.version >= (14, 0, 0)
+
+
+# =============================================================================
+# Extension Feature Mixins (Additional PostgreSQL Extensions)
+# =============================================================================
+
+
+class PostgresLtreeMixin:
+    """ltree label tree implementation."""
+
+    def supports_ltree_type(self) -> bool:
+        """Check if ltree extension is installed."""
+        return self.is_extension_installed('ltree')
+
+    def supports_ltree_operators(self) -> bool:
+        """Check if ltree extension is installed."""
+        return self.is_extension_installed('ltree')
+
+    def supports_ltree_index(self) -> bool:
+        """Check if ltree extension is installed."""
+        return self.is_extension_installed('ltree')
+
+
+class PostgresIntarrayMixin:
+    """intarray integer array implementation."""
+
+    def supports_intarray_operators(self) -> bool:
+        """Check if intarray extension is installed."""
+        return self.is_extension_installed('intarray')
+
+    def supports_intarray_functions(self) -> bool:
+        """Check if intarray extension is installed."""
+        return self.is_extension_installed('intarray')
+
+    def supports_intarray_index(self) -> bool:
+        """Check if intarray extension is installed."""
+        return self.is_extension_installed('intarray')
+
+
+class PostgresEarthdistanceMixin:
+    """earthdistance earth distance implementation."""
+
+    def supports_earthdistance_type(self) -> bool:
+        """Check if earthdistance extension is installed."""
+        return self.is_extension_installed('earthdistance')
+
+    def supports_earthdistance_operators(self) -> bool:
+        """Check if earthdistance extension is installed."""
+        return self.is_extension_installed('earthdistance')
+
+
+class PostgresTablefuncMixin:
+    """tablefunc table functions implementation."""
+
+    def supports_tablefunc_crosstab(self) -> bool:
+        """Check if tablefunc extension is installed."""
+        return self.is_extension_installed('tablefunc')
+
+    def supports_tablefunc_connectby(self) -> bool:
+        """Check if tablefunc extension is installed."""
+        return self.is_extension_installed('tablefunc')
+
+    def supports_tablefunc_normal_rand(self) -> bool:
+        """Check if tablefunc extension is installed."""
+        return self.is_extension_installed('tablefunc')
+
+
+class PostgresPgStatStatementsMixin:
+    """pg_stat_statements query statistics implementation."""
+
+    def supports_pg_stat_statements_view(self) -> bool:
+        """Check if pg_stat_statements extension is installed."""
+        return self.is_extension_installed('pg_stat_statements')
+
+    def supports_pg_stat_statements_reset(self) -> bool:
+        """Check if pg_stat_statements extension is installed."""
+        return self.is_extension_installed('pg_stat_statements')
