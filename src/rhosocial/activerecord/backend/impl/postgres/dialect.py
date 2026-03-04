@@ -28,12 +28,13 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 # PostgreSQL-specific imports
 from .protocols import (
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresVectorSupport, PostgresSpatialSupport, PostgresTrigramSupport,
+    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
     PostgresHstoreSupport,
 )
 from .mixins import (
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
-    PostgresVectorMixin, PostgresSpatialMixin, PostgresTrigramMixin, PostgresHstoreMixin,
+    PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin,
+    PostgresHstoreMixin,
 )
 
 
@@ -46,7 +47,7 @@ class PostgresDialect(
     UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
     SequenceMixin, TableMixin,
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
-    PostgresVectorMixin, PostgresSpatialMixin, PostgresTrigramMixin, PostgresHstoreMixin,
+    PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin, PostgresHstoreMixin,
     SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
     AdvancedGroupingSupport, ArraySupport, ExplainSupport, GraphSupport, LockingSupport,
@@ -54,8 +55,8 @@ class PostgresDialect(
     UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
     SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresVectorSupport, PostgresSpatialSupport, PostgresTrigramSupport, PostgresHstoreSupport,
-    ):
+    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport, PostgresHstoreSupport,
+):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
 

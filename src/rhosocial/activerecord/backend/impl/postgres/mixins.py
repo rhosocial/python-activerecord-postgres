@@ -119,31 +119,71 @@ class PostgresExtensionMixin:
             'min_version': '2.0',
             'description': 'PostGIS spatial database extension',
             'category': 'spatial',
+            'documentation': 'https://postgis.net/docs/',
+            'repository': 'https://postgis.net/',
         },
         'vector': {
             'min_version': '0.1',
             'description': 'pgvector vector similarity search',
             'category': 'vector',
+            'documentation': 'https://github.com/pgvector/pgvector',
+            'repository': 'https://github.com/pgvector/pgvector',
         },
         'pg_trgm': {
             'min_version': '1.0',
             'description': 'Trigram similarity search',
             'category': 'text',
+            'documentation': 'https://www.postgresql.org/docs/current/pgtrgm.html',
         },
         'hstore': {
             'min_version': '1.0',
             'description': 'Key-value pair storage',
             'category': 'data',
+            'documentation': 'https://www.postgresql.org/docs/current/hstore.html',
         },
         'uuid-ossp': {
             'min_version': '1.0',
             'description': 'UUID generation functions',
             'category': 'utility',
+            'documentation': 'https://www.postgresql.org/docs/current/uuid-ossp.html',
         },
         'pgcrypto': {
             'min_version': '1.0',
             'description': 'Cryptographic functions',
             'category': 'security',
+            'documentation': 'https://www.postgresql.org/docs/current/pgcrypto.html',
+        },
+        'ltree': {
+            'min_version': '1.0',
+            'description': 'Label tree for hierarchical data',
+            'category': 'data',
+            'documentation': 'https://www.postgresql.org/docs/current/ltree.html',
+        },
+        'intarray': {
+            'min_version': '1.0',
+            'description': 'Integer array operators and indexes',
+            'category': 'data',
+            'documentation': 'https://www.postgresql.org/docs/current/intarray.html',
+        },
+        'earthdistance': {
+            'min_version': '1.0',
+            'description': 'Great-circle distance calculations',
+            'category': 'spatial',
+            'documentation': 'https://www.postgresql.org/docs/current/earthdistance.html',
+            'dependencies': ['cube'],
+        },
+        'tablefunc': {
+            'min_version': '1.0',
+            'description': 'Table functions (crosstab, connectby)',
+            'category': 'utility',
+            'documentation': 'https://www.postgresql.org/docs/current/tablefunc.html',
+        },
+        'pg_stat_statements': {
+            'min_version': '1.0',
+            'description': 'Query execution statistics',
+            'category': 'monitoring',
+            'documentation': 'https://www.postgresql.org/docs/current/pgstatstatements.html',
+            'requires_preload': True,
         },
     }
 
@@ -253,22 +293,22 @@ class PostgresTableMixin:
         return True
 
 
-class PostgresVectorMixin:
-    """pgvector vector functionality implementation."""
+class PostgresPgvectorMixin:
+    """pgvector vector similarity search implementation."""
 
-    def supports_vector_type(self) -> bool:
+    def supports_pgvector_type(self) -> bool:
         """Check if pgvector extension is installed."""
         return self.is_extension_installed('vector')
 
-    def supports_vector_similarity_search(self) -> bool:
+    def supports_pgvector_similarity_search(self) -> bool:
         """Check if pgvector extension is installed."""
         return self.is_extension_installed('vector')
 
-    def supports_ivfflat_index(self) -> bool:
+    def supports_pgvector_ivfflat_index(self) -> bool:
         """IVFFlat index requires pgvector."""
         return self.is_extension_installed('vector')
 
-    def supports_hnsw_index(self) -> bool:
+    def supports_pgvector_hnsw_index(self) -> bool:
         """HNSW index requires pgvector 0.5.0+."""
         if not self.is_extension_installed('vector'):
             return False
@@ -278,34 +318,34 @@ class PostgresVectorMixin:
         return False
 
 
-class PostgresSpatialMixin:
+class PostgresPostGISMixin:
     """PostGIS spatial functionality implementation."""
 
-    def supports_geometry_type(self) -> bool:
+    def supports_postgis_geometry_type(self) -> bool:
         """Check if PostGIS extension is installed."""
         return self.is_extension_installed('postgis')
 
-    def supports_geography_type(self) -> bool:
+    def supports_postgis_geography_type(self) -> bool:
         """Check if PostGIS extension is installed."""
         return self.is_extension_installed('postgis')
 
-    def supports_spatial_index(self) -> bool:
+    def supports_postgis_spatial_index(self) -> bool:
         """Check if PostGIS extension is installed."""
         return self.is_extension_installed('postgis')
 
-    def supports_spatial_functions(self) -> bool:
+    def supports_postgis_spatial_functions(self) -> bool:
         """Check if PostGIS extension is installed."""
         return self.is_extension_installed('postgis')
 
 
-class PostgresTrigramMixin:
+class PostgresPgTrgmMixin:
     """pg_trgm trigram functionality implementation."""
 
-    def supports_trigram_similarity(self) -> bool:
+    def supports_pg_trgm_similarity(self) -> bool:
         """Check if pg_trgm extension is installed."""
         return self.is_extension_installed('pg_trgm')
 
-    def supports_trigram_index(self) -> bool:
+    def supports_pg_trgm_index(self) -> bool:
         """Check if pg_trgm extension is installed."""
         return self.is_extension_installed('pg_trgm')
 
