@@ -5,8 +5,8 @@ from typing import Dict, Optional, List
 import logging
 from psycopg.errors import Error as PsycopgError
 
-from ...errors import TransactionError
-from ...transaction import (
+from rhosocial.activerecord.backend.errors import TransactionError
+from rhosocial.activerecord.backend.transaction import (
     TransactionManager,
     AsyncTransactionManager,
     IsolationLevel,
