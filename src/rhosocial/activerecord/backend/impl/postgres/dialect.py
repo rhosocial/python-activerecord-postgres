@@ -30,11 +30,25 @@ from .protocols import (
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
     PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
     PostgresHstoreSupport,
+    # Native feature protocols
+    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresLogicalReplicationSupport,
+    # Extension feature protocols
+    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
 )
 from .mixins import (
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
     PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin,
     PostgresHstoreMixin,
+    # Native feature mixins
+    PostgresPartitionMixin, PostgresIndexMixin, PostgresVacuumMixin,
+    PostgresQueryOptimizationMixin, PostgresDataTypeMixin, PostgresSQLSyntaxMixin,
+    PostgresLogicalReplicationMixin,
+    # Extension feature mixins
+    PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
+    PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
 )
 
 
@@ -46,16 +60,33 @@ class PostgresDialect(
     MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
     UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
     SequenceMixin, TableMixin,
+    # PostgreSQL-specific mixins
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
     PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin, PostgresHstoreMixin,
+    # Native feature mixins
+    PostgresPartitionMixin, PostgresIndexMixin, PostgresVacuumMixin,
+    PostgresQueryOptimizationMixin, PostgresDataTypeMixin, PostgresSQLSyntaxMixin,
+    PostgresLogicalReplicationMixin,
+    # Extension feature mixins
+    PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
+    PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
+    # Protocol supports
     SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
     AdvancedGroupingSupport, ArraySupport, ExplainSupport, GraphSupport, LockingSupport,
     MergeSupport, OrderedSetAggregationSupport, QualifyClauseSupport, TemporalTableSupport,
     UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
     SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
+    # PostgreSQL-specific protocols
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
     PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport, PostgresHstoreSupport,
+    # Native feature protocols
+    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresLogicalReplicationSupport,
+    # Extension feature protocols
+    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
