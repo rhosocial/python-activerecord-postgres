@@ -1,8 +1,9 @@
 # src/rhosocial/activerecord/backend/impl/postgres/config.py
 """postgres connection configuration."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Any, Optional
+
 from rhosocial.activerecord.backend.config import ConnectionConfig, ConnectionPoolMixin
 
 
