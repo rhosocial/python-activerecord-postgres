@@ -175,22 +175,22 @@ def main():
         print(f"{'='*60}")
         
         print(f"\nPostGIS (spatial):")
-        print(f"  is_extension_installed('postgis'): {dialect.is_extension_installed('postgis')}")
-        print(f"  supports_geometry_type(): {dialect.supports_geometry_type()}")
-        print(f"  supports_spatial_functions(): {dialect.supports_spatial_functions()}")
-        
+        print(f" is_extension_installed('postgis'): {dialect.is_extension_installed('postgis')}")
+        print(f" supports_postgis_geometry_type(): {dialect.supports_postgis_geometry_type()}")
+        print(f" supports_postgis_spatial_functions(): {dialect.supports_postgis_spatial_functions()}")
+
         print(f"\npgvector (vector):")
-        print(f"  is_extension_installed('vector'): {dialect.is_extension_installed('vector')}")
-        print(f"  supports_vector_type(): {dialect.supports_vector_type()}")
-        print(f"  supports_hnsw_index(): {dialect.supports_hnsw_index()}")
-        
+        print(f" is_extension_installed('vector'): {dialect.is_extension_installed('vector')}")
+        print(f" supports_pgvector_type(): {dialect.supports_pgvector_type()}")
+        print(f" supports_pgvector_hnsw_index(): {dialect.supports_pgvector_hnsw_index()}")
+
         print(f"\npg_trgm (trigram):")
-        print(f"  is_extension_installed('pg_trgm'): {dialect.is_extension_installed('pg_trgm')}")
-        print(f"  supports_trigram_similarity(): {dialect.supports_trigram_similarity()}")
-        
+        print(f" is_extension_installed('pg_trgm'): {dialect.is_extension_installed('pg_trgm')}")
+        print(f" supports_pg_trgm_similarity(): {dialect.supports_pg_trgm_similarity()}")
+
         print(f"\nhstore (key-value):")
-        print(f"  is_extension_installed('hstore'): {dialect.is_extension_installed('hstore')}")
-        print(f"  supports_hstore_type(): {dialect.supports_hstore_type()}")
+        print(f" is_extension_installed('hstore'): {dialect.is_extension_installed('hstore')}")
+        print(f" supports_hstore_type(): {dialect.supports_hstore_type()}")
         
         print(f"\n{'='*60}")
         
