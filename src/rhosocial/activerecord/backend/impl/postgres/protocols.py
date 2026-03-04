@@ -151,8 +151,10 @@ class PostgresTableSupport(Protocol):
 
 
 @runtime_checkable
-class PostgresVectorSupport(Protocol):
-    """pgvector vector functionality protocol.
+class PostgresPgvectorSupport(Protocol):
+    """pgvector vector similarity search protocol.
+
+    Feature Source: Extension support (requires pgvector extension)
 
     pgvector provides AI vector similarity search functionality:
     - vector data type
@@ -160,11 +162,13 @@ class PostgresVectorSupport(Protocol):
     - IVFFlat index
     - HNSW index (requires 0.5.0+)
 
-    Dependency requirements:
+    Extension Information:
     - Extension name: vector
     - Install command: CREATE EXTENSION vector;
     - Minimum version: 0.1.0
     - Recommended version: 0.5.0+ (supports HNSW index)
+    - Repository: https://github.com/pgvector/pgvector
+    - Documentation: https://github.com/pgvector/pgvector#usage
 
     Detection methods:
     - Automatic detection: introspect_and_adapt() queries pg_extension
@@ -175,36 +179,34 @@ class PostgresVectorSupport(Protocol):
     - Maximum vector dimension: 2000
     - HNSW index requires version 0.5.0+
     - Ensure extension is installed before use: CREATE EXTENSION vector;
-
-    Documentation: https://github.com/pgvector/pgvector
     """
 
-    def supports_vector_type(self) -> bool:
-        """Whether vector data type is supported.
+    def supports_pgvector_type(self) -> bool:
+        """Whether pgvector vector data type is supported.
 
         Requires pgvector extension.
         Supports vectors with specified dimensions: vector(N), N max 2000.
         """
         ...
 
-    def supports_vector_similarity_search(self) -> bool:
-        """Whether vector similarity search is supported.
+    def supports_pgvector_similarity_search(self) -> bool:
+        """Whether pgvector vector similarity search is supported.
 
         Requires pgvector extension.
         Supports <-> (Euclidean distance) operator.
         """
         ...
 
-    def supports_ivfflat_index(self) -> bool:
-        """Whether IVFFlat vector index is supported.
+    def supports_pgvector_ivfflat_index(self) -> bool:
+        """Whether pgvector IVFFlat vector index is supported.
 
         Requires pgvector extension.
         IVFFlat is an inverted file-based vector index, suitable for medium-scale data.
         """
         ...
 
-    def supports_hnsw_index(self) -> bool:
-        """Whether HNSW vector index is supported.
+    def supports_pgvector_hnsw_index(self) -> bool:
+        """Whether pgvector HNSW vector index is supported.
 
         Requires pgvector 0.5.0+.
         HNSW is a Hierarchical Navigable Small World index, suitable for
@@ -214,8 +216,10 @@ class PostgresVectorSupport(Protocol):
 
 
 @runtime_checkable
-class PostgresSpatialSupport(Protocol):
+class PostgresPostGISSupport(Protocol):
     """PostGIS spatial functionality protocol.
+
+    Feature Source: Extension support (requires PostGIS extension)
 
     PostGIS provides complete spatial database functionality:
     - geometry and geography data types
@@ -223,11 +227,13 @@ class PostgresSpatialSupport(Protocol):
     - Spatial analysis functions
     - Coordinate system transformations
 
-    Dependency requirements:
+    Extension Information:
     - Extension name: postgis
     - Install command: CREATE EXTENSION postgis;
     - Minimum version: 2.0
     - Recommended version: 3.0+
+    - Website: https://postgis.net/
+    - Documentation: https://postgis.net/docs/
 
     Detection methods:
     - Automatic detection: introspect_and_adapt() queries pg_extension
@@ -238,36 +244,34 @@ class PostgresSpatialSupport(Protocol):
     - PostGIS needs to be installed at database level
     - Installation requires superuser privileges
     - Features vary across versions
-
-    Documentation: https://postgis.net/docs/
     """
 
-    def supports_geometry_type(self) -> bool:
-        """Whether geometry type is supported.
+    def supports_postgis_geometry_type(self) -> bool:
+        """Whether PostGIS geometry type is supported.
 
         Requires PostGIS extension.
         geometry type is used for planar coordinate systems.
         """
         ...
 
-    def supports_geography_type(self) -> bool:
-        """Whether geography type is supported.
+    def supports_postgis_geography_type(self) -> bool:
+        """Whether PostGIS geography type is supported.
 
         Requires PostGIS extension.
         geography type is used for spherical coordinate systems (lat/lon).
         """
         ...
 
-    def supports_spatial_index(self) -> bool:
-        """Whether spatial indexing is supported.
+    def supports_postgis_spatial_index(self) -> bool:
+        """Whether PostGIS spatial indexing is supported.
 
         Requires PostGIS extension.
         PostgreSQL uses GiST index to support spatial queries.
         """
         ...
 
-    def supports_spatial_functions(self) -> bool:
-        """Whether spatial analysis functions are supported.
+    def supports_postgis_spatial_functions(self) -> bool:
+        """Whether PostGIS spatial analysis functions are supported.
 
         Requires PostGIS extension.
         Includes functions like: ST_Distance, ST_Within, ST_Contains, etc.
@@ -276,37 +280,38 @@ class PostgresSpatialSupport(Protocol):
 
 
 @runtime_checkable
-class PostgresTrigramSupport(Protocol):
+class PostgresPgTrgmSupport(Protocol):
     """pg_trgm trigram functionality protocol.
+
+    Feature Source: Extension support (requires pg_trgm extension)
 
     pg_trgm provides trigram-based text similarity search:
     - Similarity calculation
     - Fuzzy search
     - Similarity indexing
 
-    Dependency requirements:
+    Extension Information:
     - Extension name: pg_trgm
     - Install command: CREATE EXTENSION pg_trgm;
     - Minimum version: 1.0
+    - Documentation: https://www.postgresql.org/docs/current/pgtrgm.html
 
     Detection methods:
     - Automatic detection: introspect_and_adapt() queries pg_extension
     - Manual detection: SELECT * FROM pg_extension WHERE extname = 'pg_trgm';
     - Programmatic detection: dialect.is_extension_installed('pg_trgm')
-
-    Documentation: https://www.postgresql.org/docs/current/pgtrgm.html
     """
 
-    def supports_trigram_similarity(self) -> bool:
-        """Whether trigram similarity calculation is supported.
+    def supports_pg_trgm_similarity(self) -> bool:
+        """Whether pg_trgm trigram similarity calculation is supported.
 
         Requires pg_trgm extension.
         Supports similarity functions: similarity(), show_trgm(), etc.
         """
         ...
 
-    def supports_trigram_index(self) -> bool:
-        """Whether trigram indexing is supported.
+    def supports_pg_trgm_index(self) -> bool:
+        """Whether pg_trgm trigram indexing is supported.
 
         Requires pg_trgm extension.
         Supports creating GiST or GIN trigram indexes on text columns.
