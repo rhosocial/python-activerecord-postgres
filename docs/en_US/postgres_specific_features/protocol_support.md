@@ -448,6 +448,70 @@ CREATE EXTENSION earthdistance;
 
 ## Extension Version-Aware Feature Detection
 
+### Introspection and Adaptation Mechanism
+
+The framework uses a **manual introspection and adaptation** mechanism that follows these principles:
+
+1. **One-time Introspection**: Database information is retrieved once when `introspect_and_adapt()` is called
+2. **In-Memory Caching**: All information (server version, extensions, versions) is cached in memory
+3. **No Automatic Re-checks**: Subsequent feature checks use cached data without database queries
+4. **Manual Trigger**: Introspection must be explicitly called by the user
+
+**Important Design Principles**:
+
+- **Performance**: Prevents repeated database queries for feature detection
+- **Assumption**: Database version and extensions don't change frequently during runtime
+- **User Control**: Users decide when to refresh cached information
+
+### When to Call introspect_and_adapt()
+
+**Call once after connection**:
+```python
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()  # Call once to cache all information
+
+# All subsequent checks use cached data (no database queries)
+if backend.dialect.supports_pgvector_hnsw_index():
+    # Uses cached extension version
+    pass
+```
+
+**When to call again**:
+- After reconnecting to a different database
+- After upgrading PostgreSQL version
+- After installing/removing extensions
+- When you need to refresh cached information
+
+**Example - Connection Lifecycle**:
+```python
+# Initial connection
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()  # ONE database query to get all info
+
+# Multiple feature checks - NO additional database queries
+dialect = backend.dialect
+
+# All these use cached data
+dialect.supports_hash_partitioning()  # Uses cached version
+dialect.supports_pgvector_hnsw_index()  # Uses cached extension version
+dialect.supports_postgis_spatial_functions()  # Uses cached extension status
+
+# No database queries occurred - all data from cache
+```
+
+### Cached Information
+
+After calling `introspect_and_adapt()`, the following is cached:
+
+1. **Server Version**: `dialect.version` (tuple)
+2. **Extensions**: `dialect._extensions` (dict)
+   - Extension installation status
+   - Extension versions
+   - Extension schemas
+3. **Feature Support**: Derived from version and extension data
+
 ### Using check_extension_feature()
 
 The framework provides a convenient method for version-aware feature detection:
@@ -455,12 +519,13 @@ The framework provides a convenient method for version-aware feature detection:
 ```python
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 
-# Connect and introspect
+# Connect and introspect (one-time)
 backend = PostgresBackend(...)
 backend.connect()
-backend.introspect_and_adapt()
+backend.introspect_and_adapt()  # Caches all information
 
 # Check extension feature with version awareness
+# NO database query - uses cached data
 if backend.dialect.check_extension_feature('vector', 'hnsw_index'):
     # HNSW index is supported (pgvector >= 0.5.0)
     pass
@@ -473,25 +538,62 @@ if backend.dialect.supports_pgvector_hnsw_index():
 
 ### Extension Detection Flow
 
-1. **Connection**: Establish connection to PostgreSQL
-2. **Introspection**: Call `introspect_and_adapt()`
-3. **Caching**: Extension information cached in `dialect._extensions`
-4. **Detection**: Use `check_extension_feature()` or specific methods
+The complete introspection and caching flow:
+
+```
+User calls introspect_and_adapt()
+         ↓
+[Database Query] Get PostgreSQL version
+         ↓
+[Database Query] Query pg_extension system table
+         ↓
+    Cache in dialect._extensions
+         ↓
+    Create PostgresDialect instance
+         ↓
+    All subsequent checks use cache
+```
 
 **Example**:
 ```python
-# Automatic detection
+# Automatic detection (manual trigger)
 backend.introspect_and_adapt()
 
-# Check installed extensions
+# Check installed extensions (from cache)
 for ext_name, info in backend.dialect._extensions.items():
     if info.installed:
         print(f"{ext_name}: {info.version} (schema: {info.schema})")
 
-# Programmatic checks
+# Programmatic checks (from cache)
 if backend.dialect.is_extension_installed('postgis'):
     version = backend.dialect.get_extension_version('postgis')
     print(f"PostGIS version: {version}")
+```
+
+### Cache Invalidation
+
+The cache is NOT automatically invalidated. Manual approaches:
+
+**Method 1: Reconnect and Re-introspect**
+```python
+backend.disconnect()
+backend.connect()
+backend.introspect_and_adapt()  # Refresh cache
+```
+
+**Method 2: Force Re-introspect**
+```python
+# Clear version cache to force re-detection
+backend._server_version_cache = None
+backend.introspect_and_adapt()  # Will re-query database
+```
+
+**Method 3: Create New Backend Instance**
+```python
+# New backend instance has no cache
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()
 ```
 
 ## Version Compatibility Matrix
