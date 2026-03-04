@@ -121,6 +121,12 @@ class PostgresExtensionMixin:
             'category': 'spatial',
             'documentation': 'https://postgis.net/docs/',
             'repository': 'https://postgis.net/',
+            'features': {
+                'geometry_type': {'min_version': '2.0'},
+                'geography_type': {'min_version': '2.0'},
+                'spatial_index': {'min_version': '2.0'},
+                'spatial_functions': {'min_version': '2.0'},
+            },
         },
         'vector': {
             'min_version': '0.1',
@@ -128,42 +134,68 @@ class PostgresExtensionMixin:
             'category': 'vector',
             'documentation': 'https://github.com/pgvector/pgvector',
             'repository': 'https://github.com/pgvector/pgvector',
+            'features': {
+                'type': {'min_version': '0.1'},
+                'similarity_search': {'min_version': '0.1'},
+                'ivfflat_index': {'min_version': '0.1'},
+                'hnsw_index': {'min_version': '0.5.0'},
+            },
         },
         'pg_trgm': {
             'min_version': '1.0',
             'description': 'Trigram similarity search',
             'category': 'text',
             'documentation': 'https://www.postgresql.org/docs/current/pgtrgm.html',
+            'features': {
+                'similarity': {'min_version': '1.0'},
+                'index': {'min_version': '1.0'},
+            },
         },
         'hstore': {
             'min_version': '1.0',
             'description': 'Key-value pair storage',
             'category': 'data',
             'documentation': 'https://www.postgresql.org/docs/current/hstore.html',
+            'features': {
+                'type': {'min_version': '1.0'},
+                'operators': {'min_version': '1.0'},
+            },
         },
         'uuid-ossp': {
             'min_version': '1.0',
             'description': 'UUID generation functions',
             'category': 'utility',
             'documentation': 'https://www.postgresql.org/docs/current/uuid-ossp.html',
+            'features': {},
         },
         'pgcrypto': {
             'min_version': '1.0',
             'description': 'Cryptographic functions',
             'category': 'security',
             'documentation': 'https://www.postgresql.org/docs/current/pgcrypto.html',
+            'features': {},
         },
         'ltree': {
             'min_version': '1.0',
             'description': 'Label tree for hierarchical data',
             'category': 'data',
             'documentation': 'https://www.postgresql.org/docs/current/ltree.html',
+            'features': {
+                'type': {'min_version': '1.0'},
+                'operators': {'min_version': '1.0'},
+                'index': {'min_version': '1.0'},
+            },
         },
         'intarray': {
             'min_version': '1.0',
             'description': 'Integer array operators and indexes',
             'category': 'data',
             'documentation': 'https://www.postgresql.org/docs/current/intarray.html',
+            'features': {
+                'operators': {'min_version': '1.0'},
+                'functions': {'min_version': '1.0'},
+                'index': {'min_version': '1.0'},
+            },
         },
         'earthdistance': {
             'min_version': '1.0',
@@ -171,12 +203,21 @@ class PostgresExtensionMixin:
             'category': 'spatial',
             'documentation': 'https://www.postgresql.org/docs/current/earthdistance.html',
             'dependencies': ['cube'],
+            'features': {
+                'type': {'min_version': '1.0'},
+                'operators': {'min_version': '1.0'},
+            },
         },
         'tablefunc': {
             'min_version': '1.0',
             'description': 'Table functions (crosstab, connectby)',
             'category': 'utility',
             'documentation': 'https://www.postgresql.org/docs/current/tablefunc.html',
+            'features': {
+                'crosstab': {'min_version': '1.0'},
+                'connectby': {'min_version': '1.0'},
+                'normal_rand': {'min_version': '1.0'},
+            },
         },
         'pg_stat_statements': {
             'min_version': '1.0',
@@ -184,6 +225,10 @@ class PostgresExtensionMixin:
             'category': 'monitoring',
             'documentation': 'https://www.postgresql.org/docs/current/pgstatstatements.html',
             'requires_preload': True,
+            'features': {
+                'view': {'min_version': '1.0'},
+                'reset': {'min_version': '1.0'},
+            },
         },
     }
 
@@ -248,6 +293,74 @@ class PostgresExtensionMixin:
             return None
         return self._extensions.get(name)
 
+    def check_extension_feature(self, ext_name: str, feature_name: str) -> bool:
+        """Check if an extension feature is supported based on installed version.
+
+        This method checks if:
+        1. The extension is installed
+        2. The extension version meets the minimum requirement for the feature
+
+        Args:
+            ext_name: Extension name (e.g., 'vector', 'postgis')
+            feature_name: Feature name defined in KNOWN_EXTENSIONS features dict
+
+        Returns:
+            True if extension is installed and version meets feature requirement
+
+        Example:
+            >>> dialect.check_extension_feature('vector', 'hnsw_index')
+            True  # Only if pgvector >= 0.5.0 is installed
+        """
+        # Check if extension is installed
+        if not self.is_extension_installed(ext_name):
+            return False
+
+        # Get extension info from KNOWN_EXTENSIONS
+        ext_config = self.KNOWN_EXTENSIONS.get(ext_name)
+        if not ext_config or 'features' not in ext_config:
+            # No feature requirements defined, assume supported if installed
+            return True
+
+        # Get feature requirements
+        feature_config = ext_config.get('features', {}).get(feature_name)
+        if not feature_config:
+            # Feature not defined, assume supported if extension installed
+            return True
+
+        # Check version requirement
+        min_version = feature_config.get('min_version')
+        if not min_version:
+            # No version requirement, assume supported
+            return True
+
+        # Compare with installed version
+        installed_version = self.get_extension_version(ext_name)
+        if not installed_version:
+            # Cannot determine version, assume not supported
+            return False
+
+        return self._compare_versions(installed_version, min_version) >= 0
+
+    def get_extension_min_version_for_feature(self, ext_name: str, feature_name: str) -> Optional[str]:
+        """Get the minimum extension version required for a feature.
+
+        Args:
+            ext_name: Extension name
+            feature_name: Feature name
+
+        Returns:
+            Minimum version string, or None if not defined
+        """
+        ext_config = self.KNOWN_EXTENSIONS.get(ext_name)
+        if not ext_config:
+            return None
+
+        feature_config = ext_config.get('features', {}).get(feature_name)
+        if not feature_config:
+            return None
+
+        return feature_config.get('min_version')
+
     def _compare_versions(self, v1: str, v2: str) -> int:
         """Compare version numbers.
 
@@ -297,69 +410,64 @@ class PostgresPgvectorMixin:
     """pgvector vector similarity search implementation."""
 
     def supports_pgvector_type(self) -> bool:
-        """Check if pgvector extension is installed."""
-        return self.is_extension_installed('vector')
+        """Check if pgvector supports vector type."""
+        return self.check_extension_feature('vector', 'type')
 
     def supports_pgvector_similarity_search(self) -> bool:
-        """Check if pgvector extension is installed."""
-        return self.is_extension_installed('vector')
+        """Check if pgvector supports similarity search."""
+        return self.check_extension_feature('vector', 'similarity_search')
 
     def supports_pgvector_ivfflat_index(self) -> bool:
-        """IVFFlat index requires pgvector."""
-        return self.is_extension_installed('vector')
+        """Check if pgvector supports IVFFlat index."""
+        return self.check_extension_feature('vector', 'ivfflat_index')
 
     def supports_pgvector_hnsw_index(self) -> bool:
-        """HNSW index requires pgvector 0.5.0+."""
-        if not self.is_extension_installed('vector'):
-            return False
-        version = self.get_extension_version('vector')
-        if version:
-            return self._compare_versions(version, '0.5.0') >= 0
-        return False
+        """Check if pgvector supports HNSW index (requires 0.5.0+)."""
+        return self.check_extension_feature('vector', 'hnsw_index')
 
 
 class PostgresPostGISMixin:
     """PostGIS spatial functionality implementation."""
 
     def supports_postgis_geometry_type(self) -> bool:
-        """Check if PostGIS extension is installed."""
-        return self.is_extension_installed('postgis')
+        """Check if PostGIS supports geometry type."""
+        return self.check_extension_feature('postgis', 'geometry_type')
 
     def supports_postgis_geography_type(self) -> bool:
-        """Check if PostGIS extension is installed."""
-        return self.is_extension_installed('postgis')
+        """Check if PostGIS supports geography type."""
+        return self.check_extension_feature('postgis', 'geography_type')
 
     def supports_postgis_spatial_index(self) -> bool:
-        """Check if PostGIS extension is installed."""
-        return self.is_extension_installed('postgis')
+        """Check if PostGIS supports spatial index."""
+        return self.check_extension_feature('postgis', 'spatial_index')
 
     def supports_postgis_spatial_functions(self) -> bool:
-        """Check if PostGIS extension is installed."""
-        return self.is_extension_installed('postgis')
+        """Check if PostGIS supports spatial functions."""
+        return self.check_extension_feature('postgis', 'spatial_functions')
 
 
 class PostgresPgTrgmMixin:
     """pg_trgm trigram functionality implementation."""
 
     def supports_pg_trgm_similarity(self) -> bool:
-        """Check if pg_trgm extension is installed."""
-        return self.is_extension_installed('pg_trgm')
+        """Check if pg_trgm supports similarity functions."""
+        return self.check_extension_feature('pg_trgm', 'similarity')
 
     def supports_pg_trgm_index(self) -> bool:
-        """Check if pg_trgm extension is installed."""
-        return self.is_extension_installed('pg_trgm')
+        """Check if pg_trgm supports trigram index."""
+        return self.check_extension_feature('pg_trgm', 'index')
 
 
 class PostgresHstoreMixin:
     """hstore key-value storage functionality implementation."""
 
     def supports_hstore_type(self) -> bool:
-        """Check if hstore extension is installed."""
-        return self.is_extension_installed('hstore')
+        """Check if hstore supports hstore type."""
+        return self.check_extension_feature('hstore', 'type')
 
     def supports_hstore_operators(self) -> bool:
-        """Check if hstore extension is installed."""
-        return self.is_extension_installed('hstore')
+        """Check if hstore supports operators."""
+        return self.check_extension_feature('hstore', 'operators')
 
 
 # =============================================================================
@@ -569,69 +677,69 @@ class PostgresLtreeMixin:
     """ltree label tree implementation."""
 
     def supports_ltree_type(self) -> bool:
-        """Check if ltree extension is installed."""
-        return self.is_extension_installed('ltree')
+        """Check if ltree supports ltree type."""
+        return self.check_extension_feature('ltree', 'type')
 
     def supports_ltree_operators(self) -> bool:
-        """Check if ltree extension is installed."""
-        return self.is_extension_installed('ltree')
+        """Check if ltree supports operators."""
+        return self.check_extension_feature('ltree', 'operators')
 
     def supports_ltree_index(self) -> bool:
-        """Check if ltree extension is installed."""
-        return self.is_extension_installed('ltree')
+        """Check if ltree supports index."""
+        return self.check_extension_feature('ltree', 'index')
 
 
 class PostgresIntarrayMixin:
     """intarray integer array implementation."""
 
     def supports_intarray_operators(self) -> bool:
-        """Check if intarray extension is installed."""
-        return self.is_extension_installed('intarray')
+        """Check if intarray supports operators."""
+        return self.check_extension_feature('intarray', 'operators')
 
     def supports_intarray_functions(self) -> bool:
-        """Check if intarray extension is installed."""
-        return self.is_extension_installed('intarray')
+        """Check if intarray supports functions."""
+        return self.check_extension_feature('intarray', 'functions')
 
     def supports_intarray_index(self) -> bool:
-        """Check if intarray extension is installed."""
-        return self.is_extension_installed('intarray')
+        """Check if intarray supports index."""
+        return self.check_extension_feature('intarray', 'index')
 
 
 class PostgresEarthdistanceMixin:
     """earthdistance earth distance implementation."""
 
     def supports_earthdistance_type(self) -> bool:
-        """Check if earthdistance extension is installed."""
-        return self.is_extension_installed('earthdistance')
+        """Check if earthdistance supports earth type."""
+        return self.check_extension_feature('earthdistance', 'type')
 
     def supports_earthdistance_operators(self) -> bool:
-        """Check if earthdistance extension is installed."""
-        return self.is_extension_installed('earthdistance')
+        """Check if earthdistance supports operators."""
+        return self.check_extension_feature('earthdistance', 'operators')
 
 
 class PostgresTablefuncMixin:
     """tablefunc table functions implementation."""
 
     def supports_tablefunc_crosstab(self) -> bool:
-        """Check if tablefunc extension is installed."""
-        return self.is_extension_installed('tablefunc')
+        """Check if tablefunc supports crosstab."""
+        return self.check_extension_feature('tablefunc', 'crosstab')
 
     def supports_tablefunc_connectby(self) -> bool:
-        """Check if tablefunc extension is installed."""
-        return self.is_extension_installed('tablefunc')
+        """Check if tablefunc supports connectby."""
+        return self.check_extension_feature('tablefunc', 'connectby')
 
     def supports_tablefunc_normal_rand(self) -> bool:
-        """Check if tablefunc extension is installed."""
-        return self.is_extension_installed('tablefunc')
+        """Check if tablefunc supports normal_rand."""
+        return self.check_extension_feature('tablefunc', 'normal_rand')
 
 
 class PostgresPgStatStatementsMixin:
     """pg_stat_statements query statistics implementation."""
 
     def supports_pg_stat_statements_view(self) -> bool:
-        """Check if pg_stat_statements extension is installed."""
-        return self.is_extension_installed('pg_stat_statements')
+        """Check if pg_stat_statements supports view."""
+        return self.check_extension_feature('pg_stat_statements', 'view')
 
     def supports_pg_stat_statements_reset(self) -> bool:
-        """Check if pg_stat_statements extension is installed."""
-        return self.is_extension_installed('pg_stat_statements')
+        """Check if pg_stat_statements supports reset."""
+        return self.check_extension_feature('pg_stat_statements', 'reset')
