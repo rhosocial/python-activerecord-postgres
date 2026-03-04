@@ -22,11 +22,6 @@ from .async_backend import AsyncPostgresBackend
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
-from .types import (
-    PostgresTypes,
-    PostgresColumnType,
-    POSTGRES_TYPE_MAPPINGS,
-)
 
 __all__ = [
     # Synchronous Backend
@@ -44,9 +39,4 @@ __all__ = [
     # Transaction - Sync and Async
     'PostgresTransactionManager',
     'AsyncPostgresTransactionManager',
-
-    # Types
-    'PostgresTypes',
-    'PostgresColumnType',
-    'POSTGRES_TYPE_MAPPINGS',
 ]
