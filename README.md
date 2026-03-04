@@ -196,14 +196,29 @@ print(user.id)  # Populated automatically via RETURNING
 | Feature | Min Version | Notes |
 |---------|-------------|-------|
 | Basic operations | 8.0+ | Core functionality |
+| RETURNING | 8.2+ | INSERT/UPDATE/DELETE RETURNING |
 | CTEs | 8.4+ | WITH clauses |
 | Window functions | 8.4+ | ROW_NUMBER, RANK, etc. |
-| RETURNING | 8.2+ | INSERT/UPDATE/DELETE RETURNING |
+| TRUNCATE RESTART IDENTITY | 8.4+ | Reset sequences on truncate |
 | JSON | 9.2+ | Basic JSON support |
+| LATERAL joins | 9.3+ | LATERAL keyword |
 | JSONB | 9.4+ | Binary JSON, indexed |
+| FILTER clause | 9.4+ | Aggregate FILTER |
+| Ordered-set aggregates | 9.4+ | PERCENTILE_CONT, etc. |
 | UPSERT | 9.5+ | INSERT ... ON CONFLICT |
+| Advanced grouping | 9.5+ | ROLLUP, CUBE, GROUPING SETS |
+| SKIP LOCKED | 9.5+ | FOR UPDATE SKIP LOCKED |
+| MATERIALIZED CTE hints | 12.0+ | MATERIALIZED/NOT MATERIALIZED |
+| JSON_TABLE | 12.0+ | JSON table function |
+| MERGE | 15.0+ | MERGE statement |
+
+**Supported SQL Protocols:**
+- ✅ SetOperationSupport (UNION, INTERSECT, EXCEPT) — All versions
+- ✅ TruncateSupport (TRUNCATE TABLE) — All versions; RESTART IDENTITY ≥ 8.4
 
 **Recommended**: PostgreSQL 12+ for optimal feature support.
+
+See [PROTOCOL_SUPPORT.md](docs/PROTOCOL_SUPPORT.md) for complete protocol support matrix.
 
 ## Get Started with AI Code Agents
 
