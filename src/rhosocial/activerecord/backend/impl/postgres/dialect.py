@@ -14,15 +14,15 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     GraphSupport, LockingSupport, MergeSupport, OrderedSetAggregationSupport,
     QualifyClauseSupport, TemporalTableSupport, UpsertSupport, LateralJoinSupport,
     WildcardSupport, JoinSupport, ViewSupport, SchemaSupport, IndexSupport,
-    SequenceSupport, TableSupport,
-)
+    SequenceSupport, TableSupport, SetOperationSupport, TruncateSupport, ILIKESupport,
+    )
 from rhosocial.activerecord.backend.dialect.mixins import (
     CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
     AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
     MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
     UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
-    SequenceMixin, TableMixin,
-)
+    SequenceMixin, TableMixin, SetOperationMixin, TruncateMixin, ILIKEMixin,
+    )
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 # PostgreSQL-specific imports
@@ -39,22 +39,20 @@ from .mixins import (
 
 class PostgresDialect(
     SQLDialectBase,
-    # Include mixins for features that PostgreSQL supports (with version-dependent implementations)
+    SetOperationMixin, TruncateMixin, ILIKEMixin,
     CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
     AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
     MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
     UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
     SequenceMixin, TableMixin,
-    # PostgreSQL-specific extension mixins (PostgresExtensionMixin must come first)
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
     PostgresVectorMixin, PostgresSpatialMixin, PostgresTrigramMixin, PostgresHstoreMixin,
-    # Protocols for type checking
+    SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
     AdvancedGroupingSupport, ArraySupport, ExplainSupport, GraphSupport, LockingSupport,
     MergeSupport, OrderedSetAggregationSupport, QualifyClauseSupport, TemporalTableSupport,
     UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
     SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
-    # PostgreSQL-specific protocols
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
     PostgresVectorSupport, PostgresSpatialSupport, PostgresTrigramSupport, PostgresHstoreSupport,
     ):
@@ -248,6 +246,94 @@ class PostgresDialect(
     def supports_wildcard(self) -> bool:
         """Wildcard (*) is supported."""
         return True
+
+    # region ILIKE Support
+    def supports_ilike(self) -> bool:
+        """ILIKE is supported."""
+        return True
+
+    def format_ilike_expression(
+        self,
+        column: Any,
+        pattern: str,
+        negate: bool = False
+    ) -> Tuple[str, Tuple]:
+        """Format ILIKE expression for PostgreSQL."""
+        if isinstance(column, str):
+            col_sql = self.format_identifier(column)
+        else:
+            col_sql, col_params = column.to_sql() if hasattr(column, 'to_sql') else (str(column), ())
+        
+        if negate:
+            sql = f"{col_sql} NOT ILIKE %s"
+        else:
+            sql = f"{col_sql} ILIKE %s"
+        
+        return sql, (pattern,)
+    # endregion
+
+    # region Set Operation Support
+    def supports_union(self) -> bool:
+        """UNION is supported."""
+        return True
+
+    def supports_union_all(self) -> bool:
+        """UNION ALL is supported."""
+        return True
+
+    def supports_intersect(self) -> bool:
+        """INTERSECT is supported."""
+        return True
+
+    def supports_except(self) -> bool:
+        """EXCEPT is supported."""
+        return True
+
+    def supports_set_operation_order_by(self) -> bool:
+        """ORDER BY is supported for set operations."""
+        return True
+
+    def supports_set_operation_limit_offset(self) -> bool:
+        """LIMIT/OFFSET is supported for set operations."""
+        return True
+
+    def supports_set_operation_for_update(self) -> bool:
+        """FOR UPDATE is supported for set operations."""
+        return True
+    # endregion
+
+    # region Truncate Support
+    def supports_truncate(self) -> bool:
+        """TRUNCATE is supported."""
+        return True
+
+    def supports_truncate_table_keyword(self) -> bool:
+        """TABLE keyword is supported in TRUNCATE."""
+        return True
+
+    def supports_truncate_restart_identity(self) -> bool:
+        """RESTART IDENTITY is supported since PostgreSQL 8.4."""
+        return self.version >= (8, 4, 0)
+
+    def supports_truncate_cascade(self) -> bool:
+        """CASCADE is supported in TRUNCATE."""
+        return True
+
+    def format_truncate_statement(
+        self, expr: "TruncateExpression"
+    ) -> Tuple[str, tuple]:
+        """Format TRUNCATE statement for PostgreSQL."""
+        parts = ["TRUNCATE TABLE"]
+        parts.append(self.format_identifier(expr.table_name))
+
+        if expr.restart_identity and self.supports_truncate_restart_identity():
+            parts.append("RESTART IDENTITY")
+
+        if expr.cascade:
+            parts.append("CASCADE")
+
+        return ' '.join(parts), ()
+    # endregion
     # endregion
 
     # region Custom Implementations for PostgreSQL-specific behavior
