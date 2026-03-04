@@ -304,6 +304,70 @@ CREATE EXTENSION earthdistance;
 
 ## 扩展版本感知特性检测
 
+### 内省与适配机制
+
+框架使用**手动内省与适配**机制，遵循以下原则：
+
+1. **一次性内省**：调用 `introspect_and_adapt()` 时，一次性检索所有数据库信息
+2. **内存缓存**：所有信息（服务器版本、扩展、版本号）都缓存在内存中
+3. **无自动重新检查**：后续的特性检查使用缓存数据，不会查询数据库
+4. **手动触发**：必须由用户显式调用内省
+
+**重要设计原则**：
+
+- **性能**：避免重复的数据库查询进行特性检测
+- **假设**：数据库版本和扩展在运行时不会频繁变更
+- **用户控制**：用户决定何时刷新缓存信息
+
+### 何时调用 introspect_and_adapt()
+
+**连接后调用一次**：
+```python
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()  # 调用一次以缓存所有信息
+
+# 后续所有检查使用缓存数据（无数据库查询）
+if backend.dialect.supports_pgvector_hnsw_index():
+    # 使用缓存的扩展版本
+    pass
+```
+
+**何时需要再次调用**：
+- 重新连接到不同的数据库后
+- 升级 PostgreSQL 版本后
+- 安装/删除扩展后
+- 需要刷新缓存信息时
+
+**示例 - 连接生命周期**：
+```python
+# 初始连接
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()  # 一次数据库查询获取所有信息
+
+# 多次特性检查 - 无额外数据库查询
+dialect = backend.dialect
+
+# 所有这些都使用缓存数据
+dialect.supports_hash_partitioning()  # 使用缓存的版本
+dialect.supports_pgvector_hnsw_index()  # 使用缓存的扩展版本
+dialect.supports_postgis_spatial_functions()  # 使用缓存的扩展状态
+
+# 未发生数据库查询 - 所有数据来自缓存
+```
+
+### 缓存的信息
+
+调用 `introspect_and_adapt()` 后，以下信息被缓存：
+
+1. **服务器版本**：`dialect.version`（元组）
+2. **扩展信息**：`dialect._extensions`（字典）
+   - 扩展安装状态
+   - 扩展版本号
+   - 扩展所在模式
+3. **特性支持**：从版本和扩展数据派生
+
 ### 使用 check_extension_feature()
 
 框架提供了便捷的方法进行版本感知的特性检测：
@@ -311,12 +375,13 @@ CREATE EXTENSION earthdistance;
 ```python
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 
-# 连接并内省
+# 连接并内省（一次性）
 backend = PostgresBackend(...)
 backend.connect()
-backend.introspect_and_adapt()
+backend.introspect_and_adapt()  # 缓存所有信息
 
 # 检查扩展特性（带版本感知）
+# 无数据库查询 - 使用缓存数据
 if backend.dialect.check_extension_feature('vector', 'hnsw_index'):
     # HNSW 索引受支持（pgvector >= 0.5.0）
     pass
@@ -329,25 +394,62 @@ if backend.dialect.supports_pgvector_hnsw_index():
 
 ### 扩展检测流程
 
-1. **连接**：建立到 PostgreSQL 的连接
-2. **内省**：调用 `introspect_and_adapt()`
-3. **缓存**：扩展信息缓存在 `dialect._extensions` 中
-4. **检测**：使用 `check_extension_feature()` 或特定方法
+完整的内省和缓存流程：
+
+```
+用户调用 introspect_and_adapt()
+         ↓
+[数据库查询] 获取 PostgreSQL 版本
+         ↓
+[数据库查询] 查询 pg_extension 系统表
+         ↓
+    缓存到 dialect._extensions
+         ↓
+    创建 PostgresDialect 实例
+         ↓
+    后续所有检查使用缓存
+```
 
 **示例**：
 ```python
-# 自动检测
+# 手动触发检测
 backend.introspect_and_adapt()
 
-# 检查已安装扩展
+# 检查已安装扩展（来自缓存）
 for ext_name, info in backend.dialect._extensions.items():
     if info.installed:
         print(f"{ext_name}: {info.version} (模式: {info.schema})")
 
-# 编程检查
+# 编程检查（来自缓存）
 if backend.dialect.is_extension_installed('postgis'):
     version = backend.dialect.get_extension_version('postgis')
     print(f"PostGIS 版本: {version}")
+```
+
+### 缓存失效
+
+缓存**不会自动失效**。手动失效方法：
+
+**方法 1：重新连接并重新内省**
+```python
+backend.disconnect()
+backend.connect()
+backend.introspect_and_adapt()  # 刷新缓存
+```
+
+**方法 2：强制重新内省**
+```python
+# 清除版本缓存以强制重新检测
+backend._server_version_cache = None
+backend.introspect_and_adapt()  # 将重新查询数据库
+```
+
+**方法 3：创建新的后端实例**
+```python
+# 新的后端实例没有缓存
+backend = PostgresBackend(connection_config=conn_config)
+backend.connect()
+backend.introspect_and_adapt()
 ```
 
 ## 版本兼容性矩阵
