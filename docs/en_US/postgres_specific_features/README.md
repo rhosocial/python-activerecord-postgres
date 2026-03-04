@@ -8,6 +8,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 - **[PostgreSQL Dialect Expressions](./dialect.md)**: PostgreSQL-specific SQL syntax
 - **[Advanced Indexing](./indexing.md)**: GIN, GiST, BRIN indexes
 - **[RETURNING Clause](./returning.md)**: Get data back from DML operations
+- **[Protocol Support Matrix](./protocol_support.md)**: Comprehensive protocol support and version compatibility
 
 ## Feature Highlights
 
@@ -17,9 +18,13 @@ from rhosocial.activerecord.model import ActiveRecord
 class Article(ActiveRecord):
     __table_name__ = "articles"
     title: str
-    tags: list        # PostgreSQL ARRAY
-    metadata: dict    # PostgreSQL JSONB
-    id: UUID         # PostgreSQL UUID
+    tags: list  # PostgreSQL ARRAY
+    metadata: dict  # PostgreSQL JSONB
+    id: UUID  # PostgreSQL UUID
 ```
 
 💡 *AI Prompt:* "What makes PostgreSQL's JSONB better than regular JSON storage?"
+
+## Related Topics
+
+- **[Backend Specific Features](../backend_specific_features/README.md)**: SSL/TLS, materialized views, introspection
