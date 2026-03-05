@@ -5,9 +5,16 @@ PostgreSQL backend SQL dialect implementation.
 This dialect implements protocols for features that PostgreSQL actually supports,
 based on the PostgreSQL version provided at initialization.
 """
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
+from rhosocial.activerecord.backend.dialect.mixins import (
+    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
+    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
+    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
+    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
+    SequenceMixin, TableMixin, SetOperationMixin, TruncateMixin, ILIKEMixin,
+)
 from rhosocial.activerecord.backend.dialect.protocols import (
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport,
     ReturningSupport, AdvancedGroupingSupport, ArraySupport, ExplainSupport,
@@ -15,28 +22,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     QualifyClauseSupport, TemporalTableSupport, UpsertSupport, LateralJoinSupport,
     WildcardSupport, JoinSupport, ViewSupport, SchemaSupport, IndexSupport,
     SequenceSupport, TableSupport, SetOperationSupport, TruncateSupport, ILIKESupport,
-    )
-from rhosocial.activerecord.backend.dialect.mixins import (
-    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
-    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
-    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
-    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
-    SequenceMixin, TableMixin, SetOperationMixin, TruncateMixin, ILIKEMixin,
-    )
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-
-# PostgreSQL-specific imports
-from .protocols import (
-    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
-    PostgresHstoreSupport,
-    # Native feature protocols
-    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
-    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
-    PostgresLogicalReplicationSupport,
-    # Extension feature protocols
-    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
 )
 from .mixins import (
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
@@ -50,6 +35,26 @@ from .mixins import (
     PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
     PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
 )
+# PostgreSQL-specific imports
+from .protocols import (
+    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
+    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
+    PostgresHstoreSupport,
+    # Native feature protocols
+    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresLogicalReplicationSupport,
+    # Extension feature protocols
+    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
+)
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.statements import (
+        CreateTableExpression, CreateViewExpression, DropViewExpression,
+        TruncateExpression, CreateMaterializedViewExpression,
+        DropMaterializedViewExpression, RefreshMaterializedViewExpression
+    )
 
 
 class PostgresDialect(
@@ -601,5 +606,164 @@ class PostgresDialect(
     def supports_table_tablespace(self) -> bool:
         """Whether tablespace specification is supported."""
         return True
+
+    def format_create_table_statement(
+        self, expr: "CreateTableExpression"
+    ) -> Tuple[str, tuple]:
+        """
+        Format CREATE TABLE statement for PostgreSQL, including LIKE syntax support.
+
+        PostgreSQL LIKE syntax supports INCLUDING/EXCLUDING options to control what
+        gets copied: DEFAULTS, CONSTRAINTS, INDEXES, IDENTITY, GENERATED, ALL,
+        COMMENTS, STORAGE, COMPRESSION.
+
+        The behavior is controlled by the `dialect_options` parameter in
+        CreateTableExpression:
+
+        1. When `dialect_options` contains 'like_table' key:
+           - LIKE syntax takes highest priority
+           - All other parameters (columns, indexes, constraints, etc.) are IGNORED
+           - Only temporary and if_not_exists flags are considered
+           - Additional 'like_options' key controls INCLUDING/EXCLUDING behavior
+
+        2. When `dialect_options` does NOT contain 'like_table':
+           - Falls back to base class implementation
+           - Standard CREATE TABLE with column definitions is generated
+
+        The 'like_options' key supports two formats:
+
+        a) Dictionary format (recommended):
+           {
+               'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
+               'excluding': ['COMMENTS']
+           }
+
+        b) List format (for backwards compatibility):
+           ['DEFAULTS', 'CONSTRAINTS']  # Defaults to INCLUDING
+           or
+           [('INCLUDING', 'DEFAULTS'), ('EXCLUDING', 'INDEXES')]
+
+        Usage Examples:
+            # Basic LIKE syntax
+            CreateTableExpression(
+                dialect=postgres_dialect,
+                table_name="users_copy",
+                columns=[],  # Ignored when like_table is present
+                dialect_options={'like_table': 'users'}
+            )
+            # Generates: CREATE TABLE "users_copy" (LIKE "users")
+
+            # LIKE with INCLUDING options (dictionary format - recommended)
+            CreateTableExpression(
+                dialect=postgres_dialect,
+                table_name="users_copy",
+                columns=[...],  # Will be ignored
+                dialect_options={
+                    'like_table': 'users',
+                    'like_options': {
+                        'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
+                        'excluding': ['COMMENTS']
+                    }
+                }
+            )
+            # Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, 
+            #           INCLUDING CONSTRAINTS, INCLUDING INDEXES, EXCLUDING COMMENTS)
+
+            # LIKE with schema-qualified source table
+            CreateTableExpression(
+                dialect=postgres_dialect,
+                table_name="users_copy",
+                columns=[],
+                dialect_options={'like_table': ('public', 'users')}
+            )
+            # Generates: CREATE TABLE "users_copy" (LIKE "public"."users")
+
+            # LIKE with TEMPORARY and IF NOT EXISTS
+            CreateTableExpression(
+                dialect=postgres_dialect,
+                table_name="temp_users",
+                columns=[],
+                temporary=True,
+                if_not_exists=True,
+                dialect_options={'like_table': 'users'}
+            )
+            # Generates: CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users" (LIKE "users")
+
+            # LIKE with INCLUDING ALL
+            CreateTableExpression(
+                dialect=postgres_dialect,
+                table_name="users_copy",
+                columns=[],
+                dialect_options={
+                    'like_table': 'users',
+                    'like_options': {'including': ['ALL']}
+                }
+            )
+            # Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING ALL)
+
+        Args:
+            expr: CreateTableExpression instance
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        # Check for LIKE syntax in dialect_options (highest priority)
+        if 'like_table' in expr.dialect_options:
+            like_table = expr.dialect_options['like_table']
+            like_options = expr.dialect_options.get('like_options', [])
+
+            parts = ["CREATE"]
+
+            if expr.temporary:
+                parts.append("TEMPORARY")
+
+            parts.append("TABLE")
+
+            if expr.if_not_exists:
+                parts.append("IF NOT EXISTS")
+
+            parts.append(self.format_identifier(expr.table_name))
+
+            # Build LIKE clause with options
+            like_parts = []
+
+            # Handle schema-qualified table name: ('schema', 'table')
+            if isinstance(like_table, tuple):
+                schema, table = like_table
+                like_table_str = f"{self.format_identifier(schema)}.{self.format_identifier(table)}"
+            else:
+                like_table_str = self.format_identifier(like_table)
+
+            like_parts.append(f"LIKE {like_table_str}")
+
+            # Add INCLUDING/EXCLUDING options
+            # Format: dictionary with 'including' and 'excluding' keys
+            # Example: {'including': ['DEFAULTS', 'CONSTRAINTS'], 'excluding': ['INDEXES']}
+            if isinstance(like_options, dict):
+                # Handle dictionary format
+                including = like_options.get('including', [])
+                excluding = like_options.get('excluding', [])
+
+                for option in including:
+                    like_parts.append(f"INCLUDING {option.upper()}")
+
+                for option in excluding:
+                    like_parts.append(f"EXCLUDING {option.upper()}")
+            elif isinstance(like_options, list):
+                # Handle list format for backwards compatibility
+                for option in like_options:
+                    if isinstance(option, tuple):
+                        action, feature = option
+                        like_parts.append(f"{action.upper()} {feature.upper()}")
+                    else:
+                        # Default to INCLUDING if just feature name provided
+                        like_parts.append(f"INCLUDING {option.upper()}")
+
+            parts.append(f"({', '.join(like_parts)})")
+
+            return ' '.join(parts), ()
+
+        # Otherwise, delegate to base implementation
+        return super().format_create_table_statement(expr)
     # endregion
     # endregion
