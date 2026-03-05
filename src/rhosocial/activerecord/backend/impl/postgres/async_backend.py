@@ -269,18 +269,27 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             if cursor:
                 await cursor.close()
 
-    async def get_server_version(self) -> tuple:
-        """Get PostgreSQL server version asynchronously."""
+    async def get_server_version(self) -> Optional[Tuple[int, int, int]]:
+        """Get PostgreSQL server version asynchronously.
+
+        Returns:
+            Tuple of (major, minor, patch) version numbers, or None if version
+            cannot be determined.
+        """
         if not self._connection:
             await self.connect()
-        
+
         cursor = None
         try:
             cursor = await self._get_cursor()
             await cursor.execute("SELECT version()")
             version_row = await cursor.fetchone()
-            version_str = version_row[0] if version_row else "13.0.0"
+            if not version_row or not version_row[0]:
+                self.log(logging.WARNING, "PostgreSQL version query returned no result")
+                return None
             
+            version_str = version_row[0]
+
             # Extract version from string like "PostgreSQL 13.2..."
             import re
             match = re.search(r'PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?', version_str)
@@ -290,12 +299,11 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
                 patch = int(match.group(3)) if match.group(3) else 0
                 return (major, minor, patch)
             else:
-                # Default to a recent version if parsing fails
-                self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}, defaulting to 13.0.0")
-                return (13, 0, 0)
+                self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}")
+                return None
         except Exception as e:
-            self.log(logging.WARNING, f"Could not determine PostgreSQL version: {str(e)}, defaulting to 13.0.0")
-            return (13, 0, 0)  # Default to a recent version
+            self.log(logging.WARNING, f"Could not determine PostgreSQL version: {str(e)}")
+            return None
         finally:
             if cursor:
                 await cursor.close()
@@ -312,6 +320,8 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
 
         After detection, the dialect instance caches extension information,
         which can be queried via is_extension_installed().
+
+        Note: If version cannot be determined, the default version (9.6.0) is retained.
         """
         # Ensure connection exists
         if not self._connection:
@@ -319,6 +329,12 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
 
         # Get server version
         actual_version = await self.get_server_version()
+        
+        # If version cannot be determined, keep the default version
+        if actual_version is None:
+            self.log(logging.WARNING, "Could not determine server version, retaining default (9.6.0)")
+            actual_version = (9, 6, 0)
+        
         cached_version = getattr(self, '_server_version_cache', None)
         version_changed = cached_version != actual_version
 
