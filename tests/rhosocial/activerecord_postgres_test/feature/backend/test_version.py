@@ -12,6 +12,7 @@ class TestPostgresVersion:
         """Test that the method correctly parses the PostgreSQL version string."""
         version = postgres_backend.get_server_version()
 
+        assert version is not None
         assert isinstance(version, tuple)
         assert len(version) >= 2
 
@@ -25,6 +26,7 @@ class TestPostgresVersion:
         """Test version parsing for the async backend."""
         version = await async_postgres_backend.get_server_version()
 
+        assert version is not None
         assert isinstance(version, tuple)
         assert len(version) >= 2
         assert version[0] > 8
