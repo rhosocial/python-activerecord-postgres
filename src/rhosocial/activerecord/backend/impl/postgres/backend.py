@@ -270,17 +270,27 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             if cursor:
                 cursor.close()
 
-    def get_server_version(self) -> tuple:
-        """Get PostgreSQL server version."""
+    def get_server_version(self) -> Optional[Tuple[int, int, int]]:
+        """Get PostgreSQL server version.
+
+        Returns:
+            Tuple of (major, minor, patch) version numbers, or None if version
+            cannot be determined.
+        """
         if not self._connection:
             self.connect()
-        
+
         cursor = None
         try:
             cursor = self._get_cursor()
             cursor.execute("SELECT version()")
-            version_str = cursor.fetchone()[0]
+            result = cursor.fetchone()
+            if not result or not result[0]:
+                self.log(logging.WARNING, "PostgreSQL version query returned no result")
+                return None
             
+            version_str = result[0]
+
             # Extract version from string like "PostgreSQL 13.2..."
             import re
             match = re.search(r'PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?', version_str)
@@ -290,12 +300,11 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                 patch = int(match.group(3)) if match.group(3) else 0
                 return (major, minor, patch)
             else:
-                # Default to a recent version if parsing fails
-                self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}, defaulting to 13.0.0")
-                return (13, 0, 0)
+                self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}")
+                return None
         except Exception as e:
-            self.log(logging.WARNING, f"Could not determine PostgreSQL version: {str(e)}, defaulting to 13.0.0")
-            return (13, 0, 0)  # Default to a recent version
+            self.log(logging.WARNING, f"Could not determine PostgreSQL version: {str(e)}")
+            return None
         finally:
             if cursor:
                 cursor.close()
@@ -312,6 +321,8 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
         After detection, the dialect instance caches extension information,
         which can be queried via is_extension_installed().
+
+        Note: If version cannot be determined, the default version (9.6.0) is retained.
         """
         # Ensure connection exists
         if not self._connection:
@@ -319,6 +330,12 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
         # Get server version
         actual_version = self.get_server_version()
+        
+        # If version cannot be determined, keep the default version
+        if actual_version is None:
+            self.log(logging.WARNING, "Could not determine server version, retaining default (9.6.0)")
+            actual_version = (9, 6, 0)
+        
         cached_version = getattr(self, '_server_version_cache', None)
         version_changed = cached_version != actual_version
 
