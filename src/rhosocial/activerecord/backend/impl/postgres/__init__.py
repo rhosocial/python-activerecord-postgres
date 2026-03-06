@@ -22,6 +22,8 @@ from .async_backend import AsyncPostgresBackend
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
+from .types import PostgresEnumType
+
 
 __all__ = [
     # Synchronous Backend
@@ -39,4 +41,7 @@ __all__ = [
     # Transaction - Sync and Async
     'PostgresTransactionManager',
     'AsyncPostgresTransactionManager',
+
+    # PostgreSQL-specific Type Helpers
+    'PostgresEnumType',
 ]
