@@ -35,7 +35,7 @@ from .mixins import (
     PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
     PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
     # DDL feature mixins
-    PostgresTriggerMixin, PostgresCommentMixin,
+    PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
 )
 # PostgreSQL-specific imports
 from .protocols import (
@@ -50,7 +50,7 @@ from .protocols import (
     PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
     PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
     # DDL feature protocols
-    PostgresTriggerSupport, PostgresCommentSupport,
+    PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
 )
 
 if TYPE_CHECKING:
@@ -80,7 +80,7 @@ class PostgresDialect(
     PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
     PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
     # DDL feature mixins
-    PostgresTriggerMixin, PostgresCommentMixin,
+    PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
     # Protocol supports
     SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
@@ -99,7 +99,7 @@ class PostgresDialect(
     PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
     PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
     # DDL feature protocols
-    PostgresTriggerSupport, PostgresCommentSupport,
+    PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
