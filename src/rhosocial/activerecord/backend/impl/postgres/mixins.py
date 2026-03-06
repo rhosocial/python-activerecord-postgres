@@ -669,6 +669,131 @@ class PostgresLogicalReplicationMixin:
 
 
 # =============================================================================
+# DDL Feature Mixins (PostgreSQL-specific DDL extensions)
+# =============================================================================
+
+
+class PostgresTriggerMixin:
+    """PostgreSQL trigger DDL implementation.
+
+    PostgreSQL uses 'EXECUTE FUNCTION func_name()' syntax instead of
+    the SQL:1999 standard 'EXECUTE func_name'.
+    """
+
+    def supports_trigger_referencing(self) -> bool:
+        """REFERENCING clause is supported since PostgreSQL 10."""
+        return self.version >= (10, 0, 0)
+
+    def supports_trigger_when(self) -> bool:
+        """WHEN condition is supported in all modern versions."""
+        return True
+
+    def supports_statement_trigger(self) -> bool:
+        """FOR EACH STATEMENT is supported."""
+        return True
+
+    def supports_instead_of_trigger(self) -> bool:
+        """INSTEAD OF triggers are supported."""
+        return True
+
+    def supports_trigger_if_not_exists(self) -> bool:
+        """IF NOT EXISTS is supported since PostgreSQL 9.5."""
+        return self.version >= (9, 5, 0)
+
+    def format_create_trigger_statement(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TRIGGER statement (PostgreSQL syntax).
+
+        PostgreSQL uses 'EXECUTE FUNCTION func_name()' instead of standard 'EXECUTE func_name'.
+        """
+        parts = ["CREATE TRIGGER"]
+
+        if expr.if_not_exists and self.supports_trigger_if_not_exists():
+            parts.append("IF NOT EXISTS")
+
+        parts.append(self.format_identifier(expr.trigger_name))
+
+        parts.append(expr.timing.value)
+
+        if expr.update_columns:
+            cols = ", ".join(self.format_identifier(c) for c in expr.update_columns)
+            events_str = f"UPDATE OF {cols}"
+        else:
+            events_str = " OR ".join(e.value for e in expr.events)
+        parts.append(events_str)
+
+        parts.append("ON")
+        parts.append(self.format_identifier(expr.table_name))
+
+        if expr.referencing and self.supports_trigger_referencing():
+            parts.append(expr.referencing)
+
+        if expr.level:
+            parts.append(expr.level.value)
+
+        all_params = []
+        if expr.condition and self.supports_trigger_when():
+            cond_sql, cond_params = expr.condition.to_sql()
+            parts.append(f"WHEN ({cond_sql})")
+            all_params.extend(cond_params)
+
+        parts.append("EXECUTE FUNCTION")
+        parts.append(expr.function_name + "()")
+
+        return " ".join(parts), tuple(all_params)
+
+    def format_drop_trigger_statement(self, expr) -> Tuple[str, tuple]:
+        """Format DROP TRIGGER statement (PostgreSQL syntax)."""
+        parts = ["DROP TRIGGER"]
+
+        if expr.if_exists:
+            parts.append("IF EXISTS")
+
+        parts.append(self.format_identifier(expr.trigger_name))
+
+        if expr.table_name:
+            parts.append("ON")
+            parts.append(self.format_identifier(expr.table_name))
+
+        return " ".join(parts), ()
+
+
+class PostgresCommentMixin:
+    """PostgreSQL COMMENT ON implementation."""
+
+    def format_comment_statement(
+        self,
+        object_type: str,
+        object_name: str,
+        comment
+    ) -> Tuple[str, tuple]:
+        """Format COMMENT ON statement (PostgreSQL-specific).
+
+        Args:
+            object_type: Object type (TABLE, COLUMN, VIEW, etc.)
+            object_name: Object name (e.g., 'table_name' or 'table_name.column_name')
+            comment: Comment text, or None to drop comment
+
+        Returns:
+            Tuple of (SQL string, parameters)
+        """
+        if comment is None:
+            comment_value = "NULL"
+        else:
+            comment_value = self.get_parameter_placeholder()
+
+        parts = ["COMMENT ON", object_type, self.format_identifier(object_name)]
+        parts.append("IS")
+        parts.append(comment_value)
+
+        sql = " ".join(parts)
+
+        if comment is None:
+            return sql, ()
+        else:
+            return sql, (comment,)
+
+
+# =============================================================================
 # Extension Feature Mixins (Additional PostgreSQL Extensions)
 # =============================================================================
 
