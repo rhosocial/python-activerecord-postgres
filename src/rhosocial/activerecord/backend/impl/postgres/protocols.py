@@ -5,7 +5,7 @@ This module defines protocols for features exclusive to PostgreSQL,
 which are not part of the SQL standard and not supported by other
 mainstream databases.
 """
-from typing import Protocol, runtime_checkable, Dict, Optional
+from typing import Protocol, runtime_checkable, Dict, Optional, Tuple, Any
 from dataclasses import dataclass
 
 
@@ -842,6 +842,129 @@ class PostgresLogicalReplicationSupport(Protocol):
 
         Native feature, PostgreSQL 14+.
         Enables binary data transfer in logical replication.
+        """
+        ...
+
+
+# =============================================================================
+# DDL Feature Protocols (PostgreSQL-specific DDL extensions)
+# =============================================================================
+
+
+@runtime_checkable
+class PostgresTriggerSupport(Protocol):
+    """PostgreSQL trigger DDL protocol.
+
+    Feature Source: Native support (no extension required)
+
+    PostgreSQL trigger features beyond SQL:1999 standard:
+    - EXECUTE FUNCTION syntax (instead of EXECUTE proc_name)
+    - REFERENCING clause for OLD/NEW row references
+    - WHEN condition with arbitrary expressions
+    - FOR EACH STATEMENT triggers
+    - INSTEAD OF triggers for views
+    - Multiple events with OR syntax
+    - UPDATE OF column_list syntax
+    - Constraint triggers with DEFERRABLE
+
+    Official Documentation:
+    - CREATE TRIGGER: https://www.postgresql.org/docs/current/sql-createtrigger.html
+    - Trigger Functions: https://www.postgresql.org/docs/current/triggers.html
+
+    Version Requirements:
+    - Basic triggers: All versions
+    - Constraint triggers: PostgreSQL 9.1+
+    - Transition tables: PostgreSQL 10+
+    """
+
+    def supports_trigger_referencing(self) -> bool:
+        """Whether REFERENCING clause is supported.
+
+        Native feature, PostgreSQL 10+.
+        Allows referencing OLD/NEW tables in triggers.
+        """
+        ...
+
+    def supports_trigger_when(self) -> bool:
+        """Whether WHEN condition is supported.
+
+        Native feature, all versions.
+        Allows conditional trigger execution.
+        """
+        ...
+
+    def supports_statement_trigger(self) -> bool:
+        """Whether FOR EACH STATEMENT triggers are supported.
+
+        Native feature, all versions.
+        Triggers execute once per statement, not per row.
+        """
+        ...
+
+    def supports_instead_of_trigger(self) -> bool:
+        """Whether INSTEAD OF triggers are supported.
+
+        Native feature, all versions.
+        Used for views to make them updatable.
+        """
+        ...
+
+    def supports_trigger_if_not_exists(self) -> bool:
+        """Whether CREATE TRIGGER IF NOT EXISTS is supported.
+
+        Native feature, PostgreSQL 9.5+.
+        """
+        ...
+
+    def format_create_trigger_statement(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TRIGGER statement.
+
+        PostgreSQL uses 'EXECUTE FUNCTION func_name()' syntax.
+        """
+        ...
+
+    def format_drop_trigger_statement(self, expr) -> Tuple[str, tuple]:
+        """Format DROP TRIGGER statement."""
+        ...
+
+
+@runtime_checkable
+class PostgresCommentSupport(Protocol):
+    """PostgreSQL COMMENT ON protocol.
+
+    Feature Source: Native support (no extension required)
+
+    PostgreSQL supports commenting on database objects:
+    - COMMENT ON TABLE
+    - COMMENT ON COLUMN
+    - COMMENT ON VIEW
+    - COMMENT ON INDEX
+    - COMMENT ON FUNCTION
+    - COMMENT ON SCHEMA
+    - etc.
+
+    Official Documentation:
+    - COMMENT: https://www.postgresql.org/docs/current/sql-comment.html
+
+    Version Requirements:
+    - All versions
+    """
+
+    def format_comment_statement(
+        self,
+        object_type: str,
+        object_name: str,
+        comment: Any
+    ) -> Tuple[str, tuple]:
+        """Format COMMENT ON statement.
+
+        Args:
+            object_type: Object type (TABLE, COLUMN, VIEW, etc.)
+            object_name: Object name (e.g., 'table_name' or 'table_name.column_name')
+            comment: Comment text, or None to drop comment
+
+        Returns:
+            Tuple of (SQL string, parameters)
         """
         ...
 
