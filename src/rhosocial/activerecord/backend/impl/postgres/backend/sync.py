@@ -1,6 +1,5 @@
-# src/rhosocial/activerecord/backend/impl/postgres/backend.py
-"""
-PostgreSQL backend implementation with sync support.
+# src/rhosocial/activerecord/backend/impl/postgres/backend/sync.py
+"""PostgreSQL synchronous backend implementation.
 
 This module provides a synchronous PostgreSQL implementation:
 - PostgreSQL synchronous backend with connection management and query execution
@@ -11,7 +10,7 @@ This module provides a synchronous PostgreSQL implementation:
 - PostgreSQL-specific type definitions and mappings
 
 Architecture:
-- PostgreSQLBackend: Synchronous implementation using psycopg
+- PostgresBackend: Synchronous implementation using psycopg
 - Independent from ORM frameworks - uses only native drivers
 """
 import datetime
@@ -37,7 +36,7 @@ from rhosocial.activerecord.backend.errors import (
     QueryError,
 )
 from rhosocial.activerecord.backend.result import QueryResult
-from .adapters import (
+from ..adapters import (
     PostgresListAdapter,
     PostgresJSONBAdapter,
     PostgresNetworkAddressAdapter,
@@ -45,18 +44,18 @@ from .adapters import (
     PostgresRangeAdapter,
     PostgresMultirangeAdapter,
 )
-from .adapters.geometric import PostgresGeometryAdapter
-from .adapters.json import PostgresJsonPathAdapter
-from .adapters.monetary import PostgresMoneyAdapter
-from .adapters.network_address import PostgresMacaddr8Adapter
-from .adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
-from .adapters.pg_lsn import PostgresLsnAdapter
-from .adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
-from .config import PostgresConnectionConfig
-from .dialect import PostgresDialect
-from .mixins import PostgresBackendMixin
-from .protocols import PostgresExtensionInfo
-from .transaction import PostgresTransactionManager
+from ..adapters.geometric import PostgresGeometryAdapter
+from ..adapters.json import PostgresJsonPathAdapter
+from ..adapters.monetary import PostgresMoneyAdapter
+from ..adapters.network_address import PostgresMacaddr8Adapter
+from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
+from ..adapters.pg_lsn import PostgresLsnAdapter
+from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
+from ..config import PostgresConnectionConfig
+from ..dialect import PostgresDialect
+from .base import PostgresBackendMixin
+from ..protocols import PostgresExtensionInfo
+from ..transaction import PostgresTransactionManager
 
 
 class PostgresBackend(PostgresBackendMixin, StorageBackend):
@@ -140,7 +139,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             PostgresRangeAdapter(),
             PostgresMultirangeAdapter(),
             PostgresGeometryAdapter(),
-            # PostgresBitStringAdapter(),  # Temporarily disabled: str->str conflicts
+            # PostgresBitStringAdapter(), # Temporarily disabled: str->str conflicts
             PostgresEnumAdapter(),
             PostgresMoneyAdapter(),
             PostgresMacaddr8Adapter(),
@@ -204,7 +203,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                     value = getattr(self.config, param)
                     if value is not None:  # Only add the parameter if it's not None
                         conn_params[param] = value
-                        
+
             # Handle 'options' parameter specially as it should be a string, not a dict
             if hasattr(self.config, 'options') and self.config.options is not None:
                 # Convert options dict to string format if needed, or use as-is if it's already a string
@@ -231,7 +230,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                 conn_params.update(ssl_params)
 
             self._connection = psycopg.connect(**conn_params)
-            
+
             self.log(logging.INFO, f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}")
         except PsycopgError as e:
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
@@ -244,7 +243,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                 # Rollback any active transaction
                 if self.transaction_manager.is_active:
                     self.transaction_manager.rollback()
-                
+
                 self._connection.close()
                 self._connection = None
                 self.log(logging.INFO, "Disconnected from PostgreSQL database")
@@ -256,7 +255,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         """Get a database cursor, ensuring connection is active."""
         if not self._connection:
             self.connect()
-        
+
         return self._connection.cursor()
 
 
@@ -264,35 +263,35 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         """Execute the same SQL statement multiple times with different parameters."""
         if not self._connection:
             self.connect()
-        
+
         cursor = None
         start_time = datetime.datetime.now()
-        
+
         try:
             cursor = self._get_cursor()
-            
+
             # Log the batch operation if logging is enabled
             if getattr(self.config, 'log_queries', False):
                 self.log(logging.DEBUG, f"Executing batch operation: {sql}")
                 self.log(logging.DEBUG, f"With {len(params_list)} parameter sets")
-            
+
             # Execute multiple statements
             affected_rows = 0
             for params in params_list:
                 cursor.execute(sql, params)
                 affected_rows += cursor.rowcount
-            
+
             duration = (datetime.datetime.now() - start_time).total_seconds()
-            
+
             result = QueryResult(
                 affected_rows=affected_rows,
                 data=None,
                 duration=duration
             )
-            
+
             self.log(logging.INFO, f"Batch operation completed, affected {affected_rows} rows, duration={duration:.3f}s")
             return result
-            
+
         except PsycopgIntegrityError as e:
             self.log(logging.ERROR, f"Integrity error in batch: {str(e)}")
             raise IntegrityError(str(e))
@@ -324,7 +323,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             if not result or not result[0]:
                 self.log(logging.WARNING, "PostgreSQL version query returned no result")
                 return None
-            
+
             version_str = result[0]
 
             # Extract version from string like "PostgreSQL 13.2..."
@@ -366,12 +365,12 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
         # Get server version
         actual_version = self.get_server_version()
-        
+
         # If version cannot be determined, keep the default version
         if actual_version is None:
             self.log(logging.WARNING, "Could not determine server version, retaining default (9.6.0)")
             actual_version = (9, 6, 0)
-        
+
         cached_version = getattr(self, '_server_version_cache', None)
         version_changed = cached_version != actual_version
 
@@ -429,7 +428,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
     def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, **kwargs) -> QueryResult:
         """Execute a SQL statement with optional parameters."""
         from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
-        
+
         # If no options provided, create default options from kwargs
         if options is None:
             # Determine statement type based on SQL
@@ -440,11 +439,11 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                 stmt_type = StatementType.DML
             else:
                 stmt_type = StatementType.DDL
-                
+
             # Extract column_mapping and column_adapters from kwargs if present
             column_mapping = kwargs.get('column_mapping')
             column_adapters = kwargs.get('column_adapters')
-            
+
             options = ExecutionOptions(
                 stmt_type=stmt_type,
                 process_result_set=None,  # Let the base logic determine this based on stmt_type
@@ -458,7 +457,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
                 options.column_mapping = kwargs['column_mapping']
             if 'column_adapters' in kwargs:
                 options.column_adapters = kwargs['column_adapters']
-        
+
         return super().execute(sql, params, options=options)
 
     def ping(self, reconnect: bool = True) -> bool:
@@ -528,7 +527,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
     def _try_rollback_transaction(self) -> None:
         """Attempt to rollback transaction to recover from aborted state.
-        
+
         PostgreSQL requires explicit ROLLBACK after query errors in a transaction.
         This method attempts to recover by rolling back the transaction, regardless
         of the transaction manager's state.
@@ -538,7 +537,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             if self._transaction_manager and self._transaction_manager.is_active:
                 self.log(logging.INFO, "Attempting to rollback transaction after error")
                 self._transaction_manager.rollback()
-            
+
             # Also try direct connection rollback to handle edge cases
             # This ensures we recover from aborted transaction state
             if self._connection and not self._connection.closed:
@@ -584,7 +583,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         if not self.in_transaction and self._connection:
             if not getattr(self.config, 'autocommit', False):
                 self._connection.commit()
-            self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
+                self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 
     def log(self, level: int, message: str):
         """Log a message with the specified level."""
@@ -593,3 +592,6 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         else:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
+
+
+__all__ = ['PostgresBackend']

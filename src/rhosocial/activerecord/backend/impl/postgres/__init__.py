@@ -17,8 +17,7 @@ Architecture:
 - Independent from ORM frameworks - uses only native drivers
 """
 
-from .backend import PostgresBackend
-from .async_backend import AsyncPostgresBackend
+from .backend import PostgresBackend, AsyncPostgresBackend
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
