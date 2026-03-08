@@ -1,5 +1,138 @@
 # PostgreSQL Dialect 表达式
 
+## 类型转换（Type Casting）
+
+PostgreSQL 使用 `::` 操作符进行类型转换，这是 PostgreSQL 特有的简洁语法。PostgresDialect 会自动使用此语法。
+
+### 基本用法
+
+```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.types.constants import INTEGER, NUMERIC, MONEY
+
+dialect = PostgresDialect()
+
+# 基本类型转换
+col = Column(dialect, "price")
+expr = col.cast(INTEGER)
+sql, params = expr.to_sql()
+# 生成: ("price"::integer, ())
+
+# 带类型修饰符
+col2 = Column(dialect, "name")
+expr2 = col2.cast("VARCHAR(100)")
+sql, params = expr2.to_sql()
+# 生成: ("name"::VARCHAR(100), ())
+```
+
+### 链式类型转换
+
+PostgreSQL 支持链式类型转换：
+
+```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.types.constants import MONEY, NUMERIC, FLOAT8
+
+dialect = PostgresDialect()
+col = Column(dialect, "amount")
+
+# 多级类型转换
+expr = col.cast(MONEY).cast(NUMERIC).cast(FLOAT8)
+sql, params = expr.to_sql()
+# 生成: ("amount"::money::numeric::float8, ())
+```
+
+### 类型兼容性
+
+某些类型转换需要中间类型。例如，`money` 类型不能直接转换为 `float8`，需要通过 `numeric` 中转：
+
+```python
+# 不推荐的直接转换（会触发警告）
+col.cast("float8")  # 从 money 直接转换
+
+# 推荐的链式转换
+col.cast("money").cast("numeric").cast("float8")
+```
+
+当使用不兼容的类型转换时，系统会发出警告提示用户使用正确的中间类型。
+
+### PostgreSQL 类型常量
+
+为方便使用，提供了 PostgreSQL 类型常量：
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+    # 数值类型
+    SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
+    REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,
+    SERIAL, BIGSERIAL,
+    
+    # 货币类型
+    MONEY,
+    
+    # 字符类型
+    VARCHAR, TEXT, CHAR,
+    
+    # 时间类型
+    DATE, TIME, TIMESTAMP, TIMESTAMPTZ, INTERVAL,
+    
+    # 布尔类型
+    BOOLEAN,
+    
+    # JSON 类型
+    JSON, JSONB, JSONPATH,
+    
+    # UUID 类型
+    UUID,
+    
+    # 网络地址类型
+    INET, CIDR, MACADDR, MACADDR8,
+    
+    # 几何类型
+    POINT, LINE, BOX, PATH, POLYGON, CIRCLE,
+    
+    # 范围类型
+    INT4RANGE, INT8RANGE, NUMRANGE, DATERANGE,
+)
+
+# 使用示例
+col.cast(INTEGER)  # 等同于 col.cast("integer")
+col.cast(MONEY)    # 等同于 col.cast("money")
+col.cast(JSONB)    # 等同于 col.cast("jsonb")
+```
+
+### 在查询中使用
+
+```python
+from rhosocial.activerecord.backend.expression import Column
+
+# WHERE 子句中的类型转换
+col = Column(dialect, "amount")
+predicate = col.cast(NUMERIC) > 100
+sql, params = predicate.to_sql()
+# 生成: ("amount"::numeric > %s, (100,))
+
+# 算术表达式中的类型转换
+col1 = Column(dialect, "price1")
+col2 = Column(dialect, "price2")
+expr = col1.cast(NUMERIC) + col2.cast(NUMERIC)
+sql, params = expr.to_sql()
+# 生成: ("price1"::numeric + "price2"::numeric, ())
+```
+
+### PostgreSQL 与标准 SQL 语法对照
+
+| 功能 | 标准 SQL | PostgreSQL |
+|------|----------|------------|
+| 基本转换 | `CAST(x AS integer)` | `x::integer` |
+| 带修饰符 | `CAST(x AS VARCHAR(100))` | `x::VARCHAR(100)` |
+| 链式转换 | `CAST(CAST(x AS money) AS numeric)` | `x::money::numeric` |
+| 数值精度 | `CAST(x AS NUMERIC(10,2))` | `x::NUMERIC(10,2)` |
+
+**注意**：虽然 PostgreSQL 支持 `::` 语法，但 `CAST()` 函数仍然可用。系统默认使用 `::` 语法以生成更简洁的 SQL。
+
 ## DDL 语句
 
 ### CREATE TABLE ... LIKE

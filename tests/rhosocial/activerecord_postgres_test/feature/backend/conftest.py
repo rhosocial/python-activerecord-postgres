@@ -92,6 +92,8 @@ class BackendFeatureProvider:
         config = PostgresConnectionConfig(**config_dict)
         self._backend = PostgresBackend(connection_config=config)
         self._backend.connect()
+        # Introspect and adapt to detect server version and extensions
+        self._backend.introspect_and_adapt()
         return self._backend
 
     async def setup_async_backend(self, scenario_name: str):
@@ -104,6 +106,8 @@ class BackendFeatureProvider:
         config = PostgresConnectionConfig(**config_dict)
         self._async_backend = AsyncPostgresBackend(connection_config=config)
         await self._async_backend.connect()
+        # Introspect and adapt to detect server version and extensions
+        await self._async_backend.introspect_and_adapt()
         return self._async_backend
 
     def cleanup(self):

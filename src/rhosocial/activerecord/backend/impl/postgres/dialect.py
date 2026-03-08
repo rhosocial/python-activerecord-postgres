@@ -5,7 +5,7 @@ PostgreSQL backend SQL dialect implementation.
 This dialect implements protocols for features that PostgreSQL actually supports,
 based on the PostgreSQL version provided at initialization.
 """
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, Tuple, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
@@ -36,6 +36,8 @@ from .mixins import (
     PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
     # DDL feature mixins
     PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
+    # Type mixins
+    EnumTypeMixin,
 )
 # PostgreSQL-specific imports
 from .protocols import (
@@ -51,6 +53,8 @@ from .protocols import (
     PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
     # DDL feature protocols
     PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
+    # Type feature protocols
+    MultirangeSupport, EnumTypeSupport,
 )
 
 if TYPE_CHECKING:
@@ -81,6 +85,8 @@ class PostgresDialect(
     PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
     # DDL feature mixins
     PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
+    # Type mixins
+    EnumTypeMixin,
     # Protocol supports
     SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
@@ -100,6 +106,8 @@ class PostgresDialect(
     PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
     # DDL feature protocols
     PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
+    # Type feature protocols
+    MultirangeSupport, EnumTypeSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
@@ -263,6 +271,14 @@ class PostgresDialect(
     def supports_ordered_set_aggregation(self) -> bool:
         """Whether ordered-set aggregate functions are supported."""
         return self.version >= (9, 4, 0)  # Supported since 9.4
+
+    def supports_multirange(self) -> bool:
+        """Whether multirange types are supported (PostgreSQL 14+)."""
+        return self.version >= (14, 0, 0)
+
+    def supports_multirange_constructor(self) -> bool:
+        """Whether multirange constructor functions are supported (PostgreSQL 14+)."""
+        return self.version >= (14, 0, 0)
 
     def supports_inner_join(self) -> bool:
         """INNER JOIN is supported."""
@@ -773,6 +789,48 @@ class PostgresDialect(
 
         # Otherwise, delegate to base implementation
         return super().format_create_table_statement(expr)
+    # endregion
+
+    # region Type Casting Support (PostgreSQL-specific)
+    def format_cast_expression(
+        self,
+        expr_sql: str,
+        target_type: str,
+        expr_params: tuple,
+        alias: Optional[str] = None
+    ) -> Tuple[str, Tuple]:
+        """Format type cast expression using PostgreSQL :: syntax.
+
+        PostgreSQL supports both standard CAST(expr AS type) syntax and the
+        PostgreSQL-specific expr::type syntax. This method uses the more
+        concise :: syntax which is idiomatic in PostgreSQL.
+
+        Args:
+            expr_sql: SQL expression string to be cast
+            target_type: Target PostgreSQL type name (e.g., 'integer', 'varchar(100)')
+            expr_params: Parameters tuple for the expression
+            alias: Optional alias for the result
+
+        Returns:
+            Tuple of (SQL string, parameters)
+
+        Example:
+            >>> dialect.format_cast_expression('price', 'numeric', ())
+            # Returns: ('price::numeric', ())
+            >>> dialect.format_cast_expression('amount', 'money', ())
+            # Returns: ('amount::money', ())
+            >>> dialect.format_cast_expression('value', 'integer', (), 'int_val')
+            # Returns: ('value::integer AS "int_val"', ())
+
+        Note:
+            For chained type conversions, each ::type is appended:
+            >>> col.cast('money').cast('numeric').cast('float8')
+            # Generates: col::money::numeric::float8
+        """
+        sql = f"{expr_sql}::{target_type}"
+        if alias:
+            sql = f"{sql} AS {self.format_identifier(alias)}"
+        return sql, expr_params
     # endregion
 
     # region Trigger Support (PostgreSQL-specific)
