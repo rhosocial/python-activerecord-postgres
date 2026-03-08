@@ -23,6 +23,154 @@ from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
 from .types import PostgresEnumType
+from .statements import (
+    CreateEnumTypeExpression,
+    DropEnumTypeExpression,
+    AlterEnumTypeAddValueExpression,
+    AlterEnumTypeRenameValueExpression,
+    CreateRangeTypeExpression,
+)
+from .adapters import (
+    PostgresEnumAdapter,
+    PostgresRangeAdapter,
+    PostgresMultirangeAdapter,
+)
+from .types.range import (
+    PostgresRange,
+    PostgresMultirange,
+)
+from .types.geometric import (
+    Point,
+    Line,
+    LineSegment,
+    Box,
+    Path,
+    Polygon,
+    Circle,
+)
+from .adapters.geometric import PostgresGeometryAdapter
+from .types.bit_string import PostgresBitString
+from .adapters.bit_string import PostgresBitStringAdapter
+from .types.monetary import PostgresMoney
+from .adapters.monetary import PostgresMoneyAdapter
+from .types.xml import PostgresXML
+from .adapters.xml import PostgresXMLAdapter
+from .types.network_address import PostgresMacaddr, PostgresMacaddr8
+from .adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
+from .types.text_search import (
+    PostgresTsVector,
+    PostgresTsQuery,
+    to_tsvector,
+    to_tsquery,
+    plainto_tsquery,
+    phraseto_tsquery,
+    websearch_to_tsquery,
+    ts_matches,
+    ts_matches_expr,
+    ts_rank,
+    ts_rank_cd,
+    ts_headline,
+    tsvector_concat,
+    tsvector_strip,
+    tsvector_setweight,
+    tsvector_length,
+)
+from .adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
+from .types.pg_lsn import PostgresLsn
+from .adapters.pg_lsn import PostgresLsnAdapter
+from .types.object_identifier import (
+    OID,
+    RegClass,
+    RegType,
+    RegProc,
+    RegProcedure,
+    RegOper,
+    RegOperator,
+    RegConfig,
+    RegDictionary,
+    RegNamespace,
+    RegRole,
+    RegCollation,
+    XID,
+    XID8,
+    CID,
+    TID,
+)
+from .adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
+from .types.json import PostgresJsonPath
+from .adapters.json import PostgresJsonPathAdapter
+from .types.enum import EnumTypeManager
+
+# Import functions from functions module
+from .functions import (
+    # Range functions
+    range_contains,
+    range_contained_by,
+    range_contains_range,
+    range_overlaps,
+    range_adjacent,
+    range_strictly_left_of,
+    range_strictly_right_of,
+    range_not_extend_right,
+    range_not_extend_left,
+    range_union,
+    range_intersection,
+    range_difference,
+    range_lower,
+    range_upper,
+    range_is_empty,
+    range_lower_inc,
+    range_upper_inc,
+    range_lower_inf,
+    range_upper_inf,
+    # Geometry functions
+    geometry_distance,
+    geometry_contains,
+    geometry_contained_by,
+    geometry_overlaps,
+    geometry_strictly_left,
+    geometry_strictly_right,
+    geometry_not_extend_right,
+    geometry_not_extend_left,
+    geometry_area,
+    geometry_center,
+    geometry_length,
+    geometry_width,
+    geometry_height,
+    geometry_npoints,
+    # Enum functions
+    enum_range,
+    enum_first,
+    enum_last,
+    enum_lt,
+    enum_le,
+    enum_gt,
+    enum_ge,
+    # Bit string functions
+    bit_concat,
+    bit_and,
+    bit_or,
+    bit_xor,
+    bit_not,
+    bit_shift_left,
+    bit_shift_right,
+    bit_length,
+    bit_length_func,
+    bit_octet_length,
+    bit_get_bit,
+    bit_set_bit,
+    bit_count,
+    # JSON functions
+    json_path_root,
+    json_path_key,
+    json_path_index,
+    json_path_wildcard,
+    json_path_filter,
+    jsonb_path_query,
+    jsonb_path_query_first,
+    jsonb_path_exists,
+    jsonb_path_match,
+)
 
 
 __all__ = [
@@ -44,4 +192,156 @@ __all__ = [
 
     # PostgreSQL-specific Type Helpers
     'PostgresEnumType',
+    'PostgresEnumAdapter',
+
+    # PostgreSQL DDL Statements
+    'CreateEnumTypeExpression',
+    'DropEnumTypeExpression',
+    'AlterEnumTypeAddValueExpression',
+    'AlterEnumTypeRenameValueExpression',
+    'CreateRangeTypeExpression',
+
+    # Range Types
+    'PostgresRange',
+    'PostgresRangeAdapter',
+    'PostgresMultirange',
+    'PostgresMultirangeAdapter',
+    'range_contains',
+    'range_contained_by',
+    'range_contains_range',
+    'range_overlaps',
+    'range_adjacent',
+    'range_strictly_left_of',
+    'range_strictly_right_of',
+    'range_not_extend_right',
+    'range_not_extend_left',
+    'range_union',
+    'range_intersection',
+    'range_difference',
+    'range_lower',
+    'range_upper',
+    'range_is_empty',
+    'range_lower_inc',
+    'range_upper_inc',
+    'range_lower_inf',
+    'range_upper_inf',
+
+    # Geometry Types
+    'Point',
+    'Line',
+    'LineSegment',
+    'Box',
+    'Path',
+    'Polygon',
+    'Circle',
+    'PostgresGeometryAdapter',
+    'geometry_distance',
+    'geometry_contains',
+    'geometry_contained_by',
+    'geometry_overlaps',
+    'geometry_strictly_left',
+    'geometry_strictly_right',
+    'geometry_not_extend_right',
+    'geometry_not_extend_left',
+    'geometry_area',
+    'geometry_center',
+    'geometry_length',
+    'geometry_width',
+    'geometry_height',
+    'geometry_npoints',
+
+    # Bit String Types
+    'PostgresBitString',
+    'PostgresBitStringAdapter',
+    'bit_concat',
+    'bit_and',
+    'bit_or',
+    'bit_xor',
+    'bit_not',
+    'bit_shift_left',
+    'bit_shift_right',
+    'bit_length',
+    'bit_length_func',
+    'bit_octet_length',
+    'bit_get_bit',
+    'bit_set_bit',
+    'bit_count',
+
+    # Enum Types
+    'EnumTypeManager',
+    'enum_range',
+    'enum_first',
+    'enum_last',
+    'enum_lt',
+    'enum_le',
+    'enum_gt',
+    'enum_ge',
+
+    # Money Type
+    'PostgresMoney',
+    'PostgresMoneyAdapter',
+
+    # XML Type
+    'PostgresXML',
+    'PostgresXMLAdapter',
+
+    # MACADDR Types
+    'PostgresMacaddr',
+    'PostgresMacaddrAdapter',
+    'PostgresMacaddr8',
+    'PostgresMacaddr8Adapter',
+
+    # Text Search Types
+    'PostgresTsVector',
+    'PostgresTsVectorAdapter',
+    'PostgresTsQuery',
+    'PostgresTsQueryAdapter',
+    'to_tsvector',
+    'to_tsquery',
+    'plainto_tsquery',
+    'phraseto_tsquery',
+    'websearch_to_tsquery',
+    'ts_matches',
+    'ts_matches_expr',
+    'ts_rank',
+    'ts_rank_cd',
+    'ts_headline',
+    'tsvector_concat',
+    'tsvector_strip',
+    'tsvector_setweight',
+    'tsvector_length',
+
+    # LSN Type
+    'PostgresLsn',
+    'PostgresLsnAdapter',
+
+    # OID Types
+    'OID',
+    'RegClass',
+    'RegType',
+    'RegProc',
+    'RegProcedure',
+    'RegOper',
+    'RegOperator',
+    'RegConfig',
+    'RegDictionary',
+    'RegNamespace',
+    'RegRole',
+    'RegCollation',
+    'XID',
+    'XID8',
+    'CID',
+    'TID',
+    'PostgresOidAdapter',
+    'PostgresXidAdapter',
+    'PostgresTidAdapter',
+
+    # JSON Path Type
+    'PostgresJsonPath',
+    'PostgresJsonPathAdapter',
+    'json_path_root',
+    'json_path_key',
+    'json_path_index',
+    'json_path_wildcard',
+    'json_path_filter',
 ]

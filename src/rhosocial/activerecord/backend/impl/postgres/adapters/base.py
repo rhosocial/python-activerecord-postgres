@@ -1,6 +1,12 @@
-# src/rhosocial/activerecord/backend/impl/postgres/adapters.py
+# src/rhosocial/activerecord/backend/impl/postgres/adapters/base.py
+"""
+Base PostgreSQL type adapters.
+
+This module contains basic type adapters for PostgreSQL.
+"""
 import json
-from typing import Any, Dict, List, Type, Union, Optional
+from enum import Enum as PythonEnum
+from typing import Any, Dict, List, Type, Union, Optional, Set
 
 from psycopg.types.json import Jsonb
 
@@ -104,3 +110,106 @@ class PostgresNetworkAddressAdapter(SQLTypeAdapter):
                 return ipaddress.ip_network(value)
             except (ImportError, ValueError):
                 return value
+
+
+class PostgresEnumAdapter(SQLTypeAdapter):
+    """PostgreSQL ENUM type adapter.
+
+    This adapter handles conversion between Python values and PostgreSQL enum values.
+
+    The adapter can work with:
+    - String values (validated against enum type)
+    - Python Enum instances
+    - None (NULL)
+    """
+
+    @property
+    def supported_types(self) -> Dict[Type, Set[Type]]:
+        """Return supported type mappings."""
+        return {str: {str}}
+
+    def to_database(
+        self,
+        value: Any,
+        target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """Convert Python value to PostgreSQL enum value.
+
+        Args:
+            value: String, Python Enum, or None
+            target_type: Target type (not used for enums)
+            options: Optional conversion options
+                - 'enum_type': PostgresEnumType for validation
+
+        Returns:
+            Enum value string, or None
+        """
+        if value is None:
+            return None
+
+        # Handle Python Enum
+        if isinstance(value, PythonEnum):
+            result = value.name
+        elif isinstance(value, str):
+            result = value
+        else:
+            raise TypeError(f"Cannot convert {type(value).__name__} to enum value")
+
+        # Validate if enum_type provided
+        if options and 'enum_type' in options:
+            from ..types import PostgresEnumType
+            enum_type = options['enum_type']
+            if isinstance(enum_type, PostgresEnumType):
+                if not enum_type.validate_value(result):
+                    raise ValueError(f"Invalid enum value: '{result}'")
+
+        return result
+
+    def from_database(
+        self,
+        value: Any,
+        target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
+        """Convert PostgreSQL enum value to Python string.
+
+        Args:
+            value: Enum value from database
+            target_type: Target Python type
+            options: Optional conversion options
+                - 'enum_class': Python Enum class to convert to
+
+        Returns:
+            String value, Python Enum instance, or None
+        """
+        if value is None:
+            return None
+
+        # If already a string, check if we should convert to Python Enum
+        if isinstance(value, str):
+            if options and 'enum_class' in options:
+                enum_class = options['enum_class']
+                if issubclass(enum_class, PythonEnum):
+                    return enum_class[value]
+            return value
+
+        raise TypeError(f"Cannot convert {type(value).__name__} from enum")
+
+    def to_database_batch(
+        self,
+        values: List[Any],
+        target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
+        """Batch convert values to database format."""
+        return [self.to_database(v, target_type, options) for v in values]
+
+    def from_database_batch(
+        self,
+        values: List[Any],
+        target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
+        """Batch convert values from database format."""
+        return [self.from_database(v, target_type, options) for v in values]

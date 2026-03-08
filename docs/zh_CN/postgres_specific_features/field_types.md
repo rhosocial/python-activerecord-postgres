@@ -1,5 +1,71 @@
 # PostgreSQL 特定字段类型
 
+## 类型常量
+
+为方便使用，提供了 PostgreSQL 类型常量。这些常量是字符串值，可在类型转换中使用：
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+    # 数值类型
+    SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
+    REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,
+    SERIAL, BIGSERIAL, SMALLSERIAL,
+    
+    # 货币类型
+    MONEY,
+    
+    # 字符类型
+    VARCHAR, TEXT, CHAR, CHARACTER, CHARACTER_VARYING,
+    
+    # 时间类型
+    DATE, TIME, TIMESTAMP, TIMESTAMPTZ, INTERVAL,
+    
+    # 布尔类型
+    BOOLEAN, BOOL,
+    
+    # JSON 类型
+    JSON, JSONB, JSONPATH,
+    
+    # UUID 类型
+    UUID,
+    
+    # 网络地址类型
+    INET, CIDR, MACADDR, MACADDR8,
+    
+    # 几何类型
+    POINT, LINE, LSEG, BOX, PATH, POLYGON, CIRCLE,
+    
+    # 位串类型
+    BIT, VARBIT,
+    
+    # 文本搜索类型
+    TSVECTOR, TSQUERY,
+    
+    # XML 类型
+    XML,
+    
+    # 范围类型
+    INT4RANGE, INT8RANGE, NUMRANGE, TSRANGE, TSTZRANGE, DATERANGE,
+    
+    # 多范围类型 (PostgreSQL 14+)
+    INT4MULTIRANGE, INT8MULTIRANGE, NUMMULTIRANGE,
+    TSMULTIRANGE, TSTZMULTIRANGE, DATEMULTIRANGE,
+    
+    # 对象标识符类型
+    OID, REGCLASS, REGTYPE, REGPROC,
+)
+
+# 常量值为字符串，可直接使用
+assert INTEGER == "integer"
+assert MONEY == "money"
+assert JSONB == "jsonb"
+
+# 在类型转换中使用
+from rhosocial.activerecord.backend.expression import Column
+col = Column(dialect, "price")
+expr = col.cast(INTEGER)  # 等同于 col.cast("integer")
+```
+
 ## 数组类型
 
 PostgreSQL 原生支持数组：

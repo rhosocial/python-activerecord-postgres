@@ -1315,3 +1315,100 @@ class PostgresTypeSupport(Protocol):
             Tuple of (SQL string, parameters tuple)
         """
         ...
+
+
+@runtime_checkable
+class MultirangeSupport(Protocol):
+    """PostgreSQL multirange type support protocol.
+
+    PostgreSQL 14 introduced multirange types, which are arrays of
+    non-overlapping ranges. Each range type has a corresponding multirange type.
+
+    Multirange types:
+    - int4multirange: Multiple int4range values
+    - int8multirange: Multiple int8range values
+    - nummultirange: Multiple numrange values
+    - tsmultirange: Multiple tsrange values
+    - tstzmultirange: Multiple tstzrange values
+    - datemultirange: Multiple daterange values
+
+    Version requirement: PostgreSQL 14+
+    """
+
+    def supports_multirange(self) -> bool:
+        """Check if multirange types are supported.
+
+        Returns:
+            True if PostgreSQL version >= 14.0
+        """
+        ...
+
+    def supports_multirange_constructor(self) -> bool:
+        """Check if multirange constructor function is supported.
+
+        The multirange constructor function (e.g., int4multirange(range1, range2))
+        was added in PostgreSQL 14.
+
+        Returns:
+            True if PostgreSQL version >= 14.0
+        """
+        ...
+
+
+@runtime_checkable
+class EnumTypeSupport(Protocol):
+    """PostgreSQL ENUM type management protocol.
+
+    PostgreSQL ENUM types are custom types created with CREATE TYPE.
+    They are reusable across tables and require explicit lifecycle management.
+
+    Version requirements:
+    - Basic ENUM: PostgreSQL 8.3+
+    - Adding values: PostgreSQL 9.1+
+    - IF NOT EXISTS: PostgreSQL 9.1+
+    """
+
+    def create_enum_type(self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False) -> str:
+        """Generate CREATE TYPE statement for enum.
+
+        Args:
+            name: Enum type name
+            values: List of allowed values
+            schema: Optional schema name
+            if_not_exists: Add IF NOT EXISTS clause (PG 9.1+)
+
+        Returns:
+            SQL statement string
+        """
+        ...
+
+    def drop_enum_type(self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False) -> str:
+        """Generate DROP TYPE statement for enum.
+
+        Args:
+            name: Enum type name
+            schema: Optional schema name
+            if_exists: Add IF EXISTS clause
+            cascade: Add CASCADE clause
+
+        Returns:
+            SQL statement string
+        """
+        ...
+
+    def alter_enum_add_value(self, type_name: str, new_value: str, schema: Optional[str] = None, before: Optional[str] = None, after: Optional[str] = None) -> str:
+        """Generate ALTER TYPE ADD VALUE statement.
+
+        Note: Requires PostgreSQL 9.1+
+
+        Args:
+            type_name: Enum type name
+            new_value: New value to add
+            schema: Optional schema name
+            before: Add before this value
+            after: Add after this value
+
+        Returns:
+            SQL statement string
+        """
+        ...
