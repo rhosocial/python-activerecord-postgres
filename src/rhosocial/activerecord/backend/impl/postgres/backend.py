@@ -41,7 +41,17 @@ from .adapters import (
     PostgresListAdapter,
     PostgresJSONBAdapter,
     PostgresNetworkAddressAdapter,
+    PostgresEnumAdapter,
+    PostgresRangeAdapter,
+    PostgresMultirangeAdapter,
 )
+from .adapters.geometric import PostgresGeometryAdapter
+from .adapters.json import PostgresJsonPathAdapter
+from .adapters.monetary import PostgresMoneyAdapter
+from .adapters.network_address import PostgresMacaddr8Adapter
+from .adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
+from .adapters.pg_lsn import PostgresLsnAdapter
+from .adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .mixins import PostgresBackendMixin
@@ -102,6 +112,8 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         self._dialect = PostgresDialect((9, 6, 0))
 
         # Register PostgreSQL-specific type adapters (same as async backend)
+        # Note: XML adapter is NOT registered by default due to potential conflicts.
+        # See PostgresXMLAdapter documentation for details.
         self._register_postgres_adapters()
 
         # Initialize transaction manager with connection (will be set when connected)
@@ -112,18 +124,42 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         self.log(logging.INFO, "PostgreSQLBackend initialized")
 
     def _register_postgres_adapters(self):
-        """Register PostgreSQL-specific type adapters."""
+        """Register PostgreSQL-specific type adapters.
+
+        Note: PostgresXMLAdapter is NOT registered by default because its
+        str->str type mapping conflicts with existing string handling.
+        Users should specify it explicitly when working with XML columns.
+
+        Note: PostgresBitStringAdapter is temporarily NOT registered by default
+        because its str->str type mapping conflicts with PostgresEnumAdapter.
+        """
         pg_adapters = [
             PostgresListAdapter(),
             PostgresJSONBAdapter(),
             PostgresNetworkAddressAdapter(),
+            PostgresRangeAdapter(),
+            PostgresMultirangeAdapter(),
+            PostgresGeometryAdapter(),
+            # PostgresBitStringAdapter(),  # Temporarily disabled: str->str conflicts
+            PostgresEnumAdapter(),
+            PostgresMoneyAdapter(),
+            PostgresMacaddr8Adapter(),
+            PostgresTsVectorAdapter(),
+            PostgresTsQueryAdapter(),
+            PostgresLsnAdapter(),
+            PostgresOidAdapter(),
+            PostgresXidAdapter(),
+            PostgresTidAdapter(),
+            PostgresJsonPathAdapter(),
+            # PostgresXMLAdapter is NOT registered by default
+            # due to str->str type pair conflict
         ]
-        
+
         for adapter in pg_adapters:
             for py_type, db_types in adapter.supported_types.items():
                 for db_type in db_types:
                     self.adapter_registry.register(adapter, py_type, db_type)
-        
+
         self.log(logging.DEBUG, "Registered PostgreSQL-specific type adapters")
 
     @property

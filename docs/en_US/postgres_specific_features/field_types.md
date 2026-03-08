@@ -1,5 +1,71 @@
 # PostgreSQL-Specific Field Types
 
+## Type Constants
+
+For convenience, PostgreSQL type constants are provided. These constants are string values that can be used in type casting:
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+    # Numeric types
+    SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
+    REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,
+    SERIAL, BIGSERIAL, SMALLSERIAL,
+    
+    # Monetary type
+    MONEY,
+    
+    # Character types
+    VARCHAR, TEXT, CHAR, CHARACTER, CHARACTER_VARYING,
+    
+    # Temporal types
+    DATE, TIME, TIMESTAMP, TIMESTAMPTZ, INTERVAL,
+    
+    # Boolean type
+    BOOLEAN, BOOL,
+    
+    # JSON types
+    JSON, JSONB, JSONPATH,
+    
+    # UUID type
+    UUID,
+    
+    # Network address types
+    INET, CIDR, MACADDR, MACADDR8,
+    
+    # Geometric types
+    POINT, LINE, LSEG, BOX, PATH, POLYGON, CIRCLE,
+    
+    # Bit string types
+    BIT, VARBIT,
+    
+    # Text search types
+    TSVECTOR, TSQUERY,
+    
+    # XML type
+    XML,
+    
+    # Range types
+    INT4RANGE, INT8RANGE, NUMRANGE, TSRANGE, TSTZRANGE, DATERANGE,
+    
+    # Multirange types (PostgreSQL 14+)
+    INT4MULTIRANGE, INT8MULTIRANGE, NUMMULTIRANGE,
+    TSMULTIRANGE, TSTZMULTIRANGE, DATEMULTIRANGE,
+    
+    # Object identifier types
+    OID, REGCLASS, REGTYPE, REGPROC,
+)
+
+# Constants are string values and can be used directly
+assert INTEGER == "integer"
+assert MONEY == "money"
+assert JSONB == "jsonb"
+
+# Use in type casting
+from rhosocial.activerecord.backend.expression import Column
+col = Column(dialect, "price")
+expr = col.cast(INTEGER)  # Equivalent to col.cast("integer")
+```
+
 ## Array Types
 
 PostgreSQL natively supports arrays:
