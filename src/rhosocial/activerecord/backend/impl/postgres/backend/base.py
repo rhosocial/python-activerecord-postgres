@@ -1,0 +1,114 @@
+# src/rhosocial/activerecord/backend/impl/postgres/backend/base.py
+"""PostgreSQL backend shared functionality.
+
+This module provides the base mixin class for PostgreSQL backend implementations,
+containing methods that are shared between sync and async backends.
+"""
+from typing import Dict, Optional, Tuple, Type
+import logging
+
+
+class PostgresBackendMixin:
+    """PostgreSQL backend shared methods mixin.
+
+    This mixin provides methods that are shared between sync and async
+    PostgreSQL backend implementations. These methods do not involve
+    I/O operations and have identical implementations in both backends.
+
+    Classes using this mixin must provide:
+    - self._dialect: PostgresDialect instance
+    - self.adapter_registry: Type adapter registry
+    - self.log(level, message): Logging method
+    - self.config: Connection configuration
+    """
+
+    def _prepare_sql_and_params(
+        self,
+        sql: str,
+        params: Optional[Tuple]
+    ) -> Tuple[str, Optional[Tuple]]:
+        """
+        Prepare SQL and parameters for PostgreSQL execution.
+
+        Converts the generic '?' placeholder to PostgreSQL-compatible '%s' placeholder.
+        """
+        if params is None:
+            return sql, None
+
+        # Replace '?' placeholders with '%s' for PostgreSQL
+        prepared_sql = sql.replace('?', '%s')
+        return prepared_sql, params
+
+    def create_expression(self, expression_str: str):
+        """Create an expression object for raw SQL expressions."""
+        from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+        return RawSQLExpression(self.dialect, expression_str)
+
+    def requires_manual_commit(self) -> bool:
+        """Check if manual commit is required for this database."""
+        return not getattr(self.config, 'autocommit', False)
+
+    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple['SQLTypeAdapter', Type]]:
+        """
+        [Backend Implementation] Provides default type adapter suggestions for PostgreSQL.
+
+        This method defines a curated set of type adapter suggestions for common Python
+        types, mapping them to their typical PostgreSQL-compatible representations as
+        demonstrated in test fixtures. It explicitly retrieves necessary `SQLTypeAdapter`
+        instances from the backend's `adapter_registry`. If an adapter for a specific
+        (Python type, DB driver type) pair is not registered, no suggestion will be
+        made for that Python type.
+
+        Returns:
+            Dict[Type, Tuple[SQLTypeAdapter, Type]]: A dictionary where keys are
+            original Python types (`TypeRegistry`'s `py_type`), and values are
+            tuples containing a `SQLTypeAdapter` instance and the target
+            Python type (`TypeRegistry`'s `db_type`) expected by the driver.
+        """
+        suggestions: Dict[Type, Tuple['SQLTypeAdapter', Type]] = {}
+
+        # Define a list of desired Python type to DB driver type mappings.
+        # This list reflects types seen in test fixtures and common usage,
+        # along with their preferred database-compatible Python types for the driver.
+        # Types that are natively compatible with the DB driver (e.g., Python str, int, float)
+        # and for which no specific conversion logic is needed are omitted from this list.
+        # The consuming layer should assume pass-through behavior for any Python type
+        # that does not have an explicit adapter suggestion.
+        #
+        # Exception: If a user requires specific processing for a natively compatible type
+        # (e.g., custom serialization/deserialization for JSON strings beyond basic conversion),
+        # they would need to implement and register their own specialized adapter.
+        # This backend's default suggestions do not cater to such advanced processing needs.
+        from datetime import date, datetime, time
+        from decimal import Decimal
+        from uuid import UUID
+        from enum import Enum
+
+        type_mappings = [
+            (bool, bool),  # Python bool -> DB driver bool (PostgreSQL BOOLEAN)
+            # Why str for date/time?
+            # PostgreSQL has native DATE, TIME, TIMESTAMP types but accepts string representations
+            (datetime, str),  # Python datetime -> DB driver str (PostgreSQL TIMESTAMP)
+            (date, str),  # Python date -> DB driver str (PostgreSQL DATE)
+            (time, str),  # Python time -> DB driver str (PostgreSQL TIME)
+            (Decimal, Decimal),  # Python Decimal -> DB driver Decimal (PostgreSQL NUMERIC/DECIMAL)
+            (UUID, str),  # Python UUID -> DB driver str (PostgreSQL UUID type)
+            (dict, str),  # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
+            (list, list),  # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
+            (Enum, str),  # Python Enum -> DB driver str (PostgreSQL TEXT)
+        ]
+
+        # Iterate through the defined mappings and retrieve adapters from the registry.
+        for py_type, db_type in type_mappings:
+            adapter = self.adapter_registry.get_adapter(py_type, db_type)
+            if adapter:
+                suggestions[py_type] = (adapter, db_type)
+            else:
+                # Log a debug message if a specific adapter is expected but not found.
+                self.log(logging.DEBUG, f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
+                         "Suggestion will not be provided for this type.")
+
+        return suggestions
+
+
+__all__ = ['PostgresBackendMixin']
