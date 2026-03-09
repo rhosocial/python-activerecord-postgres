@@ -48,7 +48,7 @@ from ..adapters import (
 from ..adapters.geometric import PostgresGeometryAdapter
 from ..adapters.json import PostgresJsonPathAdapter
 from ..adapters.monetary import PostgresMoneyAdapter
-from ..adapters.network_address import PostgresMacaddr8Adapter
+from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
 from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
 from ..adapters.pg_lsn import PostgresLsnAdapter
 from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
@@ -143,6 +143,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             # PostgresBitStringAdapter(), # Temporarily disabled: str->str conflicts
             PostgresEnumAdapter(),
             PostgresMoneyAdapter(),
+            PostgresMacaddrAdapter(),
             PostgresMacaddr8Adapter(),
             PostgresTsVectorAdapter(),
             PostgresTsQueryAdapter(),
