@@ -64,6 +64,11 @@ class PostgresBackendMixin:
             original Python types (`TypeRegistry`'s `py_type`), and values are
             tuples containing a `SQLTypeAdapter` instance and the target
             Python type (`TypeRegistry`'s `db_type`) expected by the driver.
+
+        Note:
+            PostgreSQL XML and BitString types are NOT included here due to str->str
+            mapping conflicts with the base string handling. Users must explicitly
+            specify adapters for these types when needed.
         """
         suggestions: Dict[Type, Tuple['SQLTypeAdapter', Type]] = {}
 
@@ -84,7 +89,24 @@ class PostgresBackendMixin:
         from uuid import UUID
         from enum import Enum
 
+        # Import PostgreSQL-specific types
+        from ..types.range import PostgresRange, PostgresMultirange
+        from ..types.geometric import (
+            Point, Line, LineSegment, Box, Path, Polygon, Circle
+        )
+        from ..types.text_search import PostgresTsVector, PostgresTsQuery
+        from ..types.monetary import PostgresMoney
+        from ..types.network_address import PostgresMacaddr, PostgresMacaddr8
+        from ..types.pg_lsn import PostgresLsn
+        from ..types.json import PostgresJsonPath
+        from ..types.object_identifier import (
+            OID, RegClass, RegType, RegProc, RegProcedure, RegOper, RegOperator,
+            RegConfig, RegDictionary, RegNamespace, RegRole, RegCollation,
+            XID, XID8, CID, TID
+        )
+
         type_mappings = [
+            # === Standard Python Types ===
             (bool, bool),  # Python bool -> DB driver bool (PostgreSQL BOOLEAN)
             # Why str for date/time?
             # PostgreSQL has native DATE, TIME, TIMESTAMP types but accepts string representations
@@ -96,6 +118,63 @@ class PostgresBackendMixin:
             (dict, str),  # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
             (list, list),  # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
             (Enum, str),  # Python Enum -> DB driver str (PostgreSQL TEXT)
+
+            # === PostgreSQL Range Types ===
+            (PostgresRange, str),  # PostgreSQL range types (int4range, daterange, etc.)
+            (PostgresMultirange, str),  # PostgreSQL multirange types (PG 14+)
+
+            # === PostgreSQL Geometric Types ===
+            # All geometric types map to str representation
+            (Point, str),  # 2D point (x, y)
+            (Line, str),  # Infinite line {A, B, C}
+            (LineSegment, str),  # Line segment [(x1,y1),(x2,y2)]
+            (Box, str),  # Rectangular box (x1,y1),(x2,y2)
+            (Path, str),  # Sequence of points (open or closed)
+            (Polygon, str),  # Closed path
+            (Circle, str),  # Circle <(x,y),r>
+
+            # === PostgreSQL Text Search Types ===
+            (PostgresTsVector, str),  # Text search vector
+            (PostgresTsQuery, str),  # Text search query
+
+            # === PostgreSQL Monetary Type ===
+            (PostgresMoney, str),  # MONEY type with locale-aware formatting
+
+            # === PostgreSQL Network Address Types ===
+            (PostgresMacaddr, str),  # 6-byte MAC address
+            (PostgresMacaddr8, str),  # 8-byte MAC address
+
+            # === PostgreSQL pg_lsn Type ===
+            (PostgresLsn, str),  # Log Sequence Number
+
+            # === PostgreSQL JSON Path Type ===
+            (PostgresJsonPath, str),  # JSON path expression
+
+            # === PostgreSQL Object Identifier Types ===
+            (OID, int),  # Unsigned 4-byte integer for internal object identification
+            (RegClass, str),  # Relation (table/view/sequence) name
+            (RegType, str),  # Data type name
+            (RegProc, str),  # Function name
+            (RegProcedure, str),  # Function name with argument types
+            (RegOper, str),  # Operator name
+            (RegOperator, str),  # Operator name with argument types
+            (RegConfig, str),  # Text search configuration name
+            (RegDictionary, str),  # Text search dictionary name
+            (RegNamespace, str),  # Namespace (schema) name
+            (RegRole, str),  # Role (user/group) name
+            (RegCollation, str),  # Collation name
+
+            # === PostgreSQL Transaction/Command Identifiers ===
+            (XID, int),  # 32-bit transaction identifier
+            (XID8, int),  # 64-bit transaction identifier (PG 13+)
+            (CID, int),  # Command identifier
+
+            # === PostgreSQL Tuple Identifier ===
+            (TID, str),  # Tuple identifier (block number, offset)
+
+            # Note: PostgresXML and PostgresBitString are NOT included here
+            # because they both map to str, which conflicts with base string handling.
+            # Users must explicitly specify adapters for these types.
         ]
 
         # Iterate through the defined mappings and retrieve adapters from the registry.
@@ -106,7 +185,7 @@ class PostgresBackendMixin:
             else:
                 # Log a debug message if a specific adapter is expected but not found.
                 self.log(logging.DEBUG, f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
-                         "Suggestion will not be provided for this type.")
+                      "Suggestion will not be provided for this type.")
 
         return suggestions
 
