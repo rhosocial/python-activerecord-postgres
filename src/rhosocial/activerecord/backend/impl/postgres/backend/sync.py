@@ -125,6 +125,13 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.
 
+        Note: PostgresRangeAdapter and PostgresMultirangeAdapter are NOT registered
+        by default to allow users to choose:
+        1. Use psycopg.types.range.Range directly (pass-through)
+        2. Use PostgresRange by manually registering the adapter
+
+        This design follows the "don't make decisions for the user" principle.
+
         Note: PostgresXMLAdapter is NOT registered by default because its
         str->str type mapping conflicts with existing string handling.
         Users should specify it explicitly when working with XML columns.
@@ -136,8 +143,8 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             PostgresListAdapter(),
             PostgresJSONBAdapter(),
             PostgresNetworkAddressAdapter(),
-            PostgresRangeAdapter(),
-            PostgresMultirangeAdapter(),
+            # PostgresRangeAdapter(), # Not registered by default - user choice
+            # PostgresMultirangeAdapter(), # Not registered by default - user choice
             PostgresGeometryAdapter(),
             # PostgresBitStringAdapter(), # Temporarily disabled: str->str conflicts
             PostgresEnumAdapter(),
