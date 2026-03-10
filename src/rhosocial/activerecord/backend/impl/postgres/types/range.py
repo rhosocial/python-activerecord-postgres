@@ -14,6 +14,55 @@ Supported range types:
 
 For type adapters (conversion between Python and database),
 see adapters.range module.
+
+Design Decisions:
+-----------------
+
+Why create our own PostgresRange instead of using psycopg.types.range.Range?
+
+1. Vendor Independence: By using our own class, we avoid tight coupling to psycopg.
+   Users can switch database drivers without rewriting their domain models.
+
+2. Dataclass Benefits: PostgresRange is a @dataclass, providing:
+   - Immutability by default (frozen=True can be added)
+   - Automatic __eq__, __hash__, __repr__ generation
+   - Clear, declarative syntax
+   - Easy serialization/deserialization
+
+3. No External Dependencies: PostgresRange works without psycopg installed,
+   making it suitable for code that doesn't directly interact with the database.
+
+4. Adapter Pattern: The adapter layer (adapters.range) handles conversion
+   between PostgresRange and psycopg.types.range.Range, keeping concerns separated.
+
+Comparison with Other Approaches:
+- Python Standard Library (ipaddress, uuid): No vendor lock-in, directly usable
+- psycopg.types.range.Range: Tightly coupled to psycopg driver
+- Our PostgresRange: Driver-agnostic, adapter-based conversion
+
+Usage Recommendations:
+----------------------
+
+1. **Recommended**: Use PostgresRange for Python code:
+   ```python
+   from rhosocial.activerecord.backend.impl.postgres.types import PostgresRange
+   range_obj = PostgresRange(1, 10)
+   ```
+
+2. **Advanced**: Use psycopg.adapt.Range directly if you need psycopg-specific features:
+   ```python
+   from psycopg.types.range import Range
+   # Will be passed through without conversion
+   ```
+
+3. **Conversion**: Use PostgresRange.from_psycopg_range() when needed:
+   ```python
+   postgres_range = PostgresRange.from_psycopg_range(psycopg_range)
+   ```
+
+See Also:
+- adapters.range: Conversion between PostgresRange and database values
+- psycopg.types.range: psycopg's native Range implementation
 """
 from dataclasses import dataclass
 from typing import Any, List, Optional
@@ -27,6 +76,10 @@ class PostgresRange:
     element type (called the range's subtype). The range includes a lower
     bound and an upper bound.
 
+    This class is driver-agnostic and can be used without psycopg installed.
+    For conversion to/from psycopg's Range type, use the from_psycopg_range()
+    and to_psycopg_range() methods.
+
     Attributes:
         lower: Lower bound value (None for unbounded below)
         upper: Upper bound value (None for unbounded above)
@@ -34,7 +87,7 @@ class PostgresRange:
         upper_inc: True if upper bound is inclusive (']'), False if exclusive (')')
 
     Examples:
-        # Closed range [1, 10]
+        # Closed range [1, 10)
         PostgresRange(1, 10, lower_inc=True, upper_inc=False)
 
         # Unbounded range [1, infinity)
@@ -42,6 +95,12 @@ class PostgresRange:
 
         # Empty range
         PostgresRange.empty()
+
+        # Convert from psycopg Range
+        PostgresRange.from_psycopg_range(psycopg_range)
+
+        # Convert to psycopg Range
+        postgres_range.to_psycopg_range()
     """
     lower: Optional[Any] = None
     upper: Optional[Any] = None
@@ -203,6 +262,109 @@ class PostgresRange:
             return "PostgresRange.empty()"
         return f"PostgresRange(lower={self.lower!r}, upper={self.upper!r}, lower_inc={self.lower_inc}, upper_inc={self.upper_inc})"
 
+    @classmethod
+    def from_psycopg_range(cls, psycopg_range: Any) -> 'PostgresRange':
+        """Convert from psycopg.types.range.Range to PostgresRange.
+
+        This method creates a PostgresRange instance from a psycopg Range object.
+        It's useful when you receive Range objects directly from psycopg and want
+        to work with a driver-agnostic representation.
+
+        Args:
+            psycopg_range: A psycopg.types.range.Range instance
+
+        Returns:
+            PostgresRange: A new PostgresRange instance
+
+        Raises:
+            ImportError: If psycopg is not installed
+            TypeError: If the argument is not a psycopg Range
+
+        Examples:
+            >>> from psycopg.types.range import Range
+            >>> psycopg_range = Range(1, 10, '[')
+            >>> postgres_range = PostgresRange.from_psycopg_range(psycopg_range)
+            >>> postgres_range.lower
+            1
+            >>> postgres_range.upper
+            10
+            >>> postgres_range.lower_inc
+            True
+            >>> postgres_range.upper_inc
+            False
+
+        Note:
+            psycopg uses a bounds string like '[)' where:
+            - '[' means lower bound is inclusive
+            - ')' means upper bound is exclusive
+        """
+        try:
+            from psycopg.types.range import Range
+        except ImportError as e:
+            raise ImportError(
+                "psycopg is required to use from_psycopg_range(). "
+                "Install it with: pip install psycopg[binary]"
+            ) from e
+
+        if not isinstance(psycopg_range, Range):
+            raise TypeError(
+                f"Expected psycopg.types.range.Range, got {type(psycopg_range).__name__}"
+            )
+
+        lower_inc = bool(psycopg_range.bounds and psycopg_range.bounds[0] == '[')
+        upper_inc = bool(psycopg_range.bounds and psycopg_range.bounds[1] == ']')
+
+        return cls(
+            lower=psycopg_range.lower,
+            upper=psycopg_range.upper,
+            lower_inc=lower_inc,
+            upper_inc=upper_inc
+        )
+
+    def to_psycopg_range(self) -> Any:
+        """Convert to psycopg.types.range.Range.
+
+        This method creates a psycopg Range instance from this PostgresRange.
+        It's useful when you need to pass range values to psycopg directly,
+        for example in raw SQL queries or when using psycopg-specific features.
+
+        Returns:
+            psycopg.types.range.Range: A new Range instance
+
+        Raises:
+            ImportError: If psycopg is not installed
+
+        Examples:
+            >>> postgres_range = PostgresRange(1, 10, lower_inc=True, upper_inc=False)
+            >>> psycopg_range = postgres_range.to_psycopg_range()
+            >>> psycopg_range.lower
+            1
+            >>> psycopg_range.upper
+            10
+            >>> psycopg_range.bounds
+            '[)'
+
+        Note:
+            This method requires psycopg to be installed. If you're writing
+            database-agnostic code, avoid calling this method directly and
+            use the adapter layer instead.
+        """
+        try:
+            from psycopg.types.range import Range
+        except ImportError as e:
+            raise ImportError(
+                "psycopg is required to use to_psycopg_range(). "
+                "Install it with: pip install psycopg[binary]"
+            ) from e
+
+        if self.is_empty:
+            return Range(empty=True)
+
+        bounds = '[' if self.lower_inc else '('
+        bounds += ']' if self.upper_inc else ')'
+
+        return Range(self.lower, self.upper, bounds)
+
 
 def _find_bound_separator(content: str) -> int:
     """Find the comma that separates lower and upper bounds.
@@ -238,8 +400,25 @@ class PostgresMultirange:
 
     A multirange is an ordered list of non-overlapping ranges.
 
+    This class is driver-agnostic and can be used without psycopg installed.
+    For conversion to/from psycopg's Multirange type, use the from_psycopg_multirange()
+    and to_psycopg_multirange() methods.
+
     Attributes:
         ranges: List of PostgresRange objects
+
+    Examples:
+        # Create from ranges
+        PostgresMultirange([PostgresRange(1, 5), PostgresRange(10, 15)])
+
+        # Empty multirange
+        PostgresMultirange.empty()
+
+        # Convert from psycopg Multirange
+        PostgresMultirange.from_psycopg_multirange(psycopg_multirange)
+
+        # Convert to psycopg Multirange
+        postgres_multirange.to_psycopg_multirange()
     """
     ranges: List[PostgresRange]
 
@@ -318,6 +497,81 @@ class PostgresMultirange:
         if not self.ranges:
             return "PostgresMultirange.empty()"
         return f"PostgresMultirange(ranges={self.ranges!r})"
+
+    @classmethod
+    def from_psycopg_multirange(cls, psycopg_multirange: Any) -> 'PostgresMultirange':
+        """Convert from psycopg.types.range.Multirange to PostgresMultirange.
+
+        This method creates a PostgresMultirange instance from a psycopg Multirange object.
+
+        Note: Multirange support was added in psycopg 3.2+. If using an older version,
+        this method will raise ImportError.
+
+        Args:
+            psycopg_multirange: A psycopg.types.range.Multirange instance
+
+        Returns:
+            PostgresMultirange: A new PostgresMultirange instance
+
+        Raises:
+            ImportError: If psycopg is not installed or version < 3.2
+            TypeError: If the argument is not a psycopg Multirange
+
+        Examples:
+            >>> from psycopg.types.range import Multirange, Range
+            >>> psycopg_mr = Multirange([Range(1, 5, '[)'), Range(10, 15, '[)')])
+            >>> postgres_mr = PostgresMultirange.from_psycopg_multirange(psycopg_mr)
+        """
+        try:
+            from psycopg.types.range import Multirange
+        except ImportError as e:
+            raise ImportError(
+                "psycopg 3.2+ is required to use from_psycopg_multirange(). "
+                "Multirange support was added in psycopg 3.2. "
+                "Install it with: pip install psycopg[binary]>=3.2"
+            ) from e
+
+        if not isinstance(psycopg_multirange, Multirange):
+            raise TypeError(
+                f"Expected psycopg.types.range.Multirange, got {type(psycopg_multirange).__name__}"
+            )
+
+        ranges = [
+            PostgresRange.from_psycopg_range(r)
+            for r in psycopg_multirange
+        ]
+
+        return cls(ranges=ranges)
+
+    def to_psycopg_multirange(self) -> Any:
+        """Convert to psycopg.types.range.Multirange.
+
+        This method creates a psycopg Multirange instance from this PostgresMultirange.
+
+        Note: Multirange support was added in psycopg 3.2+. If using an older version,
+        this method will raise ImportError.
+
+        Returns:
+            psycopg.types.range.Multirange: A new Multirange instance
+
+        Raises:
+            ImportError: If psycopg is not installed or version < 3.2
+
+        Examples:
+            >>> mr = PostgresMultirange([PostgresRange(1, 5), PostgresRange(10, 15)])
+            >>> psycopg_mr = mr.to_psycopg_multirange()
+        """
+        try:
+            from psycopg.types.range import Multirange
+        except ImportError as e:
+            raise ImportError(
+                "psycopg 3.2+ is required to use to_psycopg_multirange(). "
+                "Multirange support was added in psycopg 3.2. "
+                "Install it with: pip install psycopg[binary]>=3.2"
+            ) from e
+
+        psycopg_ranges = [r.to_psycopg_range() for r in self.ranges]
+        return Multirange(psycopg_ranges)
 
 
 __all__ = ['PostgresRange', 'PostgresMultirange']
