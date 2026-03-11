@@ -32,6 +32,40 @@ The following adapters are automatically registered when the backend initializes
 | `PostgresLsn` | `PG_LSN` | `PostgresLsnAdapter` | Log sequence number |
 | `Enum` | `ENUM` | `PostgresEnumAdapter` | Enum type |
 
+#### About PostgresJSONBAdapter
+
+`PostgresJSONBAdapter` provides important convenience:
+
+**psycopg native behavior**: psycopg requires explicit `Jsonb()` wrapper, otherwise an error occurs:
+
+```python
+# Using native psycopg - manual wrapping required
+from psycopg.types.json import Jsonb
+
+# ERROR: Raw dict cannot be used directly
+# backend.execute("INSERT INTO t (data) VALUES (%s)", [{'key': 'value'}])
+# Error: "cannot adapt type 'dict'"
+
+# CORRECT: Must use Jsonb wrapper
+backend.execute("INSERT INTO t (data) VALUES (%s)", [Jsonb({'key': 'value'})])
+```
+
+**Using our adapter**: Auto-wrapping, no need to manually call `Jsonb()`:
+
+```python
+# Using PostgresJSONBAdapter - automatic handling
+# Pass dict directly, adapter auto-converts to Jsonb
+backend.execute("INSERT INTO t (data) VALUES (%s)", [{'key': 'value'}])
+
+# Or use Jsonb() wrapper (both work - fully compatible)
+backend.execute("INSERT INTO t (data) VALUES (%s)", [Jsonb({'key': 'value'})])
+```
+
+**Why registered by default**:
+- psycopg does not provide automatic `dict -> JSONB` adaptation
+- Manual wrapping adds code complexity and is easy to forget
+- The adapter provides convenience while being fully compatible with native `Jsonb()`
+
 ### Non-Default Registered Adapters
 
 The following adapters are not automatically registered due to type conflicts or requiring user decisions:
