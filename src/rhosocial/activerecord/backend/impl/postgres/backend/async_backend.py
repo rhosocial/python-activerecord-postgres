@@ -66,9 +66,9 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
         """Initialize async PostgreSQL backend with connection configuration.
 
         Note:
-            The dialect is initialized with a default version (9.6.0) and no plugins
-            are enabled. Call introspect_and_adapt() after connecting to detect
-            the actual server version and installed extensions.
+        The dialect is initialized with a default version (9.6.0) and no plugins
+        are enabled. Call introspect_and_adapt() after connecting to detect
+        the actual server version and installed extensions.
         """
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get('connection_config')
@@ -133,12 +133,13 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
 
         This design follows the "don't make decisions for the user" principle.
 
-        Note: PostgresXMLAdapter is NOT registered by default because its
-        str->str type mapping conflicts with existing string handling.
-        Users should specify it explicitly when working with XML columns.
+        Note: The following adapters are NOT registered by default due to str->str
+        type mapping conflicts with existing string handling:
+        - PostgresXMLAdapter: XML type
+        - PostgresBitStringAdapter: bit/varbit types
+        - PostgresJsonPathAdapter: jsonpath type
 
-        Note: PostgresBitStringAdapter is temporarily NOT registered by default
-        because its str->str type mapping conflicts with PostgresEnumAdapter.
+        Users should specify these explicitly when working with such columns.
         """
         pg_adapters = [
             PostgresListAdapter(),
@@ -147,7 +148,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             # PostgresRangeAdapter(), # Not registered by default - user choice
             # PostgresMultirangeAdapter(), # Not registered by default - user choice
             PostgresGeometryAdapter(),
-            # PostgresBitStringAdapter(), # Temporarily disabled: str->str conflicts
+            # PostgresBitStringAdapter(), # Not registered: str->str conflict
             PostgresEnumAdapter(),
             PostgresMoneyAdapter(),
             PostgresMacaddrAdapter(),
@@ -158,7 +159,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             PostgresOidAdapter(),
             PostgresXidAdapter(),
             PostgresTidAdapter(),
-            PostgresJsonPathAdapter(),
+            # PostgresJsonPathAdapter(), # Not registered: str->str conflict
             # PostgresXMLAdapter is NOT registered by default
             # due to str->str type pair conflict
         ]
@@ -316,8 +317,8 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
         """Get PostgreSQL server version asynchronously.
 
         Returns:
-            Tuple of (major, minor, patch) version numbers, or None if version
-            cannot be determined.
+        Tuple of (major, minor, patch) version numbers, or None if version
+        cannot be determined.
         """
         if not self._connection:
             await self.connect()
@@ -409,7 +410,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
                 SELECT extname, extversion, nspname as schema_name
                 FROM pg_extension
                 JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
-            """)
+                """)
             rows = await cursor.fetchall()
 
             extensions = {}
