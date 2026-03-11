@@ -32,6 +32,40 @@
 | `PostgresLsn` | `PG_LSN` | `PostgresLsnAdapter` | 日志序列号 |
 | `Enum` | `ENUM` | `PostgresEnumAdapter` | 枚举类型 |
 
+#### 关于 PostgresJSONBAdapter
+
+`PostgresJSONBAdapter` 提供了重要的便利性：
+
+**psycopg 原生行为**：psycopg 要求显式使用 `Jsonb()` 包装器，否则会报错：
+
+```python
+# 使用原生 psycopg - 必须手动包装
+from psycopg.types.json import Jsonb
+
+# 错误：原始 dict 无法直接使用
+# backend.execute("INSERT INTO t (data) VALUES (%s)", [{'key': 'value'}])
+# 报错: "cannot adapt type 'dict'"
+
+# 正确：必须使用 Jsonb 包装器
+backend.execute("INSERT INTO t (data) VALUES (%s)", [Jsonb({'key': 'value'})])
+```
+
+**使用我们的适配器**：自动包装，无需手动调用 `Jsonb()`：
+
+```python
+# 使用 PostgresJSONBAdapter - 自动处理
+# 直接传递 dict 即可，适配器自动转换为 Jsonb
+backend.execute("INSERT INTO t (data) VALUES (%s)", [{'key': 'value'}])
+
+# 或者使用 Jsonb() 包装器也可以（两者兼容）
+backend.execute("INSERT INTO t (data) VALUES (%s)", [Jsonb({'key': 'value'})])
+```
+
+**为什么默认注册**：
+- psycopg 不提供 `dict -> JSONB` 的自动适配
+- 手动包装增加代码复杂度，容易遗忘
+- 适配器提供便利性的同时，与原生 `Jsonb()` 完全兼容
+
 ### 不默认注册的适配器
 
 以下适配器因存在类型冲突或需要用户决策，不自动注册：
