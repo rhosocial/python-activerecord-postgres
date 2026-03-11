@@ -65,9 +65,9 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
         """Initialize PostgreSQL backend with connection configuration.
 
         Note:
-            The dialect is initialized with a default version (9.6.0) and no plugins
-            are enabled. Call introspect_and_adapt() after connecting to detect
-            the actual server version and installed extensions.
+        The dialect is initialized with a default version (9.6.0) and no plugins
+        are enabled. Call introspect_and_adapt() after connecting to detect
+        the actual server version and installed extensions.
         """
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get('connection_config')
@@ -132,12 +132,13 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
 
         This design follows the "don't make decisions for the user" principle.
 
-        Note: PostgresXMLAdapter is NOT registered by default because its
-        str->str type mapping conflicts with existing string handling.
-        Users should specify it explicitly when working with XML columns.
+        Note: The following adapters are NOT registered by default due to str->str
+        type mapping conflicts with existing string handling:
+        - PostgresXMLAdapter: XML type
+        - PostgresBitStringAdapter: bit/varbit types
+        - PostgresJsonPathAdapter: jsonpath type
 
-        Note: PostgresBitStringAdapter is temporarily NOT registered by default
-        because its str->str type mapping conflicts with PostgresEnumAdapter.
+        Users should specify these explicitly when working with such columns.
         """
         pg_adapters = [
             PostgresListAdapter(),
@@ -146,7 +147,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             # PostgresRangeAdapter(), # Not registered by default - user choice
             # PostgresMultirangeAdapter(), # Not registered by default - user choice
             PostgresGeometryAdapter(),
-            # PostgresBitStringAdapter(), # Temporarily disabled: str->str conflicts
+            # PostgresBitStringAdapter(), # Not registered: str->str conflict
             PostgresEnumAdapter(),
             PostgresMoneyAdapter(),
             PostgresMacaddrAdapter(),
@@ -157,7 +158,7 @@ class PostgresBackend(PostgresBackendMixin, StorageBackend):
             PostgresOidAdapter(),
             PostgresXidAdapter(),
             PostgresTidAdapter(),
-            PostgresJsonPathAdapter(),
+            # PostgresJsonPathAdapter(), # Not registered: str->str conflict
             # PostgresXMLAdapter is NOT registered by default
             # due to str->str type pair conflict
         ]
