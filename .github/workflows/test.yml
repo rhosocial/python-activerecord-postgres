@@ -65,10 +65,10 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
-      - name: Install activerecord and testsuite from git
-        run: |
-          pip install git+https://github.com/rhosocial/python-activerecord@release/v1.0.0.dev16
-          pip install git+https://github.com/rhosocial/python-activerecord-testsuite@release/v1.0.0.dev6
+    - name: Install activerecord and testsuite from git
+      run: |
+        pip install git+https://github.com/rhosocial/python-activerecord@release/v1.0.0.dev16
+        pip install git+https://github.com/rhosocial/python-activerecord-testsuite@release/v1.0.0.dev6
 
     - name: Create postgres scenario config
       run: |
