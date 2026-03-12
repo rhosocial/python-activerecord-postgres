@@ -3,7 +3,7 @@
 
 Tests for:
 - TypeCastingMixin cast() method
-- CastExpression with PostgreSQL :: syntax
+- Type casting with PostgreSQL :: syntax
 - Chained type conversions
 - Type compatibility warnings
 """
@@ -11,7 +11,6 @@ import pytest
 import warnings
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal
-from rhosocial.activerecord.backend.expression.advanced_functions import CastExpression
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types.constants import (
     MONEY, NUMERIC, FLOAT8, INTEGER, VARCHAR, TEXT,
@@ -76,30 +75,29 @@ class TestTypeCastingMixin:
 
 
 class TestCastExpression:
-    """Tests for CastExpression class."""
+    """Tests for type casting via TypeCastingMixin."""
 
     def setup_method(self):
         self.dialect = PostgresDialect()
 
     def test_cast_expression_creation(self):
-        """Test CastExpression direct creation."""
+        """Test cast via Column.cast() method."""
         col = Column(self.dialect, "price")
-        expr = CastExpression(self.dialect, col, NUMERIC)
+        expr = col.cast(NUMERIC)
         sql, params = expr.to_sql()
         assert sql == '"price"::numeric'
         assert params == ()
 
     def test_cast_expression_chained(self):
-        """Test CastExpression chained conversions."""
+        """Test chained type conversions."""
         col = Column(self.dialect, "value")
-        expr1 = CastExpression(self.dialect, col, MONEY)
-        expr2 = expr1.cast(NUMERIC)
-        sql, params = expr2.to_sql()
+        expr = col.cast(MONEY).cast(NUMERIC)
+        sql, params = expr.to_sql()
         assert sql == '"value"::money::numeric'
         assert params == ()
 
     def test_cast_expression_supports_comparison(self):
-        """Test CastExpression supports comparison operators."""
+        """Test cast expression supports comparison operators."""
         col = Column(self.dialect, "amount")
         expr = col.cast(INTEGER)
         predicate = expr > 0
@@ -108,7 +106,7 @@ class TestCastExpression:
         assert params == (0,)
 
     def test_cast_expression_supports_arithmetic(self):
-        """Test CastExpression supports arithmetic operators."""
+        """Test cast expression supports arithmetic operators."""
         col = Column(self.dialect, "price")
         expr = col.cast(NUMERIC)
         result = expr * 1.1
