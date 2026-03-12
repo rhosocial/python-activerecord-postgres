@@ -1,3 +1,10 @@
+## [v1.0.0.dev4] - 2026-03-13
+
+### Added
+
+- Added PostgreSQL-specific DDL support including trigger DDL, TYPE DDL for ENUM/RANGE types, COMMENT ON, materialized views, extension detection, and ILIKE operator support. ([#7](https://github.com/rhosocial/python-activerecord-postgres/issues/7))
+
+
 ## [1.0.0.dev3] - 2026-02-27
 
 ### Added
