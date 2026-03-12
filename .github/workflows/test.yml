@@ -52,70 +52,70 @@ jobs:
           --health-retries 5
 
     steps:
-    - name: Check out the repository
-      uses: actions/checkout@v4
+      - name: Check out the repository
+        uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-    - name: Install activerecord and testsuite from git
-      run: |
-        pip install git+https://github.com/rhosocial/python-activerecord@release/v1.0.0.dev16
-        pip install git+https://github.com/rhosocial/python-activerecord-testsuite@release/v1.0.0.dev6
+      - name: Install activerecord and testsuite from git
+        run: |
+          pip install git+https://github.com/rhosocial/python-activerecord@release/v1.0.0.dev16
+          pip install git+https://github.com/rhosocial/python-activerecord-testsuite@release/v1.0.0.dev6
 
-    - name: Create postgres scenario config
-      run: |
-        cat > postgres_scenarios.yaml << EOF
-        scenarios:
-          postgres_default:
-            host: 127.0.0.1
-            port: 5432
-            database: test_db
-            username: root
-            password: password
-        EOF
-        echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
+      - name: Create postgres scenario config
+        run: |
+          cat > postgres_scenarios.yaml << EOF
+          scenarios:
+            postgres_default:
+              host: 127.0.0.1
+              port: 5432
+              database: test_db
+              username: root
+              password: password
+          EOF
+          echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
 
-    - name: Install postgres client for health check
-      run: |
-        sudo apt-get update
-        sudo apt-get install --yes postgresql-client
+      - name: Install postgres client for health check
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
 
-    - name: Wait for postgres service
-      run: |
-        until pg_isready -h 127.0.0.1 -p 5432 -U root; do
-          echo "Waiting for postgres..."
-          sleep 2
-        done
-        echo "postgres is ready!"
+      - name: Wait for postgres service
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U root; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "postgres is ready!"
 
-    - name: Run tests
-      run: |
-        export PYTHONPATH=src
-        python -m pytest tests/ --tb=short
+      - name: Run tests (skip for postgres 18)
+        if: matrix.postgres-version != '18'
+        run: |
+          export PYTHONPATH=src
+          python -m pytest tests/ --tb=short
 
-    - name: Run tests with coverage
-      # Only run coverage on the job with the latest postgres version to avoid redundant reports
-      if: matrix.postgres-version == '18'
-      run: |
-        export PYTHONPATH=src
-        pip install codecov
-        coverage run -m pytest tests/ --tb=short
-        coverage xml
+      - name: Run tests with coverage (only for postgres 18)
+        if: matrix.postgres-version == '18'
+        run: |
+          export PYTHONPATH=src
+          pip install codecov
+          coverage run --source=src -m pytest tests/ --tb=short
+          coverage xml
 
-    - name: Upload coverage to Codecov
-      if: matrix.postgres-version == '18'
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
-        flags: unittests,python-${{ matrix.python-version }},postgres-${{ matrix.postgres-version }}
-        name: codecov-postgres-${{ matrix.python-version }}-${{ matrix.postgres-version }}
-        fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        if: matrix.postgres-version == '18'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests,python-${{ matrix.python-version }},postgres-${{ matrix.postgres-version }}
+          name: codecov-postgres-${{ matrix.python-version }}-${{ matrix.postgres-version }}
+          fail_ci_if_error: false
