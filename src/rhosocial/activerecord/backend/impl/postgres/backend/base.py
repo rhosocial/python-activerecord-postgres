@@ -4,8 +4,11 @@
 This module provides the base mixin class for PostgreSQL backend implementations,
 containing methods that are shared between sync and async backends.
 """
-from typing import Dict, Optional, Tuple, Type
+from typing import Dict, Optional, Tuple, Type, TYPE_CHECKING
 import logging
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
 
 
 class PostgresBackendMixin:

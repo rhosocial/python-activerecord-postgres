@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rhosocial_activerecord_postgres"
-version = "1.0.0.dev4"
+version = "1.0.0.dev5"
 description = "postgres backend implementation for rhosocial-activerecord, providing a robust and optimized postgres database support."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -104,7 +104,7 @@ multi_line_output = 3
 line-length = 100
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py38"
 select = ["E", "F", "B"]
 ignore = []

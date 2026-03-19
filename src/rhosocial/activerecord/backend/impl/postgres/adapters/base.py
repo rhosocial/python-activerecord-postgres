@@ -61,7 +61,7 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
         # For string target type, serialize dict/list back to JSON string
         # This is needed because psycopg auto-deserializes JSON to dict,
         # but model fields may be defined as str type
-        if target_type == str:
+        if target_type is str:
             if isinstance(value, (dict, list)):
                 return json.dumps(value)
             return value

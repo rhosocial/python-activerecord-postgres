@@ -343,4 +343,8 @@ __all__ = [
     'json_path_index',
     'json_path_wildcard',
     'json_path_filter',
+    'jsonb_path_query',
+    'jsonb_path_query_first',
+    'jsonb_path_exists',
+    'jsonb_path_match',
 ]

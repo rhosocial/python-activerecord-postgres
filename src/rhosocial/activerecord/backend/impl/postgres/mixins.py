@@ -5,7 +5,6 @@ Note: PostgresBackendMixin has been moved to backend/base.py.
 This module contains only dialect-related mixins.
 """
 from typing import Dict, Optional, Tuple, List
-import logging
 from .protocols import PostgresExtensionInfo
 
 

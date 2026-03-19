@@ -73,7 +73,7 @@ class PostgresMoneyAdapter:
         if isinstance(value, PostgresMoney):
             return str(value.amount)
 
-        from decimal import Decimal
+        from decimal import Decimal, InvalidOperation
         if isinstance(value, Decimal):
             return str(value)
 
@@ -84,8 +84,8 @@ class PostgresMoneyAdapter:
             try:
                 Decimal(value)
                 return value
-            except:
-                raise ValueError(f"Invalid money value: {value}")
+            except (ValueError, InvalidOperation) as e:
+                raise ValueError(f"Invalid money value: {value}") from None
 
         raise TypeError(f"Cannot convert {type(value).__name__} to MONEY")
 
@@ -140,7 +140,7 @@ class PostgresMoneyAdapter:
             Decimal amount
         """
         import re
-        from decimal import Decimal
+        from decimal import Decimal, InvalidOperation
 
         value = value.strip()
 
@@ -179,8 +179,8 @@ class PostgresMoneyAdapter:
 
         try:
             return Decimal(cleaned)
-        except:
-            raise ValueError(f"Cannot parse money value: {value}")
+        except (ValueError, InvalidOperation):
+            raise ValueError(f"Cannot parse money value: {value}") from None
 
     def to_database_batch(
         self,
