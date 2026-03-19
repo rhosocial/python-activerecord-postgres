@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
+    from ..types.json import PostgresJsonPath
 
 
 # Path builder utility functions

@@ -166,13 +166,13 @@ class PostgresOidAdapter:
             if isinstance(value, int):
                 return target_type(str(value), oid=value)
 
-        if target_type == int:
+        if target_type is int:
             if isinstance(value, int):
                 return value
             if isinstance(value, str):
                 return int(value)
 
-        if target_type == str:
+        if target_type is str:
             return str(value)
 
         raise TypeError(f"Cannot convert {type(value).__name__} to {target_type.__name__}")
@@ -272,7 +272,7 @@ class PostgresXidAdapter:
             if isinstance(value, str):
                 return target_type(int(value))
 
-        if target_type == int:
+        if target_type is int:
             if isinstance(value, int):
                 return value
             if isinstance(value, str):
@@ -375,14 +375,14 @@ class PostgresTidAdapter:
             if isinstance(value, (tuple, list)):
                 return TID(int(value[0]), int(value[1]))
 
-        if target_type == tuple:
+        if target_type is tuple:
             if isinstance(value, TID):
                 return (value.block, value.offset)
             if isinstance(value, str):
                 tid = TID.from_postgres_string(value)
                 return (tid.block, tid.offset)
 
-        if target_type == str:
+        if target_type is str:
             if isinstance(value, TID):
                 return value.to_postgres_string()
             return str(value)
