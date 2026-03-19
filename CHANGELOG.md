@@ -1,3 +1,11 @@
+## [v1.0.0.dev5] - 2026-03-20
+
+### Added
+
+- Add PostgreSQL CLI protocol support display with comprehensive feature information ([#9](https://github.com/rhosocial/python-activerecord-postgres/issues/9))
+- Added Python version-aware fixture selection for PostgreSQL backend testing, enabling Python 3.10+ UnionType syntax support. ([#10](https://github.com/rhosocial/python-activerecord-postgres/issues/10))
+
+
 ## [v1.0.0.dev4] - 2026-03-13
 
 ### Added
