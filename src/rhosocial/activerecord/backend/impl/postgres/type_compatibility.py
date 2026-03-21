@@ -27,7 +27,7 @@ Example:
 """
 
 import warnings
-from typing import Set, Tuple, Optional, Dict, List
+from typing import Set, Tuple, Optional, Dict
 
 
 # Directly compatible type casts (no warning needed)
@@ -195,6 +195,27 @@ WARNED_CASTS: Set[Tuple[str, str]] = {
     # Timestamp precision changes
     ('timestamptz', 'time'),
     ('timestamp', 'time'),
+
+    # ===== New: Time precision loss =====
+    # Note: timestamptz->timestamp and timestamptz->date are in DIRECT_COMPATIBLE_CASTS
+    # so they won't produce warnings. Only time component loss is warned.
+    ('timestamp', 'time'),           # Date component lost
+    ('timestamptz', 'time'),         # Date + timezone lost
+
+    # ===== New: Numeric precision loss =====
+    ('double precision', 'real'),    # Precision loss (15 -> 6 significant digits)
+    ('float8', 'float4'),            # Same as above
+    ('bigint', 'integer'),           # May overflow
+    ('bigint', 'smallint'),          # More likely to overflow
+    ('integer', 'smallint'),         # May overflow
+
+    # ===== New: JSON type risks =====
+    ('jsonb', 'varchar'),            # Structure lost + may truncate
+    ('json', 'varchar'),             # Structure lost + may truncate
+
+    # ===== New: UUID type risks =====
+    ('uuid', 'varchar'),             # May truncate (UUID needs at least 36 chars)
+    ('uuid', 'char'),                # Will truncate (char is typically 1 char)
 }
 
 # Intermediate type suggestions for problematic casts
@@ -210,6 +231,15 @@ INTERMEDIATE_SUGGESTIONS: Dict[Tuple[str, str], str] = {
     ('money', 'integer'): 'numeric',
     ('money', 'bigint'): 'numeric',
     ('money', 'smallint'): 'numeric',
+
+    # ===== New: Numeric type conversion suggestions =====
+    ('bigint', 'integer'): 'numeric',  # Use numeric to avoid overflow
+    ('bigint', 'smallint'): 'numeric',
+    ('integer', 'smallint'): 'numeric',
+
+    # ===== New: JSON type conversion suggestions =====
+    ('jsonb', 'varchar'): 'text',
+    ('json', 'varchar'): 'text',
 }
 
 # Type categories for broader compatibility checks
@@ -284,13 +314,54 @@ TYPE_CATEGORIES: Dict[str, str] = {
     # Enum (user-defined)
     'enum': 'E',
 
-    # Range types
+    # Range types (built-in)
     'int4range': 'R',
     'int8range': 'R',
     'numrange': 'R',
     'tsrange': 'R',
     'tstzrange': 'R',
     'daterange': 'R',
+
+    # ===== New: Multirange types (PostgreSQL 14+) =====
+    'int4multirange': 'R',
+    'int8multirange': 'R',
+    'nummultirange': 'R',
+    'tsmultirange': 'R',
+    'tstzmultirange': 'R',
+    'datemultirange': 'R',
+
+    # ===== New: Pseudo-types =====
+    'anyelement': 'P',
+    'anyarray': 'P',
+    'anynonarray': 'P',
+    'anyenum': 'P',
+    'anyrange': 'P',
+    'anymultirange': 'P',
+    'void': 'P',
+    'trigger': 'P',
+    'event_trigger': 'P',
+    'pg_lsn': 'P',
+    'pg_lsn_diff': 'P',
+    'txid_snapshot': 'P',
+    'pg_snapshot': 'P',
+
+    # ===== New: Additional JSON types =====
+    'jsonpath': 'U',
+
+    # ===== New: Full-text search types =====
+    'tsvector': 'U',
+    'tsquery': 'U',
+
+    # ===== New: Object identifier types =====
+    'oid': 'N',
+    'regclass': 'N',
+    'regtype': 'N',
+    'regproc': 'N',
+    'regnamespace': 'N',
+    'regrole': 'N',
+    'xid': 'N',
+    'cid': 'N',
+    'tid': 'N',
 }
 
 

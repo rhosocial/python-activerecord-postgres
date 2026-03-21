@@ -2,9 +2,25 @@
 """postgres connection configuration."""
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Literal
+from enum import Enum
 
 from rhosocial.activerecord.backend.config import ConnectionConfig, ConnectionPoolMixin
+
+
+class RangeAdapterMode(Enum):
+    """Range adapter mode selection.
+
+    Determines which range type adapter to use for PostgreSQL range types.
+
+    Attributes:
+        NATIVE: Use psycopg's native Range type (default, recommended)
+        CUSTOM: Use custom PostgresRange type
+        BOTH: Make both adapters available, with native as default
+    """
+    NATIVE = "native"
+    CUSTOM = "custom"
+    BOTH = "both"
 
 
 @dataclass
@@ -31,11 +47,39 @@ class PostgresConnectionMixin:
 
 
 @dataclass
-class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSSLMixin, PostgresConnectionMixin):
+class PostgresTypeAdapterMixin:
+    """Mixin implementing PostgreSQL type adapter configuration options.
+
+    This mixin provides configuration options for controlling how
+    PostgreSQL-specific types are handled by the backend.
+
+    Attributes:
+        range_adapter_mode: How to handle range types (native/custom/both)
+        multirange_adapter_mode: How to handle multirange types (PG 14+)
+        json_type_preference: Preferred JSON type for dict fields
+        enable_type_compatibility_warnings: Enable type conversion warnings
+    """
+    range_adapter_mode: RangeAdapterMode = RangeAdapterMode.NATIVE
+    multirange_adapter_mode: RangeAdapterMode = RangeAdapterMode.NATIVE
+    json_type_preference: Literal["json", "jsonb"] = "jsonb"
+    enable_type_compatibility_warnings: bool = True
+
+
+@dataclass
+class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSSLMixin, PostgresConnectionMixin, PostgresTypeAdapterMixin):
     """postgres-specific connection configuration with dedicated postgres options.
 
     This class extends the base ConnectionConfig with postgres-specific
     parameters and functionality.
+
+    Type Adapter Configuration:
+        range_adapter_mode: Controls how range types are handled
+            - NATIVE (default): Use psycopg's native Range type
+            - CUSTOM: Use custom PostgresRange type
+            - BOTH: Make both available
+        multirange_adapter_mode: Same for multirange types (PG 14+)
+        json_type_preference: Preferred JSON type for dict fields (default: jsonb)
+        enable_type_compatibility_warnings: Enable type conversion warnings (default: True)
     """
 
     def to_dict(self) -> Dict[str, Any]:

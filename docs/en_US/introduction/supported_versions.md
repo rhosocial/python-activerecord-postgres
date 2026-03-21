@@ -37,6 +37,56 @@
 | Stored generated columns | 12+ |
 | JSON path queries | 12+ |
 
+### Parallel Query Features
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| Parallel sequential scan | 9.6+ |
+| Parallel Append | 10+ |
+| Parallel index scan | 10+ |
+| Gather Merge | 10+ |
+| Parallel index-only scan | 11+ |
+| Parallel hash join | 11+ |
+
+### Stored Procedures
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| CALL statement | 11+ |
+| Transaction control in procedures | 11+ |
+| SQL-standard function body | 14+ |
+
+### Extended Statistics
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| CREATE STATISTICS | 10+ |
+| Functional dependencies | 10+ |
+| NDistinct statistics | 10+ |
+| MCV (Most Common Values) | 12+ |
+
+### PostgreSQL 15+ Features
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| MERGE statement | 15+ |
+| UNIQUE NULLS NOT DISTINCT | 15+ |
+
+### PostgreSQL 16+ Features
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| REGEXP_LIKE function | 16+ |
+| random_normal() function | 16+ |
+
+### PostgreSQL 17+ Features
+
+| Feature | Minimum Version |
+|---------|-----------------|
+| Enhanced JSON_TABLE | 17+ |
+| MERGE with CTE | 17+ |
+| UPDATE RETURNING OLD | 17+ |
+
 ## Python Version Support
 
 | Python Version | Support Status | Notes |
