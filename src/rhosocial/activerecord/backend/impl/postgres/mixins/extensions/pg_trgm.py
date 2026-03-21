@@ -1,18 +1,4 @@
-# Copyright (C) 2025 Rhosocial
-# SPDX-License-Identifier: MIT
-# Author: vistart <vistart@rhosocial.com>
-#
-# This file is part of the rhosocial-activerecord-postgres package.
-# It provides pg_trgm (trigram) extension mixin for PostgreSQL backend.
-#
-# pg_trgm is a PostgreSQL extension that provides functions and operators
-# for determining the similarity of alphanumeric text based on trigram
-# matching, as well as index operator classes that support fast searching
-# for similar strings.
-#
-# For more information about pg_trgm, see:
-# https://www.postgresql.org/docs/current/pgtrgm.html
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pg_trgm.py
 """
 pg_trgm trigram functionality implementation.
 

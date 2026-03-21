@@ -1,18 +1,4 @@
-# Copyright (C) 2025 Rhosocial
-# SPDX-License-Identifier: MIT
-# Author: vistart <vistart@rhosocial.com>
-#
-# This file is part of the rhosocial-activerecord-postgres package.
-# It provides ltree extension mixin for PostgreSQL backend.
-#
-# ltree is a PostgreSQL extension that implements a data type for
-# representing labels of data stored in a hierarchical tree-like
-# structure. It provides extensive facilities for searching through
-# such structures.
-#
-# For more information about ltree, see:
-# https://www.postgresql.org/docs/current/ltree.html
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/ltree.py
 """
 ltree label tree functionality implementation.
 

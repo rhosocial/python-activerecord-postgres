@@ -1,8 +1,4 @@
-# Copyright (c) 2024-present rhosocial Engineering Team.
-# Licensed under the MIT License. See LICENSE for details.
-# PostgreSQL table extended features implementation.
-
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/table.py
 class PostgresTableMixin:
     """PostgreSQL table extended features implementation."""
 

@@ -1,13 +1,4 @@
-# Copyright (c) 2024 rhosocial.
-# Licensed under the MIT License.
-#
-# PostgreSQL Type DDL Mixin Implementation
-#
-# This module provides PostgreSQL-specific type DDL functionality,
-# including CREATE TYPE and DROP TYPE statement formatting.
-#
-# PostgreSQL supports user-defined types, particularly ENUM types.
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py
 from typing import Optional, Tuple, List
 
 

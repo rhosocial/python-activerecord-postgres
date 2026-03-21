@@ -1,20 +1,4 @@
-# Copyright (C) 2025 Rhosocial
-# SPDX-License-Identifier: MIT
-# Author: vistart <vistart@rhosocial.com>
-#
-# This file is part of the rhosocial-activerecord-postgres package.
-# It provides PostGIS extension mixin for PostgreSQL backend.
-#
-# PostGIS is a PostgreSQL extension that adds support for geographic objects,
-# allowing location queries to be run in SQL. It implements the Open Geospatial
-# Consortium (OGC) Simple Features for SQL specification and provides:
-# - Geometry and Geography data types
-# - Spatial indexing (GiST)
-# - Spatial functions for analysis and manipulation
-#
-# For more information about PostGIS, see:
-# https://postgis.net/docs/
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/postgis.py
 """
 PostGIS spatial functionality implementation.
 

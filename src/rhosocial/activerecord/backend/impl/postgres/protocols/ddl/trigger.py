@@ -1,9 +1,4 @@
-# Copyright (c) 2024-2025 rhosocial<rhosocial@163.com>
-# SPDX-License-Identifier: MIT
-# =============================================================================
-# PostgreSQL Trigger Protocol
-# =============================================================================
-
+# src/rhosocial/activerecord/backend/impl/postgres/protocols/ddl/trigger.py
 """PostgreSQL trigger DDL protocol definition.
 
 This module contains the PostgresTriggerSupport protocol which defines

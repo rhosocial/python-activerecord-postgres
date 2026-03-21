@@ -1,7 +1,4 @@
-# Copyright (c) 2024-present rhosocial Engineering Team.
-# Licensed under the MIT License. See LICENSE for details.
-# PostgreSQL materialized view extended features implementation.
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/materialized_view.py
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:

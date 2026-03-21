@@ -1,7 +1,4 @@
-# Copyright (C) 2025 rhosocial<i@rhosocial.com>
-# SPDX-License-Identifier: MIT
-# Author: rhosocial<i@rhosocial.com>
-
+# src/rhosocial/activerecord/backend/impl/postgres/protocols/dml/stored_procedure.py
 """PostgreSQL stored procedure protocol definitions."""
 
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any

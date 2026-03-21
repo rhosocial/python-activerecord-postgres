@@ -1,6 +1,4 @@
-# Copyright (C) 2025 rhosocial.cn
-# License: MIT License
-# Link: https://github.com/rhosocial/python-activerecord
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/dml/extended_statistics.py
 """PostgreSQL extended statistics implementation.
 
 This module provides mixin class for PostgreSQL extended statistics,

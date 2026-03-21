@@ -1,19 +1,4 @@
-# Copyright (C) 2025 Rhosocial
-# SPDX-License-Identifier: MIT
-# Author: vistart <vistart@rhosocial.com>
-#
-# This file is part of the rhosocial-activerecord-postgres package.
-# It provides pgvector extension mixin for PostgreSQL backend.
-#
-# pgvector is a PostgreSQL extension that provides vector similarity search.
-# It supports storing vectors (arrays of floats) and performing similarity
-# searches using various distance metrics (L2, inner product, cosine distance).
-# It also provides index support (IVFFlat and HNSW) for fast approximate
-# nearest neighbor search.
-#
-# For more information about pgvector, see:
-# https://github.com/pgvector/pgvector
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pgvector.py
 """
 pgvector vector similarity search implementation.
 

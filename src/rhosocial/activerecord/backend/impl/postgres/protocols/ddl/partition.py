@@ -1,9 +1,4 @@
-# Copyright (c) 2024-2025 rhosocial<rhosocial@163.com>
-# SPDX-License-Identifier: MIT
-# =============================================================================
-# PostgreSQL Partitioning Protocol
-# =============================================================================
-
+# src/rhosocial/activerecord/backend/impl/postgres/protocols/ddl/partition.py
 """PostgreSQL partitioning enhancements protocol definitions.
 
 This module contains the PostgresPartitionSupport protocol which defines

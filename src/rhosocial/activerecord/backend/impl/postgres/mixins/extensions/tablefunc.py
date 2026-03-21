@@ -1,10 +1,4 @@
-# Copyright (C) 2025 rhosocial<mailto:rhosocial@rhosocial.com>
-# SPDX-License-Identifier: MIT
-# Author: rhosocial<mailto:rhosocial@rhosocial.com>
-# Date: 2025-03-21
-# Version: 1.0.0
-# Description: PostgreSQL tablefunc extension mixin implementation.
-# License: MIT
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/tablefunc.py
 """PostgreSQL tablefunc table functions functionality mixin.
 
 This module provides functionality to check tablefunc extension features,

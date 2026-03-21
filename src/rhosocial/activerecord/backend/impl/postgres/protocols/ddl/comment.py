@@ -1,9 +1,4 @@
-# Copyright (c) 2024-2025 rhosocial<rhosocial@163.com>
-# SPDX-License-Identifier: MIT
-# =============================================================================
-# PostgreSQL Comment Protocol
-# =============================================================================
-
+# src/rhosocial/activerecord/backend/impl/postgres/protocols/ddl/comment.py
 """PostgreSQL COMMENT ON protocol definition.
 
 This module contains the PostgresCommentSupport protocol which defines

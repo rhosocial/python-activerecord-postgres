@@ -1,14 +1,4 @@
-# Copyright (c) 2024 rhosocial.
-# Licensed under the MIT License.
-#
-# PostgreSQL Trigger DDL Mixin Implementation
-#
-# This module provides PostgreSQL-specific trigger DDL functionality,
-# including CREATE TRIGGER and DROP TRIGGER statement formatting.
-#
-# PostgreSQL uses 'EXECUTE FUNCTION func_name()' syntax instead of
-# the SQL:1999 standard 'EXECUTE func_name'.
-
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
 from typing import Optional, Tuple, List, Dict, Any
 
 
