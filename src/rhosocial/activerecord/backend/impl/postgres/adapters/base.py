@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
 class PostgresListAdapter(SQLTypeAdapter):
     """
     Adapts Python list to PostgreSQL array types.
-    
+
     This adapter does not perform any conversion - psycopg handles
     Python lists natively for PostgreSQL array types.
     """
@@ -37,11 +37,42 @@ class PostgresListAdapter(SQLTypeAdapter):
             return value
         raise TypeError(f"Cannot convert {type(value).__name__} to list")
 
+    def to_database_batch(self, values: List[Any], target_type: Type,
+                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch conversion - psycopg handles lists natively.
+
+        No per-element processing needed, just pass through.
+        This avoids the overhead of calling to_database() for each element.
+
+        Args:
+            values: List of values to convert
+            target_type: Target type (not used for lists)
+            options: Optional conversion options
+
+        Returns:
+            The same list, psycopg handles conversion internally
+        """
+        return values
+
+    def from_database_batch(self, values: List[Any], target_type: Type,
+                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch conversion from database.
+
+        Args:
+            values: List of values from database
+            target_type: Target Python type
+            options: Optional conversion options
+
+        Returns:
+            The same list, psycopg already returns Python lists
+        """
+        return values
+
 
 class PostgresJSONBAdapter(SQLTypeAdapter):
     """
     Adapts Python dict to PostgreSQL JSONB and vice-versa.
-    
+
     Note: psycopg automatically serializes/deserializes JSON, so dict <-> JSON.
     When reading from DB, psycopg returns dict. When target type is str,
     we need to serialize back to JSON string.
@@ -55,7 +86,8 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
             return None
         return Jsonb(value)
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
+    def from_database(self, value: Any, target_type: Type,
+                      options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
         if value is None:
             return None
         # For string target type, serialize dict/list back to JSON string
@@ -72,6 +104,55 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
             return value
         # In case it's a string representation
         return json.loads(value)
+
+    def to_database_batch(self, values: List[Any], target_type: Type,
+                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch JSON conversion to database format.
+
+        Creates Jsonb wrappers for all values in a single pass,
+        reducing function call overhead compared to individual calls.
+
+        Args:
+            values: List of values to convert
+            target_type: Target type (Jsonb)
+            options: Optional conversion options
+
+        Returns:
+            List of Jsonb-wrapped values
+        """
+        result = []
+        for value in values:
+            if value is None:
+                result.append(None)
+            else:
+                result.append(Jsonb(value))
+        return result
+
+    def from_database_batch(self, values: List[Any], target_type: Type,
+                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch JSON deserialization from database.
+
+        Args:
+            values: List of values from database
+            target_type: Target Python type (dict, list, or str)
+            options: Optional conversion options
+
+        Returns:
+            List of converted values
+        """
+        result = []
+        for value in values:
+            if value is None:
+                result.append(None)
+            elif target_type is str:
+                if isinstance(value, (dict, list)):
+                    result.append(json.dumps(value))
+                else:
+                    result.append(value)
+            else:
+                # For dict/list target types, return as-is
+                result.append(value)
+        return result
 
 
 
@@ -110,6 +191,55 @@ class PostgresNetworkAddressAdapter(SQLTypeAdapter):
                 return ipaddress.ip_network(value)
             except (ImportError, ValueError):
                 return value
+
+    def to_database_batch(self, values: List[Any], target_type: Type,
+                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch network address conversion.
+
+        Converts all values to strings in a single pass.
+
+        Args:
+            values: List of values to convert
+            target_type: Target type
+            options: Optional conversion options
+
+        Returns:
+            List of string representations
+        """
+        result = []
+        for value in values:
+            if value is None:
+                result.append(None)
+            else:
+                result.append(str(value))
+        return result
+
+    def from_database_batch(self, values: List[Any], target_type: Type,
+                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+        """Optimized batch network address parsing from database.
+
+        Args:
+            values: List of string values from database
+            target_type: Target Python type
+            options: Optional conversion options
+
+        Returns:
+            List of ipaddress objects or strings
+        """
+        import ipaddress
+        result = []
+        for value in values:
+            if value is None:
+                result.append(None)
+            else:
+                try:
+                    result.append(ipaddress.ip_address(value))
+                except (ImportError, ValueError):
+                    try:
+                        result.append(ipaddress.ip_network(value))
+                    except (ImportError, ValueError):
+                        result.append(value)
+        return result
 
 
 class PostgresEnumAdapter(SQLTypeAdapter):

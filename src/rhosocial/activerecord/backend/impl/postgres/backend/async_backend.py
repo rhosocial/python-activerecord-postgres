@@ -52,7 +52,7 @@ from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8A
 from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
 from ..adapters.pg_lsn import PostgresLsnAdapter
 from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
-from ..config import PostgresConnectionConfig
+from ..config import PostgresConnectionConfig, RangeAdapterMode
 from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin
 from ..protocols import PostgresExtensionInfo
@@ -126,12 +126,12 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.
 
-        Note: PostgresRangeAdapter and PostgresMultirangeAdapter are NOT registered
-        by default to allow users to choose:
-        1. Use psycopg.types.range.Range directly (pass-through)
-        2. Use PostgresRange by manually registering the adapter
-
-        This design follows the "don't make decisions for the user" principle.
+        Range and Multirange adapter registration is controlled by configuration:
+        - range_adapter_mode: Controls how Range types are handled
+          - NATIVE (default): Use psycopg's native Range type (pass-through)
+          - CUSTOM: Use PostgresRange custom type
+          - BOTH: Register both adapters, with custom taking precedence
+        - multirange_adapter_mode: Same for Multirange types (PG 14+ only)
 
         Note: The following adapters are NOT registered by default due to str->str
         type mapping conflicts with existing string handling:
@@ -145,10 +145,7 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             PostgresListAdapter(),
             PostgresJSONBAdapter(),
             PostgresNetworkAddressAdapter(),
-            # PostgresRangeAdapter(), # Not registered by default - user choice
-            # PostgresMultirangeAdapter(), # Not registered by default - user choice
             PostgresGeometryAdapter(),
-            # PostgresBitStringAdapter(), # Not registered: str->str conflict
             PostgresEnumAdapter(),
             PostgresMoneyAdapter(),
             PostgresMacaddrAdapter(),
@@ -168,6 +165,27 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
             for py_type, db_types in adapter.supported_types.items():
                 for db_type in db_types:
                     self.adapter_registry.register(adapter, py_type, db_type)
+
+        # Register Range adapters based on configuration
+        range_mode = getattr(self.config, 'range_adapter_mode', RangeAdapterMode.NATIVE)
+        if range_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
+            range_adapter = PostgresRangeAdapter()
+            for py_type, db_types in range_adapter.supported_types.items():
+                for db_type in db_types:
+                    self.adapter_registry.register(range_adapter, py_type, db_type)
+            self.log(logging.DEBUG, "Registered PostgresRangeAdapter (custom range type)")
+
+        # Register Multirange adapters based on configuration (PG 14+ only)
+        # Note: Version check happens in dialect, but at this point we haven't
+        # connected yet, so we register if configured. The adapter itself will
+        # handle version-specific logic if needed.
+        multirange_mode = getattr(self.config, 'multirange_adapter_mode', RangeAdapterMode.NATIVE)
+        if multirange_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
+            multirange_adapter = PostgresMultirangeAdapter()
+            for py_type, db_types in multirange_adapter.supported_types.items():
+                for db_type in db_types:
+                    self.adapter_registry.register(multirange_adapter, py_type, db_type)
+            self.log(logging.DEBUG, "Registered PostgresMultirangeAdapter (custom multirange type)")
 
         self.log(logging.DEBUG, "Registered PostgreSQL-specific type adapters")
 
