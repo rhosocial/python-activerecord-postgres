@@ -1,6 +1,10 @@
 
 import pytest
-from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.config import (
+    PostgresConnectionConfig,
+    RangeAdapterMode,
+    PostgresTypeAdapterMixin
+)
 
 def test_pg_config_to_dict():
     """Test that postgres-specific parameters are added to the dictionary."""
@@ -171,4 +175,102 @@ def test_connection_string_all_pg_params():
     assert "service=my_service" in conn_str
     assert "gssencmode=prefer" in conn_str
     assert "channel_binding=require" in conn_str
+
+
+# =============================================================================
+# Range Adapter Configuration Tests
+# =============================================================================
+
+class TestRangeAdapterMode:
+    """Test RangeAdapterMode enum values."""
+
+    def test_mode_values(self):
+        """Test that RangeAdapterMode has expected values."""
+        assert RangeAdapterMode.NATIVE.value == "native"
+        assert RangeAdapterMode.CUSTOM.value == "custom"
+        assert RangeAdapterMode.BOTH.value == "both"
+
+    def test_mode_count(self):
+        """Test that there are exactly 3 modes."""
+        assert len(list(RangeAdapterMode)) == 3
+
+
+class TestPostgresTypeAdapterMixin:
+    """Test PostgresTypeAdapterMixin default values."""
+
+    def test_default_range_adapter_mode(self):
+        """Test default range_adapter_mode is NATIVE."""
+        mixin = PostgresTypeAdapterMixin()
+        assert mixin.range_adapter_mode == RangeAdapterMode.NATIVE
+
+    def test_default_multirange_adapter_mode(self):
+        """Test default multirange_adapter_mode is NATIVE."""
+        mixin = PostgresTypeAdapterMixin()
+        assert mixin.multirange_adapter_mode == RangeAdapterMode.NATIVE
+
+    def test_default_json_type_preference(self):
+        """Test default json_type_preference is jsonb."""
+        mixin = PostgresTypeAdapterMixin()
+        assert mixin.json_type_preference == "jsonb"
+
+    def test_default_type_compatibility_warnings(self):
+        """Test default enable_type_compatibility_warnings is True."""
+        mixin = PostgresTypeAdapterMixin()
+        assert mixin.enable_type_compatibility_warnings is True
+
+    def test_custom_values(self):
+        """Test custom values can be set."""
+        mixin = PostgresTypeAdapterMixin(
+            range_adapter_mode=RangeAdapterMode.CUSTOM,
+            multirange_adapter_mode=RangeAdapterMode.BOTH,
+            json_type_preference="json",
+            enable_type_compatibility_warnings=False
+        )
+        assert mixin.range_adapter_mode == RangeAdapterMode.CUSTOM
+        assert mixin.multirange_adapter_mode == RangeAdapterMode.BOTH
+        assert mixin.json_type_preference == "json"
+        assert mixin.enable_type_compatibility_warnings is False
+
+
+class TestPostgresConnectionConfigTypeAdapter:
+    """Test PostgresConnectionConfig with type adapter settings."""
+
+    def test_config_default_type_adapter_settings(self):
+        """Test default type adapter settings in config."""
+        config = PostgresConnectionConfig(host="localhost", database="test_db")
+        assert config.range_adapter_mode == RangeAdapterMode.NATIVE
+        assert config.multirange_adapter_mode == RangeAdapterMode.NATIVE
+        assert config.json_type_preference == "jsonb"
+        assert config.enable_type_compatibility_warnings is True
+
+    def test_config_custom_type_adapter_settings(self):
+        """Test custom type adapter settings in config."""
+        config = PostgresConnectionConfig(
+            host="localhost",
+            database="test_db",
+            range_adapter_mode=RangeAdapterMode.CUSTOM,
+            multirange_adapter_mode=RangeAdapterMode.BOTH,
+            json_type_preference="json",
+            enable_type_compatibility_warnings=False
+        )
+        assert config.range_adapter_mode == RangeAdapterMode.CUSTOM
+        assert config.multirange_adapter_mode == RangeAdapterMode.BOTH
+        assert config.json_type_preference == "json"
+        assert config.enable_type_compatibility_warnings is False
+
+    def test_to_dict_includes_type_adapter_settings(self):
+        """Test that to_dict includes type adapter settings."""
+        config = PostgresConnectionConfig(
+            host="localhost",
+            database="test_db",
+            range_adapter_mode=RangeAdapterMode.CUSTOM,
+            json_type_preference="json"
+        )
+        config_dict = config.to_dict()
+        assert 'range_adapter_mode' in config_dict
+        assert 'multirange_adapter_mode' in config_dict
+        assert 'json_type_preference' in config_dict
+        assert 'enable_type_compatibility_warnings' in config_dict
+        assert config_dict['range_adapter_mode'] == RangeAdapterMode.CUSTOM
+        assert config_dict['json_type_preference'] == "json"
 

@@ -1,3 +1,10 @@
+## [v1.0.0.dev6] - 2026-03-22
+
+### Added
+
+- Added comprehensive unit tests for PostgreSQL dialect features, improving code coverage from 69% to 74%. New tests cover stored procedures, extended statistics, triggers, indexes, range functions, and extensions (hstore, ltree, intarray, pg_trgm, pgvector, PostGIS). ([#12](https://github.com/rhosocial/python-activerecord-postgres/issues/12))
+
+
 ## [v1.0.0.dev5] - 2026-03-20
 
 ### Added

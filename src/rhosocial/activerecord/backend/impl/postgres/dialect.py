@@ -37,7 +37,9 @@ from .mixins import (
     # DDL feature mixins
     PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
     # Type mixins
-    EnumTypeMixin,
+    EnumTypeMixin, TypesDataTypeMixin, MultirangeMixin,
+    # DDL/DML operation mixins (new)
+    PostgresExtendedStatisticsMixin, PostgresStoredProcedureMixin,
 )
 # PostgreSQL-specific imports
 from .protocols import (
@@ -55,6 +57,9 @@ from .protocols import (
     PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
     # Type feature protocols
     MultirangeSupport, EnumTypeSupport,
+    # New feature protocols
+    PostgresParallelQuerySupport, PostgresStoredProcedureSupport,
+    PostgresExtendedStatisticsSupport,
 )
 
 if TYPE_CHECKING:
@@ -86,7 +91,9 @@ class PostgresDialect(
     # DDL feature mixins
     PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
     # Type mixins
-    EnumTypeMixin,
+    EnumTypeMixin, TypesDataTypeMixin, MultirangeMixin,
+    # DDL/DML operation mixins (new)
+    PostgresExtendedStatisticsMixin, PostgresStoredProcedureMixin,
     # Protocol supports
     SetOperationSupport, TruncateSupport, ILIKESupport,
     CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
@@ -108,6 +115,9 @@ class PostgresDialect(
     PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
     # Type feature protocols
     MultirangeSupport, EnumTypeSupport,
+    # New feature protocols
+    PostgresParallelQuerySupport, PostgresStoredProcedureSupport,
+    PostgresExtendedStatisticsSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
@@ -123,6 +133,9 @@ class PostgresDialect(
     - Advanced grouping (CUBE, ROLLUP, GROUPING SETS) (since 9.5)
     - Array types (since early versions)
     - LATERAL joins (since 9.3)
+    - Parallel query execution (since 9.6)
+    - Stored procedures with CALL (since 11)
+    - Extended statistics (since 10)
 
     PostgreSQL-specific features:
     - Table inheritance (INHERITS)
