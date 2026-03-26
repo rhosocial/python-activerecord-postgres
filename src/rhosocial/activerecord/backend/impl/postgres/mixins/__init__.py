@@ -49,6 +49,9 @@ from .data_type import PostgresDataTypeMixin
 from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 
+# Introspection capability mixin
+from .introspection import PostgresIntrospectionCapabilityMixin
+
 __all__ = [
     # Core mixins
     'PostgresExtensionMixin',
@@ -83,4 +86,6 @@ __all__ = [
     'PostgresDataTypeMixin',
     'PostgresSQLSyntaxMixin',
     'PostgresLogicalReplicationMixin',
+    # Introspection capability mixin
+    'PostgresIntrospectionCapabilityMixin',
 ]

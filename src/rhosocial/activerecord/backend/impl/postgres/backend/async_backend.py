@@ -28,6 +28,7 @@ from psycopg.errors import (
 )
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
+from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
@@ -59,7 +60,7 @@ from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
 
-class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
+class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, AsyncStorageBackend):
     """Asynchronous PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -122,6 +123,12 @@ class AsyncPostgresBackend(PostgresBackendMixin, AsyncStorageBackend):
         self._transaction_manager = AsyncPostgresTransactionManager(None, self.logger)
 
         self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
+
+    def _create_introspector(self):
+        """Create and return a PostgreSQLIntrospector with an async executor."""
+        from rhosocial.activerecord.backend.introspection.executor import AsyncIntrospectorExecutor
+        from ..introspection import PostgreSQLIntrospector
+        return PostgreSQLIntrospector(self, AsyncIntrospectorExecutor(self))
 
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.

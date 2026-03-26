@@ -22,6 +22,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     QualifyClauseSupport, TemporalTableSupport, UpsertSupport, LateralJoinSupport,
     WildcardSupport, JoinSupport, ViewSupport, SchemaSupport, IndexSupport,
     SequenceSupport, TableSupport, SetOperationSupport, TruncateSupport, ILIKESupport,
+    IntrospectionSupport,
 )
 from .mixins import (
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
@@ -40,6 +41,8 @@ from .mixins import (
     EnumTypeMixin, TypesDataTypeMixin, MultirangeMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin, PostgresStoredProcedureMixin,
+    # Introspection capability mixin
+    PostgresIntrospectionCapabilityMixin,
 )
 # PostgreSQL-specific imports
 from .protocols import (
@@ -78,6 +81,8 @@ class PostgresDialect(
     MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
     UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
     SequenceMixin, TableMixin,
+    # Introspection capability
+    PostgresIntrospectionCapabilityMixin,
     # PostgreSQL-specific mixins
     PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
     PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin, PostgresHstoreMixin,
@@ -101,6 +106,8 @@ class PostgresDialect(
     MergeSupport, OrderedSetAggregationSupport, QualifyClauseSupport, TemporalTableSupport,
     UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
     SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
+    # Introspection protocol
+    IntrospectionSupport,
     # PostgreSQL-specific protocols
     PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
     PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport, PostgresHstoreSupport,
