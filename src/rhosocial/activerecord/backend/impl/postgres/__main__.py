@@ -185,37 +185,72 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Execute SQL queries against a PostgreSQL backend.", formatter_class=argparse.RawTextHelpFormatter
-    )
+    # =========================================================================
+    # Design Notes:
+    # =========================================================================
+    # Uses explicit subcommand mode: query and introspect are mutually exclusive.
+    # This avoids argparse misidentifying SQL queries as subcommand names.
+    #
+    # Connection parameters are shared between subcommands and placed in parent parser.
+    # The main parser also inherits from parent, so global options like --info
+    # can access these parameters.
+    # =========================================================================
 
-    # Connection parameters (global)
-    parser.add_argument("--host", default=os.getenv("POSTGRES_HOST", "localhost"), help="Database host")
-    parser.add_argument("--port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Database port")
-    parser.add_argument("--database", default=os.getenv("POSTGRES_DATABASE"), help="Database name")
-    parser.add_argument("--user", default=os.getenv("POSTGRES_USER", "postgres"), help="Database user")
-    parser.add_argument("--password", default=os.getenv("POSTGRES_PASSWORD", ""), help="Database password")
-
-    # Execution options (global)
-    parser.add_argument("--use-async", action="store_true", help="Use asynchronous backend")
-
-    # Output and logging options (global)
-    parser.add_argument(
+    # Parent parser: shared connection parameters
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument("--host", default=os.getenv("POSTGRES_HOST", "localhost"), help="Database host")
+    parent_parser.add_argument("--port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Database port")
+    parent_parser.add_argument("--database", default=os.getenv("POSTGRES_DATABASE"), help="Database name (optional for some operations)")
+    parent_parser.add_argument("--user", default=os.getenv("POSTGRES_USER", "postgres"), help="Database user")
+    parent_parser.add_argument("--password", default=os.getenv("POSTGRES_PASSWORD", ""), help="Database password")
+    parent_parser.add_argument(
         "--output",
         choices=["table", "json", "csv", "tsv"],
         default="table",
         help='Output format. Defaults to "table" if rich is installed.',
     )
-    parser.add_argument("--log-level", default="INFO", help="Set logging level (e.g., DEBUG, INFO)")
-    parser.add_argument("--rich-ascii", action="store_true", help="Use ASCII characters for rich table borders.")
+    parent_parser.add_argument("--log-level", default="INFO", help="Set logging level (e.g., DEBUG, INFO)")
+    parent_parser.add_argument("--rich-ascii", action="store_true", help="Use ASCII characters for rich table borders.")
+    parent_parser.add_argument("--use-async", action="store_true", help="Use asynchronous backend")
+    parent_parser.add_argument(
+        "--version",
+        type=str,
+        default=None,
+        help='PostgreSQL version to simulate (e.g., "15.0.0"). Default: auto-detect.',
+    )
 
-    # Create subparsers for commands
+    # Main parser inherits from parent, so --info can access shared parameters
+    parser = argparse.ArgumentParser(
+        description="Execute SQL queries against a PostgreSQL backend.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        parents=[parent_parser]
+    )
+
+    # Global options (no subcommand required)
+    parser.add_argument("--info", action="store_true", help="Display PostgreSQL environment information.")
+    parser.add_argument(
+        "-v", "--verbose", action="count", default=0, help="Increase verbosity. -v for families, -vv for details."
+    )
+
+    # Subcommands: query and introspect
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    # Introspect subcommand
+    # query subcommand
+    query_parser = subparsers.add_parser(
+        'query',
+        help='Execute SQL query',
+        parents=[parent_parser]
+    )
+    query_parser.add_argument(
+        "sql", nargs="?", default=None, help="SQL query to execute. If not provided, reads from --file or stdin."
+    )
+    query_parser.add_argument("-f", "--file", default=None, help="Path to a file containing SQL to execute.")
+
+    # introspect subcommand
     introspect_parser = subparsers.add_parser(
         'introspect',
-        help='Database introspection commands'
+        help='Database introspection commands',
+        parents=[parent_parser]
     )
     introspect_parser.add_argument(
         'type',
@@ -238,24 +273,6 @@ def parse_args():
         action='store_true',
         help='Include system tables in output'
     )
-
-    # Info display options
-    parser.add_argument("--info", action="store_true", help="Display PostgreSQL environment information.")
-    parser.add_argument(
-        "-v", "--verbose", action="count", default=0, help="Increase verbosity. -v for families, -vv for details."
-    )
-    parser.add_argument(
-        "--version",
-        type=str,
-        default=None,
-        help='PostgreSQL version to simulate (e.g., "15.0.0"). Default: auto-detect.',
-    )
-
-    # Input source arguments (positional, for main command)
-    parser.add_argument(
-        "query", nargs="?", default=None, help="SQL query to execute. If not provided, reads from --file or stdin."
-    )
-    parser.add_argument("-f", "--file", default=None, help="Path to a file containing SQL to execute.")
 
     return parser.parse_args()
 
@@ -777,26 +794,7 @@ async def handle_introspect_async(args, backend: AsyncPostgresBackend, provider:
 def main():
     args = parse_args()
 
-    # Handle introspect subcommand
-    if args.command == "introspect":
-        if not args.database:
-            print("Error: --database is required for introspection", file=sys.stderr)
-            sys.exit(1)
-
-        provider = get_provider(args)
-        config = PostgresConnectionConfig(
-            host=args.host, port=args.port, database=args.database,
-            username=args.user, password=args.password
-        )
-
-        if args.use_async:
-            backend = AsyncPostgresBackend(connection_config=config)
-            asyncio.run(handle_introspect_async(args, backend, provider))
-        else:
-            backend = PostgresBackend(connection_config=config)
-            handle_introspect_sync(args, backend, provider)
-        return
-
+    # Handle --info flag (global option, no subcommand needed)
     if args.info:
         output_format = args.output if args.output != "table" or RICH_AVAILABLE else "json"
 
@@ -832,6 +830,33 @@ def main():
         )
         return
 
+    # Require a subcommand if --info is not specified
+    if args.command is None:
+        print("Error: Please specify a command: 'query' or 'introspect'", file=sys.stderr)
+        print("Use --help for more information.", file=sys.stderr)
+        sys.exit(1)
+
+    # Handle introspect subcommand
+    if args.command == "introspect":
+        if not args.database:
+            print("Error: --database is required for introspection", file=sys.stderr)
+            sys.exit(1)
+
+        provider = get_provider(args)
+        config = PostgresConnectionConfig(
+            host=args.host, port=args.port, database=args.database,
+            username=args.user, password=args.password
+        )
+
+        if args.use_async:
+            backend = AsyncPostgresBackend(connection_config=config)
+            asyncio.run(handle_introspect_async(args, backend, provider))
+        else:
+            backend = PostgresBackend(connection_config=config)
+            handle_introspect_sync(args, backend, provider)
+        return
+
+    # Handle query subcommand
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {args.log_level}")
@@ -849,8 +874,8 @@ def main():
     provider.display_greeting()
 
     sql_source = None
-    if args.query:
-        sql_source = args.query
+    if args.sql:
+        sql_source = args.sql
     elif args.file:
         try:
             with open(args.file, "r", encoding="utf-8") as f:
@@ -862,7 +887,7 @@ def main():
         sql_source = sys.stdin.read()
 
     if not sql_source:
-        msg = "Error: No SQL query provided. Use query argument, --file, or stdin."
+        msg = "Error: No SQL query provided. Use SQL argument, --file, or stdin."
         print(msg, file=sys.stderr)
         sys.exit(1)
 
