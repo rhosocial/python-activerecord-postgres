@@ -182,7 +182,7 @@ class TestAsyncColumnIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_columns(self, async_backend_with_tables):
         """Test async list_columns returns column info."""
-        columns = await async_backend_with_tables.introspector.list_columns_async("users")
+        columns = await async_backend_with_tables.introspector.list_columns("users")
 
         assert isinstance(columns, list)
         assert len(columns) > 0
@@ -190,7 +190,7 @@ class TestAsyncColumnIntrospection:
     @pytest.mark.asyncio
     async def test_async_get_column_info(self, async_backend_with_tables):
         """Test async get_column_info for existing column."""
-        column = await async_backend_with_tables.introspector.get_column_info_async("users", "id")
+        column = await async_backend_with_tables.introspector.get_column_info("users", "id")
 
         assert column is not None
         assert column.name == "id"
@@ -198,8 +198,8 @@ class TestAsyncColumnIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_columns_caching(self, async_backend_with_tables):
         """Test that async column list is cached."""
-        columns1 = await async_backend_with_tables.introspector.list_columns_async("users")
-        columns2 = await async_backend_with_tables.introspector.list_columns_async("users")
+        columns1 = await async_backend_with_tables.introspector.list_columns("users")
+        columns2 = await async_backend_with_tables.introspector.list_columns("users")
 
         # Should return the same cached list
         assert columns1 is columns2

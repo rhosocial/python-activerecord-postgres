@@ -253,7 +253,7 @@ class TestAsyncIndexIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_indexes(self, async_backend_with_tables):
         """Test async list_indexes returns index info."""
-        indexes = await async_backend_with_tables.introspector.list_indexes_async("users")
+        indexes = await async_backend_with_tables.introspector.list_indexes("users")
 
         assert isinstance(indexes, list)
         assert len(indexes) > 0
@@ -261,7 +261,7 @@ class TestAsyncIndexIntrospection:
     @pytest.mark.asyncio
     async def test_async_get_index_info(self, async_backend_with_tables):
         """Test async get_index_info for existing index."""
-        index = await async_backend_with_tables.introspector.get_index_info_async(
+        index = await async_backend_with_tables.introspector.get_index_info(
             "users", "users_pkey"
         )
 
@@ -271,7 +271,7 @@ class TestAsyncIndexIntrospection:
     @pytest.mark.asyncio
     async def test_async_get_primary_key(self, async_backend_with_tables):
         """Test async get_primary_key method."""
-        pk = await async_backend_with_tables.introspector.get_primary_key_async("users")
+        pk = await async_backend_with_tables.introspector.get_primary_key("users")
 
         assert pk is not None
         assert pk.is_primary is True
@@ -281,8 +281,8 @@ class TestAsyncIndexIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_indexes_caching(self, async_backend_with_tables):
         """Test that async index list is cached."""
-        indexes1 = await async_backend_with_tables.introspector.list_indexes_async("users")
-        indexes2 = await async_backend_with_tables.introspector.list_indexes_async("users")
+        indexes1 = await async_backend_with_tables.introspector.list_indexes("users")
+        indexes2 = await async_backend_with_tables.introspector.list_indexes("users")
 
         # Should return the same cached list
         assert indexes1 is indexes2

@@ -1,4 +1,10 @@
 # src/rhosocial/activerecord/backend/impl/postgres/introspection/__init__.py
-from .introspector import PostgreSQLIntrospector
+from .introspector import (
+    SyncPostgreSQLIntrospector,
+    AsyncPostgreSQLIntrospector,
+)
 
-__all__ = ["PostgreSQLIntrospector"]
+__all__ = [
+    "SyncPostgreSQLIntrospector",
+    "AsyncPostgreSQLIntrospector",
+]

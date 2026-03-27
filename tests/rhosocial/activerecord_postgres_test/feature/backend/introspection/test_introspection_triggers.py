@@ -196,7 +196,7 @@ class TestAsyncTriggerIntrospection:
         async_postgres_backend_single.introspector.clear_cache()
 
         try:
-            triggers = await async_postgres_backend_single.introspector.list_triggers_async("users")
+            triggers = await async_postgres_backend_single.introspector.list_triggers("users")
             assert isinstance(triggers, list)
             assert len(triggers) > 0
         finally:
@@ -211,7 +211,7 @@ class TestAsyncTriggerIntrospection:
         async_postgres_backend_single.introspector.clear_cache()
 
         try:
-            trigger = await async_postgres_backend_single.introspector.get_trigger_info_async(
+            trigger = await async_postgres_backend_single.introspector.get_trigger_info(
                 "update_user_timestamp"
             )
             assert trigger is not None
@@ -228,8 +228,8 @@ class TestAsyncTriggerIntrospection:
         async_postgres_backend_single.introspector.clear_cache()
 
         try:
-            triggers1 = await async_postgres_backend_single.introspector.list_triggers_async("users")
-            triggers2 = await async_postgres_backend_single.introspector.list_triggers_async("users")
+            triggers1 = await async_postgres_backend_single.introspector.list_triggers("users")
+            triggers2 = await async_postgres_backend_single.introspector.list_triggers("users")
             assert triggers1 is triggers2
         finally:
             for sql in _CLEANUP_TRIGGER_SQL:

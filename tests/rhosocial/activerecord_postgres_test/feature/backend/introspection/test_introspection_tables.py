@@ -171,7 +171,7 @@ class TestAsyncTableIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_tables(self, async_backend_with_tables):
         """Test async list_tables returns table info."""
-        tables = await async_backend_with_tables.introspector.list_tables_async()
+        tables = await async_backend_with_tables.introspector.list_tables()
 
         assert isinstance(tables, list)
         assert len(tables) > 0
@@ -179,7 +179,7 @@ class TestAsyncTableIntrospection:
     @pytest.mark.asyncio
     async def test_async_get_table_info(self, async_backend_with_tables):
         """Test async get_table_info for existing table."""
-        table = await async_backend_with_tables.introspector.get_table_info_async(
+        table = await async_backend_with_tables.introspector.get_table_info(
             "users"
         )
 
@@ -189,11 +189,11 @@ class TestAsyncTableIntrospection:
     @pytest.mark.asyncio
     async def test_async_table_exists(self, async_backend_with_tables):
         """Test async table_exists method."""
-        exists = await async_backend_with_tables.introspector.table_exists_async("users")
+        exists = await async_backend_with_tables.introspector.table_exists("users")
 
         assert exists is True
 
-        exists = await async_backend_with_tables.introspector.table_exists_async(
+        exists = await async_backend_with_tables.introspector.table_exists(
             "nonexistent_table"
         )
 
@@ -202,8 +202,8 @@ class TestAsyncTableIntrospection:
     @pytest.mark.asyncio
     async def test_async_list_tables_caching(self, async_backend_with_tables):
         """Test that async table list is cached."""
-        tables1 = await async_backend_with_tables.introspector.list_tables_async()
-        tables2 = await async_backend_with_tables.introspector.list_tables_async()
+        tables1 = await async_backend_with_tables.introspector.list_tables()
+        tables2 = await async_backend_with_tables.introspector.list_tables()
 
         # Should return the same cached list
         assert tables1 is tables2

@@ -125,10 +125,10 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
 
     def _create_introspector(self):
-        """Create and return a PostgreSQLIntrospector with an async executor."""
+        """Create and return an AsyncPostgreSQLIntrospector with an async executor."""
         from rhosocial.activerecord.backend.introspection.executor import AsyncIntrospectorExecutor
-        from ..introspection import PostgreSQLIntrospector
-        return PostgreSQLIntrospector(self, AsyncIntrospectorExecutor(self))
+        from ..introspection import AsyncPostgreSQLIntrospector
+        return AsyncPostgreSQLIntrospector(self, AsyncIntrospectorExecutor(self))
 
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.

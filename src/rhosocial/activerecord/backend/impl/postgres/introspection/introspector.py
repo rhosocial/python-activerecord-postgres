@@ -1,25 +1,36 @@
 # src/rhosocial/activerecord/backend/impl/postgres/introspection/introspector.py
 """
-PostgreSQL concrete introspector.
+PostgreSQL concrete introspectors.
 
-Implements AbstractIntrospector for PostgreSQL databases using pg_catalog
-system tables for metadata queries.
+Implements SyncAbstractIntrospector and AsyncAbstractIntrospector for PostgreSQL
+databases using pg_catalog system tables for metadata queries.
 
-The introspector is exposed via ``backend.introspector``.
+The introspectors are exposed via ``backend.introspector``.
 
 Key behaviours:
   - Queries pg_catalog system tables (pg_class, pg_attribute, pg_index,
     pg_constraint, pg_trigger, pg_proc, etc.)
-  - _parse_* methods are pure Python — shared by sync and async paths
+  - _parse_* methods are pure Python — shared by sync and async introspectors
   - Default schema is 'public'
   - tgtype bitmap is decoded properly for trigger events
+
+Design principle: Sync and Async are separate and cannot coexist.
+- SyncPostgreSQLIntrospector: for synchronous backends
+- AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
 import re
 from typing import Any, Dict, List, Optional
 
-from rhosocial.activerecord.backend.introspection.base import AbstractIntrospector
-from rhosocial.activerecord.backend.introspection.executor import IntrospectorExecutor
+from rhosocial.activerecord.backend.introspection.base import (
+    IntrospectorMixin,
+    SyncAbstractIntrospector,
+    AsyncAbstractIntrospector,
+)
+from rhosocial.activerecord.backend.introspection.executor import (
+    SyncIntrospectorExecutor,
+    AsyncIntrospectorExecutor,
+)
 from rhosocial.activerecord.backend.introspection.types import (
     ColumnInfo,
     ColumnNullable,
@@ -37,28 +48,16 @@ from rhosocial.activerecord.backend.introspection.types import (
 )
 
 
-class PostgreSQLIntrospector(AbstractIntrospector):
-    """Introspector for PostgreSQL backends.
+class PostgreSQLIntrospectorMixin(IntrospectorMixin):
+    """Mixin providing shared PostgreSQL-specific introspection logic.
 
-    Uses pg_catalog system tables rather than information_schema for
-    accurate, high-performance metadata queries.
-
-    Usage::
-
-        tables = backend.introspector.list_tables()
-        info   = backend.introspector.get_table_info("users")
-        cols   = backend.introspector.list_columns("users")
-
-        # Async
-        tables = await backend.introspector.list_tables_async()
+    Both SyncPostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
+    from this mixin to share:
+    - Default schema handling
+    - SQL generation overrides
+    - _parse_* implementations
+    - Trigger decoding helpers
     """
-
-    def __init__(self, backend: Any, executor: IntrospectorExecutor) -> None:
-        super().__init__(backend, executor)
-
-    # ------------------------------------------------------------------ #
-    # Internal helpers
-    # ------------------------------------------------------------------ #
 
     def _get_default_schema(self) -> str:
         """Return 'public' as PostgreSQL default schema."""
@@ -253,21 +252,8 @@ class PostgreSQLIntrospector(AbstractIntrospector):
     # ------------------------------------------------------------------ #
 
     def _parse_database_info(self, rows: List[Dict[str, Any]]) -> DatabaseInfo:
-        # rows come from pg_database query; we also need version separately.
-        # The version info is fetched via a separate "SELECT version()" call
-        # by _build_database_info_sql; but our single-SQL design means we
-        # need two rounds.  We solve this by calling SELECT version() inline
-        # via the executor, then the pg_database row for charset/collation.
-        # HOWEVER: _build_database_info_sql only issues ONE SQL statement.
-        # We use a two-field approach: rows[0] is the pg_database row.
-        # The version string is injected via a special key "_pg_version"
-        # which _build_database_info_sql provides via UNION trick.
-        # Actually, let's keep it simple: override get_database_info()
-        # to do two queries in sequence.
-        # For _parse_database_info, rows has the pg_database result.
         db_row = rows[0] if rows else {}
         db_name = self._get_database_name()
-        # version_str was embedded by get_database_info override below
         version_str = db_row.get("_version_str", "PostgreSQL 11.0")
         match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
         version_tuple = (
@@ -486,6 +472,23 @@ class PostgreSQLIntrospector(AbstractIntrospector):
             events.append("TRUNCATE")
         return events if events else ["UPDATE"]
 
+
+class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntrospector):
+    """Synchronous introspector for PostgreSQL backends.
+
+    Uses pg_catalog system tables rather than information_schema for
+    accurate, high-performance metadata queries.
+
+    Usage::
+
+        tables = backend.introspector.list_tables()
+        info   = backend.introspector.get_table_info("users")
+        cols   = backend.introspector.list_columns("users")
+    """
+
+    def __init__(self, backend: Any, executor: SyncIntrospectorExecutor) -> None:
+        super().__init__(backend, executor)
+
     # ------------------------------------------------------------------ #
     # get_database_info override — needs two queries
     # ------------------------------------------------------------------ #
@@ -497,8 +500,6 @@ class PostgreSQLIntrospector(AbstractIntrospector):
         1. SELECT version() — for version string
         2. pg_database — for charset/collation
         """
-        from rhosocial.activerecord.backend.introspection.types import IntrospectionScope
-
         key = self._make_cache_key(IntrospectionScope.DATABASE)
         cached = self._get_cached(key)
         if cached is not None:
@@ -509,7 +510,6 @@ class PostgreSQLIntrospector(AbstractIntrospector):
         version_str = version_rows[0]["version"] if version_rows else "PostgreSQL 11.0"
 
         # Query pg_database
-        db_name = self._get_database_name()
         pg_sql, pg_params = self._build_database_info_sql()
         db_rows = self._executor.execute(pg_sql, pg_params)
 
@@ -521,22 +521,48 @@ class PostgreSQLIntrospector(AbstractIntrospector):
         self._set_cached(key, result)
         return result
 
-    async def get_database_info_async(self) -> DatabaseInfo:
-        """Async version of get_database_info()."""
-        from rhosocial.activerecord.backend.introspection.types import IntrospectionScope
 
+class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntrospector):
+    """Asynchronous introspector for PostgreSQL backends.
+
+    Uses pg_catalog system tables rather than information_schema for
+    accurate, high-performance metadata queries.
+
+    Usage::
+
+        tables = await backend.introspector.list_tables()
+        info   = await backend.introspector.get_table_info("users")
+        cols   = await backend.introspector.list_columns("users")
+    """
+
+    def __init__(self, backend: Any, executor: AsyncIntrospectorExecutor) -> None:
+        super().__init__(backend, executor)
+
+    # ------------------------------------------------------------------ #
+    # get_database_info override — needs two queries
+    # ------------------------------------------------------------------ #
+
+    async def get_database_info(self) -> DatabaseInfo:
+        """Return basic information about the connected PostgreSQL database.
+
+        Overrides the base class to perform two queries:
+        1. SELECT version() — for version string
+        2. pg_database — for charset/collation
+        """
         key = self._make_cache_key(IntrospectionScope.DATABASE)
         cached = self._get_cached(key)
         if cached is not None:
             return cached
 
-        version_rows = await self._executor.execute_async("SELECT version()", ())
+        # Query version
+        version_rows = await self._executor.execute("SELECT version()", ())
         version_str = version_rows[0]["version"] if version_rows else "PostgreSQL 11.0"
 
-        db_name = self._get_database_name()
+        # Query pg_database
         pg_sql, pg_params = self._build_database_info_sql()
-        db_rows = await self._executor.execute_async(pg_sql, pg_params)
+        db_rows = await self._executor.execute(pg_sql, pg_params)
 
+        # Inject version_str into the row so _parse_database_info can use it
         db_row = dict(db_rows[0]) if db_rows else {}
         db_row["_version_str"] = version_str
 

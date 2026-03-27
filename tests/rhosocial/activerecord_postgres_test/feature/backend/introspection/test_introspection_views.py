@@ -107,7 +107,7 @@ class TestAsyncViewIntrospection:
             await async_postgres_backend_single.execute(sql)
         async_postgres_backend_single.introspector.clear_cache()
 
-        views = await async_postgres_backend_single.introspector.list_views_async()
+        views = await async_postgres_backend_single.introspector.list_views()
 
         assert isinstance(views, list)
         assert len(views) > 0
@@ -124,7 +124,7 @@ class TestAsyncViewIntrospection:
             await async_postgres_backend_single.execute(sql)
         async_postgres_backend_single.introspector.clear_cache()
 
-        view = await async_postgres_backend_single.introspector.get_view_info_async("user_summary")
+        view = await async_postgres_backend_single.introspector.get_view_info("user_summary")
 
         assert view is not None
         assert view.name == "user_summary"

@@ -57,7 +57,7 @@ from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import PostgresTransactionManager
-from ..introspection import PostgreSQLIntrospector
+from ..introspection import SyncPostgreSQLIntrospector
 
 
 class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
@@ -125,9 +125,9 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
         self.log(logging.INFO, "PostgreSQLBackend initialized")
 
     def _create_introspector(self):
-        """Create and return a PostgreSQLIntrospector with a sync executor."""
+        """Create and return a SyncPostgreSQLIntrospector with a sync executor."""
         from rhosocial.activerecord.backend.introspection.executor import SyncIntrospectorExecutor
-        return PostgreSQLIntrospector(self, SyncIntrospectorExecutor(self))
+        return SyncPostgreSQLIntrospector(self, SyncIntrospectorExecutor(self))
 
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.

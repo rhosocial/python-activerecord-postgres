@@ -248,21 +248,21 @@ class TestAsyncCacheManagement:
     @pytest.mark.asyncio
     async def test_async_clear_cache(self, async_backend_with_tables):
         """Test async clear cache."""
-        await async_backend_with_tables.introspector.list_tables_async()
+        await async_backend_with_tables.introspector.list_tables()
         async_backend_with_tables.introspector.clear_cache()
         assert len(async_backend_with_tables.introspector._cache) == 0
 
     @pytest.mark.asyncio
     async def test_async_cache_hit(self, async_backend_with_tables):
         """Test async cache hit."""
-        tables1 = await async_backend_with_tables.introspector.list_tables_async()
-        tables2 = await async_backend_with_tables.introspector.list_tables_async()
+        tables1 = await async_backend_with_tables.introspector.list_tables()
+        tables2 = await async_backend_with_tables.introspector.list_tables()
         assert tables1 is tables2
 
     @pytest.mark.asyncio
     async def test_async_cache_miss_after_clear(self, async_backend_with_tables):
         """Test async cache miss after clear."""
-        tables1 = await async_backend_with_tables.introspector.list_tables_async()
+        tables1 = await async_backend_with_tables.introspector.list_tables()
         async_backend_with_tables.introspector.clear_cache()
-        tables2 = await async_backend_with_tables.introspector.list_tables_async()
+        tables2 = await async_backend_with_tables.introspector.list_tables()
         assert tables1 is not tables2
