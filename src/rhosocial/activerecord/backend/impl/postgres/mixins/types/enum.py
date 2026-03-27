@@ -4,14 +4,11 @@
 This module provides the EnumTypeMixin class for handling PostgreSQL
 enumerated type operations.
 """
-from typing import Optional, List, Tuple, TYPE_CHECKING
+
+from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import (
-        CreateEnumTypeExpression,
-        DropEnumTypeExpression,
-        AlterEnumAddValueExpression,
-    )
+    pass
 
 
 class EnumTypeMixin:
@@ -43,11 +40,10 @@ class EnumTypeMixin:
         Returns:
             SQL-formatted values string
         """
-        return ', '.join(f"'{v}'" for v in values)
+        return ", ".join(f"'{v}'" for v in values)
 
     def format_create_enum_type(
-        self, name: str, values: List[str],
-        schema: Optional[str] = None, if_not_exists: bool = False
+        self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
     ) -> str:
         """Format CREATE TYPE statement for enum.
 
@@ -66,8 +62,7 @@ class EnumTypeMixin:
         return f"CREATE TYPE {exists_clause}{full_name} AS ENUM ({values_str})"
 
     def format_drop_enum_type(
-        self, name: str, schema: Optional[str] = None,
-        if_exists: bool = False, cascade: bool = False
+        self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> str:
         """Format DROP TYPE statement.
 
@@ -86,9 +81,12 @@ class EnumTypeMixin:
         return f"DROP TYPE {exists_clause}{full_name}{cascade_clause}"
 
     def format_alter_enum_add_value(
-        self, type_name: str, new_value: str,
+        self,
+        type_name: str,
+        new_value: str,
         schema: Optional[str] = None,
-        before: Optional[str] = None, after: Optional[str] = None
+        before: Optional[str] = None,
+        after: Optional[str] = None,
     ) -> str:
         """Format ALTER TYPE ADD VALUE statement.
 
@@ -115,8 +113,7 @@ class EnumTypeMixin:
     # =========================================================================
 
     def create_enum_type(
-        self, name: str, values: List[str],
-        schema: Optional[str] = None, if_not_exists: bool = False
+        self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
     ) -> str:
         """Generate CREATE TYPE statement for enum.
 
@@ -134,8 +131,7 @@ class EnumTypeMixin:
         return self.format_create_enum_type(name, values, schema, if_not_exists)
 
     def drop_enum_type(
-        self, name: str, schema: Optional[str] = None,
-        if_exists: bool = False, cascade: bool = False
+        self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> str:
         """Generate DROP TYPE statement for enum.
 
@@ -153,9 +149,12 @@ class EnumTypeMixin:
         return self.format_drop_enum_type(name, schema, if_exists, cascade)
 
     def alter_enum_add_value(
-        self, type_name: str, new_value: str,
+        self,
+        type_name: str,
+        new_value: str,
         schema: Optional[str] = None,
-        before: Optional[str] = None, after: Optional[str] = None
+        before: Optional[str] = None,
+        after: Optional[str] = None,
     ) -> str:
         """Generate ALTER TYPE ADD VALUE statement.
 
@@ -173,6 +172,4 @@ class EnumTypeMixin:
         Returns:
             SQL statement string
         """
-        return self.format_alter_enum_add_value(
-            type_name, new_value, schema, before, after
-        )
+        return self.format_alter_enum_add_value(type_name, new_value, schema, before, after)

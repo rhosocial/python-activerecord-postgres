@@ -14,6 +14,7 @@ JSON Types:
 Both json and jsonb accept identical input values; the key difference is in
 storage format. jsonb is generally preferred for query purposes.
 """
+
 import json
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
@@ -32,6 +33,7 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
     When reading from DB, psycopg returns dict. When target type is str,
     we need to serialize back to JSON string.
     """
+
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
         return {dict: [Jsonb]}
@@ -41,7 +43,9 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
             return None
         return Jsonb(value)
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> Union[dict, list]:
         if value is None:
             return None
         # For string target type, serialize dict/list back to JSON string
@@ -110,12 +114,7 @@ class PostgresJsonPathAdapter:
             PostgresJsonPath: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL jsonpath.
 
         Args:
@@ -137,17 +136,14 @@ class PostgresJsonPathAdapter:
             return value.path
 
         if isinstance(value, str):
-            if not value.startswith('$'):
+            if not value.startswith("$"):
                 raise ValueError(f"jsonpath must start with '$': {value}")
             return value
 
         raise TypeError(f"Cannot convert {type(value).__name__} to jsonpath")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresJsonPath]:
         """Convert PostgreSQL jsonpath value to Python.
 
@@ -174,22 +170,16 @@ class PostgresJsonPathAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} from jsonpath")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresJSONBAdapter', 'PostgresJsonPathAdapter']
+__all__ = ["PostgresJSONBAdapter", "PostgresJsonPathAdapter"]

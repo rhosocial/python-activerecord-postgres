@@ -4,6 +4,7 @@
 This module provides the PostgresStoredProcedureMixin class which implements
 stored procedure support for PostgreSQL databases (introduced in PostgreSQL 11).
 """
+
 from typing import Any, Dict, Optional, Tuple, List
 
 
@@ -32,14 +33,14 @@ class PostgresStoredProcedureMixin:
         name: str,
         parameters: Optional[List[Dict[str, str]]] = None,
         returns: Optional[str] = None,
-        language: str = 'plpgsql',
-        body: str = '',
+        language: str = "plpgsql",
+        body: str = "",
         schema: Optional[str] = None,
         or_replace: bool = False,
         security: Optional[str] = None,
         cost: Optional[float] = None,
         rows: Optional[int] = None,
-        set_params: Optional[Dict[str, str]] = None
+        set_params: Optional[Dict[str, str]] = None,
     ) -> Tuple[str, tuple]:
         """Format CREATE PROCEDURE statement.
 
@@ -74,11 +75,11 @@ class PostgresStoredProcedureMixin:
             param_strs = []
             for param in parameters:
                 param_str = ""
-                mode = param.get('mode', 'IN')
-                if mode and mode != 'IN':
+                mode = param.get("mode", "IN")
+                if mode and mode != "IN":
                     param_str += f"{mode} "
                 param_str += f"{param['name']} {param['type']}"
-                if 'default' in param:
+                if "default" in param:
                     param_str += f" = {param['default']}"
                 param_strs.append(param_str)
             sql += f"({', '.join(param_strs)})"
@@ -91,7 +92,7 @@ class PostgresStoredProcedureMixin:
         # Security
         if security:
             security = security.upper()
-            if security not in ('DEFINER', 'INVOKER'):
+            if security not in ("DEFINER", "INVOKER"):
                 raise ValueError("Security must be 'DEFINER' or 'INVOKER'")
             sql += f"\nSECURITY {security}"
 
@@ -111,7 +112,7 @@ class PostgresStoredProcedureMixin:
         parameters: Optional[List[Dict[str, str]]] = None,
         schema: Optional[str] = None,
         if_exists: bool = False,
-        cascade: bool = False
+        cascade: bool = False,
     ) -> Tuple[str, tuple]:
         """Format DROP PROCEDURE statement.
 
@@ -133,7 +134,7 @@ class PostgresStoredProcedureMixin:
 
         # Parameter types for overload resolution
         if parameters:
-            param_types = [p['type'] if isinstance(p, dict) else p for p in parameters]
+            param_types = [p["type"] if isinstance(p, dict) else p for p in parameters]
             sql += f"({', '.join(param_types)})"
 
         if cascade:
@@ -142,10 +143,7 @@ class PostgresStoredProcedureMixin:
         return sql, ()
 
     def format_call_statement(
-        self,
-        name: str,
-        arguments: Optional[List[Any]] = None,
-        schema: Optional[str] = None
+        self, name: str, arguments: Optional[List[Any]] = None, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CALL statement for stored procedure.
 
@@ -163,7 +161,7 @@ class PostgresStoredProcedureMixin:
         full_name = f"{schema}.{name}" if schema else name
 
         if arguments:
-            placeholders = ', '.join(['%s'] * len(arguments))
+            placeholders = ", ".join(["%s"] * len(arguments))
             sql = f"CALL {full_name}({placeholders})"
             return sql, tuple(arguments)
         else:

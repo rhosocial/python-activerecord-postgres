@@ -4,6 +4,7 @@
 This module defines protocols for PostgreSQL logical replication features,
 including commit timestamp tracking and streaming replication capabilities.
 """
+
 from typing import Protocol, runtime_checkable
 
 

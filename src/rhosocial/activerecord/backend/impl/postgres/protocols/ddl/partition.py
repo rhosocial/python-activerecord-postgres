@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from ...expressions import (
         CreatePartitionExpression,
         DetachPartitionExpression,
-        AttachPartitionExpression,
     )
 
 
@@ -100,9 +99,7 @@ class PostgresPartitionSupport(Protocol):
         """
         ...
 
-    def format_create_partition_statement(
-        self, expr: "CreatePartitionExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_partition_statement(self, expr: "CreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
 
         Args:
@@ -113,9 +110,7 @@ class PostgresPartitionSupport(Protocol):
         """
         ...
 
-    def format_detach_partition_statement(
-        self, expr: "DetachPartitionExpression"
-    ) -> Tuple[str, tuple]:
+    def format_detach_partition_statement(self, expr: "DetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
         Args:

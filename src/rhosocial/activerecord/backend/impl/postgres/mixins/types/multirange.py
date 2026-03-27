@@ -4,7 +4,8 @@
 This module provides the MultirangeMixin class for handling PostgreSQL
 multirange type operations.
 """
-from typing import Optional, List, Tuple
+
+from typing import Optional, Tuple
 
 
 class MultirangeMixin:
@@ -31,10 +32,7 @@ class MultirangeMixin:
         return self.version >= (14, 0, 0)
 
     def format_create_multirange_type_statement(
-        self,
-        name: str,
-        range_type: str,
-        schema: Optional[str] = None
+        self, name: str, range_type: str, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE TYPE statement for a custom multirange type.
 
@@ -59,11 +57,7 @@ class MultirangeMixin:
         return (sql, ())
 
     def format_multirange_agg_function(
-        self,
-        range_column: str,
-        table_name: str,
-        where_clause: Optional[str] = None,
-        schema: Optional[str] = None
+        self, range_column: str, table_name: str, where_clause: Optional[str] = None, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format multirange_agg aggregate function call.
 
@@ -88,10 +82,7 @@ class MultirangeMixin:
             sql += f" WHERE {where_clause}"
         return (sql, ())
 
-    def format_range_merge_function(
-        self,
-        multirange_column: str
-    ) -> str:
+    def format_range_merge_function(self, multirange_column: str) -> str:
         """Format range_merge function call on a multirange.
 
         The range_merge function returns the smallest range that includes
@@ -109,11 +100,7 @@ class MultirangeMixin:
         """
         return f"range_merge({multirange_column})"
 
-    def format_multirange_contains(
-        self,
-        multirange_column: str,
-        value: str
-    ) -> str:
+    def format_multirange_contains(self, multirange_column: str, value: str) -> str:
         """Format a containment check for multirange.
 
         Args:
@@ -129,11 +116,7 @@ class MultirangeMixin:
         """
         return f"{multirange_column} @> {value}"
 
-    def format_multirange_is_contained_by(
-        self,
-        multirange_column: str,
-        value: str
-    ) -> str:
+    def format_multirange_is_contained_by(self, multirange_column: str, value: str) -> str:
         """Format an "is contained by" check for multirange.
 
         Args:
@@ -149,11 +132,7 @@ class MultirangeMixin:
         """
         return f"{multirange_column} <@ '{value}'"
 
-    def format_multirange_overlaps(
-        self,
-        multirange_column: str,
-        other: str
-    ) -> str:
+    def format_multirange_overlaps(self, multirange_column: str, other: str) -> str:
         """Format an overlaps check for multirange.
 
         Args:
@@ -169,11 +148,7 @@ class MultirangeMixin:
         """
         return f"{multirange_column} && '{other}'"
 
-    def format_multirange_union(
-        self,
-        multirange_column: str,
-        other: str
-    ) -> str:
+    def format_multirange_union(self, multirange_column: str, other: str) -> str:
         """Format multirange union operation.
 
         Args:
@@ -189,11 +164,7 @@ class MultirangeMixin:
         """
         return f"{multirange_column} + '{other}'"
 
-    def format_multirange_intersection(
-        self,
-        multirange_column: str,
-        other: str
-    ) -> str:
+    def format_multirange_intersection(self, multirange_column: str, other: str) -> str:
         """Format multirange intersection operation.
 
         Args:
@@ -209,11 +180,7 @@ class MultirangeMixin:
         """
         return f"{multirange_column} * '{other}'"
 
-    def format_multirange_difference(
-        self,
-        multirange_column: str,
-        other: str
-    ) -> str:
+    def format_multirange_difference(self, multirange_column: str, other: str) -> str:
         """Format multirange difference operation.
 
         Args:

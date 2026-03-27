@@ -30,7 +30,7 @@ class PostgresExtensionSupport(Protocol):
     Version requirement: PostgreSQL 9.1+ supports CREATE EXTENSION
     """
 
-    def detect_extensions(self, connection) -> Dict[str, 'PostgresExtensionInfo']:
+    def detect_extensions(self, connection) -> Dict[str, "PostgresExtensionInfo"]:
         """Detect all installed extensions.
 
         Queries pg_extension system table to get extension information.
@@ -44,7 +44,7 @@ class PostgresExtensionSupport(Protocol):
         """
         ...
 
-    def get_extension_info(self, name: str) -> Optional['PostgresExtensionInfo']:
+    def get_extension_info(self, name: str) -> Optional["PostgresExtensionInfo"]:
         """Get information for a specific extension.
 
         Args:

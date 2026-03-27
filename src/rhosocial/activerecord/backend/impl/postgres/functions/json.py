@@ -11,6 +11,7 @@ All functions follow the expression-dialect separation architecture:
 - For SQL expression generators, first parameter is always the dialect instance
 - They return SQL expression strings or PostgresJsonPath objects
 """
+
 from typing import Any, Dict, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 
 
 # Path builder utility functions
+
 
 def json_path_root() -> "PostgresJsonPath":
     """Create root jsonpath expression.
@@ -31,7 +33,8 @@ def json_path_root() -> "PostgresJsonPath":
         PostgresJsonPath('$')
     """
     from ..types.json import PostgresJsonPath
-    return PostgresJsonPath('$')
+
+    return PostgresJsonPath("$")
 
 
 def json_path_key(path: Union["PostgresJsonPath", str], key: str) -> "PostgresJsonPath":
@@ -52,15 +55,13 @@ def json_path_key(path: Union["PostgresJsonPath", str], key: str) -> "PostgresJs
         PostgresJsonPath('$.store.book')
     """
     from ..types.json import PostgresJsonPath
+
     if isinstance(path, PostgresJsonPath):
         return path.key(key)
     return PostgresJsonPath(path).key(key)
 
 
-def json_path_index(
-    path: Union["PostgresJsonPath", str],
-    index: Union[int, str]
-) -> "PostgresJsonPath":
+def json_path_index(path: Union["PostgresJsonPath", str], index: Union[int, str]) -> "PostgresJsonPath":
     """Add array index access to path.
 
     Args:
@@ -78,6 +79,7 @@ def json_path_index(
         PostgresJsonPath('$.items[last]')
     """
     from ..types.json import PostgresJsonPath
+
     if isinstance(path, PostgresJsonPath):
         return path.index(index)
     return PostgresJsonPath(path).index(index)
@@ -104,16 +106,14 @@ def json_path_wildcard(path: Union["PostgresJsonPath", str], array: bool = True)
         PostgresJsonPath('$.items[*]')
     """
     from ..types.json import PostgresJsonPath
+
     if isinstance(path, PostgresJsonPath):
         return path.wildcard_array() if array else path.wildcard_object()
     path_obj = PostgresJsonPath(path)
     return path_obj.wildcard_array() if array else path_obj.wildcard_object()
 
 
-def json_path_filter(
-    path: Union["PostgresJsonPath", str],
-    condition: str
-) -> "PostgresJsonPath":
+def json_path_filter(path: Union["PostgresJsonPath", str], condition: str) -> "PostgresJsonPath":
     """Add filter expression to path.
 
     Args:
@@ -131,6 +131,7 @@ def json_path_filter(
         PostgresJsonPath('$.books[*]?(@.author == "King")')
     """
     from ..types.json import PostgresJsonPath
+
     if isinstance(path, PostgresJsonPath):
         return path.filter(condition)
     return PostgresJsonPath(path).filter(condition)
@@ -138,11 +139,9 @@ def json_path_filter(
 
 # SQL expression generators for common jsonpath operations
 
+
 def jsonb_path_query(
-    dialect: "SQLDialectBase",
-    column: str,
-    path: Union["PostgresJsonPath", str],
-    vars: Optional[Dict[str, Any]] = None
+    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
 ) -> str:
     """Generate jsonb_path_query SQL expression.
 
@@ -175,10 +174,7 @@ def jsonb_path_query(
 
 
 def jsonb_path_query_first(
-    dialect: "SQLDialectBase",
-    column: str,
-    path: Union["PostgresJsonPath", str],
-    vars: Optional[Dict[str, Any]] = None
+    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
 ) -> str:
     """Generate jsonb_path_query_first SQL expression.
 
@@ -207,10 +203,7 @@ def jsonb_path_query_first(
 
 
 def jsonb_path_exists(
-    dialect: "SQLDialectBase",
-    column: str,
-    path: Union["PostgresJsonPath", str],
-    vars: Optional[Dict[str, Any]] = None
+    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
 ) -> str:
     """Generate jsonb_path_exists SQL expression.
 
@@ -243,10 +236,7 @@ def jsonb_path_exists(
 
 
 def jsonb_path_match(
-    dialect: "SQLDialectBase",
-    column: str,
-    path: Union["PostgresJsonPath", str],
-    vars: Optional[Dict[str, Any]] = None
+    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
 ) -> str:
     """Generate jsonb_path_match SQL expression.
 
@@ -275,13 +265,13 @@ def jsonb_path_match(
 
 
 __all__ = [
-    'json_path_root',
-    'json_path_key',
-    'json_path_index',
-    'json_path_wildcard',
-    'json_path_filter',
-    'jsonb_path_query',
-    'jsonb_path_query_first',
-    'jsonb_path_exists',
-    'jsonb_path_match',
+    "json_path_root",
+    "json_path_key",
+    "json_path_index",
+    "json_path_wildcard",
+    "json_path_filter",
+    "jsonb_path_query",
+    "jsonb_path_query_first",
+    "jsonb_path_exists",
+    "jsonb_path_match",
 ]

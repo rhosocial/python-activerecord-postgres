@@ -15,6 +15,7 @@ Version requirements:
 - Basic ENUM: PostgreSQL 8.3+
 - Adding values: PostgreSQL 9.1+
 """
+
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
@@ -72,13 +73,7 @@ class PostgresEnumType(BaseExpression):
         ('app.video_status', ())
     """
 
-    def __init__(
-        self,
-        dialect: "SQLDialectBase",
-        name: str,
-        values: List[str],
-        schema: Optional[str] = None
-    ):
+    def __init__(self, dialect: "SQLDialectBase", name: str, values: List[str], schema: Optional[str] = None):
         """Initialize PostgreSQL ENUM type reference expression.
 
         Args:
@@ -149,12 +144,8 @@ class PostgresEnumType(BaseExpression):
 
     @classmethod
     def from_python_enum(
-        cls,
-        dialect: "SQLDialectBase",
-        enum_class: type,
-        name: Optional[str] = None,
-        schema: Optional[str] = None
-    ) -> 'PostgresEnumType':
+        cls, dialect: "SQLDialectBase", enum_class: type, name: Optional[str] = None, schema: Optional[str] = None
+    ) -> "PostgresEnumType":
         """Create PostgresEnumType from Python Enum class.
 
         Args:
@@ -167,6 +158,7 @@ class PostgresEnumType(BaseExpression):
             PostgresEnumType instance
         """
         from enum import Enum
+
         if not issubclass(enum_class, Enum):
             raise TypeError("enum_class must be a Python Enum class")
 
@@ -178,7 +170,10 @@ class PostgresEnumType(BaseExpression):
         return self.to_sql()[0]
 
     def __repr__(self) -> str:
-        return f"PostgresEnumType(dialect={self._dialect!r}, name={self._name!r}, values={self._values!r}, schema={self._schema!r})"
+        return (
+            f"PostgresEnumType(dialect={self._dialect!r}, name={self._name!r}, "
+            f"values={self._values!r}, schema={self._schema!r})"
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PostgresEnumType):
@@ -226,7 +221,7 @@ class EnumTypeManager:
             name=enum_type.name,
             values=enum_type.values,
             schema=enum_type.schema,
-            if_not_exists=if_not_exists
+            if_not_exists=if_not_exists,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -245,7 +240,7 @@ class EnumTypeManager:
             name=enum_type.name,
             schema=enum_type.schema,
             if_exists=if_exists,
-            cascade=cascade
+            cascade=cascade,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -253,8 +248,9 @@ class EnumTypeManager:
         if key in self._enum_types:
             del self._enum_types[key]
 
-    def add_value(self, enum_type: PostgresEnumType, new_value: str,
-                  before: Optional[str] = None, after: Optional[str] = None) -> None:
+    def add_value(
+        self, enum_type: PostgresEnumType, new_value: str, before: Optional[str] = None, after: Optional[str] = None
+    ) -> None:
         """Add a new value to an enum type.
 
         Note: Requires PostgreSQL 9.1+
@@ -274,7 +270,7 @@ class EnumTypeManager:
             new_value=new_value,
             schema=enum_type.schema,
             before=before,
-            after=after
+            after=after,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -298,7 +294,7 @@ class EnumTypeManager:
             type_name=enum_type.name,
             old_value=old_value,
             new_value=new_value,
-            schema=enum_type.schema
+            schema=enum_type.schema,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -360,7 +356,7 @@ class EnumTypeManager:
         ORDER BY e.enumsortorder
         """
         results = self._backend.fetch_all(sql, tuple(params))
-        return [r['enumlabel'] for r in results] if results else None
+        return [r["enumlabel"] for r in results] if results else None
 
 
-__all__ = ['PostgresEnumType', 'EnumTypeManager']
+__all__ = ["PostgresEnumType", "EnumTypeManager"]

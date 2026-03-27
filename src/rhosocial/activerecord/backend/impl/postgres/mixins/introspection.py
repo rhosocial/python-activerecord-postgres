@@ -126,7 +126,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             The default schema name 'public'.
         """
-        return 'public'
+        return "public"
 
     # ========== Query Formatting Methods ==========
 
@@ -142,7 +142,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        db_name = params.get("database_name")
+        params.get("database_name")
 
         sql = """
             SELECT version() as version,
@@ -548,4 +548,4 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         return (sql, tuple(params_list))
 
 
-__all__ = ['PostgresIntrospectionCapabilityMixin']
+__all__ = ["PostgresIntrospectionCapabilityMixin"]

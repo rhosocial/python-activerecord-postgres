@@ -11,6 +11,7 @@ All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return SQL expression strings
 """
+
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -208,18 +209,18 @@ def geometry_npoints(dialect: "SQLDialectBase", geom: Any) -> str:
 
 
 __all__ = [
-    'geometry_distance',
-    'geometry_contains',
-    'geometry_contained_by',
-    'geometry_overlaps',
-    'geometry_strictly_left',
-    'geometry_strictly_right',
-    'geometry_not_extend_right',
-    'geometry_not_extend_left',
-    'geometry_area',
-    'geometry_center',
-    'geometry_length',
-    'geometry_width',
-    'geometry_height',
-    'geometry_npoints',
+    "geometry_distance",
+    "geometry_contains",
+    "geometry_contained_by",
+    "geometry_overlaps",
+    "geometry_strictly_left",
+    "geometry_strictly_right",
+    "geometry_not_extend_right",
+    "geometry_not_extend_left",
+    "geometry_area",
+    "geometry_center",
+    "geometry_length",
+    "geometry_width",
+    "geometry_height",
+    "geometry_npoints",
 ]

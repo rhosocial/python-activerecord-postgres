@@ -4,6 +4,7 @@
 This module defines the protocol for PostgreSQL-specific type DDL features
 that extend beyond standard SQL.
 """
+
 from typing import Protocol, runtime_checkable, Optional, Tuple, List
 
 
@@ -66,10 +67,7 @@ class PostgresTypeSupport(Protocol):
         ...
 
     def format_create_type_enum_statement(
-        self,
-        name: str,
-        values: List[str],
-        schema: Optional[str] = None
+        self, name: str, values: List[str], schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE TYPE ... AS ENUM statement.
 
@@ -84,11 +82,7 @@ class PostgresTypeSupport(Protocol):
         ...
 
     def format_drop_type_statement(
-        self,
-        name: str,
-        schema: Optional[str] = None,
-        if_exists: bool = False,
-        cascade: bool = False
+        self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> Tuple[str, tuple]:
         """Format DROP TYPE statement.
 

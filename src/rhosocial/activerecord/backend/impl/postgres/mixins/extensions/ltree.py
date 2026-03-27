@@ -6,7 +6,7 @@ This module provides the PostgresLtreeMixin class that adds support for
 ltree extension features including ltree type, operators, and indexes.
 """
 
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 if TYPE_CHECKING:
     pass  # No type imports needed for this mixin
@@ -17,15 +17,15 @@ class PostgresLtreeMixin:
 
     def supports_ltree_type(self) -> bool:
         """Check if ltree supports ltree type."""
-        return self.check_extension_feature('ltree', 'type')
+        return self.check_extension_feature("ltree", "type")
 
     def supports_ltree_operators(self) -> bool:
         """Check if ltree supports operators."""
-        return self.check_extension_feature('ltree', 'operators')
+        return self.check_extension_feature("ltree", "operators")
 
     def supports_ltree_index(self) -> bool:
         """Check if ltree supports index."""
-        return self.check_extension_feature('ltree', 'index')
+        return self.check_extension_feature("ltree", "index")
 
     def format_ltree_literal(self, path: str) -> str:
         """Format an ltree literal value.
@@ -57,13 +57,7 @@ class PostgresLtreeMixin:
         """
         return f"'{pattern}'::lquery"
 
-    def format_ltree_operator(
-        self,
-        column: str,
-        operator: str,
-        value: str,
-        value_type: str = 'ltree'
-    ) -> str:
+    def format_ltree_operator(self, column: str, operator: str, value: str, value_type: str = "ltree") -> str:
         """Format an ltree operator expression.
 
         Args:
@@ -81,9 +75,9 @@ class PostgresLtreeMixin:
             >>> format_ltree_operator('path', '~', '*.Astronomy.*', 'lquery')
             "path ~ '*.Astronomy.*'::lquery"
         """
-        if value_type == 'lquery':
+        if value_type == "lquery":
             return f"{column} {operator} '{value}'::lquery"
-        elif value_type == 'ltxtquery':
+        elif value_type == "ltxtquery":
             return f"{column} {operator} '{value}'::ltxtquery"
         else:
             return f"{column} {operator} '{value}'"
@@ -137,12 +131,7 @@ class PostgresLtreeMixin:
         return f"{column} ~ '{pattern}'::lquery"
 
     def format_ltree_index_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        column_name: str,
-        index_type: str = 'gist',
-        schema: Optional[str] = None
+        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for ltree column.
 

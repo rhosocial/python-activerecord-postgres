@@ -6,7 +6,7 @@ from .data_type import PostgresDataTypeMixin
 from .multirange import MultirangeMixin
 
 __all__ = [
-    'EnumTypeMixin',
-    'PostgresDataTypeMixin',
-    'MultirangeMixin',
+    "EnumTypeMixin",
+    "PostgresDataTypeMixin",
+    "MultirangeMixin",
 ]

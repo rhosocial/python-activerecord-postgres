@@ -11,17 +11,20 @@ All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return SQL expression strings
 """
+
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def enum_range(dialect: "SQLDialectBase",
-               enum_type: Optional[str] = None,
-               enum_value: Optional[str] = None,
-               start_value: Optional[str] = None,
-               end_value: Optional[str] = None) -> str:
+def enum_range(
+    dialect: "SQLDialectBase",
+    enum_type: Optional[str] = None,
+    enum_value: Optional[str] = None,
+    start_value: Optional[str] = None,
+    end_value: Optional[str] = None,
+) -> str:
     """Generate SQL expression for PostgreSQL enum_range function.
 
     Args:
@@ -150,11 +153,11 @@ def enum_ge(dialect: "SQLDialectBase", e1: str, e2: str) -> str:
 
 
 __all__ = [
-    'enum_range',
-    'enum_first',
-    'enum_last',
-    'enum_lt',
-    'enum_le',
-    'enum_gt',
-    'enum_ge',
+    "enum_range",
+    "enum_first",
+    "enum_last",
+    "enum_lt",
+    "enum_le",
+    "enum_gt",
+    "enum_ge",
 ]

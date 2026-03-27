@@ -13,6 +13,7 @@ Architecture:
 - AsyncPostgresBackend: Asynchronous implementation using psycopg
 - Independent from ORM frameworks - uses only native drivers
 """
+
 import datetime
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -24,7 +25,7 @@ from psycopg.errors import (
     IntegrityError as PsycopgIntegrityError,
     OperationalError as PsycopgOperationalError,
     ProgrammingError as PsycopgProgrammingError,
-    DeadlockDetected as PsycopgDeadlockError
+    DeadlockDetected as PsycopgDeadlockError,
 )
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
@@ -47,7 +48,6 @@ from ..adapters import (
     PostgresMultirangeAdapter,
 )
 from ..adapters.geometric import PostgresGeometryAdapter
-from ..adapters.json import PostgresJsonPathAdapter
 from ..adapters.monetary import PostgresMoneyAdapter
 from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
 from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
@@ -72,25 +72,61 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         the actual server version and installed extensions.
         """
         # Ensure we have proper PostgreSQL configuration
-        connection_config = kwargs.get('connection_config')
+        connection_config = kwargs.get("connection_config")
 
         if connection_config is None:
             # Extract PostgreSQL-specific parameters from kwargs
             config_params = {}
             pg_specific_params = [
-                'host', 'port', 'database', 'username', 'password',
-                'charset', 'collation', 'timezone', 'version',
-                'pool_size', 'pool_timeout', 'pool_name', 'pool_reset_session', 'pool_pre_ping',
-                'ssl_ca', 'ssl_cert', 'ssl_key', 'ssl_verify_cert', 'ssl_verify_identity',
-                'log_queries', 'log_level',
-                'application_name', 'fallback_application_name', 'connect_timeout',
-                'options', 'service', 'target_session_attrs',
-                'gssencmode', 'channel_binding', 'replication', 'assume_role',
-                'role', 'search_path', 'row_security', 'datestyle', 'intervalstyle',
-                'timezone_setting', 'extra_float_digits', 'client_encoding',
-                'tcp_user_timeout', 'tcp_keepalives_idle', 'tcp_keepalives_interval',
-                'tcp_keepalives_count', 'load_balance_hosts', 'replication',
-                'keepalives', 'keepalives_idle', 'keepalives_interval', 'keepalives_count'
+                "host",
+                "port",
+                "database",
+                "username",
+                "password",
+                "charset",
+                "collation",
+                "timezone",
+                "version",
+                "pool_size",
+                "pool_timeout",
+                "pool_name",
+                "pool_reset_session",
+                "pool_pre_ping",
+                "ssl_ca",
+                "ssl_cert",
+                "ssl_key",
+                "ssl_verify_cert",
+                "ssl_verify_identity",
+                "log_queries",
+                "log_level",
+                "application_name",
+                "fallback_application_name",
+                "connect_timeout",
+                "options",
+                "service",
+                "target_session_attrs",
+                "gssencmode",
+                "channel_binding",
+                "replication",
+                "assume_role",
+                "role",
+                "search_path",
+                "row_security",
+                "datestyle",
+                "intervalstyle",
+                "timezone_setting",
+                "extra_float_digits",
+                "client_encoding",
+                "tcp_user_timeout",
+                "tcp_keepalives_idle",
+                "tcp_keepalives_interval",
+                "tcp_keepalives_count",
+                "load_balance_hosts",
+                "replication",
+                "keepalives",
+                "keepalives_idle",
+                "keepalives_interval",
+                "keepalives_count",
             ]
 
             for param in pg_specific_params:
@@ -98,12 +134,12 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
                     config_params[param] = kwargs[param]
 
             # Set defaults if not provided
-            if 'host' not in config_params:
-                config_params['host'] = 'localhost'
-            if 'port' not in config_params:
-                config_params['port'] = 5432
+            if "host" not in config_params:
+                config_params["host"] = "localhost"
+            if "port" not in config_params:
+                config_params["port"] = 5432
 
-            kwargs['connection_config'] = PostgresConnectionConfig(**config_params)
+            kwargs["connection_config"] = PostgresConnectionConfig(**config_params)
 
         # Initialize the base class first to ensure all base properties are set
         super().__init__(**kwargs)
@@ -128,6 +164,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         """Create and return an AsyncPostgreSQLIntrospector with an async executor."""
         from rhosocial.activerecord.backend.introspection.executor import AsyncIntrospectorExecutor
         from ..introspection import AsyncPostgreSQLIntrospector
+
         return AsyncPostgreSQLIntrospector(self, AsyncIntrospectorExecutor(self))
 
     def _register_postgres_adapters(self):
@@ -174,7 +211,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
                     self.adapter_registry.register(adapter, py_type, db_type)
 
         # Register Range adapters based on configuration
-        range_mode = getattr(self.config, 'range_adapter_mode', RangeAdapterMode.NATIVE)
+        range_mode = getattr(self.config, "range_adapter_mode", RangeAdapterMode.NATIVE)
         if range_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
             range_adapter = PostgresRangeAdapter()
             for py_type, db_types in range_adapter.supported_types.items():
@@ -186,7 +223,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         # Note: Version check happens in dialect, but at this point we haven't
         # connected yet, so we register if configured. The adapter itself will
         # handle version-specific logic if needed.
-        multirange_mode = getattr(self.config, 'multirange_adapter_mode', RangeAdapterMode.NATIVE)
+        multirange_mode = getattr(self.config, "multirange_adapter_mode", RangeAdapterMode.NATIVE)
         if multirange_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
             multirange_adapter = PostgresMultirangeAdapter()
             for py_type, db_types in multirange_adapter.supported_types.items():
@@ -214,23 +251,42 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         try:
             # Prepare connection parameters from config
             conn_params = {
-                'host': self.config.host,
-                'port': self.config.port,
-                'dbname': self.config.database,
-                'user': self.config.username,
-                'password': self.config.password,
+                "host": self.config.host,
+                "port": self.config.port,
+                "dbname": self.config.database,
+                "user": self.config.username,
+                "password": self.config.password,
             }
 
             # Add additional parameters if they exist in config
             additional_params = [
-                'application_name', 'fallback_application_name', 'connect_timeout',
-                'options', 'service', 'target_session_attrs',
-                'gssencmode', 'channel_binding', 'replication', 'assume_role',
-                'role', 'search_path', 'row_security', 'datestyle', 'intervalstyle',
-                'timezone', 'extra_float_digits', 'client_encoding',
-                'tcp_user_timeout', 'tcp_keepalives_idle', 'tcp_keepalives_interval',
-                'tcp_keepalives_count', 'load_balance_hosts',
-                'keepalives', 'keepalives_idle', 'keepalives_interval', 'keepalives_count'
+                "application_name",
+                "fallback_application_name",
+                "connect_timeout",
+                "options",
+                "service",
+                "target_session_attrs",
+                "gssencmode",
+                "channel_binding",
+                "replication",
+                "assume_role",
+                "role",
+                "search_path",
+                "row_security",
+                "datestyle",
+                "intervalstyle",
+                "timezone",
+                "extra_float_digits",
+                "client_encoding",
+                "tcp_user_timeout",
+                "tcp_keepalives_idle",
+                "tcp_keepalives_interval",
+                "tcp_keepalives_count",
+                "load_balance_hosts",
+                "keepalives",
+                "keepalives_idle",
+                "keepalives_interval",
+                "keepalives_count",
             ]
 
             for param in additional_params:
@@ -240,34 +296,37 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
                         conn_params[param] = value
 
             # Handle 'options' parameter specially as it should be a string, not a dict
-            if hasattr(self.config, 'options') and self.config.options is not None:
+            if hasattr(self.config, "options") and self.config.options is not None:
                 options_value = self.config.options
                 if isinstance(options_value, dict):
-                    options_str = ' '.join([f"-c {k}={v}" for k, v in options_value.items()])
-                    conn_params['options'] = options_str
+                    options_str = " ".join([f"-c {k}={v}" for k, v in options_value.items()])
+                    conn_params["options"] = options_str
                 else:
-                    conn_params['options'] = options_value
+                    conn_params["options"] = options_value
 
             # Add SSL parameters if provided
             ssl_params = {}
-            if hasattr(self.config, 'ssl_ca'):
-                ssl_params['sslcert'] = self.config.ssl_ca
-            if hasattr(self.config, 'ssl_cert'):
-                ssl_params['sslcert'] = self.config.ssl_cert
-            if hasattr(self.config, 'ssl_key'):
-                ssl_params['sslkey'] = self.config.ssl_key
-            if hasattr(self.config, 'ssl_mode'):
-                ssl_params['sslmode'] = self.config.ssl_mode
+            if hasattr(self.config, "ssl_ca"):
+                ssl_params["sslcert"] = self.config.ssl_ca
+            if hasattr(self.config, "ssl_cert"):
+                ssl_params["sslcert"] = self.config.ssl_cert
+            if hasattr(self.config, "ssl_key"):
+                ssl_params["sslkey"] = self.config.ssl_key
+            if hasattr(self.config, "ssl_mode"):
+                ssl_params["sslmode"] = self.config.ssl_mode
 
             if ssl_params:
                 conn_params.update(ssl_params)
 
             self._connection = await AsyncConnection.connect(**conn_params)
 
-            self.log(logging.INFO, f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}")
+            self.log(
+                logging.INFO,
+                f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}",
+            )
         except PsycopgError as e:
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
-            raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}")
+            raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}") from None
 
     async def disconnect(self):
         """Close async connection to PostgreSQL database."""
@@ -282,7 +341,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
                 self.log(logging.INFO, "Disconnected from PostgreSQL database")
             except PsycopgError as e:
                 self.log(logging.ERROR, f"Error during disconnection: {str(e)}")
-                raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}")
+                raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from None
 
     async def _get_cursor(self):
         """Get a database cursor, ensuring connection is active."""
@@ -290,7 +349,6 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
             await self.connect()
 
         return self._connection.cursor()
-
 
     async def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
         """Execute the same SQL statement multiple times with different parameters asynchronously."""
@@ -304,7 +362,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
             cursor = await self._get_cursor()
 
             # Log the batch operation if logging is enabled
-            if getattr(self.config, 'log_queries', False):
+            if getattr(self.config, "log_queries", False):
                 self.log(logging.DEBUG, f"Executing batch operation: {sql}")
                 self.log(logging.DEBUG, f"With {len(params_list)} parameter sets")
 
@@ -316,24 +374,23 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
 
             duration = (datetime.datetime.now() - start_time).total_seconds()
 
-            result = QueryResult(
-                affected_rows=affected_rows,
-                data=None,
-                duration=duration
-            )
+            result = QueryResult(affected_rows=affected_rows, data=None, duration=duration)
 
-            self.log(logging.INFO, f"Batch operation completed, affected {affected_rows} rows, duration={duration:.3f}s")
+            self.log(
+                logging.INFO,
+                f"Batch operation completed, affected {affected_rows} rows, duration={duration:.3f}s",
+            )
             return result
 
         except PsycopgIntegrityError as e:
             self.log(logging.ERROR, f"Integrity error in batch: {str(e)}")
-            raise IntegrityError(str(e))
+            raise IntegrityError(str(e)) from None
         except PsycopgError as e:
             self.log(logging.ERROR, f"PostgreSQL error in batch: {str(e)}")
-            raise DatabaseError(str(e))
+            raise DatabaseError(str(e)) from None
         except Exception as e:
             self.log(logging.ERROR, f"Unexpected error during batch execution: {str(e)}")
-            raise QueryError(str(e))
+            raise QueryError(str(e)) from None
         finally:
             if cursor:
                 await cursor.close()
@@ -361,7 +418,8 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
 
             # Extract version from string like "PostgreSQL 13.2..."
             import re
-            match = re.search(r'PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?', version_str)
+
+            match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
             if match:
                 major = int(match.group(1))
                 minor = int(match.group(2))
@@ -404,7 +462,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
             self.log(logging.WARNING, "Could not determine server version, retaining default (9.6.0)")
             actual_version = (9, 6, 0)
 
-        cached_version = getattr(self, '_server_version_cache', None)
+        cached_version = getattr(self, "_server_version_cache", None)
         version_changed = cached_version != actual_version
 
         if version_changed:
@@ -416,12 +474,8 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         self._dialect._extensions = extensions
 
         # Log detected extensions
-        installed_exts = [
-            f"{k}={v.version}"
-            for k, v in extensions.items()
-            if v.installed
-        ]
-        ext_info = ', '.join(installed_exts) if installed_exts else 'none'
+        installed_exts = [f"{k}={v.version}" for k, v in extensions.items() if v.installed]
+        ext_info = ", ".join(installed_exts) if installed_exts else "none"
 
         if version_changed:
             self.log(logging.INFO, f"Adapted to PostgreSQL {actual_version}, extensions: {ext_info}")
@@ -442,19 +496,13 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
             for row in rows:
                 ext_name = row[0]
                 extensions[ext_name] = PostgresExtensionInfo(
-                    name=ext_name,
-                    installed=True,
-                    version=row[1],
-                    schema=row[2]
+                    name=ext_name, installed=True, version=row[1], schema=row[2]
                 )
 
             # Add known but not installed extensions
             for known_ext in PostgresDialect.KNOWN_EXTENSIONS:
                 if known_ext not in extensions:
-                    extensions[known_ext] = PostgresExtensionInfo(
-                        name=known_ext,
-                        installed=False
-                    )
+                    extensions[known_ext] = PostgresExtensionInfo(name=known_ext, installed=False)
 
             return extensions
 
@@ -466,30 +514,30 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         if options is None:
             # Determine statement type based on SQL
             sql_upper = sql.strip().upper()
-            if sql_upper.startswith(('SELECT', 'WITH', 'SHOW', 'DESCRIBE', 'EXPLAIN')):
+            if sql_upper.startswith(("SELECT", "WITH", "SHOW", "DESCRIBE", "EXPLAIN")):
                 stmt_type = StatementType.DQL
-            elif sql_upper.startswith(('INSERT', 'UPDATE', 'DELETE', 'UPSERT')):
+            elif sql_upper.startswith(("INSERT", "UPDATE", "DELETE", "UPSERT")):
                 stmt_type = StatementType.DML
             else:
                 stmt_type = StatementType.DDL
 
             # Extract column_mapping and column_adapters from kwargs if present
-            column_mapping = kwargs.get('column_mapping')
-            column_adapters = kwargs.get('column_adapters')
+            column_mapping = kwargs.get("column_mapping")
+            column_adapters = kwargs.get("column_adapters")
 
             options = ExecutionOptions(
                 stmt_type=stmt_type,
                 process_result_set=None,  # Let the base logic determine this based on stmt_type
                 column_adapters=column_adapters,
-                column_mapping=column_mapping
+                column_mapping=column_mapping,
             )
         else:
             # If options is provided but column_mapping or column_adapters are explicitly passed in kwargs,
             # update the options with these values
-            if 'column_mapping' in kwargs:
-                options.column_mapping = kwargs['column_mapping']
-            if 'column_adapters' in kwargs:
-                options.column_adapters = kwargs['column_adapters']
+            if "column_mapping" in kwargs:
+                options.column_mapping = kwargs["column_mapping"]
+            if "column_adapters" in kwargs:
+                options.column_adapters = kwargs["column_adapters"]
 
         return await super().execute(sql, params, options=options)
 
@@ -600,7 +648,7 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
             # Check if we're not in an active transaction
             if not self._transaction_manager or not self._transaction_manager.is_active:
                 # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
-                if not getattr(self.config, 'autocommit', False):
+                if not getattr(self.config, "autocommit", False):
                     await self._connection.commit()
                     self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
         except Exception as e:
@@ -614,17 +662,17 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         PostgreSQL respects the autocommit setting, but we also need to handle explicit commits.
         """
         if not self.in_transaction and self._connection:
-            if not getattr(self.config, 'autocommit', False):
+            if not getattr(self.config, "autocommit", False):
                 await self._connection.commit()
                 self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 
     def log(self, level: int, message: str):
         """Log a message with the specified level."""
-        if hasattr(self, '_logger') and self._logger:
+        if hasattr(self, "_logger") and self._logger:
             self._logger.log(level, message)
         else:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
 
 
-__all__ = ['AsyncPostgresBackend']
+__all__ = ["AsyncPostgresBackend"]

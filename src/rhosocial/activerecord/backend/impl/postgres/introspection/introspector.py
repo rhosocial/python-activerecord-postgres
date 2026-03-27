@@ -257,10 +257,14 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         version_str = db_row.get("_version_str", "PostgreSQL 11.0")
         match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
         version_tuple = (
-            int(match.group(1)),
-            int(match.group(2)),
-            int(match.group(3)) if match.group(3) else 0,
-        ) if match else (11, 0, 0)
+            (
+                int(match.group(1)),
+                int(match.group(2)),
+                int(match.group(3)) if match.group(3) else 0,
+            )
+            if match
+            else (11, 0, 0)
+        )
 
         return DatabaseInfo(
             name=db_name,
@@ -272,9 +276,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             size_bytes=db_row.get("size"),
         )
 
-    def _parse_tables(
-        self, rows: List[Dict[str, Any]], schema: Optional[str]
-    ) -> List[TableInfo]:
+    def _parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[TableInfo]:
         target_schema = schema if schema is not None else self._get_default_schema()
         table_type_map = {
             "BASE TABLE": TableType.BASE_TABLE,
@@ -295,9 +297,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_columns(
-        self, rows: List[Dict[str, Any]], table_name: str, schema: str
-    ) -> List[ColumnInfo]:
+    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ColumnInfo]:
         columns = []
         for row in rows:
             data_type = row.get("data_type", "")
@@ -319,9 +319,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return columns
 
-    def _parse_indexes(
-        self, rows: List[Dict[str, Any]], table_name: str, schema: str
-    ) -> List[IndexInfo]:
+    def _parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
         index_type_map = {
             "btree": IndexType.BTREE,
             "hash": IndexType.HASH,
@@ -353,9 +351,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return list(index_map.values())
 
-    def _parse_foreign_keys(
-        self, rows: List[Dict[str, Any]], table_name: str, schema: str
-    ) -> List[ForeignKeyInfo]:
+    def _parse_foreign_keys(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ForeignKeyInfo]:
         # PostgreSQL uses single-char codes for referential actions
         action_map = {
             "a": ReferentialAction.NO_ACTION,
@@ -383,9 +379,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             fk_map[fk_name].referenced_columns.append(row.get("referenced_column", ""))
         return list(fk_map.values())
 
-    def _parse_views(
-        self, rows: List[Dict[str, Any]], schema: str
-    ) -> List[ViewInfo]:
+    def _parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[ViewInfo]:
         return [
             ViewInfo(
                 name=row.get("view_name", ""),
@@ -396,9 +390,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_view_info(
-        self, rows: List[Dict[str, Any]], view_name: str, schema: str
-    ) -> Optional[ViewInfo]:
+    def _parse_view_info(self, rows: List[Dict[str, Any]], view_name: str, schema: str) -> Optional[ViewInfo]:
         if not rows:
             return None
         row = rows[0]
@@ -409,9 +401,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             comment=row.get("comment"),
         )
 
-    def _parse_triggers(
-        self, rows: List[Dict[str, Any]], schema: str
-    ) -> List[TriggerInfo]:
+    def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[TriggerInfo]:
         triggers = []
         for row in rows:
             tgtype = int(row.get("tgtype", 0))

@@ -4,6 +4,7 @@
 This module defines the protocol for earthdistance extension support,
 which provides earth distance calculations for geographic points.
 """
+
 from typing import Protocol, runtime_checkable
 
 

@@ -4,6 +4,7 @@ PostgreSQL backend command-line interface.
 
 Provides SQL execution and database information display capabilities.
 """
+
 import argparse
 import asyncio
 import inspect
@@ -11,6 +12,8 @@ import json
 import logging
 import os
 import sys
+from dataclasses import asdict, is_dataclass
+from enum import Enum
 from typing import Dict, List, Any, Optional, Tuple
 
 from . import PostgresBackend, AsyncPostgresBackend
@@ -18,38 +21,69 @@ from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .protocols import (
     PostgresExtensionInfo,
-    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
+    PostgresExtensionSupport,
+    PostgresMaterializedViewSupport,
+    PostgresTableSupport,
+    PostgresPgvectorSupport,
+    PostgresPostGISSupport,
+    PostgresPgTrgmSupport,
     PostgresHstoreSupport,
-    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
-    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresPartitionSupport,
+    PostgresIndexSupport,
+    PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport,
+    PostgresDataTypeSupport,
+    PostgresSQLSyntaxSupport,
     PostgresLogicalReplicationSupport,
-    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
-    PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
-    MultirangeSupport, EnumTypeSupport,
+    PostgresLtreeSupport,
+    PostgresIntarraySupport,
+    PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport,
+    PostgresPgStatStatementsSupport,
+    PostgresTriggerSupport,
+    PostgresCommentSupport,
+    PostgresTypeSupport,
+    MultirangeSupport,
+    EnumTypeSupport,
 )
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
-from rhosocial.activerecord.backend.output import (
-    JsonOutputProvider, CsvOutputProvider, TsvOutputProvider
-)
+from rhosocial.activerecord.backend.output import JsonOutputProvider, CsvOutputProvider, TsvOutputProvider
 from rhosocial.activerecord.backend.dialect.protocols import (
-    WindowFunctionSupport, CTESupport, FilterClauseSupport,
-    ReturningSupport, UpsertSupport, LateralJoinSupport, JoinSupport,
-    JSONSupport, ExplainSupport, GraphSupport,
-    SetOperationSupport, ViewSupport,
-    TableSupport, TruncateSupport, GeneratedColumnSupport,
-    TriggerSupport, FunctionSupport,
-    AdvancedGroupingSupport, ArraySupport, ILIKESupport,
-    IndexSupport, LockingSupport, MergeSupport,
-    OrderedSetAggregationSupport, QualifyClauseSupport,
-    SchemaSupport, SequenceSupport, TemporalTableSupport,
+    WindowFunctionSupport,
+    CTESupport,
+    FilterClauseSupport,
+    ReturningSupport,
+    UpsertSupport,
+    LateralJoinSupport,
+    JoinSupport,
+    JSONSupport,
+    ExplainSupport,
+    GraphSupport,
+    SetOperationSupport,
+    ViewSupport,
+    TableSupport,
+    TruncateSupport,
+    GeneratedColumnSupport,
+    TriggerSupport,
+    FunctionSupport,
+    AdvancedGroupingSupport,
+    ArraySupport,
+    ILIKESupport,
+    IndexSupport,
+    LockingSupport,
+    MergeSupport,
+    OrderedSetAggregationSupport,
+    QualifyClauseSupport,
+    SchemaSupport,
+    SequenceSupport,
+    TemporalTableSupport,
 )
 
 # Attempt to import rich for formatted output
 try:
     from rich.logging import RichHandler
     from rhosocial.activerecord.backend.output_rich import RichOutputProvider
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -60,16 +94,57 @@ logger = logging.getLogger(__name__)
 # Groups that are specific to PostgreSQL dialect
 DIALECT_SPECIFIC_GROUPS = {"PostgreSQL Native", "PostgreSQL Extensions"}
 
+# Supported introspection types for CLI
+INTROSPECT_TYPES = [
+    "tables", "views", "table", "columns",
+    "indexes", "foreign-keys", "triggers", "database"
+]
+
+
+def _serialize_for_output(obj: Any) -> Any:
+    """Serialize object for JSON output, handling non-serializable types.
+
+    Handles Pydantic models, dataclasses, Enums, and nested structures.
+    """
+    if obj is None:
+        return None
+    if hasattr(obj, 'model_dump'):
+        # Pydantic model
+        try:
+            result = obj.model_dump(mode='json')
+            return _serialize_for_output(result)
+        except TypeError:
+            result = obj.model_dump()
+            return _serialize_for_output(result)
+    if is_dataclass(obj) and not isinstance(obj, type):
+        # Dataclass instance
+        return {k: _serialize_for_output(v) for k, v in asdict(obj).items()}
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, dict):
+        return {k: _serialize_for_output(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialize_for_output(item) for item in obj]
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    # Fallback: convert to string
+    return str(obj)
+
 # Protocol family groups for display
 PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
     "Query Features": [
-        WindowFunctionSupport, CTESupport, FilterClauseSupport,
-        SetOperationSupport, AdvancedGroupingSupport,
+        WindowFunctionSupport,
+        CTESupport,
+        FilterClauseSupport,
+        SetOperationSupport,
+        AdvancedGroupingSupport,
     ],
     "JOIN Support": [JoinSupport, LateralJoinSupport],
     "Data Types": [JSONSupport, ArraySupport],
     "DML Features": [
-        ReturningSupport, UpsertSupport, MergeSupport,
+        ReturningSupport,
+        UpsertSupport,
+        MergeSupport,
         OrderedSetAggregationSupport,
     ],
     "Transaction & Locking": [LockingSupport, TemporalTableSupport],
@@ -80,17 +155,30 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
     "DDL - Sequence & Trigger": [SequenceSupport, TriggerSupport, FunctionSupport],
     "String Matching": [ILIKESupport],
     "PostgreSQL Native": [
-        PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
-        PostgresQueryOptimizationSupport, PostgresDataTypeSupport,
-        PostgresSQLSyntaxSupport, PostgresLogicalReplicationSupport,
-        PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
-        MultirangeSupport, EnumTypeSupport,
+        PostgresPartitionSupport,
+        PostgresIndexSupport,
+        PostgresVacuumSupport,
+        PostgresQueryOptimizationSupport,
+        PostgresDataTypeSupport,
+        PostgresSQLSyntaxSupport,
+        PostgresLogicalReplicationSupport,
+        PostgresTriggerSupport,
+        PostgresCommentSupport,
+        PostgresTypeSupport,
+        MultirangeSupport,
+        EnumTypeSupport,
     ],
     "PostgreSQL Extensions": [
-        PostgresExtensionSupport, PostgresTableSupport,
-        PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
-        PostgresHstoreSupport, PostgresLtreeSupport, PostgresIntarraySupport,
-        PostgresEarthdistanceSupport, PostgresTablefuncSupport,
+        PostgresExtensionSupport,
+        PostgresTableSupport,
+        PostgresPgvectorSupport,
+        PostgresPostGISSupport,
+        PostgresPgTrgmSupport,
+        PostgresHstoreSupport,
+        PostgresLtreeSupport,
+        PostgresIntarraySupport,
+        PostgresEarthdistanceSupport,
+        PostgresTablefuncSupport,
         PostgresPgStatStatementsSupport,
     ],
 }
@@ -98,88 +186,76 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Execute SQL queries against a PostgreSQL backend.",
-        formatter_class=argparse.RawTextHelpFormatter
+        description="Execute SQL queries against a PostgreSQL backend.", formatter_class=argparse.RawTextHelpFormatter
     )
-    # Input source arguments
+
+    # Connection parameters (global)
+    parser.add_argument("--host", default=os.getenv("POSTGRES_HOST", "localhost"), help="Database host")
+    parser.add_argument("--port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Database port")
+    parser.add_argument("--database", default=os.getenv("POSTGRES_DATABASE"), help="Database name")
+    parser.add_argument("--user", default=os.getenv("POSTGRES_USER", "postgres"), help="Database user")
+    parser.add_argument("--password", default=os.getenv("POSTGRES_PASSWORD", ""), help="Database password")
+
+    # Execution options (global)
+    parser.add_argument("--use-async", action="store_true", help="Use asynchronous backend")
+
+    # Output and logging options (global)
     parser.add_argument(
-        'query',
+        "--output",
+        choices=["table", "json", "csv", "tsv"],
+        default="table",
+        help='Output format. Defaults to "table" if rich is installed.',
+    )
+    parser.add_argument("--log-level", default="INFO", help="Set logging level (e.g., DEBUG, INFO)")
+    parser.add_argument("--rich-ascii", action="store_true", help="Use ASCII characters for rich table borders.")
+
+    # Create subparsers for commands
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Introspect subcommand
+    introspect_parser = subparsers.add_parser(
+        'introspect',
+        help='Database introspection commands'
+    )
+    introspect_parser.add_argument(
+        'type',
+        choices=INTROSPECT_TYPES,
+        help='Introspection type: tables, views, table, columns, indexes, foreign-keys, triggers, database'
+    )
+    introspect_parser.add_argument(
+        'name',
         nargs='?',
         default=None,
-        help='SQL query to execute. If not provided, reads from --file or stdin.'
+        help='Table/view name (required for table, columns, indexes, foreign-keys types)'
     )
-    parser.add_argument(
-        '-f', '--file',
+    introspect_parser.add_argument(
+        '--schema',
         default=None,
-        help='Path to a file containing SQL to execute.'
+        help='Schema name (defaults to "public" for PostgreSQL)'
     )
-    # Connection parameters
-    parser.add_argument(
-        '--host',
-        default=os.getenv('POSTGRES_HOST', 'localhost'),
-        help='Database host'
-    )
-    parser.add_argument(
-        '--port',
-        type=int,
-        default=int(os.getenv('POSTGRES_PORT', '5432')),
-        help='Database port'
-    )
-    parser.add_argument(
-        '--database',
-        default=os.getenv('POSTGRES_DATABASE'),
-        help='Database name'
-    )
-    parser.add_argument(
-        '--user',
-        default=os.getenv('POSTGRES_USER', 'postgres'),
-        help='Database user'
-    )
-    parser.add_argument(
-        '--password',
-        default=os.getenv('POSTGRES_PASSWORD', ''),
-        help='Database password'
-    )
-
-    # Execution options
-    parser.add_argument('--use-async', action='store_true', help='Use asynchronous backend')
-
-    # Output and logging options
-    parser.add_argument(
-        '--output',
-        choices=['table', 'json', 'csv', 'tsv'],
-        default='table',
-        help='Output format. Defaults to "table" if rich is installed.'
-    )
-    parser.add_argument(
-        '--log-level',
-        default='INFO',
-        help='Set logging level (e.g., DEBUG, INFO)'
-    )
-    parser.add_argument(
-        '--rich-ascii',
+    introspect_parser.add_argument(
+        '--include-system',
         action='store_true',
-        help='Use ASCII characters for rich table borders.'
+        help='Include system tables in output'
     )
 
     # Info display options
+    parser.add_argument("--info", action="store_true", help="Display PostgreSQL environment information.")
     parser.add_argument(
-        '--info',
-        action='store_true',
-        help='Display PostgreSQL environment information.'
+        "-v", "--verbose", action="count", default=0, help="Increase verbosity. -v for families, -vv for details."
     )
     parser.add_argument(
-        '-v', '--verbose',
-        action='count',
-        default=0,
-        help='Increase verbosity. -v for families, -vv for details.'
-    )
-    parser.add_argument(
-        '--version',
+        "--version",
         type=str,
         default=None,
-        help='PostgreSQL version to simulate (e.g., "15.0.0"). Default: auto-detect.'
+        help='PostgreSQL version to simulate (e.g., "15.0.0"). Default: auto-detect.',
     )
+
+    # Input source arguments (positional, for main command)
+    parser.add_argument(
+        "query", nargs="?", default=None, help="SQL query to execute. If not provided, reads from --file or stdin."
+    )
+    parser.add_argument("-f", "--file", default=None, help="Path to a file containing SQL to execute.")
 
     return parser.parse_args()
 
@@ -187,17 +263,18 @@ def parse_args():
 def get_provider(args):
     """Factory function to get the correct output provider."""
     output_format = args.output
-    if output_format == 'table' and not RICH_AVAILABLE:
-        output_format = 'json'
+    if output_format == "table" and not RICH_AVAILABLE:
+        output_format = "json"
 
-    if output_format == 'table' and RICH_AVAILABLE:
+    if output_format == "table" and RICH_AVAILABLE:
         from rich.console import Console
+
         return RichOutputProvider(console=Console(), ascii_borders=args.rich_ascii)
-    if output_format == 'json':
+    if output_format == "json":
         return JsonOutputProvider()
-    if output_format == 'csv':
+    if output_format == "csv":
         return CsvOutputProvider()
-    if output_format == 'tsv':
+    if output_format == "tsv":
         return TsvOutputProvider()
 
     return JsonOutputProvider()
@@ -210,8 +287,8 @@ def get_protocol_support_methods(protocol_class: type) -> List[str]:
     """
     methods = []
     for name, member in inspect.getmembers(protocol_class):
-        is_supports = name.startswith('supports_')
-        is_available = (name.startswith('is_') and name.endswith('_available'))
+        is_supports = name.startswith("supports_")
+        is_available = name.startswith("is_") and name.endswith("_available")
         if callable(member) and (is_supports or is_available):
             methods.append(name)
     return sorted(methods)
@@ -221,7 +298,7 @@ def get_protocol_support_methods(protocol_class: type) -> List[str]:
 # This allows detailed display of which specific arguments are supported
 SUPPORT_METHOD_ALL_ARGS: Dict[str, List[str]] = {
     # ExplainSupport: all possible format types
-    'supports_explain_format': ['TEXT', 'JSON', 'XML', 'YAML', 'TREE', 'DOT'],
+    "supports_explain_format": ["TEXT", "JSON", "XML", "YAML", "TREE", "DOT"],
 }
 
 
@@ -242,9 +319,8 @@ def check_protocol_support(dialect: PostgresDialect, protocol_class: type) -> Di
                 method = getattr(dialect, method_name)
                 # Check if method requires arguments (beyond self)
                 sig = inspect.signature(method)
-                params = [p for p in sig.parameters.values()
-                          if p.default == inspect.Parameter.empty]
-                required_params = [p for p in params if p.name != 'self']
+                params = [p for p in sig.parameters.values() if p.default == inspect.Parameter.empty]
+                required_params = [p for p in params if p.name != "self"]
 
                 if len(required_params) == 0:
                     # No required parameters, call directly
@@ -260,11 +336,7 @@ def check_protocol_support(dialect: PostgresDialect, protocol_class: type) -> Di
                         except Exception:
                             arg_results[arg] = False
                     supported_count = sum(1 for v in arg_results.values() if v)
-                    results[method_name] = {
-                        'supported': supported_count,
-                        'total': len(all_args),
-                        'args': arg_results
-                    }
+                    results[method_name] = {"supported": supported_count, "total": len(all_args), "args": arg_results}
                 else:
                     # Unknown method requiring parameters, skip
                     results[method_name] = False
@@ -277,16 +349,19 @@ def check_protocol_support(dialect: PostgresDialect, protocol_class: type) -> Di
 
 def parse_version(version_str: str) -> Tuple[int, int, int]:
     """Parse version string like '15.0.0' to tuple."""
-    parts = version_str.split('.')
+    parts = version_str.split(".")
     major = int(parts[0]) if len(parts) > 0 else 0
     minor = int(parts[1]) if len(parts) > 1 else 0
     patch = int(parts[2]) if len(parts) > 2 else 0
     return (major, minor, patch)
 
 
-def display_info(verbose: int = 0, output_format: str = 'table',
-                 version_str: Optional[str] = None,
-                 extensions: Optional[Dict[str, PostgresExtensionInfo]] = None):
+def display_info(
+    verbose: int = 0,
+    output_format: str = "table",
+    version_str: Optional[str] = None,
+    extensions: Optional[Dict[str, PostgresExtensionInfo]] = None,
+):
     """Display PostgreSQL environment information."""
     # Parse version
     if version_str:
@@ -312,7 +387,7 @@ def display_info(verbose: int = 0, output_format: str = 'table',
         "features": {
             "extensions": {},
         },
-        "protocols": {}
+        "protocols": {},
     }
 
     # Process extensions
@@ -340,8 +415,8 @@ def display_info(verbose: int = 0, output_format: str = 'table',
             total_count = 0
             for _method_name, value in support_methods.items():
                 if isinstance(value, dict):
-                    supported_count += value['supported']
-                    total_count += value['total']
+                    supported_count += value["supported"]
+                    total_count += value["total"]
                 else:
                     total_count += 1
                     if value:
@@ -351,34 +426,33 @@ def display_info(verbose: int = 0, output_format: str = 'table',
                 info["protocols"][group_name][protocol_name] = {
                     "supported": supported_count,
                     "total": total_count,
-                    "percentage": (round(supported_count / total_count * 100, 1)
-                                   if total_count > 0 else 0),
-                    "methods": support_methods
+                    "percentage": (round(supported_count / total_count * 100, 1) if total_count > 0 else 0),
+                    "methods": support_methods,
                 }
             else:
                 info["protocols"][group_name][protocol_name] = {
                     "supported": supported_count,
                     "total": total_count,
-                    "percentage": (round(supported_count / total_count * 100, 1)
-                                   if total_count > 0 else 0)
+                    "percentage": (round(supported_count / total_count * 100, 1) if total_count > 0 else 0),
                 }
 
-    if output_format == 'json' or not RICH_AVAILABLE:
+    if output_format == "json" or not RICH_AVAILABLE:
         print(json.dumps(info, indent=2))
     else:
         # Use legacy structure for rich display
         info_legacy = {
             "postgresql": info["database"],
             "extensions": info["features"]["extensions"],
-            "protocols": info["protocols"]
+            "protocols": info["protocols"],
         }
         _display_info_rich(info_legacy, verbose, version_display, extensions)
 
     return info
 
 
-def _display_info_rich(info: Dict, verbose: int, version_display: str,
-                       extensions: Optional[Dict[str, PostgresExtensionInfo]]):
+def _display_info_rich(
+    info: Dict, verbose: int, version_display: str, extensions: Optional[Dict[str, PostgresExtensionInfo]]
+):
     """Display info using rich console."""
     from rich.console import Console
 
@@ -405,7 +479,7 @@ def _display_info_rich(info: Dict, verbose: int, version_display: str,
             console.print("  [dim]No extensions installed[/dim]")
         console.print()
 
-    label = 'Detailed' if verbose >= 2 else 'Family Overview'
+    label = "Detailed" if verbose >= 2 else "Family Overview"
     console.print(f"[bold green]Protocol Support ({label}):[/bold green]")
 
     for group_name, protocols in info["protocols"].items():
@@ -433,8 +507,8 @@ def _display_info_rich(info: Dict, verbose: int, version_display: str,
             filled = int(pct / 100 * bar_len)
             progress_bar = "#" * filled + "-" * (bar_len - filled)
 
-            sup = stats['supported']
-            tot = stats['total']
+            sup = stats["supported"]
+            tot = stats["total"]
             console.print(
                 f"    [{color}]{symbol}[/{color}] {protocol_name}: "
                 f"[{color}]{progress_bar}[/{color}] {pct:.0f}% ({sup}/{tot})"
@@ -444,15 +518,12 @@ def _display_info_rich(info: Dict, verbose: int, version_display: str,
                 for method, value in stats["methods"].items():
                     # Format method name for display
                     method_display = (
-                        method.replace("supports_", "")
-                        .replace("_", " ")
-                        .replace("is_", "")
-                        .replace("_available", "")
+                        method.replace("supports_", "").replace("_", " ").replace("is_", "").replace("_available", "")
                     )
                     if isinstance(value, dict):
                         # Method with parameters - show each arg's support
                         console.print(f"        [dim]{method_display}:[/dim]")
-                        for arg, supported in value.get('args', {}).items():
+                        for arg, supported in value.get("args", {}).items():
                             m_status = "[green][OK][/green]" if supported else "[red][X][/red]"
                             console.print(f"            {m_status} {arg}")
                     else:
@@ -463,8 +534,7 @@ def _display_info_rich(info: Dict, verbose: int, version_display: str,
     console.print()
 
 
-def execute_query_sync(sql_query: str, backend: PostgresBackend,
-                       provider: Any, **kwargs):
+def execute_query_sync(sql_query: str, backend: PostgresBackend, provider: Any, **kwargs):
     """Execute a SQL query synchronously."""
     try:
         backend.connect()
@@ -495,8 +565,7 @@ def execute_query_sync(sql_query: str, backend: PostgresBackend,
             provider.display_disconnect(is_async=False)
 
 
-async def execute_query_async(sql_query: str, backend: AsyncPostgresBackend,
-                              provider: Any, **kwargs):
+async def execute_query_async(sql_query: str, backend: AsyncPostgresBackend, provider: Any, **kwargs):
     """Execute a SQL query asynchronously."""
     try:
         await backend.connect()
@@ -527,11 +596,209 @@ async def execute_query_async(sql_query: str, backend: AsyncPostgresBackend,
             provider.display_disconnect(is_async=True)
 
 
+def handle_introspect_sync(args, backend: PostgresBackend, provider: Any):
+    """Handle introspect subcommand synchronously."""
+    try:
+        backend.connect()
+
+        introspector = backend.introspector
+
+        if args.type == "tables":
+            tables = introspector.list_tables(
+                schema=args.schema,
+                include_system=args.include_system
+            )
+            data = _serialize_for_output(tables)
+            provider.display_results(data, title="Tables")
+
+        elif args.type == "views":
+            views = introspector.list_views(schema=args.schema)
+            data = _serialize_for_output(views)
+            provider.display_results(data, title="Views")
+
+        elif args.type == "table":
+            if not args.name:
+                print("Error: Table name is required for 'table' introspection", file=sys.stderr)
+                sys.exit(1)
+            info = introspector.get_table_info(args.name, schema=args.schema)
+            if info:
+                # Display columns
+                provider.display_results(_serialize_for_output(info.columns), title=f"Columns of {args.name}")
+                # Display indexes
+                if info.indexes:
+                    provider.display_results(_serialize_for_output(info.indexes), title=f"Indexes of {args.name}")
+                # Display foreign keys
+                if info.foreign_keys:
+                    provider.display_results(_serialize_for_output(info.foreign_keys), title=f"Foreign Keys of {args.name}")
+            else:
+                print(f"Error: Table '{args.name}' not found", file=sys.stderr)
+                sys.exit(1)
+
+        elif args.type == "columns":
+            if not args.name:
+                print("Error: Table name is required for 'columns' introspection", file=sys.stderr)
+                sys.exit(1)
+            columns = introspector.list_columns(args.name, schema=args.schema)
+            data = _serialize_for_output(columns)
+            provider.display_results(data, title=f"Columns of {args.name}")
+
+        elif args.type == "indexes":
+            if not args.name:
+                print("Error: Table name is required for 'indexes' introspection", file=sys.stderr)
+                sys.exit(1)
+            indexes = introspector.list_indexes(args.name, schema=args.schema)
+            data = _serialize_for_output(indexes)
+            provider.display_results(data, title=f"Indexes of {args.name}")
+
+        elif args.type == "foreign-keys":
+            if not args.name:
+                print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
+                sys.exit(1)
+            fks = introspector.list_foreign_keys(args.name, schema=args.schema)
+            data = _serialize_for_output(fks)
+            provider.display_results(data, title=f"Foreign Keys of {args.name}")
+
+        elif args.type == "triggers":
+            triggers = introspector.list_triggers(
+                table_name=args.name,
+                schema=args.schema
+            )
+            data = _serialize_for_output(triggers)
+            provider.display_results(data, title="Triggers")
+
+        elif args.type == "database":
+            info = introspector.get_database_info()
+            data = _serialize_for_output(info)
+            provider.display_results([data], title="Database Info")
+
+    except ConnectionError as e:
+        provider.display_connection_error(e)
+        sys.exit(1)
+    except QueryError as e:
+        provider.display_query_error(e)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error during introspection: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        if backend._connection:  # type: ignore
+            backend.disconnect()
+
+
+async def handle_introspect_async(args, backend: AsyncPostgresBackend, provider: Any):
+    """Handle introspect subcommand asynchronously."""
+    try:
+        await backend.connect()
+
+        introspector = backend.introspector
+
+        if args.type == "tables":
+            tables = await introspector.list_tables_async(
+                schema=args.schema,
+                include_system=args.include_system
+            )
+            data = _serialize_for_output(tables)
+            provider.display_results(data, title="Tables")
+
+        elif args.type == "views":
+            views = await introspector.list_views_async(schema=args.schema)
+            data = _serialize_for_output(views)
+            provider.display_results(data, title="Views")
+
+        elif args.type == "table":
+            if not args.name:
+                print("Error: Table name is required for 'table' introspection", file=sys.stderr)
+                sys.exit(1)
+            info = await introspector.get_table_info_async(args.name, schema=args.schema)
+            if info:
+                # Display columns
+                provider.display_results(_serialize_for_output(info.columns), title=f"Columns of {args.name}")
+                # Display indexes
+                if info.indexes:
+                    provider.display_results(_serialize_for_output(info.indexes), title=f"Indexes of {args.name}")
+                # Display foreign keys
+                if info.foreign_keys:
+                    provider.display_results(_serialize_for_output(info.foreign_keys), title=f"Foreign Keys of {args.name}")
+            else:
+                print(f"Error: Table '{args.name}' not found", file=sys.stderr)
+                sys.exit(1)
+
+        elif args.type == "columns":
+            if not args.name:
+                print("Error: Table name is required for 'columns' introspection", file=sys.stderr)
+                sys.exit(1)
+            columns = await introspector.list_columns_async(args.name, schema=args.schema)
+            data = _serialize_for_output(columns)
+            provider.display_results(data, title=f"Columns of {args.name}")
+
+        elif args.type == "indexes":
+            if not args.name:
+                print("Error: Table name is required for 'indexes' introspection", file=sys.stderr)
+                sys.exit(1)
+            indexes = await introspector.list_indexes_async(args.name, schema=args.schema)
+            data = _serialize_for_output(indexes)
+            provider.display_results(data, title=f"Indexes of {args.name}")
+
+        elif args.type == "foreign-keys":
+            if not args.name:
+                print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
+                sys.exit(1)
+            fks = await introspector.list_foreign_keys_async(args.name, schema=args.schema)
+            data = _serialize_for_output(fks)
+            provider.display_results(data, title=f"Foreign Keys of {args.name}")
+
+        elif args.type == "triggers":
+            triggers = await introspector.list_triggers_async(
+                table_name=args.name,
+                schema=args.schema
+            )
+            data = _serialize_for_output(triggers)
+            provider.display_results(data, title="Triggers")
+
+        elif args.type == "database":
+            info = await introspector.get_database_info_async()
+            data = _serialize_for_output(info)
+            provider.display_results([data], title="Database Info")
+
+    except ConnectionError as e:
+        provider.display_connection_error(e)
+        sys.exit(1)
+    except QueryError as e:
+        provider.display_query_error(e)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error during introspection: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        if backend._connection:  # type: ignore
+            await backend.disconnect()
+
+
 def main():
     args = parse_args()
 
+    # Handle introspect subcommand
+    if args.command == "introspect":
+        if not args.database:
+            print("Error: --database is required for introspection", file=sys.stderr)
+            sys.exit(1)
+
+        provider = get_provider(args)
+        config = PostgresConnectionConfig(
+            host=args.host, port=args.port, database=args.database,
+            username=args.user, password=args.password
+        )
+
+        if args.use_async:
+            backend = AsyncPostgresBackend(connection_config=config)
+            asyncio.run(handle_introspect_async(args, backend, provider))
+        else:
+            backend = PostgresBackend(connection_config=config)
+            handle_introspect_sync(args, backend, provider)
+        return
+
     if args.info:
-        output_format = args.output if args.output != 'table' or RICH_AVAILABLE else 'json'
+        output_format = args.output if args.output != "table" or RICH_AVAILABLE else "json"
 
         # Try to connect and get real version/extensions if database is provided
         extensions = None
@@ -540,8 +807,7 @@ def main():
         if args.database:
             try:
                 config = PostgresConnectionConfig(
-                    host=args.host, port=args.port, database=args.database,
-                    username=args.user, password=args.password
+                    host=args.host, port=args.port, database=args.database, username=args.user, password=args.password
                 )
                 backend = PostgresBackend(connection_config=config)
                 backend.connect()
@@ -553,7 +819,7 @@ def main():
                     actual_version = f"{version_tuple[0]}.{version_tuple[1]}.{version_tuple[2]}"
 
                 # Get extensions from dialect
-                if hasattr(backend.dialect, '_extensions'):
+                if hasattr(backend.dialect, "_extensions"):
                     extensions = backend.dialect._extensions
 
                 backend.disconnect()
@@ -561,35 +827,24 @@ def main():
                 logger.warning("Could not connect to database for introspection: %s", e)
                 # Fall back to command-line version or default
 
-        display_info(verbose=args.verbose, output_format=output_format,
-                     version_str=actual_version, extensions=extensions)
+        display_info(
+            verbose=args.verbose, output_format=output_format, version_str=actual_version, extensions=extensions
+        )
         return
 
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError(f'Invalid log level: {args.log_level}')
+        raise ValueError(f"Invalid log level: {args.log_level}")
 
     provider = get_provider(args)
 
     if RICH_AVAILABLE and isinstance(provider, RichOutputProvider):
         from rich.console import Console
-        handler = RichHandler(
-            rich_tracebacks=True,
-            show_path=False,
-            console=Console(stderr=True)
-        )
-        logging.basicConfig(
-            level=numeric_level,
-            format="%(message)s",
-            datefmt="[%X]",
-            handlers=[handler]
-        )
+
+        handler = RichHandler(rich_tracebacks=True, show_path=False, console=Console(stderr=True))
+        logging.basicConfig(level=numeric_level, format="%(message)s", datefmt="[%X]", handlers=[handler])
     else:
-        logging.basicConfig(
-            level=numeric_level,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            stream=sys.stderr
-        )
+        logging.basicConfig(level=numeric_level, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stderr)
 
     provider.display_greeting()
 
@@ -598,7 +853,7 @@ def main():
         sql_source = args.query
     elif args.file:
         try:
-            with open(args.file, 'r', encoding='utf-8') as f:
+            with open(args.file, "r", encoding="utf-8") as f:
                 sql_source = f.read()
         except FileNotFoundError:
             logger.error(f"Error: File not found at {args.file}")
@@ -612,16 +867,15 @@ def main():
         sys.exit(1)
 
     # Ensure only one statement is provided
-    if ';' in sql_source.strip().rstrip(';'):
+    if ";" in sql_source.strip().rstrip(";"):
         logger.error("Error: Multiple SQL statements are not supported.")
         sys.exit(1)
 
     config = PostgresConnectionConfig(
-        host=args.host, port=args.port, database=args.database,
-        username=args.user, password=args.password
+        host=args.host, port=args.port, database=args.database, username=args.user, password=args.password
     )
 
-    kwargs = {'use_ascii': args.rich_ascii}
+    kwargs = {"use_ascii": args.rich_ascii}
     if args.use_async:
         backend = AsyncPostgresBackend(connection_config=config)
         asyncio.run(execute_query_async(sql_source, backend, provider, **kwargs))

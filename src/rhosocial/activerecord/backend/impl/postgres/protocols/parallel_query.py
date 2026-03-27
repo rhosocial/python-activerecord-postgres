@@ -4,6 +4,7 @@
 This module defines the protocol for parallel query execution features
 that are native to PostgreSQL and do not require any extension.
 """
+
 from typing import Protocol, runtime_checkable
 
 

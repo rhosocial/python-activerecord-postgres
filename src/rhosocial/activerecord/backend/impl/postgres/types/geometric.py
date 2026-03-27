@@ -16,6 +16,7 @@ All geometric types are available since early PostgreSQL versions.
 For type adapter (conversion between Python and database),
 see adapters.geometric.PostgresGeometryAdapter.
 """
+
 from dataclasses import dataclass
 from typing import List
 
@@ -33,21 +34,22 @@ class Point:
     Examples:
         Point(1.5, 2.5) -> (1.5,2.5) in PostgreSQL
     """
+
     x: float
     y: float
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL point literal."""
-        return f'({self.x},{self.y})'
+        return f"({self.x},{self.y})"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Point':
+    def from_postgres_string(cls, value: str) -> "Point":
         """Parse PostgreSQL point string."""
         value = value.strip()
         # Format: (x,y) or x,y
-        if value.startswith('(') and value.endswith(')'):
+        if value.startswith("(") and value.endswith(")"):
             value = value[1:-1]
-        parts = value.split(',')
+        parts = value.split(",")
         if len(parts) != 2:
             raise ValueError(f"Invalid point format: {value}")
         return cls(float(parts[0].strip()), float(parts[1].strip()))
@@ -75,22 +77,23 @@ class Line:
     Examples:
         Line(1, -1, 0) represents line y = x (x - y = 0)
     """
+
     A: float
     B: float
     C: float
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL line literal."""
-        return f'{{{self.A},{self.B},{self.C}}}'
+        return f"{{{self.A},{self.B},{self.C}}}"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Line':
+    def from_postgres_string(cls, value: str) -> "Line":
         """Parse PostgreSQL line string."""
         value = value.strip()
         # Format: {A,B,C}
-        if value.startswith('{') and value.endswith('}'):
+        if value.startswith("{") and value.endswith("}"):
             value = value[1:-1]
-        parts = value.split(',')
+        parts = value.split(",")
         if len(parts) != 3:
             raise ValueError(f"Invalid line format: {value}")
         return cls(float(parts[0].strip()), float(parts[1].strip()), float(parts[2].strip()))
@@ -114,21 +117,22 @@ class LineSegment:
     Examples:
         LineSegment(Point(0, 0), Point(1, 1))
     """
+
     start: Point
     end: Point
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL lseg literal."""
-        return f'[{self.start.to_postgres_string()},{self.end.to_postgres_string()}]'
+        return f"[{self.start.to_postgres_string()},{self.end.to_postgres_string()}]"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'LineSegment':
+    def from_postgres_string(cls, value: str) -> "LineSegment":
         """Parse PostgreSQL lseg string."""
         value = value.strip()
         # Format: [(x1,y1),(x2,y2)] or ((x1,y1),(x2,y2))
-        if value.startswith('[') and value.endswith(']'):
+        if value.startswith("[") and value.endswith("]"):
             value = value[1:-1]
-        elif value.startswith('(') and value.endswith(')'):
+        elif value.startswith("(") and value.endswith(")"):
             # Handle ((x1,y1),(x2,y2))
             value = value[1:-1]
 
@@ -136,11 +140,11 @@ class LineSegment:
         depth = 0
         sep_idx = -1
         for i, c in enumerate(value):
-            if c == '(':
+            if c == "(":
                 depth += 1
-            elif c == ')':
+            elif c == ")":
                 depth -= 1
-            elif c == ',' and depth == 0:
+            elif c == "," and depth == 0:
                 sep_idx = i
                 break
 
@@ -148,7 +152,7 @@ class LineSegment:
             raise ValueError(f"Invalid lseg format: {value}")
 
         start_str = value[:sep_idx].strip()
-        end_str = value[sep_idx + 1:].strip()
+        end_str = value[sep_idx + 1 :].strip()
 
         return cls(Point.from_postgres_string(start_str), Point.from_postgres_string(end_str))
 
@@ -167,15 +171,16 @@ class Box:
     Examples:
         Box(Point(10, 10), Point(0, 0)) represents a box from (0,0) to (10,10)
     """
+
     upper_right: Point
     lower_left: Point
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL box literal."""
-        return f'{self.upper_right.to_postgres_string()},{self.lower_left.to_postgres_string()}'
+        return f"{self.upper_right.to_postgres_string()},{self.lower_left.to_postgres_string()}"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Box':
+    def from_postgres_string(cls, value: str) -> "Box":
         """Parse PostgreSQL box string."""
         value = value.strip()
         # Format: (x1,y1),(x2,y2)
@@ -184,11 +189,11 @@ class Box:
         depth = 0
         sep_idx = -1
         for i, c in enumerate(value):
-            if c == '(':
+            if c == "(":
                 depth += 1
-            elif c == ')':
+            elif c == ")":
                 depth -= 1
-            elif c == ',' and depth == 0:
+            elif c == "," and depth == 0:
                 sep_idx = i
                 break
 
@@ -196,7 +201,7 @@ class Box:
             raise ValueError(f"Invalid box format: {value}")
 
         first_str = value[:sep_idx].strip()
-        second_str = value[sep_idx + 1:].strip()
+        second_str = value[sep_idx + 1 :].strip()
 
         return cls(Point.from_postgres_string(first_str), Point.from_postgres_string(second_str))
 
@@ -214,32 +219,33 @@ class Path:
     Examples:
         Path([Point(0, 0), Point(1, 0), Point(1, 1)], is_closed=False)
     """
+
     points: List[Point]
     is_closed: bool = False
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL path literal."""
         if not self.points:
-            return '()' if self.is_closed else '[]'
+            return "()" if self.is_closed else "[]"
 
-        points_str = ','.join(p.to_postgres_string() for p in self.points)
+        points_str = ",".join(p.to_postgres_string() for p in self.points)
         if self.is_closed:
-            return f'({points_str})'
+            return f"({points_str})"
         else:
-            return f'[{points_str}]'
+            return f"[{points_str}]"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Path':
+    def from_postgres_string(cls, value: str) -> "Path":
         """Parse PostgreSQL path string."""
         value = value.strip()
         if not value:
             return cls(points=[], is_closed=False)
 
         # Determine if open or closed
-        is_closed = value.startswith('(')
-        if value.startswith('(') and value.endswith(')'):
+        is_closed = value.startswith("(")
+        if value.startswith("(") and value.endswith(")"):
             value = value[1:-1]
-        elif value.startswith('[') and value.endswith(']'):
+        elif value.startswith("[") and value.endswith("]"):
             value = value[1:-1]
         else:
             raise ValueError(f"Invalid path format: {value}")
@@ -249,20 +255,20 @@ class Path:
 
         # Parse points
         points = []
-        current = ''
+        current = ""
         depth = 0
 
         for c in value:
-            if c == '(':
+            if c == "(":
                 depth += 1
                 current += c
-            elif c == ')':
+            elif c == ")":
                 depth -= 1
                 current += c
-            elif c == ',' and depth == 0:
+            elif c == "," and depth == 0:
                 if current.strip():
                     points.append(Point.from_postgres_string(current.strip()))
-                current = ''
+                current = ""
             else:
                 current += c
 
@@ -284,21 +290,22 @@ class Polygon:
     Examples:
         Polygon([Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)])
     """
+
     points: List[Point]
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL polygon literal."""
         if not self.points:
-            return '()'
-        points_str = ','.join(p.to_postgres_string() for p in self.points)
-        return f'({points_str})'
+            return "()"
+        points_str = ",".join(p.to_postgres_string() for p in self.points)
+        return f"({points_str})"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Polygon':
+    def from_postgres_string(cls, value: str) -> "Polygon":
         """Parse PostgreSQL polygon string."""
         value = value.strip()
         # Format: ((x1,y1),(x2,y2),...)
-        if value.startswith('(') and value.endswith(')'):
+        if value.startswith("(") and value.endswith(")"):
             value = value[1:-1]
 
         if not value:
@@ -306,20 +313,20 @@ class Polygon:
 
         # Parse points
         points = []
-        current = ''
+        current = ""
         depth = 0
 
         for c in value:
-            if c == '(':
+            if c == "(":
                 depth += 1
                 current += c
-            elif c == ')':
+            elif c == ")":
                 depth -= 1
                 current += c
-            elif c == ',' and depth == 0:
+            elif c == "," and depth == 0:
                 if current.strip():
                     points.append(Point.from_postgres_string(current.strip()))
-                current = ''
+                current = ""
             else:
                 current += c
 
@@ -342,34 +349,35 @@ class Circle:
     Examples:
         Circle(Point(0, 0), 5.0) represents a circle centered at origin with radius 5
     """
+
     center: Point
     radius: float
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL circle literal."""
-        return f'<({self.center.x},{self.center.y}),{self.radius}>'
+        return f"<({self.center.x},{self.center.y}),{self.radius}>"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'Circle':
+    def from_postgres_string(cls, value: str) -> "Circle":
         """Parse PostgreSQL circle string."""
         value = value.strip()
         # Format: <(x,y),r> or ((x,y),r)
 
         # Remove outer brackets
-        if value.startswith('<') and value.endswith('>'):
+        if value.startswith("<") and value.endswith(">"):
             value = value[1:-1]
-        elif value.startswith('(') and value.endswith(')'):
+        elif value.startswith("(") and value.endswith(")"):
             value = value[1:-1]
 
         # Find the separator between center and radius
         depth = 0
         sep_idx = -1
         for i, c in enumerate(value):
-            if c == '(':
+            if c == "(":
                 depth += 1
-            elif c == ')':
+            elif c == ")":
                 depth -= 1
-            elif c == ',' and depth == 0:
+            elif c == "," and depth == 0:
                 sep_idx = i
                 break
 
@@ -377,9 +385,9 @@ class Circle:
             raise ValueError(f"Invalid circle format: {value}")
 
         center_str = value[:sep_idx].strip()
-        radius_str = value[sep_idx + 1:].strip()
+        radius_str = value[sep_idx + 1 :].strip()
 
         return cls(Point.from_postgres_string(center_str), float(radius_str))
 
 
-__all__ = ['Point', 'Line', 'LineSegment', 'Box', 'Path', 'Polygon', 'Circle']
+__all__ = ["Point", "Line", "LineSegment", "Box", "Path", "Polygon", "Circle"]

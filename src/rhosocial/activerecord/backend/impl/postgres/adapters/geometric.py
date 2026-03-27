@@ -15,6 +15,7 @@ Geometric Types:
 - polygon: closed path (automatically closed)
 - circle: circle <(x,y),r>
 """
+
 from typing import Any, Dict, List, Optional, Set, Type
 
 from ..types.geometric import (
@@ -45,13 +46,13 @@ class PostgresGeometryAdapter:
     """
 
     GEOMETRY_TYPES: Dict[str, Type] = {
-        'point': Point,
-        'line': Line,
-        'lseg': LineSegment,
-        'box': Box,
-        'path': Path,
-        'polygon': Polygon,
-        'circle': Circle,
+        "point": Point,
+        "line": Line,
+        "lseg": LineSegment,
+        "box": Box,
+        "path": Path,
+        "polygon": Polygon,
+        "circle": Circle,
     }
 
     @property
@@ -67,12 +68,7 @@ class PostgresGeometryAdapter:
             Circle: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python geometric object to PostgreSQL string.
 
         Args:
@@ -99,12 +95,7 @@ class PostgresGeometryAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to geometric type")
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         """Convert PostgreSQL geometric value to Python object.
 
         Args:
@@ -141,22 +132,16 @@ class PostgresGeometryAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to {target_type.__name__}")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresGeometryAdapter']
+__all__ = ["PostgresGeometryAdapter"]

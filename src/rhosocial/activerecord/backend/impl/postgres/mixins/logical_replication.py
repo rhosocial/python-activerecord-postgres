@@ -1,6 +1,5 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/logical_replication.py
 """PostgreSQL logical replication enhancements implementation."""
-from typing import Any, Dict, Optional, Tuple, List
 
 
 class PostgresLogicalReplicationMixin:

@@ -14,6 +14,7 @@ All bit string types are available since early PostgreSQL versions.
 For type adapter (conversion between Python and database),
 see adapters.bit_string.PostgresBitStringAdapter.
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -33,17 +34,18 @@ class PostgresBitString:
         PostgresBitString('10101010')  # Variable length
         PostgresBitString('1010', length=8)  # Fixed length, padded
     """
+
     bits: str
     length: Optional[int] = None
 
     def __post_init__(self):
         """Validate bit string."""
-        if not all(c in '01' for c in self.bits):
+        if not all(c in "01" for c in self.bits):
             raise ValueError(f"Invalid bit string: {self.bits}. Must contain only 0s and 1s.")
 
         # Pad if fixed length is specified
         if self.length is not None and len(self.bits) < self.length:
-            self.bits = self.bits.ljust(self.length, '0')
+            self.bits = self.bits.ljust(self.length, "0")
 
     def __str__(self) -> str:
         """Return bit string."""
@@ -78,7 +80,7 @@ class PostgresBitString:
         return f"B'{self.bits}'"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'PostgresBitString':
+    def from_postgres_string(cls, value: str) -> "PostgresBitString":
         """Parse PostgreSQL bit string literal.
 
         Args:
@@ -99,7 +101,7 @@ class PostgresBitString:
         return cls(bits=bits)
 
     @classmethod
-    def from_int(cls, value: int, length: Optional[int] = None) -> 'PostgresBitString':
+    def from_int(cls, value: int, length: Optional[int] = None) -> "PostgresBitString":
         """Create bit string from integer.
 
         Args:
@@ -120,4 +122,4 @@ class PostgresBitString:
         return cls(bits=bits, length=length)
 
 
-__all__ = ['PostgresBitString']
+__all__ = ["PostgresBitString"]

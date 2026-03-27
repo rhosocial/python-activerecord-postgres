@@ -18,26 +18,21 @@ class PostgresPostGISMixin:
 
     def supports_postgis_geometry_type(self) -> bool:
         """Check if PostGIS supports geometry type."""
-        return self.check_extension_feature('postgis', 'geometry_type')
+        return self.check_extension_feature("postgis", "geometry_type")
 
     def supports_postgis_geography_type(self) -> bool:
         """Check if PostGIS supports geography type."""
-        return self.check_extension_feature('postgis', 'geography_type')
+        return self.check_extension_feature("postgis", "geography_type")
 
     def supports_postgis_spatial_index(self) -> bool:
         """Check if PostGIS supports spatial index."""
-        return self.check_extension_feature('postgis', 'spatial_index')
+        return self.check_extension_feature("postgis", "spatial_index")
 
     def supports_postgis_spatial_functions(self) -> bool:
         """Check if PostGIS supports spatial functions."""
-        return self.check_extension_feature('postgis', 'spatial_functions')
+        return self.check_extension_feature("postgis", "spatial_functions")
 
-    def format_geometry_literal(
-        self,
-        wkt: str,
-        srid: Optional[int] = None,
-        geometry_type: str = 'geometry'
-    ) -> str:
+    def format_geometry_literal(self, wkt: str, srid: Optional[int] = None, geometry_type: str = "geometry") -> str:
         """Format a geometry literal from WKT (Well-Known Text).
 
         Args:
@@ -54,7 +49,7 @@ class PostgresPostGISMixin:
             >>> format_geometry_literal('POINT(0 0)', srid=4326, geometry_type='geography')
             "ST_GeogFromText('POINT(0 0)', 4326)"
         """
-        if geometry_type.lower() == 'geography':
+        if geometry_type.lower() == "geography":
             if srid is not None:
                 return f"ST_GeogFromText('{wkt}', {srid})"
             return f"ST_GeogFromText('{wkt}')"
@@ -63,12 +58,7 @@ class PostgresPostGISMixin:
                 return f"ST_GeomFromText('{wkt}', {srid})"
             return f"ST_GeomFromText('{wkt}')"
 
-    def format_spatial_function(
-        self,
-        function_name: str,
-        *args: str,
-        **kwargs
-    ) -> str:
+    def format_spatial_function(self, function_name: str, *args: str, **kwargs) -> str:
         """Format a spatial function call.
 
         Args:
@@ -85,15 +75,11 @@ class PostgresPostGISMixin:
             >>> format_spatial_function('ST_DWithin', 'geom1', 'geom2', 1000)
             "ST_DWithin(geom1, geom2, 1000)"
         """
-        args_str = ', '.join(str(arg) for arg in args)
+        args_str = ", ".join(str(arg) for arg in args)
         return f"{function_name}({args_str})"
 
     def format_spatial_index_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        column_name: str,
-        schema: Optional[str] = None
+        self, index_name: str, table_name: str, column_name: str, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for spatial column.
 

@@ -10,6 +10,7 @@ The pg_lsn (Log Sequence Number) type represents a position in the
 PostgreSQL Write-Ahead Log (WAL). It is a 64-bit integer internally,
 displayed as two hexadecimal numbers separated by a slash.
 """
+
 from typing import Any, Dict, List, Optional, Set, Type
 
 from ..types.pg_lsn import PostgresLsn
@@ -31,12 +32,7 @@ class PostgresLsnAdapter:
             PostgresLsn: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL pg_lsn.
 
         Args:
@@ -64,15 +60,10 @@ class PostgresLsnAdapter:
             lsn = PostgresLsn.from_string(value)
             return str(lsn)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} to pg_lsn"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} to pg_lsn")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresLsn]:
         """Convert PostgreSQL pg_lsn to Python object.
 
@@ -100,33 +91,19 @@ class PostgresLsnAdapter:
         if isinstance(value, int):
             return PostgresLsn(value)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} from pg_lsn"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} from pg_lsn")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert Python values to PostgreSQL format."""
-        return [
-            self.to_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Optional[PostgresLsn]]:
         """Batch convert database values to Python objects."""
-        return [
-            self.from_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresLsnAdapter']
+__all__ = ["PostgresLsnAdapter"]

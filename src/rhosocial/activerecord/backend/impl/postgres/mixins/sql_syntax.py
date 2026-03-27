@@ -1,8 +1,6 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/sql_syntax.py
 """PostgreSQL SQL syntax enhancements mixin."""
 
-from typing import Tuple
-
 
 class PostgresSQLSyntaxMixin:
     """PostgreSQL SQL syntax enhancements implementation.

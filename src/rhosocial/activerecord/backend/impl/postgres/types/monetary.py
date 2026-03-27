@@ -15,6 +15,7 @@ Available since early PostgreSQL versions.
 For type adapter (conversion between Python and database),
 see adapters.monetary.PostgresMoneyAdapter.
 """
+
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -35,7 +36,7 @@ class PostgresMoney:
         PostgresMoney(Decimal('1234.56'))
         >>> PostgresMoney(100.50)
         PostgresMoney(Decimal('100.50'))
-        
+
         # Arithmetic operations
         >>> m1 = PostgresMoney(100)
         >>> m2 = PostgresMoney(50)
@@ -46,6 +47,7 @@ class PostgresMoney:
         >>> m1 * 2
         PostgresMoney(Decimal('200'))
     """
+
     amount: Decimal
 
     def __post_init__(self):
@@ -95,21 +97,21 @@ class PostgresMoney:
             return self.amount >= Decimal(str(other))
         return NotImplemented
 
-    def __add__(self, other: object) -> 'PostgresMoney':
+    def __add__(self, other: object) -> "PostgresMoney":
         if isinstance(other, PostgresMoney):
             return PostgresMoney(self.amount + other.amount)
         if isinstance(other, (Decimal, int, float)):
             return PostgresMoney(self.amount + Decimal(str(other)))
         return NotImplemented
 
-    def __sub__(self, other: object) -> 'PostgresMoney':
+    def __sub__(self, other: object) -> "PostgresMoney":
         if isinstance(other, PostgresMoney):
             return PostgresMoney(self.amount - other.amount)
         if isinstance(other, (Decimal, int, float)):
             return PostgresMoney(self.amount - Decimal(str(other)))
         return NotImplemented
 
-    def __mul__(self, other: object) -> 'PostgresMoney':
+    def __mul__(self, other: object) -> "PostgresMoney":
         # Money * number = money
         if isinstance(other, (Decimal, int, float)):
             return PostgresMoney(self.amount * Decimal(str(other)))
@@ -124,14 +126,14 @@ class PostgresMoney:
             return self.amount / Decimal(str(other))
         return NotImplemented
 
-    def __neg__(self) -> 'PostgresMoney':
+    def __neg__(self) -> "PostgresMoney":
         return PostgresMoney(-self.amount)
 
-    def __abs__(self) -> 'PostgresMoney':
+    def __abs__(self) -> "PostgresMoney":
         return PostgresMoney(abs(self.amount))
 
     def __hash__(self) -> int:
         return hash(self.amount)
 
 
-__all__ = ['PostgresMoney']
+__all__ = ["PostgresMoney"]

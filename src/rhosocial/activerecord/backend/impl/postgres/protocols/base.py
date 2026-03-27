@@ -15,6 +15,7 @@ class PostgresExtensionInfo:
         version: Extension version number
         schema: Schema where the extension is installed
     """
+
     name: str
     installed: bool = False
     version: Optional[str] = None

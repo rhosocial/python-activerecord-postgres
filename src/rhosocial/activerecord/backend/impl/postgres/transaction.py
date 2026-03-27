@@ -10,7 +10,7 @@ from rhosocial.activerecord.backend.transaction import (
     TransactionManager,
     AsyncTransactionManager,
     IsolationLevel,
-    TransactionState
+    TransactionState,
 )
 
 
@@ -28,7 +28,7 @@ class PostgresTransactionMixin:
         IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
         IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # postgres default
         IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
-        IsolationLevel.SERIALIZABLE: "SERIALIZABLE"
+        IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
     }
 
     def __init__(self, connection, logger=None):
@@ -71,11 +71,8 @@ class PostgresTransactionMixin:
                 sql_parts.append(f"ISOLATION LEVEL {level}")
 
         # Add deferrable mode for SERIALIZABLE transactions
-        if (self._isolation_level == IsolationLevel.SERIALIZABLE and
-                self._is_deferrable is not None):
-            sql_parts.append(
-                "DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE"
-            )
+        if self._isolation_level == IsolationLevel.SERIALIZABLE and self._is_deferrable is not None:
+            sql_parts.append("DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE")
 
         return " ".join(sql_parts)
 
@@ -94,7 +91,7 @@ class PostgresTransactionMixin:
         if self.is_active:
             error_msg = "Cannot change deferrable mode of active transaction"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         self.log(logging.DEBUG, f"Set deferrable mode to {deferrable}")
 
     def get_active_savepoint(self) -> Optional[str]:
@@ -171,11 +168,11 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
                 except PsycopgError as e:
                     error_msg = f"Failed to set isolation level to {level}: {str(e)}"
                     self.log(logging.ERROR, error_msg)
-                    raise TransactionError(error_msg)
+                    raise TransactionError(error_msg) from None
             else:
                 error_msg = f"Unsupported isolation level: {self._isolation_level}"
                 self.log(logging.ERROR, error_msg)
-                raise TransactionError(error_msg)
+                raise TransactionError(error_msg) from None
 
     def defer_constraint(self, constraint_name: str) -> None:
         """Defer constraint checking until transaction commit.
@@ -196,7 +193,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to defer constraint {constraint_name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def _do_begin(self) -> None:
         """Begin postgres transaction.
@@ -228,7 +225,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to begin transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def _do_commit(self) -> None:
         """Commit postgres transaction.
@@ -245,7 +242,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to commit transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         finally:
             self._active_savepoint = None
             self._savepoint_counter = 0
@@ -266,7 +263,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to rollback transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         finally:
             self._active_savepoint = None
             self._savepoint_counter = 0
@@ -297,7 +294,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to create savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def _do_release_savepoint(self, name: str) -> None:
         """Release postgres savepoint.
@@ -320,7 +317,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to release savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def _do_rollback_savepoint(self, name: str) -> None:
         """Rollback to postgres savepoint.
@@ -343,7 +340,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to rollback to savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def get_current_isolation_level(self) -> IsolationLevel:
         """Get current transaction isolation level.
@@ -362,9 +359,9 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
 
             if result:
                 # Convert postgres level name to IsolationLevel enum
-                level_name = result[0].upper().replace(' ', '_')
+                level_name = result[0].upper().replace(" ", "_")
                 for isolation_level, pg_level in self._ISOLATION_LEVELS.items():
-                    if pg_level.upper().replace(' ', '_') == level_name:
+                    if pg_level.upper().replace(" ", "_") == level_name:
                         return isolation_level
 
             # Default to READ COMMITTED if not found
@@ -373,7 +370,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to get transaction isolation level: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
 
 class AsyncPostgresTransactionMixin:
@@ -390,7 +387,7 @@ class AsyncPostgresTransactionMixin:
         IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
         IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # postgres default
         IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
-        IsolationLevel.SERIALIZABLE: "SERIALIZABLE"
+        IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
     }
 
     def __init__(self, connection, logger=None):
@@ -433,11 +430,8 @@ class AsyncPostgresTransactionMixin:
                 sql_parts.append(f"ISOLATION LEVEL {level}")
 
         # Add deferrable mode for SERIALIZABLE transactions
-        if (self._isolation_level == IsolationLevel.SERIALIZABLE and
-                self._is_deferrable is not None):
-            sql_parts.append(
-                "DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE"
-            )
+        if self._isolation_level == IsolationLevel.SERIALIZABLE and self._is_deferrable is not None:
+            sql_parts.append("DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE")
 
         return " ".join(sql_parts)
 
@@ -456,7 +450,7 @@ class AsyncPostgresTransactionMixin:
         if self.is_active:
             error_msg = "Cannot change deferrable mode of active transaction"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         self.log(logging.DEBUG, f"Set deferrable mode to {deferrable}")
 
     def get_active_savepoint(self) -> Optional[str]:
@@ -509,7 +503,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
         IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # postgres default
         IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
-        IsolationLevel.SERIALIZABLE: "SERIALIZABLE"
+        IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
     }
 
     def __init__(self, connection, logger=None):
@@ -547,11 +541,11 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
                 except PsycopgError as e:
                     error_msg = f"Failed to set isolation level to {level}: {str(e)}"
                     self.log(logging.ERROR, error_msg)
-                    raise TransactionError(error_msg)
+                    raise TransactionError(error_msg) from None
             else:
                 error_msg = f"Unsupported isolation level: {self._isolation_level}"
                 self.log(logging.ERROR, error_msg)
-                raise TransactionError(error_msg)
+                raise TransactionError(error_msg) from None
 
     async def defer_constraint(self, constraint_name: str) -> None:
         """Defer constraint checking until transaction commit (async).
@@ -572,7 +566,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to defer constraint {constraint_name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     def _build_begin_statement(self) -> str:
         """Build BEGIN statement with isolation level and deferrable mode.
@@ -589,11 +583,8 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
                 sql_parts.append(f"ISOLATION LEVEL {level}")
 
         # Add deferrable mode for SERIALIZABLE transactions
-        if (self._isolation_level == IsolationLevel.SERIALIZABLE and
-                self._is_deferrable is not None):
-            sql_parts.append(
-                "DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE"
-            )
+        if self._isolation_level == IsolationLevel.SERIALIZABLE and self._is_deferrable is not None:
+            sql_parts.append("DEFERRABLE" if self._is_deferrable else "NOT DEFERRABLE")
 
         return " ".join(sql_parts)
 
@@ -627,7 +618,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to begin transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     async def _do_commit(self) -> None:
         """Commit postgres transaction asynchronously.
@@ -644,7 +635,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to commit transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         finally:
             self._active_savepoint = None
             self._savepoint_counter = 0
@@ -665,7 +656,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to rollback transaction: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
         finally:
             self._active_savepoint = None
             self._savepoint_counter = 0
@@ -696,7 +687,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to create savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     async def _do_release_savepoint(self, name: str) -> None:
         """Release postgres savepoint asynchronously.
@@ -719,7 +710,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to release savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     async def _do_rollback_savepoint(self, name: str) -> None:
         """Rollback to postgres savepoint asynchronously.
@@ -742,7 +733,7 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to rollback to savepoint {name}: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None
 
     async def supports_savepoint(self) -> bool:
         """Check if savepoints are supported.
@@ -769,9 +760,9 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
 
             if result:
                 # Convert postgres level name to IsolationLevel enum
-                level_name = result[0].upper().replace(' ', '_')
+                level_name = result[0].upper().replace(" ", "_")
                 for isolation_level, pg_level in self._ISOLATION_LEVELS.items():
-                    if pg_level.upper().replace(' ', '_') == level_name:
+                    if pg_level.upper().replace(" ", "_") == level_name:
                         return isolation_level
 
             # Default to READ COMMITTED if not found
@@ -780,4 +771,4 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         except PsycopgError as e:
             error_msg = f"Failed to get transaction isolation level: {str(e)}"
             self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
+            raise TransactionError(error_msg) from None

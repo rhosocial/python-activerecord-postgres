@@ -3,6 +3,7 @@
 
 This module defines the protocol for PostgreSQL-specific ENUM type management.
 """
+
 from typing import Protocol, runtime_checkable, List, Optional
 
 
@@ -20,8 +21,7 @@ class EnumTypeSupport(Protocol):
     """
 
     def create_enum_type(
-        self, name: str, values: List[str],
-        schema: Optional[str] = None, if_not_exists: bool = False
+        self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
     ) -> str:
         """Generate CREATE TYPE statement for enum.
 
@@ -37,8 +37,7 @@ class EnumTypeSupport(Protocol):
         ...
 
     def drop_enum_type(
-        self, name: str, schema: Optional[str] = None,
-        if_exists: bool = False, cascade: bool = False
+        self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> str:
         """Generate DROP TYPE statement for enum.
 
@@ -54,9 +53,12 @@ class EnumTypeSupport(Protocol):
         ...
 
     def alter_enum_add_value(
-        self, type_name: str, new_value: str,
+        self,
+        type_name: str,
+        new_value: str,
         schema: Optional[str] = None,
-        before: Optional[str] = None, after: Optional[str] = None
+        before: Optional[str] = None,
+        after: Optional[str] = None,
     ) -> str:
         """Generate ALTER TYPE ADD VALUE statement.
 
