@@ -121,7 +121,8 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
                 comment=row.get("comment"),
-                row_count=row.get("row_count"),
+                # PostgreSQL 14+ returns -1 for unanalyzed tables, convert to None for consistency
+                row_count=row.get("row_count") if row.get("row_count") != -1 else None,
                 size_bytes=row.get("size_bytes"),
             )
             for row in rows
