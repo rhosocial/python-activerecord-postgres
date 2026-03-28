@@ -9,13 +9,14 @@ Exports:
     - PostgresBackend: Synchronous PostgreSQL backend
     - AsyncPostgresBackend: Asynchronous PostgreSQL backend
 """
+
 from .base import PostgresBackendMixin
 from .sync import PostgresBackend
 from .async_backend import AsyncPostgresBackend
 
 
 __all__ = [
-    'PostgresBackendMixin',
-    'PostgresBackend',
-    'AsyncPostgresBackend',
+    "PostgresBackendMixin",
+    "PostgresBackend",
+    "AsyncPostgresBackend",
 ]

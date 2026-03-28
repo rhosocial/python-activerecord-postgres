@@ -54,14 +54,14 @@ class PostgresStoredProcedureSupport(Protocol):
         name: str,
         parameters: Optional[List[Dict[str, str]]] = None,
         returns: Optional[str] = None,
-        language: str = 'plpgsql',
-        body: str = '',
+        language: str = "plpgsql",
+        body: str = "",
         schema: Optional[str] = None,
         or_replace: bool = False,
         security: Optional[str] = None,
         cost: Optional[float] = None,
         rows: Optional[int] = None,
-        set_params: Optional[Dict[str, str]] = None
+        set_params: Optional[Dict[str, str]] = None,
     ) -> Tuple[str, tuple]:
         """Format CREATE PROCEDURE statement.
 
@@ -89,7 +89,7 @@ class PostgresStoredProcedureSupport(Protocol):
         parameters: Optional[List[Dict[str, str]]] = None,
         schema: Optional[str] = None,
         if_exists: bool = False,
-        cascade: bool = False
+        cascade: bool = False,
     ) -> Tuple[str, tuple]:
         """Format DROP PROCEDURE statement.
 
@@ -106,10 +106,7 @@ class PostgresStoredProcedureSupport(Protocol):
         ...
 
     def format_call_statement(
-        self,
-        name: str,
-        arguments: Optional[List[Any]] = None,
-        schema: Optional[str] = None
+        self, name: str, arguments: Optional[List[Any]] = None, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CALL statement for stored procedure.
 

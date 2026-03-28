@@ -12,13 +12,13 @@ from .tablefunc import PostgresTablefuncMixin
 from .pg_stat_statements import PostgresPgStatStatementsMixin
 
 __all__ = [
-    'PostgresPgvectorMixin',
-    'PostgresPostGISMixin',
-    'PostgresHstoreMixin',
-    'PostgresLtreeMixin',
-    'PostgresIntarrayMixin',
-    'PostgresPgTrgmMixin',
-    'PostgresEarthdistanceMixin',
-    'PostgresTablefuncMixin',
-    'PostgresPgStatStatementsMixin',
+    "PostgresPgvectorMixin",
+    "PostgresPostGISMixin",
+    "PostgresHstoreMixin",
+    "PostgresLtreeMixin",
+    "PostgresIntarrayMixin",
+    "PostgresPgTrgmMixin",
+    "PostgresEarthdistanceMixin",
+    "PostgresTablefuncMixin",
+    "PostgresPgStatStatementsMixin",
 ]

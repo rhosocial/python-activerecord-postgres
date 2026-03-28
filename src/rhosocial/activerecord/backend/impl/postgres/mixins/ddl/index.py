@@ -4,6 +4,7 @@
 This module provides the PostgresIndexMixin class which implements
 PostgreSQL-specific index features and operations.
 """
+
 from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -121,12 +122,10 @@ class PostgresIndexMixin:
         """
         return self.version >= (18, 0, 0)
 
-    def format_reindex_statement(
-        self, expr: "ReindexExpression"
-    ) -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options."""
         target_type = expr.target_type.upper()
-        if target_type not in ('INDEX', 'TABLE', 'SCHEMA', 'DATABASE', 'SYSTEM'):
+        if target_type not in ("INDEX", "TABLE", "SCHEMA", "DATABASE", "SYSTEM"):
             raise ValueError(f"Invalid target_type: {target_type}")
 
         parts = ["REINDEX"]
@@ -140,7 +139,7 @@ class PostgresIndexMixin:
         parts.append(target_type)
 
         # Add schema qualifier for INDEX and TABLE
-        if target_type in ('INDEX', 'TABLE') and expr.schema:
+        if target_type in ("INDEX", "TABLE") and expr.schema:
             parts.append(f"{self.format_identifier(expr.schema)}.")
 
         # Add name (format as identifier)
@@ -163,13 +162,13 @@ class PostgresIndexMixin:
         columns: List[str],
         schema: Optional[str] = None,
         unique: bool = False,
-        index_type: str = 'btree',
+        index_type: str = "btree",
         concurrently: bool = False,
         if_not_exists: bool = False,
         include_columns: Optional[List[str]] = None,
         with_options: Optional[Dict[str, Any]] = None,
         tablespace: Optional[str] = None,
-        where_clause: Optional[str] = None
+        where_clause: Optional[str] = None,
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 
@@ -207,7 +206,7 @@ class PostgresIndexMixin:
 
         # Index type
         index_type = index_type.lower()
-        valid_types = ('btree', 'hash', 'gist', 'gin', 'spgist', 'brin')
+        valid_types = ("btree", "hash", "gist", "gin", "spgist", "brin")
         if index_type not in valid_types:
             raise ValueError(f"Invalid index_type: {index_type}. Must be one of {valid_types}")
         parts.append(f"USING {index_type}")
@@ -217,9 +216,9 @@ class PostgresIndexMixin:
 
         # INCLUDE clause (PG 12+ for GiST, PG 14+ for SP-GiST)
         if include_columns:
-            if index_type == 'gist' and not self.supports_gist_include():
+            if index_type == "gist" and not self.supports_gist_include():
                 raise ValueError("INCLUDE for GiST indexes requires PostgreSQL 12+")
-            if index_type == 'spgist' and not self.supports_spgist_include():
+            if index_type == "spgist" and not self.supports_spgist_include():
                 raise ValueError("INCLUDE for SP-GiST indexes requires PostgreSQL 14+")
             parts.append("INCLUDE (" + ", ".join(self.format_identifier(c) for c in include_columns) + ")")
 

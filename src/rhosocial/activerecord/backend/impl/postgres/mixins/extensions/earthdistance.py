@@ -11,11 +11,11 @@ class PostgresEarthdistanceMixin:
 
     def supports_earthdistance_type(self) -> bool:
         """Check if earthdistance supports earth type."""
-        return self.check_extension_feature('earthdistance', 'type')
+        return self.check_extension_feature("earthdistance", "type")
 
     def supports_earthdistance_operators(self) -> bool:
         """Check if earthdistance supports operators."""
-        return self.check_extension_feature('earthdistance', 'operators')
+        return self.check_extension_feature("earthdistance", "operators")
 
     def format_earth_literal(self, point: tuple) -> str:
         """Format an earth point literal.
@@ -33,12 +33,7 @@ class PostgresEarthdistanceMixin:
         lat, lon = point
         return f"ll_to_earth({lat}, {lon})"
 
-    def format_earthdistance_operator(
-        self,
-        column: str,
-        point: tuple,
-        operator: str = '<->'
-    ) -> str:
+    def format_earthdistance_operator(self, column: str, point: tuple, operator: str = "<->") -> str:
         """Format an earthdistance operator expression.
 
         Args:
@@ -110,12 +105,7 @@ class PostgresEarthdistanceMixin:
         """
         return f"earth_box({center}, {radius})"
 
-    def format_point_inside_circle(
-        self,
-        point: str,
-        center: tuple,
-        radius: float
-    ) -> str:
+    def format_point_inside_circle(self, point: str, center: tuple, radius: float) -> str:
         """Format point inside circle check.
 
         Args:
@@ -133,12 +123,7 @@ class PostgresEarthdistanceMixin:
         center_earth = self.format_ll_to_earth_function(center[0], center[1])
         return f"{point} <@ earth_box({center_earth}, {radius})"
 
-    def format_distance_within(
-        self,
-        column: str,
-        center: tuple,
-        radius: float
-    ) -> str:
+    def format_distance_within(self, column: str, center: tuple, radius: float) -> str:
         """Format distance within expression for WHERE clause.
 
         Args:
@@ -156,12 +141,7 @@ class PostgresEarthdistanceMixin:
         center_earth = self.format_ll_to_earth_function(center[0], center[1])
         return f"({column} <@ earth_box({center_earth}, {radius}))"
 
-    def format_order_by_distance(
-        self,
-        column: str,
-        center: tuple,
-        ascending: bool = True
-    ) -> str:
+    def format_order_by_distance(self, column: str, center: tuple, ascending: bool = True) -> str:
         """Format ORDER BY distance expression.
 
         Args:

@@ -9,17 +9,14 @@ class PostgresPgStatStatementsMixin:
 
     def supports_pg_stat_statements_view(self) -> bool:
         """Check if pg_stat_statements supports view."""
-        return self.check_extension_feature('pg_stat_statements', 'view')
+        return self.check_extension_feature("pg_stat_statements", "view")
 
     def supports_pg_stat_statements_reset(self) -> bool:
         """Check if pg_stat_statements supports reset."""
-        return self.check_extension_feature('pg_stat_statements', 'reset')
+        return self.check_extension_feature("pg_stat_statements", "reset")
 
     def format_query_stats_statement(
-        self,
-        limit: Optional[int] = None,
-        sort_by: str = 'total_exec_time',
-        descending: bool = True
+        self, limit: Optional[int] = None, sort_by: str = "total_exec_time", descending: bool = True
     ) -> Tuple[str, tuple]:
         """Format a query to retrieve statistics from pg_stat_statements.
 
@@ -33,7 +30,9 @@ class PostgresPgStatStatementsMixin:
 
         Example:
             >>> format_query_stats_statement(limit=10)
-            ("SELECT queryid, query, calls, total_exec_time, rows, shared_blks_hit, shared_blks_read FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10", ())
+            ("SELECT queryid, query, calls, total_exec_time, rows, shared_blks_hit, "
+             "shared_blks_read FROM pg_stat_statements ORDER BY total_exec_time DESC "
+             "LIMIT 10", ())
         """
         direction = "DESC" if descending else "ASC"
         sql = f"""SELECT queryid, query, calls, total_exec_time, mean_exec_time,
@@ -82,10 +81,14 @@ class PostgresPgStatStatementsMixin:
 
         Example:
             >>> format_top_queries_by_time(5)
-            ("SELECT queryid, query, calls, total_exec_time, mean_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 5", ())
+            ("SELECT queryid, query, calls, total_exec_time, mean_exec_time "
+             "FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 5", ())
         """
-        return (f"SELECT queryid, query, calls, total_exec_time, mean_exec_time "
-                f"FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT {limit}", ())
+        return (
+            f"SELECT queryid, query, calls, total_exec_time, mean_exec_time "
+            f"FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT {limit}",
+            (),
+        )
 
     def format_top_queries_by_calls(self, limit: int = 10) -> Tuple[str, tuple]:
         """Format statement to get top queries by number of calls.
@@ -100,8 +103,10 @@ class PostgresPgStatStatementsMixin:
             >>> format_top_queries_by_calls(5)
             ("SELECT queryid, query, calls, total_exec_time FROM pg_stat_statements ORDER BY calls DESC LIMIT 5", ())
         """
-        return (f"SELECT queryid, query, calls, total_exec_time "
-                f"FROM pg_stat_statements ORDER BY calls DESC LIMIT {limit}", ())
+        return (
+            f"SELECT queryid, query, calls, total_exec_time FROM pg_stat_statements ORDER BY calls DESC LIMIT {limit}",
+            (),
+        )
 
     def format_top_queries_by_rows(self, limit: int = 10) -> Tuple[str, tuple]:
         """Format statement to get top queries by rows processed.
@@ -114,10 +119,14 @@ class PostgresPgStatStatementsMixin:
 
         Example:
             >>> format_top_queries_by_rows(5)
-            ("SELECT queryid, query, calls, rows, total_exec_time FROM pg_stat_statements ORDER BY rows DESC LIMIT 5", ())
+            ("SELECT queryid, query, calls, rows, total_exec_time "
+             "FROM pg_stat_statements ORDER BY rows DESC LIMIT 5", ())
         """
-        return (f"SELECT queryid, query, calls, rows, total_exec_time "
-                f"FROM pg_stat_statements ORDER BY rows DESC LIMIT {limit}", ())
+        return (
+            f"SELECT queryid, query, calls, rows, total_exec_time "
+            f"FROM pg_stat_statements ORDER BY rows DESC LIMIT {limit}",
+            (),
+        )
 
     def format_io_stats_statement(self, limit: int = 10) -> Tuple[str, tuple]:
         """Format statement to get queries with most I/O.
@@ -130,7 +139,11 @@ class PostgresPgStatStatementsMixin:
 
         Example:
             >>> format_io_stats_statement(5)
-            ("SELECT queryid, query, shared_blks_hit, shared_blks_read, shared_blks_dirtied FROM pg_stat_statements ORDER BY shared_blks_read DESC LIMIT 5", ())
+            ("SELECT queryid, query, shared_blks_hit, shared_blks_read, shared_blks_dirtied "
+             "FROM pg_stat_statements ORDER BY shared_blks_read DESC LIMIT 5", ())
         """
-        return (f"SELECT queryid, query, shared_blks_hit, shared_blks_read, shared_blks_dirtied "
-                f"FROM pg_stat_statements ORDER BY shared_blks_read DESC LIMIT {limit}", ())
+        return (
+            f"SELECT queryid, query, shared_blks_hit, shared_blks_read, shared_blks_dirtied "
+            f"FROM pg_stat_statements ORDER BY shared_blks_read DESC LIMIT {limit}",
+            (),
+        )

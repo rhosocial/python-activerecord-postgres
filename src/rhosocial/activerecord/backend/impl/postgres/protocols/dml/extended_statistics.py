@@ -4,6 +4,7 @@
 This module defines the protocol for PostgreSQL extended statistics features,
 which provide advanced query planning statistics for better performance.
 """
+
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -63,9 +64,7 @@ class PostgresExtendedStatisticsSupport(Protocol):
         """
         ...
 
-    def format_create_statistics_statement(
-        self, expr: "CreateStatisticsExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_statistics_statement(self, expr: "CreateStatisticsExpression") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
         Args:
@@ -76,9 +75,7 @@ class PostgresExtendedStatisticsSupport(Protocol):
         """
         ...
 
-    def format_drop_statistics_statement(
-        self, expr: "DropStatisticsExpression"
-    ) -> Tuple[str, tuple]:
+    def format_drop_statistics_statement(self, expr: "DropStatisticsExpression") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
         Args:

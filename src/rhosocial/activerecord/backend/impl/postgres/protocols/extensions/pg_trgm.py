@@ -4,6 +4,7 @@
 This module defines the protocol for pg_trgm trigram functionality
 in PostgreSQL.
 """
+
 from typing import Protocol, runtime_checkable
 
 

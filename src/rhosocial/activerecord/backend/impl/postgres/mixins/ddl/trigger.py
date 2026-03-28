@@ -1,5 +1,5 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Tuple
 
 
 class PostgresTriggerMixin:

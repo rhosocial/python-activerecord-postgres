@@ -11,6 +11,7 @@ All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return SQL expression strings
 """
+
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ def range_contains(dialect: "SQLDialectBase", range_value: Any, element: Any) ->
         'int4range_col @> 5'
     """
     from ..types.range import PostgresRange
+
     if isinstance(range_value, PostgresRange):
         range_str = range_value.to_postgres_string()
     else:
@@ -64,6 +66,7 @@ def range_contained_by(dialect: "SQLDialectBase", element: Any, range_value: Any
         '5 <@ int4range_col'
     """
     from ..types.range import PostgresRange
+
     if isinstance(range_value, PostgresRange):
         range_str = range_value.to_postgres_string()
     else:
@@ -93,6 +96,7 @@ def range_contains_range(dialect: "SQLDialectBase", range1: Any, range2: Any) ->
         'col1 @> col2'
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} @> {r2_str}"
@@ -110,6 +114,7 @@ def range_overlaps(dialect: "SQLDialectBase", range1: Any, range2: Any) -> str:
         SQL expression: range1 && range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} && {r2_str}"
@@ -127,6 +132,7 @@ def range_adjacent(dialect: "SQLDialectBase", range1: Any, range2: Any) -> str:
         SQL expression: range1 -|- range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} -|- {r2_str}"
@@ -144,6 +150,7 @@ def range_strictly_left_of(dialect: "SQLDialectBase", range1: Any, range2: Any) 
         SQL expression: range1 << range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} << {r2_str}"
@@ -161,6 +168,7 @@ def range_strictly_right_of(dialect: "SQLDialectBase", range1: Any, range2: Any)
         SQL expression: range1 >> range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} >> {r2_str}"
@@ -178,6 +186,7 @@ def range_not_extend_right(dialect: "SQLDialectBase", range1: Any, range2: Any) 
         SQL expression: range1 &< range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} &< {r2_str}"
@@ -195,6 +204,7 @@ def range_not_extend_left(dialect: "SQLDialectBase", range1: Any, range2: Any) -
         SQL expression: range1 &> range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} &> {r2_str}"
@@ -212,6 +222,7 @@ def range_union(dialect: "SQLDialectBase", range1: Any, range2: Any) -> str:
         SQL expression: range1 + range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} + {r2_str}"
@@ -229,6 +240,7 @@ def range_intersection(dialect: "SQLDialectBase", range1: Any, range2: Any) -> s
         SQL expression: range1 * range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} * {r2_str}"
@@ -246,6 +258,7 @@ def range_difference(dialect: "SQLDialectBase", range1: Any, range2: Any) -> str
         SQL expression: range1 - range2
     """
     from ..types.range import PostgresRange
+
     r1_str = range1.to_postgres_string() if isinstance(range1, PostgresRange) else str(range1)
     r2_str = range2.to_postgres_string() if isinstance(range2, PostgresRange) else str(range2)
     return f"{r1_str} - {r2_str}"
@@ -262,6 +275,7 @@ def range_lower(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: lower(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"lower({r_str})"
 
@@ -277,6 +291,7 @@ def range_upper(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: upper(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"upper({r_str})"
 
@@ -292,6 +307,7 @@ def range_is_empty(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: isempty(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"isempty({r_str})"
 
@@ -307,6 +323,7 @@ def range_lower_inc(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: lower_inc(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"lower_inc({r_str})"
 
@@ -322,6 +339,7 @@ def range_upper_inc(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: upper_inc(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"upper_inc({r_str})"
 
@@ -337,6 +355,7 @@ def range_lower_inf(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: lower_inf(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"lower_inf({r_str})"
 
@@ -352,28 +371,29 @@ def range_upper_inf(dialect: "SQLDialectBase", range_value: Any) -> str:
         SQL expression: upper_inf(range)
     """
     from ..types.range import PostgresRange
+
     r_str = range_value.to_postgres_string() if isinstance(range_value, PostgresRange) else str(range_value)
     return f"upper_inf({r_str})"
 
 
 __all__ = [
-    'range_contains',
-    'range_contained_by',
-    'range_contains_range',
-    'range_overlaps',
-    'range_adjacent',
-    'range_strictly_left_of',
-    'range_strictly_right_of',
-    'range_not_extend_right',
-    'range_not_extend_left',
-    'range_union',
-    'range_intersection',
-    'range_difference',
-    'range_lower',
-    'range_upper',
-    'range_is_empty',
-    'range_lower_inc',
-    'range_upper_inc',
-    'range_lower_inf',
-    'range_upper_inf',
+    "range_contains",
+    "range_contained_by",
+    "range_contains_range",
+    "range_overlaps",
+    "range_adjacent",
+    "range_strictly_left_of",
+    "range_strictly_right_of",
+    "range_not_extend_right",
+    "range_not_extend_left",
+    "range_union",
+    "range_intersection",
+    "range_difference",
+    "range_lower",
+    "range_upper",
+    "range_is_empty",
+    "range_lower_inc",
+    "range_upper_inc",
+    "range_lower_inf",
+    "range_upper_inf",
 ]

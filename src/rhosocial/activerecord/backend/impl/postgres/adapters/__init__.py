@@ -75,43 +75,33 @@ from .xml import PostgresXMLAdapter
 
 __all__ = [
     # Basic types
-    'PostgresListAdapter',
-    'PostgresJSONBAdapter',
-    'PostgresNetworkAddressAdapter',
-    'PostgresEnumAdapter',
-
+    "PostgresListAdapter",
+    "PostgresJSONBAdapter",
+    "PostgresNetworkAddressAdapter",
+    "PostgresEnumAdapter",
     # Monetary types
-    'PostgresMoneyAdapter',
-
+    "PostgresMoneyAdapter",
     # Network address types
-    'PostgresMacaddrAdapter',
-    'PostgresMacaddr8Adapter',
-
+    "PostgresMacaddrAdapter",
+    "PostgresMacaddr8Adapter",
     # Geometric types
-    'PostgresGeometryAdapter',
-
+    "PostgresGeometryAdapter",
     # Bit string types
-    'PostgresBitStringAdapter',
-
+    "PostgresBitStringAdapter",
     # Text search types
-    'PostgresTsVectorAdapter',
-    'PostgresTsQueryAdapter',
-
+    "PostgresTsVectorAdapter",
+    "PostgresTsQueryAdapter",
     # Object identifier types
-    'PostgresOidAdapter',
-    'PostgresXidAdapter',
-    'PostgresTidAdapter',
-
+    "PostgresOidAdapter",
+    "PostgresXidAdapter",
+    "PostgresTidAdapter",
     # JSON types
-    'PostgresJsonPathAdapter',
-
+    "PostgresJsonPathAdapter",
     # Range types
-    'PostgresRangeAdapter',
-    'PostgresMultirangeAdapter',
-
+    "PostgresRangeAdapter",
+    "PostgresMultirangeAdapter",
     # pg_lsn type
-    'PostgresLsnAdapter',
-
+    "PostgresLsnAdapter",
     # XML type
-    'PostgresXMLAdapter',
+    "PostgresXMLAdapter",
 ]

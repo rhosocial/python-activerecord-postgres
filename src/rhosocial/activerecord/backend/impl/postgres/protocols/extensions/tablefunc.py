@@ -4,6 +4,7 @@
 This module defines the protocol for tablefunc table functions
 functionality in PostgreSQL.
 """
+
 from typing import Protocol, runtime_checkable
 
 

@@ -8,9 +8,9 @@ from .comment import PostgresCommentSupport
 from .type import PostgresTypeSupport
 
 __all__ = [
-    'PostgresPartitionSupport',
-    'PostgresIndexSupport',
-    'PostgresTriggerSupport',
-    'PostgresCommentSupport',
-    'PostgresTypeSupport',
+    "PostgresPartitionSupport",
+    "PostgresIndexSupport",
+    "PostgresTriggerSupport",
+    "PostgresCommentSupport",
+    "PostgresTypeSupport",
 ]

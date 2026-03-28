@@ -12,6 +12,7 @@ Network Address Types:
 - macaddr: MAC address (6-byte, EUI-48 format)
 - macaddr8: MAC address (8-byte, EUI-64 format, PostgreSQL 10+)
 """
+
 from typing import Any, Dict, List, Optional, Set, Type
 
 from ..types.network_address import PostgresMacaddr, PostgresMacaddr8
@@ -30,10 +31,12 @@ class PostgresNetworkAddressAdapter:
     - ipaddress.IPv4Network
     - ipaddress.IPv6Network
     """
+
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
         try:
             import ipaddress
+
             return {
                 ipaddress.IPv4Address: [str],
                 ipaddress.IPv6Address: [str],
@@ -53,18 +56,24 @@ class PostgresNetworkAddressAdapter:
             return None
         try:
             import ipaddress
+
             return ipaddress.ip_address(value)
         except (ImportError, ValueError):
             try:
                 import ipaddress
+
                 return ipaddress.ip_network(value)
             except (ImportError, ValueError):
                 return value
 
-    def to_database_batch(self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def to_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         return [self.to_database(v, target_type, options) for v in values]
 
-    def from_database_batch(self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def from_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         return [self.from_database(v, target_type, options) for v in values]
 
 
@@ -82,12 +91,7 @@ class PostgresMacaddrAdapter:
             PostgresMacaddr: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL MACADDR.
 
         Args:
@@ -116,15 +120,10 @@ class PostgresMacaddrAdapter:
             mac = PostgresMacaddr(value)
             return str(mac)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} to MACADDR"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} to MACADDR")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresMacaddr]:
         """Convert PostgreSQL MACADDR to Python object.
 
@@ -149,33 +148,15 @@ class PostgresMacaddrAdapter:
         if isinstance(value, str):
             return PostgresMacaddr(value)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} from MACADDR"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} from MACADDR")
 
-    def to_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def to_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert Python values to PostgreSQL format."""
-        return [
-            self.to_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.to_database(v, target_type, options) for v in values]
 
-    def from_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def from_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert database values to Python objects."""
-        return [
-            self.from_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.from_database(v, target_type, options) for v in values]
 
 
 class PostgresMacaddr8Adapter:
@@ -194,12 +175,7 @@ class PostgresMacaddr8Adapter:
             PostgresMacaddr8: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL MACADDR8.
 
         Args:
@@ -228,16 +204,9 @@ class PostgresMacaddr8Adapter:
             mac = PostgresMacaddr8(value)
             return str(mac)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} to MACADDR8"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} to MACADDR8")
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         """Convert PostgreSQL MACADDR8 to Python object.
 
         Args:
@@ -261,37 +230,19 @@ class PostgresMacaddr8Adapter:
         if isinstance(value, str):
             return PostgresMacaddr8(value)
 
-        raise TypeError(
-            f"Cannot convert {type(value).__name__} from MACADDR8"
-        )
+        raise TypeError(f"Cannot convert {type(value).__name__} from MACADDR8")
 
-    def to_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def to_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert Python values to PostgreSQL format."""
-        return [
-            self.to_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.to_database(v, target_type, options) for v in values]
 
-    def from_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def from_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert database values to Python objects."""
-        return [
-            self.from_database(v, target_type, options)
-            for v in values
-        ]
+        return [self.from_database(v, target_type, options) for v in values]
 
 
 __all__ = [
-    'PostgresNetworkAddressAdapter',
-    'PostgresMacaddrAdapter',
-    'PostgresMacaddr8Adapter',
+    "PostgresNetworkAddressAdapter",
+    "PostgresMacaddrAdapter",
+    "PostgresMacaddr8Adapter",
 ]

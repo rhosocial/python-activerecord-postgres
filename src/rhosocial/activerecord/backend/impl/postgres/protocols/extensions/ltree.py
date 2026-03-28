@@ -4,6 +4,7 @@
 This module defines the protocol for ltree (label tree) data type support,
 which provides hierarchical label path operations.
 """
+
 from typing import Protocol, runtime_checkable
 
 

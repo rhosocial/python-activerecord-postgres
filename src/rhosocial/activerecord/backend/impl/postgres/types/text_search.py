@@ -30,8 +30,9 @@ Examples:
 For type adapters (conversion between Python and database),
 see adapters.text_search module.
 """
+
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 import re
 
 
@@ -51,6 +52,7 @@ class TsVectorLexeme:
         TsVectorLexeme('hello', [(1, 'A')])
         TsVectorLexeme('world', [(2, None), (5, 'B')])
     """
+
     lexeme: str
     positions: List[Tuple[int, Optional[str]]] = field(default_factory=list)
 
@@ -73,7 +75,7 @@ class TsVectorLexeme:
         return f"'{self.lexeme}':{','.join(pos_strs)}"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'TsVectorLexeme':
+    def from_postgres_string(cls, value: str) -> "TsVectorLexeme":
         """Parse PostgreSQL tsvector lexeme string.
 
         Args:
@@ -106,12 +108,12 @@ class TsVectorLexeme:
     def _parse_positions(positions_str: str) -> List[Tuple[int, Optional[str]]]:
         """Parse position string like '1A,2B,3' into list of tuples."""
         positions = []
-        for part in positions_str.split(','):
+        for part in positions_str.split(","):
             part = part.strip()
             if not part:
                 continue
             # Extract position number and optional weight
-            pos_match = re.match(r'(\d+)([A-D])?$', part)
+            pos_match = re.match(r"(\d+)([A-D])?$", part)
             if pos_match:
                 pos = int(pos_match.group(1))
                 weight = pos_match.group(2) if pos_match.group(2) else None
@@ -151,13 +153,10 @@ class PostgresTsVector:
         tsvector = PostgresTsVector()
         tsvector.add_lexeme('hello', [(1, 'A')])
     """
+
     lexemes: Dict[str, TsVectorLexeme] = field(default_factory=dict)
 
-    def add_lexeme(
-        self,
-        lexeme: str,
-        positions: Optional[List[Tuple[int, Optional[str]]]] = None
-    ) -> None:
+    def add_lexeme(self, lexeme: str, positions: Optional[List[Tuple[int, Optional[str]]]] = None) -> None:
         """Add a lexeme with optional positions.
 
         Args:
@@ -189,14 +188,14 @@ class PostgresTsVector:
             str: PostgreSQL tsvector format
         """
         if not self.lexemes:
-            return ''
+            return ""
 
         # Sort lexemes alphabetically (PostgreSQL stores them sorted)
         sorted_lexemes = sorted(self.lexemes.values(), key=lambda x: x.lexeme)
-        return ' '.join(lex.to_postgres_string() for lex in sorted_lexemes)
+        return " ".join(lex.to_postgres_string() for lex in sorted_lexemes)
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'PostgresTsVector':
+    def from_postgres_string(cls, value: str) -> "PostgresTsVector":
         """Parse PostgreSQL tsvector string.
 
         Args:
@@ -221,15 +220,15 @@ class PostgresTsVector:
                 if j == -1:
                     raise ValueError(f"Unclosed quote at position {i}")
 
-                lexeme = value[i + 1:j]
+                lexeme = value[i + 1 : j]
                 i = j + 1
 
                 # Check for positions
                 positions = []
-                if i < len(value) and value[i] == ':':
+                if i < len(value) and value[i] == ":":
                     i += 1
                     # Parse positions
-                    pos_str = ''
+                    pos_str = ""
                     while i < len(value) and value[i] not in " \t\n":
                         pos_str += value[i]
                         i += 1
@@ -247,7 +246,7 @@ class PostgresTsVector:
         return tsvector
 
     @classmethod
-    def from_string(cls, value: str) -> 'PostgresTsVector':
+    def from_string(cls, value: str) -> "PostgresTsVector":
         """Alias for from_postgres_string for compatibility."""
         return cls.from_postgres_string(value)
 
@@ -300,6 +299,7 @@ class TsQueryLexeme(TsQueryNode):
         weight: Optional weight filter ('A', 'B', 'C', 'D' or combination)
         prefix: True if this is a prefix match (lexeme:*)
     """
+
     lexeme: str
     weight: Optional[str] = None
     prefix: bool = False
@@ -308,13 +308,13 @@ class TsQueryLexeme(TsQueryNode):
         """Convert to PostgreSQL tsquery format."""
         result = f"'{self.lexeme}'"
         if self.prefix:
-            result += ':*'
+            result += ":*"
         if self.weight:
-            result += f':{self.weight}'
+            result += f":{self.weight}"
         return result
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'TsQueryLexeme':
+    def from_postgres_string(cls, value: str) -> "TsQueryLexeme":
         """Parse PostgreSQL tsquery lexeme."""
         value = value.strip()
 
@@ -323,7 +323,7 @@ class TsQueryLexeme(TsQueryNode):
         if match:
             lexeme = match.group(1)
             weight = match.group(2) or match.group(3) if match.group(2) or match.group(3) else None
-            prefix = bool(match.group(0) and ':*' in match.group(0))
+            prefix = bool(match.group(0) and ":*" in match.group(0))
             return cls(lexeme=lexeme, weight=weight, prefix=prefix)
 
         raise ValueError(f"Invalid tsquery lexeme: {value}")
@@ -345,6 +345,7 @@ class TsQueryOperator(TsQueryNode):
         right: Right operand (None for NOT)
         distance: Distance for FOLLOWED BY operator (default 1)
     """
+
     operator: str
     left: TsQueryNode
     right: Optional[TsQueryNode] = None
@@ -352,11 +353,11 @@ class TsQueryOperator(TsQueryNode):
 
     def to_postgres_string(self) -> str:
         """Convert to PostgreSQL tsquery format."""
-        if self.operator == '!':
+        if self.operator == "!":
             return f"!{self._node_to_string(self.left)}"
-        elif self.operator == '<->':
+        elif self.operator == "<->":
             return f"{self._node_to_string(self.left)} <-> {self._node_to_string(self.right)}"
-        elif self.operator.startswith('<') and self.operator.endswith('>'):
+        elif self.operator.startswith("<") and self.operator.endswith(">"):
             return f"{self._node_to_string(self.left)} {self.operator} {self._node_to_string(self.right)}"
         else:
             return f"{self._node_to_string(self.left)} {self.operator} {self._node_to_string(self.right)}"
@@ -364,10 +365,10 @@ class TsQueryOperator(TsQueryNode):
     def _node_to_string(self, node: Optional[TsQueryNode]) -> str:
         """Convert a node to string, adding parentheses for operators."""
         if node is None:
-            return ''
+            return ""
         if isinstance(node, TsQueryOperator):
             return f"({node.to_postgres_string()})"
-        if hasattr(node, 'to_postgres_string'):
+        if hasattr(node, "to_postgres_string"):
             return node.to_postgres_string()
         return str(node)
 
@@ -417,7 +418,7 @@ class PostgresTsQuery:
         self.root = root
 
     @classmethod
-    def parse(cls, query: str) -> 'PostgresTsQuery':
+    def parse(cls, query: str) -> "PostgresTsQuery":
         """Parse a PostgreSQL tsquery string.
 
         Args:
@@ -442,21 +443,21 @@ class PostgresTsQuery:
             str: PostgreSQL tsquery string
         """
         if self.root is None:
-            return ''
+            return ""
         return self.root.to_postgres_string()
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'PostgresTsQuery':
+    def from_postgres_string(cls, value: str) -> "PostgresTsQuery":
         """Alias for parse for compatibility."""
         return cls.parse(value)
 
     @classmethod
-    def from_string(cls, value: str) -> 'PostgresTsQuery':
+    def from_string(cls, value: str) -> "PostgresTsQuery":
         """Alias for parse for compatibility."""
         return cls.parse(value)
 
     @staticmethod
-    def term(lexeme: str, weight: Optional[str] = None, prefix: bool = False) -> 'PostgresTsQuery':
+    def term(lexeme: str, weight: Optional[str] = None, prefix: bool = False) -> "PostgresTsQuery":
         """Create a simple term query.
 
         Args:
@@ -469,7 +470,7 @@ class PostgresTsQuery:
         """
         return PostgresTsQuery(TsQueryLexeme(lexeme=lexeme, weight=weight, prefix=prefix))
 
-    def and_(self, other: 'PostgresTsQuery') -> 'PostgresTsQuery':
+    def and_(self, other: "PostgresTsQuery") -> "PostgresTsQuery":
         """Combine with another query using AND.
 
         Args:
@@ -482,9 +483,9 @@ class PostgresTsQuery:
             return other
         if other.root is None:
             return self
-        return PostgresTsQuery(TsQueryOperator(operator='&', left=self.root, right=other.root))
+        return PostgresTsQuery(TsQueryOperator(operator="&", left=self.root, right=other.root))
 
-    def or_(self, other: 'PostgresTsQuery') -> 'PostgresTsQuery':
+    def or_(self, other: "PostgresTsQuery") -> "PostgresTsQuery":
         """Combine with another query using OR.
 
         Args:
@@ -497,9 +498,9 @@ class PostgresTsQuery:
             return other
         if other.root is None:
             return self
-        return PostgresTsQuery(TsQueryOperator(operator='|', left=self.root, right=other.root))
+        return PostgresTsQuery(TsQueryOperator(operator="|", left=self.root, right=other.root))
 
-    def not_(self) -> 'PostgresTsQuery':
+    def not_(self) -> "PostgresTsQuery":
         """Negate this query.
 
         Returns:
@@ -507,9 +508,9 @@ class PostgresTsQuery:
         """
         if self.root is None:
             return self
-        return PostgresTsQuery(TsQueryOperator(operator='!', left=self.root))
+        return PostgresTsQuery(TsQueryOperator(operator="!", left=self.root))
 
-    def followed_by(self, other: 'PostgresTsQuery', distance: int = 1) -> 'PostgresTsQuery':
+    def followed_by(self, other: "PostgresTsQuery", distance: int = 1) -> "PostgresTsQuery":
         """Combine with another query using FOLLOWED BY operator.
 
         Args:
@@ -523,10 +524,10 @@ class PostgresTsQuery:
             raise ValueError("Both queries must have terms for FOLLOWED BY")
 
         if distance == 1:
-            return PostgresTsQuery(TsQueryOperator(operator='<->', left=self.root, right=other.root))
+            return PostgresTsQuery(TsQueryOperator(operator="<->", left=self.root, right=other.root))
         else:
             return PostgresTsQuery(
-                TsQueryOperator(operator=f'<{distance}>', left=self.root, right=other.root, distance=distance)
+                TsQueryOperator(operator=f"<{distance}>", left=self.root, right=other.root, distance=distance)
             )
 
     def __eq__(self, other: object) -> bool:
@@ -570,11 +571,11 @@ class _TsQueryParser:
             if self.pos >= self.length:
                 break
 
-            if self._peek() == '|':
+            if self._peek() == "|":
                 self.pos += 1
                 self._skip_whitespace()
                 right = self._parse_and()
-                left = TsQueryOperator(operator='|', left=left, right=right)
+                left = TsQueryOperator(operator="|", left=left, right=right)
             else:
                 break
 
@@ -589,11 +590,11 @@ class _TsQueryParser:
             if self.pos >= self.length:
                 break
 
-            if self._peek() == '&':
+            if self._peek() == "&":
                 self.pos += 1
                 self._skip_whitespace()
                 right = self._parse_followed_by()
-                left = TsQueryOperator(operator='&', left=left, right=right)
+                left = TsQueryOperator(operator="&", left=left, right=right)
             else:
                 break
 
@@ -609,33 +610,33 @@ class _TsQueryParser:
                 break
 
             # Check for <N> or <->
-            if self._peek() == '<':
+            if self._peek() == "<":
                 start_pos = self.pos
                 self.pos += 1
 
                 # Check for <-> (followed by)
-                if self.pos < self.length and self.query[self.pos] == '-':
+                if self.pos < self.length and self.query[self.pos] == "-":
                     self.pos += 1
-                    if self.pos < self.length and self.query[self.pos] == '>':
+                    if self.pos < self.length and self.query[self.pos] == ">":
                         self.pos += 1
                         self._skip_whitespace()
                         right = self._parse_not()
-                        left = TsQueryOperator(operator='<->', left=left, right=right)
+                        left = TsQueryOperator(operator="<->", left=left, right=right)
                         continue
 
                 # Check for <N> (distance)
                 self.pos = start_pos + 1
-                num_str = ''
+                num_str = ""
                 while self.pos < self.length and self.query[self.pos].isdigit():
                     num_str += self.query[self.pos]
                     self.pos += 1
 
-                if num_str and self.pos < self.length and self.query[self.pos] == '>':
+                if num_str and self.pos < self.length and self.query[self.pos] == ">":
                     distance = int(num_str)
                     self.pos += 1
                     self._skip_whitespace()
                     right = self._parse_not()
-                    left = TsQueryOperator(operator=f'<{distance}>', left=left, right=right, distance=distance)
+                    left = TsQueryOperator(operator=f"<{distance}>", left=left, right=right, distance=distance)
                     continue
 
                 # Not a valid operator, restore position
@@ -650,11 +651,11 @@ class _TsQueryParser:
         """Parse NOT expressions."""
         self._skip_whitespace()
 
-        if self.pos < self.length and self.query[self.pos] == '!':
+        if self.pos < self.length and self.query[self.pos] == "!":
             self.pos += 1
             self._skip_whitespace()
             operand = self._parse_primary()
-            return TsQueryOperator(operator='!', left=operand)
+            return TsQueryOperator(operator="!", left=operand)
 
         return self._parse_primary()
 
@@ -666,11 +667,11 @@ class _TsQueryParser:
             raise ValueError("Unexpected end of query")
 
         # Parenthesized expression
-        if self.query[self.pos] == '(':
+        if self.query[self.pos] == "(":
             self.pos += 1
             node = self._parse_or()
             self._skip_whitespace()
-            if self.pos >= self.length or self.query[self.pos] != ')':
+            if self.pos >= self.length or self.query[self.pos] != ")":
                 raise ValueError("Missing closing parenthesis")
             self.pos += 1
             return node
@@ -688,7 +689,7 @@ class _TsQueryParser:
             raise ValueError("Expected opening quote")
 
         self.pos += 1
-        lexeme = ''
+        lexeme = ""
 
         while self.pos < self.length and self.query[self.pos] != "'":
             lexeme += self.query[self.pos]
@@ -703,16 +704,16 @@ class _TsQueryParser:
         weight = None
         prefix = False
 
-        if self.pos < self.length and self.query[self.pos] == ':':
+        if self.pos < self.length and self.query[self.pos] == ":":
             self.pos += 1
 
-            if self.pos < self.length and self.query[self.pos] == '*':
+            if self.pos < self.length and self.query[self.pos] == "*":
                 prefix = True
                 self.pos += 1
 
-            if self.pos < self.length and self.query[self.pos] in 'ABCD':
-                weight = ''
-                while self.pos < self.length and self.query[self.pos] in 'ABCD':
+            if self.pos < self.length and self.query[self.pos] in "ABCD":
+                weight = ""
+                while self.pos < self.length and self.query[self.pos] in "ABCD":
                     weight += self.query[self.pos]
                     self.pos += 1
 
@@ -720,11 +721,11 @@ class _TsQueryParser:
 
     def _parse_unquoted_lexeme(self) -> TsQueryLexeme:
         """Parse an unquoted lexeme (single word)."""
-        lexeme = ''
+        lexeme = ""
 
         while self.pos < self.length:
             c = self.query[self.pos]
-            if c in ' \t\n&|!<>()':
+            if c in " \t\n&|!<>()":
                 break
             lexeme += c
             self.pos += 1
@@ -742,11 +743,12 @@ class _TsQueryParser:
 
     def _skip_whitespace(self) -> None:
         """Skip whitespace characters."""
-        while self.pos < self.length and self.query[self.pos] in ' \t\n':
+        while self.pos < self.length and self.query[self.pos] in " \t\n":
             self.pos += 1
 
 
 # Text search utility functions for SQL generation
+
 
 def to_tsvector(document: str, config: Optional[str] = None) -> str:
     """Generate SQL expression for PostgreSQL to_tsvector function.
@@ -895,12 +897,7 @@ def ts_matches_expr(vector: str, query: str) -> str:
     return f"{vector} @@@ {query}"
 
 
-def ts_rank(
-    vector: str,
-    query: str,
-    weights: Optional[List[float]] = None,
-    normalization: int = 0
-) -> str:
+def ts_rank(vector: str, query: str, weights: Optional[List[float]] = None, normalization: int = 0) -> str:
     """Generate SQL expression for PostgreSQL ts_rank function.
 
     Calculates relevance rank for tsvector matching tsquery.
@@ -932,12 +929,7 @@ def ts_rank(
     return f"ts_rank({vector}, {query})"
 
 
-def ts_rank_cd(
-    vector: str,
-    query: str,
-    weights: Optional[List[float]] = None,
-    normalization: int = 0
-) -> str:
+def ts_rank_cd(vector: str, query: str, weights: Optional[List[float]] = None, normalization: int = 0) -> str:
     """Generate SQL expression for PostgreSQL ts_rank_cd function.
 
     Calculates relevance rank using cover density.
@@ -967,12 +959,7 @@ def ts_rank_cd(
     return f"ts_rank_cd({vector}, {query})"
 
 
-def ts_headline(
-    document: str,
-    query: str,
-    config: Optional[str] = None,
-    options: Optional[str] = None
-) -> str:
+def ts_headline(document: str, query: str, config: Optional[str] = None, options: Optional[str] = None) -> str:
     """Generate SQL expression for PostgreSQL ts_headline function.
 
     Displays query matches in document with highlighting.
@@ -1076,24 +1063,24 @@ def tsvector_length(vec: str) -> str:
 
 
 __all__ = [
-    'TsVectorLexeme',
-    'PostgresTsVector',
-    'TsQueryNode',
-    'TsQueryLexeme',
-    'TsQueryOperator',
-    'PostgresTsQuery',
-    'to_tsvector',
-    'to_tsquery',
-    'plainto_tsquery',
-    'phraseto_tsquery',
-    'websearch_to_tsquery',
-    'ts_matches',
-    'ts_matches_expr',
-    'ts_rank',
-    'ts_rank_cd',
-    'ts_headline',
-    'tsvector_concat',
-    'tsvector_strip',
-    'tsvector_setweight',
-    'tsvector_length',
+    "TsVectorLexeme",
+    "PostgresTsVector",
+    "TsQueryNode",
+    "TsQueryLexeme",
+    "TsQueryOperator",
+    "PostgresTsQuery",
+    "to_tsvector",
+    "to_tsquery",
+    "plainto_tsquery",
+    "phraseto_tsquery",
+    "websearch_to_tsquery",
+    "ts_matches",
+    "ts_matches_expr",
+    "ts_rank",
+    "ts_rank_cd",
+    "ts_headline",
+    "tsvector_concat",
+    "tsvector_strip",
+    "tsvector_setweight",
+    "tsvector_length",
 ]

@@ -4,6 +4,7 @@
 This module defines the protocol for PostgreSQL-specific VACUUM features
 that are not part of the SQL standard.
 """
+
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:

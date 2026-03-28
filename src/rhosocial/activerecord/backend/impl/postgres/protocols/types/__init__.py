@@ -6,7 +6,7 @@ from .multirange import MultirangeSupport
 from .enum import EnumTypeSupport
 
 __all__ = [
-    'PostgresDataTypeSupport',
-    'MultirangeSupport',
-    'EnumTypeSupport',
+    "PostgresDataTypeSupport",
+    "MultirangeSupport",
+    "EnumTypeSupport",
 ]

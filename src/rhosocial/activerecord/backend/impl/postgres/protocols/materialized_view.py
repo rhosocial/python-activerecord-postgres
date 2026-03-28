@@ -4,6 +4,7 @@
 This module defines protocols for PostgreSQL-specific materialized view features
 that extend beyond the SQL standard.
 """
+
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:

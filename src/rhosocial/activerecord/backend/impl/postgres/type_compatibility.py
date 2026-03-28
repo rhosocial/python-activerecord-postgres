@@ -34,108 +34,98 @@ from typing import Set, Tuple, Optional, Dict
 # Format: (source_type_lowercase, target_type_lowercase)
 DIRECT_COMPATIBLE_CASTS: Set[Tuple[str, str]] = {
     # Same type conversions (identity)
-    ('money', 'money'),
-    ('numeric', 'numeric'),
-    ('integer', 'integer'),
-    ('bigint', 'bigint'),
-    ('smallint', 'smallint'),
-    ('real', 'real'),
-    ('double precision', 'double precision'),
-    ('float4', 'float4'),
-    ('float8', 'float8'),
-    ('text', 'text'),
-    ('varchar', 'varchar'),
-    ('boolean', 'boolean'),
-    ('bool', 'bool'),
-    ('json', 'json'),
-    ('jsonb', 'jsonb'),
-    ('date', 'date'),
-    ('timestamp', 'timestamp'),
-    ('timestamptz', 'timestamptz'),
-
+    ("money", "money"),
+    ("numeric", "numeric"),
+    ("integer", "integer"),
+    ("bigint", "bigint"),
+    ("smallint", "smallint"),
+    ("real", "real"),
+    ("double precision", "double precision"),
+    ("float4", "float4"),
+    ("float8", "float8"),
+    ("text", "text"),
+    ("varchar", "varchar"),
+    ("boolean", "boolean"),
+    ("bool", "bool"),
+    ("json", "json"),
+    ("jsonb", "jsonb"),
+    ("date", "date"),
+    ("timestamp", "timestamp"),
+    ("timestamptz", "timestamptz"),
     # Numeric type widening
-    ('smallint', 'integer'),
-    ('smallint', 'bigint'),
-    ('smallint', 'numeric'),
-    ('smallint', 'real'),
-    ('smallint', 'double precision'),
-    ('integer', 'bigint'),
-    ('integer', 'numeric'),
-    ('integer', 'real'),
-    ('integer', 'double precision'),
-    ('bigint', 'numeric'),
-    ('real', 'double precision'),
-    ('float4', 'float8'),
-    ('real', 'float8'),
-    ('float4', 'double precision'),
-
+    ("smallint", "integer"),
+    ("smallint", "bigint"),
+    ("smallint", "numeric"),
+    ("smallint", "real"),
+    ("smallint", "double precision"),
+    ("integer", "bigint"),
+    ("integer", "numeric"),
+    ("integer", "real"),
+    ("integer", "double precision"),
+    ("bigint", "numeric"),
+    ("real", "double precision"),
+    ("float4", "float8"),
+    ("real", "float8"),
+    ("float4", "double precision"),
     # Numeric to/from text
-    ('integer', 'text'),
-    ('bigint', 'text'),
-    ('smallint', 'text'),
-    ('numeric', 'text'),
-    ('real', 'text'),
-    ('double precision', 'text'),
-
+    ("integer", "text"),
+    ("bigint", "text"),
+    ("smallint", "text"),
+    ("numeric", "text"),
+    ("real", "text"),
+    ("double precision", "text"),
     # Money <-> Numeric (directly compatible)
-    ('money', 'numeric'),
-    ('numeric', 'money'),
-
+    ("money", "numeric"),
+    ("numeric", "money"),
     # Numeric to numeric types
-    ('numeric', 'integer'),
-    ('numeric', 'bigint'),
-    ('numeric', 'smallint'),
-    ('numeric', 'real'),
-    ('numeric', 'double precision'),
-    ('numeric', 'float4'),
-    ('numeric', 'float8'),
-
+    ("numeric", "integer"),
+    ("numeric", "bigint"),
+    ("numeric", "smallint"),
+    ("numeric", "real"),
+    ("numeric", "double precision"),
+    ("numeric", "float4"),
+    ("numeric", "float8"),
     # Text type conversions
-    ('text', 'varchar'),
-    ('varchar', 'text'),
-    ('char', 'text'),
-    ('char', 'varchar'),
-    ('text', 'char'),
-    ('varchar', 'char'),
-
+    ("text", "varchar"),
+    ("varchar", "text"),
+    ("char", "text"),
+    ("char", "varchar"),
+    ("text", "char"),
+    ("varchar", "char"),
     # Temporal type conversions
-    ('date', 'timestamp'),
-    ('date', 'timestamptz'),
-    ('timestamp', 'timestamptz'),
-    ('timestamptz', 'timestamp'),
-    ('timestamp', 'date'),
-    ('timestamptz', 'date'),
-
+    ("date", "timestamp"),
+    ("date", "timestamptz"),
+    ("timestamp", "timestamptz"),
+    ("timestamptz", "timestamp"),
+    ("timestamp", "date"),
+    ("timestamptz", "date"),
     # JSON conversions
-    ('json', 'jsonb'),
-    ('jsonb', 'json'),
-    ('json', 'text'),
-    ('jsonb', 'text'),
-    ('text', 'json'),
-    ('text', 'jsonb'),
-
+    ("json", "jsonb"),
+    ("jsonb", "json"),
+    ("json", "text"),
+    ("jsonb", "text"),
+    ("text", "json"),
+    ("text", "jsonb"),
     # Boolean conversions
-    ('boolean', 'text'),
-    ('bool', 'text'),
-    ('text', 'boolean'),
-    ('text', 'bool'),
-
+    ("boolean", "text"),
+    ("bool", "text"),
+    ("text", "boolean"),
+    ("text", "bool"),
     # UUID conversions
-    ('uuid', 'text'),
-    ('text', 'uuid'),
-
+    ("uuid", "text"),
+    ("text", "uuid"),
     # Network address conversions
-    ('inet', 'text'),
-    ('cidr', 'text'),
-    ('text', 'inet'),
-    ('text', 'cidr'),
-    ('inet', 'cidr'),
-    ('macaddr', 'text'),
-    ('macaddr8', 'text'),
-    ('text', 'macaddr'),
-    ('text', 'macaddr8'),
-    ('macaddr', 'macaddr8'),
-    ('macaddr8', 'macaddr'),
+    ("inet", "text"),
+    ("cidr", "text"),
+    ("text", "inet"),
+    ("text", "cidr"),
+    ("inet", "cidr"),
+    ("macaddr", "text"),
+    ("macaddr8", "text"),
+    ("text", "macaddr"),
+    ("text", "macaddr8"),
+    ("macaddr", "macaddr8"),
+    ("macaddr8", "macaddr"),
 }
 
 # Type casts that require a warning
@@ -145,223 +135,192 @@ DIRECT_COMPATIBLE_CASTS: Set[Tuple[str, str]] = {
 # 3. Lose precision or information
 WARNED_CASTS: Set[Tuple[str, str]] = {
     # Money to float requires numeric intermediate
-    ('money', 'real'),
-    ('money', 'double precision'),
-    ('money', 'float4'),
-    ('money', 'float8'),
-
+    ("money", "real"),
+    ("money", "double precision"),
+    ("money", "float4"),
+    ("money", "float8"),
     # Money to integer requires numeric intermediate
-    ('money', 'integer'),
-    ('money', 'bigint'),
-    ('money', 'smallint'),
-
+    ("money", "integer"),
+    ("money", "bigint"),
+    ("money", "smallint"),
     # Boolean to numeric (unusual conversion)
-    ('boolean', 'integer'),
-    ('boolean', 'bigint'),
-    ('boolean', 'smallint'),
-    ('bool', 'integer'),
-    ('bool', 'bigint'),
-    ('bool', 'smallint'),
-
+    ("boolean", "integer"),
+    ("boolean", "bigint"),
+    ("boolean", "smallint"),
+    ("bool", "integer"),
+    ("bool", "bigint"),
+    ("bool", "smallint"),
     # Numeric to boolean (may be unexpected)
-    ('integer', 'boolean'),
-    ('bigint', 'boolean'),
-    ('smallint', 'boolean'),
-    ('integer', 'bool'),
-    ('bigint', 'bool'),
-    ('smallint', 'bool'),
-    ('numeric', 'boolean'),
-    ('numeric', 'bool'),
-
+    ("integer", "boolean"),
+    ("bigint", "boolean"),
+    ("smallint", "boolean"),
+    ("integer", "bool"),
+    ("bigint", "bool"),
+    ("smallint", "bool"),
+    ("numeric", "boolean"),
+    ("numeric", "bool"),
     # Float to money (precision concerns)
-    ('real', 'money'),
-    ('double precision', 'money'),
-    ('float4', 'money'),
-    ('float8', 'money'),
-
+    ("real", "money"),
+    ("double precision", "money"),
+    ("float4", "money"),
+    ("float8", "money"),
     # Integer to money (precision concerns)
-    ('integer', 'money'),
-    ('bigint', 'money'),
-    ('smallint', 'money'),
-
+    ("integer", "money"),
+    ("bigint", "money"),
+    ("smallint", "money"),
     # JSON to numeric types (requires proper JSON content)
-    ('json', 'integer'),
-    ('json', 'bigint'),
-    ('json', 'numeric'),
-    ('jsonb', 'integer'),
-    ('jsonb', 'bigint'),
-    ('jsonb', 'numeric'),
-
+    ("json", "integer"),
+    ("json", "bigint"),
+    ("json", "numeric"),
+    ("jsonb", "integer"),
+    ("jsonb", "bigint"),
+    ("jsonb", "numeric"),
     # Timestamp precision changes
-    ('timestamptz', 'time'),
-    ('timestamp', 'time'),
-
+    ("timestamptz", "time"),
+    ("timestamp", "time"),
     # ===== New: Time precision loss =====
     # Note: timestamptz->timestamp and timestamptz->date are in DIRECT_COMPATIBLE_CASTS
     # so they won't produce warnings. Only time component loss is warned.
-    ('timestamp', 'time'),           # Date component lost
-    ('timestamptz', 'time'),         # Date + timezone lost
-
+    ("timestamp", "time"),  # Date component lost
+    ("timestamptz", "time"),  # Date + timezone lost
     # ===== New: Numeric precision loss =====
-    ('double precision', 'real'),    # Precision loss (15 -> 6 significant digits)
-    ('float8', 'float4'),            # Same as above
-    ('bigint', 'integer'),           # May overflow
-    ('bigint', 'smallint'),          # More likely to overflow
-    ('integer', 'smallint'),         # May overflow
-
+    ("double precision", "real"),  # Precision loss (15 -> 6 significant digits)
+    ("float8", "float4"),  # Same as above
+    ("bigint", "integer"),  # May overflow
+    ("bigint", "smallint"),  # More likely to overflow
+    ("integer", "smallint"),  # May overflow
     # ===== New: JSON type risks =====
-    ('jsonb', 'varchar'),            # Structure lost + may truncate
-    ('json', 'varchar'),             # Structure lost + may truncate
-
+    ("jsonb", "varchar"),  # Structure lost + may truncate
+    ("json", "varchar"),  # Structure lost + may truncate
     # ===== New: UUID type risks =====
-    ('uuid', 'varchar'),             # May truncate (UUID needs at least 36 chars)
-    ('uuid', 'char'),                # Will truncate (char is typically 1 char)
+    ("uuid", "varchar"),  # May truncate (UUID needs at least 36 chars)
+    ("uuid", "char"),  # Will truncate (char is typically 1 char)
 }
 
 # Intermediate type suggestions for problematic casts
 # Format: (source, target) -> suggested_intermediate_type
 INTERMEDIATE_SUGGESTIONS: Dict[Tuple[str, str], str] = {
     # Money to float types
-    ('money', 'real'): 'numeric',
-    ('money', 'double precision'): 'numeric',
-    ('money', 'float4'): 'numeric',
-    ('money', 'float8'): 'numeric',
-
+    ("money", "real"): "numeric",
+    ("money", "double precision"): "numeric",
+    ("money", "float4"): "numeric",
+    ("money", "float8"): "numeric",
     # Money to integer types
-    ('money', 'integer'): 'numeric',
-    ('money', 'bigint'): 'numeric',
-    ('money', 'smallint'): 'numeric',
-
+    ("money", "integer"): "numeric",
+    ("money", "bigint"): "numeric",
+    ("money", "smallint"): "numeric",
     # ===== New: Numeric type conversion suggestions =====
-    ('bigint', 'integer'): 'numeric',  # Use numeric to avoid overflow
-    ('bigint', 'smallint'): 'numeric',
-    ('integer', 'smallint'): 'numeric',
-
+    ("bigint", "integer"): "numeric",  # Use numeric to avoid overflow
+    ("bigint", "smallint"): "numeric",
+    ("integer", "smallint"): "numeric",
     # ===== New: JSON type conversion suggestions =====
-    ('jsonb', 'varchar'): 'text',
-    ('json', 'varchar'): 'text',
+    ("jsonb", "varchar"): "text",
+    ("json", "varchar"): "text",
 }
 
 # Type categories for broader compatibility checks
 # Based on PostgreSQL's pg_type.typcategory
 TYPE_CATEGORIES: Dict[str, str] = {
     # Numeric types
-    'smallint': 'N',
-    'integer': 'N',
-    'bigint': 'N',
-    'decimal': 'N',
-    'numeric': 'N',
-    'real': 'N',
-    'double precision': 'N',
-    'float4': 'N',
-    'float8': 'N',
-    'serial': 'N',
-    'bigserial': 'N',
-    'smallserial': 'N',
-
+    "smallint": "N",
+    "integer": "N",
+    "bigint": "N",
+    "decimal": "N",
+    "numeric": "N",
+    "real": "N",
+    "double precision": "N",
+    "float4": "N",
+    "float8": "N",
+    "serial": "N",
+    "bigserial": "N",
+    "smallserial": "N",
     # Monetary types
-    'money': 'N',
-
+    "money": "N",
     # String types
-    'text': 'S',
-    'varchar': 'S',
-    'char': 'S',
-    'character': 'S',
-    'character varying': 'S',
-    'name': 'S',
-
+    "text": "S",
+    "varchar": "S",
+    "char": "S",
+    "character": "S",
+    "character varying": "S",
+    "name": "S",
     # Boolean
-    'boolean': 'B',
-    'bool': 'B',
-
+    "boolean": "B",
+    "bool": "B",
     # Date/Time
-    'date': 'D',
-    'time': 'D',
-    'timetz': 'D',
-    'timestamp': 'D',
-    'timestamptz': 'D',
-    'interval': 'T',
-
+    "date": "D",
+    "time": "D",
+    "timetz": "D",
+    "timestamp": "D",
+    "timestamptz": "D",
+    "interval": "T",
     # Geometric
-    'point': 'G',
-    'line': 'G',
-    'lseg': 'G',
-    'box': 'G',
-    'path': 'G',
-    'polygon': 'G',
-    'circle': 'G',
-
+    "point": "G",
+    "line": "G",
+    "lseg": "G",
+    "box": "G",
+    "path": "G",
+    "polygon": "G",
+    "circle": "G",
     # Network
-    'inet': 'I',
-    'cidr': 'I',
-    'macaddr': 'I',
-    'macaddr8': 'I',
-
+    "inet": "I",
+    "cidr": "I",
+    "macaddr": "I",
+    "macaddr8": "I",
     # Bit string
-    'bit': 'V',
-    'varbit': 'V',
-
+    "bit": "V",
+    "varbit": "V",
     # JSON
-    'json': 'U',
-    'jsonb': 'U',
-
+    "json": "U",
+    "jsonb": "U",
     # UUID
-    'uuid': 'U',
-
+    "uuid": "U",
     # Array types
-    'array': 'A',
-
+    "array": "A",
     # Enum (user-defined)
-    'enum': 'E',
-
+    "enum": "E",
     # Range types (built-in)
-    'int4range': 'R',
-    'int8range': 'R',
-    'numrange': 'R',
-    'tsrange': 'R',
-    'tstzrange': 'R',
-    'daterange': 'R',
-
+    "int4range": "R",
+    "int8range": "R",
+    "numrange": "R",
+    "tsrange": "R",
+    "tstzrange": "R",
+    "daterange": "R",
     # ===== New: Multirange types (PostgreSQL 14+) =====
-    'int4multirange': 'R',
-    'int8multirange': 'R',
-    'nummultirange': 'R',
-    'tsmultirange': 'R',
-    'tstzmultirange': 'R',
-    'datemultirange': 'R',
-
+    "int4multirange": "R",
+    "int8multirange": "R",
+    "nummultirange": "R",
+    "tsmultirange": "R",
+    "tstzmultirange": "R",
+    "datemultirange": "R",
     # ===== New: Pseudo-types =====
-    'anyelement': 'P',
-    'anyarray': 'P',
-    'anynonarray': 'P',
-    'anyenum': 'P',
-    'anyrange': 'P',
-    'anymultirange': 'P',
-    'void': 'P',
-    'trigger': 'P',
-    'event_trigger': 'P',
-    'pg_lsn': 'P',
-    'pg_lsn_diff': 'P',
-    'txid_snapshot': 'P',
-    'pg_snapshot': 'P',
-
+    "anyelement": "P",
+    "anyarray": "P",
+    "anynonarray": "P",
+    "anyenum": "P",
+    "anyrange": "P",
+    "anymultirange": "P",
+    "void": "P",
+    "trigger": "P",
+    "event_trigger": "P",
+    "pg_lsn": "P",
+    "pg_lsn_diff": "P",
+    "txid_snapshot": "P",
+    "pg_snapshot": "P",
     # ===== New: Additional JSON types =====
-    'jsonpath': 'U',
-
+    "jsonpath": "U",
     # ===== New: Full-text search types =====
-    'tsvector': 'U',
-    'tsquery': 'U',
-
+    "tsvector": "U",
+    "tsquery": "U",
     # ===== New: Object identifier types =====
-    'oid': 'N',
-    'regclass': 'N',
-    'regtype': 'N',
-    'regproc': 'N',
-    'regnamespace': 'N',
-    'regrole': 'N',
-    'xid': 'N',
-    'cid': 'N',
-    'tid': 'N',
+    "oid": "N",
+    "regclass": "N",
+    "regtype": "N",
+    "regproc": "N",
+    "regnamespace": "N",
+    "regrole": "N",
+    "xid": "N",
+    "cid": "N",
+    "tid": "N",
 }
 
 
@@ -418,14 +377,13 @@ def check_cast_compatibility(source_type: Optional[str], target_type: str) -> bo
                 f"intermediate conversion. Consider: "
                 f"{source_type}::{intermediate}::{target_type}",
                 UserWarning,
-                stacklevel=3
+                stacklevel=3,
             )
         else:
             warnings.warn(
-                f"Type cast from '{source_type}' to '{target_type}' may produce "
-                f"unexpected results or lose precision.",
+                f"Type cast from '{source_type}' to '{target_type}' may produce unexpected results or lose precision.",
                 UserWarning,
-                stacklevel=3
+                stacklevel=3,
             )
 
     return True
@@ -445,11 +403,7 @@ def get_compatible_types(source_type: str) -> Set[str]:
         {'money', 'numeric'}
     """
     source_lower = source_type.lower()
-    return {
-        target
-        for (source, target) in DIRECT_COMPATIBLE_CASTS
-        if source == source_lower
-    }
+    return {target for (source, target) in DIRECT_COMPATIBLE_CASTS if source == source_lower}
 
 
 def get_intermediate_type(source_type: str, target_type: str) -> Optional[str]:
@@ -515,13 +469,13 @@ def is_same_category(type1: str, type2: str) -> bool:
 
 
 __all__ = [
-    'DIRECT_COMPATIBLE_CASTS',
-    'WARNED_CASTS',
-    'INTERMEDIATE_SUGGESTIONS',
-    'TYPE_CATEGORIES',
-    'check_cast_compatibility',
-    'get_compatible_types',
-    'get_intermediate_type',
-    'get_type_category',
-    'is_same_category',
+    "DIRECT_COMPATIBLE_CASTS",
+    "WARNED_CASTS",
+    "INTERMEDIATE_SUGGESTIONS",
+    "TYPE_CATEGORIES",
+    "check_cast_compatibility",
+    "get_compatible_types",
+    "get_intermediate_type",
+    "get_type_category",
+    "is_same_category",
 ]

@@ -9,6 +9,7 @@ PostgreSQL Documentation: https://www.postgresql.org/docs/current/datatype-xml.h
 The XML type stores well-formed XML documents.
 PostgreSQL provides XML functions and XPath support.
 """
+
 from typing import Any, Dict, List, Optional, Set, Type
 
 from ..types.xml import PostgresXML
@@ -58,12 +59,7 @@ class PostgresXMLAdapter:
             PostgresXML: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL XML.
 
         Args:
@@ -86,10 +82,7 @@ class PostgresXMLAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to XML")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresXML]:
         """Convert PostgreSQL XML value to Python.
 
@@ -113,22 +106,16 @@ class PostgresXMLAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} from XML")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Optional[PostgresXML]]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresXMLAdapter']
+__all__ = ["PostgresXMLAdapter"]

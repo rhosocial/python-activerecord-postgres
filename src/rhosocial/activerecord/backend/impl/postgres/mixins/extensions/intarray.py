@@ -11,15 +11,15 @@ class PostgresIntarrayMixin:
 
     def supports_intarray_operators(self) -> bool:
         """Check if intarray supports operators."""
-        return self.check_extension_feature('intarray', 'operators')
+        return self.check_extension_feature("intarray", "operators")
 
     def supports_intarray_functions(self) -> bool:
         """Check if intarray supports functions."""
-        return self.check_extension_feature('intarray', 'functions')
+        return self.check_extension_feature("intarray", "functions")
 
     def supports_intarray_index(self) -> bool:
         """Check if intarray supports index."""
-        return self.check_extension_feature('intarray', 'index')
+        return self.check_extension_feature("intarray", "index")
 
     def format_intarray_function(self, function_name: str, *args) -> str:
         """Format an intarray function call.
@@ -37,7 +37,7 @@ class PostgresIntarrayMixin:
             >>> format_intarray_function('uniq', 'array_col')
             "uniq(array_col)"
         """
-        args_str = ', '.join(str(arg) for arg in args)
+        args_str = ", ".join(str(arg) for arg in args)
         return f"{function_name}({args_str})"
 
     def format_intarray_operator(self, column: str, operator: str, value: str) -> str:

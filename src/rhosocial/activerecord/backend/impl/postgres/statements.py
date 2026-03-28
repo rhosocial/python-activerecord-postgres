@@ -7,6 +7,7 @@ to the PostgreSQL dialect.
 
 This follows the expression-dialect separation architecture from the main package.
 """
+
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 
 
 # region ENUM Type DDL Statements
+
 
 class CreateEnumTypeExpression(BaseExpression):
     """PostgreSQL CREATE TYPE ... AS ENUM statement.
@@ -52,7 +54,7 @@ class CreateEnumTypeExpression(BaseExpression):
         name: str,
         values: List[str],
         schema: Optional[str] = None,
-        if_not_exists: bool = False
+        if_not_exists: bool = False,
     ):
         """Initialize CREATE TYPE expression.
 
@@ -86,7 +88,7 @@ class CreateEnumTypeExpression(BaseExpression):
         Returns:
             Tuple of (SQL string, empty params tuple)
         """
-        values_str = ', '.join(f"'{v}'" for v in self.values)
+        values_str = ", ".join(f"'{v}'" for v in self.values)
         exists_clause = "IF NOT EXISTS " if self.if_not_exists else ""
         type_name = f"{self.schema}.{self.name}" if self.schema else self.name
         sql = f"CREATE TYPE {exists_clause}{type_name} AS ENUM ({values_str})"
@@ -126,7 +128,7 @@ class DropEnumTypeExpression(BaseExpression):
         name: str,
         schema: Optional[str] = None,
         if_exists: bool = False,
-        cascade: bool = False
+        cascade: bool = False,
     ):
         """Initialize DROP TYPE expression.
 
@@ -199,7 +201,7 @@ class AlterEnumTypeAddValueExpression(BaseExpression):
         new_value: str,
         schema: Optional[str] = None,
         before: Optional[str] = None,
-        after: Optional[str] = None
+        after: Optional[str] = None,
     ):
         """Initialize ALTER TYPE ADD VALUE expression.
 
@@ -267,12 +269,7 @@ class AlterEnumTypeRenameValueExpression(BaseExpression):
     """
 
     def __init__(
-        self,
-        dialect: "SQLDialectBase",
-        type_name: str,
-        old_value: str,
-        new_value: str,
-        schema: Optional[str] = None
+        self, dialect: "SQLDialectBase", type_name: str, old_value: str, new_value: str, schema: Optional[str] = None
     ):
         """Initialize ALTER TYPE RENAME VALUE expression.
 
@@ -316,6 +313,7 @@ class AlterEnumTypeRenameValueExpression(BaseExpression):
 
 # region Range Type DDL Statements
 
+
 class CreateRangeTypeExpression(BaseExpression):
     """PostgreSQL CREATE TYPE ... AS RANGE statement.
 
@@ -343,7 +341,7 @@ class CreateRangeTypeExpression(BaseExpression):
         collation: Optional[str] = None,
         canonical: Optional[str] = None,
         subtype_diff: Optional[str] = None,
-        if_not_exists: bool = False
+        if_not_exists: bool = False,
     ):
         """Initialize CREATE RANGE TYPE expression.
 
@@ -397,7 +395,7 @@ class CreateRangeTypeExpression(BaseExpression):
         if self.subtype_diff:
             options.append(f"subtype_diff={self.subtype_diff}")
 
-        options_str = ', '.join(options)
+        options_str = ", ".join(options)
         sql = f"CREATE TYPE {exists_clause}{type_name} AS RANGE ({options_str})"
         return (sql, ())
 

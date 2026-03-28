@@ -18,6 +18,7 @@ see the functions.json module.
 For type adapter (conversion between Python and database),
 see adapters.json.PostgresJsonPathAdapter.
 """
+
 from dataclasses import dataclass
 from typing import Union
 import re
@@ -60,13 +61,14 @@ class PostgresJsonPath:
         path = json_path_root()
         path = json_path_key(path, 'store')
     """
+
     path: str
 
     def __post_init__(self):
         """Validate that path starts with $."""
         if not self.path:
             raise ValueError("jsonpath cannot be empty")
-        if not self.path.startswith('$'):
+        if not self.path.startswith("$"):
             raise ValueError("jsonpath must start with '$'")
 
     def __str__(self) -> str:
@@ -95,7 +97,7 @@ class PostgresJsonPath:
         Returns:
             True if path appears to be valid
         """
-        if not self.path.startswith('$'):
+        if not self.path.startswith("$"):
             return False
 
         path = self.path
@@ -107,22 +109,22 @@ class PostgresJsonPath:
         bracket_count = 0
         paren_count = 0
         for char in path:
-            if char == '[':
+            if char == "[":
                 bracket_count += 1
-            elif char == ']':
+            elif char == "]":
                 bracket_count -= 1
                 if bracket_count < 0:
                     return False
-            elif char == '(':
+            elif char == "(":
                 paren_count += 1
-            elif char == ')':
+            elif char == ")":
                 paren_count -= 1
                 if paren_count < 0:
                     return False
 
         return bracket_count == 0 and paren_count == 0
 
-    def key(self, key: str) -> 'PostgresJsonPath':
+    def key(self, key: str) -> "PostgresJsonPath":
         """Add object member access.
 
         Args:
@@ -134,12 +136,12 @@ class PostgresJsonPath:
         Examples:
             PostgresJsonPath('$').key('name')  # -> '$.name'
         """
-        if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', key):
+        if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
             return PostgresJsonPath(f"{self.path}.{key}")
         else:
-            return PostgresJsonPath(f"{self.path}.\"{key}\"")
+            return PostgresJsonPath(f'{self.path}."{key}"')
 
-    def index(self, index: Union[int, str]) -> 'PostgresJsonPath':
+    def index(self, index: Union[int, str]) -> "PostgresJsonPath":
         """Add array index access.
 
         Args:
@@ -154,7 +156,7 @@ class PostgresJsonPath:
         """
         return PostgresJsonPath(f"{self.path}[{index}]")
 
-    def wildcard_array(self) -> 'PostgresJsonPath':
+    def wildcard_array(self) -> "PostgresJsonPath":
         """Add array wildcard ([*]).
 
         Returns:
@@ -162,7 +164,7 @@ class PostgresJsonPath:
         """
         return PostgresJsonPath(f"{self.path}[*]")
 
-    def wildcard_object(self) -> 'PostgresJsonPath':
+    def wildcard_object(self) -> "PostgresJsonPath":
         """Add object member wildcard (.*).
 
         Returns:
@@ -170,7 +172,7 @@ class PostgresJsonPath:
         """
         return PostgresJsonPath(f"{self.path}.*")
 
-    def filter(self, condition: str) -> 'PostgresJsonPath':
+    def filter(self, condition: str) -> "PostgresJsonPath":
         """Add filter expression.
 
         Args:
@@ -194,4 +196,4 @@ class PostgresJsonPath:
         return f"'{escaped}'"
 
 
-__all__ = ['PostgresJsonPath']
+__all__ = ["PostgresJsonPath"]

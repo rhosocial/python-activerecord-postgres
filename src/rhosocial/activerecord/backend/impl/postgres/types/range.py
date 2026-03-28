@@ -64,6 +64,7 @@ See Also:
 - adapters.range: Conversion between PostgresRange and database values
 - psycopg.types.range: psycopg's native Range implementation
 """
+
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
@@ -102,13 +103,14 @@ class PostgresRange:
         # Convert to psycopg Range
         postgres_range.to_psycopg_range()
     """
+
     lower: Optional[Any] = None
     upper: Optional[Any] = None
     lower_inc: bool = True
     upper_inc: bool = False
 
     @classmethod
-    def empty(cls) -> 'PostgresRange':
+    def empty(cls) -> "PostgresRange":
         """Create an empty range.
 
         Empty ranges have no bounds and contain no values.
@@ -120,8 +122,7 @@ class PostgresRange:
         """Check if this is an empty range."""
         # An empty range is represented by having no bounds but being defined
         # In PostgreSQL, empty ranges are explicitly marked as 'empty'
-        return (self.lower is None and self.upper is None and
-                not self.lower_inc and not self.upper_inc)
+        return self.lower is None and self.upper is None and not self.lower_inc and not self.upper_inc
 
     @property
     def is_unbounded_below(self) -> bool:
@@ -155,19 +156,19 @@ class PostgresRange:
             PostgresRange.empty().to_postgres_string() -> 'empty'
         """
         if self.is_empty:
-            return 'empty'
+            return "empty"
 
         # For unbounded ranges, use exclusive bracket
-        lower_bracket = '[' if (self.lower_inc and self.lower is not None) else '('
-        upper_bracket = ']' if (self.upper_inc and self.upper is not None) else ')'
+        lower_bracket = "[" if (self.lower_inc and self.lower is not None) else "("
+        upper_bracket = "]" if (self.upper_inc and self.upper is not None) else ")"
 
-        lower_str = '' if self.lower is None else str(self.lower)
-        upper_str = '' if self.upper is None else str(self.upper)
+        lower_str = "" if self.lower is None else str(self.lower)
+        upper_str = "" if self.upper is None else str(self.upper)
 
-        return f'{lower_bracket}{lower_str},{upper_str}{upper_bracket}'
+        return f"{lower_bracket}{lower_str},{upper_str}{upper_bracket}"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'PostgresRange':
+    def from_postgres_string(cls, value: str) -> "PostgresRange":
         """Parse PostgreSQL range literal string.
 
         Args:
@@ -184,19 +185,19 @@ class PostgresRange:
 
         value = value.strip()
 
-        if value.lower() == 'empty':
+        if value.lower() == "empty":
             return cls.empty()
 
         if len(value) < 3:
             raise ValueError(f"Range string too short: {value}")
 
         # Parse brackets
-        lower_inc = value[0] == '['
-        upper_inc = value[-1] == ']'
+        lower_inc = value[0] == "["
+        upper_inc = value[-1] == "]"
 
-        if value[0] not in ('[', '('):
+        if value[0] not in ("[", "("):
             raise ValueError(f"Invalid lower bound bracket: {value[0]}")
-        if value[-1] not in (']', ')'):
+        if value[-1] not in ("]", ")"):
             raise ValueError(f"Invalid upper bound bracket: {value[-1]}")
 
         # Extract content between brackets
@@ -209,13 +210,12 @@ class PostgresRange:
             raise ValueError(f"No bound separator found in: {content}")
 
         lower_str = content[:comma_pos].strip()
-        upper_str = content[comma_pos + 1:].strip()
+        upper_str = content[comma_pos + 1 :].strip()
 
-        lower = None if lower_str == '' else lower_str
-        upper = None if upper_str == '' else upper_str
+        lower = None if lower_str == "" else lower_str
+        upper = None if upper_str == "" else upper_str
 
-        return cls(lower=lower, upper=upper,
-                   lower_inc=lower_inc, upper_inc=upper_inc)
+        return cls(lower=lower, upper=upper, lower_inc=lower_inc, upper_inc=upper_inc)
 
     def __contains__(self, value: Any) -> bool:
         """Check if a value is contained in the range.
@@ -249,10 +249,12 @@ class PostgresRange:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, PostgresRange):
             return NotImplemented
-        return (self.lower == other.lower and
-                self.upper == other.upper and
-                self.lower_inc == other.lower_inc and
-                self.upper_inc == other.upper_inc)
+        return (
+            self.lower == other.lower
+            and self.upper == other.upper
+            and self.lower_inc == other.lower_inc
+            and self.upper_inc == other.upper_inc
+        )
 
     def __hash__(self) -> int:
         return hash((self.lower, self.upper, self.lower_inc, self.upper_inc))
@@ -260,10 +262,13 @@ class PostgresRange:
     def __repr__(self) -> str:
         if self.is_empty:
             return "PostgresRange.empty()"
-        return f"PostgresRange(lower={self.lower!r}, upper={self.upper!r}, lower_inc={self.lower_inc}, upper_inc={self.upper_inc})"
+        return (
+            f"PostgresRange(lower={self.lower!r}, upper={self.upper!r}, "
+            f"lower_inc={self.lower_inc}, upper_inc={self.upper_inc})"
+        )
 
     @classmethod
-    def from_psycopg_range(cls, psycopg_range: Any) -> 'PostgresRange':
+    def from_psycopg_range(cls, psycopg_range: Any) -> "PostgresRange":
         """Convert from psycopg.types.range.Range to PostgresRange.
 
         This method creates a PostgresRange instance from a psycopg Range object.
@@ -302,24 +307,16 @@ class PostgresRange:
             from psycopg.types.range import Range
         except ImportError as e:
             raise ImportError(
-                "psycopg is required to use from_psycopg_range(). "
-                "Install it with: pip install psycopg[binary]"
+                "psycopg is required to use from_psycopg_range(). Install it with: pip install psycopg[binary]"
             ) from e
 
         if not isinstance(psycopg_range, Range):
-            raise TypeError(
-                f"Expected psycopg.types.range.Range, got {type(psycopg_range).__name__}"
-            )
+            raise TypeError(f"Expected psycopg.types.range.Range, got {type(psycopg_range).__name__}")
 
-        lower_inc = bool(psycopg_range.bounds and psycopg_range.bounds[0] == '[')
-        upper_inc = bool(psycopg_range.bounds and psycopg_range.bounds[1] == ']')
+        lower_inc = bool(psycopg_range.bounds and psycopg_range.bounds[0] == "[")
+        upper_inc = bool(psycopg_range.bounds and psycopg_range.bounds[1] == "]")
 
-        return cls(
-            lower=psycopg_range.lower,
-            upper=psycopg_range.upper,
-            lower_inc=lower_inc,
-            upper_inc=upper_inc
-        )
+        return cls(lower=psycopg_range.lower, upper=psycopg_range.upper, lower_inc=lower_inc, upper_inc=upper_inc)
 
     def to_psycopg_range(self) -> Any:
         """Convert to psycopg.types.range.Range.
@@ -353,15 +350,14 @@ class PostgresRange:
             from psycopg.types.range import Range
         except ImportError as e:
             raise ImportError(
-                "psycopg is required to use to_psycopg_range(). "
-                "Install it with: pip install psycopg[binary]"
+                "psycopg is required to use to_psycopg_range(). Install it with: pip install psycopg[binary]"
             ) from e
 
         if self.is_empty:
             return Range(empty=True)
 
-        bounds = '[' if self.lower_inc else '('
-        bounds += ']' if self.upper_inc else ')'
+        bounds = "[" if self.lower_inc else "("
+        bounds += "]" if self.upper_inc else ")"
 
         return Range(self.lower, self.upper, bounds)
 
@@ -376,18 +372,18 @@ def _find_bound_separator(content: str) -> int:
     quote_char = None
 
     for i, char in enumerate(content):
-        if char in ('"', "'") and (i == 0 or content[i-1] != '\\'):
+        if char in ('"', "'") and (i == 0 or content[i - 1] != "\\"):
             if not in_quotes:
                 in_quotes = True
                 quote_char = char
             elif char == quote_char:
                 in_quotes = False
                 quote_char = None
-        elif char in '([{':
+        elif char in "([{":
             depth += 1
-        elif char in ')]}':
+        elif char in ")]}":
             depth -= 1
-        elif char == ',' and depth == 0 and not in_quotes:
+        elif char == "," and depth == 0 and not in_quotes:
             return i
 
     return -1
@@ -420,10 +416,11 @@ class PostgresMultirange:
         # Convert to psycopg Multirange
         postgres_multirange.to_psycopg_multirange()
     """
+
     ranges: List[PostgresRange]
 
     @classmethod
-    def empty(cls) -> 'PostgresMultirange':
+    def empty(cls) -> "PostgresMultirange":
         """Create an empty multirange."""
         return cls(ranges=[])
 
@@ -439,13 +436,13 @@ class PostgresMultirange:
             str: PostgreSQL multirange literal like '{[1,5), [10,15)}'
         """
         if not self.ranges:
-            return '{}'
+            return "{}"
 
         range_strs = [r.to_postgres_string() for r in self.ranges]
-        return '{' + ', '.join(range_strs) + '}'
+        return "{" + ", ".join(range_strs) + "}"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'PostgresMultirange':
+    def from_postgres_string(cls, value: str) -> "PostgresMultirange":
         """Parse PostgreSQL multirange literal string.
 
         Args:
@@ -456,30 +453,30 @@ class PostgresMultirange:
         """
         value = value.strip()
 
-        if value == '{}':
+        if value == "{}":
             return cls.empty()
 
-        if not value.startswith('{') or not value.endswith('}'):
+        if not value.startswith("{") or not value.endswith("}"):
             raise ValueError(f"Invalid multirange format: {value}")
 
         content = value[1:-1]
 
         # Parse individual ranges
         ranges = []
-        current_range = ''
+        current_range = ""
         depth = 0
 
         for char in content:
-            if char in ('[', '('):
+            if char in ("[", "("):
                 depth += 1
                 current_range += char
-            elif char in (']', ')'):
+            elif char in ("]", ")"):
                 depth -= 1
                 current_range += char
-            elif char == ',' and depth == 0:
+            elif char == "," and depth == 0:
                 # Separator between ranges
                 ranges.append(PostgresRange.from_postgres_string(current_range.strip()))
-                current_range = ''
+                current_range = ""
             else:
                 current_range += char
 
@@ -499,7 +496,7 @@ class PostgresMultirange:
         return f"PostgresMultirange(ranges={self.ranges!r})"
 
     @classmethod
-    def from_psycopg_multirange(cls, psycopg_multirange: Any) -> 'PostgresMultirange':
+    def from_psycopg_multirange(cls, psycopg_multirange: Any) -> "PostgresMultirange":
         """Convert from psycopg.types.range.Multirange to PostgresMultirange.
 
         This method creates a PostgresMultirange instance from a psycopg Multirange object.
@@ -532,14 +529,9 @@ class PostgresMultirange:
             ) from e
 
         if not isinstance(psycopg_multirange, Multirange):
-            raise TypeError(
-                f"Expected psycopg.types.range.Multirange, got {type(psycopg_multirange).__name__}"
-            )
+            raise TypeError(f"Expected psycopg.types.range.Multirange, got {type(psycopg_multirange).__name__}")
 
-        ranges = [
-            PostgresRange.from_psycopg_range(r)
-            for r in psycopg_multirange
-        ]
+        ranges = [PostgresRange.from_psycopg_range(r) for r in psycopg_multirange]
 
         return cls(ranges=ranges)
 
@@ -574,4 +566,4 @@ class PostgresMultirange:
         return Multirange(psycopg_ranges)
 
 
-__all__ = ['PostgresRange', 'PostgresMultirange']
+__all__ = ["PostgresRange", "PostgresMultirange"]

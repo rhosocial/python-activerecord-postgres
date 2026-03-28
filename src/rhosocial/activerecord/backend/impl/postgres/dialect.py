@@ -5,118 +5,274 @@ PostgreSQL backend SQL dialect implementation.
 This dialect implements protocols for features that PostgreSQL actually supports,
 based on the PostgreSQL version provided at initialization.
 """
+
 from typing import Any, Tuple, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
-    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
-    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
-    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
-    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
-    SequenceMixin, TableMixin, SetOperationMixin, TruncateMixin, ILIKEMixin,
+    CTEMixin,
+    FilterClauseMixin,
+    WindowFunctionMixin,
+    JSONMixin,
+    ReturningMixin,
+    AdvancedGroupingMixin,
+    ArrayMixin,
+    ExplainMixin,
+    GraphMixin,
+    LockingMixin,
+    MergeMixin,
+    OrderedSetAggregationMixin,
+    QualifyClauseMixin,
+    TemporalTableMixin,
+    UpsertMixin,
+    LateralJoinMixin,
+    JoinMixin,
+    ViewMixin,
+    SchemaMixin,
+    IndexMixin,
+    SequenceMixin,
+    TableMixin,
+    SetOperationMixin,
+    TruncateMixin,
+    ILIKEMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
-    CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport,
-    ReturningSupport, AdvancedGroupingSupport, ArraySupport, ExplainSupport,
-    GraphSupport, LockingSupport, MergeSupport, OrderedSetAggregationSupport,
-    QualifyClauseSupport, TemporalTableSupport, UpsertSupport, LateralJoinSupport,
-    WildcardSupport, JoinSupport, ViewSupport, SchemaSupport, IndexSupport,
-    SequenceSupport, TableSupport, SetOperationSupport, TruncateSupport, ILIKESupport,
+    CTESupport,
+    FilterClauseSupport,
+    WindowFunctionSupport,
+    JSONSupport,
+    ReturningSupport,
+    AdvancedGroupingSupport,
+    ArraySupport,
+    ExplainSupport,
+    GraphSupport,
+    LockingSupport,
+    MergeSupport,
+    OrderedSetAggregationSupport,
+    QualifyClauseSupport,
+    TemporalTableSupport,
+    UpsertSupport,
+    LateralJoinSupport,
+    WildcardSupport,
+    JoinSupport,
+    ViewSupport,
+    SchemaSupport,
+    IndexSupport,
+    SequenceSupport,
+    TableSupport,
+    SetOperationSupport,
+    TruncateSupport,
+    ILIKESupport,
+    IntrospectionSupport,
 )
 from .mixins import (
-    PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
-    PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin,
+    PostgresExtensionMixin,
+    PostgresMaterializedViewMixin,
+    PostgresTableMixin,
+    PostgresPgvectorMixin,
+    PostgresPostGISMixin,
+    PostgresPgTrgmMixin,
     PostgresHstoreMixin,
     # Native feature mixins
-    PostgresPartitionMixin, PostgresIndexMixin, PostgresVacuumMixin,
-    PostgresQueryOptimizationMixin, PostgresDataTypeMixin, PostgresSQLSyntaxMixin,
+    PostgresPartitionMixin,
+    PostgresIndexMixin,
+    PostgresVacuumMixin,
+    PostgresQueryOptimizationMixin,
+    PostgresDataTypeMixin,
+    PostgresSQLSyntaxMixin,
     PostgresLogicalReplicationMixin,
     # Extension feature mixins
-    PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
-    PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
+    PostgresLtreeMixin,
+    PostgresIntarrayMixin,
+    PostgresEarthdistanceMixin,
+    PostgresTablefuncMixin,
+    PostgresPgStatStatementsMixin,
     # DDL feature mixins
-    PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
+    PostgresTriggerMixin,
+    PostgresCommentMixin,
+    PostgresTypeMixin,
     # Type mixins
-    EnumTypeMixin, TypesDataTypeMixin, MultirangeMixin,
+    EnumTypeMixin,
+    TypesDataTypeMixin,
+    MultirangeMixin,
     # DDL/DML operation mixins (new)
-    PostgresExtendedStatisticsMixin, PostgresStoredProcedureMixin,
+    PostgresExtendedStatisticsMixin,
+    PostgresStoredProcedureMixin,
+    # Introspection capability mixin
+    PostgresIntrospectionCapabilityMixin,
 )
+
 # PostgreSQL-specific imports
 from .protocols import (
-    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport,
+    PostgresExtensionSupport,
+    PostgresMaterializedViewSupport,
+    PostgresTableSupport,
+    PostgresPgvectorSupport,
+    PostgresPostGISSupport,
+    PostgresPgTrgmSupport,
     PostgresHstoreSupport,
     # Native feature protocols
-    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
-    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresPartitionSupport,
+    PostgresIndexSupport,
+    PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport,
+    PostgresDataTypeSupport,
+    PostgresSQLSyntaxSupport,
     PostgresLogicalReplicationSupport,
     # Extension feature protocols
-    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
+    PostgresLtreeSupport,
+    PostgresIntarraySupport,
+    PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport,
+    PostgresPgStatStatementsSupport,
     # DDL feature protocols
-    PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
+    PostgresTriggerSupport,
+    PostgresCommentSupport,
+    PostgresTypeSupport,
     # Type feature protocols
-    MultirangeSupport, EnumTypeSupport,
+    MultirangeSupport,
+    EnumTypeSupport,
     # New feature protocols
-    PostgresParallelQuerySupport, PostgresStoredProcedureSupport,
+    PostgresParallelQuerySupport,
+    PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
 )
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements import (
-        CreateTableExpression, CreateViewExpression, DropViewExpression,
-        TruncateExpression, CreateMaterializedViewExpression,
-        DropMaterializedViewExpression, RefreshMaterializedViewExpression
+        CreateTableExpression,
+        CreateViewExpression,
+        DropViewExpression,
+        TruncateExpression,
+        CreateMaterializedViewExpression,
+        DropMaterializedViewExpression,
+        RefreshMaterializedViewExpression,
     )
 
 
 class PostgresDialect(
     SQLDialectBase,
-    SetOperationMixin, TruncateMixin, ILIKEMixin,
-    CTEMixin, FilterClauseMixin, WindowFunctionMixin, JSONMixin, ReturningMixin,
-    AdvancedGroupingMixin, ArrayMixin, ExplainMixin, GraphMixin, LockingMixin,
-    MergeMixin, OrderedSetAggregationMixin, QualifyClauseMixin, TemporalTableMixin,
-    UpsertMixin, LateralJoinMixin, JoinMixin, ViewMixin, SchemaMixin, IndexMixin,
-    SequenceMixin, TableMixin,
+    SetOperationMixin,
+    TruncateMixin,
+    ILIKEMixin,
+    CTEMixin,
+    FilterClauseMixin,
+    WindowFunctionMixin,
+    JSONMixin,
+    ReturningMixin,
+    AdvancedGroupingMixin,
+    ArrayMixin,
+    ExplainMixin,
+    GraphMixin,
+    LockingMixin,
+    MergeMixin,
+    OrderedSetAggregationMixin,
+    QualifyClauseMixin,
+    TemporalTableMixin,
+    UpsertMixin,
+    LateralJoinMixin,
+    JoinMixin,
+    ViewMixin,
+    SchemaMixin,
+    IndexMixin,
+    SequenceMixin,
+    TableMixin,
+    # Introspection capability
+    PostgresIntrospectionCapabilityMixin,
     # PostgreSQL-specific mixins
-    PostgresExtensionMixin, PostgresMaterializedViewMixin, PostgresTableMixin,
-    PostgresPgvectorMixin, PostgresPostGISMixin, PostgresPgTrgmMixin, PostgresHstoreMixin,
+    PostgresExtensionMixin,
+    PostgresMaterializedViewMixin,
+    PostgresTableMixin,
+    PostgresPgvectorMixin,
+    PostgresPostGISMixin,
+    PostgresPgTrgmMixin,
+    PostgresHstoreMixin,
     # Native feature mixins
-    PostgresPartitionMixin, PostgresIndexMixin, PostgresVacuumMixin,
-    PostgresQueryOptimizationMixin, PostgresDataTypeMixin, PostgresSQLSyntaxMixin,
+    PostgresPartitionMixin,
+    PostgresIndexMixin,
+    PostgresVacuumMixin,
+    PostgresQueryOptimizationMixin,
+    PostgresDataTypeMixin,
+    PostgresSQLSyntaxMixin,
     PostgresLogicalReplicationMixin,
     # Extension feature mixins
-    PostgresLtreeMixin, PostgresIntarrayMixin, PostgresEarthdistanceMixin,
-    PostgresTablefuncMixin, PostgresPgStatStatementsMixin,
+    PostgresLtreeMixin,
+    PostgresIntarrayMixin,
+    PostgresEarthdistanceMixin,
+    PostgresTablefuncMixin,
+    PostgresPgStatStatementsMixin,
     # DDL feature mixins
-    PostgresTriggerMixin, PostgresCommentMixin, PostgresTypeMixin,
+    PostgresTriggerMixin,
+    PostgresCommentMixin,
+    PostgresTypeMixin,
     # Type mixins
-    EnumTypeMixin, TypesDataTypeMixin, MultirangeMixin,
+    EnumTypeMixin,
+    TypesDataTypeMixin,
+    MultirangeMixin,
     # DDL/DML operation mixins (new)
-    PostgresExtendedStatisticsMixin, PostgresStoredProcedureMixin,
+    PostgresExtendedStatisticsMixin,
+    PostgresStoredProcedureMixin,
     # Protocol supports
-    SetOperationSupport, TruncateSupport, ILIKESupport,
-    CTESupport, FilterClauseSupport, WindowFunctionSupport, JSONSupport, ReturningSupport,
-    AdvancedGroupingSupport, ArraySupport, ExplainSupport, GraphSupport, LockingSupport,
-    MergeSupport, OrderedSetAggregationSupport, QualifyClauseSupport, TemporalTableSupport,
-    UpsertSupport, LateralJoinSupport, WildcardSupport, JoinSupport, ViewSupport,
-    SchemaSupport, IndexSupport, SequenceSupport, TableSupport,
+    SetOperationSupport,
+    TruncateSupport,
+    ILIKESupport,
+    CTESupport,
+    FilterClauseSupport,
+    WindowFunctionSupport,
+    JSONSupport,
+    ReturningSupport,
+    AdvancedGroupingSupport,
+    ArraySupport,
+    ExplainSupport,
+    GraphSupport,
+    LockingSupport,
+    MergeSupport,
+    OrderedSetAggregationSupport,
+    QualifyClauseSupport,
+    TemporalTableSupport,
+    UpsertSupport,
+    LateralJoinSupport,
+    WildcardSupport,
+    JoinSupport,
+    ViewSupport,
+    SchemaSupport,
+    IndexSupport,
+    SequenceSupport,
+    TableSupport,
+    # Introspection protocol
+    IntrospectionSupport,
     # PostgreSQL-specific protocols
-    PostgresExtensionSupport, PostgresMaterializedViewSupport, PostgresTableSupport,
-    PostgresPgvectorSupport, PostgresPostGISSupport, PostgresPgTrgmSupport, PostgresHstoreSupport,
+    PostgresExtensionSupport,
+    PostgresMaterializedViewSupport,
+    PostgresTableSupport,
+    PostgresPgvectorSupport,
+    PostgresPostGISSupport,
+    PostgresPgTrgmSupport,
+    PostgresHstoreSupport,
     # Native feature protocols
-    PostgresPartitionSupport, PostgresIndexSupport, PostgresVacuumSupport,
-    PostgresQueryOptimizationSupport, PostgresDataTypeSupport, PostgresSQLSyntaxSupport,
+    PostgresPartitionSupport,
+    PostgresIndexSupport,
+    PostgresVacuumSupport,
+    PostgresQueryOptimizationSupport,
+    PostgresDataTypeSupport,
+    PostgresSQLSyntaxSupport,
     PostgresLogicalReplicationSupport,
     # Extension feature protocols
-    PostgresLtreeSupport, PostgresIntarraySupport, PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport, PostgresPgStatStatementsSupport,
+    PostgresLtreeSupport,
+    PostgresIntarraySupport,
+    PostgresEarthdistanceSupport,
+    PostgresTablefuncSupport,
+    PostgresPgStatStatementsSupport,
     # DDL feature protocols
-    PostgresTriggerSupport, PostgresCommentSupport, PostgresTypeSupport,
+    PostgresTriggerSupport,
+    PostgresCommentSupport,
+    PostgresTypeSupport,
     # Type feature protocols
-    MultirangeSupport, EnumTypeSupport,
+    MultirangeSupport,
+    EnumTypeSupport,
     # New feature protocols
-    PostgresParallelQuerySupport, PostgresStoredProcedureSupport,
+    PostgresParallelQuerySupport,
+    PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
 ):
     """
@@ -326,24 +482,20 @@ class PostgresDialect(
         """ILIKE is supported."""
         return True
 
-    def format_ilike_expression(
-        self,
-        column: Any,
-        pattern: str,
-        negate: bool = False
-    ) -> Tuple[str, Tuple]:
+    def format_ilike_expression(self, column: Any, pattern: str, negate: bool = False) -> Tuple[str, Tuple]:
         """Format ILIKE expression for PostgreSQL."""
         if isinstance(column, str):
             col_sql = self.format_identifier(column)
         else:
-            col_sql, col_params = column.to_sql() if hasattr(column, 'to_sql') else (str(column), ())
-        
+            col_sql, col_params = column.to_sql() if hasattr(column, "to_sql") else (str(column), ())
+
         if negate:
             sql = f"{col_sql} NOT ILIKE %s"
         else:
             sql = f"{col_sql} ILIKE %s"
-        
+
         return sql, (pattern,)
+
     # endregion
 
     # region Set Operation Support
@@ -374,6 +526,7 @@ class PostgresDialect(
     def supports_set_operation_for_update(self) -> bool:
         """FOR UPDATE is supported for set operations."""
         return True
+
     # endregion
 
     # region Truncate Support
@@ -393,9 +546,7 @@ class PostgresDialect(
         """CASCADE is supported in TRUNCATE."""
         return True
 
-    def format_truncate_statement(
-        self, expr: "TruncateExpression"
-    ) -> Tuple[str, tuple]:
+    def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL."""
         parts = ["TRUNCATE TABLE"]
         parts.append(self.format_identifier(expr.table_name))
@@ -406,9 +557,9 @@ class PostgresDialect(
         if expr.cascade:
             parts.append("CASCADE")
 
-        return ' '.join(parts), ()
-    # endregion
+        return " ".join(parts), ()
 
+    # endregion
 
     # region Custom Implementations for PostgreSQL-specific behavior
     def format_identifier(self, identifier: str) -> str:
@@ -470,9 +621,7 @@ class PostgresDialect(
         """Whether DROP VIEW CASCADE is supported."""
         return True  # PostgreSQL supports CASCADE
 
-    def format_create_view_statement(
-        self, expr: "CreateViewExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL."""
         parts = ["CREATE"]
 
@@ -486,7 +635,7 @@ class PostgresDialect(
         parts.append(self.format_identifier(expr.view_name))
 
         if expr.column_aliases:
-            cols = ', '.join(self.format_identifier(c) for c in expr.column_aliases)
+            cols = ", ".join(self.format_identifier(c) for c in expr.column_aliases)
             parts.append(f"({cols})")
 
         query_sql, query_params = expr.query.to_sql()
@@ -496,11 +645,9 @@ class PostgresDialect(
             check_option = expr.options.check_option.value
             parts.append(f"WITH {check_option} CHECK OPTION")
 
-        return ' '.join(parts), query_params
+        return " ".join(parts), query_params
 
-    def format_drop_view_statement(
-        self, expr: "DropViewExpression"
-    ) -> Tuple[str, tuple]:
+    def format_drop_view_statement(self, expr: "DropViewExpression") -> Tuple[str, tuple]:
         """Format DROP VIEW statement for PostgreSQL."""
         parts = ["DROP VIEW"]
         if expr.if_exists:
@@ -508,17 +655,15 @@ class PostgresDialect(
         parts.append(self.format_identifier(expr.view_name))
         if expr.cascade:
             parts.append("CASCADE")
-        return ' '.join(parts), ()
+        return " ".join(parts), ()
 
-    def format_create_materialized_view_statement(
-        self, expr: "CreateMaterializedViewExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewExpression") -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL."""
         parts = ["CREATE MATERIALIZED VIEW"]
         parts.append(self.format_identifier(expr.view_name))
 
         if expr.column_aliases:
-            cols = ', '.join(self.format_identifier(c) for c in expr.column_aliases)
+            cols = ", ".join(self.format_identifier(c) for c in expr.column_aliases)
             parts.append(f"({cols})")
 
         if expr.tablespace and self.supports_materialized_view_tablespace():
@@ -538,11 +683,9 @@ class PostgresDialect(
         else:
             parts.append("WITH NO DATA")
 
-        return ' '.join(parts), query_params
+        return " ".join(parts), query_params
 
-    def format_drop_materialized_view_statement(
-        self, expr: "DropMaterializedViewExpression"
-    ) -> Tuple[str, tuple]:
+    def format_drop_materialized_view_statement(self, expr: "DropMaterializedViewExpression") -> Tuple[str, tuple]:
         """Format DROP MATERIALIZED VIEW statement for PostgreSQL."""
         parts = ["DROP MATERIALIZED VIEW"]
         if expr.if_exists:
@@ -550,7 +693,7 @@ class PostgresDialect(
         parts.append(self.format_identifier(expr.view_name))
         if expr.cascade:
             parts.append("CASCADE")
-        return ' '.join(parts), ()
+        return " ".join(parts), ()
 
     def format_refresh_materialized_view_statement(
         self, expr: "RefreshMaterializedViewExpression"
@@ -562,7 +705,8 @@ class PostgresDialect(
         parts.append(self.format_identifier(expr.view_name))
         if expr.with_data is not None:
             parts.append("WITH DATA" if expr.with_data else "WITH NO DATA")
-        return ' '.join(parts), ()
+        return " ".join(parts), ()
+
     # endregion
 
     # region Schema Support
@@ -585,6 +729,7 @@ class PostgresDialect(
     def supports_schema_cascade(self) -> bool:
         """Whether DROP SCHEMA CASCADE is supported."""
         return True
+
     # endregion
 
     # region Index Support
@@ -607,6 +752,7 @@ class PostgresDialect(
     def supports_index_if_exists(self) -> bool:
         """Whether DROP INDEX IF EXISTS is supported."""
         return True
+
     # endregion
 
     # region Sequence Support
@@ -617,6 +763,7 @@ class PostgresDialect(
     def supports_drop_sequence(self) -> bool:
         """Whether DROP SEQUENCE is supported."""
         return True
+
     # endregion
 
     # region Table Support
@@ -644,9 +791,7 @@ class PostgresDialect(
         """Whether tablespace specification is supported."""
         return True
 
-    def format_create_table_statement(
-        self, expr: "CreateTableExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_table_statement(self, expr: "CreateTableExpression") -> Tuple[str, tuple]:
         """
         Format CREATE TABLE statement for PostgreSQL, including LIKE syntax support.
 
@@ -703,7 +848,7 @@ class PostgresDialect(
                     }
                 }
             )
-            # Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, 
+            # Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS,
             #           INCLUDING CONSTRAINTS, INCLUDING INDEXES, EXCLUDING COMMENTS)
 
             # LIKE with schema-qualified source table
@@ -745,9 +890,9 @@ class PostgresDialect(
             Tuple of (SQL string, parameters tuple)
         """
         # Check for LIKE syntax in dialect_options (highest priority)
-        if 'like_table' in expr.dialect_options:
-            like_table = expr.dialect_options['like_table']
-            like_options = expr.dialect_options.get('like_options', [])
+        if "like_table" in expr.dialect_options:
+            like_table = expr.dialect_options["like_table"]
+            like_options = expr.dialect_options.get("like_options", [])
 
             parts = ["CREATE"]
 
@@ -778,8 +923,8 @@ class PostgresDialect(
             # Example: {'including': ['DEFAULTS', 'CONSTRAINTS'], 'excluding': ['INDEXES']}
             if isinstance(like_options, dict):
                 # Handle dictionary format
-                including = like_options.get('including', [])
-                excluding = like_options.get('excluding', [])
+                including = like_options.get("including", [])
+                excluding = like_options.get("excluding", [])
 
                 for option in including:
                     like_parts.append(f"INCLUDING {option.upper()}")
@@ -798,19 +943,16 @@ class PostgresDialect(
 
             parts.append(f"({', '.join(like_parts)})")
 
-            return ' '.join(parts), ()
+            return " ".join(parts), ()
 
         # Otherwise, delegate to base implementation
         return super().format_create_table_statement(expr)
+
     # endregion
 
     # region Type Casting Support (PostgreSQL-specific)
     def format_cast_expression(
-        self,
-        expr_sql: str,
-        target_type: str,
-        expr_params: tuple,
-        alias: Optional[str] = None
+        self, expr_sql: str, target_type: str, expr_params: tuple, alias: Optional[str] = None
     ) -> Tuple[str, Tuple]:
         """Format type cast expression using PostgreSQL :: syntax.
 
@@ -844,6 +986,7 @@ class PostgresDialect(
         if alias:
             sql = f"{sql} AS {self.format_identifier(alias)}"
         return sql, expr_params
+
     # endregion
 
     # region Trigger Support (PostgreSQL-specific)
@@ -855,4 +998,5 @@ class PostgresDialect(
 
     def supports_drop_trigger(self) -> bool:
         return True
+
     # endregion

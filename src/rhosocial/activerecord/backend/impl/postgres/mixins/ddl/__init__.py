@@ -8,9 +8,9 @@ from .comment import PostgresCommentMixin
 from .type import PostgresTypeMixin
 
 __all__ = [
-    'PostgresPartitionMixin',
-    'PostgresIndexMixin',
-    'PostgresTriggerMixin',
-    'PostgresCommentMixin',
-    'PostgresTypeMixin',
+    "PostgresPartitionMixin",
+    "PostgresIndexMixin",
+    "PostgresTriggerMixin",
+    "PostgresCommentMixin",
+    "PostgresTypeMixin",
 ]

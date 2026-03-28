@@ -3,6 +3,7 @@
 
 This module defines the protocol for PostgreSQL-specific data type features.
 """
+
 from typing import Protocol, runtime_checkable
 
 

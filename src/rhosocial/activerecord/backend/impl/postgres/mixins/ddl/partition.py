@@ -5,6 +5,7 @@ This module provides the PostgresPartitionMixin class for handling
 PostgreSQL table partitioning operations including RANGE, LIST, and HASH
 partitioning with support for various PostgreSQL versions.
 """
+
 from typing import Any, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -49,12 +50,10 @@ class PostgresPartitionMixin:
         """Partitionwise aggregate is native feature, PG 11+."""
         return self.version >= (11, 0, 0)
 
-    def format_create_partition_statement(
-        self, expr: "CreatePartitionExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_partition_statement(self, expr: "CreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression."""
         partition_type = expr.partition_type.upper()
-        if partition_type not in ('RANGE', 'LIST', 'HASH'):
+        if partition_type not in ("RANGE", "LIST", "HASH"):
             raise ValueError(f"Invalid partition_type: {partition_type}")
 
         parts = ["CREATE TABLE"]
@@ -63,45 +62,46 @@ class PostgresPartitionMixin:
 
         # Partition name with optional schema
         if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.partition_name)}")
+            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
         else:
             parts.append(self.format_identifier(expr.partition_name))
 
         # PARTITION OF parent
         if expr.schema:
-            parts.append(f"PARTITION OF {self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.parent_table)}")
+            parts.append(
+                f"PARTITION OF {self.format_identifier(expr.schema)}.{self.format_identifier(expr.parent_table)}"
+            )
         else:
             parts.append(f"PARTITION OF {self.format_identifier(expr.parent_table)}")
 
         # FOR VALUES clause
         parts.append("FOR VALUES")
 
-        if partition_type == 'RANGE':
-            if 'default' in expr.partition_values and expr.partition_values['default']:
+        if partition_type == "RANGE":
+            if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
-                from_val = expr.partition_values.get('from')
-                to_val = expr.partition_values.get('to')
+                from_val = expr.partition_values.get("from")
+                to_val = expr.partition_values.get("to")
                 if from_val is None or to_val is None:
                     raise ValueError("RANGE partition requires 'from' and 'to' values")
-                parts.append(f"FROM ({self._format_partition_value(from_val)}) "
-                           f"TO ({self._format_partition_value(to_val)})")
+                parts.append(
+                    f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})"
+                )
 
-        elif partition_type == 'LIST':
-            if 'default' in expr.partition_values and expr.partition_values['default']:
+        elif partition_type == "LIST":
+            if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
-                values = expr.partition_values.get('values', [])
+                values = expr.partition_values.get("values", [])
                 if not values:
                     raise ValueError("LIST partition requires 'values' list")
                 vals_str = ", ".join(self._format_partition_value(v) for v in values)
                 parts.append(f"IN ({vals_str})")
 
-        elif partition_type == 'HASH':
-            modulus = expr.partition_values.get('modulus')
-            remainder = expr.partition_values.get('remainder')
+        elif partition_type == "HASH":
+            modulus = expr.partition_values.get("modulus")
+            remainder = expr.partition_values.get("remainder")
             if modulus is None or remainder is None:
                 raise ValueError("HASH partition requires 'modulus' and 'remainder'")
             if not self.supports_hash_partitioning():
@@ -133,22 +133,19 @@ class PostgresPartitionMixin:
             return "NULL"
         elif isinstance(value, str):
             upper_val = value.upper()
-            if upper_val == 'MAXVALUE' or upper_val == 'MINVALUE':
+            if upper_val == "MAXVALUE" or upper_val == "MINVALUE":
                 return upper_val
             # Add quotes around string values
             return f"'{value}'"
         else:
             return str(value)
 
-    def format_detach_partition_statement(
-        self, expr: "DetachPartitionExpression"
-    ) -> Tuple[str, tuple]:
+    def format_detach_partition_statement(self, expr: "DetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression."""
         parts = ["ALTER TABLE"]
 
         if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.parent_table)}")
+            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.parent_table)}")
         else:
             parts.append(self.format_identifier(expr.parent_table))
 
@@ -160,8 +157,7 @@ class PostgresPartitionMixin:
             parts.append("DETACH PARTITION")
 
         if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.partition_name)}")
+            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
         else:
             parts.append(self.format_identifier(expr.partition_name))
 
@@ -172,23 +168,19 @@ class PostgresPartitionMixin:
 
         return (" ".join(parts), ())
 
-    def format_attach_partition_statement(
-        self, expr: "AttachPartitionExpression"
-    ) -> Tuple[str, tuple]:
+    def format_attach_partition_statement(self, expr: "AttachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression."""
         parts = ["ALTER TABLE"]
 
         if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.parent_table)}")
+            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.parent_table)}")
         else:
             parts.append(self.format_identifier(expr.parent_table))
 
         parts.append("ATTACH PARTITION")
 
         if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}."
-                        f"{self.format_identifier(expr.partition_name)}")
+            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
         else:
             parts.append(self.format_identifier(expr.partition_name))
 
@@ -196,20 +188,19 @@ class PostgresPartitionMixin:
         parts.append("FOR VALUES")
 
         partition_type = expr.partition_type.upper()
-        if partition_type == 'RANGE':
-            from_val = expr.partition_values.get('from')
-            to_val = expr.partition_values.get('to')
-            parts.append(f"FROM ({self._format_partition_value(from_val)}) "
-                       f"TO ({self._format_partition_value(to_val)})")
+        if partition_type == "RANGE":
+            from_val = expr.partition_values.get("from")
+            to_val = expr.partition_values.get("to")
+            parts.append(f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})")
 
-        elif partition_type == 'LIST':
-            values = expr.partition_values.get('values', [])
+        elif partition_type == "LIST":
+            values = expr.partition_values.get("values", [])
             vals_str = ", ".join(self._format_partition_value(v) for v in values)
             parts.append(f"IN ({vals_str})")
 
-        elif partition_type == 'HASH':
-            modulus = expr.partition_values.get('modulus')
-            remainder = expr.partition_values.get('remainder')
+        elif partition_type == "HASH":
+            modulus = expr.partition_values.get("modulus")
+            remainder = expr.partition_values.get("remainder")
             parts.append(f"WITH (MODULUS {modulus}, REMAINDER {remainder})")
 
         return (" ".join(parts), ())

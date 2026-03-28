@@ -6,7 +6,7 @@ from .stored_procedure import PostgresStoredProcedureSupport
 from .extended_statistics import PostgresExtendedStatisticsSupport
 
 __all__ = [
-    'PostgresVacuumSupport',
-    'PostgresStoredProcedureSupport',
-    'PostgresExtendedStatisticsSupport',
+    "PostgresVacuumSupport",
+    "PostgresStoredProcedureSupport",
+    "PostgresExtendedStatisticsSupport",
 ]

@@ -4,6 +4,7 @@
 This module provides the PostgresVacuumMixin class for VACUUM and ANALYZE
 statement generation with PostgreSQL-specific options.
 """
+
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ class PostgresVacuumMixin:
             if not self.supports_index_cleanup_auto():
                 raise ValueError("INDEX_CLEANUP requires PostgreSQL 14+")
             index_cleanup = expr.index_cleanup.upper()
-            if index_cleanup not in ('AUTO', 'ON', 'OFF'):
+            if index_cleanup not in ("AUTO", "ON", "OFF"):
                 raise ValueError("index_cleanup must be 'AUTO', 'ON', or 'OFF'")
             options.append(f"INDEX_CLEANUP {index_cleanup}")
 

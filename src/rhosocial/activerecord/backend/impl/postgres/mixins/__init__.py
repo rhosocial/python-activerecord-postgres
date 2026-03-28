@@ -49,38 +49,43 @@ from .data_type import PostgresDataTypeMixin
 from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 
+# Introspection capability mixin
+from .introspection import PostgresIntrospectionCapabilityMixin
+
 __all__ = [
     # Core mixins
-    'PostgresExtensionMixin',
-    'PostgresMaterializedViewMixin',
-    'PostgresTableMixin',
+    "PostgresExtensionMixin",
+    "PostgresMaterializedViewMixin",
+    "PostgresTableMixin",
     # DDL mixins
-    'PostgresPartitionMixin',
-    'PostgresIndexMixin',
-    'PostgresTriggerMixin',
-    'PostgresCommentMixin',
-    'PostgresTypeMixin',
+    "PostgresPartitionMixin",
+    "PostgresIndexMixin",
+    "PostgresTriggerMixin",
+    "PostgresCommentMixin",
+    "PostgresTypeMixin",
     # DML mixins
-    'PostgresVacuumMixin',
-    'PostgresStoredProcedureMixin',
-    'PostgresExtendedStatisticsMixin',
+    "PostgresVacuumMixin",
+    "PostgresStoredProcedureMixin",
+    "PostgresExtendedStatisticsMixin",
     # Type mixins
-    'EnumTypeMixin',
-    'TypesDataTypeMixin',
-    'MultirangeMixin',
+    "EnumTypeMixin",
+    "TypesDataTypeMixin",
+    "MultirangeMixin",
     # Extension mixins
-    'PostgresPgvectorMixin',
-    'PostgresPostGISMixin',
-    'PostgresHstoreMixin',
-    'PostgresLtreeMixin',
-    'PostgresIntarrayMixin',
-    'PostgresPgTrgmMixin',
-    'PostgresEarthdistanceMixin',
-    'PostgresTablefuncMixin',
-    'PostgresPgStatStatementsMixin',
+    "PostgresPgvectorMixin",
+    "PostgresPostGISMixin",
+    "PostgresHstoreMixin",
+    "PostgresLtreeMixin",
+    "PostgresIntarrayMixin",
+    "PostgresPgTrgmMixin",
+    "PostgresEarthdistanceMixin",
+    "PostgresTablefuncMixin",
+    "PostgresPgStatStatementsMixin",
     # Additional mixins
-    'PostgresQueryOptimizationMixin',
-    'PostgresDataTypeMixin',
-    'PostgresSQLSyntaxMixin',
-    'PostgresLogicalReplicationMixin',
+    "PostgresQueryOptimizationMixin",
+    "PostgresDataTypeMixin",
+    "PostgresSQLSyntaxMixin",
+    "PostgresLogicalReplicationMixin",
+    # Introspection capability mixin
+    "PostgresIntrospectionCapabilityMixin",
 ]

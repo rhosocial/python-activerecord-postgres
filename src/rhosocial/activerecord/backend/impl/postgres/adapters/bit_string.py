@@ -12,6 +12,7 @@ Bit String Types:
 
 Bit strings are strings of 1s and 0s used for bit masks and bit manipulation.
 """
+
 from typing import Any, Dict, Optional, Set, Type
 
 from ..types.bit_string import PostgresBitString
@@ -35,12 +36,7 @@ class PostgresBitStringAdapter:
             PostgresBitString: {str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL bit string.
 
         Args:
@@ -60,22 +56,19 @@ class PostgresBitStringAdapter:
 
         if isinstance(value, str):
             # Validate it's a valid bit string
-            if not all(c in '01' for c in value):
+            if not all(c in "01" for c in value):
                 raise ValueError(f"Invalid bit string: {value}")
             return f"B'{value}'"
 
         if isinstance(value, int):
-            length = options.get('length') if options else None
+            length = options.get("length") if options else None
             bs = PostgresBitString.from_int(value, length)
             return bs.to_postgres_string()
 
         raise TypeError(f"Cannot convert {type(value).__name__} to bit string")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresBitString]:
         """Convert PostgreSQL bit string to Python object.
 
@@ -102,23 +95,13 @@ class PostgresBitStringAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to PostgresBitString")
 
-    def to_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def to_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
-    def from_database_batch(
-        self,
-        values: list,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> list:
+    def from_database_batch(self, values: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresBitStringAdapter']
+__all__ = ["PostgresBitStringAdapter"]

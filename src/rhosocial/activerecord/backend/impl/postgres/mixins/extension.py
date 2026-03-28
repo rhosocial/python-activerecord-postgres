@@ -5,7 +5,7 @@ This module provides functionality to detect and manage PostgreSQL extensions,
 including version checking and feature support verification.
 """
 
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional
 
 from ..protocols.base import PostgresExtensionInfo
 
@@ -17,119 +17,119 @@ class PostgresExtensionMixin:
     """
 
     KNOWN_EXTENSIONS = {
-        'postgis': {
-            'min_version': '2.0',
-            'description': 'PostGIS spatial database extension',
-            'category': 'spatial',
-            'documentation': 'https://postgis.net/docs/',
-            'repository': 'https://postgis.net/',
-            'features': {
-                'geometry_type': {'min_version': '2.0'},
-                'geography_type': {'min_version': '2.0'},
-                'spatial_index': {'min_version': '2.0'},
-                'spatial_functions': {'min_version': '2.0'},
+        "postgis": {
+            "min_version": "2.0",
+            "description": "PostGIS spatial database extension",
+            "category": "spatial",
+            "documentation": "https://postgis.net/docs/",
+            "repository": "https://postgis.net/",
+            "features": {
+                "geometry_type": {"min_version": "2.0"},
+                "geography_type": {"min_version": "2.0"},
+                "spatial_index": {"min_version": "2.0"},
+                "spatial_functions": {"min_version": "2.0"},
             },
         },
-        'vector': {
-            'min_version': '0.1',
-            'description': 'pgvector vector similarity search',
-            'category': 'vector',
-            'documentation': 'https://github.com/pgvector/pgvector',
-            'repository': 'https://github.com/pgvector/pgvector',
-            'features': {
-                'type': {'min_version': '0.1'},
-                'similarity_search': {'min_version': '0.1'},
-                'ivfflat_index': {'min_version': '0.1'},
-                'hnsw_index': {'min_version': '0.5.0'},
+        "vector": {
+            "min_version": "0.1",
+            "description": "pgvector vector similarity search",
+            "category": "vector",
+            "documentation": "https://github.com/pgvector/pgvector",
+            "repository": "https://github.com/pgvector/pgvector",
+            "features": {
+                "type": {"min_version": "0.1"},
+                "similarity_search": {"min_version": "0.1"},
+                "ivfflat_index": {"min_version": "0.1"},
+                "hnsw_index": {"min_version": "0.5.0"},
             },
         },
-        'pg_trgm': {
-            'min_version': '1.0',
-            'description': 'Trigram similarity search',
-            'category': 'text',
-            'documentation': 'https://www.postgresql.org/docs/current/pgtrgm.html',
-            'features': {
-                'similarity': {'min_version': '1.0'},
-                'index': {'min_version': '1.0'},
+        "pg_trgm": {
+            "min_version": "1.0",
+            "description": "Trigram similarity search",
+            "category": "text",
+            "documentation": "https://www.postgresql.org/docs/current/pgtrgm.html",
+            "features": {
+                "similarity": {"min_version": "1.0"},
+                "index": {"min_version": "1.0"},
             },
         },
-        'hstore': {
-            'min_version': '1.0',
-            'description': 'Key-value pair storage',
-            'category': 'data',
-            'documentation': 'https://www.postgresql.org/docs/current/hstore.html',
-            'features': {
-                'type': {'min_version': '1.0'},
-                'operators': {'min_version': '1.0'},
+        "hstore": {
+            "min_version": "1.0",
+            "description": "Key-value pair storage",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/hstore.html",
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
             },
         },
-        'uuid-ossp': {
-            'min_version': '1.0',
-            'description': 'UUID generation functions',
-            'category': 'utility',
-            'documentation': 'https://www.postgresql.org/docs/current/uuid-ossp.html',
-            'features': {},
+        "uuid-ossp": {
+            "min_version": "1.0",
+            "description": "UUID generation functions",
+            "category": "utility",
+            "documentation": "https://www.postgresql.org/docs/current/uuid-ossp.html",
+            "features": {},
         },
-        'pgcrypto': {
-            'min_version': '1.0',
-            'description': 'Cryptographic functions',
-            'category': 'security',
-            'documentation': 'https://www.postgresql.org/docs/current/pgcrypto.html',
-            'features': {},
+        "pgcrypto": {
+            "min_version": "1.0",
+            "description": "Cryptographic functions",
+            "category": "security",
+            "documentation": "https://www.postgresql.org/docs/current/pgcrypto.html",
+            "features": {},
         },
-        'ltree': {
-            'min_version': '1.0',
-            'description': 'Label tree for hierarchical data',
-            'category': 'data',
-            'documentation': 'https://www.postgresql.org/docs/current/ltree.html',
-            'features': {
-                'type': {'min_version': '1.0'},
-                'operators': {'min_version': '1.0'},
-                'index': {'min_version': '1.0'},
+        "ltree": {
+            "min_version": "1.0",
+            "description": "Label tree for hierarchical data",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/ltree.html",
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
+                "index": {"min_version": "1.0"},
             },
         },
-        'intarray': {
-            'min_version': '1.0',
-            'description': 'Integer array operators and indexes',
-            'category': 'data',
-            'documentation': 'https://www.postgresql.org/docs/current/intarray.html',
-            'features': {
-                'operators': {'min_version': '1.0'},
-                'functions': {'min_version': '1.0'},
-                'index': {'min_version': '1.0'},
+        "intarray": {
+            "min_version": "1.0",
+            "description": "Integer array operators and indexes",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/intarray.html",
+            "features": {
+                "operators": {"min_version": "1.0"},
+                "functions": {"min_version": "1.0"},
+                "index": {"min_version": "1.0"},
             },
         },
-        'earthdistance': {
-            'min_version': '1.0',
-            'description': 'Great-circle distance calculations',
-            'category': 'spatial',
-            'documentation': 'https://www.postgresql.org/docs/current/earthdistance.html',
-            'dependencies': ['cube'],
-            'features': {
-                'type': {'min_version': '1.0'},
-                'operators': {'min_version': '1.0'},
+        "earthdistance": {
+            "min_version": "1.0",
+            "description": "Great-circle distance calculations",
+            "category": "spatial",
+            "documentation": "https://www.postgresql.org/docs/current/earthdistance.html",
+            "dependencies": ["cube"],
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
             },
         },
-        'tablefunc': {
-            'min_version': '1.0',
-            'description': 'Table functions (crosstab, connectby)',
-            'category': 'utility',
-            'documentation': 'https://www.postgresql.org/docs/current/tablefunc.html',
-            'features': {
-                'crosstab': {'min_version': '1.0'},
-                'connectby': {'min_version': '1.0'},
-                'normal_rand': {'min_version': '1.0'},
+        "tablefunc": {
+            "min_version": "1.0",
+            "description": "Table functions (crosstab, connectby)",
+            "category": "utility",
+            "documentation": "https://www.postgresql.org/docs/current/tablefunc.html",
+            "features": {
+                "crosstab": {"min_version": "1.0"},
+                "connectby": {"min_version": "1.0"},
+                "normal_rand": {"min_version": "1.0"},
             },
         },
-        'pg_stat_statements': {
-            'min_version': '1.0',
-            'description': 'Query execution statistics',
-            'category': 'monitoring',
-            'documentation': 'https://www.postgresql.org/docs/current/pgstatstatements.html',
-            'requires_preload': True,
-            'features': {
-                'view': {'min_version': '1.0'},
-                'reset': {'min_version': '1.0'},
+        "pg_stat_statements": {
+            "min_version": "1.0",
+            "description": "Query execution statistics",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/pgstatstatements.html",
+            "requires_preload": True,
+            "features": {
+                "view": {"min_version": "1.0"},
+                "reset": {"min_version": "1.0"},
             },
         },
     }
@@ -157,19 +157,13 @@ class PostgresExtensionMixin:
             for row in cursor.fetchall():
                 ext_name = row[0]
                 extensions[ext_name] = PostgresExtensionInfo(
-                    name=ext_name,
-                    installed=True,
-                    version=row[1],
-                    schema=row[2]
+                    name=ext_name, installed=True, version=row[1], schema=row[2]
                 )
 
             # Add known but not installed extensions
             for known_ext in self.KNOWN_EXTENSIONS:
                 if known_ext not in extensions:
-                    extensions[known_ext] = PostgresExtensionInfo(
-                        name=known_ext,
-                        installed=False
-                    )
+                    extensions[known_ext] = PostgresExtensionInfo(name=known_ext, installed=False)
 
             return extensions
         finally:
@@ -177,21 +171,21 @@ class PostgresExtensionMixin:
 
     def is_extension_installed(self, name: str) -> bool:
         """Check if extension is installed."""
-        if not hasattr(self, '_extensions'):
+        if not hasattr(self, "_extensions"):
             return False
         info = self._extensions.get(name)
         return info.installed if info else False
 
     def get_extension_version(self, name: str) -> Optional[str]:
         """Get extension version."""
-        if not hasattr(self, '_extensions'):
+        if not hasattr(self, "_extensions"):
             return None
         info = self._extensions.get(name)
         return info.version if info else None
 
     def get_extension_info(self, name: str) -> Optional[PostgresExtensionInfo]:
         """Get extension info."""
-        if not hasattr(self, '_extensions'):
+        if not hasattr(self, "_extensions"):
             return None
         return self._extensions.get(name)
 
@@ -219,18 +213,18 @@ class PostgresExtensionMixin:
 
         # Get extension info from KNOWN_EXTENSIONS
         ext_config = self.KNOWN_EXTENSIONS.get(ext_name)
-        if not ext_config or 'features' not in ext_config:
+        if not ext_config or "features" not in ext_config:
             # No feature requirements defined, assume supported if installed
             return True
 
         # Get feature requirements
-        feature_config = ext_config.get('features', {}).get(feature_name)
+        feature_config = ext_config.get("features", {}).get(feature_name)
         if not feature_config:
             # Feature not defined, assume supported if extension installed
             return True
 
         # Check version requirement
-        min_version = feature_config.get('min_version')
+        min_version = feature_config.get("min_version")
         if not min_version:
             # No version requirement, assume supported
             return True
@@ -257,11 +251,11 @@ class PostgresExtensionMixin:
         if not ext_config:
             return None
 
-        feature_config = ext_config.get('features', {}).get(feature_name)
+        feature_config = ext_config.get("features", {}).get(feature_name)
         if not feature_config:
             return None
 
-        return feature_config.get('min_version')
+        return feature_config.get("min_version")
 
     def _compare_versions(self, v1: str, v2: str) -> int:
         """Compare version numbers.
@@ -269,14 +263,15 @@ class PostgresExtensionMixin:
         Returns:
             Positive if v1 > v2, negative if v1 < v2, 0 if equal
         """
+
         def parse_version(v):
             parts = []
-            for part in v.split('.'):
+            for part in v.split("."):
                 try:
                     parts.append(int(part))
                 except ValueError:
                     # Handle versions like "0.5.0.dev"
-                    num = ''.join(c for c in part if c.isdigit())
+                    num = "".join(c for c in part if c.isdigit())
                     parts.append(int(num) if num else 0)
             return parts
 

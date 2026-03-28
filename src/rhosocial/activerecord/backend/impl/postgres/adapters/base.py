@@ -4,6 +4,7 @@ Base PostgreSQL type adapters.
 
 This module contains basic type adapters for PostgreSQL.
 """
+
 import json
 from enum import Enum as PythonEnum
 from typing import Any, Dict, List, Type, Union, Optional, Set
@@ -20,6 +21,7 @@ class PostgresListAdapter(SQLTypeAdapter):
     This adapter does not perform any conversion - psycopg handles
     Python lists natively for PostgreSQL array types.
     """
+
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
         return {list: [list]}
@@ -37,8 +39,9 @@ class PostgresListAdapter(SQLTypeAdapter):
             return value
         raise TypeError(f"Cannot convert {type(value).__name__} to list")
 
-    def to_database_batch(self, values: List[Any], target_type: Type,
-                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def to_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch conversion - psycopg handles lists natively.
 
         No per-element processing needed, just pass through.
@@ -54,8 +57,9 @@ class PostgresListAdapter(SQLTypeAdapter):
         """
         return values
 
-    def from_database_batch(self, values: List[Any], target_type: Type,
-                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def from_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch conversion from database.
 
         Args:
@@ -77,6 +81,7 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
     When reading from DB, psycopg returns dict. When target type is str,
     we need to serialize back to JSON string.
     """
+
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
         return {dict: [Jsonb]}
@@ -86,8 +91,9 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
             return None
         return Jsonb(value)
 
-    def from_database(self, value: Any, target_type: Type,
-                      options: Optional[Dict[str, Any]] = None) -> Union[dict, list]:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> Union[dict, list]:
         if value is None:
             return None
         # For string target type, serialize dict/list back to JSON string
@@ -105,8 +111,9 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
         # In case it's a string representation
         return json.loads(value)
 
-    def to_database_batch(self, values: List[Any], target_type: Type,
-                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def to_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch JSON conversion to database format.
 
         Creates Jsonb wrappers for all values in a single pass,
@@ -128,8 +135,9 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
                 result.append(Jsonb(value))
         return result
 
-    def from_database_batch(self, values: List[Any], target_type: Type,
-                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def from_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch JSON deserialization from database.
 
         Args:
@@ -155,15 +163,16 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
         return result
 
 
-
 class PostgresNetworkAddressAdapter(SQLTypeAdapter):
     """
     Adapts Python ipaddress objects to PostgreSQL network types.
     """
+
     @property
     def supported_types(self) -> Dict[Type, List[Any]]:
         try:
             import ipaddress
+
             return {
                 ipaddress.IPv4Address: [str],
                 ipaddress.IPv6Address: [str],
@@ -183,17 +192,20 @@ class PostgresNetworkAddressAdapter(SQLTypeAdapter):
             return None
         try:
             import ipaddress
+
             return ipaddress.ip_address(value)
         except (ImportError, ValueError):
             try:
                 # try network
                 import ipaddress
+
                 return ipaddress.ip_network(value)
             except (ImportError, ValueError):
                 return value
 
-    def to_database_batch(self, values: List[Any], target_type: Type,
-                          options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def to_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch network address conversion.
 
         Converts all values to strings in a single pass.
@@ -214,8 +226,9 @@ class PostgresNetworkAddressAdapter(SQLTypeAdapter):
                 result.append(str(value))
         return result
 
-    def from_database_batch(self, values: List[Any], target_type: Type,
-                            options: Optional[Dict[str, Any]] = None) -> List[Any]:
+    def from_database_batch(
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
+    ) -> List[Any]:
         """Optimized batch network address parsing from database.
 
         Args:
@@ -227,6 +240,7 @@ class PostgresNetworkAddressAdapter(SQLTypeAdapter):
             List of ipaddress objects or strings
         """
         import ipaddress
+
         result = []
         for value in values:
             if value is None:
@@ -258,12 +272,7 @@ class PostgresEnumAdapter(SQLTypeAdapter):
         """Return supported type mappings."""
         return {str: {str}}
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL enum value.
 
         Args:
@@ -287,21 +296,17 @@ class PostgresEnumAdapter(SQLTypeAdapter):
             raise TypeError(f"Cannot convert {type(value).__name__} to enum value")
 
         # Validate if enum_type provided
-        if options and 'enum_type' in options:
+        if options and "enum_type" in options:
             from ..types import PostgresEnumType
-            enum_type = options['enum_type']
+
+            enum_type = options["enum_type"]
             if isinstance(enum_type, PostgresEnumType):
                 if not enum_type.validate_value(result):
                     raise ValueError(f"Invalid enum value: '{result}'")
 
         return result
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert PostgreSQL enum value to Python string.
 
         Args:
@@ -318,8 +323,8 @@ class PostgresEnumAdapter(SQLTypeAdapter):
 
         # If already a string, check if we should convert to Python Enum
         if isinstance(value, str):
-            if options and 'enum_class' in options:
-                enum_class = options['enum_class']
+            if options and "enum_class" in options:
+                enum_class = options["enum_class"]
                 if issubclass(enum_class, PythonEnum):
                     return enum_class[value]
             return value
@@ -327,19 +332,13 @@ class PostgresEnumAdapter(SQLTypeAdapter):
         raise TypeError(f"Cannot convert {type(value).__name__} from enum")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
