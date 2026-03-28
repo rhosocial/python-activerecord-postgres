@@ -455,10 +455,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Uses pg_trigger, pg_class, pg_namespace, and pg_proc to query trigger metadata.
         The tgisinternal = false condition excludes system-generated triggers.
 
-        Trigger timing is encoded in tgtype:
-        - Bit 1: BEFORE (2)
-        - Bit 2: AFTER (4)
-        - Bit 3: INSTEAD OF (8)
+        Trigger timing is encoded in tgtype bitmask:
+        - Bit 1 (2): BEFORE trigger
+        - Bit 6 (64): INSTEAD OF trigger
+        - Neither: AFTER trigger (default)
+
+        Note: Bits 2-5 encode trigger events (INSERT, DELETE, UPDATE, TRUNCATE),
+        not timing.
 
         Args:
             expr: Trigger list expression with parameters.
@@ -475,9 +478,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 t.tgname as trigger_name,
                 c.relname as table_name,
                 CASE
+                    WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
                     WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
-                    WHEN t.tgtype::integer & 4 = 4 THEN 'AFTER'
-                    WHEN t.tgtype::integer & 8 = 8 THEN 'INSTEAD OF'
+                    ELSE 'AFTER'
                 END as timing,
                 p.proname as function_name,
                 t.tgenabled as enabled,
@@ -522,9 +525,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 t.tgname as trigger_name,
                 c.relname as table_name,
                 CASE
+                    WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
                     WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
-                    WHEN t.tgtype::integer & 4 = 4 THEN 'AFTER'
-                    WHEN t.tgtype::integer & 8 = 8 THEN 'INSTEAD OF'
+                    ELSE 'AFTER'
                 END as timing,
                 p.proname as function_name,
                 t.tgenabled as enabled,
