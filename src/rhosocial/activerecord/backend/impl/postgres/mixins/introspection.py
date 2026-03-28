@@ -205,7 +205,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         params_list = [schema]
 
         if not include_system:
-            sql += " AND c.relname NOT LIKE 'pg_%'"
+            sql += " AND c.relname NOT LIKE 'pg_%%'"
 
         if table_type:
             if table_type == "BASE TABLE":
@@ -417,7 +417,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         params_list = [schema]
 
         if not include_system:
-            sql += " AND c.relname NOT LIKE 'pg_%'"
+            sql += " AND c.relname NOT LIKE 'pg_%%'"
 
         sql += " ORDER BY c.relname"
 
