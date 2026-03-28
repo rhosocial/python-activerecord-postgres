@@ -33,9 +33,7 @@ class PostgresCommentSupport(Protocol):
     - All versions
     """
 
-    def format_comment_statement(
-        self, expr: "CommentExpression"
-    ) -> Tuple[str, tuple]:
+    def format_comment_statement(self, expr: "CommentExpression") -> Tuple[str, tuple]:
         """Format COMMENT ON statement.
 
         Args:

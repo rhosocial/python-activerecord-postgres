@@ -6,6 +6,7 @@ for storing key-value pairs within a single PostgreSQL value.
 
 See: https://www.postgresql.org/docs/current/hstore.html
 """
+
 from typing import Protocol, runtime_checkable
 
 

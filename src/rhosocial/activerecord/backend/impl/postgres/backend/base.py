@@ -4,6 +4,7 @@
 This module provides the base mixin class for PostgreSQL backend implementations,
 containing methods that are shared between sync and async backends.
 """
+
 from typing import Dict, Optional, Tuple, Type, TYPE_CHECKING
 import logging
 
@@ -25,11 +26,7 @@ class PostgresBackendMixin:
     - self.config: Connection configuration
     """
 
-    def _prepare_sql_and_params(
-        self,
-        sql: str,
-        params: Optional[Tuple]
-    ) -> Tuple[str, Optional[Tuple]]:
+    def _prepare_sql_and_params(self, sql: str, params: Optional[Tuple]) -> Tuple[str, Optional[Tuple]]:
         """
         Prepare SQL and parameters for PostgreSQL execution.
 
@@ -39,19 +36,20 @@ class PostgresBackendMixin:
             return sql, None
 
         # Replace '?' placeholders with '%s' for PostgreSQL
-        prepared_sql = sql.replace('?', '%s')
+        prepared_sql = sql.replace("?", "%s")
         return prepared_sql, params
 
     def create_expression(self, expression_str: str):
         """Create an expression object for raw SQL expressions."""
         from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+
         return RawSQLExpression(self.dialect, expression_str)
 
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""
-        return not getattr(self.config, 'autocommit', False)
+        return not getattr(self.config, "autocommit", False)
 
-    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple['SQLTypeAdapter', Type]]:
+    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple["SQLTypeAdapter", Type]]:
         """
         [Backend Implementation] Provides default type adapter suggestions for PostgreSQL.
 
@@ -73,7 +71,7 @@ class PostgresBackendMixin:
             mapping conflicts with the base string handling. Users must explicitly
             specify adapters for these types when needed.
         """
-        suggestions: Dict[Type, Tuple['SQLTypeAdapter', Type]] = {}
+        suggestions: Dict[Type, Tuple["SQLTypeAdapter", Type]] = {}
 
         # Define a list of desired Python type to DB driver type mappings.
         # This list reflects types seen in test fixtures and common usage,
@@ -94,18 +92,29 @@ class PostgresBackendMixin:
 
         # Import PostgreSQL-specific types
         from ..types.range import PostgresRange, PostgresMultirange
-        from ..types.geometric import (
-            Point, Line, LineSegment, Box, Path, Polygon, Circle
-        )
+        from ..types.geometric import Point, Line, LineSegment, Box, Path, Polygon, Circle
         from ..types.text_search import PostgresTsVector, PostgresTsQuery
         from ..types.monetary import PostgresMoney
         from ..types.network_address import PostgresMacaddr, PostgresMacaddr8
         from ..types.pg_lsn import PostgresLsn
         from ..types.json import PostgresJsonPath
         from ..types.object_identifier import (
-            OID, RegClass, RegType, RegProc, RegProcedure, RegOper, RegOperator,
-            RegConfig, RegDictionary, RegNamespace, RegRole, RegCollation,
-            XID, XID8, CID, TID
+            OID,
+            RegClass,
+            RegType,
+            RegProc,
+            RegProcedure,
+            RegOper,
+            RegOperator,
+            RegConfig,
+            RegDictionary,
+            RegNamespace,
+            RegRole,
+            RegCollation,
+            XID,
+            XID8,
+            CID,
+            TID,
         )
 
         type_mappings = [
@@ -121,11 +130,9 @@ class PostgresBackendMixin:
             (dict, str),  # Python dict -> DB driver str (PostgreSQL JSON/JSONB)
             (list, list),  # Python list -> DB driver list (PostgreSQL arrays - psycopg handles natively)
             (Enum, str),  # Python Enum -> DB driver str (PostgreSQL TEXT)
-
             # === PostgreSQL Range Types ===
             (PostgresRange, str),  # PostgreSQL range types (int4range, daterange, etc.)
             (PostgresMultirange, str),  # PostgreSQL multirange types (PG 14+)
-
             # === PostgreSQL Geometric Types ===
             # All geometric types map to str representation
             (Point, str),  # 2D point (x, y)
@@ -135,24 +142,18 @@ class PostgresBackendMixin:
             (Path, str),  # Sequence of points (open or closed)
             (Polygon, str),  # Closed path
             (Circle, str),  # Circle <(x,y),r>
-
             # === PostgreSQL Text Search Types ===
             (PostgresTsVector, str),  # Text search vector
             (PostgresTsQuery, str),  # Text search query
-
             # === PostgreSQL Monetary Type ===
             (PostgresMoney, str),  # MONEY type with locale-aware formatting
-
             # === PostgreSQL Network Address Types ===
             (PostgresMacaddr, str),  # 6-byte MAC address
             (PostgresMacaddr8, str),  # 8-byte MAC address
-
             # === PostgreSQL pg_lsn Type ===
             (PostgresLsn, str),  # Log Sequence Number
-
             # === PostgreSQL JSON Path Type ===
             (PostgresJsonPath, str),  # JSON path expression
-
             # === PostgreSQL Object Identifier Types ===
             (OID, int),  # Unsigned 4-byte integer for internal object identification
             (RegClass, str),  # Relation (table/view/sequence) name
@@ -166,15 +167,12 @@ class PostgresBackendMixin:
             (RegNamespace, str),  # Namespace (schema) name
             (RegRole, str),  # Role (user/group) name
             (RegCollation, str),  # Collation name
-
             # === PostgreSQL Transaction/Command Identifiers ===
             (XID, int),  # 32-bit transaction identifier
             (XID8, int),  # 64-bit transaction identifier (PG 13+)
             (CID, int),  # Command identifier
-
             # === PostgreSQL Tuple Identifier ===
             (TID, str),  # Tuple identifier (block number, offset)
-
             # Note: PostgresXML and PostgresBitString are NOT included here
             # because they both map to str, which conflicts with base string handling.
             # Users must explicitly specify adapters for these types.
@@ -187,10 +185,13 @@ class PostgresBackendMixin:
                 suggestions[py_type] = (adapter, db_type)
             else:
                 # Log a debug message if a specific adapter is expected but not found.
-                self.log(logging.DEBUG, f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
-                      "Suggestion will not be provided for this type.")
+                self.log(
+                    logging.DEBUG,
+                    f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "
+                    "Suggestion will not be provided for this type.",
+                )
 
         return suggestions
 
 
-__all__ = ['PostgresBackendMixin']
+__all__ = ["PostgresBackendMixin"]

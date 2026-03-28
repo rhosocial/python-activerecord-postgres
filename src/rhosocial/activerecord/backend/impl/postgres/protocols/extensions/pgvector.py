@@ -4,6 +4,7 @@
 This module defines the protocol for pgvector vector similarity search
 functionality in PostgreSQL.
 """
+
 from typing import Protocol, runtime_checkable
 
 

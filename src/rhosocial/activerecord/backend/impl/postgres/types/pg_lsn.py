@@ -27,11 +27,12 @@ Operations supported:
 For type adapter (conversion between Python and database),
 see adapters.pg_lsn.PostgresLsnAdapter.
 """
+
 from dataclasses import dataclass
 import re
 
 
-_LSN_PATTERN = re.compile(r'^([0-9A-Fa-f]+)/([0-9A-Fa-f]+)$')
+_LSN_PATTERN = re.compile(r"^([0-9A-Fa-f]+)/([0-9A-Fa-f]+)$")
 
 
 @dataclass
@@ -49,6 +50,7 @@ class PostgresLsn:
         PostgresLsn(123456789)  # Create from integer
         PostgresLsn.from_string('16/B374D848')
     """
+
     value: int
 
     def __post_init__(self):
@@ -61,7 +63,7 @@ class PostgresLsn:
             raise ValueError(f"LSN value exceeds 64-bit range: {self.value}")
 
     @classmethod
-    def from_string(cls, lsn_str: str) -> 'PostgresLsn':
+    def from_string(cls, lsn_str: str) -> "PostgresLsn":
         """Parse LSN from string format (e.g., '16/B374D848').
 
         Args:
@@ -166,7 +168,7 @@ class PostgresLsn:
             return other - self.value
         return NotImplemented
 
-    def __add__(self, other: object) -> 'PostgresLsn':
+    def __add__(self, other: object) -> "PostgresLsn":
         """Add bytes to LSN to get new position.
 
         In PostgreSQL, LSN + integer returns a new LSN position.
@@ -184,13 +186,13 @@ class PostgresLsn:
         if isinstance(other, int):
             new_value = self.value + other
             if new_value < 0:
-                raise ValueError(f"LSN addition would result in negative value")
+                raise ValueError("LSN addition would result in negative value")
             if new_value > 0xFFFFFFFFFFFFFFFF:
-                raise ValueError(f"LSN addition exceeds 64-bit range")
+                raise ValueError("LSN addition exceeds 64-bit range")
             return PostgresLsn(new_value)
         return NotImplemented
 
-    def __radd__(self, other: object) -> 'PostgresLsn':
+    def __radd__(self, other: object) -> "PostgresLsn":
         """Reverse addition (int + LSN)."""
         return self.__add__(other)
 
@@ -212,4 +214,4 @@ class PostgresLsn:
         return self.value & 0xFFFFFFFF
 
 
-__all__ = ['PostgresLsn']
+__all__ = ["PostgresLsn"]

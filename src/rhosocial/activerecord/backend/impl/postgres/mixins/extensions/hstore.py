@@ -5,7 +5,7 @@ This module provides functionality to check hstore extension features,
 including type support and operators.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 
 class PostgresHstoreMixin:
@@ -13,11 +13,11 @@ class PostgresHstoreMixin:
 
     def supports_hstore_type(self) -> bool:
         """Check if hstore supports hstore type."""
-        return self.check_extension_feature('hstore', 'type')
+        return self.check_extension_feature("hstore", "type")
 
     def supports_hstore_operators(self) -> bool:
         """Check if hstore supports operators."""
-        return self.check_extension_feature('hstore', 'operators')
+        return self.check_extension_feature("hstore", "operators")
 
     def format_hstore_literal(self, data: Dict[str, str]) -> str:
         """Format an hstore literal value.
@@ -66,11 +66,7 @@ class PostgresHstoreMixin:
         return f"hstore(ARRAY[{', '.join(formatted_pairs)}])"
 
     def format_hstore_operator(
-        self,
-        column: str,
-        operator: str,
-        value: str,
-        right_operand: Optional[str] = None
+        self, column: str, operator: str, value: str, right_operand: Optional[str] = None
     ) -> str:
         """Format an hstore operator expression.
 
@@ -89,17 +85,16 @@ class PostgresHstoreMixin:
             >>> format_hstore_operator('data', '@>', "'a=>1'")
             "data @> 'a=>1'"
         """
-        valid_operators = ['->', '->>', '#>', '#>>', '@>', '<@', '?', '?|', '?&', '||', '-', '#-']
 
-        if operator in ('@>', '<@'):
+        if operator in ("@>", "<@"):
             return f"{column} {operator} {value}"
-        elif operator in ('?', '?|', '?&'):
+        elif operator in ("?", "?|", "?&"):
             return f"{column} {operator} {value}"
-        elif operator == '||':
+        elif operator == "||":
             return f"{column} {operator} {value}"
-        elif operator == '-':
+        elif operator == "-":
             return f"{column} {operator} {value}"
-        elif operator == '#-':
+        elif operator == "#-":
             return f"{column} {operator} {value}"
         else:
             # Default: key access operators
@@ -122,7 +117,7 @@ class PostgresHstoreMixin:
             >>> format_hstore_get_value('data', 'name', as_text=True)
             "data->>'name'"
         """
-        op = '->>' if as_text else '->'
+        op = "->>" if as_text else "->"
         return f"{column}{op}'{key}'"
 
     def format_hstore_contains_key(self, column: str, key: str) -> str:
@@ -155,7 +150,7 @@ class PostgresHstoreMixin:
             >>> format_hstore_contains_all_keys('data', ['a', 'b'])
             "data ?& ARRAY['a', 'b']"
         """
-        keys_str = ', '.join(f"'{k}'" for k in keys)
+        keys_str = ", ".join(f"'{k}'" for k in keys)
         return f"{column} ?& ARRAY[{keys_str}]"
 
     def format_hstore_contains_any_keys(self, column: str, keys: list) -> str:
@@ -172,5 +167,5 @@ class PostgresHstoreMixin:
             >>> format_hstore_contains_any_keys('data', ['a', 'b'])
             "data ?| ARRAY['a', 'b']"
         """
-        keys_str = ', '.join(f"'{k}'" for k in keys)
+        keys_str = ", ".join(f"'{k}'" for k in keys)
         return f"{column} ?| ARRAY[{keys_str}]"

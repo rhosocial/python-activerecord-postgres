@@ -9,6 +9,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 - **[Advanced Indexing](./indexing.md)**: GIN, GiST, BRIN indexes
 - **[RETURNING Clause](./returning.md)**: Get data back from DML operations
 - **[Protocol Support Matrix](./protocol_support.md)**: Comprehensive protocol support and version compatibility
+- **[Database Introspection](./introspection.md)**: Query metadata using pg_catalog
 
 ## Feature Highlights
 

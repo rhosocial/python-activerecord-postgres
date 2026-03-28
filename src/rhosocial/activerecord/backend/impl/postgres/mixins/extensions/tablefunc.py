@@ -5,7 +5,7 @@ This module provides functionality to check tablefunc extension features,
 including crosstab, connectby, and normal_rand functions.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 
 
 class PostgresTablefuncMixin:
@@ -13,21 +13,17 @@ class PostgresTablefuncMixin:
 
     def supports_tablefunc_crosstab(self) -> bool:
         """Check if tablefunc supports crosstab."""
-        return self.check_extension_feature('tablefunc', 'crosstab')
+        return self.check_extension_feature("tablefunc", "crosstab")
 
     def supports_tablefunc_connectby(self) -> bool:
         """Check if tablefunc supports connectby."""
-        return self.check_extension_feature('tablefunc', 'connectby')
+        return self.check_extension_feature("tablefunc", "connectby")
 
     def supports_tablefunc_normal_rand(self) -> bool:
         """Check if tablefunc supports normal_rand."""
-        return self.check_extension_feature('tablefunc', 'normal_rand')
+        return self.check_extension_feature("tablefunc", "normal_rand")
 
-    def format_crosstab_function(
-        self,
-        sql: str,
-        categories: Optional[str] = None
-    ) -> str:
+    def format_crosstab_function(self, sql: str, categories: Optional[str] = None) -> str:
         """Format crosstab function for pivot queries.
 
         Args:
@@ -40,7 +36,10 @@ class PostgresTablefuncMixin:
         Example:
             >>> format_crosstab_function("SELECT row_name, cat, value FROM table")
             "crosstab('SELECT row_name, cat, value FROM table')"
-            >>> format_crosstab_function("SELECT row_name, cat, value FROM table", "SELECT DISTINCT cat FROM table ORDER BY 1")
+            >>> format_crosstab_function(
+            ...     "SELECT row_name, cat, value FROM table",
+            ...     "SELECT DISTINCT cat FROM table ORDER BY 1"
+            ... )
             "crosstab('SELECT row_name, cat, value FROM table', 'SELECT DISTINCT cat FROM table ORDER BY 1')"
         """
         if categories:
@@ -54,8 +53,8 @@ class PostgresTablefuncMixin:
         parent_column: str,
         start_value: str,
         max_depth: Optional[int] = None,
-        branch_delim: str = '~',
-        order_by_column: Optional[str] = None
+        branch_delim: str = "~",
+        order_by_column: Optional[str] = None,
     ) -> str:
         """Format connectby function for hierarchical queries.
 
@@ -83,11 +82,7 @@ class PostgresTablefuncMixin:
         return f"connectby({', '.join(params)})"
 
     def format_normal_rand_function(
-        self,
-        num_values: int,
-        mean: float,
-        stddev: float,
-        seed: Optional[int] = None
+        self, num_values: int, mean: float, stddev: float, seed: Optional[int] = None
     ) -> str:
         """Format normal_rand function for random values.
 
@@ -107,10 +102,7 @@ class PostgresTablefuncMixin:
         return f"normal_rand({num_values}, {mean}, {stddev})"
 
     def format_crosstab_with_definition(
-        self,
-        source_sql: str,
-        output_columns: str,
-        categories_sql: Optional[str] = None
+        self, source_sql: str, output_columns: str, categories_sql: Optional[str] = None
     ) -> str:
         """Format crosstab function with explicit column definition.
 
@@ -137,7 +129,7 @@ class PostgresTablefuncMixin:
         parent_column: str,
         start_value: str,
         max_depth: int,
-        branch_delim: str = '~'
+        branch_delim: str = "~",
     ) -> str:
         """Format connectby function with full options.
 
@@ -154,6 +146,11 @@ class PostgresTablefuncMixin:
 
         Example:
             >>> format_connectby_full('categories', 'id', 'parent_id', '1', 5)
-            "SELECT * FROM connectby('categories', 'id', 'parent_id', '1', 5, '~') AS t(keyid text, parent_keyid text, level int, branch text, sort_column text)"
+            ("SELECT * FROM connectby('categories', 'id', 'parent_id', '1', 5, '~') "
+             "AS t(keyid text, parent_keyid text, level int, branch text, sort_column text)")
         """
-        return f"SELECT * FROM connectby('{table_name}', '{key_column}', '{parent_column}', '{start_value}', {max_depth}, '{branch_delim}') AS t(keyid text, parent_keyid text, level int, branch text)"
+        return (
+            f"SELECT * FROM connectby('{table_name}', '{key_column}', "
+            f"'{parent_column}', '{start_value}', {max_depth}, '{branch_delim}') "
+            f"AS t(keyid text, parent_keyid text, level int, branch text)"
+        )

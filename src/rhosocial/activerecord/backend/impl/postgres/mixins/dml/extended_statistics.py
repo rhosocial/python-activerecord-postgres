@@ -34,9 +34,7 @@ class PostgresExtendedStatisticsMixin:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12."""
         return self.version >= (12, 0, 0)
 
-    def format_create_statistics_statement(
-        self, expr: "CreateStatisticsExpression"
-    ) -> Tuple[str, tuple]:
+    def format_create_statistics_statement(self, expr: "CreateStatisticsExpression") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
         Args:
@@ -57,23 +55,21 @@ class PostgresExtendedStatisticsMixin:
         types_clause = ""
         if expr.statistics_type:
             # Validate statistics type
-            valid_types = {'ndistinct', 'dependencies', 'mcv'}
+            valid_types = {"ndistinct", "dependencies", "mcv"}
             if expr.statistics_type not in valid_types:
                 raise ValueError(f"Invalid statistics type: {expr.statistics_type}. Valid types are: {valid_types}")
-            if expr.statistics_type == 'mcv' and not self.supports_statistics_mcv():
+            if expr.statistics_type == "mcv" and not self.supports_statistics_mcv():
                 raise ValueError("MCV statistics require PostgreSQL 12+")
 
             types_clause = f"({expr.statistics_type})"
 
-        columns_str = ', '.join(expr.columns)
+        columns_str = ", ".join(expr.columns)
 
         sql = f"CREATE STATISTICS {exists_clause}{full_name}{types_clause} ON {columns_str} FROM {table_full}"
 
         return sql, ()
 
-    def format_drop_statistics_statement(
-        self, expr: "DropStatisticsExpression"
-    ) -> Tuple[str, tuple]:
+    def format_drop_statistics_statement(self, expr: "DropStatisticsExpression") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
         Args:

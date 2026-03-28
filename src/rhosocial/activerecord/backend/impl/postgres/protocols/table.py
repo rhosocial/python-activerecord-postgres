@@ -4,6 +4,7 @@
 This module defines the PostgresTableSupport protocol for features
 exclusive to PostgreSQL table management.
 """
+
 from typing import Protocol, runtime_checkable
 
 

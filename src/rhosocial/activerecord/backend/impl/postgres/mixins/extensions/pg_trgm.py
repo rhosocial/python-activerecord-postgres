@@ -17,18 +17,14 @@ class PostgresPgTrgmMixin:
 
     def supports_pg_trgm_similarity(self) -> bool:
         """Check if pg_trgm supports similarity functions."""
-        return self.check_extension_feature('pg_trgm', 'similarity')
+        return self.check_extension_feature("pg_trgm", "similarity")
 
     def supports_pg_trgm_index(self) -> bool:
         """Check if pg_trgm supports trigram index."""
-        return self.check_extension_feature('pg_trgm', 'index')
+        return self.check_extension_feature("pg_trgm", "index")
 
     def format_similarity_expression(
-        self,
-        column: str,
-        text: str,
-        threshold: Optional[float] = None,
-        use_operator: bool = True
+        self, column: str, text: str, threshold: Optional[float] = None, use_operator: bool = True
     ) -> str:
         """Format a similarity expression.
 
@@ -58,12 +54,7 @@ class PostgresPgTrgmMixin:
             return f"similarity({column}, '{text}')"
 
     def format_trgm_index_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        column_name: str,
-        index_type: str = 'gin',
-        schema: Optional[str] = None
+        self, index_name: str, table_name: str, column_name: str, index_type: str = "gin", schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for trigram index.
 

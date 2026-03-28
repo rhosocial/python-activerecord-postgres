@@ -13,6 +13,7 @@ Text Search Types:
 PostgreSQL full-text search allows searching through documents using
 lexemes (normalized words) with optional weights and positions.
 """
+
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
 from ..types.text_search import PostgresTsVector, PostgresTsQuery
@@ -40,7 +41,7 @@ class PostgresTsVectorAdapter:
         self,
         value: Union[PostgresTsVector, str, Dict[str, Any]],
         target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
         """Convert Python value to PostgreSQL tsvector string.
 
@@ -88,10 +89,7 @@ class PostgresTsVectorAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to tsvector")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresTsVector]:
         """Convert PostgreSQL tsvector value to PostgresTsVector object.
 
@@ -115,19 +113,13 @@ class PostgresTsVectorAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to PostgresTsVector")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Optional[PostgresTsVector]]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
@@ -151,10 +143,7 @@ class PostgresTsQueryAdapter:
         }
 
     def to_database(
-        self,
-        value: Union[PostgresTsQuery, str],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Union[PostgresTsQuery, str], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """Convert Python value to PostgreSQL tsquery string.
 
@@ -181,10 +170,7 @@ class PostgresTsQueryAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to tsquery")
 
     def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[PostgresTsQuery]:
         """Convert PostgreSQL tsquery value to PostgresTsQuery object.
 
@@ -208,22 +194,16 @@ class PostgresTsQueryAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to PostgresTsQuery")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Optional[PostgresTsQuery]]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresTsVectorAdapter', 'PostgresTsQueryAdapter']
+__all__ = ["PostgresTsVectorAdapter", "PostgresTsQueryAdapter"]

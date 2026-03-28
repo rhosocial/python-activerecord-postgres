@@ -14,6 +14,7 @@ Available since early PostgreSQL versions.
 For type adapter (conversion between Python and database),
 see adapters.xml.PostgresXMLAdapter.
 """
+
 from dataclasses import dataclass
 from typing import Dict, Optional, Union
 
@@ -31,6 +32,7 @@ class PostgresXML:
     Examples:
         PostgresXML('<root><item>value</item></root>')
     """
+
     content: str
 
     def __post_init__(self):
@@ -66,12 +68,13 @@ class PostgresXML:
         """
         # Basic check for matching tags
         content = self.content.strip()
-        if not content.startswith('<') or not content.endswith('>'):
+        if not content.startswith("<") or not content.endswith(">"):
             return False
         return True
 
 
 # XML utility functions for use with PostgreSQL
+
 
 def xmlparse(content: str, document: bool = True, preserve_whitespace: bool = False) -> str:
     """Generate XMLPARSE expression.
@@ -89,8 +92,7 @@ def xmlparse(content: str, document: bool = True, preserve_whitespace: bool = Fa
     return f"XMLPARSE({doc_type} '{content}' {whitespace})".strip()
 
 
-def xpath_query(xml_value: Union[str, PostgresXML], xpath: str,
-                namespaces: Optional[Dict[str, str]] = None) -> str:
+def xpath_query(xml_value: Union[str, PostgresXML], xpath: str, namespaces: Optional[Dict[str, str]] = None) -> str:
     """Generate XPath query expression.
 
     Args:
@@ -105,7 +107,7 @@ def xpath_query(xml_value: Union[str, PostgresXML], xpath: str,
         xml_value = f"'{xml_value.content}'"
 
     if namespaces:
-        ns_array = ', '.join(f"ARRAY[{k!s}, {v!s}]" for k, v in namespaces.items())
+        ns_array = ", ".join(f"ARRAY[{k!s}, {v!s}]" for k, v in namespaces.items())
         ns_param = f", ARRAY[{ns_array}]"
     else:
         ns_param = ""
@@ -113,8 +115,7 @@ def xpath_query(xml_value: Union[str, PostgresXML], xpath: str,
     return f"xpath('{xpath}', {xml_value}{ns_param})"
 
 
-def xpath_exists(xml_value: Union[str, PostgresXML], xpath: str,
-                 namespaces: Optional[Dict[str, str]] = None) -> str:
+def xpath_exists(xml_value: Union[str, PostgresXML], xpath: str, namespaces: Optional[Dict[str, str]] = None) -> str:
     """Generate xpath_exists expression.
 
     Args:
@@ -129,7 +130,7 @@ def xpath_exists(xml_value: Union[str, PostgresXML], xpath: str,
         xml_value = f"'{xml_value.content}'"
 
     if namespaces:
-        ns_array = ', '.join(f"ARRAY[{k!s}, {v!s}]" for k, v in namespaces.items())
+        ns_array = ", ".join(f"ARRAY[{k!s}, {v!s}]" for k, v in namespaces.items())
         ns_param = f", ARRAY[{ns_array}]"
     else:
         ns_param = ""
@@ -149,4 +150,4 @@ def xml_is_well_formed(content: str) -> str:
     return f"xml_is_well_formed('{content}')"
 
 
-__all__ = ['PostgresXML', 'xmlparse', 'xpath_query', 'xpath_exists', 'xml_is_well_formed']
+__all__ = ["PostgresXML", "xmlparse", "xpath_query", "xpath_exists", "xml_is_well_formed"]

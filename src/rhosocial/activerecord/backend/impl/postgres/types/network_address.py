@@ -19,6 +19,7 @@ MACADDR8 (PostgresMacaddr8):
 For type adapters (conversion between Python and database),
 see adapters.network_address module.
 """
+
 from dataclasses import dataclass
 from typing import Union
 import re
@@ -40,6 +41,7 @@ class PostgresMacaddr:
         PostgresMacaddr('08002b010203')
         PostgresMacaddr(b'\\x08\\x00\\x2b\\x01\\x02\\x03')
     """
+
     address: Union[str, bytes]
 
     def __post_init__(self):
@@ -51,27 +53,24 @@ class PostgresMacaddr:
     def _bytes_to_str(self, data: bytes) -> str:
         """Convert bytes to MAC address string."""
         hex_str = data.hex()
-        return ':'.join(hex_str[i:i+2] for i in range(0, len(hex_str), 2))
+        return ":".join(hex_str[i : i + 2] for i in range(0, len(hex_str), 2))
 
     def _normalize(self, addr: str) -> str:
         """Normalize MAC address to canonical format (lowercase, colons)."""
         addr = addr.strip().lower()
         parts = self._parse(addr)
-        return ':'.join(f'{p:02x}' for p in parts)
+        return ":".join(f"{p:02x}" for p in parts)
 
     def _parse(self, addr: str) -> list:
         """Parse MAC address string to list of integers."""
         addr = addr.strip().lower()
-        addr = re.sub(r'[:\-\.]', '', addr)
+        addr = re.sub(r"[:\-\.]", "", addr)
 
         if len(addr) != 12:
-            raise ValueError(
-                f"Invalid MAC address length: {len(addr)} hex digits "
-                f"(expected 12 for EUI-48)"
-            )
+            raise ValueError(f"Invalid MAC address length: {len(addr)} hex digits (expected 12 for EUI-48)")
 
         try:
-            return [int(addr[i:i+2], 16) for i in range(0, 12, 2)]
+            return [int(addr[i : i + 2], 16) for i in range(0, 12, 2)]
         except ValueError as e:
             raise ValueError(f"Invalid hex digit in MAC address: {addr}") from e
 
@@ -98,7 +97,7 @@ class PostgresMacaddr:
 
     def __bytes__(self) -> bytes:
         """Return MAC address as bytes."""
-        parts = str(self.address).split(':')
+        parts = str(self.address).split(":")
         return bytes(int(p, 16) for p in parts)
 
 
@@ -117,6 +116,7 @@ class PostgresMacaddr8:
         PostgresMacaddr8('08:00:2b:01:02:03')  # 6-byte, converted to 8-byte
         PostgresMacaddr8(b'\\x08\\x00\\x2b\\x01\\x02\\x03\\x04\\x05')  # bytes format
     """
+
     address: Union[str, bytes]
 
     def __post_init__(self):
@@ -129,32 +129,29 @@ class PostgresMacaddr8:
         """Convert bytes to MAC address string."""
         hex_str = data.hex()
         if len(hex_str) == 12:
-            hex_str = hex_str[:6] + 'fffe' + hex_str[6:]
-        return ':'.join(hex_str[i:i+2] for i in range(0, len(hex_str), 2))
+            hex_str = hex_str[:6] + "fffe" + hex_str[6:]
+        return ":".join(hex_str[i : i + 2] for i in range(0, len(hex_str), 2))
 
     def _normalize(self, addr: str) -> str:
         """Normalize MAC address to canonical format (lowercase, colons)."""
         addr = addr.strip().lower()
         parts = self._parse(addr)
-        return ':'.join(f'{p:02x}' for p in parts)
+        return ":".join(f"{p:02x}" for p in parts)
 
     def _parse(self, addr: str) -> list:
         """Parse MAC address string to list of integers."""
         addr = addr.strip().lower()
-        addr = re.sub(r'[:\-.]', '', addr)
+        addr = re.sub(r"[:\-.]", "", addr)
 
         if len(addr) == 12:
-            addr = addr[:6] + 'fffe' + addr[6:]
+            addr = addr[:6] + "fffe" + addr[6:]
         elif len(addr) == 16:
             pass
         else:
-            raise ValueError(
-                f"Invalid MAC address length: {len(addr)} hex digits "
-                f"(expected 12 or 16)"
-            )
+            raise ValueError(f"Invalid MAC address length: {len(addr)} hex digits (expected 12 or 16)")
 
         try:
-            return [int(addr[i:i+2], 16) for i in range(0, 16, 2)]
+            return [int(addr[i : i + 2], 16) for i in range(0, 16, 2)]
         except ValueError as e:
             raise ValueError(f"Invalid hex digit in MAC address: {addr}") from e
 
@@ -181,7 +178,7 @@ class PostgresMacaddr8:
 
     def __bytes__(self) -> bytes:
         """Return MAC address as bytes."""
-        parts = str(self.address).split(':')
+        parts = str(self.address).split(":")
         return bytes(int(p, 16) for p in parts)
 
     @property
@@ -190,10 +187,10 @@ class PostgresMacaddr8:
 
         EUI-48 derived addresses have FF:FE in bytes 4 and 5.
         """
-        parts = str(self.address).split(':')
-        return parts[3] == 'ff' and parts[4] == 'fe'
+        parts = str(self.address).split(":")
+        return parts[3] == "ff" and parts[4] == "fe"
 
-    def to_ipv6_interface(self, prefix: str = 'fe80::') -> str:
+    def to_ipv6_interface(self, prefix: str = "fe80::") -> str:
         """Convert to IPv6 interface identifier.
 
         For use in IPv6 stateless address autoconfiguration.
@@ -206,16 +203,18 @@ class PostgresMacaddr8:
         Returns:
             IPv6 address string with MAC as interface ID
         """
-        parts = str(self.address).split(':')
-        interface_id = ':'.join([
-            f'{int(parts[0], 16):02x}{int(parts[1], 16):02x}',
-            f'{int(parts[2], 16):02x}{int(parts[3], 16):02x}',
-            f'{int(parts[4], 16):02x}{int(parts[5], 16):02x}',
-            f'{int(parts[6], 16):02x}{int(parts[7], 16):02x}',
-        ])
-        return f'{prefix}{interface_id}'
+        parts = str(self.address).split(":")
+        interface_id = ":".join(
+            [
+                f"{int(parts[0], 16):02x}{int(parts[1], 16):02x}",
+                f"{int(parts[2], 16):02x}{int(parts[3], 16):02x}",
+                f"{int(parts[4], 16):02x}{int(parts[5], 16):02x}",
+                f"{int(parts[6], 16):02x}{int(parts[7], 16):02x}",
+            ]
+        )
+        return f"{prefix}{interface_id}"
 
-    def set7bit(self) -> 'PostgresMacaddr8':
+    def set7bit(self) -> "PostgresMacaddr8":
         """Set the 7th bit (Universal/Local flag) for IPv6 use.
 
         This modifies the first byte to set the U/L bit,
@@ -224,10 +223,10 @@ class PostgresMacaddr8:
         Returns:
             New PostgresMacaddr8 with 7th bit set
         """
-        parts = str(self.address).split(':')
+        parts = str(self.address).split(":")
         first_byte = int(parts[0], 16) | 0x02
-        new_parts = [f'{first_byte:02x}'] + parts[1:]
-        return PostgresMacaddr8(':'.join(new_parts))
+        new_parts = [f"{first_byte:02x}"] + parts[1:]
+        return PostgresMacaddr8(":".join(new_parts))
 
 
-__all__ = ['PostgresMacaddr', 'PostgresMacaddr8']
+__all__ = ["PostgresMacaddr", "PostgresMacaddr8"]

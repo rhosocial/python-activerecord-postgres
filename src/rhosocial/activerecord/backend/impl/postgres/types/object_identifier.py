@@ -33,6 +33,7 @@ Version requirements:
 For type adapters (conversion between Python and database),
 see adapters.object_identifier module.
 """
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -54,6 +55,7 @@ class OID:
         OID(16384)  # System catalog OID
         OID(0)  # Invalid OID (often used as NULL equivalent)
     """
+
     value: int
 
     def __post_init__(self):
@@ -98,6 +100,7 @@ class RegClass:
         RegClass('public.users')  # Table with explicit schema
         RegClass('users', 16384)  # With known OID
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -131,6 +134,7 @@ class RegType:
         RegType('varchar')
         RegType('public.my_type')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -163,6 +167,7 @@ class RegProc:
         RegProc('now')
         RegProc('pg_catalog.now')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -195,6 +200,7 @@ class RegProcedure:
         RegProcedure('sum(integer)')
         RegProcedure('pg_catalog.sum(bigint)')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -226,6 +232,7 @@ class RegOper:
         RegOper('+')
         RegOper('pg_catalog.||')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -258,6 +265,7 @@ class RegOperator:
         RegOperator('+(integer,integer)')
         RegOperator('||(text,text)')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -289,6 +297,7 @@ class RegConfig:
         RegConfig('english')
         RegConfig('pg_catalog.english')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -320,6 +329,7 @@ class RegDictionary:
         RegDictionary('english_stem')
         RegDictionary('pg_catalog.english_stem')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -351,6 +361,7 @@ class RegNamespace:
         RegNamespace('public')
         RegNamespace('app')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -382,6 +393,7 @@ class RegRole:
         RegRole('postgres')
         RegRole('app_user')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -414,6 +426,7 @@ class RegCollation:
         RegCollation('C')
         RegCollation('pg_catalog.default')
     """
+
     name: str
     oid: Optional[int] = None
 
@@ -446,6 +459,7 @@ class XID:
         XID(1000)  # Transaction 1000
         XID(0)  # Frozen transaction ID
     """
+
     value: int
 
     def __post_init__(self):
@@ -487,6 +501,7 @@ class XID8:
     Examples:
         XID8(1000000000)  # Full transaction ID
     """
+
     value: int
 
     def __post_init__(self):
@@ -529,6 +544,7 @@ class CID:
         CID(0)  # First command in transaction
         CID(5)  # Sixth command in transaction
     """
+
     value: int
 
     def __post_init__(self):
@@ -572,6 +588,7 @@ class TID:
         TID(0, 1)  # First block, first tuple
         TID(100, 50)  # Block 100, tuple at offset 50
     """
+
     block: int
     offset: int
 
@@ -605,7 +622,7 @@ class TID:
         return f"({self.block},{self.offset})"
 
     @classmethod
-    def from_postgres_string(cls, value: str) -> 'TID':
+    def from_postgres_string(cls, value: str) -> "TID":
         """Parse PostgreSQL tid string.
 
         Args:
@@ -618,17 +635,29 @@ class TID:
             ValueError: If string format is invalid
         """
         value = value.strip()
-        if value.startswith('(') and value.endswith(')'):
+        if value.startswith("(") and value.endswith(")"):
             value = value[1:-1]
-        parts = value.split(',')
+        parts = value.split(",")
         if len(parts) != 2:
             raise ValueError(f"Invalid tid format: {value}")
         return cls(int(parts[0].strip()), int(parts[1].strip()))
 
 
 __all__ = [
-    'OID', 'RegClass', 'RegType', 'RegProc', 'RegProcedure',
-    'RegOper', 'RegOperator', 'RegConfig', 'RegDictionary',
-    'RegNamespace', 'RegRole', 'RegCollation',
-    'XID', 'XID8', 'CID', 'TID'
+    "OID",
+    "RegClass",
+    "RegType",
+    "RegProc",
+    "RegProcedure",
+    "RegOper",
+    "RegOperator",
+    "RegConfig",
+    "RegDictionary",
+    "RegNamespace",
+    "RegRole",
+    "RegCollation",
+    "XID",
+    "XID8",
+    "CID",
+    "TID",
 ]

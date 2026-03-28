@@ -4,6 +4,7 @@
 This module defines the protocol for PostgreSQL-specific index features
 that extend beyond standard SQL.
 """
+
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -108,9 +109,7 @@ class PostgresIndexSupport(Protocol):
         """
         ...
 
-    def format_reindex_statement(
-        self, expr: "ReindexExpression"
-    ) -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Args:
@@ -128,13 +127,13 @@ class PostgresIndexSupport(Protocol):
         columns: List[str],
         schema: Optional[str] = None,
         unique: bool = False,
-        index_type: str = 'btree',
+        index_type: str = "btree",
         concurrently: bool = False,
         if_not_exists: bool = False,
         include_columns: Optional[List[str]] = None,
         with_options: Optional[Dict[str, Any]] = None,
         tablespace: Optional[str] = None,
-        where_clause: Optional[str] = None
+        where_clause: Optional[str] = None,
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 

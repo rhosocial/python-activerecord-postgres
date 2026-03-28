@@ -12,13 +12,13 @@ from .tablefunc import PostgresTablefuncSupport
 from .pg_stat_statements import PostgresPgStatStatementsSupport
 
 __all__ = [
-    'PostgresPgvectorSupport',
-    'PostgresPostGISSupport',
-    'PostgresHstoreSupport',
-    'PostgresLtreeSupport',
-    'PostgresIntarraySupport',
-    'PostgresPgTrgmSupport',
-    'PostgresEarthdistanceSupport',
-    'PostgresTablefuncSupport',
-    'PostgresPgStatStatementsSupport',
+    "PostgresPgvectorSupport",
+    "PostgresPostGISSupport",
+    "PostgresHstoreSupport",
+    "PostgresLtreeSupport",
+    "PostgresIntarraySupport",
+    "PostgresPgTrgmSupport",
+    "PostgresEarthdistanceSupport",
+    "PostgresTablefuncSupport",
+    "PostgresPgStatStatementsSupport",
 ]

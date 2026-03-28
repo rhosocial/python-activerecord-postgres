@@ -4,7 +4,8 @@
 This module provides the DataTypeMixin class for handling PostgreSQL-specific
 data type operations including multirange types, xid8, and other features.
 """
-from typing import Optional, List, Tuple, Any
+
+from typing import Optional, List, Any
 
 
 class PostgresDataTypeMixin:
@@ -77,7 +78,7 @@ class PostgresDataTypeMixin:
             >>> format_multirange_literal(['[1,5)', '[10,20)'], 'int4multirange')
             "int4multirange('[1,5)', '[10,20)')"
         """
-        ranges_str = ', '.join(ranges)
+        ranges_str = ", ".join(ranges)
         return f"{multirange_type}({ranges_str})"
 
     def format_multirange_constructor(self, multirange_type: str, *range_values: str) -> str:
@@ -95,7 +96,7 @@ class PostgresDataTypeMixin:
             "int4multirange('[1,5)', '[10,20)')"
         """
         if range_values:
-            values_str = ', '.join(f"'{r}'" for r in range_values)
+            values_str = ", ".join(f"'{r}'" for r in range_values)
             return f"{multirange_type}({values_str})"
         return f"{multirange_type}()"
 
@@ -138,7 +139,7 @@ class PostgresDataTypeMixin:
             if isinstance(e, str):
                 formatted_elements.append(f"'{e}'")
             elif e is None:
-                formatted_elements.append('NULL')
+                formatted_elements.append("NULL")
             else:
                 formatted_elements.append(str(e))
 

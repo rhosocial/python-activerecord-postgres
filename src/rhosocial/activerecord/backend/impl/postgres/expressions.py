@@ -5,6 +5,7 @@ PostgreSQL-specific expression classes for SQL statement generation.
 These expression classes encapsulate parameters for PostgreSQL-specific
 DDL/DML statements and delegate SQL generation to the dialect.
 """
+
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 # =============================================================================
 # DML Expressions (VACUUM, ANALYZE)
 # =============================================================================
+
 
 class VacuumExpression(BaseExpression):
     """PostgreSQL VACUUM statement expression.
@@ -50,7 +52,7 @@ class VacuumExpression(BaseExpression):
         truncate: bool = False,
         columns: Optional[List[str]] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.table_name = table_name
@@ -94,7 +96,7 @@ class AnalyzeExpression(BaseExpression):
         skip_locked: bool = False,
         columns: Optional[List[str]] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.table_name = table_name
@@ -112,6 +114,7 @@ class AnalyzeExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Partition)
 # =============================================================================
+
 
 class CreatePartitionExpression(BaseExpression):
     """PostgreSQL CREATE TABLE ... PARTITION OF statement expression.
@@ -142,7 +145,7 @@ class CreatePartitionExpression(BaseExpression):
         tablespace: Optional[str] = None,
         if_not_exists: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -184,7 +187,7 @@ class DetachPartitionExpression(BaseExpression):
         concurrently: bool = False,
         finalize: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -222,7 +225,7 @@ class AttachPartitionExpression(BaseExpression):
         partition_values: Dict[str, Any],
         schema: Optional[str] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -240,6 +243,7 @@ class AttachPartitionExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Index)
 # =============================================================================
+
 
 class ReindexExpression(BaseExpression):
     """PostgreSQL REINDEX statement expression.
@@ -268,7 +272,7 @@ class ReindexExpression(BaseExpression):
         concurrently: bool = False,
         verbose: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.target_type = target_type
@@ -287,6 +291,7 @@ class ReindexExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Statistics)
 # =============================================================================
+
 
 class CreateStatisticsExpression(BaseExpression):
     """PostgreSQL CREATE STATISTICS statement expression.
@@ -312,7 +317,7 @@ class CreateStatisticsExpression(BaseExpression):
         statistics_type: Optional[str] = None,  # ndistinct, dependencies, mcv
         if_not_exists: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -347,7 +352,7 @@ class DropStatisticsExpression(BaseExpression):
         schema: Optional[str] = None,
         if_exists: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -363,6 +368,7 @@ class DropStatisticsExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Comment)
 # =============================================================================
+
 
 class CommentExpression(BaseExpression):
     """PostgreSQL COMMENT ON statement expression.
@@ -385,7 +391,7 @@ class CommentExpression(BaseExpression):
         comment: Optional[str],
         schema: Optional[str] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.object_type = object_type
@@ -402,6 +408,7 @@ class CommentExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Materialized View)
 # =============================================================================
+
 
 class RefreshMaterializedViewPgExpression(BaseExpression):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
@@ -426,7 +433,7 @@ class RefreshMaterializedViewPgExpression(BaseExpression):
         concurrently: bool = False,
         with_data: Optional[bool] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -443,6 +450,7 @@ class RefreshMaterializedViewPgExpression(BaseExpression):
 # =============================================================================
 # DDL Expressions (Enum)
 # =============================================================================
+
 
 class CreateEnumTypeExpression(BaseExpression):
     """PostgreSQL CREATE TYPE ... AS ENUM statement expression.
@@ -464,7 +472,7 @@ class CreateEnumTypeExpression(BaseExpression):
         schema: Optional[str] = None,
         if_not_exists: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -498,7 +506,7 @@ class DropEnumTypeExpression(BaseExpression):
         if_exists: bool = False,
         cascade: bool = False,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -534,7 +542,7 @@ class AlterEnumAddValueExpression(BaseExpression):
         before: Optional[str] = None,
         after: Optional[str] = None,
         *,
-        dialect_options: Optional[Dict[str, Any]] = None
+        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.type_name = type_name

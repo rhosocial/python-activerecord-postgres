@@ -1,5 +1,6 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/comment.py
 """PostgreSQL COMMENT ON DDL implementation."""
+
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -9,9 +10,7 @@ if TYPE_CHECKING:
 class PostgresCommentMixin:
     """PostgreSQL COMMENT ON implementation."""
 
-    def format_comment_statement(
-        self, expr: "CommentExpression"
-    ) -> Tuple[str, tuple]:
+    def format_comment_statement(self, expr: "CommentExpression") -> Tuple[str, tuple]:
         """Format COMMENT ON statement (PostgreSQL-specific).
 
         Args:

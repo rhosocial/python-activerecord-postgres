@@ -6,7 +6,7 @@ from .stored_procedure import PostgresStoredProcedureMixin
 from .extended_statistics import PostgresExtendedStatisticsMixin
 
 __all__ = [
-    'PostgresVacuumMixin',
-    'PostgresStoredProcedureMixin',
-    'PostgresExtendedStatisticsMixin',
+    "PostgresVacuumMixin",
+    "PostgresStoredProcedureMixin",
+    "PostgresExtendedStatisticsMixin",
 ]

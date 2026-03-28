@@ -26,6 +26,7 @@ Transaction and Command Identifiers:
 Tuple Identifier:
 - tid: Tuple identifier (block number, offset)
 """
+
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
 from ..types.object_identifier import (
@@ -68,17 +69,17 @@ class PostgresOidAdapter:
     """
 
     REGISTRY_TYPES: Dict[str, Type] = {
-        'regclass': RegClass,
-        'regtype': RegType,
-        'regproc': RegProc,
-        'regprocedure': RegProcedure,
-        'regoper': RegOper,
-        'regoperator': RegOperator,
-        'regconfig': RegConfig,
-        'regdictionary': RegDictionary,
-        'regnamespace': RegNamespace,
-        'regrole': RegRole,
-        'regcollation': RegCollation,
+        "regclass": RegClass,
+        "regtype": RegType,
+        "regproc": RegProc,
+        "regprocedure": RegProcedure,
+        "regoper": RegOper,
+        "regoperator": RegOperator,
+        "regconfig": RegConfig,
+        "regdictionary": RegDictionary,
+        "regnamespace": RegNamespace,
+        "regrole": RegRole,
+        "regcollation": RegCollation,
     }
 
     @property
@@ -100,10 +101,7 @@ class PostgresOidAdapter:
         }
 
     def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> Optional[Union[int, str]]:
         """Convert Python value to PostgreSQL OID type.
 
@@ -135,12 +133,7 @@ class PostgresOidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to OID type")
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         """Convert PostgreSQL OID value to Python object.
 
         Args:
@@ -178,19 +171,13 @@ class PostgresOidAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to {target_type.__name__}")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
@@ -217,12 +204,7 @@ class PostgresXidAdapter:
             CID: {int, str},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[int]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[int]:
         """Convert Python value to PostgreSQL transaction ID.
 
         Args:
@@ -247,12 +229,7 @@ class PostgresXidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to transaction ID type")
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         """Convert PostgreSQL transaction ID to Python object.
 
         Args:
@@ -281,19 +258,13 @@ class PostgresXidAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to {target_type.__name__}")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
@@ -316,12 +287,7 @@ class PostgresTidAdapter:
             TID: {str, tuple},
         }
 
-    def to_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Optional[str]:
+    def to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """Convert Python value to PostgreSQL tid.
 
         Args:
@@ -348,12 +314,7 @@ class PostgresTidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to TID")
 
-    def from_database(
-        self,
-        value: Any,
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         """Convert PostgreSQL tid to Python object.
 
         Args:
@@ -390,22 +351,16 @@ class PostgresTidAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to {target_type.__name__}")
 
     def to_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values to database format."""
         return [self.to_database(v, target_type, options) for v in values]
 
     def from_database_batch(
-        self,
-        values: List[Any],
-        target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
     ) -> List[Any]:
         """Batch convert values from database format."""
         return [self.from_database(v, target_type, options) for v in values]
 
 
-__all__ = ['PostgresOidAdapter', 'PostgresXidAdapter', 'PostgresTidAdapter']
+__all__ = ["PostgresOidAdapter", "PostgresXidAdapter", "PostgresTidAdapter"]

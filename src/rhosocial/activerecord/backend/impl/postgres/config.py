@@ -18,6 +18,7 @@ class RangeAdapterMode(Enum):
         CUSTOM: Use custom PostgresRange type
         BOTH: Make both adapters available, with native as default
     """
+
     NATIVE = "native"
     CUSTOM = "custom"
     BOTH = "both"
@@ -26,6 +27,7 @@ class RangeAdapterMode(Enum):
 @dataclass
 class PostgresSSLMixin:
     """Mixin implementing postgres-specific SSL/TLS options."""
+
     sslmode: Optional[str] = None  # 'disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'
     sslcert: Optional[str] = None
     sslkey: Optional[str] = None
@@ -37,6 +39,7 @@ class PostgresSSLMixin:
 @dataclass
 class PostgresConnectionMixin:
     """Mixin implementing postgres-specific connection options."""
+
     application_name: Optional[str] = None
     target_session_attrs: Optional[str] = None  # 'any', 'primary', 'standby', 'prefer-standby'
     connect_timeout: Optional[int] = None
@@ -59,6 +62,7 @@ class PostgresTypeAdapterMixin:
         json_type_preference: Preferred JSON type for dict fields
         enable_type_compatibility_warnings: Enable type conversion warnings
     """
+
     range_adapter_mode: RangeAdapterMode = RangeAdapterMode.NATIVE
     multirange_adapter_mode: RangeAdapterMode = RangeAdapterMode.NATIVE
     json_type_preference: Literal["json", "jsonb"] = "jsonb"
@@ -66,7 +70,9 @@ class PostgresTypeAdapterMixin:
 
 
 @dataclass
-class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSSLMixin, PostgresConnectionMixin, PostgresTypeAdapterMixin):
+class PostgresConnectionConfig(
+    ConnectionConfig, ConnectionPoolMixin, PostgresSSLMixin, PostgresConnectionMixin, PostgresTypeAdapterMixin
+):
     """postgres-specific connection configuration with dedicated postgres options.
 
     This class extends the base ConnectionConfig with postgres-specific
@@ -86,29 +92,29 @@ class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSS
         """Convert config to dictionary, including postgres-specific parameters."""
         # Get base config
         config_dict = super().to_dict()
-        
+
         # Add postgres-specific parameters
         pg_params = {
-            'sslmode': self.sslmode,
-            'sslcert': self.sslcert,
-            'sslkey': self.sslkey,
-            'sslrootcert': self.sslrootcert,
-            'sslcrl': self.sslcrl,
-            'sslcompression': self.sslcompression,
-            'application_name': self.application_name,
-            'target_session_attrs': self.target_session_attrs,
-            'connect_timeout': self.connect_timeout,
-            'client_encoding': self.client_encoding,
-            'service': self.service,
-            'gssencmode': self.gssencmode,
-            'channel_binding': self.channel_binding,
+            "sslmode": self.sslmode,
+            "sslcert": self.sslcert,
+            "sslkey": self.sslkey,
+            "sslrootcert": self.sslrootcert,
+            "sslcrl": self.sslcrl,
+            "sslcompression": self.sslcompression,
+            "application_name": self.application_name,
+            "target_session_attrs": self.target_session_attrs,
+            "connect_timeout": self.connect_timeout,
+            "client_encoding": self.client_encoding,
+            "service": self.service,
+            "gssencmode": self.gssencmode,
+            "channel_binding": self.channel_binding,
         }
-        
+
         # Only include non-None values
         for key, value in pg_params.items():
             if value is not None:
                 config_dict[key] = value
-        
+
         return config_dict
 
     def to_connection_string(self) -> str:
@@ -156,7 +162,7 @@ class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSS
             params.append(f"gssencmode={self.gssencmode}")
         if self.channel_binding:
             params.append(f"channel_binding={self.channel_binding}")
-        
+
         # Add any additional options
         if self.options:
             for key, value in self.options.items():
@@ -188,21 +194,13 @@ class PostgresConnectionConfig(ConnectionConfig, ConnectionPoolMixin, PostgresSS
 
         # Validate SSL mode if specified
         if self.sslmode:
-            valid_ssl_modes = {
-                "disable", "allow", "prefer", "require",
-                "verify-ca", "verify-full"
-            }
+            valid_ssl_modes = {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}
             if self.sslmode not in valid_ssl_modes:
-                raise ValueError(
-                    f"Invalid sslmode: {self.sslmode}. "
-                    f"Must be one of: {', '.join(valid_ssl_modes)}"
-                )
-        
+                raise ValueError(f"Invalid sslmode: {self.sslmode}. Must be one of: {', '.join(valid_ssl_modes)}")
+
         # Validate target_session_attrs if specified
         if self.target_session_attrs:
-            valid_session_attrs = {
-                "any", "primary", "standby", "prefer-standby", "read-write", "read-only"
-            }
+            valid_session_attrs = {"any", "primary", "standby", "prefer-standby", "read-write", "read-only"}
             if self.target_session_attrs not in valid_session_attrs:
                 raise ValueError(
                     f"Invalid target_session_attrs: {self.target_session_attrs}. "

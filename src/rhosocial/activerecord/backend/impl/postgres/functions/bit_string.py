@@ -11,6 +11,7 @@ All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return SQL expression strings
 """
+
 from typing import Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -196,17 +197,17 @@ def bit_count(dialect: "SQLDialectBase", bit: str) -> str:
 
 
 __all__ = [
-    'bit_concat',
-    'bit_and',
-    'bit_or',
-    'bit_xor',
-    'bit_not',
-    'bit_shift_left',
-    'bit_shift_right',
-    'bit_length',
-    'bit_length_func',
-    'bit_octet_length',
-    'bit_get_bit',
-    'bit_set_bit',
-    'bit_count',
+    "bit_concat",
+    "bit_and",
+    "bit_or",
+    "bit_xor",
+    "bit_not",
+    "bit_shift_left",
+    "bit_shift_right",
+    "bit_length",
+    "bit_length_func",
+    "bit_octet_length",
+    "bit_get_bit",
+    "bit_set_bit",
+    "bit_count",
 ]

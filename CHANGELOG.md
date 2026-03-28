@@ -1,3 +1,10 @@
+## [v1.0.0.dev7] - 2026-03-28
+
+### Added
+
+- Added PostgreSQL introspection support with AbstractIntrospector for database schema discovery, including tables, columns, indexes, foreign keys, views, and triggers. ([#14](https://github.com/rhosocial/python-activerecord-postgres/issues/14))
+
+
 ## [v1.0.0.dev6] - 2026-03-22
 
 ### Added

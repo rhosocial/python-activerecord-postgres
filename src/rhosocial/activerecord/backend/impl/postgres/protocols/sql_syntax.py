@@ -4,6 +4,7 @@
 This module defines the PostgresSQLSyntaxSupport protocol for PostgreSQL-specific
 SQL syntax features that extend beyond the SQL standard.
 """
+
 from typing import Protocol, runtime_checkable
 
 
