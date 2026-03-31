@@ -10,6 +10,7 @@ PostgreSQL 提供了许多超越标准 SQL 的高级功能。本节介绍 Postgr
 - **[RETURNING 子句](./returning.md)**: 从 DML 操作获取返回数据
 - **[协议支持矩阵](./protocol_support.md)**: 完整的协议支持和版本兼容性
 - **[数据库内省](./introspection.md)**: 使用 pg_catalog 查询元数据
+- **[EXPLAIN 支持](./explain.md)**: 查询执行计划分析与性能诊断
 
 ## 功能亮点
 

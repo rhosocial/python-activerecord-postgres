@@ -397,8 +397,8 @@ class PostgresDialect(
         supported_formats = ["TEXT", "XML", "JSON", "YAML"]
         return format_type_upper in supported_formats
 
-    def format_explain_statement(self, explain_expr: "ExplainExpression") -> str:
-        """Build the PostgreSQL EXPLAIN prefix using bracket-option syntax.
+    def format_explain_statement(self, explain_expr: "ExplainExpression") -> tuple:
+        """Build the PostgreSQL EXPLAIN SQL string and return (sql, params).
 
         PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``
 
@@ -406,15 +406,13 @@ class PostgresDialect(
         - ``ANALYZE``
         - ``FORMAT { TEXT | XML | JSON | YAML }``
         - ``VERBOSE``  (passed through ``ExplainOptions.verbose`` if present)
-
-        The prefix is returned without a trailing newline; the caller appends
-        the inner SQL separated by a single space.
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
 
+        statement_sql, statement_params = explain_expr.statement.to_sql()
         options = explain_expr.options
         if options is None:
-            return "EXPLAIN"
+            return f"EXPLAIN {statement_sql}", statement_params
 
         opts: list = []
 
@@ -429,8 +427,8 @@ class PostgresDialect(
             pass
 
         if opts:
-            return "EXPLAIN (" + ", ".join(opts) + ")"
-        return "EXPLAIN"
+            return "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
+        return f"EXPLAIN {statement_sql}", statement_params
 
     def supports_graph_match(self) -> bool:
         """Whether graph query MATCH clause is supported."""

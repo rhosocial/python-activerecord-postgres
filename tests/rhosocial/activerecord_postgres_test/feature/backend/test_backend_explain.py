@@ -24,38 +24,34 @@ from rhosocial.activerecord.backend.impl.postgres import (
 # Schema helpers (PostgreSQL syntax)
 # ---------------------------------------------------------------------------
 
-_SETUP_SQL = """
-    DROP TABLE IF EXISTS explain_order_items CASCADE;
-    DROP TABLE IF EXISTS explain_orders CASCADE;
-
-    CREATE TABLE explain_orders (
+_SETUP_STMTS = [
+    "DROP TABLE IF EXISTS explain_order_items CASCADE",
+    "DROP TABLE IF EXISTS explain_orders CASCADE",
+    """CREATE TABLE explain_orders (
         id      SERIAL       PRIMARY KEY,
         status  VARCHAR(20)  NOT NULL,
         amount  NUMERIC(10,2)
-    );
-    CREATE INDEX idx_orders_status ON explain_orders(status);
-
-    CREATE TABLE explain_order_items (
+    )""",
+    "CREATE INDEX idx_orders_status ON explain_orders(status)",
+    """CREATE TABLE explain_order_items (
         id       SERIAL      PRIMARY KEY,
         order_id INTEGER     NOT NULL,
         sku      VARCHAR(50) NOT NULL,
         qty      INTEGER     NOT NULL DEFAULT 1
-    );
-    CREATE INDEX idx_items_order_id_sku ON explain_order_items(order_id, sku);
-
-    INSERT INTO explain_orders (status, amount) VALUES
+    )""",
+    "CREATE INDEX idx_items_order_id_sku ON explain_order_items(order_id, sku)",
+    """INSERT INTO explain_orders (status, amount) VALUES
         ('pending', 10.00), ('pending', 20.00),
-        ('shipped', 30.00), ('delivered', 40.00);
-
-    INSERT INTO explain_order_items (order_id, sku, qty) VALUES
+        ('shipped', 30.00), ('delivered', 40.00)""",
+    """INSERT INTO explain_order_items (order_id, sku, qty) VALUES
         (1, 'A001', 1), (1, 'A002', 2),
-        (2, 'B001', 1), (3, 'A001', 3);
-"""
+        (2, 'B001', 1), (3, 'A001', 3)""",
+]
 
-_CLEANUP_SQL = """
-    DROP TABLE IF EXISTS explain_order_items CASCADE;
-    DROP TABLE IF EXISTS explain_orders CASCADE;
-"""
+_CLEANUP_STMTS = [
+    "DROP TABLE IF EXISTS explain_order_items CASCADE",
+    "DROP TABLE IF EXISTS explain_orders CASCADE",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -65,10 +61,12 @@ _CLEANUP_SQL = """
 @pytest.fixture(scope="function")
 def indexed_backend(postgres_backend):
     """Sync backend with test tables and indexes."""
-    postgres_backend.executescript(_SETUP_SQL)
+    for stmt in _SETUP_STMTS:
+        postgres_backend.execute(stmt)
     yield postgres_backend
     try:
-        postgres_backend.executescript(_CLEANUP_SQL)
+        for stmt in _CLEANUP_STMTS:
+            postgres_backend.execute(stmt)
     except Exception:
         pass
 
@@ -76,10 +74,12 @@ def indexed_backend(postgres_backend):
 @pytest_asyncio.fixture(scope="function")
 async def async_indexed_backend(async_postgres_backend):
     """Async backend with test tables and indexes."""
-    await async_postgres_backend.executescript(_SETUP_SQL)
+    for stmt in _SETUP_STMTS:
+        await async_postgres_backend.execute(stmt)
     yield async_postgres_backend
     try:
-        await async_postgres_backend.executescript(_CLEANUP_SQL)
+        for stmt in _CLEANUP_STMTS:
+            await async_postgres_backend.execute(stmt)
     except Exception:
         pass
 
