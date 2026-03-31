@@ -30,6 +30,7 @@ from psycopg.errors import (
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
+from rhosocial.activerecord.backend.explain import AsyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
@@ -60,7 +61,7 @@ from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
 
-class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, AsyncStorageBackend):
+class AsyncPostgresBackend(AsyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, AsyncStorageBackend):
     """Asynchronous PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -673,6 +674,12 @@ class AsyncPostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, Async
         else:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
+
+    def _parse_explain_result(self, raw_rows, sql, duration):
+        """Return a typed :class:`PostgresExplainResult` for PostgreSQL EXPLAIN output."""
+        from ..explain import PostgresExplainResult, PostgresExplainPlanLine
+        rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
+        return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
 
 __all__ = ["AsyncPostgresBackend"]

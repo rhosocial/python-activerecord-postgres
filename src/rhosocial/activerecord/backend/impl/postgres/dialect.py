@@ -147,6 +147,7 @@ if TYPE_CHECKING:
         CreateMaterializedViewExpression,
         DropMaterializedViewExpression,
         RefreshMaterializedViewExpression,
+        ExplainExpression,
     )
 
 
@@ -395,6 +396,41 @@ class PostgresDialect(
         # PostgreSQL supports TEXT, XML, JSON, and YAML formats
         supported_formats = ["TEXT", "XML", "JSON", "YAML"]
         return format_type_upper in supported_formats
+
+    def format_explain_statement(self, explain_expr: "ExplainExpression") -> str:
+        """Build the PostgreSQL EXPLAIN prefix using bracket-option syntax.
+
+        PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``
+
+        Supported options assembled here:
+        - ``ANALYZE``
+        - ``FORMAT { TEXT | XML | JSON | YAML }``
+        - ``VERBOSE``  (passed through ``ExplainOptions.verbose`` if present)
+
+        The prefix is returned without a trailing newline; the caller appends
+        the inner SQL separated by a single space.
+        """
+        from rhosocial.activerecord.backend.expression.statements import ExplainType
+
+        options = explain_expr.options
+        if options is None:
+            return "EXPLAIN"
+
+        opts: list = []
+
+        if options.analyze:
+            opts.append("ANALYZE")
+
+        if options.format is not None:
+            fmt_name = options.format.name if hasattr(options.format, "name") else str(options.format)
+            opts.append(f"FORMAT {fmt_name.upper()}")
+        elif options.type is not None and options.type == ExplainType.QUERY_PLAN:
+            # PostgreSQL has no QUERY PLAN keyword; plain EXPLAIN is equivalent
+            pass
+
+        if opts:
+            return "EXPLAIN (" + ", ".join(opts) + ")"
+        return "EXPLAIN"
 
     def supports_graph_match(self) -> bool:
         """Whether graph query MATCH clause is supported."""

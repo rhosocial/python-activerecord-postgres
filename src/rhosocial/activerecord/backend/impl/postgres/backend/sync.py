@@ -29,6 +29,7 @@ from psycopg.errors import (
 
 from rhosocial.activerecord.backend.base import StorageBackend
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
+from rhosocial.activerecord.backend.explain import SyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
@@ -60,7 +61,7 @@ from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
 
 
-class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
+class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
     """PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -674,6 +675,12 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
         else:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
+
+    def _parse_explain_result(self, raw_rows, sql, duration):
+        """Return a typed :class:`PostgresExplainResult` for PostgreSQL EXPLAIN output."""
+        from ..explain import PostgresExplainResult, PostgresExplainPlanLine
+        rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
+        return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
 
 __all__ = ["PostgresBackend"]
