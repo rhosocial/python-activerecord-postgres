@@ -10,6 +10,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 - **[RETURNING Clause](./returning.md)**: Get data back from DML operations
 - **[Protocol Support Matrix](./protocol_support.md)**: Comprehensive protocol support and version compatibility
 - **[Database Introspection](./introspection.md)**: Query metadata using pg_catalog
+- **[EXPLAIN Support](./explain.md)**: Query execution plan analysis and performance diagnostics
 
 ## Feature Highlights
 

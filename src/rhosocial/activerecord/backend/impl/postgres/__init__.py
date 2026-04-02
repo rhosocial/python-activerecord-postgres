@@ -22,6 +22,7 @@ from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
 from .types import PostgresEnumType
+from .explain import PostgresExplainResult, PostgresExplainPlanLine
 from .statements import (
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
@@ -187,6 +188,9 @@ __all__ = [
     # PostgreSQL-specific Type Helpers
     "PostgresEnumType",
     "PostgresEnumAdapter",
+    # PostgreSQL EXPLAIN Result Types
+    "PostgresExplainResult",
+    "PostgresExplainPlanLine",
     # PostgreSQL DDL Statements
     "CreateEnumTypeExpression",
     "DropEnumTypeExpression",
