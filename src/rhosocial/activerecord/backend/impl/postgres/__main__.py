@@ -188,90 +188,173 @@ def parse_args():
     # =========================================================================
     # Design Notes:
     # =========================================================================
-    # Uses explicit subcommand mode: query and introspect are mutually exclusive.
+    # Uses explicit subcommand mode: info, query and introspect are peers.
     # This avoids argparse misidentifying SQL queries as subcommand names.
     #
     # Connection parameters are shared between subcommands and placed in parent parser.
-    # The main parser also inherits from parent, so global options like --info
-    # can access these parameters.
+    # Only subcommand parsers inherit from parent, main parser does not.
     # =========================================================================
 
     # Parent parser: shared connection parameters
     parent_parser = argparse.ArgumentParser(add_help=False)
-    parent_parser.add_argument("--host", default=os.getenv("POSTGRES_HOST", "localhost"), help="Database host")
-    parent_parser.add_argument("--port", type=int, default=int(os.getenv("POSTGRES_PORT", "5432")), help="Database port")
-    parent_parser.add_argument("--database", default=os.getenv("POSTGRES_DATABASE"), help="Database name (optional for some operations)")
-    parent_parser.add_argument("--user", default=os.getenv("POSTGRES_USER", "postgres"), help="Database user")
-    parent_parser.add_argument("--password", default=os.getenv("POSTGRES_PASSWORD", ""), help="Database password")
     parent_parser.add_argument(
-        "--output",
-        choices=["table", "json", "csv", "tsv"],
-        default="table",
-        help='Output format. Defaults to "table" if rich is installed.',
+        "--host",
+        default=os.getenv("POSTGRES_HOST", "localhost"),
+        help="Database host (env: POSTGRES_HOST, default: localhost)",
     )
-    parent_parser.add_argument("--log-level", default="INFO", help="Set logging level (e.g., DEBUG, INFO)")
-    parent_parser.add_argument("--rich-ascii", action="store_true", help="Use ASCII characters for rich table borders.")
-    parent_parser.add_argument("--use-async", action="store_true", help="Use asynchronous backend")
+    parent_parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("POSTGRES_PORT", "5432")),
+        help="Database port (env: POSTGRES_PORT, default: 5432)",
+    )
+    parent_parser.add_argument(
+        "--database",
+        default=os.getenv("POSTGRES_DATABASE"),
+        help="Database name (env: POSTGRES_DATABASE, optional for some operations)",
+    )
+    parent_parser.add_argument(
+        "--user",
+        default=os.getenv("POSTGRES_USER", "postgres"),
+        help="Database user (env: POSTGRES_USER, default: postgres)",
+    )
+    parent_parser.add_argument(
+        "--password",
+        default=os.getenv("POSTGRES_PASSWORD", ""),
+        help="Database password (env: POSTGRES_PASSWORD)",
+    )
+    parent_parser.add_argument(
+        "--use-async",
+        action="store_true",
+        help="Use asynchronous backend",
+    )
     parent_parser.add_argument(
         "--version",
         type=str,
         default=None,
         help='PostgreSQL version to simulate (e.g., "15.0.0"). Default: auto-detect.',
     )
+    parent_parser.add_argument(
+        "-o", "--output",
+        choices=["table", "json", "csv", "tsv"],
+        default="table",
+        help='Output format. Defaults to "table" if rich is installed.',
+    )
+    parent_parser.add_argument(
+        "--log-level",
+        default="INFO",
+        help="Set logging level (e.g., DEBUG, INFO)",
+    )
+    parent_parser.add_argument(
+        "--rich-ascii",
+        action="store_true",
+        help="Use ASCII characters for rich table borders.",
+    )
 
-    # Main parser inherits from parent, so --info can access shared parameters
+    # Main parser does NOT inherit from parent
     parser = argparse.ArgumentParser(
         description="Execute SQL queries against a PostgreSQL backend.",
         formatter_class=argparse.RawTextHelpFormatter,
-        parents=[parent_parser]
     )
 
-    # Global options (no subcommand required)
-    parser.add_argument("--info", action="store_true", help="Display PostgreSQL environment information.")
+    # Global options
     parser.add_argument(
-        "-v", "--verbose", action="count", default=0, help="Increase verbosity. -v for families, -vv for details."
+        "-v", "--verbose",
+        action="count",
+        default=0,
+        help="Increase verbosity. -v for families, -vv for details.",
     )
 
-    # Subcommands: query and introspect
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    # Subcommands: info, query and introspect
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # info subcommand
+    info_parser = subparsers.add_parser(
+        "info",
+        help="Display PostgreSQL environment information",
+        parents=[parent_parser],
+    )
 
     # query subcommand
     query_parser = subparsers.add_parser(
-        'query',
-        help='Execute SQL query',
-        parents=[parent_parser]
+        "query",
+        help="Execute SQL query",
+        parents=[parent_parser],
     )
     query_parser.add_argument(
-        "sql", nargs="?", default=None, help="SQL query to execute. If not provided, reads from --file or stdin."
+        "sql",
+        nargs="?",
+        default=None,
+        help="SQL query to execute. If not provided, reads from --file or stdin.",
     )
-    query_parser.add_argument("-f", "--file", default=None, help="Path to a file containing SQL to execute.")
+    query_parser.add_argument(
+        "-f", "--file",
+        default=None,
+        help="Path to a file containing SQL to execute.",
+    )
 
     # introspect subcommand
     introspect_parser = subparsers.add_parser(
-        'introspect',
-        help='Database introspection commands',
-        parents=[parent_parser]
+        "introspect",
+        help="Database introspection commands",
+        parents=[parent_parser],
+        epilog="""Examples:
+  # List all tables in database
+  %(prog)s tables --database mydb
+
+  # List all views
+  %(prog)s views --database mydb
+
+  # Get detailed table info (columns, indexes, foreign keys)
+  %(prog)s table users --database mydb
+
+  # Get column details for a table
+  %(prog)s columns users --database mydb
+
+  # Get index information
+  %(prog)s indexes users --database mydb
+
+  # Get foreign key relationships
+  %(prog)s foreign-keys users --database mydb
+
+  # List triggers
+  %(prog)s triggers --database mydb
+
+  # Get database information
+  %(prog)s database --database mydb
+
+  # Output as JSON
+  %(prog)s tables --database mydb -o json
+
+  # Specify schema (PostgreSQL specific)
+  %(prog)s tables --database mydb --schema public
+
+  # Using environment variables for connection
+  export POSTGRES_HOST=localhost POSTGRES_DATABASE=mydb POSTGRES_USER=postgres POSTGRES_PASSWORD=secret
+  %(prog)s tables
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     introspect_parser.add_argument(
-        'type',
+        "type",
         choices=INTROSPECT_TYPES,
-        help='Introspection type: tables, views, table, columns, indexes, foreign-keys, triggers, database'
+        help="Introspection type: tables, views, table, columns, indexes, foreign-keys, triggers, database",
     )
     introspect_parser.add_argument(
-        'name',
-        nargs='?',
+        "name",
+        nargs="?",
         default=None,
-        help='Table/view name (required for table, columns, indexes, foreign-keys types)'
+        help="Table/view name (required for table, columns, indexes, foreign-keys types)",
     )
     introspect_parser.add_argument(
-        '--schema',
+        "--schema",
         default=None,
-        help='Schema name (defaults to "public" for PostgreSQL)'
+        help='Schema name (defaults to "public" for PostgreSQL)',
     )
     introspect_parser.add_argument(
-        '--include-system',
-        action='store_true',
-        help='Include system tables in output'
+        "--include-system",
+        action="store_true",
+        help="Include system tables in output",
     )
 
     return parser.parse_args()
@@ -373,33 +456,68 @@ def parse_version(version_str: str) -> Tuple[int, int, int]:
     return (major, minor, patch)
 
 
-def display_info(
-    verbose: int = 0,
-    output_format: str = "table",
-    version_str: Optional[str] = None,
-    extensions: Optional[Dict[str, PostgresExtensionInfo]] = None,
-):
-    """Display PostgreSQL environment information."""
-    # Parse version
-    if version_str:
-        version = parse_version(version_str)
-    else:
-        version = (13, 0, 0)  # Default version
+def handle_info(args, provider: Any):
+    """Handle info subcommand.
 
-    dialect = PostgresDialect(version=version)
+    Display PostgreSQL environment information based on actual database connection
+    or default values if no database is provided.
+    """
+    output_format = args.output if args.output != "table" or RICH_AVAILABLE else "json"
 
-    # Set extensions if provided
-    if extensions:
-        dialect._extensions = extensions  # type: ignore
+    # Track whether we're using actual database or defaults
+    is_connected = False
+    dialect = None
+    extensions = None
+    version_display = None
 
-    version_display = f"{version[0]}.{version[1]}.{version[2]}"
+    if args.database:
+        try:
+            config = PostgresConnectionConfig(
+                host=args.host,
+                port=args.port,
+                database=args.database,
+                username=args.user,
+                password=args.password,
+            )
+            backend = PostgresBackend(connection_config=config)
+            backend.connect()
+            backend.introspect_and_adapt()
+
+            # Use the adapted dialect from backend
+            dialect = backend.dialect
+            version_tuple = backend.get_server_version()
+            if version_tuple:
+                version_display = f"{version_tuple[0]}.{version_tuple[1]}.{version_tuple[2]}"
+
+            # Get extensions from dialect
+            if hasattr(backend.dialect, "_extensions"):
+                extensions = backend.dialect._extensions
+            is_connected = True
+
+            backend.disconnect()
+        except Exception as e:
+            logger.warning("Could not connect to database for introspection: %s", e)
+            logger.warning("Using default values for dialect information.")
+            # Fall back to command-line version or default
+
+    # Create default dialect if not connected
+    if dialect is None:
+        # Parse version from command line or use default
+        actual_version = args.version
+        if actual_version:
+            version = parse_version(actual_version)
+        else:
+            version = (13, 0, 0)  # Default version
+        dialect = PostgresDialect(version=version)
+        version_display = f"{version[0]}.{version[1]}.{version[2]}"
 
     # Unified structure for JSON output
     info = {
         "database": {
             "type": "postgresql",
             "version": version_display,
-            "version_tuple": list(version),
+            "version_tuple": list(dialect.version),
+            "connected": is_connected,
         },
         "features": {
             "extensions": {},
@@ -439,7 +557,7 @@ def display_info(
                     if value:
                         supported_count += 1
 
-            if verbose >= 2:
+            if args.verbose >= 2:
                 info["protocols"][group_name][protocol_name] = {
                     "supported": supported_count,
                     "total": total_count,
@@ -462,15 +580,27 @@ def display_info(
             "extensions": info["features"]["extensions"],
             "protocols": info["protocols"],
         }
-        _display_info_rich(info_legacy, verbose, version_display, extensions)
+        _display_info_rich(info_legacy, args.verbose, version_display, extensions, is_connected)
 
     return info
 
 
 def _display_info_rich(
-    info: Dict, verbose: int, version_display: str, extensions: Optional[Dict[str, PostgresExtensionInfo]]
+    info: Dict,
+    verbose: int,
+    version_display: str,
+    extensions: Optional[Dict[str, PostgresExtensionInfo]],
+    is_connected: bool = True,
 ):
-    """Display info using rich console."""
+    """Display info using rich console.
+
+    Args:
+        info: Information dictionary containing database and protocol info
+        verbose: Verbosity level for output detail
+        version_display: Version string for display
+        extensions: Optional dictionary of extension information
+        is_connected: Whether the info is from actual database connection
+    """
     from rich.console import Console
 
     console = Console(force_terminal=True)
@@ -481,7 +611,11 @@ def _display_info_rich(
 
     console.print("\n[bold cyan]PostgreSQL Environment Information[/bold cyan]\n")
 
-    console.print(f"[bold]PostgreSQL Version:[/bold] {version_display}\n")
+    # Show connection status
+    if is_connected:
+        console.print(f"[bold]PostgreSQL Version:[/bold] {version_display} [dim](from actual connection)[/dim]\n")
+    else:
+        console.print(f"[bold]PostgreSQL Version:[/bold] {version_display} [yellow](default value - no database connection)[/yellow]\n")
 
     # Display extensions if available
     if extensions:
@@ -794,47 +928,18 @@ async def handle_introspect_async(args, backend: AsyncPostgresBackend, provider:
 def main():
     args = parse_args()
 
-    # Handle --info flag (global option, no subcommand needed)
-    if args.info:
-        output_format = args.output if args.output != "table" or RICH_AVAILABLE else "json"
-
-        # Try to connect and get real version/extensions if database is provided
-        extensions = None
-        actual_version = args.version
-
-        if args.database:
-            try:
-                config = PostgresConnectionConfig(
-                    host=args.host, port=args.port, database=args.database, username=args.user, password=args.password
-                )
-                backend = PostgresBackend(connection_config=config)
-                backend.connect()
-                backend.introspect_and_adapt()
-
-                # Get actual version
-                version_tuple = backend.get_server_version()
-                if version_tuple:
-                    actual_version = f"{version_tuple[0]}.{version_tuple[1]}.{version_tuple[2]}"
-
-                # Get extensions from dialect
-                if hasattr(backend.dialect, "_extensions"):
-                    extensions = backend.dialect._extensions
-
-                backend.disconnect()
-            except Exception as e:
-                logger.warning("Could not connect to database for introspection: %s", e)
-                # Fall back to command-line version or default
-
-        display_info(
-            verbose=args.verbose, output_format=output_format, version_str=actual_version, extensions=extensions
-        )
-        return
-
-    # Require a subcommand if --info is not specified
+    # Must specify a subcommand
     if args.command is None:
-        print("Error: Please specify a command: 'query' or 'introspect'", file=sys.stderr)
+        print("Error: Please specify a command: 'info', 'query', or 'introspect'", file=sys.stderr)
         print("Use --help for more information.", file=sys.stderr)
         sys.exit(1)
+
+    provider = get_provider(args)
+
+    # Handle info subcommand
+    if args.command == "info":
+        handle_info(args, provider)
+        return
 
     # Handle introspect subcommand
     if args.command == "introspect":
@@ -842,10 +947,12 @@ def main():
             print("Error: --database is required for introspection", file=sys.stderr)
             sys.exit(1)
 
-        provider = get_provider(args)
         config = PostgresConnectionConfig(
-            host=args.host, port=args.port, database=args.database,
-            username=args.user, password=args.password
+            host=args.host,
+            port=args.port,
+            database=args.database,
+            username=args.user,
+            password=args.password,
         )
 
         if args.use_async:
@@ -860,8 +967,6 @@ def main():
     numeric_level = getattr(logging, args.log_level.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {args.log_level}")
-
-    provider = get_provider(args)
 
     if RICH_AVAILABLE and isinstance(provider, RichOutputProvider):
         from rich.console import Console
@@ -897,7 +1002,11 @@ def main():
         sys.exit(1)
 
     config = PostgresConnectionConfig(
-        host=args.host, port=args.port, database=args.database, username=args.user, password=args.password
+        host=args.host,
+        port=args.port,
+        database=args.database,
+        username=args.user,
+        password=args.password,
     )
 
     kwargs = {"use_ascii": args.rich_ascii}

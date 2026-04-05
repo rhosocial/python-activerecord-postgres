@@ -147,6 +147,7 @@ if TYPE_CHECKING:
         CreateMaterializedViewExpression,
         DropMaterializedViewExpression,
         RefreshMaterializedViewExpression,
+        ExplainExpression,
     )
 
 
@@ -396,11 +397,54 @@ class PostgresDialect(
         supported_formats = ["TEXT", "XML", "JSON", "YAML"]
         return format_type_upper in supported_formats
 
+    def format_explain_statement(self, explain_expr: "ExplainExpression") -> tuple:
+        """Build the PostgreSQL EXPLAIN SQL string and return (sql, params).
+
+        PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``
+
+        Supported options assembled here:
+        - ``ANALYZE``
+        - ``FORMAT { TEXT | XML | JSON | YAML }``
+        - ``VERBOSE``  (passed through ``ExplainOptions.verbose`` if present)
+        """
+        from rhosocial.activerecord.backend.expression.statements import ExplainType
+
+        statement_sql, statement_params = explain_expr.statement.to_sql()
+        options = explain_expr.options
+        if options is None:
+            return f"EXPLAIN {statement_sql}", statement_params
+
+        opts: list = []
+
+        if options.analyze:
+            opts.append("ANALYZE")
+
+        if options.format is not None:
+            fmt_name = options.format.name if hasattr(options.format, "name") else str(options.format)
+            opts.append(f"FORMAT {fmt_name.upper()}")
+        elif options.type is not None and options.type == ExplainType.QUERY_PLAN:
+            # PostgreSQL has no QUERY PLAN keyword; plain EXPLAIN is equivalent
+            pass
+
+        if opts:
+            return "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
+        return f"EXPLAIN {statement_sql}", statement_params
+
     def supports_graph_match(self) -> bool:
         """Whether graph query MATCH clause is supported."""
         # PostgreSQL doesn't have native MATCH clause like some other systems
         # Though graph querying can be done with extensions like Apache AGE
         return False
+
+    def supports_for_update(self) -> bool:
+        """Whether FOR UPDATE clause is supported in SELECT statements.
+
+        PostgreSQL supports FOR UPDATE since early versions. The clause locks
+        selected rows preventing other transactions from modifying them.
+        PostgreSQL also supports FOR UPDATE OF, FOR UPDATE NOWAIT, and
+        FOR UPDATE SKIP LOCKED (since 9.5).
+        """
+        return True
 
     def supports_for_update_skip_locked(self) -> bool:
         """Whether FOR UPDATE SKIP LOCKED is supported."""

@@ -29,6 +29,7 @@ from psycopg.errors import (
 
 from rhosocial.activerecord.backend.base import StorageBackend
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
+from rhosocial.activerecord.backend.explain import SyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
@@ -60,7 +61,7 @@ from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
 
 
-class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
+class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
     """PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -345,8 +346,19 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
                 raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from None
 
     def _get_cursor(self):
-        """Get a database cursor, ensuring connection is active."""
+        """Get a database cursor, ensuring connection is active.
+
+        This method implements automatic connection health checking (Plan A):
+        - Checks if connection object exists
+        - Checks if connection is still valid using closed/broken attributes
+        - Automatically reconnects if connection was lost
+        """
         if not self._connection:
+            self.log(logging.DEBUG, "No connection, connecting...")
+            self.connect()
+        elif self._connection.closed or self._connection.broken:
+            self.log(logging.DEBUG, "Connection lost, reconnecting...")
+            self._connection = None  # Clear the closed/broken connection
             self.connect()
 
         return self._connection.cursor()
@@ -507,8 +519,173 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
 
             return extensions
 
-    def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, **kwargs) -> QueryResult:
-        """Execute a SQL statement with optional parameters."""
+    def ping(self, reconnect: bool = True) -> bool:
+        """
+        Ping the PostgreSQL server to check if the connection is alive.
+
+        Args:
+            reconnect: If True, attempt to reconnect if the connection is dead.
+                      If False, just return the current connection status.
+
+        Returns:
+            True if the connection is alive (or was successfully reconnected),
+            False if the connection is dead and reconnect is False or reconnection failed.
+        """
+        try:
+            if not self._connection:
+                if reconnect:
+                    self.connect()
+                    return True
+                else:
+                    return False
+
+            # Check connection status without triggering auto-reconnect
+            if self._connection.closed or self._connection.broken:
+                if reconnect:
+                    self._connection = None
+                    self.connect()
+                    return True
+                else:
+                    return False
+
+            # Execute a simple query to verify connection is actually working
+            cursor = self._get_cursor()
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            cursor.close()
+
+            return True
+        except psycopg.Error as e:
+            self.log(logging.WARNING, f"PostgreSQL connection ping failed: {str(e)}")
+            if reconnect:
+                try:
+                    self._connection = None
+                    self.connect()
+                    return True
+                except Exception as connect_error:
+                    self.log(logging.ERROR, f"Failed to reconnect after ping failure: {str(connect_error)}")
+                    return False
+            return False
+
+    # PostgreSQL connection error SQLSTATE codes
+    # Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
+    CONNECTION_ERROR_SQLSTATES = {
+        "08000",  # CONNECTION_EXCEPTION
+        "08001",  # SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION
+        "08003",  # CONNECTION_DOES_NOT_EXIST
+        "08004",  # SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION
+        "08006",  # CONNECTION_FAILURE
+        "08007",  # TRANSACTION_RESOLUTION_UNKNOWN
+        "08P01",  # PROTOCOL_VIOLATION
+        "57P01",  # ADMIN_SHUTDOWN
+        "57P02",  # CRASH_SHUTDOWN
+        "57P03",  # CANNOT_CONNECT_NOW
+        "57P04",  # DATABASE_DROPPED
+    }
+
+    def _is_connection_error(self, error: Exception) -> bool:
+        """
+        Check if an error indicates a connection loss.
+
+        This method identifies errors that result from lost or invalid connections,
+        which should trigger automatic reconnection attempts.
+
+        Args:
+            error: The exception to check
+
+        Returns:
+            True if the error indicates a connection problem, False otherwise
+        """
+        if isinstance(error, PsycopgOperationalError):
+            # Check SQLSTATE code if available
+            sqlstate = getattr(error, 'sqlstate', None)
+            if sqlstate and sqlstate in self.CONNECTION_ERROR_SQLSTATES:
+                return True
+
+            # Check for common connection error patterns in message
+            error_msg = str(error).lower()
+            connection_error_patterns = [
+                'connection',
+                'connect',
+                'closed',
+                'terminated',
+                'unexpectedly',
+                'broken pipe',
+                'reset by peer',
+                'server closed',
+                'server has gone away',
+            ]
+            for pattern in connection_error_patterns:
+                if pattern in error_msg:
+                    return True
+
+        return False
+
+    def _reconnect(self) -> bool:
+        """
+        Attempt to reconnect to the PostgreSQL server.
+
+        Returns:
+            True if reconnection was successful, False otherwise
+        """
+        try:
+            self._connection = None
+            self.connect()
+            return True
+        except Exception as e:
+            self.log(logging.ERROR, f"Failed to reconnect: {str(e)}")
+            return False
+
+    def _is_connection_error_message(self, error_msg: str) -> bool:
+        """
+        Check if an error message indicates a connection loss.
+
+        This method identifies error messages that result from lost or invalid connections,
+        which should trigger automatic reconnection attempts.
+
+        Args:
+            error_msg: The error message to check
+
+        Returns:
+            True if the message indicates a connection problem, False otherwise
+        """
+        error_msg_lower = error_msg.lower()
+        connection_error_patterns = [
+            'connection',
+            'connect',
+            'closed',
+            'terminated',
+            'terminating connection due to administrator command',
+            'unexpectedly',
+            'broken pipe',
+            'reset by peer',
+            'server closed',
+            'server has gone away',
+            'ssl connection has been closed',
+            'consuming input failed',
+        ]
+        for pattern in connection_error_patterns:
+            if pattern in error_msg_lower:
+                return True
+        return False
+
+    def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, max_retries: int = 2, **kwargs) -> QueryResult:
+        """
+        Execute a SQL statement with optional parameters.
+
+        This method wraps the base execute method with automatic reconnection
+        logic for connection errors (Plan B: Error Retry Mechanism).
+
+        Args:
+            sql: SQL statement to execute
+            params: Optional parameters for the SQL statement
+            options: Execution options
+            max_retries: Maximum number of retry attempts for connection errors
+            **kwargs: Additional keyword arguments
+
+        Returns:
+            QueryResult containing the query results
+        """
         from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 
         # If no options provided, create default options from kwargs
@@ -528,7 +705,7 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
 
             options = ExecutionOptions(
                 stmt_type=stmt_type,
-                process_result_set=None,  # Let the base logic determine this based on stmt_type
+                process_result_set=None,
                 column_adapters=column_adapters,
                 column_mapping=column_mapping,
             )
@@ -540,36 +717,23 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
             if "column_adapters" in kwargs:
                 options.column_adapters = kwargs["column_adapters"]
 
-        return super().execute(sql, params, options=options)
-
-    def ping(self, reconnect: bool = True) -> bool:
-        """Ping the PostgreSQL server to check if the connection is alive."""
-        try:
-            if not self._connection:
-                if reconnect:
-                    self.connect()
-                    return True
-                else:
-                    return False
-
-            # Execute a simple query to check connection
-            cursor = self._get_cursor()
-            cursor.execute("SELECT 1")
-            cursor.fetchone()
-            cursor.close()
-
-            return True
-        except psycopg.Error as e:
-            self.log(logging.WARNING, f"PostgreSQL connection ping failed: {str(e)}")
-            if reconnect:
-                try:
-                    self.disconnect()
-                    self.connect()
-                    return True
-                except Exception as connect_error:
-                    self.log(logging.ERROR, f"Failed to reconnect after ping failure: {str(connect_error)}")
-                    return False
-            return False
+        # Retry loop for connection errors (Plan B)
+        # We catch the framework's OperationalError because the original PsycopgOperationalError
+        # has already been converted by _handle_error() in the base class.
+        for attempt in range(max_retries + 1):
+            try:
+                return super().execute(sql, params, options=options)
+            except OperationalError as e:
+                error_msg = str(e)
+                if self._is_connection_error_message(error_msg) and attempt < max_retries:
+                    self.log(logging.WARNING,
+                             f"Connection error on attempt {attempt + 1}, retrying... Error: {error_msg}")
+                    if self._reconnect():
+                        continue
+                    # If reconnection fails, break and raise the error
+                    self.log(logging.ERROR, f"Failed to reconnect after connection error")
+                    break
+                raise
 
     def _handle_error(self, error: Exception) -> None:
         """Handle PostgreSQL-specific errors."""
@@ -674,6 +838,12 @@ class PostgresBackend(IntrospectorBackendMixin, PostgresBackendMixin, StorageBac
         else:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
+
+    def _parse_explain_result(self, raw_rows, sql, duration):
+        """Return a typed :class:`PostgresExplainResult` for PostgreSQL EXPLAIN output."""
+        from ..explain import PostgresExplainResult, PostgresExplainPlanLine
+        rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
+        return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
 
 __all__ = ["PostgresBackend"]

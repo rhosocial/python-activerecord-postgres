@@ -10,6 +10,39 @@ import pytest
 from rhosocial.activerecord.backend.introspection.types import ViewInfo
 
 
+# SQL statements for async view tests (duplicated from conftest to avoid import issues)
+_VIEW_SQL = [
+    "DROP VIEW IF EXISTS user_summary CASCADE",
+    "DROP TABLE IF EXISTS user_stats CASCADE",
+    "DROP TABLE IF EXISTS users CASCADE",
+    """
+    CREATE TABLE users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(255) NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE user_stats (
+        user_id INTEGER PRIMARY KEY,
+        post_count INTEGER DEFAULT 0
+    )
+    """,
+    """
+    CREATE VIEW user_summary AS
+    SELECT u.id, u.name, u.email, COALESCE(s.post_count, 0) as post_count
+    FROM users u
+    LEFT JOIN user_stats s ON u.id = s.user_id
+    """,
+]
+
+_CLEANUP_VIEW_SQL = [
+    "DROP VIEW IF EXISTS user_summary CASCADE",
+    "DROP TABLE IF EXISTS user_stats CASCADE",
+    "DROP TABLE IF EXISTS users CASCADE",
+]
+
+
 class TestListViews:
     """Tests for list_views method."""
 
@@ -102,7 +135,6 @@ class TestAsyncViewIntrospection:
     async def test_async_list_views(self, async_postgres_backend_single):
         """Test async list_views returns view info."""
         # Create view manually for async test
-        from tests.rhosocial.activerecord_postgres_test.feature.backend.introspection.conftest import _VIEW_SQL, _CLEANUP_VIEW_SQL
         for sql in _VIEW_SQL:
             await async_postgres_backend_single.execute(sql)
         async_postgres_backend_single.introspector.clear_cache()
@@ -119,7 +151,6 @@ class TestAsyncViewIntrospection:
     @pytest.mark.asyncio
     async def test_async_get_view_info(self, async_postgres_backend_single):
         """Test async get_view_info for existing view."""
-        from tests.rhosocial.activerecord_postgres_test.feature.backend.introspection.conftest import _VIEW_SQL, _CLEANUP_VIEW_SQL
         for sql in _VIEW_SQL:
             await async_postgres_backend_single.execute(sql)
         async_postgres_backend_single.introspector.clear_cache()

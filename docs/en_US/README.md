@@ -48,4 +48,7 @@
     *   **[Performance Issues](troubleshooting/performance.md)**: performance bottleneck analysis
     *   **[SQL Standard Compliance](troubleshooting/sql_standard.md)**: strict SQL compliance handling
 
+8. **[Scenarios](scenarios/README.md)**
+    *   **[Parallel Worker Processing](scenarios/parallel_workers.md)**: correct usage in multi-process/async concurrent scenarios
+
 > 📖 **Core Library Documentation**: To learn about the complete functionality of the ActiveRecord framework, please refer to [rhosocial-activerecord documentation](https://github.com/rhosocial/python-activerecord/tree/main/docs/en_US).

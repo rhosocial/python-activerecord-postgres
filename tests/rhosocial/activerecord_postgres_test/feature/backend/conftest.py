@@ -142,3 +142,79 @@ async def async_postgres_backend(request):
     backend.scenario_name = scenario_name # Attach for test reference
     yield backend
     await provider.async_cleanup()
+
+
+# --- Non-parameterized Single Backend Fixtures ---
+
+
+@pytest.fixture(scope="function")
+def postgres_backend_single():
+    """Non-parameterized fixture using the first available scenario."""
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = provider.setup_backend(scenario_name)
+    backend.scenario_name = scenario_name
+    yield backend
+    provider.cleanup()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_postgres_backend_single():
+    """Non-parameterized async fixture using the first available scenario."""
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = await provider.setup_async_backend(scenario_name)
+    backend.scenario_name = scenario_name
+    yield backend
+    await provider.async_cleanup()
+
+
+# --- Control Backend for Session Modification Tests ---
+
+
+@pytest.fixture(scope="function")
+def postgres_control_backend():
+    """
+    Dedicated control backend for tests that modify PostgreSQL session settings.
+
+    This fixture provides an independent backend instance for operations that
+    need to control or interfere with the main test backend, such as:
+    - Terminating other connections (pg_terminate_backend)
+    - Setting global variables
+    - Monitoring other connections
+
+    The fixture is NOT parameterized to ensure consistent behavior across
+    all PostgreSQL scenarios.
+    """
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = provider.setup_backend(scenario_name)
+    yield backend
+    provider.cleanup()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_postgres_control_backend():
+    """
+    Dedicated async control backend for tests that modify PostgreSQL session settings.
+
+    This fixture provides an independent async backend instance for operations that
+    need to control or interfere with the main test backend.
+    """
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = await provider.setup_async_backend(scenario_name)
+    yield backend
+    await provider.async_cleanup()
