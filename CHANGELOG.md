@@ -1,3 +1,11 @@
+## [v1.0.0.dev8] - 2026-04-06
+
+### Added
+
+- Added EXPLAIN clause support with typed PostgresExplainResult and dual-layer connection recovery for PostgreSQL backend ([#16](https://github.com/rhosocial/python-activerecord-postgres/issues/16))
+- Improved PostgreSQL backend CLI info command with connection status display and added comprehensive introspect usage examples. ([#17](https://github.com/rhosocial/python-activerecord-postgres/issues/17))
+
+
 ## [v1.0.0.dev7] - 2026-03-28
 
 ### Added
