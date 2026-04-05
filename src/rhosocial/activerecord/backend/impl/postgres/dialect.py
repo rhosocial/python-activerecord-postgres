@@ -436,6 +436,16 @@ class PostgresDialect(
         # Though graph querying can be done with extensions like Apache AGE
         return False
 
+    def supports_for_update(self) -> bool:
+        """Whether FOR UPDATE clause is supported in SELECT statements.
+
+        PostgreSQL supports FOR UPDATE since early versions. The clause locks
+        selected rows preventing other transactions from modifying them.
+        PostgreSQL also supports FOR UPDATE OF, FOR UPDATE NOWAIT, and
+        FOR UPDATE SKIP LOCKED (since 9.5).
+        """
+        return True
+
     def supports_for_update_skip_locked(self) -> bool:
         """Whether FOR UPDATE SKIP LOCKED is supported."""
         return self.version >= (9, 5, 0)  # Supported since 9.5
