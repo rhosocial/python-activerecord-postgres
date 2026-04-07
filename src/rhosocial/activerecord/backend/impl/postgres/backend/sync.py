@@ -154,10 +154,8 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         # See PostgresXMLAdapter documentation for details.
         self._register_postgres_adapters()
 
-        # Initialize transaction manager with connection (will be set when connected)
-        # Pass None for connection initially, it will be updated later
-        # Use the logger from the base class
-        self._transaction_manager = PostgresTransactionManager(None, self.logger)
+        # Initialize transaction manager (will use backend.execute())
+        self._transaction_manager = PostgresTransactionManager(self, self.logger)
 
         self.log(logging.INFO, "PostgreSQLBackend initialized")
 
@@ -241,9 +239,6 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
     @property
     def transaction_manager(self):
         """Get the PostgreSQL transaction manager."""
-        # Update the transaction manager's connection if needed
-        if self._transaction_manager:
-            self._transaction_manager._connection = self._connection
         return self._transaction_manager
 
     def connect(self):

@@ -344,19 +344,17 @@ class TestAsyncTransactionSavepoint:
     async def test_async_get_active_savepoint(self, async_postgres_backend, async_test_table):
         """Test getting active savepoint name (async)."""
         tx_manager = async_postgres_backend.transaction_manager
-        
-        # Check _active_savepoint attribute directly since
-        # AsyncPostgresTransactionManager doesn't have get_active_savepoint method
-        assert tx_manager._active_savepoint is None
-        
+
+        assert tx_manager.get_active_savepoint() is None
+
         await tx_manager.begin()
         sp_name = await tx_manager.savepoint("async_active_sp")
-        
-        assert tx_manager._active_savepoint == sp_name
-        
+
+        assert tx_manager.get_active_savepoint() == sp_name
+
         await tx_manager.release(sp_name)
-        assert tx_manager._active_savepoint is None
-        
+        assert tx_manager.get_active_savepoint() is None
+
         await tx_manager.commit()
 
     @pytest.mark.asyncio

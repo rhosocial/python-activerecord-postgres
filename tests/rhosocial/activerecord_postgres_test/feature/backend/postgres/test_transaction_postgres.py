@@ -144,8 +144,8 @@ class TestSyncPostgresTransactionFeatures:
         """Test that BEGIN statement includes isolation level."""
         tx_manager = postgres_backend.transaction_manager
         tx_manager.isolation_level = IsolationLevel.REPEATABLE_READ
-        
-        begin_sql = tx_manager._build_begin_statement()
+
+        begin_sql, _ = tx_manager._build_begin_sql()
         assert "ISOLATION LEVEL REPEATABLE READ" in begin_sql
 
     def test_begin_statement_with_deferrable(self, postgres_backend, test_table):
@@ -153,8 +153,8 @@ class TestSyncPostgresTransactionFeatures:
         tx_manager = postgres_backend.transaction_manager
         tx_manager.isolation_level = IsolationLevel.SERIALIZABLE
         tx_manager.set_deferrable(True)
-        
-        begin_sql = tx_manager._build_begin_statement()
+
+        begin_sql, _ = tx_manager._build_begin_sql()
         assert "DEFERRABLE" in begin_sql
 
 
@@ -272,8 +272,8 @@ class TestAsyncPostgresTransactionFeatures:
         """Test that BEGIN statement includes isolation level (async)."""
         tx_manager = async_postgres_backend.transaction_manager
         tx_manager.isolation_level = IsolationLevel.REPEATABLE_READ
-        
-        begin_sql = tx_manager._build_begin_statement()
+
+        begin_sql, _ = tx_manager._build_begin_sql()
         assert "ISOLATION LEVEL REPEATABLE READ" in begin_sql
 
     @pytest.mark.asyncio
@@ -282,6 +282,6 @@ class TestAsyncPostgresTransactionFeatures:
         tx_manager = async_postgres_backend.transaction_manager
         tx_manager.isolation_level = IsolationLevel.SERIALIZABLE
         tx_manager._is_deferrable = True
-        
-        begin_sql = tx_manager._build_begin_statement()
+
+        begin_sql, _ = tx_manager._build_begin_sql()
         assert "DEFERRABLE" in begin_sql
