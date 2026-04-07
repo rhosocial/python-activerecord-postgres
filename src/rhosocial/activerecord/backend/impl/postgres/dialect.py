@@ -64,6 +64,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     TruncateSupport,
     ILIKESupport,
     IntrospectionSupport,
+    TransactionControlSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -148,6 +149,14 @@ if TYPE_CHECKING:
         DropMaterializedViewExpression,
         RefreshMaterializedViewExpression,
         ExplainExpression,
+    )
+    from rhosocial.activerecord.backend.expression.transaction import (
+        BeginTransactionExpression,
+        CommitTransactionExpression,
+        RollbackTransactionExpression,
+        SavepointExpression,
+        ReleaseSavepointExpression,
+        SetTransactionExpression,
     )
 
 
@@ -242,6 +251,8 @@ class PostgresDialect(
     TableSupport,
     # Introspection protocol
     IntrospectionSupport,
+    # Transaction control protocol
+    TransactionControlSupport,
     # PostgreSQL-specific protocols
     PostgresExtensionSupport,
     PostgresMaterializedViewSupport,
@@ -1042,5 +1053,143 @@ class PostgresDialect(
 
     def supports_drop_trigger(self) -> bool:
         return True
+
+    # endregion
+
+    # region Transaction Control Support
+    def supports_transaction_mode(self) -> bool:
+        """PostgreSQL supports READ ONLY and READ WRITE transaction modes."""
+        return True
+
+    def supports_isolation_level_in_begin(self) -> bool:
+        """PostgreSQL supports isolation level specification in BEGIN statement."""
+        return True
+
+    def supports_read_only_transaction(self) -> bool:
+        """PostgreSQL supports READ ONLY transactions."""
+        return True
+
+    def supports_deferrable_transaction(self) -> bool:
+        """PostgreSQL supports DEFERRABLE transactions (for SERIALIZABLE isolation)."""
+        return True
+
+    def supports_savepoint(self) -> bool:
+        """PostgreSQL supports savepoints."""
+        return True
+
+    def format_begin_transaction(
+        self, expr: "BeginTransactionExpression"
+    ) -> Tuple[str, tuple]:
+        """Format BEGIN TRANSACTION statement for PostgreSQL.
+
+        PostgreSQL syntax:
+        BEGIN [ ISOLATION LEVEL { READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE } ]
+              [ { READ WRITE | READ ONLY } ]
+              [ { NOT DEFERRABLE | DEFERRABLE } ]
+
+        DEFERRABLE is only meaningful for SERIALIZABLE isolation level.
+        """
+        params = expr.get_params()
+        parts = ["BEGIN"]
+
+        isolation = params.get("isolation_level")
+        if isolation:
+            level_str = self.get_isolation_level_name(isolation)
+            parts.append(f"ISOLATION LEVEL {level_str}")
+
+        mode = params.get("mode")
+        if mode:
+            mode_name = mode.name if hasattr(mode, "name") else str(mode)
+            if mode_name == "READ_ONLY":
+                parts.append("READ ONLY")
+            elif mode_name == "READ_WRITE":
+                parts.append("READ WRITE")
+
+        deferrable = params.get("deferrable")
+        if deferrable is not None and isolation:
+            isolation_name = isolation.name if hasattr(isolation, "name") else str(isolation)
+            if isolation_name == "SERIALIZABLE":
+                parts.append("DEFERRABLE" if deferrable else "NOT DEFERRABLE")
+
+        return " ".join(parts), ()
+
+    def format_commit_transaction(
+        self, expr: "CommitTransactionExpression"
+    ) -> Tuple[str, tuple]:
+        """Format COMMIT TRANSACTION statement for PostgreSQL."""
+        return "COMMIT", ()
+
+    def format_rollback_transaction(
+        self, expr: "RollbackTransactionExpression"
+    ) -> Tuple[str, tuple]:
+        """Format ROLLBACK TRANSACTION statement for PostgreSQL.
+
+        Supports ROLLBACK [ TO SAVEPOINT savepoint_name ].
+        """
+        params = expr.get_params()
+        savepoint = params.get("savepoint")
+        if savepoint:
+            return f"ROLLBACK TO SAVEPOINT {self.format_identifier(savepoint)}", ()
+        return "ROLLBACK", ()
+
+    def format_savepoint(
+        self, expr: "SavepointExpression"
+    ) -> Tuple[str, tuple]:
+        """Format SAVEPOINT statement for PostgreSQL."""
+        params = expr.get_params()
+        name = params.get("name", "")
+        return f"SAVEPOINT {self.format_identifier(name)}", ()
+
+    def format_release_savepoint(
+        self, expr: "ReleaseSavepointExpression"
+    ) -> Tuple[str, tuple]:
+        """Format RELEASE SAVEPOINT statement for PostgreSQL."""
+        params = expr.get_params()
+        name = params.get("name", "")
+        return f"RELEASE SAVEPOINT {self.format_identifier(name)}", ()
+
+    def format_set_transaction(
+        self, expr: "SetTransactionExpression"
+    ) -> Tuple[str, tuple]:
+        """Format SET TRANSACTION statement for PostgreSQL.
+
+        PostgreSQL supports setting transaction characteristics for the current
+        transaction or for subsequent transactions.
+
+        Syntax:
+        SET TRANSACTION { ISOLATION LEVEL { ... } | { READ WRITE | READ ONLY } | [ NOT ] DEFERRABLE } [, ...]
+        SET SESSION CHARACTERISTICS AS TRANSACTION { ... }
+        """
+        params = expr.get_params()
+        parts = []
+
+        if params.get("session"):
+            parts.append("SET SESSION CHARACTERISTICS AS TRANSACTION")
+        else:
+            parts.append("SET TRANSACTION")
+
+        options = []
+
+        isolation = params.get("isolation_level")
+        if isolation:
+            level_str = self.get_isolation_level_name(isolation)
+            options.append(f"ISOLATION LEVEL {level_str}")
+
+        mode = params.get("mode")
+        if mode:
+            mode_name = mode.name if hasattr(mode, "name") else str(mode)
+            if mode_name == "READ_ONLY":
+                options.append("READ ONLY")
+            elif mode_name == "READ_WRITE":
+                options.append("READ WRITE")
+
+        deferrable = params.get("deferrable")
+        if deferrable is not None:
+            options.append("DEFERRABLE" if deferrable else "NOT DEFERRABLE")
+
+        if options:
+            parts.append(" ".join(options))
+
+        return " ".join(parts), ()
 
     # endregion
