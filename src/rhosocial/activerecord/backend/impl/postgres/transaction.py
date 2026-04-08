@@ -46,8 +46,10 @@ class PostgresTransactionManager(TransactionManager):
             logger: Optional logger instance.
         """
         super().__init__(backend, logger)
-        # PostgreSQL default isolation level is READ COMMITTED
-        self._isolation_level = IsolationLevel.READ_COMMITTED
+        # PostgreSQL default isolation level is READ COMMITTED, but we don't
+        # set it here to allow SESSION CHARACTERISTICS to take effect.
+        # Users can explicitly set isolation_level property if needed.
+        # self._isolation_level = None (inherited from base class)
         # DEFERRABLE mode for SERIALIZABLE transactions
         self._is_deferrable: Optional[bool] = None
         # Deferred constraints list
@@ -196,8 +198,10 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
             logger: Optional logger instance.
         """
         super().__init__(backend, logger)
-        # PostgreSQL default isolation level is READ COMMITTED
-        self._isolation_level = IsolationLevel.READ_COMMITTED
+        # PostgreSQL default isolation level is READ COMMITTED, but we don't
+        # set it here to allow SESSION CHARACTERISTICS to take effect.
+        # Users can explicitly set isolation_level property if needed.
+        # self._isolation_level = None (inherited from base class)
         # DEFERRABLE mode for SERIALIZABLE transactions
         self._is_deferrable: Optional[bool] = None
         # Deferred constraints list
