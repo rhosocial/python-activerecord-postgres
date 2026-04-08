@@ -175,3 +175,6 @@ cython_debug/
 *.crt
 .env*coverage*.json
 htmlcov/
+
+# Claude Code plans (local only)
+.claude/plans/

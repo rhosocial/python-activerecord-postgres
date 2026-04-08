@@ -99,6 +99,7 @@ from .mixins import (
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
+    PostgresAdvisoryLockMixin,
     # Introspection capability mixin
     PostgresIntrospectionCapabilityMixin,
 )
@@ -137,6 +138,7 @@ from .protocols import (
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
+    PostgresAdvisoryLockSupport,
 )
 
 if TYPE_CHECKING:
@@ -222,6 +224,7 @@ class PostgresDialect(
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
+    PostgresAdvisoryLockMixin,
     # Protocol supports
     SetOperationSupport,
     TruncateSupport,
@@ -286,6 +289,7 @@ class PostgresDialect(
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
+    PostgresAdvisoryLockSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
@@ -460,6 +464,46 @@ class PostgresDialect(
     def supports_for_update_skip_locked(self) -> bool:
         """Whether FOR UPDATE SKIP LOCKED is supported."""
         return self.version >= (9, 5, 0)  # Supported since 9.5
+
+    def supports_for_share(self) -> bool:
+        """Whether FOR SHARE lock strength is supported (PostgreSQL 9.0+)."""
+        return self.version >= (9, 0, 0)
+
+    def supports_for_no_key_update(self) -> bool:
+        """Whether FOR NO KEY UPDATE lock strength is supported (PostgreSQL 9.0+)."""
+        return self.version >= (9, 0, 0)
+
+    def supports_for_key_share(self) -> bool:
+        """Whether FOR KEY SHARE lock strength is supported (PostgreSQL 9.3+)."""
+        return self.version >= (9, 3, 0)
+
+    def supports_lock_strength(self, strength) -> bool:
+        """
+        Check if a specific lock strength is supported.
+
+        PostgreSQL lock strength support by version:
+        - FOR UPDATE: All versions
+        - FOR NO KEY UPDATE: PostgreSQL 9.0+
+        - FOR SHARE: PostgreSQL 9.0+
+        - FOR KEY SHARE: PostgreSQL 9.3+
+
+        Args:
+            strength: The LockStrength enum value to check
+
+        Returns:
+            True if the lock strength is supported, False otherwise
+        """
+        from rhosocial.activerecord.backend.expression.query_parts import LockStrength
+
+        if strength == LockStrength.UPDATE:
+            return True  # All PostgreSQL versions support FOR UPDATE
+        elif strength == LockStrength.NO_KEY_UPDATE:
+            return self.version >= (9, 0, 0)
+        elif strength == LockStrength.SHARE:
+            return self.version >= (9, 0, 0)
+        elif strength == LockStrength.KEY_SHARE:
+            return self.version >= (9, 3, 0)
+        return False
 
     def supports_merge_statement(self) -> bool:
         """Whether MERGE statement is supported."""

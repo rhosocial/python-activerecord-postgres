@@ -61,7 +61,12 @@ from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
 
-class AsyncPostgresBackend(AsyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, AsyncStorageBackend):
+class AsyncPostgresBackend(
+    AsyncExplainBackendMixin,
+    IntrospectorBackendMixin,
+    PostgresBackendMixin,
+    AsyncStorageBackend,
+):
     """Asynchronous PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -663,7 +668,15 @@ class AsyncPostgresBackend(AsyncExplainBackendMixin, IntrospectorBackendMixin, P
             self.log(logging.ERROR, f"Failed to reconnect: {str(e)}")
             return False
 
-    async def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, max_retries: int = 2, **kwargs) -> QueryResult:
+    async def execute(
+        self,
+        sql: str,
+        params: Optional[Tuple] = None,
+        *,
+        options=None,
+        max_retries: int = 2,
+        **kwargs,
+    ) -> QueryResult:
         """
         Execute a SQL statement with optional parameters asynchronously.
 
@@ -725,7 +738,7 @@ class AsyncPostgresBackend(AsyncExplainBackendMixin, IntrospectorBackendMixin, P
                     if await self._reconnect():
                         continue
                     # If reconnection fails, break and raise the error
-                    self.log(logging.ERROR, f"Failed to reconnect after connection error")
+                    self.log(logging.ERROR, "Failed to reconnect after connection error")
                     break
                 raise
 
@@ -838,6 +851,140 @@ class AsyncPostgresBackend(AsyncExplainBackendMixin, IntrospectorBackendMixin, P
         from ..explain import PostgresExplainResult, PostgresExplainPlanLine
         rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
         return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
+
+    # region Advisory Lock Methods
+
+    async def execute_advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ) -> None:
+        """
+        Acquire an advisory lock asynchronously.
+
+        This method blocks until the lock is acquired.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Raises:
+            DatabaseError: If the lock operation fails
+        """
+        from rhosocial.activerecord.backend.expression.advisory import AdvisoryLockExpression
+
+        expr = AdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        sql, params = expr.to_sql()
+        await self.execute(sql, params)
+
+    async def execute_advisory_unlock(self, key, shared: bool = False) -> bool:
+        """
+        Release an advisory lock asynchronously.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, release shared lock; otherwise exclusive lock
+
+        Returns:
+            True if the lock was released, False if it was not held
+        """
+        from rhosocial.activerecord.backend.expression.advisory import AdvisoryUnlockExpression
+
+        expr = AdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
+        sql, params = expr.to_sql()
+        result = await self.execute(sql, params)
+        # pg_advisory_unlock returns boolean in first column
+        if result.data and len(result.data) > 0:
+            row = result.data[0]
+            # Result is a dict with column name as key
+            return bool(list(row.values())[0])
+        return False
+
+    async def execute_advisory_unlock_all(self) -> None:
+        """
+        Release all advisory locks held by the current session asynchronously.
+        """
+        from rhosocial.activerecord.backend.expression.advisory import AdvisoryUnlockAllExpression
+
+        expr = AdvisoryUnlockAllExpression(self.dialect)
+        sql, params = expr.to_sql()
+        await self.execute(sql, params)
+
+    async def try_advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ) -> bool:
+        """
+        Non-blocking advisory lock acquisition asynchronously.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Returns:
+            True if the lock was acquired, False if it was not available
+        """
+        from rhosocial.activerecord.backend.expression.advisory import TryAdvisoryLockExpression
+
+        expr = TryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        sql, params = expr.to_sql()
+        result = await self.execute(sql, params)
+        # pg_try_advisory_lock returns boolean in first column
+        if result.data and len(result.data) > 0:
+            row = result.data[0]
+            # Result is a dict with column name as key
+            return bool(list(row.values())[0])
+        return False
+
+    def advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ):
+        """
+        Async context manager for advisory locks.
+
+        Automatically acquires the lock on entry and releases it on exit.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Returns:
+            Async context manager that holds the lock
+
+        Example:
+            async with backend.advisory_lock(key=12345):
+                # Critical section - lock is held
+                await process_data()
+            # Lock automatically released
+
+            # Shared lock for read-only access
+            async with backend.advisory_lock(key=12345, shared=True):
+                await read_data()
+        """
+        from contextlib import asynccontextmanager
+
+        @asynccontextmanager
+        async def _advisory_lock_context():
+            await self.execute_advisory_lock(key=key, shared=shared, session=session)
+            try:
+                yield
+            finally:
+                # Only release session-level locks; transaction-level are auto-released
+                if session:
+                    await self.execute_advisory_unlock(key=key)
+
+        return _advisory_lock_context()
+
+    # endregion
 
 
 __all__ = ["AsyncPostgresBackend"]
