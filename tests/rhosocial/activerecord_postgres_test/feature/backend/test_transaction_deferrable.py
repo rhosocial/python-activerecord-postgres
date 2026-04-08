@@ -211,13 +211,12 @@ class TestAsyncTransactionDeferrable:
     async def test_async_get_deferred_constraints(self, async_postgres_backend, async_test_table_with_deferrable_fk):
         """Test getting list of deferred constraints (async)."""
         tx_manager = async_postgres_backend.transaction_manager
-        
+
         async with async_postgres_backend.transaction():
             await tx_manager.defer_constraint("async_deferred_fk")
-            
-            # Check _deferred_constraints attribute directly since
-            # AsyncPostgresTransactionManager doesn't have get_deferred_constraints method
-            deferred = tx_manager._deferred_constraints
+
+            # Use public API to get deferred constraints
+            deferred = tx_manager.get_deferred_constraints()
             assert "async_deferred_fk" in deferred
 
     @pytest.mark.asyncio
@@ -227,7 +226,7 @@ class TestAsyncTransactionDeferrable:
         
         async with async_postgres_backend.transaction():
             await tx_manager.defer_constraint("async_deferred_fk")
-            assert len(tx_manager._deferred_constraints) == 1
+            assert len(tx_manager.get_deferred_constraints()) == 1
             
             await async_postgres_backend.execute(
                 "INSERT INTO test_deferred_parent (id, name) VALUES (%s, %s)",
@@ -238,7 +237,7 @@ class TestAsyncTransactionDeferrable:
                 (3, Decimal("100.00"))
             )
         
-        assert len(tx_manager._deferred_constraints) == 0
+        assert len(tx_manager.get_deferred_constraints()) == 0
 
     @pytest.mark.asyncio
     async def test_async_deferred_constraints_cleared_after_rollback(self, async_postgres_backend, async_test_table_with_deferrable_fk):
@@ -248,9 +247,9 @@ class TestAsyncTransactionDeferrable:
         try:
             async with async_postgres_backend.transaction():
                 await tx_manager.defer_constraint("async_deferred_fk")
-                assert len(tx_manager._deferred_constraints) == 1
+                assert len(tx_manager.get_deferred_constraints()) == 1
                 raise Exception("Force rollback")
         except Exception:
             pass
         
-        assert len(tx_manager._deferred_constraints) == 0
+        assert len(tx_manager.get_deferred_constraints()) == 0
