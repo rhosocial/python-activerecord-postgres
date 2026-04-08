@@ -51,6 +51,10 @@ from rhosocial.activerecord.backend.introspection.types import (
     TriggerInfo,
     ViewInfo,
 )
+from .status_introspector import (
+    SyncPostgreSQLStatusIntrospector,
+    AsyncPostgreSQLStatusIntrospector,
+)
 
 
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
@@ -314,6 +318,14 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
 
     def __init__(self, backend: Any, executor: SyncIntrospectorExecutor) -> None:
         super().__init__(backend, executor)
+        self._status_instance: Optional[SyncPostgreSQLStatusIntrospector] = None
+
+    @property
+    def status(self) -> SyncPostgreSQLStatusIntrospector:
+        """PostgreSQL status introspector (lazily created)."""
+        if self._status_instance is None:
+            self._status_instance = SyncPostgreSQLStatusIntrospector(self._backend)
+        return self._status_instance
 
 
 class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntrospector):
@@ -334,3 +346,11 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
 
     def __init__(self, backend: Any, executor: AsyncIntrospectorExecutor) -> None:
         super().__init__(backend, executor)
+        self._status_instance: Optional[AsyncPostgreSQLStatusIntrospector] = None
+
+    @property
+    def status(self) -> AsyncPostgreSQLStatusIntrospector:
+        """PostgreSQL status introspector (lazily created)."""
+        if self._status_instance is None:
+            self._status_instance = AsyncPostgreSQLStatusIntrospector(self._backend)
+        return self._status_instance
