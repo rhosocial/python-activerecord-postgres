@@ -1,3 +1,17 @@
+## [v1.0.0.dev9] - 2026-04-08
+
+### Added
+
+- Added connection pool context awareness support for PostgreSQL backend, enabling proper connection management across sync/async contexts and transaction boundaries. ([#19](https://github.com/rhosocial/python-activerecord-postgres/issues/19))
+- Added PostgreSQL server status overview support with comprehensive introspection capabilities including WAL, replication, archive, security, and extensions info. ([#21](https://github.com/rhosocial/python-activerecord-postgres/issues/21))
+
+
+
+### Fixed
+
+- Fixed PostgreSQL transaction manager to respect optional BEGIN syntax - isolation level is no longer forced, allowing SESSION CHARACTERISTICS to take effect when not explicitly set. ([#20](https://github.com/rhosocial/python-activerecord-postgres/issues/20))
+
+
 ## [v1.0.0.dev8] - 2026-04-06
 
 ### Added
