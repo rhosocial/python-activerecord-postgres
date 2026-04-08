@@ -43,8 +43,8 @@ POSTGRES_CONFIG_VARIABLES = [
     ("maintenance_work_mem", StatusCategory.CONFIGURATION, "Maintenance work memory", "bytes", True),
     ("dynamic_shared_memory", StatusCategory.CONFIGURATION, "Dynamic shared memory", None, False),
     ("wal_level", StatusCategory.CONFIGURATION, "WAL level", None, False),
-    ("wal_keep_segments", StatusCategory.CONFIGURATION, "WAL segments", None, False),
-    ("synchronous_commit", StatusCategory.CONFIGURATION, "Synchronous commit", None, False),
+    ("wal_keep_size", StatusCategory.CONFIGURATION, "WAL keep size", "bytes", False),  # Changed from wal_keep_segments
+    ("synchronous_commit", StatusCategory.PERFORMANCE, "Synchronous commit", None, False),
     ("checkpoint_timeout", StatusCategory.PERFORMANCE, "Checkpoint timeout", "seconds", False),
     ("checkpoint_completion_target", StatusCategory.PERFORMANCE, "Checkpoint completion target", "seconds", False),
     ("archive_timeout", StatusCategory.PERFORMANCE, "Archive timeout", "seconds", False),
@@ -64,6 +64,29 @@ POSTGRES_CONFIG_VARIABLES = [
     ("max_wal_senders", StatusCategory.REPLICATION, "Maximum WAL senders", None, False),
     ("max_replication_slots", StatusCategory.REPLICATION, "Maximum replication slots", None, False),
     ("hot_standby", StatusCategory.REPLICATION, "Hot standby mode", None, False),
+]
+
+
+# Performance metrics from pg_stat_bgwriter and other views
+# Format: (variable_name, category, description, unit)
+POSTGRES_STATUS_VARIABLES = [
+    # Checkpoint statistics (available in PostgreSQL 10-16, removed in 17+)
+    ("checkpoints_timed", StatusCategory.PERFORMANCE, "Scheduled checkpoints", "checkpoints"),
+    ("checkpoints_req", StatusCategory.PERFORMANCE, "Requested checkpoints", "checkpoints"),
+
+    # Buffer pool statistics
+    ("buffers_alloc", StatusCategory.PERFORMANCE, "Buffer allocations", None),
+    ("buffers_backend_fsync", StatusCategory.PERFORMANCE, "Buffer backend fsync", None),
+    ("buffers_checkpoint", StatusCategory.PERFORMANCE, "Buffers written by checkpoint", None),
+
+    # Connection statistics (from pg_stat_activity)
+    ("numbackends", StatusCategory.CONNECTION, "Number of backend connections", None),
+    ("sessions", StatusCategory.CONNECTION, "Number of sessions", None),
+    ("active", StatusCategory.CONNECTION, "Number of active sessions", None),
+    ("idle", StatusCategory.CONNECTION, "Number of idle sessions", None),
+    ("waiting", StatusCategory.CONNECTION, "Number of waiting sessions", None),
+    ("total", StatusCategory.CONNECTION, "Total connections", None),
+    ("max_conn", StatusCategory.CONNECTION, "Maximum connections", None),
 ]
 
 
@@ -130,6 +153,37 @@ class PostgreSQLStatusIntrospectorMixin:
             pass
 
         return "Unknown"
+
+    def _get_version_tuple(self) -> tuple:
+        """Get PostgreSQL version as tuple for comparison.
+
+        Returns tuple like (18, 3, 0) or (9, 6, 24).
+        """
+        # Try to get version from backend's _server_version_cache attribute first
+        version = getattr(self._backend, '_server_version_cache', None)
+        if version:
+            return tuple(version)
+
+        # Fall back to _version attribute
+        version = getattr(self._backend, '_version', None)
+        if version:
+            return tuple(version)
+
+        # Try dialect version
+        if hasattr(self._backend, '_dialect') and hasattr(self._backend._dialect, 'version'):
+            version = self._backend._dialect.version
+            if version:
+                return tuple(version)
+
+        # Last resort: query server directly
+        try:
+            version = self._backend.get_server_version()
+            if version:
+                return tuple(version)
+        except Exception:
+            pass
+
+        return (0, 0, 0)  # Unknown version
 
     def _create_status_item(
         self,
@@ -485,6 +539,7 @@ class SyncPostgreSQLStatusIntrospector(
     def get_wal_info(self) -> WALInfo:
         """Get WAL (Write-Ahead Logging) information."""
         wal_info = WALInfo()
+        version = self._get_version_tuple()
 
         # Get WAL level
         try:
@@ -494,54 +549,89 @@ class SyncPostgreSQLStatusIntrospector(
         except Exception:
             pass
 
-        # Get WAL directory size (PostgreSQL 13+)
+        # Get WAL position/size
+        # PostgreSQL 10+: pg_current_wal_lsn()
+        # PostgreSQL 9.6 and below: pg_current_xlog_location()
         try:
-            rows = self._exec_query("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
+            if version >= (10, 0, 0):
+                rows = self._exec_query("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
+            else:
+                # PG 9.6 and below use xlog terminology
+                rows = self._exec_query("SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes")
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
             pass
 
         # Get WAL files count
-        try:
-            rows = self._exec_query("""
-                SELECT count(*) as wal_files
-                FROM pg_ls_waldir()
-            """)
-            if rows:
-                wal_info.wal_files = int(rows[0].get('wal_files', 0))
-        except Exception:
-            # Function may not exist in older versions
-            pass
+        # pg_ls_waldir() only exists in PostgreSQL 10+
+        if version >= (10, 0, 0):
+            try:
+                rows = self._exec_query("""
+                    SELECT count(*) as wal_files
+                    FROM pg_ls_waldir()
+                """)
+                if rows:
+                    wal_info.wal_files = int(rows[0].get('wal_files', 0))
+            except Exception:
+                pass
 
         # Get checkpoint statistics
+        # PostgreSQL 10-16: pg_stat_bgwriter has checkpoints_timed and checkpoints_req
+        # PostgreSQL 17+: these columns moved to pg_stat_checkpointer
         try:
-            rows = self._exec_query("""
-                SELECT checkpoints_timed + checkpoints_req as checkpoint_count
-                FROM pg_stat_bgwriter
-            """)
+            if version >= (17, 0, 0):
+                # PostgreSQL 17+ uses pg_stat_checkpointer
+                rows = self._exec_query("""
+                    SELECT
+                        COALESCE(num_timed, 0) +
+                        COALESCE(num_requested, 0) as checkpoint_count
+                    FROM pg_stat_checkpointer
+                """)
+            else:
+                # PostgreSQL 10-16 uses pg_stat_bgwriter
+                rows = self._exec_query("""
+                    SELECT
+                        COALESCE(checkpoints_timed, 0) +
+                        COALESCE(checkpoints_req, 0) as checkpoint_count
+                    FROM pg_stat_bgwriter
+                """)
             if rows:
                 wal_info.checkpoint_count = int(rows[0].get('checkpoint_count', 0))
         except Exception:
             pass
 
-        # Get last checkpoint time
-        try:
-            rows = self._exec_query("""
-                SELECT pg_stat_get_xact_checkpoint_timestamp()::text as checkpoint_time
-            """)
-            if rows and rows[0].get('checkpoint_time'):
-                wal_info.checkpoint_time = rows[0]['checkpoint_time']
-        except Exception:
-            pass
+        # Get last checkpoint info
+        # pg_control_checkpoint() exists in PostgreSQL 9.6+
+        # Returns a record with checkpoint LSN as the first column
+        if version >= (10, 0, 0):
+            try:
+                rows = self._exec_query("""
+                    SELECT (pg_control_checkpoint()).checkpoint_lsn as checkpoint_info
+                """)
+                if rows and rows[0].get('checkpoint_info'):
+                    wal_info.checkpoint_time = rows[0]['checkpoint_info']
+            except Exception:
+                # Some PostgreSQL versions may not support this syntax
+                pass
 
-        # Get WAL segments (pg_wal files)
-        try:
-            rows = self._exec_query("SHOW wal_keep_segments")
-            if rows:
-                wal_info.wal_segments = int(list(rows[0].values())[0] or 0)
-        except Exception:
-            pass
+        # Get WAL keep size/segments
+        # PostgreSQL 13+: wal_keep_size
+        # PostgreSQL 12 and below: wal_keep_segments
+        if version >= (13, 0, 0):
+            try:
+                rows = self._exec_query("SHOW wal_keep_size")
+                if rows:
+                    wal_info.wal_segments = list(rows[0].values())[0]
+            except Exception:
+                pass
+        else:
+            try:
+                rows = self._exec_query("SHOW wal_keep_segments")
+                if rows:
+                    wal_info.wal_segments = list(rows[0].values())[0]
+            except Exception:
+                pass
 
         return wal_info
 
@@ -1041,6 +1131,7 @@ class AsyncPostgreSQLStatusIntrospector(
     async def get_wal_info(self) -> WALInfo:
         """Get WAL (Write-Ahead Logging) information."""
         wal_info = WALInfo()
+        version = self._get_version_tuple()
 
         # Get WAL level
         try:
@@ -1050,54 +1141,89 @@ class AsyncPostgreSQLStatusIntrospector(
         except Exception:
             pass
 
-        # Get WAL directory size (PostgreSQL 13+)
+        # Get WAL position/size
+        # PostgreSQL 10+: pg_current_wal_lsn()
+        # PostgreSQL 9.6 and below: pg_current_xlog_location()
         try:
-            rows = await self._exec_query_async("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
+            if version >= (10, 0, 0):
+                rows = await self._exec_query_async("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
+            else:
+                # PG 9.6 and below use xlog terminology
+                rows = await self._exec_query_async("SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes")
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
             pass
 
         # Get WAL files count
-        try:
-            rows = await self._exec_query_async("""
-                SELECT count(*) as wal_files
-                FROM pg_ls_waldir()
-            """)
-            if rows:
-                wal_info.wal_files = int(rows[0].get('wal_files', 0))
-        except Exception:
-            # Function may not exist in older versions
-            pass
+        # pg_ls_waldir() only exists in PostgreSQL 10+
+        if version >= (10, 0, 0):
+            try:
+                rows = await self._exec_query_async("""
+                    SELECT count(*) as wal_files
+                    FROM pg_ls_waldir()
+                """)
+                if rows:
+                    wal_info.wal_files = int(rows[0].get('wal_files', 0))
+            except Exception:
+                pass
 
         # Get checkpoint statistics
+        # PostgreSQL 10-16: pg_stat_bgwriter has checkpoints_timed and checkpoints_req
+        # PostgreSQL 17+: these columns moved to pg_stat_checkpointer
         try:
-            rows = await self._exec_query_async("""
-                SELECT checkpoints_timed + checkpoints_req as checkpoint_count
-                FROM pg_stat_bgwriter
-            """)
+            if version >= (17, 0, 0):
+                # PostgreSQL 17+ uses pg_stat_checkpointer
+                rows = await self._exec_query_async("""
+                    SELECT
+                        COALESCE(num_timed, 0) +
+                        COALESCE(num_requested, 0) as checkpoint_count
+                    FROM pg_stat_checkpointer
+                """)
+            else:
+                # PostgreSQL 10-16 uses pg_stat_bgwriter
+                rows = await self._exec_query_async("""
+                    SELECT
+                        COALESCE(checkpoints_timed, 0) +
+                        COALESCE(checkpoints_req, 0) as checkpoint_count
+                    FROM pg_stat_bgwriter
+                """)
             if rows:
                 wal_info.checkpoint_count = int(rows[0].get('checkpoint_count', 0))
         except Exception:
             pass
 
-        # Get last checkpoint time
-        try:
-            rows = await self._exec_query_async("""
-                SELECT pg_stat_get_xact_checkpoint_timestamp()::text as checkpoint_time
-            """)
-            if rows and rows[0].get('checkpoint_time'):
-                wal_info.checkpoint_time = rows[0]['checkpoint_time']
-        except Exception:
-            pass
+        # Get last checkpoint info
+        # pg_control_checkpoint() exists in PostgreSQL 9.6+
+        # Returns a record with checkpoint LSN as the first column
+        if version >= (10, 0, 0):
+            try:
+                rows = await self._exec_query_async("""
+                    SELECT (pg_control_checkpoint()).checkpoint_lsn as checkpoint_info
+                """)
+                if rows and rows[0].get('checkpoint_info'):
+                    wal_info.checkpoint_time = rows[0]['checkpoint_info']
+            except Exception:
+                # Some PostgreSQL versions may not support this syntax
+                pass
 
-        # Get WAL segments (pg_wal files)
-        try:
-            rows = await self._exec_query_async("SHOW wal_keep_segments")
-            if rows:
-                wal_info.wal_segments = int(list(rows[0].values())[0] or 0)
-        except Exception:
-            pass
+        # Get WAL keep size/segments
+        # PostgreSQL 13+: wal_keep_size
+        # PostgreSQL 12 and below: wal_keep_segments
+        if version >= (13, 0, 0):
+            try:
+                rows = await self._exec_query_async("SHOW wal_keep_size")
+                if rows:
+                    wal_info.wal_segments = list(rows[0].values())[0]
+            except Exception:
+                pass
+        else:
+            try:
+                rows = await self._exec_query_async("SHOW wal_keep_segments")
+                if rows:
+                    wal_info.wal_segments = list(rows[0].values())[0]
+            except Exception:
+                pass
 
         return wal_info
 
