@@ -262,13 +262,10 @@ class TestSyncSessionCharacteristics:
     def test_session_characteristics_with_isolation_level(self, postgres_backend, test_table):
         """Test session characteristics with isolation level.
 
-        Note: The transaction manager always explicitly sets isolation level
-        in BEGIN statements, which overrides SESSION CHARACTERISTICS.
-        This test verifies that SESSION CHARACTERISTICS can be set and
-        that explicit settings in BEGIN take precedence.
-
-        To test SESSION CHARACTERISTICS isolation level directly,
-        you would need to execute a plain BEGIN without parameters.
+        When isolation_level is not explicitly set (None), SESSION CHARACTERISTICS
+        should take effect. This test verifies:
+        1. SESSION CHARACTERISTICS can set default isolation level
+        2. BEGIN without explicit isolation level uses session default
         """
         from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
 
@@ -278,19 +275,30 @@ class TestSyncSessionCharacteristics:
             expr.session(True).isolation_level(IsolationLevel.SERIALIZABLE).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
-            # The transaction manager's isolation_level property determines
-            # what gets set in BEGIN statement, not session characteristics
-            # So we set the transaction manager's isolation level to match
-            postgres_backend.transaction_manager.isolation_level = IsolationLevel.SERIALIZABLE
+            # Verify isolation_level is None (not explicitly set)
+            tx_manager = postgres_backend.transaction_manager
+            assert tx_manager.isolation_level is None, \
+                "isolation_level should be None to allow SESSION CHARACTERISTICS to take effect"
 
+            # Use begin() directly (not context manager) to avoid implicit isolation level setting
+            tx_manager.begin()
+            level = tx_manager.get_current_isolation_level()
+            assert level == IsolationLevel.SERIALIZABLE, \
+                f"Expected SERIALIZABLE from SESSION CHARACTERISTICS, got {level}"
+            tx_manager.commit()
+
+            # Now test with explicit isolation level override
+            tx_manager.isolation_level = IsolationLevel.READ_COMMITTED
             with postgres_backend.transaction():
-                level = postgres_backend.transaction_manager.get_current_isolation_level()
-                assert level == IsolationLevel.SERIALIZABLE
+                level = tx_manager.get_current_isolation_level()
+                assert level == IsolationLevel.READ_COMMITTED, \
+                    f"Explicit isolation level should override SESSION CHARACTERISTICS, got {level}"
         finally:
             # Reset to default READ WRITE with READ COMMITTED
-            postgres_backend.transaction_manager.isolation_level = IsolationLevel.READ_COMMITTED
+            tx_manager = postgres_backend.transaction_manager
+            tx_manager.isolation_level = None
             expr = SetTransactionExpression(postgres_backend.dialect)
-            expr.session(True).isolation_level(IsolationLevel.READ_COMMITTED).read_write()
+            expr.session(True).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
 
@@ -455,6 +463,49 @@ class TestAsyncSessionCharacteristics:
                 await tx_manager.rollback()
         finally:
             # Reset session characteristics to READ WRITE for teardown
+            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr.session(True).read_write()
+            await async_postgres_backend.execute(expr.to_sql()[0])
+
+    @pytest.mark.asyncio
+    async def test_async_session_characteristics_with_isolation_level(self, async_postgres_backend, async_test_table):
+        """Test session characteristics with isolation level (async).
+
+        When isolation_level is not explicitly set (None), SESSION CHARACTERISTICS
+        should take effect. This test verifies:
+        1. SESSION CHARACTERISTICS can set default isolation level
+        2. BEGIN without explicit isolation level uses session default
+        """
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+
+        try:
+            # Set session characteristics with SERIALIZABLE isolation
+            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr.session(True).isolation_level(IsolationLevel.SERIALIZABLE).read_write()
+            await async_postgres_backend.execute(expr.to_sql()[0])
+
+            # Verify isolation_level is None (not explicitly set)
+            tx_manager = async_postgres_backend.transaction_manager
+            assert tx_manager.isolation_level is None, \
+                "isolation_level should be None to allow SESSION CHARACTERISTICS to take effect"
+
+            # Use begin() directly (not context manager) to avoid implicit isolation level setting
+            await tx_manager.begin()
+            level = await tx_manager.get_current_isolation_level()
+            assert level == IsolationLevel.SERIALIZABLE, \
+                f"Expected SERIALIZABLE from SESSION CHARACTERISTICS, got {level}"
+            await tx_manager.commit()
+
+            # Now test with explicit isolation level override
+            tx_manager.isolation_level = IsolationLevel.READ_COMMITTED
+            async with async_postgres_backend.transaction():
+                level = await tx_manager.get_current_isolation_level()
+                assert level == IsolationLevel.READ_COMMITTED, \
+                    f"Explicit isolation level should override SESSION CHARACTERISTICS, got {level}"
+        finally:
+            # Reset to default READ WRITE with no explicit isolation level
+            tx_manager = async_postgres_backend.transaction_manager
+            tx_manager.isolation_level = None
             expr = SetTransactionExpression(async_postgres_backend.dialect)
             expr.session(True).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
