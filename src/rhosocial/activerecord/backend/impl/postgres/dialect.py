@@ -493,7 +493,7 @@ class PostgresDialect(
         Returns:
             True if the lock strength is supported, False otherwise
         """
-        from rhosocial.activerecord.backend.expression.query_parts import LockStrength
+        from rhosocial.activerecord.backend.impl.postgres.expression.locking import LockStrength
 
         if strength == LockStrength.UPDATE:
             return True  # All PostgreSQL versions support FOR UPDATE

@@ -869,7 +869,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         Raises:
             DatabaseError: If the lock operation fails
         """
-        from rhosocial.activerecord.backend.expression.advisory import AdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryLockExpression
 
         expr = AdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
@@ -886,7 +886,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         Returns:
             True if the lock was released, False if it was not held
         """
-        from rhosocial.activerecord.backend.expression.advisory import AdvisoryUnlockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockExpression
 
         expr = AdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
         sql, params = expr.to_sql()
@@ -902,7 +902,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         """
         Release all advisory locks held by the current session.
         """
-        from rhosocial.activerecord.backend.expression.advisory import AdvisoryUnlockAllExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockAllExpression
 
         expr = AdvisoryUnlockAllExpression(self.dialect)
         sql, params = expr.to_sql()
@@ -925,7 +925,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         Returns:
             True if the lock was acquired, False if it was not available
         """
-        from rhosocial.activerecord.backend.expression.advisory import TryAdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import TryAdvisoryLockExpression
 
         expr = TryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()

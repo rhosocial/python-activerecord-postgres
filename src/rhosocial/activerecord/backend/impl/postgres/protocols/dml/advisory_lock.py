@@ -10,7 +10,7 @@ without relying on table-level or row-level locks.
 from typing import Protocol, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.advisory import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
         AdvisoryLockExpression,
         AdvisoryUnlockExpression,
         AdvisoryUnlockAllExpression,

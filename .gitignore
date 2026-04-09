@@ -176,5 +176,6 @@ cython_debug/
 .env*coverage*.json
 htmlcov/
 
-# Claude Code plans (local only)
+# Claude Code temporary files (local only)
+.claude/tmp/
 .claude/plans/

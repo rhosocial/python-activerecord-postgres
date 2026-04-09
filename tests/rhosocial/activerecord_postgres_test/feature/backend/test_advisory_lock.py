@@ -11,7 +11,7 @@ This module tests PostgreSQL's advisory lock functionality:
 - Context manager usage
 """
 
-from rhosocial.activerecord.backend.expression.advisory import (
+from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
     AdvisoryLockExpression,
     AdvisoryUnlockExpression,
     AdvisoryUnlockAllExpression,
