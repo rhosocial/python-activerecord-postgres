@@ -10,6 +10,8 @@ import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.types.xml import (
     PostgresXML,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.xml import (
     xmlparse,
     xpath_query,
     xpath_exists,
