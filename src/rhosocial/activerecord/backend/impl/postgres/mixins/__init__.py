@@ -26,6 +26,7 @@ from .ddl.type import PostgresTypeMixin
 from .dml.vacuum import PostgresVacuumMixin
 from .dml.stored_procedure import PostgresStoredProcedureMixin
 from .dml.extended_statistics import PostgresExtendedStatisticsMixin
+from .dml.advisory_lock import PostgresAdvisoryLockMixin
 
 # Type mixins
 from .types.enum import EnumTypeMixin
@@ -67,6 +68,7 @@ __all__ = [
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",
     "PostgresExtendedStatisticsMixin",
+    "PostgresAdvisoryLockMixin",
     # Type mixins
     "EnumTypeMixin",
     "TypesDataTypeMixin",

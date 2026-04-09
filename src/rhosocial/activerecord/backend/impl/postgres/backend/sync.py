@@ -664,7 +664,15 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
                 return True
         return False
 
-    def execute(self, sql: str, params: Optional[Tuple] = None, *, options=None, max_retries: int = 2, **kwargs) -> QueryResult:
+    def execute(
+        self,
+        sql: str,
+        params: Optional[Tuple] = None,
+        *,
+        options=None,
+        max_retries: int = 2,
+        **kwargs,
+    ) -> QueryResult:
         """
         Execute a SQL statement with optional parameters.
 
@@ -726,7 +734,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
                     if self._reconnect():
                         continue
                     # If reconnection fails, break and raise the error
-                    self.log(logging.ERROR, f"Failed to reconnect after connection error")
+                    self.log(logging.ERROR, "Failed to reconnect after connection error")
                     break
                 raise
 
@@ -839,6 +847,140 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         from ..explain import PostgresExplainResult, PostgresExplainPlanLine
         rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
         return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
+
+    # region Advisory Lock Methods
+
+    def execute_advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ) -> None:
+        """
+        Acquire an advisory lock.
+
+        This method blocks until the lock is acquired.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Raises:
+            DatabaseError: If the lock operation fails
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryLockExpression
+
+        expr = AdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        sql, params = expr.to_sql()
+        self.execute(sql, params)
+
+    def execute_advisory_unlock(self, key, shared: bool = False) -> bool:
+        """
+        Release an advisory lock.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, release shared lock; otherwise exclusive lock
+
+        Returns:
+            True if the lock was released, False if it was not held
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockExpression
+
+        expr = AdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
+        sql, params = expr.to_sql()
+        result = self.execute(sql, params)
+        # pg_advisory_unlock returns boolean in first column
+        if result.data and len(result.data) > 0:
+            row = result.data[0]
+            # Result is a dict with column name as key
+            return bool(list(row.values())[0])
+        return False
+
+    def execute_advisory_unlock_all(self) -> None:
+        """
+        Release all advisory locks held by the current session.
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockAllExpression
+
+        expr = AdvisoryUnlockAllExpression(self.dialect)
+        sql, params = expr.to_sql()
+        self.execute(sql, params)
+
+    def try_advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ) -> bool:
+        """
+        Non-blocking advisory lock acquisition.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Returns:
+            True if the lock was acquired, False if it was not available
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import TryAdvisoryLockExpression
+
+        expr = TryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        sql, params = expr.to_sql()
+        result = self.execute(sql, params)
+        # pg_try_advisory_lock returns boolean in first column
+        if result.data and len(result.data) > 0:
+            row = result.data[0]
+            # Result is a dict with column name as key
+            return bool(list(row.values())[0])
+        return False
+
+    def advisory_lock(
+        self,
+        key,
+        shared: bool = False,
+        session: bool = True
+    ):
+        """
+        Context manager for advisory locks.
+
+        Automatically acquires the lock on entry and releases it on exit.
+
+        Args:
+            key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
+            shared: If True, acquire shared lock; otherwise exclusive lock
+            session: If True (default), session-level lock; otherwise transaction-level
+
+        Returns:
+            Context manager that holds the lock
+
+        Example:
+            with backend.advisory_lock(key=12345):
+                # Critical section - lock is held
+                process_data()
+            # Lock automatically released
+
+            # Shared lock for read-only access
+            with backend.advisory_lock(key=12345, shared=True):
+                read_data()
+        """
+        from contextlib import contextmanager
+
+        @contextmanager
+        def _advisory_lock_context():
+            self.execute_advisory_lock(key=key, shared=shared, session=session)
+            try:
+                yield
+            finally:
+                # Only release session-level locks; transaction-level are auto-released
+                if session:
+                    self.execute_advisory_unlock(key=key)
+
+        return _advisory_lock_context()
+
+    # endregion
 
 
 __all__ = ["PostgresBackend"]
