@@ -60,6 +60,8 @@ from .adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Ad
 from .types.text_search import (
     PostgresTsVector,
     PostgresTsQuery,
+)
+from .functions.text_search import (
     to_tsvector,
     to_tsquery,
     plainto_tsquery,

@@ -18,6 +18,8 @@ Function modules and their corresponding PostgreSQL documentation:
 - enum: Enum functions - https://www.postgresql.org/docs/current/functions-enum.html
 - bit_string: Bit string functions and operators - https://www.postgresql.org/docs/current/functions-bitstring.html
 - json: JSON functions and operators - https://www.postgresql.org/docs/current/functions-json.html
+- text_search: Full-text search functions - https://www.postgresql.org/docs/current/functions-textsearch.html
+- xml: XML functions - https://www.postgresql.org/docs/current/functions-xml.html
 """
 
 # Range functions
@@ -102,6 +104,32 @@ from .json import (
     jsonb_path_match,
 )
 
+# Text search functions
+from .text_search import (
+    to_tsvector,
+    to_tsquery,
+    plainto_tsquery,
+    phraseto_tsquery,
+    websearch_to_tsquery,
+    ts_matches,
+    ts_matches_expr,
+    ts_rank,
+    ts_rank_cd,
+    ts_headline,
+    tsvector_concat,
+    tsvector_strip,
+    tsvector_setweight,
+    tsvector_length,
+)
+
+# XML functions
+from .xml import (
+    xmlparse,
+    xpath_query,
+    xpath_exists,
+    xml_is_well_formed,
+)
+
 
 __all__ = [
     # Range functions
@@ -171,4 +199,24 @@ __all__ = [
     "jsonb_path_query_first",
     "jsonb_path_exists",
     "jsonb_path_match",
+    # Text search functions
+    "to_tsvector",
+    "to_tsquery",
+    "plainto_tsquery",
+    "phraseto_tsquery",
+    "websearch_to_tsquery",
+    "ts_matches",
+    "ts_matches_expr",
+    "ts_rank",
+    "ts_rank_cd",
+    "ts_headline",
+    "tsvector_concat",
+    "tsvector_strip",
+    "tsvector_setweight",
+    "tsvector_length",
+    # XML functions
+    "xmlparse",
+    "xpath_query",
+    "xpath_exists",
+    "xml_is_well_formed",
 ]

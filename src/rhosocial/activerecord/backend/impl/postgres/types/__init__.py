@@ -100,10 +100,6 @@ from .monetary import (
 # XML type
 from .xml import (
     PostgresXML,
-    xmlparse,
-    xpath_query,
-    xpath_exists,
-    xml_is_well_formed,
 )
 
 # Type constants (convenience references)
@@ -260,10 +256,6 @@ __all__ = [
     "PostgresMoney",
     # XML type
     "PostgresXML",
-    "xmlparse",
-    "xpath_query",
-    "xpath_exists",
-    "xml_is_well_formed",
     # Type constants - Numeric
     "SMALLINT",
     "INTEGER",
