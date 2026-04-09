@@ -1,0 +1,1 @@
+Added PostgreSQL row-level lock strength support: FOR SHARE, FOR NO KEY UPDATE, and FOR KEY SHARE. These lock strengths provide finer control over row-level locking in PostgreSQL 9.0+ (KEY SHARE requires 9.3+).

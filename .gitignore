@@ -175,3 +175,7 @@ cython_debug/
 *.crt
 .env*coverage*.json
 htmlcov/
+
+# Claude Code temporary files (local only)
+.claude/tmp/
+.claude/plans/

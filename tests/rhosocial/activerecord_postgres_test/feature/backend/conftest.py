@@ -218,3 +218,10 @@ async def async_postgres_control_backend():
     backend = await provider.setup_async_backend(scenario_name)
     yield backend
     await provider.async_cleanup()
+
+
+@pytest.fixture(scope="function")
+def postgres_dialect():
+    """Fixture providing PostgresDialect instance for testing transaction expressions."""
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    return PostgresDialect()
