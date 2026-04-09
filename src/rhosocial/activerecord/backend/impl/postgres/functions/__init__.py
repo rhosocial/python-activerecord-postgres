@@ -20,6 +20,7 @@ Function modules and their corresponding PostgreSQL documentation:
 - json: JSON functions and operators - https://www.postgresql.org/docs/current/functions-json.html
 - text_search: Full-text search functions - https://www.postgresql.org/docs/current/functions-textsearch.html
 - xml: XML functions - https://www.postgresql.org/docs/current/functions-xml.html
+- math_enhanced: Enhanced math functions - https://www.postgresql.org/docs/current/functions-math.html
 """
 
 # Range functions
@@ -130,6 +131,21 @@ from .xml import (
     xml_is_well_formed,
 )
 
+# Math enhanced functions
+from .math_enhanced import (
+    round_,
+    pow,
+    power,
+    sqrt,
+    mod,
+    ceil,
+    floor,
+    trunc,
+    max_,
+    min_,
+    avg,
+)
+
 
 __all__ = [
     # Range functions
@@ -219,4 +235,16 @@ __all__ = [
     "xpath_query",
     "xpath_exists",
     "xml_is_well_formed",
+    # Math enhanced functions
+    "round_",
+    "pow",
+    "power",
+    "sqrt",
+    "mod",
+    "ceil",
+    "floor",
+    "trunc",
+    "max_",
+    "min_",
+    "avg",
 ]
