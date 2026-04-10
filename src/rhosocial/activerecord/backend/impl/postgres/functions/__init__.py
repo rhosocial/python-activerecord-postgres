@@ -146,6 +146,59 @@ from .math_enhanced import (
     avg,
 )
 
+# Array functions
+from .array import (
+    array_agg,
+    array_append,
+    array_cat,
+    array_dims,
+    array_fill,
+    array_length,
+    array_lower,
+    array_ndims,
+    array_position,
+    array_positions,
+    array_prepend,
+    array_remove,
+    array_replace,
+    array_to_string,
+    array_upper,
+    unnest,
+    array_agg_distinct,
+    string_to_array,
+)
+
+# Network address functions
+from .network import (
+    inet_client_addr,
+    inet_client_port,
+    inet_server_addr,
+    inet_server_port,
+    inet_merge,
+    inet_and,
+    inet_or,
+    inetnot,
+    inet_set_mask,
+    inet_masklen,
+    inet_netmask,
+    inet_network,
+    inet_recv,
+    inet_show,
+    cidr_netmask,
+    macaddr8_set7bit,
+)
+
+# UUID functions
+from .uuid import (
+    uuid_generate_v1,
+    uuid_generate_v1mc,
+    uuid_generate_v3,
+    uuid_generate_v4,
+    uuid_generate_v5,
+    uuid_nil,
+    uuid_max,
+)
+
 
 __all__ = [
     # Range functions
@@ -247,4 +300,55 @@ __all__ = [
     "max_",
     "min_",
     "avg",
+    # Array functions
+    "array_agg",
+    "array_append",
+    "array_cat",
+    "array_dims",
+    "array_fill",
+    "array_length",
+    "array_lower",
+    "array_ndims",
+    "array_position",
+    "array_positions",
+    "array_prepend",
+    "array_remove",
+    "array_replace",
+    "array_to_string",
+    "array_upper",
+    "unnest",
+    "array_agg_distinct",
+    "string_to_array",
+    # Network address functions
+    "inet_client_addr",
+    "inet_client_port",
+    "inet_server_addr",
+    "inet_server_port",
+    "inet_merge",
+    "inet_and",
+    "inet_or",
+    "inetnot",
+    "inet_set_mask",
+    "inet_masklen",
+    "inet_netmask",
+    "inet_network",
+    "inet_recv",
+    "inet_show",
+    "cidr_netmask",
+    "macaddr8_set7bit",
+    # UUID functions
+    "uuid_generate_v1",
+    "uuid_generate_v1mc",
+    "uuid_generate_v3",
+    "uuid_generate_v4",
+    "uuid_generate_v5",
+    "uuid_nil",
+    "uuid_max",
+    # Range constructors
+    "int4range",
+    "int8range",
+    "numrange",
+    "tsrange",
+    "tstzrange",
+    "daterange",
 ]
