@@ -376,7 +376,209 @@ def range_upper_inf(dialect: "SQLDialectBase", range_value: Any) -> str:
     return f"upper_inf({r_str})"
 
 
+# Range type constructors
+
+# Sentinel value to detect when bounds argument was not provided
+_BOUNDS_UNSET = object()
+
+
+def int4range(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct an integer range.
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (integer or None for unbounded)
+        upper: Upper bound (integer or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: int4range(lower, upper[, bounds])
+
+    Example:
+        >>> int4range(dialect, 1, 10)
+        'int4range(1, 10)'
+        >>> int4range(dialect, 1, 10, '[)')
+        "int4range(1, 10, '[)')"
+    """
+    if lower is None and upper is None:
+        return "int4range()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"int4range(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"int4range({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"int4range({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"int4range({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def int8range(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct a big integer range.
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (bigint or None for unbounded)
+        upper: Upper bound (bigint or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: int8range(lower, upper[, bounds])
+
+    Example:
+        >>> int8range(dialect, 1, 1000000)
+        'int8range(1, 1000000)'
+    """
+    if lower is None and upper is None:
+        return "int8range()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"int8range(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"int8range({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"int8range({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"int8range({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def numrange(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct a numeric range.
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (numeric or None for unbounded)
+        upper: Upper bound (numeric or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: numrange(lower, upper[, bounds])
+
+    Example:
+        >>> numrange(dialect, 1.5, 10.5)
+        'numrange(1.5, 10.5)'
+    """
+    if lower is None and upper is None:
+        return "numrange()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"numrange(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"numrange({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"numrange({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"numrange({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def tsrange(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct a timestamp range (without time zone).
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (timestamp or None for unbounded)
+        upper: Upper bound (timestamp or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: tsrange(lower, upper[, bounds])
+
+    Example:
+        >>> tsrange(dialect, "'2024-01-01 00:00:00'", "'2024-12-31 23:59:59'")
+        "tsrange('2024-01-01 00:00:00', '2024-12-31 23:59:59')"
+    """
+    if lower is None and upper is None:
+        return "tsrange()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"tsrange(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"tsrange({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"tsrange({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"tsrange({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def tstzrange(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct a timestamp range (with time zone).
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (timestamptz or None for unbounded)
+        upper: Upper bound (timestamptz or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: tstzrange(lower, upper[, bounds])
+
+    Example:
+        >>> tstzrange(dialect, "'2024-01-01 00:00:00+00'", "'2024-12-31 23:59:59+00'")
+        "tstzrange('2024-01-01 00:00:00+00', '2024-12-31 23:59:59+00')"
+    """
+    if lower is None and upper is None:
+        return "tstzrange()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"tstzrange(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"tstzrange({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"tstzrange({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"tstzrange({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def daterange(dialect: "SQLDialectBase", lower: Any = None, upper: Any = None, bounds: Any = _BOUNDS_UNSET) -> str:
+    """
+    Construct a date range.
+
+    Args:
+        dialect: The SQL dialect instance
+        lower: Lower bound (date or None for unbounded)
+        upper: Upper bound (date or None for unbounded)
+        bounds: Bounds string: '[]' (inclusive), '[)' (lower inclusive), '(]' (upper inclusive), '()' (exclusive).
+                If not provided, defaults to inclusive '[]'.
+
+    Returns:
+        SQL expression: daterange(lower, upper[, bounds])
+
+    Example:
+        >>> daterange(dialect, "'2024-01-01'", "'2024-12-31'")
+        "daterange('2024-01-01', '2024-12-31')"
+    """
+    if lower is None and upper is None:
+        return "daterange()"
+    elif lower is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"daterange(NULL, {_to_sql(upper)}{bound_str})"
+    elif upper is None:
+        bound_str = f", '{bounds}'" if bounds is not _BOUNDS_UNSET else ""
+        return f"daterange({_to_sql(lower)}, NULL{bound_str})"
+    elif bounds is _BOUNDS_UNSET:
+        return f"daterange({_to_sql(lower)}, {_to_sql(upper)})"
+    return f"daterange({_to_sql(lower)}, {_to_sql(upper)}, '{bounds}')"
+
+
+def _to_sql(expr: Any) -> str:
+    """Convert an expression to its SQL string representation."""
+    if hasattr(expr, 'to_sql'):
+        return expr.to_sql()[0]
+    return str(expr)
+
+
 __all__ = [
+    # Range operators
     "range_contains",
     "range_contained_by",
     "range_contains_range",
@@ -389,6 +591,7 @@ __all__ = [
     "range_union",
     "range_intersection",
     "range_difference",
+    # Range functions
     "range_lower",
     "range_upper",
     "range_is_empty",
@@ -396,4 +599,11 @@ __all__ = [
     "range_upper_inc",
     "range_lower_inf",
     "range_upper_inf",
+    # Range type constructors
+    "int4range",
+    "int8range",
+    "numrange",
+    "tsrange",
+    "tstzrange",
+    "daterange",
 ]
