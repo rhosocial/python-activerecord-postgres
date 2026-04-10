@@ -83,7 +83,7 @@ def hstore_from_key_value(key: str, value: str) -> str:
 
 # ============== Key/Value Extraction ==============
 
-def akeys(hstore_expr: str) -> str:
+def hstore_akeys(hstore_expr: str) -> str:
     """
     Get all keys from hstore as a text array.
 
@@ -94,13 +94,13 @@ def akeys(hstore_expr: str) -> str:
         SQL expression: akeys(hstore)
 
     Example:
-        >>> akeys("data")
+        >>> hstore_akeys("data")
         "akeys(data)"
     """
     return f"akeys({hstore_expr})"
 
 
-def skeys(hstore_expr: str) -> str:
+def hstore_skeys(hstore_expr: str) -> str:
     """
     Get all keys from hstore as a set.
 
@@ -111,13 +111,13 @@ def skeys(hstore_expr: str) -> str:
         SQL expression: skeys(hstore)
 
     Example:
-        >>> skeys("data")
+        >>> hstore_skeys("data")
         "skeys(data)"
     """
     return f"skeys({hstore_expr})"
 
 
-def avals(hstore_expr: str) -> str:
+def hstore_avals(hstore_expr: str) -> str:
     """
     Get all values from hstore as a text array.
 
@@ -128,13 +128,13 @@ def avals(hstore_expr: str) -> str:
         SQL expression: avals(hstore)
 
     Example:
-        >>> avals("data")
+        >>> hstore_avals("data")
         "avals(data)"
     """
     return f"avals({hstore_expr})"
 
 
-def svals(hstore_expr: str) -> str:
+def hstore_svals(hstore_expr: str) -> str:
     """
     Get all values from hstore as a set.
 
@@ -145,13 +145,13 @@ def svals(hstore_expr: str) -> str:
         SQL expression: svals(hstore)
 
     Example:
-        >>> svals("data")
+        >>> hstore_svals("data")
         "svals(data)"
     """
     return f"svals({hstore_expr})"
 
 
-def each(hstore_expr: str) -> str:
+def hstore_each(hstore_expr: str) -> str:
     """
     Get all key/value pairs from hstore as a set of (key, value) records.
 
@@ -162,7 +162,7 @@ def each(hstore_expr: str) -> str:
         SQL expression: each(hstore)
 
     Example:
-        >>> each("data")
+        >>> hstore_each("data")
         "each(data)"
     """
     return f"each({hstore_expr})"
@@ -706,11 +706,11 @@ __all__ = [
     "hstore_from_record",
     "hstore_from_key_value",
     # Key/Value Extraction
-    "akeys",
-    "skeys",
-    "avals",
-    "svals",
-    "each",
+    "hstore_akeys",
+    "hstore_skeys",
+    "hstore_avals",
+    "hstore_svals",
+    "hstore_each",
     # Conversion
     "hstore_to_array",
     "hstore_to_matrix",
