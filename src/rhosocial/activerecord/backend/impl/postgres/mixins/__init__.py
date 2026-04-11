@@ -21,6 +21,7 @@ from .ddl.index import PostgresIndexMixin
 from .ddl.trigger import PostgresTriggerMixin
 from .ddl.comment import PostgresCommentMixin
 from .ddl.type import PostgresTypeMixin
+from .ddl.constraint import PostgresConstraintMixin
 
 # DML mixins
 from .dml.vacuum import PostgresVacuumMixin
