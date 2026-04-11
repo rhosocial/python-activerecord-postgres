@@ -92,6 +92,7 @@ from .mixins import (
     PostgresTriggerMixin,
     PostgresCommentMixin,
     PostgresTypeMixin,
+    PostgresConstraintMixin,
     # Type mixins
     EnumTypeMixin,
     TypesDataTypeMixin,
@@ -217,6 +218,7 @@ class PostgresDialect(
     PostgresTriggerMixin,
     PostgresCommentMixin,
     PostgresTypeMixin,
+    PostgresConstraintMixin,
     # Type mixins
     EnumTypeMixin,
     TypesDataTypeMixin,
@@ -1085,6 +1087,118 @@ class PostgresDialect(
         if alias:
             sql = f"{sql} AS {self.format_identifier(alias)}"
         return sql, expr_params
+
+    # endregion
+
+    # region Constraint DDL Support (PostgreSQL-specific)
+
+    def format_add_table_constraint_action(
+        self, action: "AddTableConstraint",
+    ) -> Tuple[str, tuple]:
+        """Format ADD CONSTRAINT action with PostgreSQL-specific extensions.
+
+        Extends the base class implementation with:
+        - EXCLUDE constraint support (PG-specific constraint type)
+        - NOT VALID suffix (PG-specific: skip validation of existing rows)
+        """
+        from rhosocial.activerecord.backend.expression.statements import (
+            TableConstraintType, ConstraintValidation,
+        )
+
+        # Handle EXCLUDE constraint (PG-specific, not in base class)
+        if action.constraint.constraint_type == TableConstraintType.EXCLUDE:
+            parts = []
+            exclude_sql, params = self._format_exclude_constraint(action.constraint)
+            parts.append(exclude_sql)
+
+            # NOT VALID suffix
+            if action.constraint.dialect_options:
+                validation = action.constraint.dialect_options.get('validation')
+                if validation == ConstraintValidation.NOVALIDATE:
+                    parts.append("NOT VALID")
+
+            return f"ADD {' '.join(parts)}", tuple(params)
+
+        # Use base class for standard formatting (includes DEFERRABLE)
+        sql, params = super().format_add_table_constraint_action(action)
+
+        # PostgreSQL NOT VALID suffix
+        if action.constraint.dialect_options:
+            validation = action.constraint.dialect_options.get('validation')
+            if validation == ConstraintValidation.NOVALIDATE:
+                sql += " NOT VALID"
+
+        return sql, params
+
+    def _format_exclude_constraint(
+        self, constraint: "TableConstraint",
+    ) -> Tuple[str, tuple]:
+        """Format EXCLUDE constraint (PostgreSQL-specific).
+
+        EXCLUDE constraints use the dialect_options dict to specify:
+        - 'exclude_elements': List of (expression, operator) tuples
+          e.g., [('range', '&&')] for EXCLUDE USING gist (range WITH &&)
+        - 'using': The index access method (default 'gist')
+          e.g., 'gist', 'btree', 'spgist'
+        - 'where': Optional predicate for partial exclusion constraints
+
+        Example:
+            TableConstraint(
+                constraint_type=TableConstraintType.EXCLUDE,
+                name='exclude_range_overlap',
+                dialect_options={
+                    'exclude_elements': [('range', '&&')],
+                    'using': 'gist',
+                }
+            )
+            # Generates: EXCLUDE USING gist (range WITH &&)
+        """
+        parts = []
+        params: list = []
+
+        if constraint.name:
+            parts.append(f"CONSTRAINT {self.format_identifier(constraint.name)}")
+
+        # USING clause
+        using = 'gist'  # default
+        if constraint.dialect_options and 'using' in constraint.dialect_options:
+            using = constraint.dialect_options['using']
+        parts.append(f"EXCLUDE USING {using}")
+
+        # Elements: (expression, operator) pairs
+        exclude_elements = []
+        if constraint.dialect_options and 'exclude_elements' in constraint.dialect_options:
+            for expr, op in constraint.dialect_options['exclude_elements']:
+                if isinstance(expr, str):
+                    exclude_elements.append(f"{self.format_identifier(expr)} WITH {op}")
+                else:
+                    # expr is a BaseExpression
+                    expr_sql, expr_params = expr.to_sql()
+                    params.extend(expr_params)
+                    exclude_elements.append(f"{expr_sql} WITH {op}")
+
+        if exclude_elements:
+            parts.append(f"({', '.join(exclude_elements)})")
+
+        # WHERE clause for partial exclusion constraint
+        if constraint.dialect_options and 'where' in constraint.dialect_options:
+            where_expr = constraint.dialect_options['where']
+            where_sql, where_params = where_expr.to_sql()
+            params.extend(where_params)
+            parts.append(f"WHERE ({where_sql})")
+
+        # DEFERRABLE / NOT DEFERRABLE
+        if constraint.deferrable is True:
+            if constraint.initially_deferred is True:
+                parts.append("DEFERRABLE INITIALLY DEFERRED")
+            elif constraint.initially_deferred is False:
+                parts.append("DEFERRABLE INITIALLY IMMEDIATE")
+            else:
+                parts.append("DEFERRABLE")
+        elif constraint.deferrable is False:
+            parts.append("NOT DEFERRABLE")
+
+        return ' '.join(parts), tuple(params)
 
     # endregion
 

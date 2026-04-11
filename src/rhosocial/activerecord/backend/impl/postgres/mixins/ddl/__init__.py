@@ -6,6 +6,7 @@ from .index import PostgresIndexMixin
 from .trigger import PostgresTriggerMixin
 from .comment import PostgresCommentMixin
 from .type import PostgresTypeMixin
+from .constraint import PostgresConstraintMixin
 
 __all__ = [
     "PostgresPartitionMixin",
@@ -13,4 +14,5 @@ __all__ = [
     "PostgresTriggerMixin",
     "PostgresCommentMixin",
     "PostgresTypeMixin",
+    "PostgresConstraintMixin",
 ]
