@@ -20,6 +20,7 @@ from .ddl.index import PostgresIndexSupport
 from .ddl.trigger import PostgresTriggerSupport
 from .ddl.comment import PostgresCommentSupport
 from .ddl.type import PostgresTypeSupport
+from .ddl.constraint import PostgresConstraintSupport
 
 # DML protocols
 from .dml.vacuum import PostgresVacuumSupport
@@ -62,6 +63,7 @@ __all__ = [
     "PostgresTriggerSupport",
     "PostgresCommentSupport",
     "PostgresTypeSupport",
+    "PostgresConstraintSupport",
     # DML protocols
     "PostgresVacuumSupport",
     "PostgresStoredProcedureSupport",

@@ -35,6 +35,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     SetOperationMixin,
     TruncateMixin,
     ILIKEMixin,
+    ConstraintMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     CTESupport,
@@ -65,6 +66,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     ILIKESupport,
     IntrospectionSupport,
     TransactionControlSupport,
+    ConstraintSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -132,6 +134,7 @@ from .protocols import (
     PostgresTriggerSupport,
     PostgresCommentSupport,
     PostgresTypeSupport,
+    PostgresConstraintSupport,
     # Type feature protocols
     MultirangeSupport,
     EnumTypeSupport,
@@ -190,6 +193,7 @@ class PostgresDialect(
     IndexMixin,
     SequenceMixin,
     TableMixin,
+    ConstraintMixin,
     # Introspection capability
     PostgresIntrospectionCapabilityMixin,
     # PostgreSQL-specific mixins
@@ -254,6 +258,7 @@ class PostgresDialect(
     IndexSupport,
     SequenceSupport,
     TableSupport,
+    ConstraintSupport,
     # Introspection protocol
     IntrospectionSupport,
     # Transaction control protocol
@@ -284,6 +289,7 @@ class PostgresDialect(
     PostgresTriggerSupport,
     PostgresCommentSupport,
     PostgresTypeSupport,
+    PostgresConstraintSupport,
     # Type feature protocols
     MultirangeSupport,
     EnumTypeSupport,
@@ -891,6 +897,16 @@ class PostgresDialect(
     def supports_table_tablespace(self) -> bool:
         """Whether tablespace specification is supported."""
         return True
+
+    # Constraint capability overrides
+
+    def supports_constraint_enforced(self) -> bool:
+        """PostgreSQL does not support ENFORCED/NOT ENFORCED (SQL:2016).
+
+        PostgreSQL uses NOT VALID as a proprietary alternative for
+        skipping validation of existing data when adding constraints.
+        """
+        return False
 
     def format_create_table_statement(self, expr: "CreateTableExpression") -> Tuple[str, tuple]:
         """
