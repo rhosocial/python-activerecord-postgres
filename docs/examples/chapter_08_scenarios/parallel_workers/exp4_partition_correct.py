@@ -158,6 +158,8 @@ async def _async_partition_main(user_ids: list) -> int:
 
 
 def worker_partition_async(user_ids: list) -> int:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     return asyncio.run(_async_partition_main(user_ids))
 
 
@@ -251,6 +253,8 @@ async def _async_atomic_main(worker_id: int) -> int:
 
 
 def worker_atomic_async(worker_id: int) -> int:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     return asyncio.run(_async_atomic_main(worker_id))
 
 

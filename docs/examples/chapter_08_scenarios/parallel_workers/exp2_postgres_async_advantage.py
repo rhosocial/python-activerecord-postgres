@@ -167,6 +167,8 @@ async def _async_worker_main(post_ids: list) -> tuple:
 
 
 def async_worker(post_ids: list) -> tuple:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     return asyncio.run(_async_worker_main(post_ids))
 
 
@@ -176,6 +178,8 @@ def async_worker(post_ids: list) -> tuple:
 
 
 def main() -> None:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     all_ids = fetch_all_post_ids()
     if not all_ids:
         print("⚠️  No post data, please run setup_db.py first")

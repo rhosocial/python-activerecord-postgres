@@ -214,6 +214,8 @@ async def async_worker_main(post_ids: list) -> int:
 
 def worker_async(post_ids: list) -> int:
     """Child process entry: Each process independently creates its own event loop"""
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     return asyncio.run(async_worker_main(post_ids))
 
 

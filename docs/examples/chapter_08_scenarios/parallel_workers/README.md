@@ -220,3 +220,103 @@ A: 不一定。死锁依赖时序，`sleep(0.01)` 已增大窗口，多运行几
 **Q: 为什么 psycopg 不支持 free-threaded Python？**
 
 A: `psycopg` 版本 3 的 C 扩展模块尚未适配 Python 3.13t/3.14t 的 free-threaded 构建。如需 free-threaded 支持，请使用 MySQL 或 SQLite 后端。
+
+## Windows 测试结果
+
+以下测试结果在 Windows 11 上验证通过：
+
+### 测试环境
+
+| 组件 | 版本 |
+|------|------|
+| 操作系统 | Windows 11 Pro 25H2 (Build 26200) |
+| Python | 3.8.10 / 3.14.3 |
+| pytest | 8.3.5 (Python 3.8) / 8.4.2 (Python 3.14) |
+| PostgreSQL | 17.5 |
+
+### exp1: 基础多进程用法
+
+```
+=== Experiment A: Serial Processing (Single Process, Synchronous ActiveRecord) ===
+Serial completed 20 posts, time: 0.910s
+
+=== Experiment B: 4 Processes Parallel (Synchronous ActiveRecord) ===
+Parallel completed 20 posts, time: 2.998s
+Speedup: 0.3x (theoretical max 4x)
+
+=== Experiment C: 4 Processes Parallel (Asynchronous ActiveRecord) ===
+Parallel completed 20 posts, time: 3.163s
+Speedup: 0.3x (theoretical max 4x)
+```
+
+### exp2: PostgreSQL 异步特点与多进程并发写入
+
+```
+Part 1: Same process sync serial vs async sequential (single-connection limitation)
+Sync serial: 0.204s, async sequential: 0.218s
+
+Part 2: Multiprocess concurrent writes (PostgreSQL MVCC)
+Sync multiprocess (4 processes): 1.133s
+Async multiprocess (4 processes): 1.264s
+```
+
+### exp3: 死锁演示
+
+```
+Results: 2 Workers succeeded, 2 deadlocked, 0 other errors
+⚠️ Found 2 Workers rolled back due to deadlock by PostgreSQL!
+Deadlock error code: SQLSTATE 40P01
+```
+
+### exp4: 正确的并行方案
+
+```
+Solution A: Data Partitioning
+Sync: 1.170s, Async: 1.263s ✓ No duplicates
+
+Solution B: Atomic Claiming
+Sync: 1.812s, Async: 1.446s ✓ No duplicates
+
+Solution C: Atomic + Deadlock Retry (Production Recommended)
+Sync: 2.501s ✓ No duplicates
+```
+
+### exp5: 多线程警告
+
+```
+Scenario 1: Shared __backend__
+⚠️ Undefined behavior detected
+
+Scenario 2: Each thread calls configure()
+Actual backend instance count: 1 (Expected 4)
+✗ All threads share the same backend instance
+```
+
+### Windows 特殊说明
+
+在 Windows 上运行异步测试时，需要设置 `WindowsSelectorEventLoopPolicy`：
+
+```python
+import asyncio
+import sys
+
+def worker_async(post_ids: list) -> int:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    return asyncio.run(async_worker_main(post_ids))
+
+# 主程序中也需要设置（如果在主进程中使用异步）
+def main():
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # ... 其他代码
+```
+
+这是因为 Windows 默认使用 `ProactorEventLoop`，而 `psycopg` 的异步后端需要 `SelectorEventLoop`。
+
+> **重要**: 如果未设置正确的 event loop policy，将收到以下错误：
+> ```
+> Psycopg cannot use the 'ProactorEventLoop' to run in async mode.
+> Please use a compatible event loop, for instance by setting
+> 'asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())'
+> ```
