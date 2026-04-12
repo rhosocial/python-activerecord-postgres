@@ -26,29 +26,36 @@
     *   **[Advanced Indexing](postgres_specific_features/indexing.md)**: GIN, GiST, BRIN index types
     *   **[RETURNING Clause](postgres_specific_features/returning.md)**: INSERT/UPDATE/DELETE RETURNING support
 
-4. **[Transaction Support](transaction_support/README.md)**
+4. **[DDL Operations](ddl/README.md)**
+    *   **[PostgreSQL DDL Overview](ddl/README.md)**: CREATE TABLE, ALTER TABLE, DROP TABLE
+    *   **[Example Code](../examples/chapter_04_ddl/ddl.py)**: DDL example
+
+5. **[Transaction Support](transaction_support/README.md)**
     *   **[Transaction Isolation Levels](transaction_support/isolation_level.md)**: READ COMMITTED, REPEATABLE READ, SERIALIZABLE
     *   **[Savepoint Support](transaction_support/savepoint.md)**: nested transactions
     *   **[DEFERRABLE Mode](transaction_support/deferrable.md)**: deferred constraint checking
     *   **[Deadlock Handling](transaction_support/deadlock.md)**: failure retry mechanism
 
-5. **[Type Adapters](type_adapters/README.md)**
+6. **[Type Adapters](type_adapters/README.md)**
     *   **[PostgreSQL to Python Type Mapping](type_adapters/mapping.md)**: type conversion rules
     *   **[Custom Type Adapters](type_adapters/custom.md)**: extending type support
     *   **[Timezone Handling](type_adapters/timezone.md)**: TIMESTAMP WITH TIME ZONE
     *   **[Array Type Handling](type_adapters/arrays.md)**: PostgreSQL array support
 
-6. **[Testing](testing/README.md)**
+7. **[Testing](testing/README.md)**
     *   **[Test Configuration](testing/configuration.md)**: test environment setup
     *   **[Using testsuite for Testing](testing/testsuite.md)**: test suite usage
     *   **[Local PostgreSQL Testing](testing/local.md)**: local database testing
 
-7. **[Troubleshooting](troubleshooting/README.md)**
+8. **[Troubleshooting](troubleshooting/README.md)**
     *   **[Common Connection Errors](troubleshooting/connection.md)**: connection issue diagnosis
     *   **[Performance Issues](troubleshooting/performance.md)**: performance bottleneck analysis
     *   **[SQL Standard Compliance](troubleshooting/sql_standard.md)**: strict SQL compliance handling
 
-8. **[Scenarios](scenarios/README.md)**
+9. **[Scenarios](scenarios/README.md)**
     *   **[Parallel Worker Processing](scenarios/parallel_workers.md)**: correct usage in multi-process/async concurrent scenarios
+
+10. **[Worker Isolation Experiment](examples/chapter_05_worker_isolation/README.md)**
+    *   **[Worker Connection Isolation](examples/chapter_05_worker_isolation/README.md)**: worker process isolation experiment
 
 > 📖 **Core Library Documentation**: To learn about the complete functionality of the ActiveRecord framework, please refer to [rhosocial-activerecord documentation](https://github.com/rhosocial/python-activerecord/tree/main/docs/en_US).
