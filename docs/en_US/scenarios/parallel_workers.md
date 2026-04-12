@@ -634,3 +634,102 @@ def transfer_task(from_id: int, to_id: int, amount: float, conn_params: dict):
 - Test bridge files: `tests/rhosocial/activerecord_postgres_test/feature/basic/worker/`
 - Provider implementations: `tests/providers/basic.py`, `tests/providers/query.py`
 - WorkerPool implementation: `rhosocial.activerecord.worker.pool`
+
+---
+
+## 9. Test Verification Conclusions
+
+### 9.1 Test Environment
+
+Tests verified across multiple environments:
+
+| Platform | Operating System | Python Version | pytest Version | PostgreSQL Version |
+|----------|------------------|----------------|----------------|-------------------|
+| macOS | macOS Tahoe 26 | 3.8-3.14 | 8.3+ | 17.x |
+| Windows | Windows 11 Pro 25H2 (Build 26200) | 3.8.10 / 3.14.3 | 8.3.5 / 8.4.2 | 17.5 |
+
+### 9.2 Test Results Summary
+
+#### Multiprocess Parallel Testing (exp1)
+
+| Platform | Serial Time | Sync Multiprocess | Async Multiprocess | Speedup |
+|----------|-------------|-------------------|--------------------|---------|
+| macOS | ~0.8s | ~2.5s | ~2.8s | ~0.3x |
+| Windows | 0.910s | 2.998s | 3.163s | 0.3x |
+
+> **Note**: Process startup overhead may exceed parallel benefits for small datasets. Larger datasets show better speedup.
+
+#### Async Feature Testing (exp2)
+
+| Platform | Same-process Sync Serial | Same-process Async Sequential | Multiprocess Sync | Multiprocess Async |
+|----------|--------------------------|-------------------------------|-------------------|--------------------|
+| macOS | ~0.2s | ~0.2s | ~1.1s | ~1.2s |
+| Windows | 0.204s | 0.218s | 1.133s | 1.264s |
+
+#### Deadlock Detection Testing (exp3)
+
+All platforms successfully triggered PostgreSQL deadlock detection:
+- Deadlock automatically detected (SQLSTATE 40P01)
+- Lower-cost transaction rolled back
+- Uncaught exceptions result in lost work from rolled-back transactions
+
+#### Correct Solution Testing (exp4)
+
+| Solution | macOS Time | Windows Time | Verification |
+|----------|------------|--------------|--------------|
+| A: Data Partitioning (Sync) | ~1.1s | 1.170s | ✓ No duplicates |
+| A: Data Partitioning (Async) | ~1.2s | 1.263s | ✓ No duplicates |
+| B: Atomic Claiming (Sync) | ~1.7s | 1.812s | ✓ No duplicates |
+| B: Atomic Claiming (Async) | ~1.3s | 1.446s | ✓ No duplicates |
+| C: Atomic + Retry (Sync) | ~2.3s | 2.501s | ✓ No duplicates |
+
+#### Multithread Warning Testing (exp5)
+
+All platforms verified multithreaded connection sharing is unsafe:
+- Shared `__backend__`: Cursor state corruption
+- Per-thread `configure()`: Class attributes overwritten, still share same instance
+
+### 9.3 Platform-Specific Notes
+
+#### Windows Configuration
+
+On Windows, `WindowsSelectorEventLoopPolicy` must be set:
+
+```python
+import asyncio
+import sys
+
+def worker_async(post_ids: list) -> int:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    return asyncio.run(async_worker_main(post_ids))
+
+# Also required in main program
+def main():
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # ... other code
+```
+
+**Reason**: Windows uses `ProactorEventLoop` by default, but `psycopg` async backend requires `SelectorEventLoop`.
+
+> **Important**: Without the correct event loop policy, you will receive:
+> ```
+> Psycopg cannot use the 'ProactorEventLoop' to run in async mode.
+> Please use a compatible event loop, for instance by setting
+> 'asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())'
+> ```
+
+#### macOS / Linux
+
+No special configuration needed; default event loop works correctly.
+
+### 9.4 Conclusions
+
+1. **Multiprocessing is the correct approach for parallel workers**: Verified on all platforms
+2. **Sync backend is more stable**: Async backend requires extra configuration on Windows
+3. **Deadlock retry recommended for production**: Doesn't rely on data partitionability, automatically handles deadlocks
+4. **Data partitioning is most efficient**: MVCC has no lock contention, suitable for partitionable scenarios
+5. **PostgreSQL vs MySQL deadlock error codes**:
+   - PostgreSQL: SQLSTATE 40P01
+   - MySQL: errno 1213
