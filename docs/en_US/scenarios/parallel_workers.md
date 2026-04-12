@@ -645,7 +645,7 @@ Tests verified across multiple environments:
 
 | Platform | Operating System | Python Version | pytest Version | PostgreSQL Version |
 |----------|------------------|----------------|----------------|-------------------|
-| macOS | macOS Tahoe 26 | 3.8-3.14 | 8.3+ | 17.x |
+| macOS | macOS Tahoe 26.4.1 (Build 25E253) arm64 | 3.8.10 | 8.3.5 | 9.6.24 |
 | Windows | Windows 11 Pro 25H2 (Build 26200) | 3.8.10 / 3.14.3 | 8.3.5 / 8.4.2 | 17.5 |
 
 ### 9.2 Test Results Summary
@@ -654,17 +654,19 @@ Tests verified across multiple environments:
 
 | Platform | Serial Time | Sync Multiprocess | Async Multiprocess | Speedup |
 |----------|-------------|-------------------|--------------------|---------|
-| macOS | ~0.8s | ~2.5s | ~2.8s | ~0.3x |
-| Windows | 0.910s | 2.998s | 3.163s | 0.3x |
+| macOS (Python 3.8.10) | 0.727s | 0.700s (1.0x) | 0.894s (0.8x) | 1.0x |
+| Windows | 0.910s | 2.998s (0.3x) | 3.163s (0.3x) | 0.3x |
 
-> **Note**: Process startup overhead may exceed parallel benefits for small datasets. Larger datasets show better speedup.
+> **Note**: Process startup overhead may exceed parallel benefits for small datasets. Larger datasets show better speedup. macOS arm64 sync multiprocess shows stable performance.
 
 #### Async Feature Testing (exp2)
 
 | Platform | Same-process Sync Serial | Same-process Async Sequential | Multiprocess Sync | Multiprocess Async |
 |----------|--------------------------|-------------------------------|-------------------|--------------------|
-| macOS | ~0.2s | ~0.2s | ~1.1s | ~1.2s |
+| macOS (Python 3.8.10) | 0.651s | N/A (deadlock triggered) | N/A | N/A |
 | Windows | 0.204s | 0.218s | 1.133s | 1.264s |
+
+> **Note**: macOS triggered PostgreSQL deadlock detection (SQLSTATE 40P01) during async concurrent testing, related to small dataset and higher conflict probability.
 
 #### Deadlock Detection Testing (exp3)
 
@@ -672,16 +674,18 @@ All platforms successfully triggered PostgreSQL deadlock detection:
 - Deadlock automatically detected (SQLSTATE 40P01)
 - Lower-cost transaction rolled back
 - Uncaught exceptions result in lost work from rolled-back transactions
+- macOS: 2 Workers succeeded, 2 Workers deadlocked and rolled back, total time 2.584s
+- Windows: 2 Workers succeeded, 2 Workers deadlocked and rolled back
 
 #### Correct Solution Testing (exp4)
 
 | Solution | macOS Time | Windows Time | Verification |
 |----------|------------|--------------|--------------|
-| A: Data Partitioning (Sync) | ~1.1s | 1.170s | ✓ No duplicates |
-| A: Data Partitioning (Async) | ~1.2s | 1.263s | ✓ No duplicates |
-| B: Atomic Claiming (Sync) | ~1.7s | 1.812s | ✓ No duplicates |
-| B: Atomic Claiming (Async) | ~1.3s | 1.446s | ✓ No duplicates |
-| C: Atomic + Retry (Sync) | ~2.3s | 2.501s | ✓ No duplicates |
+| A: Data Partitioning (Sync) | 0.804s | 1.170s | ✓ No duplicates |
+| A: Data Partitioning (Async) | 0.724s | 1.263s | ✓ No duplicates |
+| B: Atomic Claiming (Sync) | 1.071s | 1.812s | ✓ No duplicates |
+| B: Atomic Claiming (Async) | 1.218s | 1.446s | ✓ No duplicates |
+| C: Atomic + Retry (Sync) | 1.193s | 2.501s | ✓ No duplicates |
 
 #### Multithread Warning Testing (exp5)
 
