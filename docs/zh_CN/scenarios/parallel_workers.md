@@ -651,3 +651,102 @@ def transfer_task(from_id: int, to_id: int, amount: float, conn_params: dict):
 - 测试桥接文件：`tests/rhosocial/activerecord_postgres_test/feature/basic/worker/`
 - Provider 实现：`tests/providers/basic.py`、`tests/providers/query.py`
 - WorkerPool 实现：`rhosocial.activerecord.worker.pool`
+
+---
+
+## 9. 测试验证结论
+
+### 9.1 测试环境
+
+以下测试在多种环境下验证通过：
+
+| 平台 | 操作系统 | Python 版本 | pytest 版本 | PostgreSQL 版本 |
+|------|----------|-------------|-------------|-----------------|
+| macOS | macOS Tahoe 26 | 3.8-3.14 | 8.3+ | 17.x |
+| Windows | Windows 11 Pro 25H2 (Build 26200) | 3.8.10 / 3.14.3 | 8.3.5 / 8.4.2 | 17.5 |
+
+### 9.2 测试结果汇总
+
+#### 多进程并行测试 (exp1)
+
+| 平台 | 串行耗时 | 同步多进程 | 异步多进程 | 加速比 |
+|------|----------|------------|------------|--------|
+| macOS | ~0.8s | ~2.5s | ~2.8s | ~0.3x |
+| Windows | 0.910s | 2.998s | 3.163s | 0.3x |
+
+> **说明**: 多进程启动开销在小数据量下可能超过并行收益，大数据量时加速效果更明显。
+
+#### 异步特性测试 (exp2)
+
+| 平台 | 同进程同步串行 | 同进程异步顺序 | 多进程同步 | 多进程异步 |
+|------|----------------|----------------|------------|------------|
+| macOS | ~0.2s | ~0.2s | ~1.1s | ~1.2s |
+| Windows | 0.204s | 0.218s | 1.133s | 1.264s |
+
+#### 死锁检测测试 (exp3)
+
+所有平台均成功触发 PostgreSQL 死锁检测机制：
+- 死锁被自动检测（SQLSTATE 40P01）
+- 代价较小的事务被回滚
+- 未捕获异常时，回滚事务的工作丢失
+
+#### 正确方案测试 (exp4)
+
+| 方案 | macOS 耗时 | Windows 耗时 | 验证结果 |
+|------|------------|--------------|----------|
+| A: 数据分区（同步） | ~1.1s | 1.170s | ✓ 无重复 |
+| A: 数据分区（异步） | ~1.2s | 1.263s | ✓ 无重复 |
+| B: 原子领取（同步） | ~1.7s | 1.812s | ✓ 无重复 |
+| B: 原子领取（异步） | ~1.3s | 1.446s | ✓ 无重复 |
+| C: 原子+重试（同步） | ~2.3s | 2.501s | ✓ 无重复 |
+
+#### 多线程警告测试 (exp5)
+
+所有平台均验证多线程共享连接不安全：
+- 共享 `__backend__`: 游标状态混乱
+- 每线程 `configure()`: 类属性被覆盖，仍共享同一实例
+
+### 9.3 平台差异说明
+
+#### Windows 特殊配置
+
+在 Windows 上运行异步测试时，需要设置 `WindowsSelectorEventLoopPolicy`：
+
+```python
+import asyncio
+import sys
+
+def worker_async(post_ids: list) -> int:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    return asyncio.run(async_worker_main(post_ids))
+
+# 主程序中同样需要设置
+def main():
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # ... 其他代码
+```
+
+**原因**: Windows 默认使用 `ProactorEventLoop`，而 `psycopg` 的异步后端需要 `SelectorEventLoop`。
+
+> **重要**: 如果未设置正确的 event loop policy，将收到以下错误：
+> ```
+> Psycopg cannot use the 'ProactorEventLoop' to run in async mode.
+> Please use a compatible event loop, for instance by setting
+> 'asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())'
+> ```
+
+#### macOS / Linux
+
+无需特殊配置，默认 event loop 即可正常工作。
+
+### 9.4 结论
+
+1. **多进程是并行 Worker 的正确方案**: 所有平台均验证通过
+2. **同步后端更稳定**: 异步后端在 Windows 上需要额外配置
+3. **死锁重试方案推荐用于生产**: 不依赖数据可分区性，自动处理死锁
+4. **数据分区效率最高**: MVCC 无锁竞争，适合可分区场景
+5. **PostgreSQL vs MySQL 死锁错误码**:
+   - PostgreSQL: SQLSTATE 40P01
+   - MySQL: errno 1213
