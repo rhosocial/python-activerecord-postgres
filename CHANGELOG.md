@@ -1,3 +1,19 @@
+## [v1.0.0.dev10] - 2026-04-13
+
+### Added
+
+- Added PostgreSQL row-level lock strength support: FOR SHARE, FOR NO KEY UPDATE, and FOR KEY SHARE. These lock strengths provide finer control over row-level locking in PostgreSQL 9.0+ (KEY SHARE requires 9.3+). ([#23](https://github.com/rhosocial/python-activerecord-postgres/issues/23))
+- Added enhanced mathematical functions to PostgreSQL backend, including round_, pow, power, sqrt, mod, ceil, floor, trunc, max_, min_, and avg, with proper naming to avoid conflicts with Python builtins. ([#25](https://github.com/rhosocial/python-activerecord-postgres/issues/25))
+- Added comprehensive PostgreSQL function support: array (18), network address (16), UUID (8), hstore (33), and range constructors (6). ([#26](https://github.com/rhosocial/python-activerecord-postgres/issues/26))
+- Add PostgreSQL constraint support protocol with EXCLUDE and NOT VALID options ([#27](https://github.com/rhosocial/python-activerecord-postgres/issues/27))
+
+
+
+### Fixed
+
+- Refactored SQL function generation utilities by migrating them from types/ to functions/ directory for better module responsibility separation. ([#24](https://github.com/rhosocial/python-activerecord-postgres/issues/24))
+
+
 ## [v1.0.0.dev9] - 2026-04-08
 
 ### Added
