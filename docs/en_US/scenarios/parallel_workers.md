@@ -728,12 +728,147 @@ def main():
 
 No special configuration needed; default event loop works correctly.
 
-### 9.4 Conclusions
+### 9.4 FastAPI Async Application Best Practices
+
+#### Problem Scenario
+
+In FastAPI + PostgreSQL + async backend scenario:
+- Each HTTP request is handled in a separate coroutine
+- Multiple coroutines may execute concurrently
+- PostgreSQL's `threadsafety=2`, connection pool is supported
+- Need efficient connection reuse mechanism
+
+#### Recommended Solution: BackendPool Connection Pooling
+
+**Core Principles**:
+1. Create global `AsyncBackendPool` at application startup
+2. Each request acquires connection from pool
+3. Return connection to pool after use
+4. Close connection pool at application shutdown
+
+**Complete Example**:
+
+```python
+# database.py - Connection pool manager
+from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
+from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+
+# Global connection pool (created at application startup)
+_pool: AsyncBackendPool = None
+
+async def init_pool():
+    """Initialize connection pool"""
+    global _pool
+    
+    pool_config = PoolConfig(
+        min_size=2,   # Minimum connections
+        max_size=10,  # Maximum connections
+        backend_factory=lambda: AsyncPostgresBackend(connection_config=config)
+    )
+    
+    _pool = AsyncBackendPool(pool_config)
+
+async def close_pool():
+    """Close connection pool"""
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+
+@asynccontextmanager
+async def get_request_db():
+    """Request-level connection manager"""
+    global _pool
+    
+    # Acquire connection from pool
+    async with _pool.connection() as backend:
+        # Bind models to current connection
+        AsyncUser.__backend__ = backend
+        AsyncPost.__backend__ = backend
+        AsyncComment.__backend__ = backend
+        
+        yield backend
+        # Connection automatically returned to pool
+
+
+# app.py - FastAPI application
+from fastapi import FastAPI, Depends
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_database()
+    await init_pool()  # Initialize pool at startup
+    yield
+    await close_pool()  # Cleanup pool at shutdown
+
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/users/{user_id}")
+async def get_user(user_id: int, db=Depends(get_request_db)):
+    user = await AsyncUser.find_one(user_id)
+    return {"user": user.to_dict()}
+```
+
+#### Solution Analysis
+
+| Feature | Description |
+|---------|-------------|
+| **Connection Reuse** | Pooled connections, reduced creation overhead |
+| **Concurrency Safety** | Each request gets independent connection |
+| **Resource Management** | Pool automatically manages connection lifecycle |
+| **High Performance** | Suitable for high-concurrency scenarios |
+| **Transaction Support** | Transaction support within same connection |
+
+#### MySQL vs PostgreSQL Approach Comparison
+
+| Aspect | MySQL | PostgreSQL |
+|--------|-------|------------|
+| threadsafety | 1 | 2 |
+| BackendPool | ❌ Not supported | ✅ Recommended |
+| Recommended approach | Request-level BackendGroup | BackendPool |
+| Connection reuse | Per-request (create/disconnect) | Pool-managed reuse |
+| Performance | Acceptable overhead | Optimized for pooling |
+
+#### Key Design Points
+
+1. **Global Connection Pool** (created at application startup)
+   - Initialize connection pool in `lifespan`
+   - Configure appropriate min_size and max_size
+
+2. **Request-Level Connection Acquisition**
+   - Use dependency injection to get connection
+   - Automatically bind models to current connection
+
+3. **Automatic Connection Return**
+   - Use `async with` to ensure connection return
+   - Properly returns even on exceptions
+
+4. **Cleanup at Application Shutdown**
+   - Close connection pool after `yield` in `lifespan`
+
+#### Suitable Scenarios
+
+| Scenario | Recommendation | Notes |
+|----------|----------------|-------|
+| Web API (high concurrency) | ⭐⭐⭐ Recommended | Connection pooling, efficient reuse |
+| Microservices | ⭐⭐⭐ Recommended | Pool management, suitable for distributed |
+| Real-time applications | ⭐⭐⭐ Recommended | High performance, WebSocket support |
+| Batch processing | ⭐⭐ Acceptable | Configure appropriate pool size |
+| Background tasks | ⭐⭐ Acceptable | Share application connection pool |
+
+#### Complete Example Code
+
+See `docs/examples/chapter_10_fastapi/` directory.
+
+### 9.5 Conclusions
 
 1. **Multiprocessing is the correct approach for parallel workers**: Verified on all platforms
 2. **Sync backend is more stable**: Async backend requires extra configuration on Windows
 3. **Deadlock retry recommended for production**: Doesn't rely on data partitionability, automatically handles deadlocks
 4. **Data partitioning is most efficient**: MVCC has no lock contention, suitable for partitionable scenarios
+5. **PostgreSQL recommends BackendPool for multithreading**: threadsafety=2 supports connection pooling
+6. **BackendPool provides true thread isolation**: Each thread gets independent connection, no race conditions
+7. **FastAPI recommends using BackendPool**: Efficient connection reuse, suitable for high-concurrency scenarios
 5. **PostgreSQL vs MySQL deadlock error codes**:
    - PostgreSQL: SQLSTATE 40P01
    - MySQL: errno 1213

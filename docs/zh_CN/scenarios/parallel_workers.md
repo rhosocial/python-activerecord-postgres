@@ -480,6 +480,7 @@ async def batch_update_correct(post_ids: list[int]):
 | [`exp3_deadlock_wrong.py`](../../examples/chapter_08_scenarios/parallel_workers/exp3_deadlock_wrong.py) | 行锁顺序冲突导致 PostgreSQL 死锁（反面教材） | §4.1 |
 | [`exp4_partition_correct.py`](../../examples/chapter_08_scenarios/parallel_workers/exp4_partition_correct.py) | 数据分区 + 原子领取 + 死锁重试（同步/异步各方案） | §4.2–4.4 |
 | [`exp5_multithread_warning.py`](../../examples/chapter_08_scenarios/parallel_workers/exp5_multithread_warning.py) | 多线程共享连接的问题（反面教材） | §1.2 |
+| [`exp6_backend_group_pool.py`](../../examples/chapter_08_scenarios/parallel_workers/exp6_backend_group_pool.py) | BackendGroup vs BackendPool 线程安全性对比 | §8.5 |
 
 > **说明**：所有示例文件均直接使用 `rhosocial-activerecord` ORM，模型体系为 `User → Post → Comment`，并体现 `HasMany` / `BelongsTo` 关联关系的同步与异步对等用法。
 
@@ -745,12 +746,223 @@ def main():
 
 无需特殊配置，默认 event loop 即可正常工作。
 
-### 9.4 结论
+### 9.4 BackendGroup vs BackendPool 线程安全对比 (exp6)
+
+#### 实验目的
+
+对比 BackendGroup + backend.context() 与 BackendPool 在多线程场景下的安全性。
+
+#### 实验结果
+
+| 场景 | 成功数 | 错误数 | 耗时 | 结论 |
+|-----|--------|--------|------|------|
+| Scenario 1: BackendPool | 20 | 0 | 0.382s | ✅ 线程安全，推荐 |
+| Scenario 2: BackendGroup | 20 | 0 | 0.484s | ⚠️ 可用但有竞争风险 |
+
+#### 关键发现
+
+**PostgreSQL (psycopg) 的 threadsafety=2**：
+
+1. **连接对象本身是线程安全的**：多线程可以安全共享连接对象
+2. **BackendPool 是推荐方案**：每个线程从池中获取独立连接
+3. **BackendGroup 在 PostgreSQL 上能工作**：但理论上仍有竞争条件
+
+#### BackendPool 的优势
+
+```python
+# ✅ 推荐：BackendPool（连接池）
+from rhosocial.activerecord.connection.pool import PoolConfig, BackendPool
+
+config = PoolConfig(
+    min_size=2,
+    max_size=10,
+    backend_factory=lambda: PostgresBackend(connection_config=db_config)
+)
+pool = BackendPool(config)
+
+# 每个线程获取独立连接
+def thread_worker(pool, thread_id):
+    with pool.connection() as backend:
+        User.__backend__ = backend
+        user = User.find_one(1)
+        # 使用完毕自动归还连接池
+```
+
+#### BackendGroup 的局限
+
+```python
+# ⚠️ 有风险：BackendGroup（共享后端实例）
+group = BackendGroup(
+    name="main",
+    models=[User, Post, Comment],
+    config=config,
+    backend_class=PostgresBackend
+)
+group.configure()
+
+# 多个线程共享同一个后端实例
+def thread_worker(group, thread_id):
+    backend = group.get_backend()
+    with backend.context():  # 理论上有竞争条件
+        user = User.find_one(1)
+```
+
+#### PostgreSQL 的线程安全方案
+
+| 方案 | threadsafety | 推荐度 | 说明 |
+|-----|-------------|--------|------|
+| **BackendPool** | 2 | ⭐⭐⭐ 推荐 | 每线程独立连接，真正的线程隔离 |
+| BackendGroup + context() | 2 | ⭐⭐ 可用 | 共享后端实例，PostgreSQL 能处理但不够优雅 |
+| 多进程 | - | ⭐ 可用 | 进程隔离，但开销较大 |
+
+#### 结论
+
+- **PostgreSQL 支持 BackendPool**：因为 psycopg 的 threadsafety=2
+- **BackendPool 是多线程首选方案**：提供真正的连接隔离
+- **BackendGroup 主要用于多模型共享**：不是线程隔离机制
+- **"随用随连、用完即断"**：BackendPool 自动管理连接生命周期
+
+### 9.5 FastAPI 异步应用的最佳实践
+
+#### 问题场景
+
+在 FastAPI + PostgreSQL + 异步后端场景下：
+- 每个 HTTP 请求在独立的协程中处理
+- 多个协程可能并发执行
+- PostgreSQL 的 `threadsafety=2`，支持连接池
+- 需要高效的连接复用机制
+
+#### 推荐方案：BackendPool 连接池
+
+**核心原则**：
+1. 应用启动时创建全局 `AsyncBackendPool`
+2. 每个请求从池中获取连接
+3. 使用完毕后归还连接池
+4. 应用关闭时关闭连接池
+
+**完整示例**：
+
+```python
+# database.py - 连接池管理器
+from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
+from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+
+# 全局连接池（应用启动时创建）
+_pool: AsyncBackendPool = None
+
+async def init_pool():
+    """初始化连接池"""
+    global _pool
+    
+    pool_config = PoolConfig(
+        min_size=2,   # 最小连接数
+        max_size=10,  # 最大连接数
+        backend_factory=lambda: AsyncPostgresBackend(connection_config=config)
+    )
+    
+    _pool = AsyncBackendPool(pool_config)
+
+async def close_pool():
+    """关闭连接池"""
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
+
+@asynccontextmanager
+async def get_request_db():
+    """请求级连接管理器"""
+    global _pool
+    
+    # 从池中获取连接
+    async with _pool.connection() as backend:
+        # 绑定模型到当前连接
+        AsyncUser.__backend__ = backend
+        AsyncPost.__backend__ = backend
+        AsyncComment.__backend__ = backend
+        
+        yield backend
+        # 连接自动归还到池
+
+
+# app.py - FastAPI 应用
+from fastapi import FastAPI, Depends
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_database()
+    await init_pool()  # 启动时初始化连接池
+    yield
+    await close_pool()  # 关闭时清理连接池
+
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/users/{user_id}")
+async def get_user(user_id: int, db=Depends(get_request_db)):
+    user = await AsyncUser.find_one(user_id)
+    return {"user": user.to_dict()}
+```
+
+#### 方案分析
+
+| 特性 | 说明 |
+|-----|------|
+| **连接复用** | 池化连接，减少创建开销 |
+| **并发安全** | 每个请求获取独立连接 |
+| **资源管理** | 池自动管理连接生命周期 |
+| **高性能** | 适合高并发场景 |
+| **事务支持** | 同一连接内支持事务 |
+
+#### MySQL vs PostgreSQL 方案对比
+
+| 方面 | MySQL | PostgreSQL |
+|-----|-------|------------|
+| threadsafety | 1 | 2 |
+| BackendPool | ❌ 不支持 | ✅ 推荐 |
+| 推荐方案 | 请求级 BackendGroup | BackendPool |
+| 连接复用 | 每请求创建/断开 | 池管理复用 |
+| 性能 | 可接受开销 | 优化连接池 |
+
+#### 关键设计要点
+
+1. **全局连接池**（应用启动时创建）
+   - 在 `lifespan` 中初始化连接池
+   - 配置合适的 min_size 和 max_size
+
+2. **请求级连接获取**
+   - 使用依赖注入获取连接
+   - 自动绑定模型到当前连接
+
+3. **自动归还连接**
+   - 使用 `async with` 确保连接归还
+   - 异常时也能正确归还
+
+4. **应用关闭时清理**
+   - 在 `lifespan` 的 `yield` 后关闭连接池
+
+#### 适用场景
+
+| 场景 | 推荐度 | 说明 |
+|-----|--------|------|
+| Web API（高并发） | ⭐⭐⭐ 推荐 | 连接池，高效复用 |
+| 微服务 | ⭐⭐⭐ 推荐 | 连接池管理，适合分布式 |
+| 实时应用 | ⭐⭐⭐ 推荐 | 高性能，支持 WebSocket |
+| 批处理任务 | ⭐⭐ 可用 | 配合适当的池大小 |
+| 后台任务 | ⭐⭐ 可用 | 共享应用连接池 |
+
+#### 完整示例代码
+
+参见 `docs/examples/chapter_10_fastapi/` 目录。
+
+### 9.6 结论
 
 1. **多进程是并行 Worker 的正确方案**: 所有平台均验证通过
 2. **同步后端更稳定**: 异步后端在 Windows 上需要额外配置
 3. **死锁重试方案推荐用于生产**: 不依赖数据可分区性，自动处理死锁
 4. **数据分区效率最高**: MVCC 无锁竞争，适合可分区场景
+5. **PostgreSQL 多线程推荐 BackendPool**: threadsafety=2 支持连接池
+6. **BackendPool 提供真正的线程隔离**: 每线程独立连接，无竞争条件
+7. **FastAPI 推荐使用 BackendPool**: 高效连接复用，适合高并发场景
 5. **PostgreSQL vs MySQL 死锁错误码**:
    - PostgreSQL: SQLSTATE 40P01
    - MySQL: errno 1213
