@@ -301,8 +301,10 @@ class AlterEnumTypeRenameValueExpression(BaseExpression):
         super().__init__(dialect)
         if not type_name:
             raise ValueError("Enum type name cannot be empty")
-        if not old_value or not new_value:
-            raise ValueError("Both old and new values must be specified")
+        if not old_value:
+            raise ValueError("Old value cannot be empty")
+        if not new_value:
+            raise ValueError("New value cannot be empty")
 
         self.type_name = type_name
         self.old_value = old_value
