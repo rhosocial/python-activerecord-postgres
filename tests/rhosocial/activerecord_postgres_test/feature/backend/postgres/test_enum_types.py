@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
 from rhosocial.activerecord.backend.impl.postgres.protocols import EnumTypeSupport
-from rhosocial.activerecord.backend.impl.postgres.statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
     AlterEnumTypeAddValueExpression,
