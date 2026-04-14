@@ -6,7 +6,7 @@ This dialect implements protocols for features that PostgreSQL actually supports
 based on the PostgreSQL version provided at initialization.
 """
 
-from typing import Any, Tuple, Optional, TYPE_CHECKING
+from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
@@ -67,6 +67,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     IntrospectionSupport,
     TransactionControlSupport,
     ConstraintSupport,
+    SQLFunctionSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -298,6 +299,8 @@ class PostgresDialect(
     PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
     PostgresAdvisoryLockSupport,
+    # Function support protocol
+    SQLFunctionSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
@@ -1231,6 +1234,257 @@ class PostgresDialect(
     # endregion
 
     # region Transaction Control Support
+
+# PostgreSQL function version support: function_name -> (min_version, max_version)
+# min_version: minimum supported version (inclusive), None = all versions
+# max_version: maximum supported version (inclusive), None = no upper limit
+# Reference: https://www.postgresql.org/docs/current/functions.html
+# Note: Most PostgreSQL functions have been available since early versions,
+# only a few newer functions have version requirements.
+_POSTGRES_FUNCTION_VERSIONS = {
+    # JSON path functions (JSONPath): PostgreSQL 12+
+    "jsonb_path_query": ((12, 0, 0), None),
+    "jsonb_path_query_first": ((12, 0, 0), None),
+    "jsonb_path_exists": ((12, 0, 0), None),
+    "jsonb_path_match": ((12, 0, 0), None),
+    "json_path_root": ((12, 0, 0), None),
+    "json_path_key": ((12, 0, 0), None),
+    "json_path_index": ((12, 0, 0), None),
+    "json_path_wildcard": ((12, 0, 0), None),
+    "json_path_filter": ((12, 0, 0), None),
+    # Range functions: PostgreSQL 9.2+ (range types introduced)
+    "range_contains": ((9, 2, 0), None),
+    "range_contained_by": ((9, 2, 0), None),
+    "range_contains_range": ((9, 2, 0), None),
+    "range_overlaps": ((9, 2, 0), None),
+    "range_adjacent": ((9, 2, 0), None),
+    "range_strictly_left_of": ((9, 2, 0), None),
+    "range_strictly_right_of": ((9, 2, 0), None),
+    "range_not_extend_right": ((9, 2, 0), None),
+    "range_not_extend_left": ((9, 2, 0), None),
+    "range_union": ((9, 2, 0), None),
+    "range_intersection": ((9, 2, 0), None),
+    "range_difference": ((9, 2, 0), None),
+    "range_lower": ((9, 2, 0), None),
+    "range_upper": ((9, 2, 0), None),
+    "range_is_empty": ((9, 2, 0), None),
+    "range_lower_inc": ((9, 2, 0), None),
+    "range_upper_inc": ((9, 2, 0), None),
+    "range_lower_inf": ((9, 2, 0), None),
+    "range_upper_inf": ((9, 2, 0), None),
+    # Geometric functions: All versions
+    "geometry_distance": (None, None),
+    "geometry_contains": (None, None),
+    "geometry_contained_by": (None, None),
+    "geometry_overlaps": (None, None),
+    "geometry_strictly_left": (None, None),
+    "geometry_strictly_right": (None, None),
+    "geometry_not_extend_right": (None, None),
+    "geometry_not_extend_left": (None, None),
+    "geometry_area": (None, None),
+    "geometry_center": (None, None),
+    "geometry_length": (None, None),
+    "geometry_width": (None, None),
+    "geometry_height": (None, None),
+    "geometry_npoints": (None, None),
+    # Enum functions: PostgreSQL 8.3+
+    "enum_range": ((8, 3, 0), None),
+    "enum_first": ((8, 3, 0), None),
+    "enum_last": ((8, 3, 0), None),
+    "enum_lt": ((8, 3, 0), None),
+    "enum_le": ((8, 3, 0), None),
+    "enum_gt": ((8, 3, 0), None),
+    "enum_ge": ((8, 3, 0), None),
+    # Bit string functions: All versions
+    "bit_concat": (None, None),
+    "bit_and": (None, None),
+    "bit_or": (None, None),
+    "bit_xor": (None, None),
+    "bit_not": (None, None),
+    "bit_shift_left": (None, None),
+    "bit_shift_right": (None, None),
+    "bit_length": (None, None),
+    "bit_length_func": (None, None),
+    "bit_octet_length": (None, None),
+    "bit_get_bit": (None, None),
+    "bit_set_bit": (None, None),
+    "bit_count": ((9, 5, 0), None),  # Added in 9.5
+    # Text search functions: PostgreSQL 8.3+
+    "to_tsvector": ((8, 3, 0), None),
+    "to_tsquery": ((8, 3, 0), None),
+    "plainto_tsquery": ((8, 3, 0), None),
+    "phraseto_tsquery": ((9, 6, 0), None),  # Added in 9.6
+    "websearch_to_tsquery": ((11, 0, 0), None),  # Added in 11
+    "ts_matches": ((8, 3, 0), None),
+    "ts_matches_expr": ((8, 3, 0), None),
+    "ts_rank": ((8, 3, 0), None),
+    "ts_rank_cd": ((8, 5, 0), None),  # Added in 8.5
+    "ts_headline": ((8, 3, 0), None),
+    "tsvector_concat": ((8, 3, 0), None),
+    "tsvector_strip": ((8, 3, 0), None),
+    "tsvector_setweight": ((8, 3, 0), None),
+    "tsvector_length": ((8, 3, 0), None),
+    # XML functions: PostgreSQL 8.3+
+    "xmlparse": ((8, 3, 0), None),
+    "xpath_query": ((8, 3, 0), None),
+    "xpath_exists": ((8, 3, 0), None),
+    "xml_is_well_formed": ((9, 1, 0), None),  # Added in 9.1
+    # Math enhanced functions: All versions
+    "round_": (None, None),
+    "pow": (None, None),
+    "power": (None, None),
+    "sqrt": (None, None),
+    "mod": (None, None),
+    "ceil": (None, None),
+    "floor": (None, None),
+    "trunc": (None, None),
+    "max_": (None, None),
+    "min_": (None, None),
+    "avg": (None, None),
+    # Array functions: All versions (arrays supported since early versions)
+    "array_agg": (None, None),
+    "array_append": (None, None),
+    "array_cat": (None, None),
+    "array_dims": (None, None),
+    "array_fill": ((8, 4, 0), None),  # Added in 8.4
+    "array_length": (None, None),
+    "array_lower": (None, None),
+    "array_ndims": ((8, 4, 0), None),  # Added in 8.4
+    "array_position": ((9, 5, 0), None),  # Added in 9.5
+    "array_positions": ((9, 5, 0), None),  # Added in 9.5
+    "array_prepend": (None, None),
+    "array_remove": (None, None),
+    "array_replace": ((8, 3, 0), None),  # Added in 8.3
+    "array_to_string": (None, None),
+    "array_upper": (None, None),
+    "unnest": ((8, 4, 0), None),  # Added in 8.4
+    "array_agg_distinct": (None, None),
+    "string_to_array": (None, None),
+    # Network address functions: PostgreSQL 8.3+
+    "inet_client_addr": ((8, 3, 0), None),
+    "inet_client_port": ((8, 3, 0), None),
+    "inet_server_addr": ((8, 3, 0), None),
+    "inet_server_port": ((8, 3, 0), None),
+    "inet_merge": ((9, 5, 0), None),  # Added in 9.5
+    "inet_and": ((8, 3, 0), None),
+    "inet_or": ((8, 3, 0), None),
+    "inetnot": ((8, 3, 0), None),
+    "inet_set_mask": ((8, 3, 0), None),
+    "inet_masklen": ((8, 3, 0), None),
+    "inet_netmask": ((8, 3, 0), None),
+    "inet_network": ((8, 3, 0), None),
+    "inet_recv": ((8, 3, 0), None),
+    "inet_show": ((8, 3, 0), None),
+    "cidr_netmask": ((8, 3, 0), None),
+    "macaddr8_set7bit": ((10, 0, 0), None),  # Added in 10
+    # UUID functions: uuid-ossp extension (varies by version)
+    # These require the uuid-ossp extension which is bundled
+    "uuid_generate_v1": (None, None),  # Extension function
+    "uuid_generate_v1mc": (None, None),
+    "uuid_generate_v3": (None, None),
+    "uuid_generate_v4": (None, None),
+    "uuid_generate_v5": (None, None),
+    "uuid_nil": (None, None),
+    "uuid_max": (None, None),
+    # hstore functions: hstore extension
+    # Available since 8.3 with hstore extension
+    "hstore_from_record": ((8, 3, 0), None),
+    "hstore_from_key_value": ((8, 3, 0), None),
+    "hstore_akeys": ((8, 3, 0), None),
+    "hstore_skeys": ((8, 3, 0), None),
+    "hstore_avals": ((8, 3, 0), None),
+    "hstore_svals": ((8, 3, 0), None),
+    "hstore_each": ((8, 3, 0), None),
+    "hstore_to_array": ((8, 3, 0), None),
+    "hstore_to_matrix": ((8, 3, 0), None),
+    "hstore_to_json": ((9, 3, 0), None),  # Added in 9.3
+    "hstore_to_jsonb": ((9, 4, 0), None),  # JSONB added in 9.4
+    "hstore_to_json_loose": ((9, 3, 0), None),
+    "hstore_to_jsonb_loose": ((9, 4, 0), None),
+    "hstore_slice": ((8, 3, 0), None),
+    "hstore_exist": ((8, 3, 0), None),
+    "hstore_defined": ((8, 3, 0), None),
+    "hstore_delete": ((8, 3, 0), None),
+    "hstore_delete_keys": ((8, 3, 0), None),
+    "hstore_delete_pairs": ((8, 3, 0), None),
+    "hstore_populate_record": ((8, 3, 0), None),
+    "hstore_get_value": ((8, 3, 0), None),
+    "hstore_get_values": ((8, 3, 0), None),
+    "hstore_concat": ((8, 3, 0), None),
+    "hstore_key_exists": ((8, 3, 0), None),
+    "hstore_all_keys_exist": ((8, 3, 0), None),
+    "hstore_any_key_exists": ((8, 3, 0), None),
+    "hstore_contains": ((8, 3, 0), None),
+    "hstore_contained_by": ((8, 3, 0), None),
+    "hstore_subtract_key": ((8, 3, 0), None),
+    "hstore_subtract_keys": ((8, 3, 0), None),
+    "hstore_subtract_pairs": ((8, 3, 0), None),
+    "hstore_to_array_operator": ((8, 3, 0), None),
+    "hstore_to_matrix_operator": ((8, 3, 0), None),
+    "hstore_record_update": ((8, 3, 0), None),
+    "hstore_subscript_get": ((9, 0, 0), None),  # Added in 9.0
+    "hstore_subscript_set": ((9, 0, 0), None),  # Added in 9.0
+    # Range constructors: PostgreSQL 9.2+
+    "int4range": ((9, 2, 0), None),
+    "int8range": ((9, 2, 0), None),
+    "numrange": ((9, 2, 0), None),
+    "tsrange": ((9, 2, 0), None),
+    "tstzrange": ((9, 2, 0), None),
+    "daterange": ((9, 2, 0), None),
+}
+
+    def supports_functions(self) -> Dict[str, bool]:
+        """Return supported SQL functions as function_name -> bool mapping.
+
+        This method combines:
+        1. Core functions from rhosocial.activerecord.backend.expression.functions
+        2. PostgreSQL-specific functions from rhosocial.activerecord.backend.impl.postgres.functions
+
+        PostgreSQL version-specific functions:
+        - JSONPath functions: PostgreSQL 12+
+
+        Returns:
+            Dict mapping function names to True (supported) or False.
+        """
+        from rhosocial.activerecord.backend.expression.functions import (
+            __all__ as core_functions,
+        )
+        from rhosocial.activerecord.backend.impl.postgres import functions as postgres_functions
+
+        result = {}
+        for func_name in core_functions:
+            result[func_name] = True
+
+        postgres_funcs = getattr(postgres_functions, "__all__", [])
+        for func_name in postgres_funcs:
+            if func_name not in result:
+                result[func_name] = self._is_postgres_function_supported(func_name)
+
+        return result
+
+    def _is_postgres_function_supported(self, func_name: str) -> bool:
+        """Check if a PostgreSQL-specific function is supported based on version.
+
+        Args:
+            func_name: Name of the PostgreSQL function
+
+        Returns:
+            True if supported, False otherwise
+        """
+        version_range = self._POSTGRES_FUNCTION_VERSIONS.get(func_name)
+        if version_range is None:
+            return True
+
+        min_version, max_version = version_range
+
+        if min_version is not None and self.version < min_version:
+            return False
+
+        if max_version is not None and self.version > max_version:
+            return False
+
+        return True
+
     def supports_transaction_mode(self) -> bool:
         """PostgreSQL supports READ ONLY and READ WRITE transaction modes."""
         return True
