@@ -1453,7 +1453,7 @@ class PostgresDialect(
 
         result = {}
         for func_name in core_functions:
-            result[func_name] = True
+            result[func_name] = self._is_postgres_function_supported(func_name)
 
         postgres_funcs = getattr(postgres_functions, "__all__", [])
         for func_name in postgres_funcs:
