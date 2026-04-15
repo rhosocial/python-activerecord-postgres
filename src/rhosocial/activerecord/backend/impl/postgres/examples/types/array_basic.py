@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -29,37 +34,45 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='users',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='users',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'name', 'data_type': 'VARCHAR(100)'},
-        {'name': 'scores', 'data_type': 'INT[]'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('name', 'VARCHAR(100)'),
+        ColumnDefinition('scores', 'INTEGER[]'),
     ],
 )
 backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'users'),
+    into='users',
+    columns=['name', 'scores'],
     source=ValuesSource(
         dialect,
         [
-            [Literal(dialect, 'Alice'), Literal(dialect, 'ARRAY[85, 90, 78]')],
-            [Literal(dialect, 'Bob'), Literal(dialect, 'ARRAY[92, 88, 95]')],
-            [Literal(dialect, 'Charlie'), Literal(dialect, 'ARRAY[70, 75, 80]')],
+            [Literal(dialect, 'Alice'), Literal(dialect, '{85,90,78}')],
+            [Literal(dialect, 'Bob'), Literal(dialect, '{92,88,95}')],
+            [Literal(dialect, 'Charlie'), Literal(dialect, '{70,75,80}')],
         ],
     ),
-    columns=['name', 'scores'],
-    dialect_options={},
 )
 backend.execute(*insert_expr.to_sql())
 

@@ -10,6 +10,12 @@ from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
+    DropTableExpression,
+)
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -25,21 +31,30 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='products',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='products',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'name', 'data_type': 'VARCHAR(100)'},
-        {'name': 'category', 'data_type': 'VARCHAR(50)'},
-        {'name': 'price', 'data_type': 'DECIMAL(10,2)'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('name', 'VARCHAR(100)'),
+        ColumnDefinition('category', 'VARCHAR(50)'),
+        ColumnDefinition('price', 'DECIMAL(10,2)'),
     ],
 )
 backend.execute(*create_table.to_sql())

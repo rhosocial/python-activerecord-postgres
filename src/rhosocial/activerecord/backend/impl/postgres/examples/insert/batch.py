@@ -10,6 +10,12 @@ from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
+    DropTableExpression,
+)
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -25,21 +31,30 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='logs',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='logs',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'level', 'data_type': 'VARCHAR(20)'},
-        {'name': 'message', 'data_type': 'TEXT'},
-        {'name': 'created_at', 'data_type': 'TIMESTAMP', 'default': 'CURRENT_TIMESTAMP'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('level', 'VARCHAR(20)'),
+        ColumnDefinition('message', 'TEXT'),
+        ColumnDefinition('created_at', 'TIMESTAMP'),
     ],
 )
 backend.execute(*create_table.to_sql())
@@ -50,13 +65,13 @@ backend.execute(*create_table.to_sql())
 from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
-    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 
 insert = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'logs'),
+    into='logs',
+    columns=['level', 'message'],
     source=ValuesSource(
         dialect,
         [
@@ -66,8 +81,6 @@ insert = InsertExpression(
             [Literal(dialect, 'WARNING'), Literal(dialect, 'Memory usage high')],
         ],
     ),
-    columns=['level', 'message'],
-    dialect_options={},
 )
 
 sql, params = insert.to_sql()

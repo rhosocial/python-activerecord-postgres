@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -29,28 +34,38 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='sales_data',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='sales_data',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'salesperson', 'data_type': 'VARCHAR(100)'},
-        {'name': 'region', 'data_type': 'VARCHAR(50)'},
-        {'name': 'amount', 'data_type': 'DECIMAL(10,2)'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('salesperson', 'VARCHAR(100)'),
+        ColumnDefinition('region', 'VARCHAR(50)'),
+        ColumnDefinition('amount', 'DECIMAL(10,2)'),
     ],
 )
 backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'sales_data'),
+    into='sales_data',
+    columns=['salesperson', 'region', 'amount'],
     source=ValuesSource(
         dialect,
         [
@@ -61,8 +76,6 @@ insert_expr = InsertExpression(
             [Literal(dialect, 'Charlie'), Literal(dialect, 'South'), Literal(dialect, 2000)],
         ],
     ),
-    columns=['salesperson', 'region', 'amount'],
-    dialect_options={},
 )
 backend.execute(*insert_expr.to_sql())
 
@@ -74,8 +87,9 @@ from rhosocial.activerecord.backend.expression import (
     TableExpression,
     Column,
     WindowSpecification,
+    OrderByClause,
 )
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression.advanced_functions import WindowFunctionCall
 
 query = QueryExpression(
     dialect=dialect,
@@ -83,19 +97,26 @@ query = QueryExpression(
         Column(dialect, 'salesperson'),
         Column(dialect, 'region'),
         Column(dialect, 'amount'),
-        FunctionCall(dialect, 'ROW_NUMBER').over(
-            WindowSpecification(
+        WindowFunctionCall(
+            dialect,
+            'ROW_NUMBER',
+            window_spec=WindowSpecification(
                 dialect,
                 partition_by=[Column(dialect, 'region')],
-                order_by='amount DESC',
-            )
-        ).as_('row_num'),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'amount')).over(
-            WindowSpecification(
+                order_by=OrderByClause(dialect, expressions=[(Column(dialect, 'amount'), 'DESC')]),
+            ),
+            alias='row_num',
+        ),
+        WindowFunctionCall(
+            dialect,
+            'SUM',
+            args=[Column(dialect, 'amount')],
+            window_spec=WindowSpecification(
                 dialect,
                 partition_by=[Column(dialect, 'region')],
-            )
-        ).as_('region_total'),
+            ),
+            alias='region_total',
+        ),
     ],
     from_=TableExpression(dialect, 'sales_data'),
 )

@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -29,29 +34,44 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='users',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='users',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'name', 'data_type': 'VARCHAR(100)', 'nullable': False},
-        {'name': 'age', 'data_type': 'INTEGER'},
-        {'name': 'status', 'data_type': 'VARCHAR(20)', 'default': "'active'"},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition(
+            'name',
+            'VARCHAR(100)',
+            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+        ),
+        ColumnDefinition('age', 'INTEGER'),
+        ColumnDefinition('status', 'VARCHAR(20)'),
     ],
+    if_not_exists=True,
 )
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert_expr = InsertExpression(
+insert = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'users'),
+    into='users',
+    columns=['name', 'age', 'status'],
     source=ValuesSource(
         dialect,
         [
@@ -60,10 +80,8 @@ insert_expr = InsertExpression(
             [Literal(dialect, 'Charlie'), Literal(dialect, 35), Literal(dialect, 'inactive')],
         ],
     ),
-    columns=['name', 'age', 'status'],
-    dialect_options={},
 )
-sql, params = insert_expr.to_sql()
+sql, params = insert.to_sql()
 backend.execute(sql, params)
 
 # ============================================================

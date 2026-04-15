@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -30,20 +35,29 @@ backend.connect()
 dialect = backend.dialect
 
 for table in ['employees', 'departments']:
-    drop_table = dialect.format_drop_table_statement(
+    drop_table = DropTableExpression(
+        dialect=dialect,
         table_name=table,
         if_exists=True,
         cascade=True,
     )
-    backend.execute(drop_table[0], drop_table[1])
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
 create_departments = CreateTableExpression(
     dialect=dialect,
     table_name='departments',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'name', 'data_type': 'VARCHAR(100)'},
-        {'name': 'budget', 'data_type': 'DECIMAL(15,2)'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('name', 'VARCHAR(100)'),
+        ColumnDefinition('budget', 'DECIMAL(15,2)'),
     ],
 )
 backend.execute(*create_departments.to_sql())
@@ -52,22 +66,25 @@ create_employees = CreateTableExpression(
     dialect=dialect,
     table_name='employees',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'name', 'data_type': 'VARCHAR(100)'},
-        {'name': 'salary', 'data_type': 'DECIMAL(10,2)'},
-        {'name': 'department_id', 'data_type': 'INT'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('name', 'VARCHAR(100)'),
+        ColumnDefinition('salary', 'DECIMAL(10,2)'),
+        ColumnDefinition('department_id', 'INTEGER'),
     ],
-    foreign_keys=[{
-        'columns': ['department_id'],
-        'ref_table': 'departments',
-        'ref_columns': ['id'],
-    }],
 )
 backend.execute(*create_employees.to_sql())
 
 insert_departments = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'departments'),
+    into='departments',
+    columns=['name', 'budget'],
     source=ValuesSource(
         dialect,
         [
@@ -75,14 +92,13 @@ insert_departments = InsertExpression(
             [Literal(dialect, 'Sales'), Literal(dialect, 500000)],
         ],
     ),
-    columns=['name', 'budget'],
-    dialect_options={},
 )
 backend.execute(*insert_departments.to_sql())
 
 insert_employees = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'employees'),
+    into='employees',
+    columns=['name', 'salary', 'department_id'],
     source=ValuesSource(
         dialect,
         [
@@ -92,8 +108,6 @@ insert_employees = InsertExpression(
             [Literal(dialect, 'David'), Literal(dialect, 70000), Literal(dialect, 2)],
         ],
     ),
-    columns=['name', 'salary', 'department_id'],
-    dialect_options={},
 )
 backend.execute(*insert_employees.to_sql())
 
@@ -105,16 +119,18 @@ from rhosocial.activerecord.backend.expression import (
     TableExpression,
     Column,
     WhereClause,
-    SubqueryExpression,
+    Subquery,
 )
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-subquery = QueryExpression(
+subquery_query = QueryExpression(
     dialect=dialect,
     select=[FunctionCall(dialect, 'AVG', Column(dialect, 'salary'))],
     from_=TableExpression(dialect, 'employees'),
 )
+sql, params = subquery_query.to_sql()
+subquery = Subquery(dialect, sql, params)
 
 query = QueryExpression(
     dialect=dialect,
@@ -129,7 +145,7 @@ query = QueryExpression(
             dialect,
             '>',
             Column(dialect, 'salary'),
-            SubqueryExpression(dialect, subquery),
+            subquery,
         ),
     ),
 )

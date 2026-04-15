@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -29,27 +34,37 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='articles',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='articles',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'title', 'data_type': 'VARCHAR(200)'},
-        {'name': 'content', 'data_type': 'TEXT'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('title', 'VARCHAR(200)'),
+        ColumnDefinition('content', 'TEXT'),
     ],
 )
 backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'articles'),
+    into='articles',
+    columns=['title', 'content'],
     source=ValuesSource(
         dialect,
         [
@@ -58,8 +73,6 @@ insert_expr = InsertExpression(
             [Literal(dialect, 'Database Design'), Literal(dialect, 'Best practices for designing relational databases.')],
         ],
     ),
-    columns=['title', 'content'],
-    dialect_options={},
 )
 backend.execute(*insert_expr.to_sql())
 
@@ -72,18 +85,21 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     WhereClause,
 )
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.text_search import (
     to_tsvector,
     plainto_tsquery,
-    ts_matches,
-    ts_rank,
 )
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 search_term = 'PostgreSQL'
 tsvector_expr = to_tsvector('content', 'english')
 tsquery_expr = plainto_tsquery(search_term, 'english')
-match_expr = ts_matches(tsvector_expr, tsquery_expr)
-rank_expr = ts_rank(tsvector_expr, tsquery_expr)
+match_expr = RawSQLExpression(
+    dialect,
+    f"{tsvector_expr} @@ {tsquery_expr}",
+)
 
 query = QueryExpression(
     dialect=dialect,
@@ -94,7 +110,12 @@ query = QueryExpression(
     from_=TableExpression(dialect, 'articles'),
     where=WhereClause(
         dialect,
-        condition=match_expr,
+        condition=ComparisonPredicate(
+            dialect,
+            '=',
+            Literal(dialect, True),
+            match_expr,
+        ),
     ),
 )
 

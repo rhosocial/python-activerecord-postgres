@@ -12,9 +12,14 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
     ValuesSource,
-    TableExpression,
+    DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -29,29 +34,39 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = dialect.format_drop_table_statement(
+drop_table = DropTableExpression(
+    dialect=dialect,
     table_name='sales',
     if_exists=True,
     cascade=True,
 )
-backend.execute(drop_table[0], drop_table[1])
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='sales',
     columns=[
-        {'name': 'id', 'data_type': 'SERIAL', 'primary_key': True},
-        {'name': 'product', 'data_type': 'VARCHAR(100)'},
-        {'name': 'quantity', 'data_type': 'INT'},
-        {'name': 'price', 'data_type': 'DECIMAL(10,2)'},
-        {'name': 'region', 'data_type': 'VARCHAR(50)'},
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('product', 'VARCHAR(100)'),
+        ColumnDefinition('quantity', 'INTEGER'),
+        ColumnDefinition('price', 'DECIMAL(10,2)'),
+        ColumnDefinition('region', 'VARCHAR(50)'),
     ],
 )
 backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'sales'),
+    into='sales',
+    columns=['product', 'quantity', 'price', 'region'],
     source=ValuesSource(
         dialect,
         [
@@ -62,8 +77,6 @@ insert_expr = InsertExpression(
             [Literal(dialect, 'Widget'), Literal(dialect, 7), Literal(dialect, 5.00), Literal(dialect, 'East')],
         ],
     ),
-    columns=['product', 'quantity', 'price', 'region'],
-    dialect_options={},
 )
 backend.execute(*insert_expr.to_sql())
 
@@ -74,8 +87,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
     Column,
-    GroupByClause,
-    HavingClause,
+    GroupByHavingClause,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -88,13 +100,10 @@ query = QueryExpression(
         FunctionCall(dialect, 'AVG', Column(dialect, 'price')).as_('avg_price'),
     ],
     from_=TableExpression(dialect, 'sales'),
-    group_by=GroupByClause(
+    group_by_having=GroupByHavingClause(
         dialect,
-        expressions=[Column(dialect, 'product')],
-    ),
-    having=HavingClause(
-        dialect,
-        condition=ComparisonPredicate(
+        group_by=[Column(dialect, 'product')],
+        having=ComparisonPredicate(
             dialect,
             '>',
             FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')),
