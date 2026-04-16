@@ -2,11 +2,11 @@
 """Data type related PostgreSQL protocols."""
 
 from .data_type import PostgresDataTypeSupport
-from .multirange import MultirangeSupport
-from .enum import EnumTypeSupport
+from .multirange import PostgresMultirangeSupport
+from .enum import PostgresEnumTypeSupport
 
 __all__ = [
     "PostgresDataTypeSupport",
-    "MultirangeSupport",
-    "EnumTypeSupport",
+    "PostgresMultirangeSupport",
+    "PostgresEnumTypeSupport",
 ]

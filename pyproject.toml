@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rhosocial_activerecord_postgres"
+name = "rhosocial-activerecord-postgres"
 version = "1.0.0.dev11"
 description = "postgres backend implementation for rhosocial-activerecord, providing a robust and optimized postgres database support."
 readme = "README.md"

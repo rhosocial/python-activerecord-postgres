@@ -137,8 +137,8 @@ from .protocols import (
     PostgresTypeSupport,
     PostgresConstraintSupport,
     # Type feature protocols
-    MultirangeSupport,
-    EnumTypeSupport,
+    PostgresMultirangeSupport,
+    PostgresEnumTypeSupport,
     # New feature protocols
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,
@@ -292,8 +292,8 @@ class PostgresDialect(
     PostgresTypeSupport,
     PostgresConstraintSupport,
     # Type feature protocols
-    MultirangeSupport,
-    EnumTypeSupport,
+    PostgresMultirangeSupport,
+    PostgresEnumTypeSupport,
     # New feature protocols
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,

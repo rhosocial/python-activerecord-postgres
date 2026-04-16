@@ -30,8 +30,8 @@ from .dml.advisory_lock import PostgresAdvisoryLockSupport
 
 # Type protocols
 from .types.data_type import PostgresDataTypeSupport
-from .types.multirange import MultirangeSupport
-from .types.enum import EnumTypeSupport
+from .types.multirange import PostgresMultirangeSupport
+from .types.enum import PostgresEnumTypeSupport
 
 # Extension protocols
 from .extensions.pgvector import PostgresPgvectorSupport
