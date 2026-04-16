@@ -111,9 +111,23 @@ EXAMPLES_META = {
         'max_version': '18',
         'note': 'JSON type is available since PostgreSQL 9.4+',
     },
-    'types/array_basic.py': {
-        'title': 'Array Type Operations',
+    'types/array_postgres84.py': {
+        'title': 'Array Type Operations (PostgreSQL 8.4+)',
         'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'query/cte.py': {
+        'title': 'CTE (Common Table Expressions)',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'query/window_functions.py': {
+        'title': 'Window Functions (Advanced)',
+        'dialect_protocols': ['WindowFunctionSupport'],
         'priority': 10,
         'min_version': '9',
         'max_version': '18',
