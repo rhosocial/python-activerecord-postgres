@@ -33,6 +33,7 @@ from rhosocial.activerecord.backend.expression.advanced_functions import (
     WindowSpecification,
     WindowFrameSpecification,
 )
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 # ROW_NUMBER() - sequential rank without gaps
 row_number = WindowFunctionCall(
@@ -41,7 +42,7 @@ row_number = WindowFunctionCall(
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],
-        order_by=[Column(dialect, 'salary')],
+        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
         frame=WindowFrameSpecification(
             dialect=dialect,
             frame_type='ROWS',
@@ -59,7 +60,7 @@ rank = WindowFunctionCall(
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],
-        order_by=[Column(dialect, 'salary')],
+        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
     ),
     alias='rank',
 )
@@ -71,7 +72,7 @@ dense_rank = WindowFunctionCall(
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],
-        order_by=[Column(dialect, 'salary')],
+        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
     ),
     alias='dense_rank',
 )

@@ -72,7 +72,7 @@ create_table = CreateTableExpression(
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('balance', 'DECIMAL(10,2)', default=Literal(dialect, '0')),
+        ColumnDefinition('balance', 'DECIMAL(10,2)'),
     ],
     if_not_exists=True,
 )
@@ -185,7 +185,7 @@ except Exception as e:
 # FOR KEY SHARE - for foreign key detection
 
 # Use PostgresForUpdateClause with LockStrength.SHARE for FOR SHARE
-from rhosocial.activerecord.backend.impl.postgres.expression.locking import (
+from rhosocial.activerecord.backend.impl.postgres.expression.locking import (  # noqa: E402
     PostgresForUpdateClause,
     LockStrength,
 )

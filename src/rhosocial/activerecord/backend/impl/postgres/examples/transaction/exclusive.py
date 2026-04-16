@@ -25,6 +25,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -72,7 +73,7 @@ create_table = CreateTableExpression(
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('balance', 'NUMERIC(10,2)', default=Literal(dialect, '0')),
+        ColumnDefinition('balance', 'NUMERIC(10,2)'),
     ],
     if_not_exists=True,
 )
@@ -100,7 +101,7 @@ backend.execute(sql, params)
 # Non-repeatable reads and phantom reads can still occur
 # because each statement sees a snapshot as of its start.
 print("--- READ COMMITTED (PostgreSQL default) ---")
-with backend.transaction(isolation_level=IsolationLevel.READ_COMMITTED):
+with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ_COMMITTED):
     # Read Alice's balance
     query = QueryExpression(
         dialect=dialect,
@@ -120,7 +121,7 @@ with backend.transaction(isolation_level=IsolationLevel.READ_COMMITTED):
     update_expr = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 1100)},
+        assignments={'balance': Literal(dialect, 1100)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -151,7 +152,7 @@ print(f"After commit - Alice's balance: {result.data[0]['balance']}")
 # taken at the first query's start time.
 # Phantom reads are possible in PostgreSQL (unlike MySQL).
 print("\n--- REPEATABLE READ ---")
-with backend.transaction(isolation_level=IsolationLevel.REPEATABLE_READ):
+with backend.transaction_manager.transaction(isolation_level=IsolationLevel.REPEATABLE_READ):
     # First read
     query = QueryExpression(
         dialect=dialect,
@@ -181,13 +182,13 @@ with backend.transaction(isolation_level=IsolationLevel.REPEATABLE_READ):
 # and phantom reads. Transactions appear to execute sequentially.
 # May raise serialization failures that require retry.
 print("\n--- SERIALIZABLE ---")
-with backend.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
+with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
     # Read all accounts
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=TableExpression(dialect, 'accounts'),
-        order_by=[Column(dialect, 'id')],
+        order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=dql_options)
@@ -197,7 +198,7 @@ with backend.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
     update_expr = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 600)},
+        assignments={'balance': Literal(dialect, 600)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -214,11 +215,11 @@ with backend.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
 print("\n--- Per-transaction isolation level ---")
 
 # Transaction 1: SERIALIZABLE
-with backend.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
+with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
     update_expr = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 1200)},
+        assignments={'balance': Literal(dialect, 1200)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -234,7 +235,7 @@ with backend.transaction():
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=TableExpression(dialect, 'accounts'),
-        order_by=[Column(dialect, 'id')],
+        order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=dql_options)
@@ -257,7 +258,7 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use isolation_level parameter in backend.transaction() to set isolation
+# 1. Use backend.transaction_manager.transaction(isolation_level=...) to set isolation
 # 2. READ COMMITTED: PostgreSQL default, prevents dirty reads only
 # 3. REPEATABLE READ: prevents dirty and non-repeatable reads, snapshot-based
 # 4. SERIALIZABLE: strictest level, may raise serialization failures

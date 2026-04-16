@@ -83,23 +83,18 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
     Column,
-    WhereClause,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
-from rhosocial.activerecord.backend.impl.postgres.functions.text_search import (
-    to_tsvector,
-    plainto_tsquery,
-)
+from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 search_term = 'PostgreSQL'
-tsvector_expr = to_tsvector('content', 'english')
-tsquery_expr = plainto_tsquery(search_term, 'english')
-match_expr = RawSQLExpression(
-    dialect,
-    f"{tsvector_expr} @@ {tsquery_expr}",
-)
+
+# Build to_tsvector and plainto_tsquery using FunctionCall
+tsvector_expr = FunctionCall(dialect, 'to_tsvector', Literal(dialect, 'english'), Column(dialect, 'content'))
+tsquery_expr = FunctionCall(dialect, 'plainto_tsquery', Literal(dialect, 'english'), Literal(dialect, search_term))
+
+# Use @@ operator via ComparisonPredicate
+match_pred = ComparisonPredicate(dialect, '@@', tsvector_expr, tsquery_expr)
 
 query = QueryExpression(
     dialect=dialect,
@@ -108,15 +103,7 @@ query = QueryExpression(
         Column(dialect, 'title'),
     ],
     from_=TableExpression(dialect, 'articles'),
-    where=WhereClause(
-        dialect,
-        condition=ComparisonPredicate(
-            dialect,
-            '=',
-            Literal(dialect, True),
-            match_expr,
-        ),
-    ),
+    where=match_pred,
 )
 
 sql, params = query.to_sql()

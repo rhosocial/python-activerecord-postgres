@@ -36,7 +36,7 @@ from rhosocial.activerecord.backend.expression import (
     WithQueryExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate, IsNullPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -46,6 +46,11 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+
+# Drop table first for clean setup
+drop = DropTableExpression(dialect=dialect, table_name='employees', if_exists=True, cascade=True)
+sql, params = drop.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
@@ -65,7 +70,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    table_name='employees',
+    into='employees',
     columns=['name', 'manager_id'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'CEO'), Literal(dialect, None)],
@@ -120,16 +125,17 @@ base_query = QueryExpression(
         Column(dialect, 'id'),
         Column(dialect, 'name'),
         Column(dialect, 'manager_id'),
-        Literal(dialect, 1).as_('level'),
+        Literal(dialect, 1),
     ],
     from_=TableExpression(dialect, 'employees'),
-    where=ComparisonPredicate(dialect, 'IS', Column(dialect, 'manager_id'), Literal(dialect, None)),
+    where=IsNullPredicate(dialect, Column(dialect, 'manager_id')),
 )
 
 org_cte = CTEExpression(
     dialect=dialect,
     name='org_chart',
     query=base_query,
+    columns=['id', 'name', 'manager_id', 'level'],
 )
 
 recursive_query = WithQueryExpression(
@@ -145,7 +151,7 @@ recursive_query = WithQueryExpression(
 sql, params = recursive_query.to_sql()
 print(f"Recursive CTE SQL: {sql}")
 result = backend.execute(sql, params, options=dql_options)
-print(f"Recursive CTE result:")
+print("Recursive CTE result:")
 for row in result.data or []:
     print(f"  {row}")
 

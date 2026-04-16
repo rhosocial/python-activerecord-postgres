@@ -28,6 +28,7 @@ from rhosocial.activerecord.backend.expression import (
     FunctionCall,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column, WildcardExpression
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -138,7 +139,7 @@ verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
     from_=TableExpression(dialect, 'sales_summary'),
-    order_by=[Column(dialect, 'product_id')],
+    order_by=OrderByClause(dialect, [Column(dialect, 'product_id')]),
 )
 sql, params = verify_query.to_sql()
 result = backend.execute(sql, params, options=dql_options)

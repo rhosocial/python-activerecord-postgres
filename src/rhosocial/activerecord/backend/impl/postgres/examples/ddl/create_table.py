@@ -24,6 +24,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
     ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     IndexDefinition,
 )
@@ -76,12 +77,16 @@ columns = [
     ColumnDefinition(
         name='is_active',
         data_type='BOOLEAN',
-        default_value='TRUE',
+        constraints=[
+            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=True),
+        ],
     ),
     ColumnDefinition(
         name='created_at',
         data_type='TIMESTAMP',
-        default_value='CURRENT_TIMESTAMP',
+        constraints=[
+            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=FunctionCall(dialect, 'now')),
+        ],
     ),
 ]
 
@@ -111,10 +116,10 @@ result = backend.execute(sql, params)
 print("Table created: products")
 
 # Verify table structure using introspector
-columns_info = backend.introspector.get_columns('products')
+columns_info = backend.introspector.list_columns('products')
 print("Columns in 'products':")
 for col in columns_info:
-    print(f"  {col.name} {col.data_type} nullable={col.is_nullable}")
+    print(f"  {col}")
 
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
@@ -132,4 +137,4 @@ backend.disconnect()
 # 2. NUMERIC(p,s) for precise decimal columns
 # 3. BOOLEAN type for true/false values
 # 4. DEFAULT values use PostgreSQL syntax (TRUE, CURRENT_TIMESTAMP)
-# 5. Use introspector.get_columns() to verify table structure
+# 5. Use introspector.list_columns() to verify table structure

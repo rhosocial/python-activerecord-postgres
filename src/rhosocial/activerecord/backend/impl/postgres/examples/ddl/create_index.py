@@ -80,7 +80,7 @@ print(f"Params: {params}")
 # SECTION: Execution (run the expression)
 # ============================================================
 result = backend.execute(sql, params)
-print(f"Index created: idx_category_price")
+print("Index created: idx_category_price")
 
 # Verify index creation
 options = ExecutionOptions(stmt_type=StatementType.DQL)

@@ -20,7 +20,6 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     QueryExpression,
     TableExpression,
-    WhereClause,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -74,7 +73,7 @@ create_table = CreateTableExpression(
         ColumnDefinition('email', 'VARCHAR(100)', constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('login_count', 'INTEGER', default=Literal(dialect, '0')),
+        ColumnDefinition('login_count', 'INTEGER'),
     ],
     if_not_exists=True,
 )
@@ -146,8 +145,8 @@ insert_update = InsertExpression(
         dialect,
         [Column(dialect, 'username')],
         update_assignments={
-            'email': Literal(dialect, 'EXCLUDED.email'),
-            'login_count': Literal(dialect, 'users.login_count + 1'),
+            'email': Column(dialect, 'email', table='EXCLUDED'),
+            'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
         },
     ),
 )
@@ -161,14 +160,14 @@ insert_update2 = InsertExpression(
     into='users',
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
-        [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 1)],
+        [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],
     ]),
     on_conflict=OnConflictClause(
         dialect,
         [Column(dialect, 'username')],
         update_assignments={
-            'email': Literal(dialect, 'EXCLUDED.email'),
-            'login_count': Literal(dialect, 'users.login_count + 1'),
+            'email': Column(dialect, 'email', table='EXCLUDED'),
+            'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
         },
     ),
 )
@@ -177,7 +176,10 @@ backend.execute(sql, params)
 
 query = QueryExpression(
     dialect=dialect,
-    select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email'), Column(dialect, 'login_count')],
+    select=[
+        Column(dialect, 'id'), Column(dialect, 'username'),
+        Column(dialect, 'email'), Column(dialect, 'login_count'),
+    ],
     from_=TableExpression(dialect, 'users'),
     where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
 )
@@ -206,4 +208,4 @@ backend.disconnect()
 # 2. Use OnConflictClause with do_nothing=True for DO NOTHING
 # 3. Use OnConflictClause with update_assignments for DO UPDATE
 # 4. conflict_target specifies the conflict columns (e.g., [Column(dialect, 'username')])
-# 5. EXCLUDED table references the attempted values
+# 5. Use Column(dialect, 'col', table='EXCLUDED') to reference EXCLUDED values

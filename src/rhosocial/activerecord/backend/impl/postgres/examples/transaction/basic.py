@@ -21,7 +21,8 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -43,6 +44,10 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
+drop_table = DropTableExpression(dialect=dialect, table_name='accounts', if_exists=True, cascade=True)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
+
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='accounts',
@@ -53,7 +58,7 @@ create_table = CreateTableExpression(
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('balance', 'NUMERIC(10,2)', default_value='0'),
+        ColumnDefinition('balance', 'NUMERIC(10,2)'),
     ],
     if_not_exists=True,
 )
@@ -87,7 +92,7 @@ with backend.transaction():
     update = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 1500.00)},
+        assignments={'balance': Literal(dialect, 1500.00)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -120,7 +125,7 @@ try:
         update = UpdateExpression(
             dialect=dialect,
             table=TableExpression(dialect, 'accounts'),
-            set_values={'balance': Literal(dialect, 0)},
+            assignments={'balance': Literal(dialect, 0)},
             where=ComparisonPredicate(
                 dialect, '=',
                 Column(dialect, 'name'),
@@ -156,7 +161,7 @@ with backend.transaction():
     update = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 2000.00)},
+        assignments={'balance': Literal(dialect, 2000.00)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -167,14 +172,14 @@ with backend.transaction():
     backend.execute(sql, params)
 
     # Create savepoint
-    sp = backend.savepoint('before_bob_update')
-    print(f"Savepoint created: {sp.name}")
+    sp = backend.transaction_manager.savepoint('before_bob_update')
+    print(f"Savepoint created: {sp}")
 
     # Second operation (within savepoint)
     update = UpdateExpression(
         dialect=dialect,
         table=TableExpression(dialect, 'accounts'),
-        set_values={'balance': Literal(dialect, 9999.00)},
+        assignments={'balance': Literal(dialect, 9999.00)},
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -185,7 +190,7 @@ with backend.transaction():
     backend.execute(sql, params)
 
     # Rollback to savepoint (undo only Bob's update)
-    sp.rollback()
+    backend.transaction_manager.rollback_to(sp)
     print("Rolled back to savepoint (Bob's update undone)")
 
 # Verify - Alice updated, Bob unchanged
@@ -193,7 +198,7 @@ query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=TableExpression(dialect, 'accounts'),
-    order_by=[Column(dialect, 'id')],
+    order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )
 sql, params = query.to_sql()
 result = backend.execute(sql, params, options=dql_options)
@@ -213,6 +218,6 @@ backend.disconnect()
 # Key points:
 # 1. Use backend.transaction() context manager for automatic commit/rollback
 # 2. Exceptions within the context cause automatic rollback
-# 3. Use backend.savepoint(name) for nested transaction control
-# 4. Savepoint.rollback() undoes operations after the savepoint
+# 3. Use backend.transaction_manager.savepoint(name) for nested transaction control
+# 4. backend.transaction_manager.rollback_to(sp) undoes operations after the savepoint
 # 5. Outer transaction commits if no exception propagates

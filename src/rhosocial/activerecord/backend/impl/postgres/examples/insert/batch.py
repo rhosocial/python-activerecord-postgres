@@ -69,6 +69,7 @@ from rhosocial.activerecord.backend.expression import (
     TableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 insert = InsertExpression(
     dialect=dialect,
@@ -100,7 +101,7 @@ verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
     from_=TableExpression(dialect, 'logs'),
-    order_by=[Column(dialect, 'id')],
+    order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)
 sql, params = verify_query.to_sql()

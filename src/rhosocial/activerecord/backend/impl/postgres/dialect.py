@@ -158,6 +158,8 @@ if TYPE_CHECKING:
         DropMaterializedViewExpression,
         RefreshMaterializedViewExpression,
         ExplainExpression,
+        AddTableConstraint,
+        TableConstraint,
     )
     from rhosocial.activerecord.backend.expression.transaction import (
         BeginTransactionExpression,
@@ -673,6 +675,65 @@ class PostgresDialect(
         # Escape any internal double quotes by doubling them
         escaped = identifier.replace('"', '""')
         return f'"{escaped}"'
+
+    def format_on_conflict_clause(self, expr) -> Tuple[str, tuple]:
+        """Format ON CONFLICT clause for PostgreSQL.
+
+        Overrides the base implementation to handle EXCLUDED pseudo-table
+        references without quoting, as EXCLUDED is a special PostgreSQL
+        keyword in ON CONFLICT context and must not be double-quoted.
+        """
+        from rhosocial.activerecord.backend.expression import bases
+        from rhosocial.activerecord.backend.expression.core import Column
+
+        all_params = []
+        parts = ["ON CONFLICT"]
+
+        # Add conflict target if specified
+        if expr.conflict_target:
+            target_parts = []
+            for target in expr.conflict_target:
+                if isinstance(target, str):
+                    target_parts.append(self.format_identifier(target))
+                elif hasattr(target, 'to_sql'):
+                    target_sql, target_params = target.to_sql()
+                    target_parts.append(target_sql)
+                    all_params.extend(target_params)
+                else:
+                    target_parts.append(self.format_identifier(str(target)))
+            if target_parts:
+                parts.append(f"({', '.join(target_parts)})")
+
+        # Add DO NOTHING or DO UPDATE
+        if expr.do_nothing:
+            parts.append("DO NOTHING")
+        elif expr.update_assignments:
+            update_parts = []
+            for col, expr_val in expr.update_assignments.items():
+                if isinstance(expr_val, Column) and getattr(expr_val, 'table', None) == 'EXCLUDED':
+                    # EXCLUDED is a special pseudo-table in PostgreSQL ON CONFLICT.
+                    # It must NOT be double-quoted, only the column name should be quoted.
+                    val_sql = f'EXCLUDED.{self.format_identifier(expr_val.name)}'
+                    update_parts.append(f"{self.format_identifier(col)} = {val_sql}")
+                elif isinstance(expr_val, bases.BaseExpression):
+                    val_sql, val_params = expr_val.to_sql()
+                    update_parts.append(f"{self.format_identifier(col)} = {val_sql}")
+                    all_params.extend(val_params)
+                else:
+                    update_parts.append(f"{self.format_identifier(col)} = {self.get_parameter_placeholder()}")
+                    all_params.append(expr_val)
+
+            parts.append(f"DO UPDATE SET {', '.join(update_parts)}")
+
+            # Add WHERE clause if specified
+            if expr.update_where:
+                where_sql, where_params = expr.update_where.to_sql()
+                parts.append(f"WHERE {where_sql}")
+                all_params.extend(where_params)
+        else:
+            parts.append("DO NOTHING")
+
+        return " ".join(parts), tuple(all_params)
 
     def supports_jsonb(self) -> bool:
         """Check if PostgreSQL version supports JSONB type (introduced in 9.4)."""

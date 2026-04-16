@@ -38,9 +38,15 @@ from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    ColumnConstraint,
-    ColumnConstraintType,
 )
+
+drop_table = DropTableExpression(
+    dialect=dialect,
+    table_name='users',
+    if_exists=True,
+)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
