@@ -13,7 +13,7 @@ from typing import Tuple
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
-from rhosocial.activerecord.backend.impl.postgres.protocols import EnumTypeSupport
+from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
@@ -368,13 +368,15 @@ class TestPostgresEnumAdapter:
         assert results[2] is None
 
 
-class TestEnumTypeSupport:
-    """Tests for EnumTypeSupport protocol implementation."""
+class TestPostgresEnumTypeSupport:
+    """Tests for PostgresEnumTypeSupport protocol implementation."""
 
-    def test_dialect_implements_enum_type_support(self):
-        """Test that PostgresDialect implements EnumTypeSupport."""
+    def test_dialect_implements_postgres_enum_type_support(self):
+        """Test that PostgresDialect implements PostgresEnumTypeSupport."""
         dialect = PostgresDialect()
-        assert isinstance(dialect, EnumTypeSupport)
+        # Check via MRO
+        from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport
+        assert PostgresEnumTypeSupport in dialect.__class__.__mro__
 
     def test_create_enum_type_method(self):
         """Test create_enum_type method."""

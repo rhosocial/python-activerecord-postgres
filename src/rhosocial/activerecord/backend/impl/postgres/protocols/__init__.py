@@ -86,11 +86,4 @@ __all__ = [
     "PostgresSQLSyntaxSupport",
     "PostgresLogicalReplicationSupport",
     "PostgresParallelQuerySupport",
-    # Backward compatibility aliases (deprecated - use new names)
-    "MultirangeSupport",
-    "EnumTypeSupport",
 ]
-
-# Backward compatibility aliases (deprecated - use new names)
-MultirangeSupport = PostgresMultirangeSupport
-EnumTypeSupport = PostgresEnumTypeSupport
