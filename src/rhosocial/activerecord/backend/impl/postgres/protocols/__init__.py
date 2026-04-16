@@ -71,8 +71,6 @@ __all__ = [
     "PostgresAdvisoryLockSupport",
     # Type protocols
     "PostgresDataTypeSupport",
-    "MultirangeSupport",
-    "EnumTypeSupport",
     # Extension protocols
     "PostgresPgvectorSupport",
     "PostgresPostGISSupport",
@@ -88,4 +86,11 @@ __all__ = [
     "PostgresSQLSyntaxSupport",
     "PostgresLogicalReplicationSupport",
     "PostgresParallelQuerySupport",
+    # Backward compatibility aliases (deprecated - use new names)
+    "MultirangeSupport",
+    "EnumTypeSupport",
 ]
+
+# Backward compatibility aliases (deprecated - use new names)
+MultirangeSupport = PostgresMultirangeSupport
+EnumTypeSupport = PostgresEnumTypeSupport
