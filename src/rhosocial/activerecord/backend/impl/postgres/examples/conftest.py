@@ -98,6 +98,20 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'query/distinct.py': {
+        'title': 'SELECT DISTINCT',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'query/union.py': {
+        'title': 'UNION using SetOperationExpression',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'query/subquery.py': {
         'title': 'Subquery',
         'dialect_protocols': [],
