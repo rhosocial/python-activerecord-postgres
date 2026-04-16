@@ -47,6 +47,13 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'ddl/view.py': {
+        'title': 'CREATE VIEW',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'insert/batch.py': {
         'title': 'Batch Insert',
         'dialect_protocols': [],
