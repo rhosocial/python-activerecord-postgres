@@ -70,6 +70,13 @@ EXAMPLES_META = {
         'max_version': '18',
         'note': 'Requires PostgreSQL 9.3+',
     },
+    'transaction/for_update.py': {
+        'title': 'FOR UPDATE Row Locking',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'query/basic.py': {
         'title': 'Basic SELECT Query',
         'dialect_protocols': [],
