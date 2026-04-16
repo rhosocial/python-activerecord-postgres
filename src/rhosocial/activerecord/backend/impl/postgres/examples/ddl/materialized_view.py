@@ -14,6 +14,18 @@ This example demonstrates:
 import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.expression import (
+    CreateTableExpression,
+    InsertExpression,
+    ValuesSource,
+    DropTableExpression,
+)
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+)
 
 config = PostgresConnectionConfig(
     host=os.getenv('PG_HOST', 'localhost'),
@@ -24,32 +36,68 @@ config = PostgresConnectionConfig(
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
+dialect = backend.dialect
 
-# Create base table
-backend.execute("""
-    CREATE TABLE IF NOT EXISTS sales (
-        id SERIAL PRIMARY KEY,
-        product_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
-        sale_date DATE NOT NULL
-    )
-""")
-backend.execute("TRUNCATE TABLE sales RESTART IDENTITY")
+drop_table = DropTableExpression(
+    dialect=dialect,
+    table_name='sales',
+    if_exists=True,
+    cascade=True,
+)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 
-# Insert sample data
-backend.execute("""
-    INSERT INTO sales (product_id, amount, sale_date) VALUES
-    (1, 100.00, '2024-01-01'),
-    (1, 150.00, '2024-01-02'),
-    (2, 200.00, '2024-01-01'),
-    (2, 250.00, '2024-01-03'),
-    (1, 180.00, '2024-01-04')
-""")
+create_table = CreateTableExpression(
+    dialect=dialect,
+    table_name='sales',
+    columns=[
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('product_id', 'INT', constraints=[
+            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ]),
+        ColumnDefinition('amount', 'DECIMAL(10,2)', constraints=[
+            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ]),
+        ColumnDefinition('sale_date', 'DATE', constraints=[
+            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ]),
+    ],
+    if_not_exists=True,
+)
+sql, params = create_table.to_sql()
+backend.execute(sql, params)
+
+insert_expr = InsertExpression(
+    dialect=dialect,
+    into='sales',
+    columns=['product_id', 'amount', 'sale_date'],
+    source=ValuesSource(
+        dialect,
+        [
+            [Literal(dialect, '1'), Literal(dialect, '100.00'), Literal(dialect, "'2024-01-01'")],
+            [Literal(dialect, '1'), Literal(dialect, '150.00'), Literal(dialect, "'2024-01-02'")],
+            [Literal(dialect, '2'), Literal(dialect, '200.00'), Literal(dialect, "'2024-01-01'")],
+            [Literal(dialect, '2'), Literal(dialect, '250.00'), Literal(dialect, "'2024-01-03'")],
+            [Literal(dialect, '1'), Literal(dialect, '180.00'), Literal(dialect, "'2024-01-04'")],
+        ],
+    ),
+)
+sql, params = insert_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Create Materialized View
 # ============================================================
 # Materialized views store the query result physically
+# Note: Expression API does not yet cover CREATE MATERIALIZED VIEW.
+# The following uses raw SQL for MV operations.
 
 backend.execute("""
     CREATE MATERIALIZED VIEW sales_summary AS
@@ -78,6 +126,7 @@ backend.execute("""
 """)
 
 # Data in view is stale - refresh to see new data
+# Note: REFRESH MATERIALIZED VIEW also requires raw SQL.
 backend.execute("REFRESH MATERIALIZED VIEW sales_summary")
 
 result = backend.execute("SELECT * FROM sales_summary ORDER BY product_id")
@@ -110,7 +159,14 @@ backend.execute("DROP MATERIALIZED VIEW IF EXISTS sales_daily")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS sales")
+drop_table = DropTableExpression(
+    dialect=dialect,
+    table_name='sales',
+    if_exists=True,
+    cascade=True,
+)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 backend.disconnect()
 
 # ============================================================

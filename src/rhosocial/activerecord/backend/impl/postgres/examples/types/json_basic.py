@@ -89,6 +89,14 @@ from rhosocial.activerecord.backend.impl.postgres.functions.json import (
     json_path_key,
 )
 
+# Note: json_path_root and json_path_key build PostgresJsonPath objects,
+# while jsonb_path_query generates SQL string fragments.
+path = json_path_key(json_path_root(), 'name')
+print(f"JSON path for $.name: {path}")
+
+path_sql = jsonb_path_query(dialect, 'data', path)
+print(f"jsonb_path_query SQL: {path_sql}")
+
 query = QueryExpression(
     dialect=dialect,
     select=[

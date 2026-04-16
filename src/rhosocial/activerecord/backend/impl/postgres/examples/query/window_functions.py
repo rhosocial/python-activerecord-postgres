@@ -5,63 +5,75 @@ Window function support example - ROW_NUMBER(), RANK(), DENSE_RANK().
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
+import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
-    host='localhost',
-    port=5432,
-    database='test',
-    user='test',
-    password='test',
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', 5432)),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
-backend = PostgresBackend(config)
+backend = PostgresBackend(connection_config=config)
+backend.connect()
 dialect = backend.dialect
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    WindowFunctionExpression,
-    WindowFrameBounded,
-    WindowFrameRows,
+    QueryExpression,
+    TableExpression,
 )
-from rhosocial.activerecord.backend.expression.core import TableExpression, ColumnExpression
-from rhosocial.activerecord.backend.expression import aggregate
-
-# Example: Rank employees by salary within department
-employees = TableExpression('employees')
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.advanced_functions import (
+    WindowFunctionCall,
+    WindowSpecification,
+    WindowFrameSpecification,
+)
 
 # ROW_NUMBER() - sequential rank without gaps
-row_number = WindowFunctionExpression(
-    func='ROW_NUMBER',
-    partition_by=[
-        ColumnExpression('department', table=employees),
-    ],
-    order_by=[('salary', 'DESC')],
-    window_frame=WindowFrameBounded(
-        kind=WindowFrameRows,
-        start='UNBOUNDED PRECEDING',
-        end='CURRENT ROW',
+row_number = WindowFunctionCall(
+    dialect=dialect,
+    function_name='ROW_NUMBER',
+    window_spec=WindowSpecification(
+        dialect=dialect,
+        partition_by=[Column(dialect, 'department')],
+        order_by=[Column(dialect, 'salary')],
+        frame=WindowFrameSpecification(
+            dialect=dialect,
+            frame_type='ROWS',
+            start_frame='UNBOUNDED PRECEDING',
+            end_frame='CURRENT ROW',
+        ),
     ),
+    alias='row_number',
 )
 
 # RANK() - rank with gaps (same values get same rank, skip ranks)
-rank = WindowFunctionExpression(
-    func='RANK',
-    partition_by=[
-        ColumnExpression('department', table=employees),
-    ],
-    order_by=[('salary', 'DESC')],
+rank = WindowFunctionCall(
+    dialect=dialect,
+    function_name='RANK',
+    window_spec=WindowSpecification(
+        dialect=dialect,
+        partition_by=[Column(dialect, 'department')],
+        order_by=[Column(dialect, 'salary')],
+    ),
+    alias='rank',
 )
 
 # DENSE_RANK() - rank without gaps
-dense_rank = WindowFunctionExpression(
-    func='DENSE_RANK',
-    partition_by=[
-        ColumnExpression('department', table=employees),
-    ],
-    order_by=[('salary', 'DESC')],
+dense_rank = WindowFunctionCall(
+    dialect=dialect,
+    function_name='DENSE_RANK',
+    window_spec=WindowSpecification(
+        dialect=dialect,
+        partition_by=[Column(dialect, 'department')],
+        order_by=[Column(dialect, 'salary')],
+    ),
+    alias='dense_rank',
 )
 
 # Generate SQL
@@ -76,10 +88,30 @@ sql, params = dense_rank.to_sql()
 print(f"DENSE_RANK: {sql}")
 
 # ============================================================
+# SECTION: Full Query Example
+# ============================================================
+# Using window functions in a SELECT query
+query = QueryExpression(
+    dialect=dialect,
+    select=[
+        Column(dialect, 'id'),
+        Column(dialect, 'name'),
+        Column(dialect, 'department'),
+        Column(dialect, 'salary'),
+        row_number,
+    ],
+    from_=TableExpression(dialect, 'employees'),
+)
+
+sql, params = query.to_sql()
+print(f"Full query SQL: {sql}")
+print(f"Params: {params}")
+
+# ============================================================
 # SECTION: Output (reference)
 # ============================================================
 # Expected output:
-# SELECT ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary DESC 
+# ROW_NUMBER: ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary
 #    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS row_number
-# SELECT RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rank
-# SELECT DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS dense_rank
+# RANK: RANK() OVER (PARTITION BY department ORDER BY salary) AS rank
+# DENSE_RANK: DENSE_RANK() OVER (PARTITION BY department ORDER BY salary) AS dense_rank

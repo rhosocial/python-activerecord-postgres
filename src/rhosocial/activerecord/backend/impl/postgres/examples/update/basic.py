@@ -32,8 +32,10 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     DropTableExpression,
+    UpdateExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -70,14 +72,10 @@ backend.execute(sql, params)
 # ============================================================
 # SECTION: UPDATE (using UpdateExpression)
 # ============================================================
-from rhosocial.activerecord.backend.expression import UpdateExpression
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-
 update_expr = UpdateExpression(
     dialect=dialect,
     table='users',
-    set_columns=[Column(dialect, 'age')],
-    set_values=[Literal(dialect, 26)],
+    assignments={'age': Literal(dialect, 26)},
     where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
 )
 sql, params = update_expr.to_sql()
@@ -94,8 +92,7 @@ print(f"Updated rows: {result.affected_rows}")
 update_all = UpdateExpression(
     dialect=dialect,
     table='users',
-    set_columns=[Column(dialect, 'age')],
-    set_values=[Literal(dialect, 99)],
+    assignments={'age': Literal(dialect, 99)},
 )
 sql, params = update_all.to_sql()
 print(f"UPDATE all SQL: {sql}")
@@ -114,6 +111,6 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use UpdateExpression with set_columns/set_values
+# 1. Use UpdateExpression with assignments dict for SET clause
 # 2. Use ComparisonPredicate for WHERE
 # 3. Omit where to update all rows

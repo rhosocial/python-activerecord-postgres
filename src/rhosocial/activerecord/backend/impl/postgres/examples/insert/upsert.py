@@ -13,6 +13,25 @@ This example demonstrates:
 import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.expression import (
+    CreateTableExpression,
+    DropTableExpression,
+    InsertExpression,
+    ValuesSource,
+    QueryExpression,
+    TableExpression,
+    WhereClause,
+)
+from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+    OnConflictClause,
+)
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
 
 config = PostgresConnectionConfig(
     host=os.getenv('PG_HOST', 'localhost'),
@@ -23,37 +42,92 @@ config = PostgresConnectionConfig(
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
+dialect = backend.dialect
 
-# Create table for testing
-backend.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username VARCHAR(100) UNIQUE NOT NULL,
-        email VARCHAR(100) NOT NULL,
-        login_count INTEGER DEFAULT 0
-    )
-""")
-backend.execute("TRUNCATE TABLE users RESTART IDENTITY")
+dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+
+drop_table = DropTableExpression(
+    dialect=dialect,
+    table_name='users',
+    if_exists=True,
+    cascade=True,
+)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
+
+create_table = CreateTableExpression(
+    dialect=dialect,
+    table_name='users',
+    columns=[
+        ColumnDefinition(
+            'id',
+            'SERIAL',
+            constraints=[
+                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ],
+        ),
+        ColumnDefinition('username', 'VARCHAR(100)', constraints=[
+            ColumnConstraint(ColumnConstraintType.UNIQUE),
+            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ]),
+        ColumnDefinition('email', 'VARCHAR(100)', constraints=[
+            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ]),
+        ColumnDefinition('login_count', 'INTEGER', default=Literal(dialect, '0')),
+    ],
+    if_not_exists=True,
+)
+sql, params = create_table.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: INSERT ON CONFLICT DO NOTHING
 # ============================================================
 # Ignore duplicate key violations
 
-backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('alice', 'alice@example.com', 1)
-    ON CONFLICT (username) DO NOTHING
-""")
+insert_nothing = InsertExpression(
+    dialect=dialect,
+    into='users',
+    columns=['username', 'email', 'login_count'],
+    source=ValuesSource(dialect, [
+        [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
+    ]),
+    on_conflict=OnConflictClause(
+        dialect,
+        [Column(dialect, 'username')],
+        do_nothing=True,
+    ),
+)
+sql, params = insert_nothing.to_sql()
+print(f"DO NOTHING SQL: {sql}")
+backend.execute(sql, params)
 
 # Try to insert again - will be ignored
-backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('alice', 'different@example.com', 2)
-    ON CONFLICT (username) DO NOTHING
-""")
+insert_nothing2 = InsertExpression(
+    dialect=dialect,
+    into='users',
+    columns=['username', 'email', 'login_count'],
+    source=ValuesSource(dialect, [
+        [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
+    ]),
+    on_conflict=OnConflictClause(
+        dialect,
+        [Column(dialect, 'username')],
+        do_nothing=True,
+    ),
+)
+sql, params = insert_nothing2.to_sql()
+backend.execute(sql, params)
 
-result = backend.execute("SELECT * FROM users WHERE username = 'alice'")
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
+    from_=TableExpression(dialect, 'users'),
+    where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'alice')),
+)
+sql, params = query.to_sql()
+result = backend.execute(sql, params, options=dql_options)
 print(f"DO NOTHING result: {result.data}")
 
 # ============================================================
@@ -61,57 +135,67 @@ print(f"DO NOTHING result: {result.data}")
 # ============================================================
 # Update existing rows on conflict
 
-backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('bob', 'bob@example.com', 1)
-    ON CONFLICT (username) DO UPDATE SET
-        email = EXCLUDED.email,
-        login_count = users.login_count + 1
-""")
+insert_update = InsertExpression(
+    dialect=dialect,
+    into='users',
+    columns=['username', 'email', 'login_count'],
+    source=ValuesSource(dialect, [
+        [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
+    ]),
+    on_conflict=OnConflictClause(
+        dialect,
+        [Column(dialect, 'username')],
+        update_assignments={
+            'email': Literal(dialect, 'EXCLUDED.email'),
+            'login_count': Literal(dialect, 'users.login_count + 1'),
+        },
+    ),
+)
+sql, params = insert_update.to_sql()
+print(f"DO UPDATE SQL: {sql}")
+backend.execute(sql, params)
 
 # Insert again - will update
-backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('bob', 'bob_new@example.com', 1)
-    ON CONFLICT (username) DO UPDATE SET
-        email = EXCLUDED.email,
-        login_count = users.login_count + 1
-""")
+insert_update2 = InsertExpression(
+    dialect=dialect,
+    into='users',
+    columns=['username', 'email', 'login_count'],
+    source=ValuesSource(dialect, [
+        [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 1)],
+    ]),
+    on_conflict=OnConflictClause(
+        dialect,
+        [Column(dialect, 'username')],
+        update_assignments={
+            'email': Literal(dialect, 'EXCLUDED.email'),
+            'login_count': Literal(dialect, 'users.login_count + 1'),
+        },
+    ),
+)
+sql, params = insert_update2.to_sql()
+backend.execute(sql, params)
 
-result = backend.execute("SELECT * FROM users WHERE username = 'bob'")
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email'), Column(dialect, 'login_count')],
+    from_=TableExpression(dialect, 'users'),
+    where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
+)
+sql, params = query.to_sql()
+result = backend.execute(sql, params, options=dql_options)
 print(f"DO UPDATE result: {result.data}")
-
-# ============================================================
-# SECTION: Conditional UPSERT
-# ============================================================
-# Use WHERE clause for conditional updates
-
-backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('charlie', 'charlie@example.com', 1)
-    ON CONFLICT (username) DO UPDATE SET
-        login_count = users.login_count + 1
-    WHERE users.login_count < 5
-""")
-
-# ============================================================
-# SECTION: UPSERT with RETURNING
-# ============================================================
-# Return the inserted/updated row
-
-result = backend.execute("""
-    INSERT INTO users (username, email, login_count)
-    VALUES ('david', 'david@example.com', 1)
-    ON CONFLICT (username) DO UPDATE SET
-        login_count = users.login_count + 1
-    RETURNING *
-""")
-print(f"UPSERT RETURNING result: {result.data}")
 
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS users")
+drop_table = DropTableExpression(
+    dialect=dialect,
+    table_name='users',
+    if_exists=True,
+    cascade=True,
+)
+sql, params = drop_table.to_sql()
+backend.execute(sql, params)
 backend.disconnect()
 
 # ============================================================
@@ -119,9 +203,7 @@ backend.disconnect()
 # ============================================================
 # Key points:
 # 1. Requires PostgreSQL 9.5+
-# 2. Use ON CONFLICT (column) to specify conflict target
-# 3. DO NOTHING to skip conflicts
-# 4. DO UPDATE to update existing rows
+# 2. Use OnConflictClause with do_nothing=True for DO NOTHING
+# 3. Use OnConflictClause with update_assignments for DO UPDATE
+# 4. conflict_target specifies the conflict columns (e.g., [Column(dialect, 'username')])
 # 5. EXCLUDED table references the attempted values
-# 6. Use WHERE for conditional updates
-# 7. Can use RETURNING with UPSERT

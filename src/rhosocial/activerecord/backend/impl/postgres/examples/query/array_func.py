@@ -89,6 +89,14 @@ from rhosocial.activerecord.backend.impl.postgres.functions.array import (
     array_to_string,
 )
 
+# Note: array_length and array_to_string are helper functions that return
+# SQL string fragments. They can be used to build raw SQL expressions:
+sql_fragment = array_length(dialect, 'tags', 1)
+print(f"array_length SQL: {sql_fragment}")
+
+sql_fragment = array_to_string(dialect, 'tags', ', ')
+print(f"array_to_string SQL: {sql_fragment}")
+
 query = QueryExpression(
     dialect=dialect,
     select=[
