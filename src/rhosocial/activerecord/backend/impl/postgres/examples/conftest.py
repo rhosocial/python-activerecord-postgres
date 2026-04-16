@@ -26,6 +26,13 @@ Version-specific features:
 """
 
 EXAMPLES_META = {
+    'connection/quickstart.py': {
+        'title': 'Connect to PostgreSQL and Execute Queries',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'ddl/create_index.py': {
         'title': 'Create Index',
         'dialect_protocols': [],
