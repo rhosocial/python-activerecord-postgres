@@ -33,6 +33,13 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'ddl/create_table.py': {
+        'title': 'Create Table',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'ddl/create_index.py': {
         'title': 'Create Index',
         'dialect_protocols': [],
@@ -160,6 +167,20 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'query/predicate.py': {
+        'title': 'Complex Predicates',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'query/pagination.py': {
+        'title': 'Pagination with LIMIT/OFFSET',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'query/cte.py': {
         'title': 'CTE (Common Table Expressions)',
         'dialect_protocols': [],
@@ -170,6 +191,27 @@ EXAMPLES_META = {
     'query/window_functions.py': {
         'title': 'Window Functions (Advanced)',
         'dialect_protocols': ['WindowFunctionSupport'],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'transaction/basic.py': {
+        'title': 'Transaction Control',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'transaction/for_update.py': {
+        'title': 'FOR UPDATE Row Locking',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
+    'transaction/exclusive.py': {
+        'title': 'Transaction Isolation Levels',
+        'dialect_protocols': [],
         'priority': 10,
         'min_version': '9',
         'max_version': '18',
