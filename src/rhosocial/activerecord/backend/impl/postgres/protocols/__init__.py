@@ -27,6 +27,7 @@ from .dml.vacuum import PostgresVacuumSupport
 from .dml.stored_procedure import PostgresStoredProcedureSupport
 from .dml.extended_statistics import PostgresExtendedStatisticsSupport
 from .dml.advisory_lock import PostgresAdvisoryLockSupport
+from .dml.locking import PostgresLockingSupport
 
 # Type protocols
 from .types.data_type import PostgresDataTypeSupport
@@ -69,6 +70,7 @@ __all__ = [
     "PostgresStoredProcedureSupport",
     "PostgresExtendedStatisticsSupport",
     "PostgresAdvisoryLockSupport",
+    "PostgresLockingSupport",
     # Type protocols
     "PostgresDataTypeSupport",
     # Extension protocols

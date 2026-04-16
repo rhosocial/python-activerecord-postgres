@@ -19,13 +19,22 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     DropTableExpression,
+    QueryExpression,
+    TableExpression,
+    CreateMaterializedViewExpression,
+    DropMaterializedViewExpression,
+    RefreshMaterializedViewExpression,
+    GroupByHavingClause,
+    FunctionCall,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, Column, WildcardExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
 
 config = PostgresConnectionConfig(
     host=os.getenv('PG_HOST', 'localhost'),
@@ -37,6 +46,8 @@ config = PostgresConnectionConfig(
 backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
+
+dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 drop_table = DropTableExpression(
     dialect=dialect,
@@ -96,22 +107,42 @@ backend.execute(sql, params)
 # SECTION: Create Materialized View
 # ============================================================
 # Materialized views store the query result physically
-# Note: Expression API does not yet cover CREATE MATERIALIZED VIEW.
-# The following uses raw SQL for MV operations.
 
-backend.execute("""
-    CREATE MATERIALIZED VIEW sales_summary AS
-    SELECT
-        product_id,
-        COUNT(*) AS total_sales,
-        SUM(amount) AS total_amount,
-        AVG(amount) AS avg_amount
-    FROM sales
-    GROUP BY product_id
-""")
+# Build the summary query with aggregations
+summary_query = QueryExpression(
+    dialect=dialect,
+    select=[
+        Column(dialect, 'product_id'),
+        FunctionCall(dialect, 'COUNT', WildcardExpression(dialect)).as_('total_sales'),
+        FunctionCall(dialect, 'SUM', Column(dialect, 'amount')).as_('total_amount'),
+        FunctionCall(dialect, 'AVG', Column(dialect, 'amount')).as_('avg_amount'),
+    ],
+    from_=TableExpression(dialect, 'sales'),
+    group_by_having=GroupByHavingClause(
+        dialect,
+        group_by=[Column(dialect, 'product_id')],
+    ),
+)
 
-result = backend.execute("SELECT * FROM sales_summary ORDER BY product_id")
-print(f"Materialized view result:")
+create_mv = CreateMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+    query=summary_query,
+)
+sql, params = create_mv.to_sql()
+print(f"Create MV SQL: {sql}")
+backend.execute(sql, params)
+
+# Verify the materialized view content
+verify_query = QueryExpression(
+    dialect=dialect,
+    select=[WildcardExpression(dialect)],
+    from_=TableExpression(dialect, 'sales_summary'),
+    order_by=[Column(dialect, 'product_id')],
+)
+sql, params = verify_query.to_sql()
+result = backend.execute(sql, params, options=dql_options)
+print("Materialized view result:")
 for row in result.data or []:
     print(f"  {row}")
 
@@ -120,17 +151,31 @@ for row in result.data or []:
 # ============================================================
 # Refresh to update the data
 
-backend.execute("""
-    INSERT INTO sales (product_id, amount, sale_date)
-    VALUES (1, 300.00, '2024-01-05')
-""")
+# Insert new data
+insert_new = InsertExpression(
+    dialect=dialect,
+    into='sales',
+    columns=['product_id', 'amount', 'sale_date'],
+    source=ValuesSource(
+        dialect,
+        [[Literal(dialect, '1'), Literal(dialect, '300.00'), Literal(dialect, "'2024-01-05'")]],
+    ),
+)
+sql, params = insert_new.to_sql()
+backend.execute(sql, params)
 
 # Data in view is stale - refresh to see new data
-# Note: REFRESH MATERIALIZED VIEW also requires raw SQL.
-backend.execute("REFRESH MATERIALIZED VIEW sales_summary")
+refresh_mv = RefreshMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+)
+sql, params = refresh_mv.to_sql()
+backend.execute(sql, params)
 
-result = backend.execute("SELECT * FROM sales_summary ORDER BY product_id")
-print(f"After refresh:")
+# Verify after refresh
+sql, params = verify_query.to_sql()
+result = backend.execute(sql, params, options=dql_options)
+print("After refresh:")
 for row in result.data or []:
     print(f"  {row}")
 
@@ -139,22 +184,59 @@ for row in result.data or []:
 # ============================================================
 # Use WITH NO DATA to create without populating
 
-backend.execute("""
-    CREATE MATERIALIZED VIEW sales_daily AS
-    SELECT sale_date, SUM(amount) AS daily_total
-    FROM sales
-    GROUP BY sale_date
-    WITH NO DATA
-""")
+daily_query = QueryExpression(
+    dialect=dialect,
+    select=[
+        Column(dialect, 'sale_date'),
+        FunctionCall(dialect, 'SUM', Column(dialect, 'amount')).as_('daily_total'),
+    ],
+    from_=TableExpression(dialect, 'sales'),
+    group_by_having=GroupByHavingClause(
+        dialect,
+        group_by=[Column(dialect, 'sale_date')],
+    ),
+)
 
-result = backend.execute("SELECT * FROM sales_daily")
-print(f"WITH NO DATA result: {result.data}")
+create_mv_nodata = CreateMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_daily',
+    query=daily_query,
+    with_data=False,
+)
+sql, params = create_mv_nodata.to_sql()
+backend.execute(sql, params)
+
+# Verify WITH NO DATA - query should fail or return empty
+nodata_query = QueryExpression(
+    dialect=dialect,
+    select=[WildcardExpression(dialect)],
+    from_=TableExpression(dialect, 'sales_daily'),
+)
+sql, params = nodata_query.to_sql()
+try:
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"WITH NO DATA result: {result.data}")
+except Exception as e:
+    print(f"WITH NO DATA query error (expected): {e}")
 
 # ============================================================
 # SECTION: Drop Materialized View
 # ============================================================
-backend.execute("DROP MATERIALIZED VIEW IF EXISTS sales_summary")
-backend.execute("DROP MATERIALIZED VIEW IF EXISTS sales_daily")
+drop_mv1 = DropMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+    if_exists=True,
+)
+sql, params = drop_mv1.to_sql()
+backend.execute(sql, params)
+
+drop_mv2 = DropMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_daily',
+    if_exists=True,
+)
+sql, params = drop_mv2.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
@@ -173,9 +255,9 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Requires PostgreSQL 9.3+
-# 2. Data is materialized (physically stored)
-# 3. Use REFRESH MATERIALIZED VIEW to update
-# 4. Use WITH NO DATA for lazy population
-# 5. Cannot be queried with other tables (not like regular views)
-# 6. Use CREATE UNIQUE MATERIALIZED VIEW for concurrent refresh
+# 1. Use CreateMaterializedViewExpression to create MVs
+# 2. Use RefreshMaterializedViewExpression to update MV data
+# 3. Use with_data=False for WITH NO DATA (lazy population)
+# 4. Use DropMaterializedViewExpression to drop MVs
+# 5. Requires PostgreSQL 9.3+
+# 6. Use concurrent=True for CONCURRENTLY refresh (PG 9.4+)

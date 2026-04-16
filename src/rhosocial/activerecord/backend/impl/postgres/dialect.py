@@ -104,6 +104,7 @@ from .mixins import (
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
+    PostgresLockingMixin,
     # Introspection capability mixin
     PostgresIntrospectionCapabilityMixin,
 )
@@ -144,6 +145,7 @@ from .protocols import (
     PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
     PostgresAdvisoryLockSupport,
+    PostgresLockingSupport,
 )
 
 if TYPE_CHECKING:
@@ -181,6 +183,7 @@ class PostgresDialect(
     ArrayMixin,
     ExplainMixin,
     GraphMixin,
+    PostgresLockingMixin,
     LockingMixin,
     MergeMixin,
     OrderedSetAggregationMixin,
@@ -299,6 +302,7 @@ class PostgresDialect(
     PostgresStoredProcedureSupport,
     PostgresExtendedStatisticsSupport,
     PostgresAdvisoryLockSupport,
+    PostgresLockingSupport,
     # Function support protocol
     SQLFunctionSupport,
 ):
@@ -471,22 +475,6 @@ class PostgresDialect(
         FOR UPDATE SKIP LOCKED (since 9.5).
         """
         return True
-
-    def supports_for_update_skip_locked(self) -> bool:
-        """Whether FOR UPDATE SKIP LOCKED is supported."""
-        return self.version >= (9, 5, 0)  # Supported since 9.5
-
-    def supports_for_share(self) -> bool:
-        """Whether FOR SHARE lock strength is supported (PostgreSQL 9.0+)."""
-        return self.version >= (9, 0, 0)
-
-    def supports_for_no_key_update(self) -> bool:
-        """Whether FOR NO KEY UPDATE lock strength is supported (PostgreSQL 9.0+)."""
-        return self.version >= (9, 0, 0)
-
-    def supports_for_key_share(self) -> bool:
-        """Whether FOR KEY SHARE lock strength is supported (PostgreSQL 9.3+)."""
-        return self.version >= (9, 3, 0)
 
     def supports_lock_strength(self, strength) -> bool:
         """

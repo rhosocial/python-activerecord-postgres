@@ -184,15 +184,22 @@ except Exception as e:
 # FOR SHARE - shared lock (read lock)
 # FOR KEY SHARE - for foreign key detection
 
-# Note: FOR SHARE uses ForUpdateClause with different lock mode.
-# Currently Expression API provides ForUpdateClause for FOR UPDATE.
-# FOR SHARE requires raw SQL or extension of ForUpdateClause.
+# Use PostgresForUpdateClause with LockStrength.SHARE for FOR SHARE
+from rhosocial.activerecord.backend.impl.postgres.expression.locking import (
+    PostgresForUpdateClause,
+    LockStrength,
+)
 
 with backend.transaction():
     # Shared lock - allows other transactions to also read
-    result = backend.execute(
-        "SELECT * FROM accounts FOR SHARE"
+    share_query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
+        from_=TableExpression(dialect, 'accounts'),
+        for_update=PostgresForUpdateClause(dialect, strength=LockStrength.SHARE),
     )
+    sql, params = share_query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
     print(f"FOR SHARE result: {len(result.data)} rows")
 
 # ============================================================
@@ -215,5 +222,5 @@ backend.disconnect()
 # 1. Use ForUpdateClause with QueryExpression for SELECT ... FOR UPDATE
 # 2. ForUpdateClause(dialect, skip_locked=True) for SKIP LOCKED
 # 3. ForUpdateClause(dialect, nowait=True) for NOWAIT
-# 4. FOR SHARE requires raw SQL (Expression API provides FOR UPDATE only)
+# 4. Use PostgresForUpdateClause with LockStrength.SHARE for FOR SHARE
 # 5. Locks released on COMMIT/ROLLBACK
