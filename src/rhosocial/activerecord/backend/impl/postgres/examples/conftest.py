@@ -47,6 +47,13 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'ddl/drop_table.py': {
+        'title': 'DROP TABLE',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'ddl/view.py': {
         'title': 'CREATE VIEW',
         'dialect_protocols': [],
@@ -54,31 +61,22 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
-    'insert/batch.py': {
+'insert/batch.py': {
         'title': 'Batch Insert',
         'dialect_protocols': [],
         'priority': 10,
         'min_version': '9',
         'max_version': '18',
     },
-    'insert/upsert.py': {
-        'title': 'UPSERT (INSERT ON CONFLICT)',
+    'insert/single.py': {
+        'title': 'Single Row Insert',
         'dialect_protocols': [],
         'priority': 10,
-        'min_version': '9.5',
+        'min_version': '9',
         'max_version': '18',
-        'note': 'Requires PostgreSQL 9.5+',
     },
-    'ddl/materialized_view.py': {
-        'title': 'Materialized Views',
-        'dialect_protocols': [],
-        'priority': 10,
-        'min_version': '9.3',
-        'max_version': '18',
-        'note': 'Requires PostgreSQL 9.3+',
-    },
-    'transaction/for_update.py': {
-        'title': 'FOR UPDATE Row Locking',
+    'update/basic.py': {
+        'title': 'UPDATE using UpdateExpression',
         'dialect_protocols': [],
         'priority': 10,
         'min_version': '9',
