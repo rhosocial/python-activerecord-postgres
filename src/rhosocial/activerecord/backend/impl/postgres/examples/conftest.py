@@ -54,6 +54,22 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'insert/upsert.py': {
+        'title': 'UPSERT (INSERT ON CONFLICT)',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9.5',
+        'max_version': '18',
+        'note': 'Requires PostgreSQL 9.5+',
+    },
+    'ddl/materialized_view.py': {
+        'title': 'Materialized Views',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9.3',
+        'max_version': '18',
+        'note': 'Requires PostgreSQL 9.3+',
+    },
     'query/basic.py': {
         'title': 'Basic SELECT Query',
         'dialect_protocols': [],
