@@ -1,3 +1,10 @@
+## [v1.0.0.dev11] - 2026-04-17
+
+### Added
+
+- Add comprehensive PostgreSQL backend examples covering connection, CRUD, transactions, CTEs, window functions, and more ([#30](https://github.com/rhosocial/python-activerecord-postgres/issues/30))
+
+
 ## [v1.0.0.dev10] - 2026-04-13
 
 ### Added
