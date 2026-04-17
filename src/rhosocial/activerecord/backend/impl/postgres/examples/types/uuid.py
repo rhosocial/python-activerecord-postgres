@@ -4,7 +4,8 @@ Native UUID type - PostgreSQL.
 This example demonstrates:
 1. CREATE TABLE with UUID column type
 2. Using gen_random_uuid() as DEFAULT value (PostgreSQL 13+)
-3. INSERT with UUID values
+3. Using uuid_generate_v4() from uuid-ossp extension (PostgreSQL < 13)
+4. INSERT with UUID values
 """
 
 # ============================================================
@@ -43,22 +44,34 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='events',
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+# Determine UUID generation function based on server version
+server_version = backend.get_server_version()
+if server_version >= (13, 0, 0):
+    uuid_func = FunctionCall(dialect, 'GEN_RANDOM_UUID')
+    uuid_func_name = 'gen_random_uuid()'
+else:
+    # Enable uuid-ossp extension for PostgreSQL < 13
+    backend.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
+    uuid_func = FunctionCall(dialect, 'UUID_GENERATE_V4')
+    uuid_func_name = 'uuid_generate_v4()'
+
+print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
+print(f"Using UUID function: {uuid_func_name}")
+
+# Clean up
+for table in ['events_v13', 'events_legacy']:
+    drop = DropTableExpression(dialect=dialect, table_name=table, if_exists=True, cascade=True)
+    sql, params = drop.to_sql()
+    backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 
-# 1. CREATE TABLE with UUID column and gen_random_uuid() DEFAULT
-# gen_random_uuid() is built-in since PostgreSQL 13
-# For PostgreSQL < 13, use uuid-ossp extension: uuid_generate_v4()
+# 1. CREATE TABLE with UUID column and auto-generated DEFAULT
+# PostgreSQL 13+: use built-in gen_random_uuid()
+# PostgreSQL < 13: use uuid-ossp extension's uuid_generate_v4()
+# Both produce version 4 (random) UUIDs
 create_table = CreateTableExpression(
     dialect=dialect,
     table_name='events',
@@ -67,7 +80,7 @@ create_table = CreateTableExpression(
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ColumnConstraint(
                 ColumnConstraintType.DEFAULT,
-                default_value=FunctionCall(dialect, 'GEN_RANDOM_UUID'),
+                default_value=uuid_func,
             ),
         ]),
         ColumnDefinition('name', 'VARCHAR(200)', constraints=[
@@ -86,7 +99,7 @@ print(f"Params: {params}")
 # SECTION: Execution (run the expression)
 # ============================================================
 backend.execute(sql, params)
-print("Table created: events (with UUID primary key)")
+print(f"Table created: events (with UUID primary key, DEFAULT {uuid_func_name})")
 
 # 2. INSERT with auto-generated UUID (using DEFAULT)
 insert_default = InsertExpression(
@@ -143,8 +156,11 @@ backend.disconnect()
 # ============================================================
 # Key points:
 # 1. PostgreSQL has native UUID type (no need for VARCHAR storage)
-# 2. gen_random_uuid() available since PostgreSQL 13 (built-in)
-# 3. For PostgreSQL < 13, enable uuid-ossp extension: CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
-# 4. Use FunctionCall(dialect, 'GEN_RANDOM_UUID') for DEFAULT value
+# 2. PostgreSQL 13+: gen_random_uuid() is built-in, no extension required
+# 3. PostgreSQL < 13: enable uuid-ossp extension and use uuid_generate_v4()
+#    - CREATE EXTENSION IF NOT EXISTS "uuid-ossp"
+#    - Both functions produce version 4 (random) UUIDs
+# 4. Use FunctionCall(dialect, 'GEN_RANDOM_UUID') or
+#    FunctionCall(dialect, 'UUID_GENERATE_V4') for DEFAULT value
 # 5. Explicit UUID values can be inserted as string literals
 # 6. UUID type provides validation and efficient storage (16 bytes vs 36 chars)
