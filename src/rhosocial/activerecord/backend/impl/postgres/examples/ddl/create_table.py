@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
     ColumnConstraintType,
 )
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression.functions.datetime import current_timestamp
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     IndexDefinition,
 )
@@ -85,7 +85,7 @@ columns = [
         name='created_at',
         data_type='TIMESTAMP',
         constraints=[
-            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=FunctionCall(dialect, 'now')),
+            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=current_timestamp(dialect)),
         ],
     ),
 ]
