@@ -8,7 +8,7 @@ from typing import Protocol, runtime_checkable, List, Optional
 
 
 @runtime_checkable
-class EnumTypeSupport(Protocol):
+class PostgresEnumTypeSupport(Protocol):
     """PostgreSQL ENUM type management protocol.
 
     PostgreSQL ENUM types are custom types created with CREATE TYPE.

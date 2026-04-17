@@ -23,7 +23,7 @@ from rhosocial.activerecord.backend.expression.bases import BaseExpression
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
-from ..statements import (
+from ..expression.ddl import (
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
     AlterEnumTypeAddValueExpression,

@@ -8,7 +8,7 @@ the interface for PostgreSQL's native COMMENT ON feature.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import CommentExpression
+    from ...expression.ddl import CommentExpression
 
 
 @runtime_checkable

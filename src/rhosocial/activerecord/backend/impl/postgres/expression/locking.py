@@ -118,61 +118,12 @@ class PostgresForUpdateClause(ForUpdateClause):
         """
         Generate the SQL representation of the PostgreSQL FOR UPDATE clause.
 
-        This method handles PostgreSQL-specific lock strengths (FOR SHARE,
-        FOR NO KEY UPDATE, FOR KEY SHARE) in addition to the standard
-        FOR UPDATE clause.
+        Delegates to the dialect's format_postgres_for_update_clause method
+        to follow the Expression-Dialect separation pattern.
 
         Returns:
             Tuple containing:
             - SQL string fragment for the FOR UPDATE clause
             - Tuple of parameter values for prepared statements
         """
-        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-
-        all_params = []
-
-        # Check version support for lock strength
-        if self.strength == LockStrength.NO_KEY_UPDATE:
-            if not self.dialect.supports_for_no_key_update():
-                raise UnsupportedFeatureError(
-                    self.dialect.name, "FOR NO KEY UPDATE (requires PostgreSQL 9.0+)"
-                )
-        elif self.strength == LockStrength.SHARE:
-            if not self.dialect.supports_for_share():
-                raise UnsupportedFeatureError(
-                    self.dialect.name, "FOR SHARE (requires PostgreSQL 9.0+)"
-                )
-        elif self.strength == LockStrength.KEY_SHARE:
-            if not self.dialect.supports_for_key_share():
-                raise UnsupportedFeatureError(
-                    self.dialect.name, "FOR KEY SHARE (requires PostgreSQL 9.3+)"
-                )
-
-        # Use the strength value directly (e.g., "FOR UPDATE", "FOR SHARE")
-        sql_parts = [self.strength.value]
-
-        # Handle OF columns if specified
-        if self.of_columns:
-            of_parts = []
-            for col in self.of_columns:
-                if isinstance(col, str):
-                    of_parts.append(self.dialect.format_identifier(col))
-                else:
-                    # BaseExpression
-                    col_sql, col_params = col.to_sql()
-                    of_parts.append(col_sql)
-                    all_params.extend(col_params)
-            if of_parts:
-                sql_parts.append(f"OF {', '.join(of_parts)}")
-
-        # Handle NOWAIT/SKIP LOCKED options
-        if self.nowait:
-            sql_parts.append("NOWAIT")
-        elif self.skip_locked:
-            if not self.dialect.supports_for_update_skip_locked():
-                raise UnsupportedFeatureError(
-                    self.dialect.name, "SKIP LOCKED (requires PostgreSQL 9.5+)"
-                )
-            sql_parts.append("SKIP LOCKED")
-
-        return " ".join(sql_parts), tuple(all_params)
+        return self.dialect.format_postgres_for_update_clause(self)

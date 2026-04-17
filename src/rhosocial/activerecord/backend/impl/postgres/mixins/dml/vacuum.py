@@ -8,7 +8,7 @@ statement generation with PostgreSQL-specific options.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import VacuumExpression, AnalyzeExpression
+    from ...expression.ddl import VacuumExpression, AnalyzeExpression
 
 
 class PostgresVacuumMixin:

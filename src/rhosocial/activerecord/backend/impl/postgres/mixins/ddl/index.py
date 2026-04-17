@@ -8,7 +8,7 @@ PostgreSQL-specific index features and operations.
 from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import ReindexExpression
+    from ...expression.ddl import ReindexExpression
 
 
 class PostgresIndexMixin:

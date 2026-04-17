@@ -8,7 +8,7 @@ the interface for PostgreSQL's native partitioning features.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import (
+    from ...expression.ddl import (
         CreatePartitionExpression,
         DetachPartitionExpression,
     )

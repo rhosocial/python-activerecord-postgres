@@ -8,7 +8,7 @@ that are not part of the SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import VacuumExpression, AnalyzeExpression
+    from ...expression.ddl import VacuumExpression, AnalyzeExpression
 
 
 @runtime_checkable

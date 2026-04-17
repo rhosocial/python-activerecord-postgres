@@ -8,7 +8,7 @@ that extend beyond standard SQL.
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import ReindexExpression
+    from ...expression.ddl import ReindexExpression
 
 
 @runtime_checkable

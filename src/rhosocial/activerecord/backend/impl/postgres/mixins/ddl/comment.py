@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import CommentExpression
+    from ...expression.ddl import CommentExpression
 
 
 class PostgresCommentMixin:

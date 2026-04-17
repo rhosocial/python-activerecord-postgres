@@ -8,7 +8,7 @@ that extend beyond the SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import RefreshMaterializedViewPgExpression
+    from ...expression.ddl import RefreshMaterializedViewPgExpression
 
 
 @runtime_checkable
