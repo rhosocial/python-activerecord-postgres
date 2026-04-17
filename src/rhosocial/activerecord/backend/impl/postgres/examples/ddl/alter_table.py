@@ -147,7 +147,9 @@ print("Column renamed successfully")
 # Verify table structure
 options = ExecutionOptions(stmt_type=StatementType.DQL)
 result = backend.execute(
-    "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = 'users' ORDER BY ordinal_position",
+    "SELECT column_name, data_type, is_nullable "
+    "FROM information_schema.columns "
+    "WHERE table_name = 'users' ORDER BY ordinal_position",
     options=options
 )
 print("Table structure after alterations:")

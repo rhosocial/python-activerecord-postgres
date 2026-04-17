@@ -68,9 +68,11 @@ insert_expr = InsertExpression(
     source=ValuesSource(
         dialect,
         [
-            [Literal(dialect, 'PostgreSQL Tutorial'), Literal(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
+            [Literal(dialect, 'PostgreSQL Tutorial'),
+             Literal(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
             [Literal(dialect, 'MySQL Guide'), Literal(dialect, 'Learn MySQL from beginner to advanced level.')],
-            [Literal(dialect, 'Database Design'), Literal(dialect, 'Best practices for designing relational databases.')],
+            [Literal(dialect, 'Database Design'),
+             Literal(dialect, 'Best practices for designing relational databases.')],
         ],
     ),
 )
