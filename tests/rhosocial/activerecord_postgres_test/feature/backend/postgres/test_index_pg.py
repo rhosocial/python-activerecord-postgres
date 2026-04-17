@@ -9,7 +9,7 @@ Tests for:
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expressions import ReindexExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import ReindexExpression
 
 
 class TestIndexFeatureDetection:

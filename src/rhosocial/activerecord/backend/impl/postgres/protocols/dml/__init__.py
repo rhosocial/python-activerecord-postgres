@@ -4,9 +4,11 @@
 from .vacuum import PostgresVacuumSupport
 from .stored_procedure import PostgresStoredProcedureSupport
 from .extended_statistics import PostgresExtendedStatisticsSupport
+from .locking import PostgresLockingSupport
 
 __all__ = [
     "PostgresVacuumSupport",
     "PostgresStoredProcedureSupport",
     "PostgresExtendedStatisticsSupport",
+    "PostgresLockingSupport",
 ]

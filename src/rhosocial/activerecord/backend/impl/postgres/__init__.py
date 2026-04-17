@@ -23,7 +23,7 @@ from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
 from .types import PostgresEnumType
 from .explain import PostgresExplainResult, PostgresExplainPlanLine
-from .statements import (
+from .expression.ddl import (
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
     AlterEnumTypeAddValueExpression,

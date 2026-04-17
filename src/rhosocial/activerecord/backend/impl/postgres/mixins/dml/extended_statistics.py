@@ -8,7 +8,7 @@ which help the query planner make better estimates for combined column values.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import CreateStatisticsExpression, DropStatisticsExpression
+    from ...expression.ddl import CreateStatisticsExpression, DropStatisticsExpression
 
 
 class PostgresExtendedStatisticsMixin:

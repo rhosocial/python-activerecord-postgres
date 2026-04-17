@@ -4,7 +4,7 @@
 from typing import Protocol
 
 
-class MultirangeSupport(Protocol):
+class PostgresMultirangeSupport(Protocol):
     """PostgreSQL multirange type support protocol.
 
     PostgreSQL 14 introduced multirange types, which are arrays of

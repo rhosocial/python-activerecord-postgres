@@ -5,10 +5,14 @@ This module provides the EnumTypeMixin class for handling PostgreSQL
 enumerated type operations.
 """
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Tuple, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    pass
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+        CreateEnumTypeExpression,
+        DropEnumTypeExpression,
+        AlterEnumAddValueExpression,
+    )
 
 
 class EnumTypeMixin:
@@ -42,7 +46,7 @@ class EnumTypeMixin:
         """
         return ", ".join(f"'{v}'" for v in values)
 
-    def format_create_enum_type(
+    def format_create_enum_type_raw(
         self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
     ) -> str:
         """Format CREATE TYPE statement for enum.
@@ -61,7 +65,7 @@ class EnumTypeMixin:
         exists_clause = "IF NOT EXISTS " if if_not_exists else ""
         return f"CREATE TYPE {exists_clause}{full_name} AS ENUM ({values_str})"
 
-    def format_drop_enum_type(
+    def format_drop_enum_type_raw(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> str:
         """Format DROP TYPE statement.
@@ -80,14 +84,10 @@ class EnumTypeMixin:
         cascade_clause = " CASCADE" if cascade else ""
         return f"DROP TYPE {exists_clause}{full_name}{cascade_clause}"
 
-    def format_alter_enum_add_value(
-        self,
-        type_name: str,
-        new_value: str,
-        schema: Optional[str] = None,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-    ) -> str:
+    def format_alter_enum_add_value_raw(
+            self, type_name: str, new_value: str, schema: Optional[str] = None,
+            before: Optional[str] = None, after: Optional[str] = None
+        ) -> str:
         """Format ALTER TYPE ADD VALUE statement.
 
         Args:
@@ -128,7 +128,7 @@ class EnumTypeMixin:
         Returns:
             SQL statement string
         """
-        return self.format_create_enum_type(name, values, schema, if_not_exists)
+        return self.format_create_enum_type_raw(name, values, schema, if_not_exists)
 
     def drop_enum_type(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
@@ -146,7 +146,7 @@ class EnumTypeMixin:
         Returns:
             SQL statement string
         """
-        return self.format_drop_enum_type(name, schema, if_exists, cascade)
+        return self.format_drop_enum_type_raw(name, schema, if_exists, cascade)
 
     def alter_enum_add_value(
         self,
@@ -172,4 +172,73 @@ class EnumTypeMixin:
         Returns:
             SQL statement string
         """
-        return self.format_alter_enum_add_value(type_name, new_value, schema, before, after)
+        return self.format_alter_enum_add_value_raw(type_name, new_value, schema, before, after)
+
+    # =========================================================================
+    # Expression-based methods (for expression-dialect architecture)
+    # =========================================================================
+
+    def format_create_enum_type(
+        self,
+        expr_or_name: Union["CreateEnumTypeExpression", str],
+        values: Optional[List[str]] = None,
+        schema: Optional[str] = None,
+        if_not_exists: bool = False,
+    ) -> Union[str, Tuple[str, tuple]]:
+        """Format CREATE TYPE for either the legacy or expression-based API."""
+        if hasattr(expr_or_name, "values"):
+            sql = self.format_create_enum_type_raw(
+                expr_or_name.name,
+                expr_or_name.values,
+                expr_or_name.schema,
+                expr_or_name.if_not_exists,
+            )
+            return (sql, ())
+
+        if values is None:
+            raise TypeError("values must be provided when formatting enum type by name")
+
+        return self.format_create_enum_type_raw(expr_or_name, values, schema, if_not_exists)
+
+    def format_drop_enum_type(
+        self,
+        expr_or_name: Union["DropEnumTypeExpression", str],
+        schema: Optional[str] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
+    ) -> Union[str, Tuple[str, tuple]]:
+        """Format DROP TYPE for either the legacy or expression-based API."""
+        if hasattr(expr_or_name, "if_exists"):
+            sql = self.format_drop_enum_type_raw(
+                expr_or_name.name,
+                expr_or_name.schema,
+                expr_or_name.if_exists,
+                expr_or_name.cascade,
+            )
+            return (sql, ())
+
+        return self.format_drop_enum_type_raw(expr_or_name, schema, if_exists, cascade)
+
+    def format_alter_enum_add_value(
+        self,
+        expr_or_type_name: Union["AlterEnumAddValueExpression", str],
+        new_value: Optional[str] = None,
+        schema: Optional[str] = None,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+    ) -> Union[str, Tuple[str, tuple]]:
+        """Format ALTER TYPE ADD VALUE for either the legacy or expression-based API."""
+        if hasattr(expr_or_type_name, "new_value"):
+            sql = self.format_alter_enum_add_value_raw(
+                expr_or_type_name.type_name,
+                expr_or_type_name.new_value,
+                expr_or_type_name.schema,
+                expr_or_type_name.before,
+                expr_or_type_name.after,
+            )
+            return (sql, ())
+
+        if new_value is None:
+            raise TypeError("new_value must be provided when formatting enum value by name")
+
+        return self.format_alter_enum_add_value_raw(expr_or_type_name, new_value, schema, before, after)

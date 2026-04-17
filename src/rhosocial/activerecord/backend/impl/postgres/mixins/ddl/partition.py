@@ -9,7 +9,7 @@ partitioning with support for various PostgreSQL versions.
 from typing import Any, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expressions import (
+    from ...expression.ddl import (
         CreatePartitionExpression,
         DetachPartitionExpression,
         AttachPartitionExpression,

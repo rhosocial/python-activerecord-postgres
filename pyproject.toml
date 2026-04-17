@@ -3,8 +3,8 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rhosocial_activerecord_postgres"
-version = "1.0.0.dev10"
+name = "rhosocial-activerecord-postgres"
+version = "1.0.0.dev11"
 description = "postgres backend implementation for rhosocial-activerecord, providing a robust and optimized postgres database support."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -71,12 +71,20 @@ Issues = "https://github.com/rhosocial/python-activerecord-postgres/issues"
 where = ["src"]
 namespaces = true
 
+[tool.setuptools.package-data]
+rhosocial = ["**/*.pyi", "**/*.py"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q"
 asyncio_mode = "auto"
 testpaths = [
     "tests",
+]
+markers = [
+    "requires_capability: marks tests requiring specific backend capabilities",
+    "requires_protocol: marks tests requiring specific backend protocol support",
+    "requires_inner_join: marks tests requiring INNER JOIN support",
 ]
 
 [tool.coverage.run]

@@ -4,9 +4,11 @@
 from .vacuum import PostgresVacuumMixin
 from .stored_procedure import PostgresStoredProcedureMixin
 from .extended_statistics import PostgresExtendedStatisticsMixin
+from .locking import PostgresLockingMixin
 
 __all__ = [
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",
     "PostgresExtendedStatisticsMixin",
+    "PostgresLockingMixin",
 ]
