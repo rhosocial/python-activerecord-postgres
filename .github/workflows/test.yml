@@ -68,7 +68,7 @@ jobs:
       - name: Install activerecord and testsuite from Git
         run: |
           pip install git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev23
-          pip install git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev10
+          pip install git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev11
 
       - name: Create postgres scenario config
         run: |
