@@ -255,6 +255,13 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'query/explain.py': {
+        'title': 'EXPLAIN Query Plan',
+        'dialect_protocols': [],
+        'priority': 10,
+        'min_version': '9',
+        'max_version': '18',
+    },
     'transaction/basic.py': {
         'title': 'Transaction Control',
         'dialect_protocols': [],
