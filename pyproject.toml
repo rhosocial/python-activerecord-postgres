@@ -71,6 +71,9 @@ Issues = "https://github.com/rhosocial/python-activerecord-postgres/issues"
 where = ["src"]
 namespaces = true
 
+[tool.setuptools.package-data]
+rhosocial = ["**/*.pyi", "**/*.py"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q"
