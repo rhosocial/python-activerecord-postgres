@@ -43,8 +43,8 @@ from .protocols import (
     PostgresTriggerSupport,
     PostgresCommentSupport,
     PostgresTypeSupport,
-    MultirangeSupport,
-    EnumTypeSupport,
+    PostgresMultirangeSupport,
+    PostgresEnumTypeSupport,
 )
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.output import JsonOutputProvider, CsvOutputProvider, TsvOutputProvider
@@ -79,6 +79,11 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     SequenceSupport,
     TemporalTableSupport,
 )
+from rhosocial.activerecord.backend.named_query.cli import (
+    create_named_query_parser,
+    handle_named_query as handle_nq,
+)
+from rhosocial.activerecord.backend.options import ExecutionOptions
 
 # Attempt to import rich for formatted output
 try:
@@ -168,8 +173,8 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
         PostgresTriggerSupport,
         PostgresCommentSupport,
         PostgresTypeSupport,
-        MultirangeSupport,
-        EnumTypeSupport,
+        PostgresMultirangeSupport,
+        PostgresEnumTypeSupport,
     ],
     "PostgreSQL Extensions": [
         PostgresExtensionSupport,
@@ -403,6 +408,9 @@ def parse_args():
         choices=STATUS_TYPES,
         help="Status type: all (default), config, performance, connections, storage, databases, users",
     )
+
+    # named-query subcommand (using shared CLI helper)
+    create_named_query_parser(subparsers, parent_parser)
 
     return parser.parse_args()
 
@@ -1359,6 +1367,68 @@ def _display_status_rich(status: Any, verbose: int = 0):
         console.print()
 
 
+def _create_postgres_backend(args) -> PostgresBackend:
+    """Create and connect a PostgreSQL backend based on args."""
+    config = PostgresConnectionConfig(
+        host=args.host,
+        port=args.port,
+        database=args.database,
+        username=args.user,
+        password=args.password,
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    return backend
+
+
+def _get_postgres_dialect(backend: PostgresBackend) -> PostgresDialect:
+    """Get the dialect from a connected PostgreSQL backend."""
+    return backend.dialect
+
+
+def _execute_postgres_query(backend: PostgresBackend, sql: str, params: tuple, stmt_type) -> Any:
+    """Execute a query on the provided backend."""
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    return backend.execute(sql, params, options=ExecutionOptions(stmt_type=stmt_type))
+
+
+_default_backend: Optional[PostgresBackend] = None
+
+
+def _disconnect_postgres():
+    """Disconnect the default backend."""
+    global _default_backend
+    if _default_backend and _default_backend._connection:
+        _default_backend.disconnect()
+        _default_backend = None
+
+
+def _handle_named_query_postgres(args, provider):
+    """Handle named-query subcommand for PostgreSQL."""
+    global _default_backend
+
+    def backend_factory():
+        global _default_backend
+        _default_backend = _create_postgres_backend(args)
+        return _default_backend
+
+    def get_dialect(b):
+        return b.dialect
+
+    def execute_query(sql, params, stmt_type):
+        return _default_backend.execute(sql, params, options=ExecutionOptions(stmt_type=stmt_type))
+
+    handle_nq(
+        args,
+        provider,
+        backend_factory=backend_factory,
+        get_dialect=get_dialect,
+        execute_query=execute_query,
+        disconnect=_disconnect_postgres,
+    )
+
+
 def _format_size(size_bytes: int) -> str:
     """Format byte size to human-readable string."""
     units = ["B", "KB", "MB", "GB", "TB"]
@@ -1375,7 +1445,7 @@ def main():
 
     # Must specify a subcommand
     if args.command is None:
-        print("Error: Please specify a command: 'info', 'query', 'introspect', or 'status'", file=sys.stderr)
+        print("Error: Please specify a command: 'info', 'query', 'introspect', 'status', or 'named-query'", file=sys.stderr)
         print("Use --help for more information.", file=sys.stderr)
         sys.exit(1)
 
@@ -1428,6 +1498,11 @@ def main():
         else:
             backend = PostgresBackend(connection_config=config)
             handle_status_sync(args, backend, provider)
+        return
+
+    # Handle named-query subcommand
+    if args.command == "named-query":
+        _handle_named_query_postgres(args, provider)
         return
 
     # Handle query subcommand
