@@ -83,6 +83,10 @@ from rhosocial.activerecord.backend.named_query.cli import (
     create_named_query_parser,
     handle_named_query as handle_nq,
 )
+from rhosocial.activerecord.backend.named_query.cli_procedure import (
+    create_named_procedure_parser,
+    handle_named_procedure as handle_np,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 
 # Attempt to import rich for formatted output
@@ -411,6 +415,9 @@ def parse_args():
 
     # named-query subcommand (using shared CLI helper)
     create_named_query_parser(subparsers, parent_parser)
+
+    # named-procedure subcommand (using shared CLI helper)
+    create_named_procedure_parser(subparsers, parent_parser)
 
     return parser.parse_args()
 
@@ -1428,6 +1435,94 @@ def _handle_named_query_postgres(args, provider):
         disconnect=_disconnect_postgres,
     )
 
+    async def backend_async_factory():
+        global _default_backend
+        config = PostgresConnectionConfig(
+            host=args.host,
+            port=args.port,
+            database=args.database,
+            username=args.user,
+            password=args.password,
+        )
+        _default_backend = AsyncPostgresBackend(connection_config=config)
+        return _default_backend
+
+    async def get_dialect_async(b):
+        return b.dialect
+
+    async def execute_query_async(sql, params, stmt_type):
+        return await _default_backend.execute(sql, params, options=ExecutionOptions(stmt_type=stmt_type))
+
+    async def disconnect_async():
+        global _default_backend
+        if _default_backend and _default_backend._connection:
+            await _default_backend.disconnect()
+            _default_backend = None
+
+
+def _handle_named_procedure_postgres(args, provider):
+    """Handle named-procedure subcommand for PostgreSQL."""
+    global _default_backend
+    is_async = getattr(args, "is_async", False)
+
+    def backend_factory():
+        global _default_backend
+        _default_backend = _create_postgres_backend(args)
+        return _default_backend
+
+    def get_dialect(b):
+        return b.dialect
+
+    def execute_query(sql, params, stmt_type):
+        return _default_backend.execute(sql, params, options=ExecutionOptions(stmt_type=stmt_type))
+
+    async def backend_async_factory():
+        global _default_backend
+        config = PostgresConnectionConfig(
+            host=args.host,
+            port=args.port,
+            database=args.database,
+            username=args.user,
+            password=args.password,
+        )
+        _default_backend = AsyncPostgresBackend(connection_config=config)
+        return _default_backend
+
+    async def get_dialect_async(b):
+        return b.dialect
+
+    async def execute_query_async(sql, params, stmt_type):
+        return await _default_backend.execute(sql, params, options=ExecutionOptions(stmt_type=stmt_type))
+
+    async def disconnect_async():
+        global _default_backend
+        if _default_backend and _default_backend._connection:
+            await _default_backend.disconnect()
+            _default_backend = None
+
+    if is_async:
+        handle_np(
+            args,
+            provider,
+            backend_factory=backend_factory,
+            get_dialect=get_dialect,
+            execute_query=execute_query,
+            disconnect=_disconnect_postgres,
+            backend_async_factory=backend_async_factory,
+            get_dialect_async=get_dialect_async,
+            execute_query_async=execute_query_async,
+            disconnect_async=disconnect_async,
+        )
+    else:
+        handle_np(
+            args,
+            provider,
+            backend_factory=backend_factory,
+            get_dialect=get_dialect,
+            execute_query=execute_query,
+            disconnect=_disconnect_postgres,
+        )
+
 
 def _format_size(size_bytes: int) -> str:
     """Format byte size to human-readable string."""
@@ -1503,6 +1598,11 @@ def main():
     # Handle named-query subcommand
     if args.command == "named-query":
         _handle_named_query_postgres(args, provider)
+        return
+
+    # Handle named-procedure subcommand
+    if args.command == "named-procedure":
+        _handle_named_procedure_postgres(args, provider)
         return
 
     # Handle query subcommand
