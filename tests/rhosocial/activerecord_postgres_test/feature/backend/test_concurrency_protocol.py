@@ -6,7 +6,6 @@ This test verifies that PostgresBackend correctly implements the ConcurrencyAwar
 protocol by returning the connection pool size as the concurrency limit.
 """
 import pytest
-import pytest_asyncio
 
 from rhosocial.activerecord.backend.protocols import ConcurrencyAware, ConcurrencyHint
 
@@ -45,14 +44,14 @@ class TestPostgresConcurrencyAware:
 class TestAsyncPostgresConcurrencyAware:
     """Test ConcurrencyAware protocol implementation for async PostgreSQL backend."""
 
-    @pytest_asyncio.mark.asyncio
+    @pytest.mark.asyncio
     async def test_async_postgres_backend_implements_protocol(
         self, async_postgres_backend_single
     ):
         """Test that AsyncPostgresBackend implements ConcurrencyAware protocol."""
         assert isinstance(async_postgres_backend_single, ConcurrencyAware)
 
-    @pytest_asyncio.mark.asyncio
+    @pytest.mark.asyncio
     async def test_async_postgres_get_concurrency_hint(self, async_postgres_backend_single):
         """Test AsyncPostgresBackend returns correct concurrency hint."""
         hint = async_postgres_backend_single.get_concurrency_hint()
@@ -60,7 +59,7 @@ class TestAsyncPostgresConcurrencyAware:
         assert hint is not None
         assert isinstance(hint, ConcurrencyHint)
 
-    @pytest_asyncio.mark.asyncio
+    @pytest.mark.asyncio
     async def test_async_postgres_concurrency_hint_has_limit_or_none(
         self, async_postgres_backend_single
     ):
@@ -73,7 +72,7 @@ class TestAsyncPostgresConcurrencyAware:
         else:
             assert "no" in hint.reason.lower() or hint.reason == ""
 
-    @pytest_asyncio.mark.asyncio
+    @pytest.mark.asyncio
     async def test_async_postgres_concurrency_hint_returns_hint_object(
         self, async_postgres_backend_single
     ):
