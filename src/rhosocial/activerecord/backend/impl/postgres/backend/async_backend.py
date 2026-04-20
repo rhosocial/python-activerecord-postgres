@@ -56,7 +56,7 @@ from ..adapters.pg_lsn import PostgresLsnAdapter
 from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
 from ..config import PostgresConnectionConfig, RangeAdapterMode
 from ..dialect import PostgresDialect
-from .base import PostgresBackendMixin
+from .base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
@@ -65,6 +65,7 @@ class AsyncPostgresBackend(
     AsyncExplainBackendMixin,
     IntrospectorBackendMixin,
     PostgresBackendMixin,
+    PostgresConcurrencyMixin,
     AsyncStorageBackend,
 ):
     """Asynchronous PostgreSQL-specific backend implementation."""

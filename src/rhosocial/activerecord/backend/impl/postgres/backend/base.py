@@ -10,6 +10,7 @@ import logging
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
+    from rhosocial.activerecord.backend.protocols import ConcurrencyHint
 
 
 class PostgresBackendMixin:
@@ -194,4 +195,29 @@ class PostgresBackendMixin:
         return suggestions
 
 
-__all__ = ["PostgresBackendMixin"]
+class PostgresConcurrencyMixin:
+    """Mixin providing PostgreSQL-specific concurrency hint.
+
+    Uses PostgreSQL connection pool for concurrency limit.
+    Returns pool.size as the concurrency limit.
+    """
+
+    def get_concurrency_hint(self) -> "ConcurrencyHint":
+        """Get concurrency hint based on connection pool size."""
+        from rhosocial.activerecord.backend.protocols import ConcurrencyHint
+
+        pool = getattr(self, "_pool", None)
+        if pool and hasattr(pool, "size"):
+            max_concurrency = pool.size
+            return ConcurrencyHint(
+                max_concurrency=max_concurrency,
+                reason=f"connection pool size={max_concurrency}",
+            )
+        # No pool - return None to indicate no constraint
+        return ConcurrencyHint(
+            max_concurrency=None,
+            reason="no connection pool configured",
+        )
+
+
+__all__ = ["PostgresBackendMixin", "PostgresConcurrencyMixin"]

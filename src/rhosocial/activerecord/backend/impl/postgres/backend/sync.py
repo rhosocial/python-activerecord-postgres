@@ -55,13 +55,13 @@ from ..adapters.pg_lsn import PostgresLsnAdapter
 from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
 from ..config import PostgresConnectionConfig, RangeAdapterMode
 from ..dialect import PostgresDialect
-from .base import PostgresBackendMixin
+from .base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
 
 
-class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, StorageBackend):
+class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, PostgresConcurrencyMixin, StorageBackend):
     """PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
