@@ -36,6 +36,8 @@ from .ddl import (
     AlterEnumTypeAddValueExpression,
     AlterEnumTypeRenameValueExpression,
     CreateRangeTypeExpression,
+    CreateExtensionExpression,
+    DropExtensionExpression,
 )
 
 __all__ = [
@@ -65,4 +67,6 @@ __all__ = [
     "AlterEnumTypeAddValueExpression",
     "AlterEnumTypeRenameValueExpression",
     "CreateRangeTypeExpression",
+    "CreateExtensionExpression",
+    "DropExtensionExpression",
 ]

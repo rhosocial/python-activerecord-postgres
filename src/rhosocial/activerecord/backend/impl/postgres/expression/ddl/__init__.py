@@ -10,6 +10,7 @@ Directory structure:
 - comment.py   - COMMENT expressions
 - mv.py         - Materialized view expressions
 - type.py       - Enum/Range type expressions
+- extension.py  - Extension DDL expressions
 """
 
 from .vacuum import VacuumExpression, AnalyzeExpression
@@ -33,6 +34,7 @@ from .type import (
     AlterEnumTypeRenameValueExpression,
     CreateRangeTypeExpression,
 )
+from .extension import CreateExtensionExpression, DropExtensionExpression
 
 __all__ = [
     # vacuum
@@ -58,4 +60,7 @@ __all__ = [
     "AlterEnumTypeAddValueExpression",
     "AlterEnumTypeRenameValueExpression",
     "CreateRangeTypeExpression",
+    # extension
+    "CreateExtensionExpression",
+    "DropExtensionExpression",
 ]
