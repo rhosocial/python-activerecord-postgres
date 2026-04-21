@@ -5,9 +5,13 @@ This module provides functionality to detect and manage PostgreSQL extensions,
 including version checking and feature support verification.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, TYPE_CHECKING
 
 from ..protocols.base import PostgresExtensionInfo
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
+    from ..expression.ddl.extension import CreateExtensionExpression, DropExtensionExpression
 
 
 class PostgresExtensionMixin:
@@ -285,3 +289,67 @@ class PostgresExtensionMixin:
             if a != b:
                 return a - b
         return 0
+
+    def format_create_extension(
+        self, expr: "CreateExtensionExpression"
+    ) -> "SQLQueryAndParams":
+        """Format CREATE EXTENSION expression.
+
+        Args:
+            expr: CreateExtensionExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        parts = ["CREATE EXTENSION"]
+
+        if expr.if_not_exists:
+            parts.append("IF NOT EXISTS")
+
+        # Quote extension name if it contains hyphen or other special chars
+        if "-" in expr.name or "_" in expr.name or any(c.isupper() for c in expr.name):
+            name = f'"{expr.name}"'
+        else:
+            name = expr.name
+        parts.append(name)
+
+        if expr.schema:
+            parts.append(f"SCHEMA {expr.schema}")
+
+        if expr.version:
+            parts.append(f"VERSION '{expr.version}'")
+
+        if expr.cascade:
+            parts.append("CASCADE")
+
+        return " ".join(parts), ()
+
+    def format_drop_extension(
+        self, expr: "DropExtensionExpression"
+    ) -> "SQLQueryAndParams":
+        """Format DROP EXTENSION expression.
+
+        Args:
+            expr: DropExtensionExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        parts = ["DROP EXTENSION"]
+
+        if expr.if_exists:
+            parts.append("IF EXISTS")
+
+        # Quote extension name if it contains hyphen or other special chars
+        if "-" in expr.name or "_" in expr.name or any(c.isupper() for c in expr.name):
+            name = f'"{expr.name}"'
+        else:
+            name = expr.name
+        parts.append(name)
+
+        if expr.cascade:
+            parts.append("CASCADE")
+        elif expr.restrict:
+            parts.append("RESTRICT")
+
+        return " ".join(parts), ()
