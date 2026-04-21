@@ -1,0 +1,49 @@
+# docker/postgres-all-ext/docker-compose.yml
+#
+# PostgreSQL with all extensions for testing
+#
+# Usage:
+#   docker compose up -d
+#   docker compose down
+#
+# Environment variables:
+#   POSTGRES_PASSWORD: Database password (default: password)
+#   POSTGRES_USER: Database user (default: root)
+#   POSTGRES_DB: Database name (default: test_db)
+#
+
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PG_VERSION: "16"
+        POSTGIS_VERSION: "3.4"
+    image: postgres-all-ext:16
+    container_name: postgres-all-ext
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d test_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: postgres-all-ext-network
