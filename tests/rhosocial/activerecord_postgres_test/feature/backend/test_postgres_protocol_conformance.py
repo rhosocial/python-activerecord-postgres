@@ -125,8 +125,6 @@ class TestProtocolNonOverlap:
             assert len(members) > 0, f"Protocol {name} has no members defined"
 
         excluded_overlaps = {
-            ('IntrospectionSupport', 'AsyncIntrospectionSupport'),
-            ('AsyncIntrospectionSupport', 'IntrospectionSupport'),
             ('LockingSupport', 'PostgresLockingSupport'),
             ('PostgresLockingSupport', 'LockingSupport'),
         }
