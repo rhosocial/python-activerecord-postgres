@@ -109,7 +109,8 @@ DIALECT_SPECIFIC_GROUPS = {"PostgreSQL Native", "PostgreSQL Extensions"}
 # Supported introspection types for CLI
 INTROSPECT_TYPES = [
     "tables", "views", "table", "columns",
-    "indexes", "foreign-keys", "triggers", "database"
+    "indexes", "foreign-keys", "triggers", "database",
+    "extensions"
 ]
 
 STATUS_TYPES = ["all", "config", "performance", "connections", "storage", "databases", "users"]
@@ -644,6 +645,7 @@ def handle_info(args, provider: Any):
         for name, ext_info in extensions.items():
             ext_data = {
                 "installed": ext_info.installed,
+                "available": ext_info.available,
             }
             if ext_info.version:
                 ext_data["version"] = ext_info.version
@@ -735,13 +737,23 @@ def _display_info_rich(
     if extensions:
         console.print("[bold green]Extension Support:[/bold green]")
         installed_exts = {k: v for k, v in extensions.items() if v.installed}
+        available_exts = {k: v for k, v in extensions.items() if v.available and not v.installed}
+        
         if installed_exts:
+            console.print("  [bold]Installed:[/bold]")
             for name, ext in installed_exts.items():
                 ver_str = f" ({ext.version})" if ext.version else ""
                 schema_str = f" [schema: {ext.schema}]" if ext.schema else ""
-                console.print(f"  [green][OK][/green] [bold]{name}[/bold]{ver_str}{schema_str}")
-        else:
-            console.print("  [dim]No extensions installed[/dim]")
+                console.print(f"    [green][OK][/green] [bold]{name}[/bold]{ver_str}{schema_str}")
+        
+        if available_exts:
+            console.print("  [bold]Available (not installed):[/bold]")
+            for name, ext in available_exts.items():
+                ver_str = f" (default: {ext.version})" if ext.version else ""
+                console.print(f"    [yellow][~][/yellow] [bold]{name}[/bold]{ver_str}")
+        
+        if not installed_exts and not available_exts:
+            console.print("  [dim]No extensions available[/dim]")
         console.print()
 
     label = "Detailed" if verbose >= 2 else "Family Overview"
@@ -936,6 +948,25 @@ def handle_introspect_sync(args, backend: PostgresBackend, provider: Any):
             data = _serialize_for_output(info)
             provider.display_results([data], title="Database Info")
 
+        elif args.type == "extensions":
+            backend.introspect_and_adapt()
+            if hasattr(backend.dialect, "_extensions"):
+                extensions = backend.dialect._extensions
+                ext_list = []
+                for name, ext_info in extensions.items():
+                    ext_list.append({
+                        "name": name,
+                        "installed": ext_info.installed,
+                        "available": ext_info.available,
+                        "version": ext_info.version,
+                        "schema": ext_info.schema,
+                    })
+                data = _serialize_for_output(ext_list)
+                provider.display_results(data, title="Extensions")
+            else:
+                print("No extensions information available", file=sys.stderr)
+                sys.exit(1)
+
     except ConnectionError as e:
         provider.display_connection_error(e)
         sys.exit(1)
@@ -1024,6 +1055,25 @@ async def handle_introspect_async(args, backend: AsyncPostgresBackend, provider:
             info = await introspector.get_database_info_async()
             data = _serialize_for_output(info)
             provider.display_results([data], title="Database Info")
+
+        elif args.type == "extensions":
+            await backend.introspect_and_adapt()
+            if hasattr(backend.dialect, "_extensions"):
+                extensions = backend.dialect._extensions
+                ext_list = []
+                for name, ext_info in extensions.items():
+                    ext_list.append({
+                        "name": name,
+                        "installed": ext_info.installed,
+                        "available": ext_info.available,
+                        "version": ext_info.version,
+                        "schema": ext_info.schema,
+                    })
+                data = _serialize_for_output(ext_list)
+                provider.display_results(data, title="Extensions")
+            else:
+                print("No extensions information available", file=sys.stderr)
+                sys.exit(1)
 
     except ConnectionError as e:
         provider.display_connection_error(e)

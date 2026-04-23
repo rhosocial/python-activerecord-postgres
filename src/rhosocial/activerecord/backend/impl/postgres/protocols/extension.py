@@ -26,18 +26,26 @@ class PostgresExtensionSupport(Protocol):
     - hstore: Key-value pair storage
     - uuid-ossp: UUID generation functions
 
+    Extension States:
+    - Unknown: Extension is not in KNOWN_EXTENSIONS and hasn't been detected
+    - Available: Extension exists in pg_available_extensions (can be installed)
+    - Installed: Extension is enabled in the database
+
     Detection methods:
-    - Automatic detection: introspect_and_adapt() queries pg_extension
+    - Automatic detection: introspect_and_adapt() queries pg_extension and pg_available_extensions
     - Manual detection: SELECT * FROM pg_extension WHERE extname = 'xxx';
     - Programmatic detection: dialect.is_extension_installed('xxx')
+    - Query availability: dialect.is_extension_available('xxx')
 
     Version requirement: PostgreSQL 9.1+ supports CREATE EXTENSION
     """
 
     def detect_extensions(self, connection) -> Dict[str, "PostgresExtensionInfo"]:
-        """Detect all installed extensions.
+        """Detect all installed and available extensions.
 
-        Queries pg_extension system table to get extension information.
+        Queries pg_extension system table to get installed extension information,
+        and pg_available_extensions to get available extensions.
+
         This method should be called within introspect_and_adapt().
 
         Args:
@@ -60,13 +68,24 @@ class PostgresExtensionSupport(Protocol):
         ...
 
     def is_extension_installed(self, name: str) -> bool:
-        """Check if an extension is installed.
+        """Check if an extension is installed (enabled in database).
 
         Args:
             name: Extension name
 
         Returns:
             True if extension is installed and enabled
+        """
+        ...
+
+    def is_extension_available(self, name: str) -> bool:
+        """Check if an extension is available (can be installed).
+
+        Args:
+            name: Extension name
+
+        Returns:
+            True if extension exists in pg_available_extensions
         """
         ...
 

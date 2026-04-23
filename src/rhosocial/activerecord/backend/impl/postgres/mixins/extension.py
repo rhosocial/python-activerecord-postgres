@@ -21,6 +21,7 @@ class PostgresExtensionMixin:
     """
 
     KNOWN_EXTENSIONS = {
+        # Spatial/Geospatial
         "postgis": {
             "min_version": "2.0",
             "description": "PostGIS spatial database extension",
@@ -34,6 +35,52 @@ class PostgresExtensionMixin:
                 "spatial_functions": {"min_version": "2.0"},
             },
         },
+        "postgis_raster": {
+            "min_version": "3.0",
+            "description": "PostGIS raster extension",
+            "category": "spatial",
+            "dependencies": ["postgis"],
+            "features": {},
+        },
+        "postgis_topology": {
+            "min_version": "2.0",
+            "description": "PostGIS topology extension",
+            "category": "spatial",
+            "dependencies": ["postgis"],
+            "features": {},
+        },
+        "postgis_sfcgal": {
+            "min_version": "2.0",
+            "description": "PostGIS SFCGAL 3D geometry extension",
+            "category": "spatial",
+            "dependencies": ["postgis"],
+            "features": {},
+        },
+        "postgis_tiger_geocoder": {
+            "min_version": "2.0",
+            "description": "PostGIS Tiger geocoder extension",
+            "category": "spatial",
+            "dependencies": ["postgis"],
+            "features": {},
+        },
+        "pgrouting": {
+            "min_version": "2.0",
+            "description": "pgRouting path finding extension",
+            "category": "spatial",
+            "dependencies": ["postgis"],
+            "features": {},
+        },
+        "earthdistance": {
+            "min_version": "1.0",
+            "description": "Great-circle distance calculations",
+            "category": "spatial",
+            "dependencies": ["cube"],
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
+            },
+        },
+        # Vector Search
         "vector": {
             "min_version": "0.1",
             "description": "pgvector vector similarity search",
@@ -47,6 +94,7 @@ class PostgresExtensionMixin:
                 "hnsw_index": {"min_version": "0.5.0"},
             },
         },
+        # Full-Text Search
         "pg_trgm": {
             "min_version": "1.0",
             "description": "Trigram similarity search",
@@ -57,6 +105,17 @@ class PostgresExtensionMixin:
                 "index": {"min_version": "1.0"},
             },
         },
+        "fuzzystrmatch": {
+            "min_version": "1.0",
+            "description": "Fuzzy string matching (Levenshtein, Soundex)",
+            "category": "text",
+            "documentation": "https://www.postgresql.org/docs/current/fuzzystrmatch.html",
+            "features": {
+                "levenshtein": {"min_version": "1.0"},
+                "soundex": {"min_version": "1.0"},
+            },
+        },
+        # Data Types
         "hstore": {
             "min_version": "1.0",
             "description": "Key-value pair storage",
@@ -65,6 +124,47 @@ class PostgresExtensionMixin:
             "features": {
                 "type": {"min_version": "1.0"},
                 "operators": {"min_version": "1.0"},
+            },
+        },
+        "intarray": {
+            "min_version": "1.0",
+            "description": "Integer array operators and indexes",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/intarray.html",
+            "features": {
+                "operators": {"min_version": "1.0"},
+                "functions": {"min_version": "1.0"},
+                "index": {"min_version": "1.0"},
+            },
+        },
+        "ltree": {
+            "min_version": "1.0",
+            "description": "Label tree for hierarchical data",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/ltree.html",
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
+                "index": {"min_version": "1.0"},
+            },
+        },
+        "cube": {
+            "min_version": "1.0",
+            "description": "Multidimensional cube data type",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/cube.html",
+            "features": {
+                "type": {"min_version": "1.0"},
+                "operators": {"min_version": "1.0"},
+            },
+        },
+        "citext": {
+            "min_version": "1.0",
+            "description": "Case-insensitive text type",
+            "category": "data",
+            "documentation": "https://www.postgresql.org/docs/current/citext.html",
+            "features": {
+                "type": {"min_version": "1.0"},
             },
         },
         "uuid-ossp": {
@@ -81,39 +181,6 @@ class PostgresExtensionMixin:
             "documentation": "https://www.postgresql.org/docs/current/pgcrypto.html",
             "features": {},
         },
-        "ltree": {
-            "min_version": "1.0",
-            "description": "Label tree for hierarchical data",
-            "category": "data",
-            "documentation": "https://www.postgresql.org/docs/current/ltree.html",
-            "features": {
-                "type": {"min_version": "1.0"},
-                "operators": {"min_version": "1.0"},
-                "index": {"min_version": "1.0"},
-            },
-        },
-        "intarray": {
-            "min_version": "1.0",
-            "description": "Integer array operators and indexes",
-            "category": "data",
-            "documentation": "https://www.postgresql.org/docs/current/intarray.html",
-            "features": {
-                "operators": {"min_version": "1.0"},
-                "functions": {"min_version": "1.0"},
-                "index": {"min_version": "1.0"},
-            },
-        },
-        "earthdistance": {
-            "min_version": "1.0",
-            "description": "Great-circle distance calculations",
-            "category": "spatial",
-            "documentation": "https://www.postgresql.org/docs/current/earthdistance.html",
-            "dependencies": ["cube"],
-            "features": {
-                "type": {"min_version": "1.0"},
-                "operators": {"min_version": "1.0"},
-            },
-        },
         "tablefunc": {
             "min_version": "1.0",
             "description": "Table functions (crosstab, connectby)",
@@ -125,6 +192,39 @@ class PostgresExtensionMixin:
                 "normal_rand": {"min_version": "1.0"},
             },
         },
+        # Indexing
+        "bloom": {
+            "min_version": "1.0",
+            "description": "Bloom filter index access method",
+            "category": "indexing",
+            "documentation": "https://www.postgresql.org/docs/current/bloom.html",
+            "features": {},
+        },
+        "btree_gin": {
+            "min_version": "1.0",
+            "description": "B-tree index support for GIN",
+            "category": "indexing",
+            "documentation": "https://www.postgresql.org/docs/current/btree_gin.html",
+            "features": {},
+        },
+        "btree_gist": {
+            "min_version": "1.0",
+            "description": "B-tree index support for GiST",
+            "category": "indexing",
+            "documentation": "https://www.postgresql.org/docs/current/btree_gist.html",
+            "features": {},
+        },
+        # Partitioning
+        "pg_partman": {
+            "min_version": "4.0",
+            "description": "Partition management extension",
+            "category": "partitioning",
+            "documentation": "https://github.com/pgpartman/pg_partman",
+            "features": {
+                "auto_partition": {"min_version": "4.0"},
+            },
+        },
+        # Monitoring & Statistics
         "pg_stat_statements": {
             "min_version": "1.0",
             "description": "Query execution statistics",
@@ -136,12 +236,134 @@ class PostgresExtensionMixin:
                 "reset": {"min_version": "1.0"},
             },
         },
+        "pg_surgery": {
+            "min_version": "1.0",
+            "description": "Repair corrupted data",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/pgsurgery.html",
+            "features": {},
+        },
+        "pg_walinspect": {
+            "min_version": "1.0",
+            "description": "WAL inspection functions",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/pgwalinspect.html",
+            "features": {},
+        },
+        "amcheck": {
+            "min_version": "1.0",
+            "description": "Index integrity checking",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/amcheck.html",
+            "features": {},
+        },
+        "pageinspect": {
+            "min_version": "1.0",
+            "description": "Page-level inspection",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/pageinspect.html",
+            "features": {},
+        },
+        # Replication
+        "pglogical": {
+            "min_version": "2.0",
+            "description": "Logical replication",
+            "category": "replication",
+            "documentation": "https://www.2ndquadrant.com/en/resources/pglogical/",
+            "features": {
+                "replication": {"min_version": "2.0"},
+            },
+        },
+        "pg_logicalinspect": {
+            "min_version": "1.0",
+            "description": "Logical replication inspection",
+            "category": "replication",
+            "features": {},
+        },
+        # Security & Auditing
+        "pgaudit": {
+            "min_version": "1.0",
+            "description": "Audit logging extension",
+            "category": "security",
+            "documentation": "https://www.pgaudit.org/",
+            "features": {
+                "session": {"min_version": "1.0"},
+                "row": {"min_version": "1.7"},
+            },
+        },
+        # Scheduling
+        "pg_cron": {
+            "min_version": "1.0",
+            "description": "Job scheduling extension",
+            "category": "scheduling",
+            "documentation": "https://github.com/citusdata/pg_cron",
+            "features": {
+                "schedule": {"min_version": "1.0"},
+            },
+        },
+        # Database Maintenance
+        "pg_repack": {
+            "min_version": "1.0",
+            "description": "Online table and index rebuild",
+            "category": "maintenance",
+            "documentation": "https://github.com/reorg/pg_repack",
+            "features": {
+                "rebuild": {"min_version": "1.0"},
+            },
+        },
+        # Testing
+        "pgtap": {
+            "min_version": "1.0",
+            "description": "Database testing framework",
+            "category": "testing",
+            "documentation": "https://pgtap.org/",
+            "features": {
+                "tests": {"min_version": "1.0"},
+            },
+        },
+        # Performance & Optimization
+        "hypopg": {
+            "min_version": "1.0",
+            "description": "Hypothetical indexes",
+            "category": "performance",
+            "documentation": "https://github.com/HypoPG/hypopg",
+            "features": {
+                "hypothetical_indexes": {"min_version": "1.0"},
+            },
+        },
+        # Oracle Compatibility
+        "orafce": {
+            "min_version": "3.0",
+            "description": "Oracle compatibility functions",
+            "category": "compatibility",
+            "documentation": "https://github.com/orafce/orafce",
+            "features": {
+                "functions": {"min_version": "3.0"},
+            },
+        },
+        # Address Standardization
+        "address_standardizer": {
+            "min_version": "2.0",
+            "description": "Address standardization",
+            "category": "utility",
+            "dependencies": ["postgis"],
+            "documentation": "https://postgis.net/docs/Geocode.html",
+            "features": {},
+        },
+        "address_standardizer_data_us": {
+            "min_version": "2.0",
+            "description": "US address standardization data",
+            "category": "utility",
+            "dependencies": ["address_standardizer"],
+            "features": {},
+        },
     }
 
     def detect_extensions(self, connection) -> Dict[str, PostgresExtensionInfo]:
-        """Query installed extensions from database.
+        """Query installed and available extensions from database.
 
-        Queries pg_extension system table to get extension information.
+        Queries pg_extension for installed extensions and pg_available_extensions
+        for available (installable) extensions.
 
         Args:
             connection: Database connection object
@@ -151,23 +373,40 @@ class PostgresExtensionMixin:
         """
         cursor = connection.cursor()
         try:
+            extensions = {}
+
             cursor.execute("""
                 SELECT extname, extversion, nspname as schema_name
                 FROM pg_extension
                 JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
             """)
 
-            extensions = {}
             for row in cursor.fetchall():
                 ext_name = row[0]
                 extensions[ext_name] = PostgresExtensionInfo(
-                    name=ext_name, installed=True, version=row[1], schema=row[2]
+                    name=ext_name,
+                    installed=True,
+                    available=True,
+                    version=row[1],
+                    schema=row[2],
                 )
 
-            # Add known but not installed extensions
-            for known_ext in self.KNOWN_EXTENSIONS:
-                if known_ext not in extensions:
-                    extensions[known_ext] = PostgresExtensionInfo(name=known_ext, installed=False)
+            cursor.execute("""
+                SELECT name, default_version
+                FROM pg_available_extensions
+            """)
+
+            for row in cursor.fetchall():
+                ext_name = row[0]
+                if ext_name in extensions:
+                    extensions[ext_name].available = True
+                else:
+                    extensions[ext_name] = PostgresExtensionInfo(
+                        name=ext_name,
+                        installed=False,
+                        available=True,
+                        version=row[1],
+                    )
 
             return extensions
         finally:
@@ -179,6 +418,13 @@ class PostgresExtensionMixin:
             return False
         info = self._extensions.get(name)
         return info.installed if info else False
+
+    def is_extension_available(self, name: str) -> bool:
+        """Check if extension is available (can be installed)."""
+        if not hasattr(self, "_extensions"):
+            return False
+        info = self._extensions.get(name)
+        return info.available if info else False
 
     def get_extension_version(self, name: str) -> Optional[str]:
         """Get extension version."""
