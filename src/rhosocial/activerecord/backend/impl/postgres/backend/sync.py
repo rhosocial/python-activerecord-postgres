@@ -241,6 +241,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         """Get the PostgreSQL transaction manager."""
         return self._transaction_manager
 
+
     def connect(self):
         """Establish connection to PostgreSQL database."""
         try:
