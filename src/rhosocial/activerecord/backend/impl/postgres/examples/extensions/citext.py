@@ -73,6 +73,8 @@ if not installed:
     print(f"\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
+    # Re-detect extensions after creation
+    backend.introspect_and_adapt()
 
 # Example 1: Create table with CITEXT column
 columns = [
