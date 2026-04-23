@@ -46,6 +46,18 @@ class PostgresBackendMixin:
 
         return RawSQLExpression(self.dialect, expression_str)
 
+    @property
+    def threadsafety(self) -> int:
+        """Return driver threadsafety level.
+
+        PostgreSQL connections can be safely shared across threads when using
+        psycopg version 3, which supports thread-safe connection handling.
+
+        Returns:
+            2 (connections can be safely shared across threads)
+        """
+        return 2
+
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""
         return not getattr(self.config, "autocommit", False)

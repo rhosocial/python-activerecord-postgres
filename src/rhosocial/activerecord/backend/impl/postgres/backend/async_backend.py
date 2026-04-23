@@ -248,6 +248,7 @@ class AsyncPostgresBackend(
         """Get the async PostgreSQL transaction manager."""
         return self._transaction_manager
 
+
     async def connect(self):
         """Establish async connection to PostgreSQL database."""
         try:
