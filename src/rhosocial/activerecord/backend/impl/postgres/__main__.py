@@ -953,7 +953,7 @@ def handle_introspect_sync(args, backend: PostgresBackend, provider: Any):
             if hasattr(backend.dialect, "_extensions"):
                 extensions = backend.dialect._extensions
                 ext_list = []
-                for name, ext_info in extensions.items():
+                for name, ext_info in sorted(extensions.items()):
                     ext_list.append({
                         "name": name,
                         "installed": ext_info.installed,
@@ -1061,7 +1061,7 @@ async def handle_introspect_async(args, backend: AsyncPostgresBackend, provider:
             if hasattr(backend.dialect, "_extensions"):
                 extensions = backend.dialect._extensions
                 ext_list = []
-                for name, ext_info in extensions.items():
+                for name, ext_info in sorted(extensions.items()):
                     ext_list.append({
                         "name": name,
                         "installed": ext_info.installed,
