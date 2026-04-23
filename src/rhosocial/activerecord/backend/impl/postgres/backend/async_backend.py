@@ -497,26 +497,55 @@ class AsyncPostgresBackend(
             self.log(logging.DEBUG, f"Extensions detected: {ext_info}")
 
     async def _detect_extensions(self) -> Dict[str, PostgresExtensionInfo]:
-        """Detect installed extensions."""
+        """Detect installed and available extensions."""
         async with self._connection.cursor() as cursor:
+            # First, get all installed extensions
             await cursor.execute("""
                 SELECT extname, extversion, nspname as schema_name
                 FROM pg_extension
                 JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
-                """)
-            rows = await cursor.fetchall()
+            """)
+            installed_rows = await cursor.fetchall()
 
             extensions = {}
-            for row in rows:
+            for row in installed_rows:
                 ext_name = row[0]
                 extensions[ext_name] = PostgresExtensionInfo(
-                    name=ext_name, installed=True, version=row[1], schema=row[2]
+                    name=ext_name,
+                    installed=True,
+                    available=True,
+                    version=row[1],
+                    schema=row[2],
                 )
 
-            # Add known but not installed extensions
+            # Then, get all available extensions from pg_available_extensions
+            await cursor.execute("""
+                SELECT name, default_version
+                FROM pg_available_extensions
+            """)
+            available_rows = await cursor.fetchall()
+
+            for row in available_rows:
+                ext_name = row[0]
+                if ext_name in extensions:
+                    # Already installed, ensure available is True
+                    extensions[ext_name].available = True
+                else:
+                    # Not installed but available
+                    extensions[ext_name] = PostgresExtensionInfo(
+                        name=ext_name,
+                        installed=False,
+                        available=True,
+                        version=row[1],
+                    )
+
+            # Add known extensions that might not be in pg_available_extensions
             for known_ext in PostgresDialect.KNOWN_EXTENSIONS:
                 if known_ext not in extensions:
-                    extensions[known_ext] = PostgresExtensionInfo(name=known_ext, installed=False)
+                    extensions[known_ext] = PostgresExtensionInfo(
+                        name=known_ext,
+                        installed=False,
+                    )
 
             return extensions
 
