@@ -35,6 +35,10 @@ backend.execute("DROP TABLE IF EXISTS users", ())
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    CreateExtensionExpression,
+    DropExtensionExpression,
+)
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     ColumnDefinition,
@@ -59,13 +63,16 @@ available = dialect.is_extension_available("citext")
 installed = dialect.is_extension_installed("citext")
 print(f"Extension check: citext available = {available}, installed = {installed}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
+# Create extension using expression
 if not installed:
-    # Create the extension if not installed
+    create_ext = CreateExtensionExpression(
+        dialect=dialect,
+        name="citext",
+    )
+    sql, params = create_ext.to_sql()
     print(f"\n--- CREATE EXTENSION ---")
-    backend.execute("CREATE EXTENSION IF NOT EXISTS citext", ())
+    print(f"SQL: {sql}")
+    backend.execute(sql, params)
 
 # Example 1: Create table with CITEXT column
 columns = [
