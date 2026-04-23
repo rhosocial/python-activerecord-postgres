@@ -87,6 +87,8 @@ from rhosocial.activerecord.backend.named_query.cli_procedure import (
     create_named_procedure_parser,
     handle_named_procedure as handle_np,
 )
+from rhosocial.activerecord.backend.named_connection import NamedConnectionResolver
+from rhosocial.activerecord.backend.named_connection.cli import parse_params
 from rhosocial.activerecord.backend.options import ExecutionOptions
 
 # Attempt to import rich for formatted output
@@ -261,6 +263,20 @@ def parse_args():
         "--rich-ascii",
         action="store_true",
         help="Use ASCII characters for rich table borders.",
+    )
+    parent_parser.add_argument(
+        "--named-connection",
+        dest="named_connection",
+        metavar="QUALIFIED_NAME",
+        help="Named connection from Python module (e.g., myapp.connections.prod_db).",
+    )
+    parent_parser.add_argument(
+        "--conn-param",
+        action="append",
+        metavar="KEY=VALUE",
+        default=[],
+        dest="connection_params",
+        help="Connection parameter override for named connection. Can be specified multiple times.",
     )
 
     # Main parser does NOT inherit from parent
@@ -573,15 +589,10 @@ def handle_info(args, provider: Any):
     extensions = None
     version_display = None
 
-    if args.database:
+    named_conn = getattr(args, "named_connection", None)
+    if named_conn or args.database:
         try:
-            config = PostgresConnectionConfig(
-                host=args.host,
-                port=args.port,
-                database=args.database,
-                username=args.user,
-                password=args.password,
-            )
+            config = _resolve_postgres_config(args)
             backend = PostgresBackend(connection_config=config)
             backend.connect()
             backend.introspect_and_adapt()
@@ -1415,15 +1426,33 @@ def _display_status_rich(status: Any, verbose: int = 0):
         console.print()
 
 
-def _create_postgres_backend(args) -> PostgresBackend:
-    """Create and connect a PostgreSQL backend based on args."""
-    config = PostgresConnectionConfig(
+def _resolve_postgres_config(args) -> PostgresConnectionConfig:
+    """Resolve PostgreSQL connection config from named connection or explicit params."""
+    named_conn = getattr(args, "named_connection", None)
+    conn_params = getattr(args, "connection_params", [])
+
+    if conn_params:
+        conn_params = parse_params(conn_params)
+    else:
+        conn_params = {}
+
+    if named_conn:
+        resolver = NamedConnectionResolver(named_conn).load()
+        return resolver.resolve(PostgresBackend, conn_params)
+
+    # Fallback to explicit connection parameters
+    return PostgresConnectionConfig(
         host=args.host,
         port=args.port,
         database=args.database,
         username=args.user,
         password=args.password,
     )
+
+
+def _create_postgres_backend(args) -> PostgresBackend:
+    """Create and connect a PostgreSQL backend based on args."""
+    config = _resolve_postgres_config(args)
     backend = PostgresBackend(connection_config=config)
     backend.connect()
     backend.introspect_and_adapt()
@@ -1478,13 +1507,7 @@ def _handle_named_query_postgres(args, provider):
 
     async def backend_async_factory():
         global _default_backend
-        config = PostgresConnectionConfig(
-            host=args.host,
-            port=args.port,
-            database=args.database,
-            username=args.user,
-            password=args.password,
-        )
+        config = _resolve_postgres_config(args)
         _default_backend = AsyncPostgresBackend(connection_config=config)
         return _default_backend
 
@@ -1519,13 +1542,7 @@ def _handle_named_procedure_postgres(args, provider):
 
     async def backend_async_factory():
         global _default_backend
-        config = PostgresConnectionConfig(
-            host=args.host,
-            port=args.port,
-            database=args.database,
-            username=args.user,
-            password=args.password,
-        )
+        config = _resolve_postgres_config(args)
         _default_backend = AsyncPostgresBackend(connection_config=config)
         return _default_backend
 
@@ -1594,17 +1611,12 @@ def main():
 
     # Handle introspect subcommand
     if args.command == "introspect":
-        if not args.database:
+        named_conn = getattr(args, "named_connection", None)
+        if not named_conn and not args.database:
             print("Error: --database is required for introspection", file=sys.stderr)
             sys.exit(1)
 
-        config = PostgresConnectionConfig(
-            host=args.host,
-            port=args.port,
-            database=args.database,
-            username=args.user,
-            password=args.password,
-        )
+        config = _resolve_postgres_config(args)
 
         if args.use_async:
             backend = AsyncPostgresBackend(connection_config=config)
@@ -1616,17 +1628,12 @@ def main():
 
     # Handle status subcommand
     if args.command == "status":
-        if not args.database:
+        named_conn = getattr(args, "named_connection", None)
+        if not named_conn and not args.database:
             print("Error: --database is required for status", file=sys.stderr)
             sys.exit(1)
 
-        config = PostgresConnectionConfig(
-            host=args.host,
-            port=args.port,
-            database=args.database,
-            username=args.user,
-            password=args.password,
-        )
+        config = _resolve_postgres_config(args)
 
         if args.use_async:
             backend = AsyncPostgresBackend(connection_config=config)
@@ -1684,13 +1691,7 @@ def main():
         logger.error("Error: Multiple SQL statements are not supported.")
         sys.exit(1)
 
-    config = PostgresConnectionConfig(
-        host=args.host,
-        port=args.port,
-        database=args.database,
-        username=args.user,
-        password=args.password,
-    )
+    config = _resolve_postgres_config(args)
 
     kwargs = {"use_ascii": args.rich_ascii}
     if args.use_async:
