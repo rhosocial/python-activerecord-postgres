@@ -12,11 +12,13 @@ class PostgresExtensionInfo:
     Attributes:
         name: Extension name
         installed: Whether the extension is installed (enabled in database)
-        version: Extension version number
+        available: Whether the extension is available (can be installed)
+        version: Extension version number (only if installed)
         schema: Schema where the extension is installed
     """
 
     name: str
     installed: bool = False
+    available: bool = False
     version: Optional[str] = None
     schema: Optional[str] = None
