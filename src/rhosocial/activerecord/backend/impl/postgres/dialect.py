@@ -216,6 +216,7 @@ class PostgresDialect(
     JoinMixin,
     ViewMixin,
     SchemaMixin,
+    PostgresIndexMixin,
     IndexMixin,
     SequenceMixin,
     TableMixin,
@@ -234,7 +235,6 @@ class PostgresDialect(
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresPartitionMixin,
-    PostgresIndexMixin,
     PostgresVacuumMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
@@ -1195,6 +1195,24 @@ class PostgresDialect(
         if alias:
             sql = f"{sql} AS {self.format_identifier(alias)}"
         return sql, expr_params
+
+    # endregion
+
+    # region Operator Formatting (PostgreSQL-specific)
+
+    def format_binary_operator(
+        self, op: str, left_sql: str, right_sql: str, left_params: tuple, right_params: tuple
+    ) -> Tuple[str, Tuple]:
+        """Format binary operator with psycopg placeholder escaping.
+
+        psycopg uses %s as parameter placeholder. When the SQL operator itself
+        contains % (e.g., pg_trgm similarity operator), it must be escaped as %%
+        to prevent psycopg from interpreting it as a placeholder prefix.
+        """
+        # Escape % in operators for psycopg compatibility
+        escaped_op = op.replace('%', '%%') if '%' in op else op
+        sql = f"{left_sql} {escaped_op} {right_sql}"
+        return sql, left_params + right_params
 
     # endregion
 

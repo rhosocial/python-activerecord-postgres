@@ -58,7 +58,6 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
@@ -157,7 +156,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "tag_ids"),
-            RawSQLExpression(dialect, "'{1,3}'"),
+            Literal(dialect, "{1,3}").cast("integer[]"),
         ),
     )
     sql, params = query.to_sql()
@@ -176,7 +175,7 @@ if installed:
         where=BinaryExpression(
             dialect, "&&",
             Column(dialect, "tag_ids"),
-            RawSQLExpression(dialect, "'{1,6}'"),
+            Literal(dialect, "{1,6}").cast("integer[]"),
         ),
     )
     sql, params = query.to_sql()

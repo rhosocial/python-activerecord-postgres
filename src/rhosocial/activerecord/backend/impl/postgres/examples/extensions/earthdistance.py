@@ -193,7 +193,7 @@ if installed:
     result = backend.execute(sql, params, options=opts)
     print(f"Result: {result.data}")
     if result.data and result.data[0]:
-        km = result.data[0][0] / 1000
+        km = result.data[0]["distance_meters"] / 1000
         print(f"Distance (km): {km:.1f}")
 
     # Example 4: Find cities within a radius using earth_box + earth_distance

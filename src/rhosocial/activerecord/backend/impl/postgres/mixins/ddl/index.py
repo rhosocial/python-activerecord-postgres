@@ -7,8 +7,13 @@ PostgreSQL-specific index features and operations.
 
 from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
+
 if TYPE_CHECKING:
     from ...expression.ddl import ReindexExpression
+    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
+        CreateIndexExpression,
+    )
 
 
 class PostgresIndexMixin:
@@ -121,6 +126,80 @@ class PostgresIndexMixin:
             True if supported
         """
         return self.version >= (18, 0, 0)
+
+    def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
+        """Format CREATE INDEX statement with PostgreSQL-specific options.
+
+        Extends the generic format_create_index_statement to support:
+        - Operator classes via dialect_options["opclasses"]
+        - CONCURRENTLY clause
+        - INCLUDE clause with version checks
+        """
+        all_params = []
+        parts = ["CREATE"]
+
+        if expr.unique:
+            parts.append("UNIQUE")
+        parts.append("INDEX")
+
+        # CONCURRENTLY requires PG 11+
+        if expr.concurrent:
+            if not self.supports_parallel_create_index():
+                raise ValueError("CREATE INDEX CONCURRENTLY requires PostgreSQL 11+")
+            parts.append("CONCURRENTLY")
+
+        if expr.if_not_exists:
+            parts.append("IF NOT EXISTS")
+        parts.append(self.format_identifier(expr.index_name))
+        parts.append("ON")
+        parts.append(self.format_identifier(expr.table_name))
+
+        if expr.index_type:
+            parts.append(f"USING {expr.index_type}")
+
+        # Columns with optional operator classes
+        opclasses = expr.dialect_options.get("opclasses", {})
+        col_parts = []
+        for col in expr.columns:
+            if isinstance(col, ToSQLProtocol):
+                col_sql, col_params = col.to_sql()
+                col_parts.append(col_sql)
+                all_params.extend(col_params)
+            else:
+                col_name = self.format_identifier(str(col))
+                # Append operator class if specified for this column
+                opclass = opclasses.get(str(col))
+                if opclass:
+                    col_parts.append(f"{col_name} {opclass}")
+                else:
+                    col_parts.append(col_name)
+        parts.append(f"({', '.join(col_parts)})")
+
+        # INCLUDE clause (PG 12+ for GiST, PG 14+ for SP-GiST)
+        if expr.include:
+            index_type = (expr.index_type or "").lower()
+            if index_type == "gist" and not self.supports_gist_include():
+                raise ValueError("INCLUDE for GiST indexes requires PostgreSQL 12+")
+            if index_type == "spgist" and not self.supports_spgist_include():
+                raise ValueError("INCLUDE for SP-GiST indexes requires PostgreSQL 14+")
+            include_cols = ", ".join(self.format_identifier(c) for c in expr.include)
+            parts.append(f"INCLUDE ({include_cols})")
+
+        # WITH options via dialect_options
+        with_options = expr.dialect_options.get("with")
+        if with_options:
+            opts = ", ".join(f"{k} = {v}" for k, v in with_options.items())
+            parts.append(f"WITH ({opts})")
+
+        if expr.where:
+            where_sql, where_params = expr.where.to_sql()
+            parts.append(f"WHERE {where_sql}")
+            all_params.extend(where_params)
+
+        if expr.tablespace:
+            parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
+
+        return " ".join(parts), tuple(all_params)
 
     def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options."""

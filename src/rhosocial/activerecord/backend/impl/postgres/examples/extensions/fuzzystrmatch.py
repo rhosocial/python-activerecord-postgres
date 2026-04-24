@@ -110,8 +110,8 @@ if installed:
     sql, params = lev_query2.to_sql()
     print(f"\nSQL: {sql}")
     result = backend.execute(sql, params, options=opts)
-    print(f"Levenshtein('kitten', 'sitting') = {result.data[0][0] if result.data else 'N/A'}")
-    print(f"Levenshtein('sunday', 'saturday') = {result.data[0][1] if result.data else 'N/A'}")
+    print(f"Levenshtein('kitten', 'sitting') = {result.data[0]['kitten_to_sitting'] if result.data else 'N/A'}")
+    print(f"Levenshtein('sunday', 'saturday') = {result.data[0]['sunday_to_saturday'] if result.data else 'N/A'}")
 
     # Example 2: Soundex encoding
     # soundex(text) returns a Soundex code (4-character string)
@@ -131,10 +131,10 @@ if installed:
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     if result.data:
-        print(f"Soundex('Robert')   = {result.data[0][0]}")
-        print(f"Soundex('Rupert')   = {result.data[0][1]}")
-        print(f"Soundex('Ashcraft') = {result.data[0][2]}")
-        print(f"Soundex('Ashcroft') = {result.data[0][3]}")
+        print(f"Soundex('Robert')   = {result.data[0]['soundex_robert']}")
+        print(f"Soundex('Rupert')   = {result.data[0]['soundex_rupert']}")
+        print(f"Soundex('Ashcraft') = {result.data[0]['soundex_ashcraft']}")
+        print(f"Soundex('Ashcroft') = {result.data[0]['soundex_ashcroft']}")
 
     # Example 3: Difference function
     # difference(s1, s2) returns an integer (0-4) indicating how similar
@@ -165,9 +165,9 @@ if installed:
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     if result.data:
-        print(f"Difference('hello', 'hallo')   = {result.data[0][0]} (0-4 scale)")
-        print(f"Difference('Robert', 'Rupert')  = {result.data[0][1]} (0-4 scale)")
-        print(f"Difference('hello', 'world')    = {result.data[0][2]} (0-4 scale)")
+        print(f"Difference('hello', 'hallo')   = {result.data[0]['diff_hello_hallo']} (0-4 scale)")
+        print(f"Difference('Robert', 'Rupert')  = {result.data[0]['diff_robert_rupert']} (0-4 scale)")
+        print(f"Difference('hello', 'world')    = {result.data[0]['diff_hello_world']} (0-4 scale)")
 
     # Example 4: Metaphone encoding
     # metaphone(text, max_output_length) returns a Metaphone code
@@ -197,9 +197,9 @@ if installed:
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     if result.data:
-        print(f"Metaphone('Robert', 4)    = {result.data[0][0]}")
-        print(f"Metaphone('Rupert', 4)    = {result.data[0][1]}")
-        print(f"Metaphone('telephone', 6) = {result.data[0][2]}")
+        print(f"Metaphone('Robert', 4)    = {result.data[0]['meta_robert']}")
+        print(f"Metaphone('Rupert', 4)    = {result.data[0]['meta_rupert']}")
+        print(f"Metaphone('telephone', 6) = {result.data[0]['meta_telephone']}")
 
     # Example 5: Double Metaphone encoding
     # dmetaphone(text) returns the primary Double Metaphone code
@@ -227,9 +227,9 @@ if installed:
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     if result.data:
-        print(f"Dmetaphone('Robert')  = {result.data[0][0]}")
-        print(f"Dmetaphone('Smith')   = {result.data[0][1]}")
-        print(f"Dmetaphone('Schmidt') = {result.data[0][2]}")
+        print(f"Dmetaphone('Robert')  = {result.data[0]['dmeta_robert']}")
+        print(f"Dmetaphone('Smith')   = {result.data[0]['dmeta_smith']}")
+        print(f"Dmetaphone('Schmidt') = {result.data[0]['dmeta_schmidt']}")
 
     # Example 6: Double Metaphone alternate codes
     dmeta_alt_query = QueryExpression(
@@ -255,9 +255,9 @@ if installed:
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     if result.data:
-        print(f"Dmetaphone_alt('Robert')  = {result.data[0][0]}")
-        print(f"Dmetaphone_alt('Smith')   = {result.data[0][1]}")
-        print(f"Dmetaphone_alt('Schmidt') = {result.data[0][2]}")
+        print(f"Dmetaphone_alt('Robert')  = {result.data[0]['dmeta_alt_robert']}")
+        print(f"Dmetaphone_alt('Smith')   = {result.data[0]['dmeta_alt_smith']}")
+        print(f"Dmetaphone_alt('Schmidt') = {result.data[0]['dmeta_alt_schmidt']}")
 
 else:
     print("\nSkipping - fuzzystrmatch not available on this server")

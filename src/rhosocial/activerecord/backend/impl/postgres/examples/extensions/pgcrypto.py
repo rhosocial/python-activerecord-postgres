@@ -94,7 +94,7 @@ if installed:
     # Example 2: Verify password against stored hash
     # crypt() extracts the salt from the existing hash automatically
     # In practice: crypt(input_password, stored_hash) should equal stored_hash
-    stored_hash = result.data[0][0] if result.data else None
+    stored_hash = result.data[0]['hashed_password'] if result.data else None
     if stored_hash:
         # Re-hash the input password using the stored hash as salt
         # If the result equals the stored hash, the password is correct
@@ -110,7 +110,7 @@ if installed:
         print(f"SQL: {sql}")
         print(f"Params: {params}")
         result = backend.execute(sql, params, options=opts)
-        rehashed = result.data[0][0] if result.data else None
+        rehashed = result.data[0]['rehashed'] if result.data else None
         matches = rehashed == stored_hash
         print(f"Re-hashed: {rehashed}")
         print(f"Password matches: {matches}")
@@ -205,7 +205,7 @@ if installed:
     print(f"Encrypted (PGP message): {result.data}")
 
     # Decrypt the data back
-    encrypted = result.data[0][0] if result.data else None
+    encrypted = result.data[0]['encrypted'] if result.data else None
     if encrypted:
         decrypt_call = FunctionCall(
             dialect, "pgp_sym_decrypt",

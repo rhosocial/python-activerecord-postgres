@@ -64,7 +64,6 @@ from rhosocial.activerecord.backend.expression.core import (
 )
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -122,7 +121,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert hstore data using InsertExpression + ValuesSource
-    # Use RawSQLExpression for hstore literals with ::hstore cast
+    # Use Literal with .cast("hstore") for type-safe hstore insertion
     insert_expr = InsertExpression(
         dialect=dialect,
         into="products",
@@ -132,15 +131,15 @@ if installed:
             [
                 [
                     Literal(dialect, "Laptop"),
-                    RawSQLExpression(dialect, "'color=>silver, weight=>2.5'::hstore"),
+                    Literal(dialect, "color=>silver, weight=>2.5").cast("hstore"),
                 ],
                 [
                     Literal(dialect, "Phone"),
-                    RawSQLExpression(dialect, "'color=>black, weight=>0.2'::hstore"),
+                    Literal(dialect, "color=>black, weight=>0.2").cast("hstore"),
                 ],
                 [
                     Literal(dialect, "Tablet"),
-                    RawSQLExpression(dialect, "'color=>silver, weight=>0.5, brand=>Acme'::hstore"),
+                    Literal(dialect, "color=>silver, weight=>0.5, brand=>Acme").cast("hstore"),
                 ],
             ],
         ),
@@ -202,7 +201,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "attributes"),
-            RawSQLExpression(dialect, "'color=>silver'"),
+            Literal(dialect, "color=>silver").cast("hstore"),
         ),
     )
     sql, params = query.to_sql()
@@ -220,7 +219,7 @@ if installed:
             Subquery(dialect, BinaryExpression(
                 dialect, "||",
                 Column(dialect, "attributes"),
-                RawSQLExpression(dialect, "'brand=>Acme'"),
+                Literal(dialect, "brand=>Acme").cast("hstore"),
             )).as_("with_brand"),
         ],
         from_=TableExpression(dialect, "products"),
@@ -319,7 +318,7 @@ if installed:
             "attributes": BinaryExpression(
                 dialect, "||",
                 Column(dialect, "attributes"),
-                RawSQLExpression(dialect, "'discount=>true'"),
+                Literal(dialect, "discount=>true").cast("hstore"),
             ),
         },
         where=ComparisonPredicate(

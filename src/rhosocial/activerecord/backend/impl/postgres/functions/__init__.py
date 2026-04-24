@@ -195,6 +195,10 @@ from .uuid import (
     uuid_generate_v3,
     uuid_generate_v4,
     uuid_generate_v5,
+    uuid_ns_dns,
+    uuid_ns_url,
+    uuid_ns_oid,
+    uuid_ns_x500,
     uuid_nil,
     uuid_max,
 )
@@ -382,6 +386,10 @@ __all__ = [
     "uuid_generate_v3",
     "uuid_generate_v4",
     "uuid_generate_v5",
+    "uuid_ns_dns",
+    "uuid_ns_url",
+    "uuid_ns_oid",
+    "uuid_ns_x500",
     "uuid_nil",
     "uuid_max",
     # hstore functions

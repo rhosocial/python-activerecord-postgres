@@ -40,14 +40,12 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
     uuid_generate_v1mc,
     uuid_generate_v4,
     uuid_generate_v5,
+    uuid_ns_dns,
     uuid_nil,
-    uuid_max,
 )
 from rhosocial.activerecord.backend.expression import (
     QueryExpression,
 )
-from rhosocial.activerecord.backend.expression.core import RawSQLExpression
-from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -76,8 +74,8 @@ installed = dialect.is_extension_installed("uuid-ossp")
 
 if installed:
     # Example 1: Generate UUID v1 (time-based, MAC address)
-    # uuid_generate_v1() returns a SQL string, wrap with RawSQLExpression
-    uuid_v1_expr = RawSQLExpression(dialect, uuid_generate_v1(dialect)).as_("uuid_v1")
+    # uuid_generate_v1() returns a FunctionCall expression
+    uuid_v1_expr = uuid_generate_v1(dialect).as_("uuid_v1")
     query = QueryExpression(
         dialect=dialect,
         select=[uuid_v1_expr],
@@ -89,7 +87,7 @@ if installed:
     print(f"Generated UUID v1: {result.data}")
 
     # Example 2: Generate UUID v1mc (time-based, random multicast MAC)
-    uuid_v1mc_expr = RawSQLExpression(dialect, uuid_generate_v1mc(dialect)).as_("uuid_v1mc")
+    uuid_v1mc_expr = uuid_generate_v1mc(dialect).as_("uuid_v1mc")
     query = QueryExpression(
         dialect=dialect,
         select=[uuid_v1mc_expr],
@@ -101,7 +99,7 @@ if installed:
     print(f"Generated UUID v1mc: {result.data}")
 
     # Example 3: Generate UUID v4 (random, most common)
-    uuid_v4_expr = RawSQLExpression(dialect, uuid_generate_v4(dialect)).as_("uuid_v4")
+    uuid_v4_expr = uuid_generate_v4(dialect).as_("uuid_v4")
     query = QueryExpression(
         dialect=dialect,
         select=[uuid_v4_expr],
@@ -113,10 +111,9 @@ if installed:
     print(f"Generated UUID v4: {result.data}")
 
     # Example 4: Generate UUID v5 (namespace + SHA-1 name-based)
-    # uuid_generate_v5 takes namespace and name as SQL-literal strings
-    uuid_v5_expr = RawSQLExpression(
-        dialect, uuid_generate_v5(dialect, "'dns'", "'example.com'")
-    ).as_("uuid_v5")
+    # uuid_generate_v5 takes a UUID namespace and a name as parameters
+    # Use uuid_ns_dns() to get the DNS namespace UUID constant
+    uuid_v5_expr = uuid_generate_v5(dialect, uuid_ns_dns(dialect), "example.com").as_("uuid_v5")
     query = QueryExpression(
         dialect=dialect,
         select=[uuid_v5_expr],
@@ -124,6 +121,7 @@ if installed:
     sql, params = query.to_sql()
     print(f"\n--- UUID v5 (SHA-1 name-based) ---")
     print(f"SQL: {sql}")
+    print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
     print(f"Generated UUID v5 (dns, example.com): {result.data}")
 
@@ -131,9 +129,9 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[
-            RawSQLExpression(dialect, uuid_generate_v1(dialect)).as_("v1"),
-            RawSQLExpression(dialect, uuid_generate_v1mc(dialect)).as_("v1mc"),
-            RawSQLExpression(dialect, uuid_generate_v4(dialect)).as_("v4"),
+            uuid_generate_v1(dialect).as_("v1"),
+            uuid_generate_v1mc(dialect).as_("v1mc"),
+            uuid_generate_v4(dialect).as_("v4"),
         ],
     )
     sql, params = query.to_sql()
@@ -142,20 +140,18 @@ if installed:
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
-    # Example 6: Nil and Max UUID constants
+    # Example 6: Nil UUID constant
     query = QueryExpression(
         dialect=dialect,
         select=[
-            RawSQLExpression(dialect, uuid_nil(dialect)).as_("nil_uuid"),
-            RawSQLExpression(dialect, uuid_max(dialect)).as_("max_uuid"),
+            uuid_nil(dialect).as_("nil_uuid"),
         ],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Nil and Max UUID constants ---")
+    print(f"\n--- Nil UUID constant ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
-    print(f"Nil UUID (all zeros): {result.data[0][0] if result.data else 'N/A'}")
-    print(f"Max UUID (all ones): {result.data[0][1] if result.data else 'N/A'}")
+    print(f"Results: {result.data}")
 
 else:
     print("\nSkipping - uuid-ossp not available on this server")

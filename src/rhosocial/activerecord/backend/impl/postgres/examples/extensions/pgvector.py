@@ -54,7 +54,6 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.core import Literal, Subquery
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
@@ -130,7 +129,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert vector data
-    # Using literal string representation for vectors
+    # Use Literal with .cast("vector") for type-safe vector insertion
     insert_expr = InsertExpression(
         dialect=dialect,
         into="documents",
@@ -140,19 +139,19 @@ if installed:
             [
                 [
                     Literal(dialect, "cat"),
-                    Literal(dialect, "[1.0, 0.5, 0.2]"),
+                    Literal(dialect, "[1.0, 0.5, 0.2]").cast("vector"),
                 ],
                 [
                     Literal(dialect, "dog"),
-                    Literal(dialect, "[0.9, 0.6, 0.3]"),
+                    Literal(dialect, "[0.9, 0.6, 0.3]").cast("vector"),
                 ],
                 [
                     Literal(dialect, "car"),
-                    Literal(dialect, "[0.1, 0.2, 0.9]"),
+                    Literal(dialect, "[0.1, 0.2, 0.9]").cast("vector"),
                 ],
                 [
                     Literal(dialect, "bicycle"),
-                    Literal(dialect, "[0.15, 0.25, 0.85]"),
+                    Literal(dialect, "[0.15, 0.25, 0.85]").cast("vector"),
                 ],
             ],
         ),
@@ -166,7 +165,7 @@ if installed:
     # Example 3: Cosine similarity search
     # Find documents most similar to "kitten" represented as [1.0, 0.55, 0.18]
     # pgvector <=> operator is cosine distance; cosine_similarity = 1 - cosine_distance
-    query_vector_cosine = RawSQLExpression(dialect, "'[1.0, 0.55, 0.18]'")
+    query_vector_cosine = Literal(dialect, "[1.0, 0.55, 0.18]").cast("vector")
     cosine_dist = BinaryExpression(
         dialect, "<=>",
         Column(dialect, "embedding"),
@@ -174,10 +173,17 @@ if installed:
     )
 
     # cosine_similarity = 1 - (embedding <=> query_vector)
-    # Wrap with Subquery to add alias since BinaryArithmeticExpression lacks AliasableMixin
+    # Wrap cosine_dist with Subquery to ensure parentheses for operator precedence:
+    # without parentheses, PostgreSQL parses "1 - embedding <=> ..." as "(1 - embedding) <=> ..."
+    # because subtraction (-) has higher precedence than the custom <=> operator.
+    # Wrap the outer expression with Subquery to add alias since BinaryExpression lacks AliasableMixin.
     cosine_sim = Subquery(
         dialect,
-        Literal(dialect, 1) - cosine_dist,
+        BinaryExpression(
+            dialect, "-",
+            Literal(dialect, 1),
+            Subquery(dialect, cosine_dist),
+        ),
     ).as_("cosine_similarity")
 
     query = QueryExpression(
@@ -198,7 +204,7 @@ if installed:
 
     # Example 4: L2 distance search
     # pgvector <-> operator is L2 (Euclidean) distance
-    query_vector_l2 = RawSQLExpression(dialect, "'[0.1, 0.2, 0.9]'")
+    query_vector_l2 = Literal(dialect, "[0.1, 0.2, 0.9]").cast("vector")
     l2_dist = BinaryExpression(
         dialect, "<->",
         Column(dialect, "embedding"),
@@ -212,7 +218,7 @@ if installed:
     l2_dist_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "embedding"),
-        RawSQLExpression(dialect, "'[0.1, 0.2, 0.9]'"),
+        Literal(dialect, "[0.1, 0.2, 0.9]").cast("vector"),
     )
 
     query = QueryExpression(
@@ -232,6 +238,8 @@ if installed:
 
     # Example 5: Create HNSW index for fast vector search
     # HNSW index provides approximate nearest neighbor search
+    # Use dialect_options={"opclasses": {"embedding": "vector_cosine_ops"}}
+    # to specify the operator class for the vector column.
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_documents_embedding",
@@ -239,6 +247,7 @@ if installed:
         columns=["embedding"],
         index_type="HNSW",
         if_not_exists=True,
+        dialect_options={"opclasses": {"embedding": "vector_cosine_ops"}},
     )
     sql, params = create_idx.to_sql()
     print(f"\n--- CREATE HNSW INDEX ---")
