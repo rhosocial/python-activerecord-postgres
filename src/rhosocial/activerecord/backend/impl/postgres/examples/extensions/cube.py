@@ -59,7 +59,6 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.core import Literal, Subquery
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements.dml import (
@@ -137,12 +136,12 @@ if installed:
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Widget A"), Literal(dialect, "(0.5, 0.8, 0.2)")],
-                [Literal(dialect, "Widget B"), Literal(dialect, "(0.3, 0.6, 0.9)")],
-                [Literal(dialect, "Widget C"), Literal(dialect, "(0.7, 0.4, 0.1)")],
-                [Literal(dialect, "Widget D"), Literal(dialect, "(0.2, 0.3, 0.7)")],
-                # A range entry (min/max in each dimension)
-                [Literal(dialect, "Category X"), Literal(dialect, "(0.1,0.5),(0.2,0.6),(0.0,0.3)")],
+                [Literal(dialect, "Widget A"), Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube")],
+                [Literal(dialect, "Widget B"), Literal(dialect, "(0.3, 0.6, 0.9)").cast("cube")],
+                [Literal(dialect, "Widget C"), Literal(dialect, "(0.7, 0.4, 0.1)").cast("cube")],
+                [Literal(dialect, "Widget D"), Literal(dialect, "(0.2, 0.3, 0.7)").cast("cube")],
+                # A range entry (min corner, max corner in each dimension)
+                [Literal(dialect, "Category X"), Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube")],
             ],
         ),
     )
@@ -162,7 +161,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
         where=BinaryExpression(
             dialect, "@>",
-            RawSQLExpression(dialect, "'(0.1,0.5),(0.2,0.6),(0.0,0.3)'"),
+            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube"),
             Column(dialect, "feature_vector"),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
@@ -170,7 +169,7 @@ if installed:
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
     print(f"\n--- Contains operator (@>) ---")
-    print(f"Points contained within range '(0.1,0.5),(0.2,0.6),(0.0,0.3)':")
+    print(f"Points contained within range '(0.1,0.2,0.0),(0.5,0.6,0.3)':")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -182,7 +181,7 @@ if installed:
         where=BinaryExpression(
             dialect, "<@",
             Column(dialect, "feature_vector"),
-            RawSQLExpression(dialect, "'(0.1,0.5),(0.2,0.6),(0.0,0.3)'"),
+            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube"),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
@@ -202,25 +201,25 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
+            Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
         ),
     ).as_("distance")
 
-    dist_base = BinaryExpression(
-        dialect, "<->",
-        Column(dialect, "feature_vector"),
-        RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
+    # For the WHERE clause, use Subquery to wrap the distance expression
+    # so it can be used in ComparisonPredicate with proper parentheses
+    dist_for_where = Subquery(
+        dialect,
+        BinaryExpression(
+            dialect, "<->",
+            Column(dialect, "feature_vector"),
+            Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
+        ),
     )
-    dist_sql, dist_params = dist_base.to_sql()
-
-    # Wrap the distance expression SQL as a RawSQLExpression so it can be used
-    # in ComparisonPredicate (< comparison with the threshold)
-    dist_value_expr = RawSQLExpression(dialect, dist_sql, dist_params)
 
     dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
+        Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
     )
 
     query = QueryExpression(
@@ -233,7 +232,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
         where=ComparisonPredicate(
             dialect, "<",
-            dist_value_expr,
+            dist_for_where,
             Literal(dialect, 0.5),
         ),
         order_by=OrderByClause(dialect, expressions=[dist_for_order]),
@@ -252,14 +251,14 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            RawSQLExpression(dialect, "'(0.4, 0.5, 0.6)'"),
+            Literal(dialect, "(0.4, 0.5, 0.6)").cast("cube"),
         ),
     ).as_("distance")
 
     nn_dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        RawSQLExpression(dialect, "'(0.4, 0.5, 0.6)'"),
+        Literal(dialect, "(0.4, 0.5, 0.6)").cast("cube"),
     )
 
     query = QueryExpression(

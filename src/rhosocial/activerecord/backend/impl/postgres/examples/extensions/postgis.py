@@ -56,7 +56,7 @@ from rhosocial.activerecord.backend.expression.core import (
     FunctionCall,
     Subquery,
 )
-from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -243,10 +243,15 @@ if installed:
         where=FunctionCall(
             dialect, "ST_DWithin",
             Column(dialect, "geom"),
-            RawSQLExpression(
-                dialect,
-                "ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography",
-            ),
+            FunctionCall(
+                dialect, "ST_SetSRID",
+                FunctionCall(
+                    dialect, "ST_MakePoint",
+                    Literal(dialect, -74.006),
+                    Literal(dialect, 40.7128),
+                ),
+                Literal(dialect, 4326),
+            ).cast("geography"),
             Literal(dialect, 500000),
         ),
     )

@@ -31,14 +31,13 @@ class PostgresBackendMixin:
         """
         Prepare SQL and parameters for PostgreSQL execution.
 
-        Converts the generic '?' placeholder to PostgreSQL-compatible '%s' placeholder.
+        Returns SQL and parameters unchanged. The PostgresDialect already generates
+        '%s' placeholders (via get_parameter_placeholder()), so no placeholder
+        conversion is needed. Blind replacement of '?' to '%s' would incorrectly
+        transform PostgreSQL operators like hstore/jsonb '?', '?|', '?&' into
+        parameter placeholders, causing psycopg to miscount placeholders.
         """
-        if params is None:
-            return sql, None
-
-        # Replace '?' placeholders with '%s' for PostgreSQL
-        prepared_sql = sql.replace("?", "%s")
-        return prepared_sql, params
+        return sql, params
 
     def create_expression(self, expression_str: str):
         """Create an expression object for raw SQL expressions."""
