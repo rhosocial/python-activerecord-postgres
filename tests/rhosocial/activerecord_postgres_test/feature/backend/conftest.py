@@ -225,3 +225,80 @@ def postgres_dialect():
     """Fixture providing PostgresDialect instance for testing transaction expressions."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     return PostgresDialect()
+
+
+# --- Extension Availability Utilities ---
+
+
+def requires_extension(*extension_names):
+    """Decorator to skip tests when specified PostgreSQL extensions are not installed.
+
+    Usage:
+        @requires_extension("hstore", "pg_trgm")
+        def test_something(self, postgres_backend_single):
+            ...
+
+        # Or as a fixture-level check:
+        def test_something(self, postgres_backend_single):
+            requires_extension("postgis")(lambda: None)()
+    """
+    def decorator(func):
+        import functools
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Try to find a backend/dialect from kwargs or args
+            dialect = None
+            for arg in args:
+                if hasattr(arg, 'dialect'):
+                    dialect = arg.dialect
+                    break
+            if dialect is None:
+                for val in kwargs.values():
+                    if hasattr(val, 'dialect'):
+                        dialect = val.dialect
+                        break
+            if dialect is None:
+                pytest.skip("Cannot check extension availability: no backend/dialect available")
+
+            for ext_name in extension_names:
+                if not dialect.is_extension_installed(ext_name):
+                    pytest.skip(f"Extension '{ext_name}' not installed")
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def requires_extension_available(*extension_names):
+    """Decorator to skip tests when specified PostgreSQL extensions are not available (installable).
+
+    This checks pg_available_extensions, meaning the extension files exist on the server
+    but may not yet be CREATE EXTENSION'd.
+
+    Usage:
+        @requires_extension_available("postgis")
+        def test_something(self, postgres_backend_single):
+            ...
+    """
+    def decorator(func):
+        import functools
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            dialect = None
+            for arg in args:
+                if hasattr(arg, 'dialect'):
+                    dialect = arg.dialect
+                    break
+            if dialect is None:
+                for val in kwargs.values():
+                    if hasattr(val, 'dialect'):
+                        dialect = val.dialect
+                        break
+            if dialect is None:
+                pytest.skip("Cannot check extension availability: no backend/dialect available")
+
+            for ext_name in extension_names:
+                if not dialect.is_extension_available(ext_name):
+                    pytest.skip(f"Extension '{ext_name}' not available on this server")
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
