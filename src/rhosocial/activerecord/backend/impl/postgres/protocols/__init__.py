@@ -37,6 +37,8 @@ from .types.enum import PostgresEnumTypeSupport
 # Extension protocols
 from .extensions.pgvector import PostgresPgvectorSupport
 from .extensions.postgis import PostgresPostGISSupport
+from .extensions.postgis_raster import PostgresPostgisRasterSupport
+from .extensions.pgrouting import PostgresPgroutingSupport
 from .extensions.hstore import PostgresHstoreSupport
 from .extensions.ltree import PostgresLtreeSupport
 from .extensions.intarray import PostgresIntarraySupport
@@ -44,6 +46,14 @@ from .extensions.pg_trgm import PostgresPgTrgmSupport
 from .extensions.earthdistance import PostgresEarthdistanceSupport
 from .extensions.tablefunc import PostgresTablefuncSupport
 from .extensions.pg_stat_statements import PostgresPgStatStatementsSupport
+from .extensions.citext import PostgresCitextSupport
+from .extensions.pgcrypto import PostgresPgcryptoSupport
+from .extensions.fuzzystrmatch import PostgresFuzzystrmatchSupport
+from .extensions.cube import PostgresCubeSupport
+from .extensions.uuid_ossp import PostgresUuidOssSupport
+from .extensions.bloom import PostgresBloomSupport
+from .extensions.btree_gin import PostgresBtreeGinSupport
+from .extensions.btree_gist import PostgresBtreeGistSupport
 
 # Additional protocols from original file
 from .query_optimization import PostgresQueryOptimizationSupport
@@ -76,6 +86,8 @@ __all__ = [
     # Extension protocols
     "PostgresPgvectorSupport",
     "PostgresPostGISSupport",
+    "PostgresPostgisRasterSupport",
+    "PostgresPgroutingSupport",
     "PostgresHstoreSupport",
     "PostgresLtreeSupport",
     "PostgresIntarraySupport",
@@ -83,6 +95,14 @@ __all__ = [
     "PostgresEarthdistanceSupport",
     "PostgresTablefuncSupport",
     "PostgresPgStatStatementsSupport",
+    "PostgresCitextSupport",
+    "PostgresPgcryptoSupport",
+    "PostgresFuzzystrmatchSupport",
+    "PostgresCubeSupport",
+    "PostgresUuidOssSupport",
+    "PostgresBloomSupport",
+    "PostgresBtreeGinSupport",
+    "PostgresBtreeGistSupport",
     # Additional protocols
     "PostgresQueryOptimizationSupport",
     "PostgresSQLSyntaxSupport",

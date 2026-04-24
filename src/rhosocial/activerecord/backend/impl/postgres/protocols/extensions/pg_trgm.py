@@ -5,7 +5,7 @@ This module defines the protocol for pg_trgm trigram functionality
 in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable
@@ -45,4 +45,36 @@ class PostgresPgTrgmSupport(Protocol):
         Requires pg_trgm extension.
         Supports creating GiST or GIN trigram indexes on text columns.
         """
+        ...
+
+    def format_similarity_expression(
+        self, column: str, text: str, threshold: Optional[float] = None, use_operator: bool = True
+    ) -> str:
+        """Format a similarity expression."""
+        ...
+
+    def format_trgm_index_statement(
+        self, index_name: str, table_name: str, column_name: str, index_type: str = "gin", schema: Optional[str] = None
+    ) -> Tuple[str, tuple]:
+        """Format CREATE INDEX statement for trigram index."""
+        ...
+
+    def format_similarity_function(self, text1: str, text2: str) -> str:
+        """Format similarity function call."""
+        ...
+
+    def format_show_trgm(self, text: str) -> str:
+        """Format show_trgm function."""
+        ...
+
+    def format_word_similarity(self, column: str, query: str) -> str:
+        """Format word_similarity function."""
+        ...
+
+    def format_similarity_operator(self, column: str, text: str, negate: bool = False) -> str:
+        """Format similarity operator (%)."""
+        ...
+
+    def format_similarity_threshold(self, threshold: float) -> str:
+        """Format SET similarity_threshold statement."""
         ...

@@ -5,7 +5,7 @@ This module defines the protocol for bloom filter index
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -27,4 +27,18 @@ class PostgresBloomSupport(Protocol):
 
     def supports_bloom_index(self) -> bool:
         """Whether bloom index is supported."""
+        ...
+
+    def format_bloom_index(
+        self,
+        index_name: str,
+        table_name: str,
+        columns: List[str],
+        fill_factor: Optional[int] = None,
+    ) -> str:
+        """Format a bloom index creation."""
+        ...
+
+    def format_bloom_access_method(self) -> str:
+        """Format bloom as access method."""
         ...

@@ -5,7 +5,7 @@ This module defines the protocol for pgvector vector similarity search
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import List, Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable
@@ -70,4 +70,49 @@ class PostgresPgvectorSupport(Protocol):
         HNSW is a Hierarchical Navigable Small World index, suitable for
         large-scale high-dimensional data.
         """
+        ...
+
+    def format_vector_literal(self, values: List[float], dimensions: Optional[int] = None) -> str:
+        """Format a vector literal value."""
+        ...
+
+    def format_vector_similarity_expression(self, column: str, query_vector: str, distance_metric: str = "l2") -> str:
+        """Format a vector similarity/distance expression."""
+        ...
+
+    def format_create_vector_index_statement(
+        self,
+        index_name: str,
+        table_name: str,
+        column_name: str,
+        index_type: str = "hnsw",
+        m: Optional[int] = None,
+        ef_construction: Optional[int] = None,
+        lists: Optional[int] = None,
+        schema: Optional[str] = None,
+    ) -> Tuple[str, tuple]:
+        """Format CREATE INDEX statement for vector column."""
+        ...
+
+    def format_vector_cosine_similarity(self, column: str, query_vector: str) -> str:
+        """Format cosine similarity expression (1 - cosine_distance)."""
+        ...
+
+    def format_create_hnsw_index_statement(
+        self,
+        table_name: str,
+        column_name: str,
+        index_name: Optional[str] = None,
+        m: Optional[int] = None,
+        ef_construction: Optional[int] = None,
+    ) -> str:
+        """Format CREATE INDEX statement with HNSW index for vector column."""
+        ...
+
+    def format_vector_l2_distance(self, left: str, right: str) -> str:
+        """Format L2 (Euclidean) distance expression."""
+        ...
+
+    def format_vector_inner_product(self, left: str, right: str) -> str:
+        """Format inner product expression."""
         ...

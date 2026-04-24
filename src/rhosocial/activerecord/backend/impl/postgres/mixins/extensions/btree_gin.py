@@ -37,3 +37,14 @@ class PostgresBtreeGinMixin:
         """
         col_str = ", ".join(columns)
         return f"CREATE INDEX {index_name} ON {table_name} USING gin ({col_str})"
+
+    def format_btree_gin_operator_class(self, data_type: str) -> str:
+        """Format btree_gin operator class name.
+
+        Args:
+            data_type: Data type name (e.g., int4, text, timestamp)
+
+        Returns:
+            Operator class name for btree_gin (e.g., int4_ops for int4)
+        """
+        return f"{data_type}_ops"

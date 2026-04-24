@@ -210,3 +210,89 @@ class PostgresPostGISMixin:
             "ST_SetSRID(ST_MakePoint(0, 0), 4326)"
         """
         return f"ST_SetSRID({geometry}, {srid})"
+
+    def format_geography_literal(self, lon: float, lat: float, srid: int = 4326) -> str:
+        """Format a geography literal from longitude and latitude.
+
+        Args:
+            lon: Longitude value
+            lat: Latitude value
+            srid: Spatial reference system ID (default: 4326)
+
+        Returns:
+            SQL geography literal string
+
+        Example:
+            >>> format_geography_literal(116.4, 39.9)
+            "ST_GeogFromText('SRID=4326;POINT(116.4 39.9)')"
+            >>> format_geography_literal(116.4, 39.9, srid=4326)
+            "ST_GeogFromText('SRID=4326;POINT(116.4 39.9)')"
+        """
+        return f"ST_GeogFromText('SRID={srid};POINT({lon} {lat})')"
+
+    def format_st_area(self, geom_expr: str, use_spheroid: bool = False) -> str:
+        """Format ST_Area function for area calculation.
+
+        Args:
+            geom_expr: Geometry or geography expression
+            use_spheroid: Use spheroid for geography type
+
+        Returns:
+            SQL function call
+
+        Example:
+            >>> format_st_area('geom')
+            "ST_Area(geom)"
+            >>> format_st_area('geog', use_spheroid=True)
+            "ST_Area(geog, true)"
+        """
+        if use_spheroid:
+            return f"ST_Area({geom_expr}, true)"
+        return f"ST_Area({geom_expr})"
+
+    def format_st_transform(self, geom_expr: str, target_srid: int) -> str:
+        """Format ST_Transform function for coordinate system transformation.
+
+        Args:
+            geom_expr: Geometry expression
+            target_srid: Target spatial reference system ID
+
+        Returns:
+            SQL function call
+
+        Example:
+            >>> format_st_transform('geom', 3857)
+            "ST_Transform(geom, 3857)"
+        """
+        return f"ST_Transform({geom_expr}, {target_srid})"
+
+    def format_st_as_geojson(self, geom_expr: str) -> str:
+        """Format ST_AsGeoJSON function for GeoJSON output.
+
+        Args:
+            geom_expr: Geometry or geography expression
+
+        Returns:
+            SQL function call
+
+        Example:
+            >>> format_st_as_geojson('geom')
+            "ST_AsGeoJSON(geom)"
+        """
+        return f"ST_AsGeoJSON({geom_expr})"
+
+    def format_st_buffer(self, geom_expr: str, radius: float) -> str:
+        """Format ST_Buffer function for buffer area calculation.
+
+        Args:
+            geom_expr: Geometry expression
+            radius: Buffer radius
+
+        Returns:
+            SQL function call
+
+        Example:
+            >>> format_st_buffer('geom', 100)
+            "ST_Buffer(geom, 100)"
+        """
+        return f"ST_Buffer({geom_expr}, {radius})"

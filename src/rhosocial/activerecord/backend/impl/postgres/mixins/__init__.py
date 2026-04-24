@@ -38,6 +38,8 @@ from .types.multirange import MultirangeMixin
 # Extension mixins
 from .extensions.pgvector import PostgresPgvectorMixin
 from .extensions.postgis import PostgresPostGISMixin
+from .extensions.postgis_raster import PostgresPostgisRasterMixin
+from .extensions.pgrouting import PostgresPgroutingMixin
 from .extensions.hstore import PostgresHstoreMixin
 from .extensions.ltree import PostgresLtreeMixin
 from .extensions.intarray import PostgresIntarrayMixin
@@ -45,6 +47,14 @@ from .extensions.pg_trgm import PostgresPgTrgmMixin
 from .extensions.earthdistance import PostgresEarthdistanceMixin
 from .extensions.tablefunc import PostgresTablefuncMixin
 from .extensions.pg_stat_statements import PostgresPgStatStatementsMixin
+from .extensions.citext import PostgresCitextMixin
+from .extensions.pgcrypto import PostgresPgcryptoMixin
+from .extensions.fuzzystrmatch import PostgresFuzzystrmatchMixin
+from .extensions.cube import PostgresCubeMixin
+from .extensions.uuid_ossp import PostgresUuidOssMixin
+from .extensions.bloom import PostgresBloomMixin
+from .extensions.btree_gin import PostgresBtreeGinMixin
+from .extensions.btree_gist import PostgresBtreeGistMixin
 
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
@@ -79,6 +89,8 @@ __all__ = [
     # Extension mixins
     "PostgresPgvectorMixin",
     "PostgresPostGISMixin",
+    "PostgresPostgisRasterMixin",
+    "PostgresPgroutingMixin",
     "PostgresHstoreMixin",
     "PostgresLtreeMixin",
     "PostgresIntarrayMixin",
@@ -86,6 +98,14 @@ __all__ = [
     "PostgresEarthdistanceMixin",
     "PostgresTablefuncMixin",
     "PostgresPgStatStatementsMixin",
+    "PostgresCitextMixin",
+    "PostgresPgcryptoMixin",
+    "PostgresFuzzystrmatchMixin",
+    "PostgresCubeMixin",
+    "PostgresUuidOssMixin",
+    "PostgresBloomMixin",
+    "PostgresBtreeGinMixin",
+    "PostgresBtreeGistMixin",
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",

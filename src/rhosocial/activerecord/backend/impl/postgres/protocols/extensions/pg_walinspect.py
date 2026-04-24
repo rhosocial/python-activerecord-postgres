@@ -28,3 +28,17 @@ class PostgresPgWalinspectSupport(Protocol):
     def supports_pg_walinspect(self) -> bool:
         """Whether pg_walinspect extension is available."""
         ...
+
+    def format_pg_get_wal_records_info(self) -> str:
+        """Format WAL records info query."""
+        ...
+
+    def format_pg_get_wal_blocks_info(self) -> str:
+        """Format WAL blocks info query."""
+        ...
+
+    def format_pg_logical_emit_message(
+        self, transactional: bool = False, prefix: str = "test"
+    ) -> str:
+        """Format logical WAL message emission."""
+        ...

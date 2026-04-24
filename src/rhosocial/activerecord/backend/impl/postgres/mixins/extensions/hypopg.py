@@ -58,3 +58,14 @@ class PostgresHypoPgMixin:
             SQL SELECT statement
         """
         return "SELECT * FROM hypopg_index_detail()"
+
+    def format_hypopg_estimate_size(self, index_id: int) -> str:
+        """Format hypothetical index size estimation.
+
+        Args:
+            index_id: Hypothetical index identifier
+
+        Returns:
+            SQL SELECT statement
+        """
+        return f"SELECT hypopg_estimate_size({index_id})"

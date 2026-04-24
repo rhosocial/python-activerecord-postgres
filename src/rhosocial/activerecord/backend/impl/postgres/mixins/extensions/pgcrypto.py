@@ -6,7 +6,7 @@ This module provides the PostgresPgcryptoMixin class that adds support for
 pgcrypto extension features.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     pass
@@ -87,3 +87,54 @@ class PostgresPgcryptoMixin:
             SQL hmac call
         """
         return f"hmac('{data}', '{key}', '{algorithm}')"
+
+    def format_digest(self, data_expr: str, algorithm: str = "sha256") -> Tuple[str, tuple]:
+        """Format digest function for hashing.
+
+        Args:
+            data_expr: Data expression to hash
+            algorithm: Hash algorithm (sha256, md5, sha1, etc.)
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_digest("'hello'", "sha256")
+            ("digest('hello', 'sha256')", ())
+        """
+        sql = f"digest({data_expr}, '{algorithm}')"
+        return (sql, ())
+
+    def format_pgp_encrypt(self, data_expr: str, key_expr: str) -> Tuple[str, tuple]:
+        """Format pgp_sym_encrypt function.
+
+        Args:
+            data_expr: Data expression to encrypt
+            key_expr: Key expression for encryption
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_pgp_encrypt("'secret'", "'password'")
+            ("pgp_sym_encrypt('secret', 'password')", ())
+        """
+        sql = f"pgp_sym_encrypt({data_expr}, {key_expr})"
+        return (sql, ())
+
+    def format_pgp_decrypt(self, data_expr: str, key_expr: str) -> Tuple[str, tuple]:
+        """Format pgp_sym_decrypt function.
+
+        Args:
+            data_expr: Data expression to decrypt
+            key_expr: Key expression for decryption
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_pgp_decrypt("encrypted_col", "'password'")
+            ("pgp_sym_decrypt(encrypted_col, 'password')", ())
+        """
+        sql = f"pgp_sym_decrypt({data_expr}, {key_expr})"
+        return (sql, ())

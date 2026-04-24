@@ -28,6 +28,8 @@ from .pgcrypto import PostgresPgcryptoMixin
 from .btree_gin import PostgresBtreeGinMixin
 from .btree_gist import PostgresBtreeGistMixin
 from .uuid_ossp import PostgresUuidOssMixin
+from .postgis_raster import PostgresPostgisRasterMixin
+from .pgrouting import PostgresPgroutingMixin
 
 __all__ = [
     "PostgresPgvectorMixin",
@@ -57,4 +59,6 @@ __all__ = [
     "PostgresBtreeGinMixin",
     "PostgresBtreeGistMixin",
     "PostgresUuidOssMixin",
+    "PostgresPostgisRasterMixin",
+    "PostgresPgroutingMixin",
 ]

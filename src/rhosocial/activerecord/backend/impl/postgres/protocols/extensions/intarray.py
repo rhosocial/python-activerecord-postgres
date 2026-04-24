@@ -5,7 +5,7 @@ This module defines the protocol for intarray integer array operations
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -53,4 +53,40 @@ class PostgresIntarraySupport(Protocol):
         Requires intarray extension.
         Supports GiST indexes for integer arrays.
         """
+        ...
+
+    def format_intarray_function(self, function_name: str, *args) -> str:
+        """Format an intarray function call."""
+        ...
+
+    def format_intarray_operator(self, column: str, operator: str, value: str) -> str:
+        """Format an intarray operator expression."""
+        ...
+
+    def format_intarray_contains(self, column: str, values: list) -> str:
+        """Format intarray contains check (column contains all values)."""
+        ...
+
+    def format_intarray_overlaps(self, column: str, values: list) -> str:
+        """Format intarray overlaps check (any common elements)."""
+        ...
+
+    def format_intarray_idx(self, column: str, value: int) -> str:
+        """Format idx function (find index of value in array)."""
+        ...
+
+    def format_intarray_subarray(self, column: str, start: int, length: int = None) -> str:
+        """Format subarray function."""
+        ...
+
+    def format_intarray_uniq(self, column: str) -> str:
+        """Format uniq function (remove duplicates)."""
+        ...
+
+    def format_intarray_sort(self, column: str, ascending: bool = True) -> str:
+        """Format sort function."""
+        ...
+
+    def format_intarray_index_statement(self, table_name: str, column_name: str, index_name: Optional[str] = None) -> str:
+        """Format CREATE INDEX statement with GIN intarray ops."""
         ...

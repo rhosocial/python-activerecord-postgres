@@ -47,3 +47,35 @@ class PostgresEarthdistanceSupport(Protocol):
         Supports <@> operator for distance in miles.
         """
         ...
+
+    def format_earth_literal(self, point: tuple) -> str:
+        """Format an earth point literal."""
+        ...
+
+    def format_earthdistance_operator(self, column: str, point: tuple, operator: str = "<->") -> str:
+        """Format an earthdistance operator expression."""
+        ...
+
+    def format_ll_to_earth_function(self, latitude: float, longitude: float) -> str:
+        """Format ll_to_earth function call."""
+        ...
+
+    def format_earth_distance(self, point1: str, point2: str) -> str:
+        """Format earth_distance function call."""
+        ...
+
+    def format_earth_box(self, center: str, radius: float) -> str:
+        """Format earth_box function call."""
+        ...
+
+    def format_point_inside_circle(self, point: str, center: tuple, radius: float) -> str:
+        """Format point inside circle check."""
+        ...
+
+    def format_distance_within(self, column: str, center: tuple, radius: float) -> str:
+        """Format distance within expression for WHERE clause."""
+        ...
+
+    def format_order_by_distance(self, column: str, center: tuple, ascending: bool = True) -> str:
+        """Format ORDER BY distance expression."""
+        ...

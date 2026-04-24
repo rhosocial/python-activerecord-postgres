@@ -186,3 +186,35 @@ class PostgresLtreeMixin:
             "nlevel(path)"
         """
         return f"nlevel({column})"
+
+    def format_ltree_concat(self, left: str, right: str) -> str:
+        """Format ltree path concatenation.
+
+        Args:
+            left: Left ltree expression
+            right: Right ltree expression
+
+        Returns:
+            SQL concatenation expression
+
+        Example:
+            >>> format_ltree_concat("'Top.Science'", "'Astronomy'")
+            "'Top.Science' || 'Astronomy'"
+        """
+        return f"{left} || {right}"
+
+    def format_ltree_lca(self, *paths: str) -> str:
+        """Format lca (lowest common ancestor) function.
+
+        Args:
+            *paths: ltree path expressions
+
+        Returns:
+            SQL lca function call
+
+        Example:
+            >>> format_ltree_lca("'Top.Science.Astronomy'", "'Top.Science.Physics'")
+            "lca('Top.Science.Astronomy', 'Top.Science.Physics')"
+        """
+        paths_str = ", ".join(paths)
+        return f"lca({paths_str})"

@@ -32,3 +32,19 @@ class PostgresCitextMixin:
         if length:
             return f"{column_name} CITEXT({length})"
         return f"{column_name} CITEXT"
+
+    def format_citext_literal(self, value: str) -> str:
+        """Format a citext type literal value.
+
+        Args:
+            value: The text value
+
+        Returns:
+            SQL citext literal string
+
+        Example:
+            >>> format_citext_literal('Hello World')
+            "'Hello World'::citext"
+        """
+        escaped = value.replace("'", "''")
+        return f"'{escaped}'::citext"

@@ -28,3 +28,13 @@ class PostgresAddressStandardizerSupport(Protocol):
     def supports_address_standardizer(self) -> bool:
         """Whether address_standardizer is available."""
         ...
+
+    def format_address_standardize(
+        self, address: str, use_tiger: bool = False
+    ) -> str:
+        """Format address standardization."""
+        ...
+
+    def format_address_parse(self, address: str) -> str:
+        """Format address parsing."""
+        ...
