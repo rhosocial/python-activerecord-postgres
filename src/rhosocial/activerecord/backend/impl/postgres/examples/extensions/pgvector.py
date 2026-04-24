@@ -32,7 +32,11 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-backend.execute("DROP TABLE IF EXISTS documents", ())
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="documents", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -47,7 +51,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     CreateIndexExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, Subquery
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQLExpression,
+)
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -58,6 +66,10 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     QueryExpression,
     TableExpression,
+)
+from rhosocial.activerecord.backend.expression.query_parts import (
+    OrderByClause,
+    LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -153,30 +165,69 @@ if installed:
 
     # Example 3: Cosine similarity search
     # Find documents most similar to "kitten" represented as [1.0, 0.55, 0.18]
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    result = backend.execute(
-        "SELECT content, 1 - (embedding <=> '[1.0, 0.55, 0.18]') AS cosine_similarity "
-        "FROM documents "
-        "ORDER BY embedding <=> '[1.0, 0.55, 0.18]' "
-        "LIMIT 3",
-        (),
-        options=opts,
+    # pgvector <=> operator is cosine distance; cosine_similarity = 1 - cosine_distance
+    query_vector_cosine = RawSQLExpression(dialect, "'[1.0, 0.55, 0.18]'")
+    cosine_dist = BinaryExpression(
+        dialect, "<=>",
+        Column(dialect, "embedding"),
+        query_vector_cosine,
     )
+
+    # cosine_similarity = 1 - (embedding <=> query_vector)
+    # Wrap with Subquery to add alias since BinaryArithmeticExpression lacks AliasableMixin
+    cosine_sim = Subquery(
+        dialect,
+        Literal(dialect, 1) - cosine_dist,
+    ).as_("cosine_similarity")
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "content"), cosine_sim],
+        from_=TableExpression(dialect, "documents"),
+        order_by=OrderByClause(dialect, [cosine_dist]),
+        limit_offset=LimitOffsetClause(dialect, limit=3),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- Cosine similarity search ---")
     print(f"Query vector: [1.0, 0.55, 0.18] (similar to 'cat')")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    opts = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
     # Example 4: L2 distance search
-    result = backend.execute(
-        "SELECT content, embedding <-> '[0.1, 0.2, 0.9]' AS l2_distance "
-        "FROM documents "
-        "ORDER BY embedding <-> '[0.1, 0.2, 0.9]' "
-        "LIMIT 3",
-        (),
-        options=opts,
+    # pgvector <-> operator is L2 (Euclidean) distance
+    query_vector_l2 = RawSQLExpression(dialect, "'[0.1, 0.2, 0.9]'")
+    l2_dist = BinaryExpression(
+        dialect, "<->",
+        Column(dialect, "embedding"),
+        query_vector_l2,
     )
+
+    # Wrap with Subquery to add alias since BinaryExpression lacks AliasableMixin
+    l2_dist_aliased = Subquery(dialect, l2_dist).as_("l2_distance")
+
+    # ORDER BY needs the raw expression (without alias wrapper)
+    l2_dist_order = BinaryExpression(
+        dialect, "<->",
+        Column(dialect, "embedding"),
+        RawSQLExpression(dialect, "'[0.1, 0.2, 0.9]'"),
+    )
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "content"), l2_dist_aliased],
+        from_=TableExpression(dialect, "documents"),
+        order_by=OrderByClause(dialect, [l2_dist_order]),
+        limit_offset=LimitOffsetClause(dialect, limit=3),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- L2 distance search ---")
     print(f"Query vector: [0.1, 0.2, 0.9] (similar to 'car')")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
     # Example 5: Create HNSW index for fast vector search
@@ -209,5 +260,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS documents", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="documents", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()

@@ -30,8 +30,12 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up for demo
-backend.execute("DROP TABLE IF EXISTS cities", ())
+# Clean up for demo using DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="cities", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -44,21 +48,23 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
+    QueryExpression,
+    Column,
+    TableExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal, Subquery
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
-)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+
+opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Check if earthdistance extension is available
 # earthdistance depends on cube extension
@@ -164,21 +170,28 @@ if installed:
     print(f"Params: {params}")
     backend.execute(sql, params)
 
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-
     # Example 3: Calculate distance between two cities
     # earth_distance(ll_to_earth(lat1, lon1), ll_to_earth(lat2, lon2))
     # Returns distance in meters (on earth surface)
-    result = backend.execute(
-        "SELECT earth_distance("
-        "  ll_to_earth(40.7128, -74.0060),"
-        "  ll_to_earth(34.0522, -118.2437)"
-        ") AS distance_meters",
-        (),
-        options=opts,
+    ny_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Literal(dialect, 40.7128), Literal(dialect, -74.0060),
     )
+    la_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Literal(dialect, 34.0522), Literal(dialect, -118.2437),
+    )
+    distance_func = FunctionCall(dialect, "earth_distance", ny_point, la_point)
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[distance_func.as_("distance_meters")],
+    )
+    sql, params = query.to_sql()
     print(f"\n--- Distance between New York and Los Angeles ---")
-    print(f"Distance (meters): {result.data}")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Result: {result.data}")
     if result.data and result.data[0]:
         km = result.data[0][0] / 1000
         print(f"Distance (km): {km:.1f}")
@@ -186,40 +199,92 @@ if installed:
     # Example 4: Find cities within a radius using earth_box + earth_distance
     # earth_box returns the bounding box for a point and radius
     # Then use earth_distance for exact distance check
-    result = backend.execute(
-        "SELECT name, "
-        "  earth_distance("
-        "    ll_to_earth(40.7128, -74.0060),"
-        "    ll_to_earth(latitude, longitude)"
-        "  ) / 1000.0 AS distance_km "
-        "FROM cities "
-        "WHERE earth_box("
-        "  ll_to_earth(40.7128, -74.0060), 500000"
-        ") @> ll_to_earth(latitude, longitude) "
-        "ORDER BY distance_km",
-        (),
-        options=opts,
+    # The @> operator checks if the bounding box contains the city point
+    ny_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Literal(dialect, 40.7128), Literal(dialect, -74.0060),
     )
+    city_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Column(dialect, "latitude"), Column(dialect, "longitude"),
+    )
+    distance_func = FunctionCall(dialect, "earth_distance", ny_point, city_point)
+    box_func = FunctionCall(
+        dialect, "earth_box",
+        ny_point, Literal(dialect, 500000),
+    )
+
+    # Build distance_km expression: earth_distance(...) / 1000.0
+    # BinaryExpression lacks AliasableMixin, so wrap with Subquery to add alias
+    distance_km_expr = BinaryExpression(
+        dialect, "/", distance_func, Literal(dialect, 1000.0),
+    )
+    distance_km_aliased = Subquery(dialect, distance_km_expr).as_("distance_km")
+
+    # WHERE: box @> city_point (the @> is the contains operator for cube type)
+    contains_pred = BinaryExpression(dialect, "@>", box_func, city_point)
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            distance_km_aliased,
+        ],
+        from_=TableExpression(dialect, "cities"),
+        where=contains_pred,
+        order_by=OrderByClause(
+            dialect,
+            expressions=[(distance_km_expr, "ASC")],
+        ),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- Cities within 500km of New York ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
     # Example 5: Simple radius search with exact distance
-    result = backend.execute(
-        "SELECT name, "
-        "  ROUND(earth_distance("
-        "    ll_to_earth(41.8781, -87.6298),"
-        "    ll_to_earth(latitude, longitude)"
-        "  ) / 1000.0) AS distance_km "
-        "FROM cities "
-        "WHERE earth_distance("
-        "  ll_to_earth(41.8781, -87.6298),"
-        "  ll_to_earth(latitude, longitude)"
-        ") < 1500000 "
-        "ORDER BY distance_km",
-        (),
-        options=opts,
+    # Find cities within 1500km of Chicago using earth_distance directly
+    chicago_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Literal(dialect, 41.8781), Literal(dialect, -87.6298),
     )
+    city_point = FunctionCall(
+        dialect, "ll_to_earth",
+        Column(dialect, "latitude"), Column(dialect, "longitude"),
+    )
+    distance_func = FunctionCall(dialect, "earth_distance", chicago_point, city_point)
+
+    # ROUND(earth_distance(...) / 1000.0) AS distance_km
+    distance_km_expr = BinaryExpression(
+        dialect, "/", distance_func, Literal(dialect, 1000.0),
+    )
+    round_distance = FunctionCall(dialect, "ROUND", distance_km_expr)
+
+    # WHERE: earth_distance(...) < 1500000
+    within_radius_pred = BinaryExpression(
+        dialect, "<", distance_func, Literal(dialect, 1500000),
+    )
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            round_distance.as_("distance_km"),
+        ],
+        from_=TableExpression(dialect, "cities"),
+        where=within_radius_pred,
+        order_by=OrderByClause(
+            dialect,
+            expressions=[(distance_km_expr, "ASC")],
+        ),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- Cities within 1500km of Chicago ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
 else:
@@ -231,5 +296,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS cities", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="cities", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()

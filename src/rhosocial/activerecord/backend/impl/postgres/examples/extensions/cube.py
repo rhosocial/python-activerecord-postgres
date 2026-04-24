@@ -32,7 +32,11 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-backend.execute("DROP TABLE IF EXISTS products", ())
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -46,18 +50,23 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     CreateIndexExpression,
+    QueryExpression,
+    TableExpression,
+    Column,
+    OrderByClause,
+    LimitOffsetClause,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, Subquery
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQLExpression,
+)
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
-)
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -147,56 +156,128 @@ if installed:
 
     # Example 3: Contains operator (@>)
     # Check if a range cube contains a point cube
-    result = backend.execute(
-        "SELECT name, feature_vector::TEXT FROM products "
-        "WHERE '(0.1,0.5),(0.2,0.6),(0.0,0.3)' @> feature_vector "
-        "ORDER BY name",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
+        from_=TableExpression(dialect, "products"),
+        where=BinaryExpression(
+            dialect, "@>",
+            RawSQLExpression(dialect, "'(0.1,0.5),(0.2,0.6),(0.0,0.3)'"),
+            Column(dialect, "feature_vector"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Contains operator (@>) ---")
     print(f"Points contained within range '(0.1,0.5),(0.2,0.6),(0.0,0.3)':")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 4: Contained by operator (<@)
-    result = backend.execute(
-        "SELECT name, feature_vector::TEXT FROM products "
-        "WHERE feature_vector <@ '(0.1,0.5),(0.2,0.6),(0.0,0.3)' "
-        "ORDER BY name",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
+        from_=TableExpression(dialect, "products"),
+        where=BinaryExpression(
+            dialect, "<@",
+            Column(dialect, "feature_vector"),
+            RawSQLExpression(dialect, "'(0.1,0.5),(0.2,0.6),(0.0,0.3)'"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Contained by operator (<@) ---")
     print(f"Points contained by the range cube:")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 5: Distance operator (<->)
     # Euclidean distance between cubes
-    result = backend.execute(
-        "SELECT name, feature_vector::TEXT, "
-        "  feature_vector <-> '(0.5, 0.8, 0.2)' AS distance "
-        "FROM products "
-        "WHERE feature_vector <-> '(0.5, 0.8, 0.2)' < 0.5 "
-        "ORDER BY distance",
-        (),
-        options=opts,
+    # BinaryExpression lacks AliasableMixin, so wrap with Subquery to add alias.
+    # We need separate instances for SELECT, WHERE, and ORDER BY.
+    dist_for_select = Subquery(
+        dialect,
+        BinaryExpression(
+            dialect, "<->",
+            Column(dialect, "feature_vector"),
+            RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
+        ),
+    ).as_("distance")
+
+    dist_base = BinaryExpression(
+        dialect, "<->",
+        Column(dialect, "feature_vector"),
+        RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
     )
+    dist_sql, dist_params = dist_base.to_sql()
+
+    # Wrap the distance expression SQL as a RawSQLExpression so it can be used
+    # in ComparisonPredicate (< comparison with the threshold)
+    dist_value_expr = RawSQLExpression(dialect, dist_sql, dist_params)
+
+    dist_for_order = BinaryExpression(
+        dialect, "<->",
+        Column(dialect, "feature_vector"),
+        RawSQLExpression(dialect, "'(0.5, 0.8, 0.2)'"),
+    )
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            Column(dialect, "feature_vector"),
+            dist_for_select,
+        ],
+        from_=TableExpression(dialect, "products"),
+        where=ComparisonPredicate(
+            dialect, "<",
+            dist_value_expr,
+            Literal(dialect, 0.5),
+        ),
+        order_by=OrderByClause(dialect, expressions=[dist_for_order]),
+    )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Distance operator (<->) ---")
     print(f"Products within distance 0.5 from point (0.5, 0.8, 0.2):")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
     print(f"Results: {result.data}")
 
     # Example 6: Nearest neighbor search
-    result = backend.execute(
-        "SELECT name, feature_vector::TEXT, "
-        "  feature_vector <-> '(0.4, 0.5, 0.6)' AS distance "
-        "FROM products "
-        "ORDER BY feature_vector <-> '(0.4, 0.5, 0.6)' "
-        "LIMIT 3",
-        (),
-        options=opts,
+    nn_dist_for_select = Subquery(
+        dialect,
+        BinaryExpression(
+            dialect, "<->",
+            Column(dialect, "feature_vector"),
+            RawSQLExpression(dialect, "'(0.4, 0.5, 0.6)'"),
+        ),
+    ).as_("distance")
+
+    nn_dist_for_order = BinaryExpression(
+        dialect, "<->",
+        Column(dialect, "feature_vector"),
+        RawSQLExpression(dialect, "'(0.4, 0.5, 0.6)'"),
     )
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            Column(dialect, "feature_vector"),
+            nn_dist_for_select,
+        ],
+        from_=TableExpression(dialect, "products"),
+        order_by=OrderByClause(dialect, expressions=[nn_dist_for_order]),
+        limit_offset=LimitOffsetClause(dialect, limit=3),
+    )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Nearest neighbor search ---")
     print(f"3 nearest to point (0.4, 0.5, 0.6):")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 7: Create GiST index for fast cube queries
@@ -221,5 +302,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS products", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()

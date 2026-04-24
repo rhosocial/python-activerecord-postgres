@@ -5,7 +5,7 @@ uuid-ossp extension - UUID generation functions.
 This example demonstrates:
 1. Check if uuid-ossp extension is available
 2. Create extension using CreateExtensionExpression
-3. Generate UUIDs using various algorithms
+3. Generate UUIDs using various algorithms with expression-based API
 """
 
 # ============================================================
@@ -35,6 +35,23 @@ dialect = backend.dialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     CreateExtensionExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.functions import (
+    uuid_generate_v1,
+    uuid_generate_v1mc,
+    uuid_generate_v4,
+    uuid_generate_v5,
+    uuid_nil,
+    uuid_max,
+)
+from rhosocial.activerecord.backend.expression import (
+    QueryExpression,
+)
+from rhosocial.activerecord.backend.expression.core import RawSQLExpression
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
+
+opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Check if uuid-ossp extension is available
 available = dialect.is_extension_available("uuid-ossp")
@@ -58,12 +75,88 @@ if available and not installed:
 installed = dialect.is_extension_installed("uuid-ossp")
 
 if installed:
-    print("\n--- UUID generation functions ---")
-    print("Available functions:")
-    print("  - uuid_generate_v1(): MAC address + time-based")
-    print("  - uuid_generate_v1mc(): Random node-based v1")
-    print("  - uuid_generate_v4(): Random (most common)")
-    print("  - uuid_generate_v5(ns, name): Namespace + name based v5")
+    # Example 1: Generate UUID v1 (time-based, MAC address)
+    # uuid_generate_v1() returns a SQL string, wrap with RawSQLExpression
+    uuid_v1_expr = RawSQLExpression(dialect, uuid_generate_v1(dialect)).as_("uuid_v1")
+    query = QueryExpression(
+        dialect=dialect,
+        select=[uuid_v1_expr],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- UUID v1 (time-based) ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Generated UUID v1: {result.data}")
+
+    # Example 2: Generate UUID v1mc (time-based, random multicast MAC)
+    uuid_v1mc_expr = RawSQLExpression(dialect, uuid_generate_v1mc(dialect)).as_("uuid_v1mc")
+    query = QueryExpression(
+        dialect=dialect,
+        select=[uuid_v1mc_expr],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- UUID v1mc (random MAC) ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Generated UUID v1mc: {result.data}")
+
+    # Example 3: Generate UUID v4 (random, most common)
+    uuid_v4_expr = RawSQLExpression(dialect, uuid_generate_v4(dialect)).as_("uuid_v4")
+    query = QueryExpression(
+        dialect=dialect,
+        select=[uuid_v4_expr],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- UUID v4 (random) ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Generated UUID v4: {result.data}")
+
+    # Example 4: Generate UUID v5 (namespace + SHA-1 name-based)
+    # uuid_generate_v5 takes namespace and name as SQL-literal strings
+    uuid_v5_expr = RawSQLExpression(
+        dialect, uuid_generate_v5(dialect, "'dns'", "'example.com'")
+    ).as_("uuid_v5")
+    query = QueryExpression(
+        dialect=dialect,
+        select=[uuid_v5_expr],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- UUID v5 (SHA-1 name-based) ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Generated UUID v5 (dns, example.com): {result.data}")
+
+    # Example 5: Generate multiple UUIDs in one query
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            RawSQLExpression(dialect, uuid_generate_v1(dialect)).as_("v1"),
+            RawSQLExpression(dialect, uuid_generate_v1mc(dialect)).as_("v1mc"),
+            RawSQLExpression(dialect, uuid_generate_v4(dialect)).as_("v4"),
+        ],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- Multiple UUIDs in one query ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Results: {result.data}")
+
+    # Example 6: Nil and Max UUID constants
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            RawSQLExpression(dialect, uuid_nil(dialect)).as_("nil_uuid"),
+            RawSQLExpression(dialect, uuid_max(dialect)).as_("max_uuid"),
+        ],
+    )
+    sql, params = query.to_sql()
+    print(f"\n--- Nil and Max UUID constants ---")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params, options=opts)
+    print(f"Nil UUID (all zeros): {result.data[0][0] if result.data else 'N/A'}")
+    print(f"Max UUID (all ones): {result.data[0][1] if result.data else 'N/A'}")
+
 else:
     print("\nSkipping - uuid-ossp not available on this server")
 

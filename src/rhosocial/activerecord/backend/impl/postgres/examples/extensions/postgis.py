@@ -32,7 +32,11 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-backend.execute("DROP TABLE IF EXISTS locations", ())
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -47,7 +51,12 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     CreateIndexExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import (
+    Literal,
+    FunctionCall,
+    Subquery,
+)
+from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -59,6 +68,8 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
 )
+from rhosocial.activerecord.backend.expression.query_parts import WhereClause
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -118,7 +129,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert spatial data (point)
-    # Use ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
+    # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
     insert_expr = InsertExpression(
         dialect=dialect,
         into="locations",
@@ -128,15 +139,39 @@ if installed:
             [
                 [
                     Literal(dialect, "New York"),
-                    Literal(dialect, "ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)"),
+                    FunctionCall(
+                        dialect, "ST_SetSRID",
+                        FunctionCall(
+                            dialect, "ST_MakePoint",
+                            Literal(dialect, -74.006),
+                            Literal(dialect, 40.7128),
+                        ),
+                        Literal(dialect, 4326),
+                    ),
                 ],
                 [
                     Literal(dialect, "Los Angeles"),
-                    Literal(dialect, "ST_SetSRID(ST_MakePoint(-118.2437, 34.0522), 4326)"),
+                    FunctionCall(
+                        dialect, "ST_SetSRID",
+                        FunctionCall(
+                            dialect, "ST_MakePoint",
+                            Literal(dialect, -118.2437),
+                            Literal(dialect, 34.0522),
+                        ),
+                        Literal(dialect, 4326),
+                    ),
                 ],
                 [
                     Literal(dialect, "Chicago"),
-                    Literal(dialect, "ST_SetSRID(ST_MakePoint(-87.6298, 41.8781), 4326)"),
+                    FunctionCall(
+                        dialect, "ST_SetSRID",
+                        FunctionCall(
+                            dialect, "ST_MakePoint",
+                            Literal(dialect, -87.6298),
+                            Literal(dialect, 41.8781),
+                        ),
+                        Literal(dialect, 4326),
+                    ),
                 ],
             ],
         ),
@@ -149,28 +184,77 @@ if installed:
 
     # Example 3: Spatial query - ST_Distance
     # Calculate distance between New York and Los Angeles (in degrees)
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    result = backend.execute(
-        "SELECT ST_Distance("
-        "  (SELECT geom FROM locations WHERE name = 'New York'),"
-        "  (SELECT geom FROM locations WHERE name = 'Los Angeles')"
-        ") AS distance_degrees",
-        (),
-        options=opts,
+    # Build subqueries for each city's geom
+    ny_geom = Subquery(
+        dialect,
+        QueryExpression(
+            dialect=dialect,
+            select=[Column(dialect, "geom")],
+            from_=TableExpression(dialect, "locations"),
+            where=ComparisonPredicate(
+                dialect, "=",
+                Column(dialect, "name"),
+                Literal(dialect, "New York"),
+            ),
+        ),
     )
+
+    la_geom = Subquery(
+        dialect,
+        QueryExpression(
+            dialect=dialect,
+            select=[Column(dialect, "geom")],
+            from_=TableExpression(dialect, "locations"),
+            where=ComparisonPredicate(
+                dialect, "=",
+                Column(dialect, "name"),
+                Literal(dialect, "Los Angeles"),
+            ),
+        ),
+    )
+
+    distance_query = QueryExpression(
+        dialect=dialect,
+        select=[
+            FunctionCall(
+                dialect, "ST_Distance", ny_geom, la_geom,
+            ).as_("distance_degrees"),
+        ],
+    )
+    sql, params = distance_query.to_sql()
     print(f"\n--- ST_Distance query ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    opts = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=opts)
     print(f"Distance (degrees): {result.data}")
 
     # Example 4: Spatial query - ST_DWithin
     # Find locations within a bounding area
-    result = backend.execute(
-        "SELECT name, ST_AsText(geom) AS point "
-        "FROM locations "
-        "WHERE ST_DWithin(geom, ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography, 500000)",
-        (),
-        options=opts,
+    dwithin_query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            FunctionCall(
+                dialect, "ST_AsText", Column(dialect, "geom"),
+            ).as_("point"),
+        ],
+        from_=TableExpression(dialect, "locations"),
+        where=FunctionCall(
+            dialect, "ST_DWithin",
+            Column(dialect, "geom"),
+            RawSQLExpression(
+                dialect,
+                "ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography",
+            ),
+            Literal(dialect, 500000),
+        ),
     )
+    sql, params = dwithin_query.to_sql()
     print(f"\n--- ST_DWithin query (within 500km of New York) ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
     # Example 5: Create GIST spatial index
@@ -195,5 +279,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS locations", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()
