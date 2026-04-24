@@ -1,6 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/test_cli.py
 """
-Tests for PostgreSQL backend CLI (__main__.py).
+Tests for PostgreSQL backend CLI.
 
 Tests argument parsing for named-query and named-procedure subcommands.
 """

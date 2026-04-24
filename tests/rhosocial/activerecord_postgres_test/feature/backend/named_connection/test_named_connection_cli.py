@@ -41,12 +41,12 @@ class TestPostgresConnectionConfigPriority:
     def test_default_values(self):
         """Test that default PostgreSQL values are used when no connection specified."""
         args = MockArgs()
-        from rhosocial.activerecord.backend.impl.postgres.__main__ import _resolve_postgres_config
+        from rhosocial.activerecord.backend.impl.postgres.cli.connection import resolve_connection_config_from_args
 
         with patch(
-            "rhosocial.activerecord.backend.impl.postgres.__main__.NamedConnectionResolver"
+            "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver"
         ):
-            config = _resolve_postgres_config(args)
+            config = resolve_connection_config_from_args(args)
 
         assert config.host == "localhost"
         assert config.port == 5432
@@ -60,12 +60,12 @@ class TestPostgresConnectionConfigPriority:
             user="myuser",
             password="mypass",
         )
-        from rhosocial.activerecord.backend.impl.postgres.__main__ import _resolve_postgres_config
+        from rhosocial.activerecord.backend.impl.postgres.cli.connection import resolve_connection_config_from_args
 
         with patch(
-            "rhosocial.activerecord.backend.impl.postgres.__main__.NamedConnectionResolver"
+            "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver"
         ):
-            config = _resolve_postgres_config(args)
+            config = resolve_connection_config_from_args(args)
 
         assert config.host == "myhost"
         assert config.port == 5433
@@ -77,7 +77,7 @@ class TestPostgresConnectionConfigPriority:
         args = MockArgs(
             named_connection="myapp.connections.prod_db",
         )
-        from rhosocial.activerecord.backend.impl.postgres.__main__ import _resolve_postgres_config
+        from rhosocial.activerecord.backend.impl.postgres.cli.connection import resolve_connection_config_from_args
 
         mock_resolver = MagicMock()
         mock_config = PostgresConnectionConfig(
@@ -89,10 +89,10 @@ class TestPostgresConnectionConfigPriority:
         mock_resolver.resolve.return_value = mock_config
 
         with patch(
-            "rhosocial.activerecord.backend.impl.postgres.__main__.NamedConnectionResolver",
+            "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver",
             return_value=mock_resolver,
         ):
-            config = _resolve_postgres_config(args)
+            config = resolve_connection_config_from_args(args)
 
         mock_resolver.load.assert_called_once()
         assert config.host == "prod.example.com"
@@ -103,7 +103,7 @@ class TestPostgresConnectionConfigPriority:
             named_connection="myapp.connections.prod_db",
             connection_params=["database=custom_db"],
         )
-        from rhosocial.activerecord.backend.impl.postgres.__main__ import _resolve_postgres_config
+        from rhosocial.activerecord.backend.impl.postgres.cli.connection import resolve_connection_config_from_args
 
         mock_resolver = MagicMock()
         mock_config = PostgresConnectionConfig(host="prod.example.com")
@@ -111,10 +111,10 @@ class TestPostgresConnectionConfigPriority:
         mock_resolver.resolve.return_value = mock_config
 
         with patch(
-            "rhosocial.activerecord.backend.impl.postgres.__main__.NamedConnectionResolver",
+            "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver",
             return_value=mock_resolver,
         ):
-            config = _resolve_postgres_config(args)
+            config = resolve_connection_config_from_args(args)
 
         mock_resolver.resolve.assert_called_once_with({"database": "custom_db"})
 
@@ -128,7 +128,7 @@ class TestPostgresConnectionConfigPriority:
             host="myhost",
             named_connection="myapp.connections.prod_db",
         )
-        from rhosocial.activerecord.backend.impl.postgres.__main__ import _resolve_postgres_config
+        from rhosocial.activerecord.backend.impl.postgres.cli.connection import resolve_connection_config_from_args
 
         mock_resolver = MagicMock()
         mock_config = PostgresConnectionConfig(host="prod.example.com")
@@ -136,10 +136,10 @@ class TestPostgresConnectionConfigPriority:
         mock_resolver.resolve.return_value = mock_config
 
         with patch(
-            "rhosocial.activerecord.backend.impl.postgres.__main__.NamedConnectionResolver",
+            "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver",
             return_value=mock_resolver,
         ):
-            config = _resolve_postgres_config(args)
+            config = resolve_connection_config_from_args(args)
 
         # Named connection is used, explicit host is ignored when named_connection present
         assert config.host == "prod.example.com"
