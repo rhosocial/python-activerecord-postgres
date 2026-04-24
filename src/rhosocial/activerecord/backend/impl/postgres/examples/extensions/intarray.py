@@ -32,7 +32,11 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-backend.execute("DROP TABLE IF EXISTS tags", ())
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -46,18 +50,21 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     CreateIndexExpression,
+    QueryExpression,
+    TableExpression,
+    Column,
+    OrderByClause,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQLExpression,
+)
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
-)
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -143,46 +150,80 @@ if installed:
 
     # Example 3: Contains operator (@>)
     # Find articles that contain ALL of the specified tag IDs
-    result = backend.execute(
-        "SELECT name, tag_ids FROM tags WHERE tag_ids @> '{1,3}'",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
+        from_=TableExpression(dialect, "tags"),
+        where=BinaryExpression(
+            dialect, "@>",
+            Column(dialect, "tag_ids"),
+            RawSQLExpression(dialect, "'{1,3}'"),
+        ),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Contains operator (@>) ---")
     print(f"Find articles with BOTH tag 1 AND 3:")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 4: Overlap operator (&&)
     # Find articles that have ANY of the specified tag IDs
-    result = backend.execute(
-        "SELECT name, tag_ids FROM tags WHERE tag_ids && '{1,6}'",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
+        from_=TableExpression(dialect, "tags"),
+        where=BinaryExpression(
+            dialect, "&&",
+            Column(dialect, "tag_ids"),
+            RawSQLExpression(dialect, "'{1,6}'"),
+        ),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Overlap operator (&&) ---")
     print(f"Find articles with tag 1 OR tag 6:")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 5: idx() function - find position of element in array
     # idx(array, element) returns 0 if not found (1-based index)
-    result = backend.execute(
-        "SELECT name, idx(tag_ids, 3) AS pos_of_3 FROM tags ORDER BY name",
-        (),
-        options=opts,
+    idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Literal(dialect, 3)).as_("pos_of_3")
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), idx_func],
+        from_=TableExpression(dialect, "tags"),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- idx() function ---")
     print(f"Position of element 3 in each array:")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 6: sort() and uniq() functions
     # sort() sorts the array, uniq() removes duplicates (works on sorted arrays)
-    result = backend.execute(
-        "SELECT name, sort(tag_ids) AS sorted, uniq(sort(tag_ids)) AS unique_sorted "
-        "FROM tags WHERE id = 4",
-        (),
-        options=opts,
+    sort_func = FunctionCall(dialect, "sort", Column(dialect, "tag_ids")).as_("sorted")
+    unique_sorted_func = FunctionCall(
+        dialect, "uniq", FunctionCall(dialect, "sort", Column(dialect, "tag_ids"))
+    ).as_("unique_sorted")
+
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "name"),
+            sort_func,
+            unique_sorted_func,
+        ],
+        from_=TableExpression(dialect, "tags"),
+        where=Column(dialect, "id") == Literal(dialect, 4),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- sort() and uniq() functions ---")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 7: Create GiST index for fast intarray queries
@@ -208,5 +249,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS tags", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()

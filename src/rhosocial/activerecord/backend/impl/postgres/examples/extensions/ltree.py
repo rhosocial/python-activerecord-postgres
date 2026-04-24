@@ -33,7 +33,11 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-backend.execute("DROP TABLE IF EXISTS categories", ())
+from rhosocial.activerecord.backend.expression import DropTableExpression
+
+drop_expr = DropTableExpression(dialect=dialect, table_name="categories", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
@@ -47,18 +51,18 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     CreateIndexExpression,
+    QueryExpression,
+    TableExpression,
+    Column,
+    OrderByClause,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
-)
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -148,57 +152,86 @@ if installed:
     print(f"Params: {params}")
     backend.execute(sql, params)
 
+    opts = ExecutionOptions(stmt_type=StatementType.DQL)
+
     # Example 3: Ancestor query - find all descendants of 'electronics.computers'
     # @> means "is ancestor of" (left is ancestor of right)
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    result = backend.execute(
-        "SELECT name, path::TEXT FROM categories "
-        "WHERE 'electronics.computers' @> path "
-        "ORDER BY path",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "path")],
+        from_=TableExpression(dialect, "categories"),
+        where=BinaryExpression(
+            dialect, "@>",
+            Literal(dialect, "electronics.computers"),
+            Column(dialect, "path"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Ancestor query (@>) ---")
     print(f"Find descendants of 'electronics.computers':")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 4: Descendant query - find all ancestors of 'electronics.computers.laptops'
     # <@ means "is descendant of" (left is descendant of right)
-    result = backend.execute(
-        "SELECT name, path::TEXT FROM categories "
-        "WHERE path <@ 'electronics.computers.laptops' "
-        "ORDER BY path",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "path")],
+        from_=TableExpression(dialect, "categories"),
+        where=BinaryExpression(
+            dialect, "<@",
+            Column(dialect, "path"),
+            Literal(dialect, "electronics.computers.laptops"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Descendant query (<@) ---")
     print(f"Find ancestors of 'electronics.computers.laptops':")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 5: Pattern matching query (~)
     # Find categories matching a lquery pattern
     # '*' matches any single label, '*{,2}' matches up to 2 labels
-    result = backend.execute(
-        "SELECT name, path::TEXT FROM categories "
-        "WHERE path ~ 'electronics.*{1}' "
-        "ORDER BY path",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "path")],
+        from_=TableExpression(dialect, "categories"),
+        where=BinaryExpression(
+            dialect, "~",
+            Column(dialect, "path"),
+            Literal(dialect, "electronics.*{1}"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Pattern matching query (~) ---")
     print(f"Pattern: 'electronics.*{{1}}' (direct children of electronics):")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 6: Search for any path under electronics at any depth
-    result = backend.execute(
-        "SELECT name, path::TEXT FROM categories "
-        "WHERE path ~ 'electronics.*' "
-        "ORDER BY path",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "name"), Column(dialect, "path")],
+        from_=TableExpression(dialect, "categories"),
+        where=BinaryExpression(
+            dialect, "~",
+            Column(dialect, "path"),
+            Literal(dialect, "electronics.*"),
+        ),
+        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
     )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=opts)
     print(f"\n--- Pattern matching (any depth) ---")
     print(f"Pattern: 'electronics.*' (all under electronics):")
+    print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
     # Example 7: Create GiST index for fast path queries
@@ -223,5 +256,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS categories", ())
+drop_expr = DropTableExpression(dialect=dialect, table_name="categories", if_exists=True)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()

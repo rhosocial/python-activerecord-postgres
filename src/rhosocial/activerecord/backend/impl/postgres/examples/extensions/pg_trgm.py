@@ -31,9 +31,6 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up for demo
-backend.execute("DROP TABLE IF EXISTS articles", ())
-
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
@@ -46,21 +43,32 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     CreateIndexExpression,
+    DropTableExpression,
+    QueryExpression,
+    Column,
+    TableExpression,
+    FunctionCall,
+    BinaryExpression,
+    OrderByClause,
+    Literal,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
-)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+
+# Clean up for demo
+drop_expr = DropTableExpression(
+    dialect=dialect,
+    table_name="articles",
+    if_exists=True,
+)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 
 # Check if pg_trgm extension is available
 available = dialect.is_extension_available("pg_trgm")
@@ -140,41 +148,80 @@ if installed:
 
     # Example 3: Similarity search using similarity() function
     # similarity(a, b) returns float [0, 1], higher = more similar
-    result = backend.execute(
-        "SELECT title, similarity(title, 'PostgreSQL intro') AS sim_score "
-        "FROM articles "
-        "WHERE similarity(title, 'PostgreSQL intro') > 0.1 "
-        "ORDER BY sim_score DESC",
-        (),
-        options=opts,
+    # Note: as_() modifies the object in-place, so create separate instances
+    # for SELECT (with alias) and WHERE (without alias)
+    sim_select = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
+    ).as_("sim_score")
+    sim_where = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
     )
+    sim_order = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
+    )
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "title"),
+            sim_select,
+        ],
+        from_=TableExpression(dialect, "articles"),
+        where=sim_where > Literal(dialect, 0.1),
+        order_by=OrderByClause(dialect, [(sim_order, "DESC")]),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- similarity() fuzzy search ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Query: 'PostgreSQL intro'")
     print(f"Results: {result.data}")
 
     # Example 4: Using % operator (similarity threshold)
     # The % operator returns true if similarity exceeds the threshold
     # Default threshold: 0.3 (set by pg_trgm.similarity_threshold)
-    result = backend.execute(
-        "SELECT title FROM articles WHERE title %% 'Postgres guide' ORDER BY title",
-        (),
-        options=opts,
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "title")],
+        from_=TableExpression(dialect, "articles"),
+        where=BinaryExpression(
+            dialect, "%", Column(dialect, "title"), Literal(dialect, "Postgres guide")
+        ),
+        order_by=OrderByClause(dialect, [(Column(dialect, "title"), "ASC")]),
     )
+    sql, params = query.to_sql()
     print(f"\n--- %% operator search ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Query: 'Postgres guide' (above default threshold 0.3)")
     print(f"Results: {result.data}")
 
     # Example 5: Show similarity scores for comparison
-    result = backend.execute(
-        "SELECT title, "
-        "  similarity(title, 'PostgreSQL') AS sim_postgresql, "
-        "  similarity(title, 'database design') AS sim_design "
-        "FROM articles "
-        "ORDER BY sim_postgresql DESC",
-        (),
-        options=opts,
+    sim_pg_select = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL")
+    ).as_("sim_postgresql")
+    sim_design_select = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "database design")
+    ).as_("sim_design")
+    sim_pg_order = FunctionCall(
+        dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL")
     )
+    query = QueryExpression(
+        dialect=dialect,
+        select=[
+            Column(dialect, "title"),
+            sim_pg_select,
+            sim_design_select,
+        ],
+        from_=TableExpression(dialect, "articles"),
+        order_by=OrderByClause(dialect, [(sim_pg_order, "DESC")]),
+    )
+    sql, params = query.to_sql()
     print(f"\n--- Multiple similarity scores ---")
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+    result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
     # Example 6: Create GIN index with trigram operator class
@@ -201,5 +248,11 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-backend.execute("DROP TABLE IF EXISTS articles", ())
+drop_expr = DropTableExpression(
+    dialect=dialect,
+    table_name="articles",
+    if_exists=True,
+)
+sql, params = drop_expr.to_sql()
+backend.execute(sql, params)
 backend.disconnect()
