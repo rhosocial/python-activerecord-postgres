@@ -29,3 +29,19 @@ class PostgresUuidOssSupport(Protocol):
     def supports_uuid_generation(self) -> bool:
         """Whether UUID generation functions are supported."""
         ...
+
+    def format_uuid_generate_v1(self) -> str:
+        """Format UUID v1 generation."""
+        ...
+
+    def format_uuid_generate_v1mc(self) -> str:
+        """Format UUID v1mc generation."""
+        ...
+
+    def format_uuid_generate_v4(self) -> str:
+        """Format UUID v4 generation."""
+        ...
+
+    def format_uuid_generate_v5(self, namespace: str, name: str) -> str:
+        """Format UUID v5 generation."""
+        ...

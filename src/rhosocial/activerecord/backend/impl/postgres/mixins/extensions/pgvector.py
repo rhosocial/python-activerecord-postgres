@@ -149,3 +149,71 @@ class PostgresPgvectorMixin:
             "1 - (embedding <=> '[1,2,3]')"
         """
         return f"1 - ({column} <=> '{query_vector}')"
+
+    def format_create_hnsw_index_statement(
+        self,
+        table_name: str,
+        column_name: str,
+        index_name: Optional[str] = None,
+        m: Optional[int] = None,
+        ef_construction: Optional[int] = None,
+    ) -> str:
+        """Format CREATE INDEX statement with HNSW index for vector column.
+
+        Args:
+            table_name: Table name
+            column_name: Vector column name
+            index_name: Optional index name (auto-generated if not provided)
+            m: HNSW M parameter (max connections per layer)
+            ef_construction: HNSW ef_construction parameter
+
+        Returns:
+            SQL CREATE INDEX statement
+
+        Example:
+            >>> format_create_hnsw_index_statement('items', 'embedding', m=16, ef_construction=64)
+            "CREATE INDEX ON items USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64)"
+        """
+        idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
+        with_clauses = []
+        if m is not None:
+            with_clauses.append(f"m = {m}")
+        if ef_construction is not None:
+            with_clauses.append(f"ef_construction = {ef_construction}")
+        with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
+        return (
+            f"CREATE INDEX {idx_name} ON {table_name} "
+            f"USING hnsw ({column_name} vector_cosine_ops){with_clause}"
+        )
+
+    def format_vector_l2_distance(self, left: str, right: str) -> str:
+        """Format L2 (Euclidean) distance expression.
+
+        Args:
+            left: Left vector expression
+            right: Right vector expression
+
+        Returns:
+            SQL L2 distance expression
+
+        Example:
+            >>> format_vector_l2_distance('embedding', '[1,2,3]')
+            "embedding <-> '[1,2,3]'"
+        """
+        return f"{left} <-> '{right}'"
+
+    def format_vector_inner_product(self, left: str, right: str) -> str:
+        """Format inner product expression.
+
+        Args:
+            left: Left vector expression
+            right: Right vector expression
+
+        Returns:
+            SQL inner product expression
+
+        Example:
+            >>> format_vector_inner_product('embedding', '[1,2,3]')
+            "embedding <#> '[1,2,3]'"
+        """
+        return f"{left} <#> '{right}'"

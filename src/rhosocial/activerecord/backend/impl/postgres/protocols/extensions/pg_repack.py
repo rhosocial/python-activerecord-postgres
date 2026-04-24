@@ -28,3 +28,17 @@ class PostgresPgRepackSupport(Protocol):
     def supports_pg_repack(self) -> bool:
         """Whether pg_repack extension is available."""
         ...
+
+    def format_pg_repack_table(self, table_name: str) -> str:
+        """Format pg_repack table rebuild."""
+        ...
+
+    def format_pg_repack_index(self, index_name: str) -> str:
+        """Format pg_repack index rebuild."""
+        ...
+
+    def format_pg_repack_move_tablespace(
+        self, table_name: str, tablespace: str
+    ) -> str:
+        """Format pg_repack table move to tablespace."""
+        ...

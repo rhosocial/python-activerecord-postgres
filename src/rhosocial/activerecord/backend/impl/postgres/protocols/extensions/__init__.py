@@ -28,6 +28,8 @@ from .pgcrypto import PostgresPgcryptoSupport
 from .btree_gin import PostgresBtreeGinSupport
 from .btree_gist import PostgresBtreeGistSupport
 from .uuid_ossp import PostgresUuidOssSupport
+from .postgis_raster import PostgresPostgisRasterSupport
+from .pgrouting import PostgresPgroutingSupport
 
 __all__ = [
     "PostgresPgvectorSupport",
@@ -57,4 +59,6 @@ __all__ = [
     "PostgresBtreeGinSupport",
     "PostgresBtreeGistSupport",
     "PostgresUuidOssSupport",
+    "PostgresPostgisRasterSupport",
+    "PostgresPgroutingSupport",
 ]

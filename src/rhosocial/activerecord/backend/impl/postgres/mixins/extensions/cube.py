@@ -66,3 +66,50 @@ class PostgresCubeMixin:
             SQL cube intersection
         """
         return f"{cube1} inter {cube2}"
+
+    def format_cube_contains(self, cube_expr: str, target: str) -> str:
+        """Format cube containment check.
+
+        Args:
+            cube_expr: The cube expression or column name
+            target: The target cube to check containment
+
+        Returns:
+            SQL containment expression
+
+        Example:
+            >>> format_cube_contains('cube_col', "'(1,1)'")
+            "cube_col @> '(1,1)'"
+        """
+        return f"{cube_expr} @> {target}"
+
+    def format_cube_distance(self, cube_expr: str, target: str) -> str:
+        """Format cube distance operator.
+
+        Args:
+            cube_expr: The cube expression or column name
+            target: The target cube to measure distance to
+
+        Returns:
+            SQL distance expression
+
+        Example:
+            >>> format_cube_distance('cube_col', "'(1,1)'")
+            "cube_col <-> '(1,1)'"
+        """
+        return f"{cube_expr} <-> {target}"
+
+    def format_cube_size(self, cube_expr: str) -> str:
+        """Format cube_size function.
+
+        Args:
+            cube_expr: The cube expression or column name
+
+        Returns:
+            SQL cube_size function call
+
+        Example:
+            >>> format_cube_size('cube_col')
+            "cube_size(cube_col)"
+        """
+        return f"cube_size({cube_expr})"

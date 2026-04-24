@@ -5,7 +5,7 @@ This module defines the protocol for ltree (label tree) data type support,
 which provides hierarchical label path operations.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable
@@ -54,4 +54,50 @@ class PostgresLtreeSupport(Protocol):
         Requires ltree extension.
         Supports GiST and B-tree indexes on ltree.
         """
+        ...
+
+    def format_ltree_literal(self, path: str) -> str:
+        """Format an ltree literal value."""
+        ...
+
+    def format_lquery_literal(self, pattern: str) -> str:
+        """Format an lquery pattern literal."""
+        ...
+
+    def format_ltree_operator(self, column: str, operator: str, value: str, value_type: str = "ltree") -> str:
+        """Format an ltree operator expression."""
+        ...
+
+    def format_ltree_is_ancestor(self, column: str, path: str) -> str:
+        """Format ltree ancestor check (column is ancestor of path)."""
+        ...
+
+    def format_ltree_is_descendant(self, column: str, path: str) -> str:
+        """Format ltree descendant check (column is descendant of path)."""
+        ...
+
+    def format_ltree_matches(self, column: str, pattern: str) -> str:
+        """Format ltree lquery match."""
+        ...
+
+    def format_ltree_index_statement(
+        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
+    ) -> Tuple[str, tuple]:
+        """Format CREATE INDEX statement for ltree column."""
+        ...
+
+    def format_ltree_subpath(self, column: str, start: int, length: Optional[int] = None) -> str:
+        """Format subpath extraction."""
+        ...
+
+    def format_ltree_nlevel(self, column: str) -> str:
+        """Format nlevel function (count of labels)."""
+        ...
+
+    def format_ltree_concat(self, left: str, right: str) -> str:
+        """Format ltree path concatenation."""
+        ...
+
+    def format_ltree_lca(self, *paths: str) -> str:
+        """Format lca (lowest common ancestor) function."""
         ...

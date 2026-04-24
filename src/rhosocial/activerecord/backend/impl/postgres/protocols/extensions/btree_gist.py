@@ -5,7 +5,7 @@ This module defines the protocol for btree_gist composite index
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import List, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -27,4 +27,18 @@ class PostgresBtreeGistSupport(Protocol):
 
     def supports_btree_gist(self) -> bool:
         """Whether btree_gist is available."""
+        ...
+
+    def format_gist_index(
+        self,
+        index_name: str,
+        table_name: str,
+        columns: List[str],
+        include: Optional[List[str]] = None,
+    ) -> str:
+        """Format a GiST index using btree_gist."""
+        ...
+
+    def format_btree_gist_operator_class(self, data_type: str) -> str:
+        """Format btree_gist operator class name."""
         ...

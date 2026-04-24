@@ -138,3 +138,36 @@ class PostgresOrafceMixin:
         if format:
             return f"ROUND({value}, '{format}')"
         return f"ROUND({value})"
+
+    def format_instr(
+        self, string_expr: str, substring_expr: str, position: int = 1, occurrence: int = 1
+    ) -> str:
+        """Format INSTR function.
+
+        Args:
+            string_expr: String to search in
+            substring_expr: Substring to find
+            position: Starting position (1-based)
+            occurrence: Which occurrence to find
+
+        Returns:
+            SQL INSTR function
+        """
+        return f"INSTR({string_expr}, {substring_expr}, {position}, {occurrence})"
+
+    def format_substr(
+        self, string_expr: str, position: int, length: Optional[int] = None
+    ) -> str:
+        """Format SUBSTR function.
+
+        Args:
+            string_expr: String expression
+            position: Starting position (1-based)
+            length: Optional length of substring
+
+        Returns:
+            SQL SUBSTR function
+        """
+        if length is not None:
+            return f"SUBSTR({string_expr}, {position}, {length})"
+        return f"SUBSTR({string_expr}, {position})"

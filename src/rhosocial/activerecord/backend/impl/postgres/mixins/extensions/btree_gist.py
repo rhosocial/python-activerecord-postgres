@@ -40,3 +40,14 @@ class PostgresBtreeGistMixin:
         col_str = ", ".join(columns)
         inc_str = f" INCLUDE ({', '.join(include)})" if include else ""
         return f"CREATE INDEX {index_name} ON {table_name} USING gist ({col_str}){inc_str}"
+
+    def format_btree_gist_operator_class(self, data_type: str) -> str:
+        """Format btree_gist operator class name.
+
+        Args:
+            data_type: Data type name (e.g., int4, text, timestamp)
+
+        Returns:
+            Operator class name for btree_gist (e.g., int4_ops for int4)
+        """
+        return f"{data_type}_ops"

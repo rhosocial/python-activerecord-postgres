@@ -5,7 +5,7 @@ This module provides functionality to check hstore extension features,
 including type support and operators.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 
 class PostgresHstoreMixin:
@@ -169,3 +169,68 @@ class PostgresHstoreMixin:
         """
         keys_str = ", ".join(f"'{k}'" for k in keys)
         return f"{column} ?| ARRAY[{keys_str}]"
+
+    def format_hstore_delete_key(self, hstore_expr: str, key: str) -> Tuple[str, tuple]:
+        """Format delete(hstore, key) operation.
+
+        Args:
+            hstore_expr: The hstore expression or column name
+            key: The key to delete
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_hstore_delete_key('data', 'old_key')
+            ("delete(data, 'old_key')", ())
+        """
+        sql = f"delete({hstore_expr}, '{key}')"
+        return (sql, ())
+
+    def format_hstore_each(self, hstore_expr: str) -> Tuple[str, tuple]:
+        """Format each(hstore) expansion.
+
+        Args:
+            hstore_expr: The hstore expression or column name
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_hstore_each('data')
+            ("each(data)", ())
+        """
+        sql = f"each({hstore_expr})"
+        return (sql, ())
+
+    def format_hstore_keys(self, hstore_expr: str) -> Tuple[str, tuple]:
+        """Format akeys(hstore) - get all keys as array.
+
+        Args:
+            hstore_expr: The hstore expression or column name
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_hstore_keys('data')
+            ("akeys(data)", ())
+        """
+        sql = f"akeys({hstore_expr})"
+        return (sql, ())
+
+    def format_hstore_values(self, hstore_expr: str) -> Tuple[str, tuple]:
+        """Format avals(hstore) - get all values as array.
+
+        Args:
+            hstore_expr: The hstore expression or column name
+
+        Returns:
+            Tuple of (SQL expression, parameters)
+
+        Example:
+            >>> format_hstore_values('data')
+            ("avals(data)", ())
+        """
+        sql = f"avals({hstore_expr})"
+        return (sql, ())

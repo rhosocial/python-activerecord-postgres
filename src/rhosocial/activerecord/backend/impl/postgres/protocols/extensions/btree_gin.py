@@ -5,7 +5,7 @@ This module defines the protocol for btree_gin composite index
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import List, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -27,4 +27,17 @@ class PostgresBtreeGinSupport(Protocol):
 
     def supports_btree_gin(self) -> bool:
         """Whether btree_gin is available."""
+        ...
+
+    def format_gin_index(
+        self,
+        index_name: str,
+        table_name: str,
+        columns: List[str],
+    ) -> str:
+        """Format a GIN index using btree_gin."""
+        ...
+
+    def format_btree_gin_operator_class(self, data_type: str) -> str:
+        """Format btree_gin operator class name."""
         ...

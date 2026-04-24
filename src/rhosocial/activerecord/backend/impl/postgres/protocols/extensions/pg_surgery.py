@@ -28,3 +28,13 @@ class PostgresPgSurgerySupport(Protocol):
     def supports_pg_surgery(self) -> bool:
         """Whether pg_surgery extension is available."""
         ...
+
+    def format_pg_surgery_heap_freeze(self, table_name: str) -> str:
+        """Format heap freeze operation."""
+        ...
+
+    def format_pg_surgery_heap_page_header(
+        self, table_name: str, page_offset: int, page_pid: int
+    ) -> str:
+        """Format heap page header repair."""
+        ...

@@ -33,3 +33,15 @@ class PostgresPgauditSupport(Protocol):
     def supports_pgaudit_session(self) -> bool:
         """Whether pgaudit supports session auditing."""
         ...
+
+    def format_pgaudit_set_role(self, role: str) -> str:
+        """Format audit role assignment."""
+        ...
+
+    def format_pgaudit_log_level(self, level: str = "log") -> str:
+        """Format audit log level configuration."""
+        ...
+
+    def format_pgaudit_include_catalog(self, include: bool = True) -> str:
+        """Format include catalog statements."""
+        ...

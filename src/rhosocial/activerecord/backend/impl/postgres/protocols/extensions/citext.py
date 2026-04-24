@@ -5,7 +5,7 @@ This module defines the protocol for citext case-insensitive text
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -27,4 +27,12 @@ class PostgresCitextSupport(Protocol):
 
     def supports_citext_type(self) -> bool:
         """Whether citext type is supported."""
+        ...
+
+    def format_citext_column(self, column_name: str, length: Optional[int] = None) -> str:
+        """Format a citext column definition."""
+        ...
+
+    def format_citext_literal(self, value: str) -> str:
+        """Format a citext type literal value."""
         ...

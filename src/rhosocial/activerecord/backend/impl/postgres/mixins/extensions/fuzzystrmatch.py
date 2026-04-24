@@ -6,7 +6,7 @@ This module provides the PostgresFuzzystrmatchMixin class that adds support for
 fuzzystrmatch extension features.
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     pass
@@ -78,3 +78,41 @@ class PostgresFuzzystrmatchMixin:
             SQL function call
         """
         return f"dmetaphone_alt('{text}')"
+
+    def format_difference(self, s1_expr: str, s2_expr: str) -> Tuple[str, tuple]:
+        """Format difference function.
+
+        The difference() function returns an integer indicating how similar
+        the Soundex codes of two strings are.
+
+        Args:
+            s1_expr: First string expression
+            s2_expr: Second string expression
+
+        Returns:
+            Tuple of (SQL function call, parameters)
+
+        Example:
+            >>> format_difference("'hello'", "'helo'")
+            ("difference('hello', 'helo')", ())
+        """
+        return (f"difference({s1_expr}, {s2_expr})", ())
+
+    def format_metaphone(self, str_expr: str, max_length: int) -> Tuple[str, tuple]:
+        """Format metaphone function.
+
+        The metaphone() function returns a metaphone code of specified
+        maximum length for the input string.
+
+        Args:
+            str_expr: Input string expression
+            max_length: Maximum length of the metaphone code
+
+        Returns:
+            Tuple of (SQL function call, parameters)
+
+        Example:
+            >>> format_metaphone("'hello'", 6)
+            ("metaphone('hello', 6)", ())
+        """
+        return (f"metaphone({str_expr}, {max_length})", ())
