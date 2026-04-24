@@ -81,3 +81,39 @@ class PostgresPgLogicalMixin:
             f"sub_name := '{sub_name}', provider_dsn := '{pub_dsn}', "
             f"replication_sets := ARRAY[{sets_str}])"
         )
+
+    def format_pglogical_show_subscription_status(
+        self, sub_name: Optional[str] = None
+    ) -> str:
+        """Format pglogical subscription status query.
+
+        Args:
+            sub_name: Optional subscription name to filter
+
+        Returns:
+            SQL SELECT statement
+        """
+        if sub_name:
+            return (
+                f"SELECT * FROM pglogical.show_subscription_status("
+                f"sub_name := '{sub_name}')"
+            )
+        return "SELECT * FROM pglogical.show_subscription_status()"
+
+    def format_pglogical_alter_subscription_synchronize(
+        self, sub_name: str, truncate: bool = False
+    ) -> str:
+        """Format pglogical subscription synchronization.
+
+        Args:
+            sub_name: Name of the subscription to synchronize
+            truncate: Truncate local data before synchronization
+
+        Returns:
+            SQL SELECT statement
+        """
+        tr = "true" if truncate else "false"
+        return (
+            f"SELECT pglogical.alter_subscription_synchronize("
+            f"sub_name := '{sub_name}', truncate := {tr})"
+        )

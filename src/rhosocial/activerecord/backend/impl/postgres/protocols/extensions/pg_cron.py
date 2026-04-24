@@ -53,3 +53,11 @@ class PostgresPgCronSupport(Protocol):
         Supports cancelling scheduled jobs.
         """
         ...
+
+    def supports_pg_cron_run(self) -> bool:
+        """Whether pg_cron supports immediate job execution.
+
+        Requires pg_cron extension.
+        Supports running scheduled jobs immediately.
+        """
+        ...
