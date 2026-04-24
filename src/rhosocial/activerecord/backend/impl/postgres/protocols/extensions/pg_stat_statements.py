@@ -5,7 +5,7 @@ This module defines the protocol for pg_stat_statements query statistics
 functionality in PostgreSQL.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable
@@ -53,10 +53,32 @@ class PostgresPgStatStatementsSupport(Protocol):
         """
         ...
 
-    def reset_pg_stat_statements(self) -> bool:
-        """Reset pg_stat_statements statistics.
+    def format_query_stats_statement(
+        self, limit: Optional[int] = None, sort_by: str = "total_exec_time", descending: bool = True
+    ) -> Tuple[str, tuple]:
+        """Format a query to retrieve statistics from pg_stat_statements."""
+        ...
 
-        Returns:
-            True if reset was successful
-        """
+    def format_reset_stats_statement(self) -> Tuple[str, tuple]:
+        """Format statement to reset pg_stat_statements statistics."""
+        ...
+
+    def format_query_by_id_statement(self, queryid: int) -> Tuple[str, tuple]:
+        """Format statement to get statistics for a specific query."""
+        ...
+
+    def format_top_queries_by_time(self, limit: int = 10) -> Tuple[str, tuple]:
+        """Format statement to get top queries by total execution time."""
+        ...
+
+    def format_top_queries_by_calls(self, limit: int = 10) -> Tuple[str, tuple]:
+        """Format statement to get top queries by number of calls."""
+        ...
+
+    def format_top_queries_by_rows(self, limit: int = 10) -> Tuple[str, tuple]:
+        """Format statement to get top queries by rows processed."""
+        ...
+
+    def format_io_stats_statement(self, limit: int = 10) -> Tuple[str, tuple]:
+        """Format statement to get queries with most I/O."""
         ...

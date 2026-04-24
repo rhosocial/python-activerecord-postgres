@@ -83,3 +83,36 @@ class PostgresPgPartmanMixin:
         """
         conf = f", '{config}'" if config else ""
         return f"SELECT partman.run_maintenance(){conf}"
+
+    def format_auto_partition_config(
+        self,
+        table_name: str,
+        automatic: bool = True,
+        infinite_time_partitions: bool = False,
+        retention: Optional[str] = None,
+    ) -> str:
+        """Format auto partition configuration update.
+
+        Args:
+            table_name: Name of the partitioned table
+            automatic: Enable automatic partition creation
+            infinite_time_partitions: Create partitions infinitely into the future
+            retention: Optional retention period (e.g., '30 days')
+
+        Returns:
+            SQL UPDATE statement for part_config
+        """
+        parts = []
+        if not automatic:
+            parts.append("automatic = false")
+        if infinite_time_partitions:
+            parts.append("infinite_time_partitions = true")
+        if retention:
+            parts.append(f"retention = '{retention}'")
+        if not parts:
+            parts.append("automatic = true")
+        set_clause = ", ".join(parts)
+        return (
+            f"UPDATE partman.part_config SET {set_clause} "
+            f"WHERE parent_table = '{table_name}'"
+        )

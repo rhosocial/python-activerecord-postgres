@@ -27,6 +27,10 @@ class PostgresPgCronMixin:
         """Check if pg_cron supports job cancellation."""
         return self.check_extension_feature("pg_cron", "cancel")
 
+    def supports_pg_cron_run(self) -> bool:
+        """Check if pg_cron supports immediate job execution."""
+        return self.check_extension_feature("pg_cron", "run")
+
     def format_cron_schedule(self, schedule: str, command: str, comment: Optional[str] = None) -> str:
         """Format a pg_cron job schedule.
 
