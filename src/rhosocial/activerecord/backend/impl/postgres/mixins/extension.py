@@ -40,7 +40,9 @@ class PostgresExtensionMixin:
             "description": "PostGIS raster extension",
             "category": "spatial",
             "dependencies": ["postgis"],
-            "features": {},
+            "features": {
+                "raster_type": {"min_version": "3.0"},
+            },
         },
         "postgis_topology": {
             "min_version": "2.0",
@@ -48,6 +50,7 @@ class PostgresExtensionMixin:
             "category": "spatial",
             "dependencies": ["postgis"],
             "features": {},
+            "requires_dialect": False,
         },
         "postgis_sfcgal": {
             "min_version": "2.0",
@@ -55,6 +58,7 @@ class PostgresExtensionMixin:
             "category": "spatial",
             "dependencies": ["postgis"],
             "features": {},
+            "requires_dialect": False,
         },
         "postgis_tiger_geocoder": {
             "min_version": "2.0",
@@ -62,13 +66,16 @@ class PostgresExtensionMixin:
             "category": "spatial",
             "dependencies": ["postgis"],
             "features": {},
+            "requires_dialect": False,
         },
         "pgrouting": {
             "min_version": "2.0",
             "description": "pgRouting path finding extension",
             "category": "spatial",
             "dependencies": ["postgis"],
-            "features": {},
+            "features": {
+                "dijkstra": {"min_version": "2.0"},
+            },
         },
         "earthdistance": {
             "min_version": "1.0",
@@ -256,6 +263,7 @@ class PostgresExtensionMixin:
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/amcheck.html",
             "features": {},
+            "requires_dialect": False,
         },
         "pageinspect": {
             "min_version": "1.0",
@@ -263,6 +271,7 @@ class PostgresExtensionMixin:
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/pageinspect.html",
             "features": {},
+            "requires_dialect": False,
         },
         # Replication
         "pglogical": {
@@ -279,6 +288,7 @@ class PostgresExtensionMixin:
             "description": "Logical replication inspection",
             "category": "replication",
             "features": {},
+            "requires_dialect": False,
         },
         # Security & Auditing
         "pgaudit": {
@@ -299,6 +309,8 @@ class PostgresExtensionMixin:
             "documentation": "https://github.com/citusdata/pg_cron",
             "features": {
                 "schedule": {"min_version": "1.0"},
+                "cancel": {"min_version": "1.0"},
+                "run": {"min_version": "1.5"},
             },
         },
         # Database Maintenance
@@ -320,6 +332,7 @@ class PostgresExtensionMixin:
             "features": {
                 "tests": {"min_version": "1.0"},
             },
+            "requires_dialect": False,
         },
         # Performance & Optimization
         "hypopg": {
@@ -356,6 +369,7 @@ class PostgresExtensionMixin:
             "category": "utility",
             "dependencies": ["address_standardizer"],
             "features": {},
+            "requires_dialect": False,
         },
     }
 
