@@ -123,7 +123,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_postgres_18_connection(self):
         """Test resolving the postgres_18 named connection."""
         config = resolve_named_connection(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18",
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18",
             {},
         )
         assert isinstance(config, PostgresConnectionConfig)
@@ -135,7 +135,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_postgres_18_with_custom_database(self):
         """Test resolving postgres_18 with custom database parameter."""
         config = resolve_named_connection(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18",
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18",
             {"database": "my_app"},
         )
         assert isinstance(config, PostgresConnectionConfig)
@@ -144,7 +144,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_postgres_18_with_pool(self):
         """Test resolving postgres_18_with_pool named connection."""
         config = resolve_named_connection(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_with_pool",
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_with_pool",
             {},
         )
         assert isinstance(config, PostgresConnectionConfig)
@@ -153,7 +153,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_postgres_18_with_custom_pool_size(self):
         """Test resolving postgres_18_with_pool with custom pool_size."""
         config = resolve_named_connection(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_with_pool",
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_with_pool",
             {"pool_size": "10"},
         )
         assert isinstance(config, PostgresConnectionConfig)
@@ -162,7 +162,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_postgres_18_readonly(self):
         """Test resolving postgres_18_readonly named connection."""
         config = resolve_named_connection(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_readonly",
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18_readonly",
             {},
         )
         assert isinstance(config, PostgresConnectionConfig)
@@ -171,7 +171,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_list_example_connections(self):
         """Test listing connections in example_connections module."""
         connections = list_named_connections_in_module(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections"
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections"
         )
         names = [c["name"] for c in connections]
         assert "postgres_18" in names
@@ -181,7 +181,7 @@ class TestPostgresNamedConnectionsIntegration:
     def test_describe_postgres_18(self):
         """Test describing the postgres_18 connection."""
         resolver = NamedConnectionResolver(
-            "tests.rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18"
+            "rhosocial.activerecord_postgres_test.feature.backend.named_connection.example_connections.postgres_18"
         ).load()
         info = resolver.describe()
         assert info["is_class"] is False

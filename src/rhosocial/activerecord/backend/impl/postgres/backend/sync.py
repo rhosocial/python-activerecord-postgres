@@ -317,6 +317,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
                 conn_params.update(ssl_params)
 
             self._connection = psycopg.connect(**conn_params)
+            self._connection.autocommit = True  # Disable psycopg auto-transaction management
 
             self.log(
                 logging.INFO,

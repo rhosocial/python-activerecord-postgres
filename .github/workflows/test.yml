@@ -99,13 +99,13 @@ jobs:
       - name: Run tests (skip for postgres 18)
         if: matrix.postgres-version != '18'
         run: |
-          export PYTHONPATH=src
+          export PYTHONPATH=src:tests
           python -m pytest tests/ --tb=short
 
       - name: Run tests with coverage (only for postgres 18)
         if: matrix.postgres-version == '18'
         run: |
-          export PYTHONPATH=src
+          export PYTHONPATH=src:tests
           pip install codecov
           coverage run --source=src -m pytest tests/ --tb=short
           coverage xml
