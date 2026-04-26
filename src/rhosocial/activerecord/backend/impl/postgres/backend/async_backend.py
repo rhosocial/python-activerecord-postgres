@@ -337,7 +337,7 @@ class AsyncPostgresBackend(
         if self._connection:
             try:
                 # Rollback any active transaction
-                if self.transaction_manager.is_active:
+                if self.in_transaction:
                     await self.transaction_manager.rollback()
 
                 await self._connection.close()
@@ -819,7 +819,7 @@ class AsyncPostgresBackend(
         """
         try:
             # First, try the transaction manager if active
-            if self._transaction_manager and self._transaction_manager.is_active:
+            if self.in_transaction:
                 self.log(logging.INFO, "Attempting to rollback transaction after error")
                 await self._transaction_manager.rollback()
 
@@ -850,7 +850,7 @@ class AsyncPostgresBackend(
                 return
 
             # Check if we're not in an active transaction
-            if not self._transaction_manager or not self._transaction_manager.is_active:
+            if not self.in_transaction:
                 # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
                 if not getattr(self.config, "autocommit", False):
                     await self._connection.commit()

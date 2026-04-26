@@ -332,7 +332,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         if self._connection:
             try:
                 # Rollback any active transaction
-                if self.transaction_manager.is_active:
+                if self.in_transaction:
                     self.transaction_manager.rollback()
 
                 self._connection.close()
@@ -814,7 +814,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         """
         try:
             # First, try the transaction manager if active
-            if self._transaction_manager and self._transaction_manager.is_active:
+            if self.in_transaction:
                 self.log(logging.INFO, "Attempting to rollback transaction after error")
                 self._transaction_manager.rollback()
 
@@ -845,7 +845,7 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
                 return
 
             # Check if we're not in an active transaction
-            if not self._transaction_manager or not self._transaction_manager.is_active:
+            if not self.in_transaction:
                 # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
                 if not getattr(self.config, "autocommit", False):
                     self._connection.commit()
