@@ -125,6 +125,13 @@ class TestProtocolNonOverlap:
             assert len(members) > 0, f"Protocol {name} has no members defined"
 
         excluded_overlaps = {
+            # Generic -> Postgres derivation pairs (expected overlap)
+            ('IndexSupport', 'PostgresIndexSupport'),
+            ('PostgresIndexSupport', 'IndexSupport'),
+            ('TableSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'TableSupport'),
+            ('ConstraintSupport', 'PostgresConstraintSupport'),
+            ('PostgresConstraintSupport', 'ConstraintSupport'),
             ('LockingSupport', 'PostgresLockingSupport'),
             ('PostgresLockingSupport', 'LockingSupport'),
             ('TriggerSupport', 'PostgresTriggerSupport'),
