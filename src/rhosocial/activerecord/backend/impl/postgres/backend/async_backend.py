@@ -322,6 +322,7 @@ class AsyncPostgresBackend(
                 conn_params.update(ssl_params)
 
             self._connection = await AsyncConnection.connect(**conn_params)
+            await self._connection.set_autocommit(True)  # Disable psycopg auto-transaction management
 
             self.log(
                 logging.INFO,
