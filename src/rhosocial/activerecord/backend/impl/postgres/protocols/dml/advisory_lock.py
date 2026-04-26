@@ -8,6 +8,7 @@ without relying on table-level or row-level locks.
 """
 
 from typing import Protocol, Tuple, Union, TYPE_CHECKING
+from typing import runtime_checkable
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     )
 
 
+@runtime_checkable
 class PostgresAdvisoryLockSupport(Protocol):
     """
     Protocol for PostgreSQL advisory lock support.

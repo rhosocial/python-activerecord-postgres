@@ -1,9 +1,10 @@
 # src/rhosocial/activerecord/backend/impl/postgres/protocols/types/multirange.py
 """PostgreSQL multirange type support protocol."""
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class PostgresMultirangeSupport(Protocol):
     """PostgreSQL multirange type support protocol.
 
