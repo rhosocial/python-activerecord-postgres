@@ -27,16 +27,63 @@ class PostgresBackendMixin:
     - self.config: Connection configuration
     """
 
+    @staticmethod
+    def _convert_qmark_to_format(sql: str) -> str:
+        """Convert '?' parameter placeholders to '%s' for psycopg.
+
+        This method replaces question-mark placeholders with '%s' format
+        placeholders expected by psycopg v3, while preserving PostgreSQL's
+        hstore/jsonb operators '?', '?|', and '?&'.
+
+        Rules:
+        - '?' followed by '|' or '&' is a PostgreSQL operator, preserved as-is
+        - '?' preceded by a letter/digit/underscore is not a placeholder
+          (e.g., part of an identifier), preserved as-is
+        - All other '?' are treated as parameter placeholders and replaced with '%s'
+        """
+        result = []
+        i = 0
+        length = len(sql)
+        while i < length:
+            ch = sql[i]
+            if ch == '?':
+                # Check if this is a PostgreSQL operator: ?| or ?&
+                if i + 1 < length and sql[i + 1] in ('|', '&'):
+                    result.append('?')
+                    result.append(sql[i + 1])
+                    i += 2
+                    continue
+                # Check if '?' is preceded by an identifier character (not a placeholder)
+                if i > 0 and (sql[i - 1].isalnum() or sql[i - 1] == '_'):
+                    result.append('?')
+                    i += 1
+                    continue
+                # This is a parameter placeholder, replace with '%s'
+                result.append('%s')
+                i += 1
+            else:
+                result.append(ch)
+                i += 1
+        return ''.join(result)
+
     def _prepare_sql_and_params(self, sql: str, params: Optional[Tuple]) -> Tuple[str, Optional[Tuple]]:
         """
         Prepare SQL and parameters for PostgreSQL execution.
 
-        Returns SQL and parameters unchanged. The PostgresDialect already generates
-        '%s' placeholders (via get_parameter_placeholder()), so no placeholder
-        conversion is needed. Blind replacement of '?' to '%s' would incorrectly
-        transform PostgreSQL operators like hstore/jsonb '?', '?|', '?&' into
-        parameter placeholders, causing psycopg to miscount placeholders.
+        Converts '?' parameter placeholders to '%s' format expected by psycopg v3,
+        while preserving PostgreSQL operators like '?', '?|', '?&' used in
+        hstore and jsonb operations.
+
+        Args:
+            sql: The raw SQL statement string
+            params: Optional tuple of parameter values
+
+        Returns:
+            Tuple of (converted_sql, params)
         """
+        if params:
+            converted_sql = self._convert_qmark_to_format(sql)
+            return converted_sql, params
         return sql, params
 
     def create_expression(self, expression_str: str):
