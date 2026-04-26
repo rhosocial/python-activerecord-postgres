@@ -47,25 +47,28 @@ class PostgresLockingMixin:
 
         all_params = []
 
+        # Handle both base ForUpdateClause (no strength) and PostgresForUpdateClause
+        strength = getattr(clause, 'strength', LockStrength.UPDATE)
+
         # Check version support for lock strength
-        if clause.strength == LockStrength.NO_KEY_UPDATE:
+        if strength == LockStrength.NO_KEY_UPDATE:
             if not self.supports_for_no_key_update():
                 raise UnsupportedFeatureError(
                     self.name, "FOR NO KEY UPDATE (requires PostgreSQL 9.0+)"
                 )
-        elif clause.strength == LockStrength.SHARE:
+        elif strength == LockStrength.SHARE:
             if not self.supports_for_share():
                 raise UnsupportedFeatureError(
                     self.name, "FOR SHARE (requires PostgreSQL 9.0+)"
                 )
-        elif clause.strength == LockStrength.KEY_SHARE:
+        elif strength == LockStrength.KEY_SHARE:
             if not self.supports_for_key_share():
                 raise UnsupportedFeatureError(
                     self.name, "FOR KEY SHARE (requires PostgreSQL 9.3+)"
                 )
 
         # Use the strength value directly (e.g., "FOR UPDATE", "FOR SHARE")
-        sql_parts = [clause.strength.value]
+        sql_parts = [strength.value]
 
         # Handle OF columns if specified
         if clause.of_columns:
