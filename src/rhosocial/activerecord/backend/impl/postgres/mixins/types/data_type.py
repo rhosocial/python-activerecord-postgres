@@ -5,7 +5,7 @@ This module provides the DataTypeMixin class for handling PostgreSQL-specific
 data type operations including multirange types, xid8, and other features.
 """
 
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Tuple
 
 
 class PostgresDataTypeMixin:
@@ -147,3 +147,30 @@ class PostgresDataTypeMixin:
         if element_type:
             array_str += f"::{element_type}[]"
         return array_str
+
+    def format_create_range_type(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TYPE AS RANGE statement from expression object.
+
+        Args:
+            expr: PostgresCreateRangeTypeExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+        """
+        exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
+        type_name = f"{expr.schema}.{expr.name}" if expr.schema else expr.name
+
+        options = [f"subtype={expr.subtype}"]
+
+        if expr.subtype_opclass:
+            options.append(f"subtype_opclass={expr.subtype_opclass}")
+        if expr.collation:
+            options.append(f"collation={expr.collation}")
+        if expr.canonical:
+            options.append(f"canonical={expr.canonical}")
+        if expr.subtype_diff:
+            options.append(f"subtype_diff={expr.subtype_diff}")
+
+        options_str = ", ".join(options)
+        sql = f"CREATE TYPE {exists_clause}{type_name} AS RANGE ({options_str})"
+        return (sql, ())

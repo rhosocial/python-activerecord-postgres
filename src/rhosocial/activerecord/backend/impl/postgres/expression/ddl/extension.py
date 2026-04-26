@@ -20,12 +20,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "CreateExtensionExpression",
-    "DropExtensionExpression",
+    "PostgresCreateExtensionExpression",
+    "PostgresDropExtensionExpression",
 ]
 
 
-class CreateExtensionExpression(BaseExpression):
+class PostgresCreateExtensionExpression(BaseExpression):
     """PostgreSQL CREATE EXTENSION statement expression.
 
     Installs a PostgreSQL extension into the database.
@@ -40,7 +40,7 @@ class CreateExtensionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> create_ext = CreateExtensionExpression(
+        >>> create_ext = PostgresCreateExtensionExpression(
         ...     dialect=dialect,
         ...     name="uuid-ossp",
         ... )
@@ -49,7 +49,7 @@ class CreateExtensionExpression(BaseExpression):
         'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
 
         >>> # With schema and version
-        >>> create_ext = CreateExtensionExpression(
+        >>> create_ext = PostgresCreateExtensionExpression(
         ...     dialect=dialect,
         ...     name="postgis",
         ...     schema="public",
@@ -86,7 +86,7 @@ class CreateExtensionExpression(BaseExpression):
         return self.dialect.format_create_extension(self)
 
 
-class DropExtensionExpression(BaseExpression):
+class PostgresDropExtensionExpression(BaseExpression):
     """PostgreSQL DROP EXTENSION statement expression.
 
     Removes an extension from the database.
@@ -101,7 +101,7 @@ class DropExtensionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> drop_ext = DropExtensionExpression(
+        >>> drop_ext = PostgresDropExtensionExpression(
         ...     dialect=dialect,
         ...     name="uuid-ossp",
         ...     if_exists=True,

@@ -7,9 +7,11 @@ features that are not part of the SQL standard.
 
 from typing import Any, Protocol, runtime_checkable, Tuple
 
+from rhosocial.activerecord.backend.dialect.protocols import LockingSupport
+
 
 @runtime_checkable
-class PostgresLockingSupport(Protocol):
+class PostgresLockingSupport(LockingSupport, Protocol):
     """PostgreSQL row-level locking protocol.
 
     Feature Source: Native support (no extension required)
@@ -46,7 +48,7 @@ class PostgresLockingSupport(Protocol):
         """Whether FOR UPDATE SKIP LOCKED is supported (PostgreSQL 9.5+)."""
         ...
 
-    def format_postgres_for_update_clause(self, clause: Any) -> Tuple[str, tuple]:
+    def format_for_update_clause(self, clause: Any) -> Tuple[str, tuple]:
         """Format PostgreSQL-specific FOR UPDATE clause.
 
         Args:

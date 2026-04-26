@@ -12,21 +12,21 @@ This module tests PostgreSQL's advisory lock functionality:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
-    AdvisoryLockExpression,
-    AdvisoryUnlockExpression,
-    AdvisoryUnlockAllExpression,
-    TryAdvisoryLockExpression,
+    PostgresAdvisoryLockExpression,
+    PostgresAdvisoryUnlockExpression,
+    PostgresAdvisoryUnlockAllExpression,
+    PostgresTryAdvisoryLockExpression,
 )
 
 
-class TestAdvisoryLockExpression:
+class TestPostgresAdvisoryLockExpression:
     """Test advisory lock expression SQL generation."""
 
     def test_advisory_lock_expression_basic(self, postgres_backend_single):
         """Test basic advisory lock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryLockExpression(dialect, key=12345)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_lock(%s)"
         assert params == (12345,)
@@ -35,7 +35,7 @@ class TestAdvisoryLockExpression:
         """Test shared advisory lock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryLockExpression(dialect, key=12345, shared=True)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345, shared=True)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_lock_shared(%s)"
         assert params == (12345,)
@@ -44,7 +44,7 @@ class TestAdvisoryLockExpression:
         """Test transaction-level advisory lock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryLockExpression(dialect, key=12345, session=False)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345, session=False)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_xact_lock(%s)"
         assert params == (12345,)
@@ -53,7 +53,7 @@ class TestAdvisoryLockExpression:
         """Test advisory lock with two keys."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryLockExpression(dialect, key=(123, 456))
+        expr = PostgresAdvisoryLockExpression(dialect, key=(123, 456))
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_lock(%s, %s)"
         assert params == (123, 456)
@@ -62,7 +62,7 @@ class TestAdvisoryLockExpression:
         """Test advisory unlock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryUnlockExpression(dialect, key=12345)
+        expr = PostgresAdvisoryUnlockExpression(dialect, key=12345)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_unlock(%s)"
         assert params == (12345,)
@@ -71,7 +71,7 @@ class TestAdvisoryLockExpression:
         """Test advisory unlock all expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = AdvisoryUnlockAllExpression(dialect)
+        expr = PostgresAdvisoryUnlockAllExpression(dialect)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_unlock_all()"
         assert params == ()
@@ -80,7 +80,7 @@ class TestAdvisoryLockExpression:
         """Test try advisory lock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = TryAdvisoryLockExpression(dialect, key=12345)
+        expr = PostgresTryAdvisoryLockExpression(dialect, key=12345)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_try_advisory_lock(%s)"
         assert params == (12345,)
@@ -89,7 +89,7 @@ class TestAdvisoryLockExpression:
         """Test try shared advisory lock expression."""
         dialect = postgres_backend_single.dialect
 
-        expr = TryAdvisoryLockExpression(dialect, key=12345, shared=True)
+        expr = PostgresTryAdvisoryLockExpression(dialect, key=12345, shared=True)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_try_advisory_lock_shared(%s)"
         assert params == (12345,)
@@ -170,14 +170,14 @@ class TestAdvisoryLockBackend:
         postgres_backend_single.execute_advisory_unlock(key=12345)
 
 
-class TestAsyncAdvisoryLockExpression:
+class TestAsyncPostgresAdvisoryLockExpression:
     """Async tests for advisory lock expression SQL generation."""
 
     async def test_async_advisory_lock_expression_basic(self, async_postgres_backend_single):
         """Test basic advisory lock expression (async)."""
         dialect = async_postgres_backend_single.dialect
 
-        expr = AdvisoryLockExpression(dialect, key=12345)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345)
         sql, params = expr.to_sql()
         assert sql == "SELECT pg_advisory_lock(%s)"
         assert params == (12345,)

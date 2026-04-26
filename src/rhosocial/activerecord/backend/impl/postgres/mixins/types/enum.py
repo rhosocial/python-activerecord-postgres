@@ -9,9 +9,9 @@ from typing import Optional, List, Tuple, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
-        CreateEnumTypeExpression,
-        DropEnumTypeExpression,
-        AlterEnumAddValueExpression,
+        PostgresCreateEnumTypeExpression,
+        PostgresDropEnumTypeExpression,
+        PostgresAlterEnumAddValueExpression,
     )
 
 
@@ -180,7 +180,7 @@ class EnumTypeMixin:
 
     def format_create_enum_type(
         self,
-        expr_or_name: Union["CreateEnumTypeExpression", str],
+        expr_or_name: Union["PostgresCreateEnumTypeExpression", str],
         values: Optional[List[str]] = None,
         schema: Optional[str] = None,
         if_not_exists: bool = False,
@@ -202,7 +202,7 @@ class EnumTypeMixin:
 
     def format_drop_enum_type(
         self,
-        expr_or_name: Union["DropEnumTypeExpression", str],
+        expr_or_name: Union["PostgresDropEnumTypeExpression", str],
         schema: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,
@@ -221,7 +221,7 @@ class EnumTypeMixin:
 
     def format_alter_enum_add_value(
         self,
-        expr_or_type_name: Union["AlterEnumAddValueExpression", str],
+        expr_or_type_name: Union["PostgresAlterEnumAddValueExpression", str],
         new_value: Optional[str] = None,
         schema: Optional[str] = None,
         before: Optional[str] = None,
@@ -242,3 +242,34 @@ class EnumTypeMixin:
             raise TypeError("new_value must be provided when formatting enum value by name")
 
         return self.format_alter_enum_add_value_raw(expr_or_type_name, new_value, schema, before, after)
+
+    def format_alter_enum_type_add_value(self, expr) -> Tuple[str, tuple]:
+        """Format ALTER TYPE ADD VALUE statement from expression object.
+
+        Args:
+            expr: PostgresAlterEnumTypeAddValueExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+        """
+        sql = self.format_alter_enum_add_value_raw(
+            expr.type_name,
+            expr.new_value,
+            expr.schema,
+            expr.before,
+            expr.after,
+        )
+        return (sql, ())
+
+    def format_alter_enum_type_rename_value(self, expr) -> Tuple[str, tuple]:
+        """Format ALTER TYPE RENAME VALUE statement from expression object.
+
+        Args:
+            expr: PostgresAlterEnumTypeRenameValueExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+        """
+        full_name = self.format_enum_type_name(expr.type_name, expr.schema)
+        sql = f"ALTER TYPE {full_name} RENAME VALUE '{expr.old_value}' TO '{expr.new_value}'"
+        return (sql, ())

@@ -4,7 +4,7 @@ uuid-ossp extension - UUID generation functions.
 
 This example demonstrates:
 1. Check if uuid-ossp extension is available
-2. Create extension using CreateExtensionExpression
+2. Create extension using PostgresCreateExtensionExpression
 3. Generate UUIDs using various algorithms with expression-based API
 """
 
@@ -33,7 +33,7 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    CreateExtensionExpression,
+    PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     uuid_generate_v1,
@@ -58,7 +58,7 @@ print(f"Extension: uuid-ossp available = {available}, installed = {installed}")
 
 # Create extension using expression
 if available and not installed:
-    create_ext = CreateExtensionExpression(
+    create_ext = PostgresCreateExtensionExpression(
         dialect=dialect,
         name="uuid-ossp",
     )

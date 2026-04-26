@@ -905,9 +905,9 @@ class AsyncPostgresBackend(
         Raises:
             DatabaseError: If the lock operation fails
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryLockExpression
 
-        expr = AdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        expr = PostgresAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
         await self.execute(sql, params)
 
@@ -922,9 +922,9 @@ class AsyncPostgresBackend(
         Returns:
             True if the lock was released, False if it was not held
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockExpression
 
-        expr = AdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
+        expr = PostgresAdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
         sql, params = expr.to_sql()
         result = await self.execute(sql, params)
         # pg_advisory_unlock returns boolean in first column
@@ -938,9 +938,9 @@ class AsyncPostgresBackend(
         """
         Release all advisory locks held by the current session asynchronously.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockAllExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockAllExpression
 
-        expr = AdvisoryUnlockAllExpression(self.dialect)
+        expr = PostgresAdvisoryUnlockAllExpression(self.dialect)
         sql, params = expr.to_sql()
         await self.execute(sql, params)
 
@@ -961,9 +961,9 @@ class AsyncPostgresBackend(
         Returns:
             True if the lock was acquired, False if it was not available
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import TryAdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresTryAdvisoryLockExpression
 
-        expr = TryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        expr = PostgresTryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
         result = await self.execute(sql, params)
         # pg_try_advisory_lock returns boolean in first column

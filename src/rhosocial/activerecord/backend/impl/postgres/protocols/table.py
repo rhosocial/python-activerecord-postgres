@@ -7,9 +7,11 @@ exclusive to PostgreSQL table management.
 
 from typing import Protocol, runtime_checkable
 
+from rhosocial.activerecord.backend.dialect.protocols import TableSupport
+
 
 @runtime_checkable
-class PostgresTableSupport(Protocol):
+class PostgresTableSupport(TableSupport, Protocol):
     """PostgreSQL table extended features protocol.
 
     PostgreSQL's table support includes exclusive features:

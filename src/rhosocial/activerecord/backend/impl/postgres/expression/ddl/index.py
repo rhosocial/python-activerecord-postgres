@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["ReindexExpression"]
+__all__ = ["PostgresReindexExpression"]
 
 
-class ReindexExpression(BaseExpression):
+class PostgresReindexExpression(BaseExpression):
     """PostgreSQL REINDEX statement expression.
 
     Rebuilt indexes to eliminate bloat, update statistics, and recover from corruption.
@@ -40,7 +40,7 @@ class ReindexExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Reindex a specific index
-        >>> reindex = ReindexExpression(
+        >>> reindex = PostgresReindexExpression(
         ...     dialect=dialect,
         ...     target_type="INDEX",
         ...     name="users_pkey",
@@ -50,7 +50,7 @@ class ReindexExpression(BaseExpression):
         "REINDEX INDEX users_pkey"
 
         >>> # Reindex all indexes in a table concurrently (PG 12+)
-        >>> reindex = ReindexExpression(
+        >>> reindex = PostgresReindexExpression(
         ...     dialect=dialect,
         ...     target_type="TABLE",
         ...     name="orders",
@@ -59,7 +59,7 @@ class ReindexExpression(BaseExpression):
         ... )
 
         >>> # Reindex database with new tablespace (PG 14+)
-        >>> reindex = ReindexExpression(
+        >>> reindex = PostgresReindexExpression(
         ...     dialect=dialect,
         ...     target_type="DATABASE",
         ...     name="mydb",

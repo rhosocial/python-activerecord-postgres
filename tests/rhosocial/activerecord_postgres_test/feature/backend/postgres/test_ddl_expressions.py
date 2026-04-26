@@ -9,21 +9,21 @@ import pytest
 import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    RefreshMaterializedViewPgExpression,
-    CommentExpression,
-    CreatePartitionExpression,
-    DetachPartitionExpression,
-    AttachPartitionExpression,
-    VacuumExpression,
-    AnalyzeExpression,
+    PostgresRefreshMaterializedViewExpression,
+    PostgresCommentExpression,
+    PostgresCreatePartitionExpression,
+    PostgresDetachPartitionExpression,
+    PostgresAttachPartitionExpression,
+    PostgresVacuumExpression,
+    PostgresAnalyzeExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,
 )
 
 
-class TestRefreshMaterializedViewPgExpression:
-    """Test RefreshMaterializedViewPgExpression."""
+class TestPostgresRefreshMaterializedViewExpression:
+    """Test PostgresRefreshMaterializedViewExpression."""
 
     @pytest.fixture
     def dialect(self):
@@ -31,7 +31,7 @@ class TestRefreshMaterializedViewPgExpression:
 
     def test_basic_refresh(self, dialect):
         """Test basic REFRESH MATERIALIZED VIEW statement."""
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             name="monthly_sales_summary",
         )
@@ -41,7 +41,7 @@ class TestRefreshMaterializedViewPgExpression:
 
     def test_refresh_with_schema(self, dialect):
         """Test REFRESH MATERIALIZED VIEW with schema."""
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             name="monthly_sales_summary",
             schema="analytics",
@@ -53,7 +53,7 @@ class TestRefreshMaterializedViewPgExpression:
     def test_refresh_concurrently_pg13(self):
         """Test CONCURRENTLY refresh requires PG 9.4+."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect_pg93,
             name="monthly_sales_summary",
             concurrently=True,
@@ -64,7 +64,7 @@ class TestRefreshMaterializedViewPgExpression:
 
     def test_refresh_concurrently_pg94(self, dialect):
         """Test CONCURRENTLY refresh with PG 9.4+."""
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             name="monthly_sales_summary",
             concurrently=True,
@@ -76,7 +76,7 @@ class TestRefreshMaterializedViewPgExpression:
     def test_refresh_with_data_false_pg93(self):
         """Test WITH NO DATA requires PG 9.4+."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect_pg93,
             name="monthly_sales_summary",
             with_data=False,
@@ -87,7 +87,7 @@ class TestRefreshMaterializedViewPgExpression:
 
     def test_refresh_with_data_false_pg94(self, dialect):
         """Test WITH NO DATA with PG 9.4+."""
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             name="monthly_sales_summary",
             with_data=False,
@@ -98,7 +98,7 @@ class TestRefreshMaterializedViewPgExpression:
 
     def test_refresh_concurrently_and_with_data(self, dialect):
         """Test CONCURRENTLY with WITH NO DATA."""
-        expr = RefreshMaterializedViewPgExpression(
+        expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             name="monthly_sales_summary",
             concurrently=True,
@@ -110,8 +110,8 @@ class TestRefreshMaterializedViewPgExpression:
         assert params == ()
 
 
-class TestCommentExpression:
-    """Test CommentExpression."""
+class TestPostgresCommentExpression:
+    """Test PostgresCommentExpression."""
 
     @pytest.fixture
     def dialect(self):
@@ -119,7 +119,7 @@ class TestCommentExpression:
 
     def test_comment_on_table(self, dialect):
         """Test COMMENT ON TABLE."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
             object_name="users",
@@ -132,7 +132,7 @@ class TestCommentExpression:
 
     def test_comment_on_column(self, dialect):
         """Test COMMENT ON COLUMN."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="COLUMN",
             object_name="users.email",
@@ -145,7 +145,7 @@ class TestCommentExpression:
 
     def test_comment_on_index(self, dialect):
         """Test COMMENT ON INDEX."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="INDEX",
             object_name="users_email_idx",
@@ -156,7 +156,7 @@ class TestCommentExpression:
 
     def test_comment_on_view(self, dialect):
         """Test COMMENT ON VIEW."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="VIEW",
             object_name="user_stats",
@@ -167,7 +167,7 @@ class TestCommentExpression:
 
     def test_comment_on_schema(self, dialect):
         """Test COMMENT ON SCHEMA."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="SCHEMA",
             object_name="analytics",
@@ -178,7 +178,7 @@ class TestCommentExpression:
 
     def test_comment_on_function(self, dialect):
         """Test COMMENT ON FUNCTION."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="FUNCTION",
             object_name="calculate_total",
@@ -189,7 +189,7 @@ class TestCommentExpression:
 
     def test_remove_comment(self, dialect):
         """Test removing comment by setting comment to None."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
             object_name="users",
@@ -202,7 +202,7 @@ class TestCommentExpression:
 
     def test_comment_with_schema(self, dialect):
         """Test comment on object with schema."""
-        expr = CommentExpression(
+        expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
             object_name="public.users",
@@ -214,8 +214,8 @@ class TestCommentExpression:
         assert params == ("Public users table",)
 
 
-class TestCreatePartitionExpression:
-    """Test CreatePartitionExpression."""
+class TestPostgresCreatePartitionExpression:
+    """Test PostgresCreatePartitionExpression."""
 
     @pytest.fixture
     def dialect(self):
@@ -223,7 +223,7 @@ class TestCreatePartitionExpression:
 
     def test_create_range_partition(self, dialect):
         """Test CREATE TABLE ... PARTITION OF for RANGE."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -240,7 +240,7 @@ class TestCreatePartitionExpression:
 
     def test_create_list_partition(self, dialect):
         """Test CREATE TABLE ... PARTITION OF for LIST."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="orders_active",
             parent_table="orders",
@@ -255,7 +255,7 @@ class TestCreatePartitionExpression:
     def test_create_hash_partition_pg10(self):
         """Test HASH partitioning requires PG 11+."""
         dialect_pg10 = PostgresDialect(version=(10, 0, 0))
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect_pg10,
             partition_name="orders shard0",
             parent_table="orders",
@@ -267,7 +267,7 @@ class TestCreatePartitionExpression:
 
     def test_create_hash_partition_pg11(self, dialect):
         """Test HASH partitioning with PG 11+."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="orders_shard0",
             parent_table="orders",
@@ -281,7 +281,7 @@ class TestCreatePartitionExpression:
 
     def test_create_partition_with_schema(self, dialect):
         """Test partition with schema."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="2024_q1",
             parent_table="orders",
@@ -294,7 +294,7 @@ class TestCreatePartitionExpression:
 
     def test_create_partition_if_not_exists(self, dialect):
         """Test partition with IF NOT EXISTS."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -307,7 +307,7 @@ class TestCreatePartitionExpression:
 
     def test_create_partition_with_tablespace(self, dialect):
         """Test partition with TABLESPACE."""
-        expr = CreatePartitionExpression(
+        expr = PostgresCreatePartitionExpression(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -320,8 +320,8 @@ class TestCreatePartitionExpression:
         assert "faststorage" in sql
 
 
-class TestDetachPartitionExpression:
-    """Test DetachPartitionExpression."""
+class TestPostgresDetachPartitionExpression:
+    """Test PostgresDetachPartitionExpression."""
 
     @pytest.fixture
     def dialect(self):
@@ -329,7 +329,7 @@ class TestDetachPartitionExpression:
 
     def test_basic_detach(self, dialect):
         """Test basic DETACH PARTITION."""
-        expr = DetachPartitionExpression(
+        expr = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -343,7 +343,7 @@ class TestDetachPartitionExpression:
     def test_detach_concurrently_pg13(self):
         """Test CONCURRENTLY requires PG 14+."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = DetachPartitionExpression(
+        expr = PostgresDetachPartitionExpression(
             dialect=dialect_pg13,
             partition_name="orders_2023",
             parent_table="orders",
@@ -354,7 +354,7 @@ class TestDetachPartitionExpression:
 
     def test_detach_concurrently_pg14(self, dialect):
         """Test DETACH CONCURRENTLY with PG 14+."""
-        expr = DetachPartitionExpression(
+        expr = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -365,7 +365,7 @@ class TestDetachPartitionExpression:
 
     def test_detach_finalize_requires_concurrently(self, dialect):
         """Test FINALIZE requires CONCURRENTLY."""
-        expr = DetachPartitionExpression(
+        expr = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -376,7 +376,7 @@ class TestDetachPartitionExpression:
 
     def test_detach_with_schema(self, dialect):
         """Test partition detach with schema."""
-        expr = DetachPartitionExpression(
+        expr = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -386,8 +386,8 @@ class TestDetachPartitionExpression:
         assert '"sales".' in sql
 
 
-class TestAttachPartitionExpression:
-    """Test AttachPartitionExpression."""
+class TestPostgresAttachPartitionExpression:
+    """Test PostgresAttachPartitionExpression."""
 
     @pytest.fixture
     def dialect(self):
@@ -395,7 +395,7 @@ class TestAttachPartitionExpression:
 
     def test_attach_range_partition(self, dialect):
         """Test ATTACH PARTITION for RANGE."""
-        expr = AttachPartitionExpression(
+        expr = PostgresAttachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -412,7 +412,7 @@ class TestAttachPartitionExpression:
 
     def test_attach_list_partition(self, dialect):
         """Test ATTACH PARTITION for LIST."""
-        expr = AttachPartitionExpression(
+        expr = PostgresAttachPartitionExpression(
             dialect=dialect,
             partition_name="orders_active",
             parent_table="orders",
@@ -425,7 +425,7 @@ class TestAttachPartitionExpression:
 
     def test_attach_hash_partition(self, dialect):
         """Test ATTACH PARTITION for HASH."""
-        expr = AttachPartitionExpression(
+        expr = PostgresAttachPartitionExpression(
             dialect=dialect,
             partition_name="orders_shard0",
             parent_table="orders",

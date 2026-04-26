@@ -4,7 +4,7 @@ pgcrypto extension - cryptographic functions.
 
 This example demonstrates:
 1. Check if pgcrypto extension is available
-2. CREATE EXTENSION using CreateExtensionExpression
+2. CREATE EXTENSION using PostgresCreateExtensionExpression
 3. Use crypt + gen_salt for password hashing
 4. Use digest for data integrity
 5. Use hmac for message authentication
@@ -36,7 +36,7 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    CreateExtensionExpression,
+    PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     QueryExpression,
@@ -54,7 +54,7 @@ print(f"Extension check: pgcrypto available = {available}, installed = {installe
 
 # Create extension using expression
 if available and not installed:
-    create_ext = CreateExtensionExpression(
+    create_ext = PostgresCreateExtensionExpression(
         dialect=dialect,
         name="pgcrypto",
     )

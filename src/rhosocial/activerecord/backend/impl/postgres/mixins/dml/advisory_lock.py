@@ -10,10 +10,10 @@ from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
-        AdvisoryLockExpression,
-        AdvisoryUnlockExpression,
-        AdvisoryUnlockAllExpression,
-        TryAdvisoryLockExpression,
+        PostgresAdvisoryLockExpression,
+        PostgresAdvisoryUnlockExpression,
+        PostgresAdvisoryUnlockAllExpression,
+        PostgresTryAdvisoryLockExpression,
     )
 
 
@@ -51,7 +51,7 @@ class PostgresAdvisoryLockMixin:
         """
         return True  # PostgreSQL 9.0+ supports advisory locks
 
-    def format_advisory_lock(self, expr: "AdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_advisory_lock(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for acquiring an advisory lock.
 
@@ -62,7 +62,7 @@ class PostgresAdvisoryLockMixin:
         - SELECT pg_advisory_xact_lock_shared(key) for shared transaction lock
 
         Args:
-            expr: AdvisoryLockExpression with lock parameters
+            expr: PostgresAdvisoryLockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)
@@ -88,7 +88,7 @@ class PostgresAdvisoryLockMixin:
         else:
             return f"SELECT {func_name}(%s)", (expr.key,)
 
-    def format_advisory_unlock(self, expr: "AdvisoryUnlockExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing an advisory lock.
 
@@ -97,7 +97,7 @@ class PostgresAdvisoryLockMixin:
         - SELECT pg_advisory_unlock_shared(key) for shared lock
 
         Args:
-            expr: AdvisoryUnlockExpression with lock parameters
+            expr: PostgresAdvisoryUnlockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)
@@ -113,7 +113,7 @@ class PostgresAdvisoryLockMixin:
         else:
             return f"SELECT {func_name}(%s)", (expr.key,)
 
-    def format_advisory_unlock_all(self, expr: "AdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_all(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing all advisory locks.
 
@@ -121,14 +121,14 @@ class PostgresAdvisoryLockMixin:
         - SELECT pg_advisory_unlock_all()
 
         Args:
-            expr: AdvisoryUnlockAllExpression
+            expr: PostgresAdvisoryUnlockAllExpression
 
         Returns:
             Tuple of (SQL string, parameters)
         """
         return "SELECT pg_advisory_unlock_all()", ()
 
-    def format_try_advisory_lock(self, expr: "TryAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_try_advisory_lock(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for non-blocking advisory lock acquisition.
 
@@ -139,7 +139,7 @@ class PostgresAdvisoryLockMixin:
         - SELECT pg_try_advisory_xact_lock_shared(key) for shared transaction lock
 
         Args:
-            expr: TryAdvisoryLockExpression with lock parameters
+            expr: PostgresTryAdvisoryLockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)

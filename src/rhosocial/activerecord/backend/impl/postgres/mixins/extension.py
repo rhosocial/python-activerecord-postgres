@@ -11,7 +11,7 @@ from ..protocols.base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
-    from ..expression.ddl.extension import CreateExtensionExpression, DropExtensionExpression
+    from ..expression.ddl.extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 
 
 class PostgresExtensionMixin:
@@ -551,12 +551,12 @@ class PostgresExtensionMixin:
         return 0
 
     def format_create_extension(
-        self, expr: "CreateExtensionExpression"
+        self, expr: "PostgresCreateExtensionExpression"
     ) -> "SQLQueryAndParams":
         """Format CREATE EXTENSION expression.
 
         Args:
-            expr: CreateExtensionExpression instance
+            expr: PostgresCreateExtensionExpression instance
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -585,12 +585,12 @@ class PostgresExtensionMixin:
         return " ".join(parts), ()
 
     def format_drop_extension(
-        self, expr: "DropExtensionExpression"
+        self, expr: "PostgresDropExtensionExpression"
     ) -> "SQLQueryAndParams":
         """Format DROP EXTENSION expression.
 
         Args:
-            expr: DropExtensionExpression instance
+            expr: PostgresDropExtensionExpression instance
 
         Returns:
             Tuple of (SQL string, empty params tuple).

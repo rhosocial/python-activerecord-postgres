@@ -221,7 +221,6 @@ class PostgresDialect(
     SequenceMixin,
     TableMixin,
     ConstraintMixin,
-    # Introspection capability
     PostgresIntrospectionCapabilityMixin,
     # PostgreSQL-specific mixins
     PostgresExtensionMixin,
@@ -280,7 +279,6 @@ class PostgresDialect(
     ArraySupport,
     ExplainSupport,
     GraphSupport,
-    LockingSupport,
     MergeSupport,
     OrderedSetAggregationSupport,
     QualifyClauseSupport,
@@ -291,10 +289,7 @@ class PostgresDialect(
     JoinSupport,
     ViewSupport,
     SchemaSupport,
-    IndexSupport,
     SequenceSupport,
-    TableSupport,
-    ConstraintSupport,
     # Introspection protocol
     IntrospectionSupport,
     # Transaction control protocol

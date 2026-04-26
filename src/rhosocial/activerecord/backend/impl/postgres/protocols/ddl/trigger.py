@@ -7,9 +7,11 @@ the interface for PostgreSQL's native trigger DDL features.
 
 from typing import Protocol, runtime_checkable, Tuple
 
+from rhosocial.activerecord.backend.dialect.protocols import TriggerSupport
+
 
 @runtime_checkable
-class PostgresTriggerSupport(Protocol):
+class PostgresTriggerSupport(TriggerSupport, Protocol):
     """PostgreSQL trigger DDL protocol.
 
     Feature Source: Native support (no extension required)

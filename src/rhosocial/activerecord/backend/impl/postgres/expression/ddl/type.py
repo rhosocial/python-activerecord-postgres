@@ -24,14 +24,14 @@ if TYPE_CHECKING:
 
 __all__ = [
     # Enum types
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
+    "PostgresCreateEnumTypeExpression",
+    "PostgresDropEnumTypeExpression",
+    "PostgresAlterEnumAddValueExpression",
     # Additional
-    "AlterEnumTypeAddValueExpression",
-    "AlterEnumTypeRenameValueExpression",
+    "PostgresAlterEnumTypeAddValueExpression",
+    "PostgresAlterEnumTypeRenameValueExpression",
     # Range type
-    "CreateRangeTypeExpression",
+    "PostgresCreateRangeTypeExpression",
 ]
 
 
@@ -39,7 +39,7 @@ __all__ = [
 # Enum Type Operations
 # =============================================================================
 
-class CreateEnumTypeExpression(BaseExpression):
+class PostgresCreateEnumTypeExpression(BaseExpression):
     """PostgreSQL CREATE TYPE ... AS ENUM statement expression.
 
     Creates a new enumerated type consisting of a set of static string values.
@@ -54,7 +54,7 @@ class CreateEnumTypeExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> create_enum = CreateEnumTypeExpression(
+        >>> create_enum = PostgresCreateEnumTypeExpression(
         ...     dialect=dialect,
         ...     name="order_status",
         ...     values=["pending", "processing", "shipped", "delivered", "cancelled"],
@@ -64,7 +64,7 @@ class CreateEnumTypeExpression(BaseExpression):
         "CREATE TYPE order_status AS ENUM ('pending', 'processing', 'shipped', 'delivered', 'cancelled')"
 
         >>> # With schema and IF NOT EXISTS
-        >>> create_enum = CreateEnumTypeExpression(
+        >>> create_enum = PostgresCreateEnumTypeExpression(
         ...     dialect=dialect,
         ...     name="priority",
         ...     values=["low", "medium", "high"],
@@ -99,7 +99,7 @@ class CreateEnumTypeExpression(BaseExpression):
         return self.dialect.format_create_enum_type(self)
 
 
-class DropEnumTypeExpression(BaseExpression):
+class PostgresDropEnumTypeExpression(BaseExpression):
     """PostgreSQL DROP TYPE statement expression for enum types.
 
     Drops an existing enum type from the database.
@@ -113,7 +113,7 @@ class DropEnumTypeExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> drop_enum = DropEnumTypeExpression(
+        >>> drop_enum = PostgresDropEnumTypeExpression(
         ...     dialect=dialect,
         ...     name="order_status",
         ... )
@@ -122,7 +122,7 @@ class DropEnumTypeExpression(BaseExpression):
         "DROP TYPE order_status"
 
         >>> # With IF EXISTS and CASCADE
-        >>> drop_enum = DropEnumTypeExpression(
+        >>> drop_enum = PostgresDropEnumTypeExpression(
         ...     dialect=dialect,
         ...     name="priority",
         ...     schema="app",
@@ -157,7 +157,7 @@ class DropEnumTypeExpression(BaseExpression):
         return self.dialect.format_drop_enum_type(self)
 
 
-class AlterEnumAddValueExpression(BaseExpression):
+class PostgresAlterEnumAddValueExpression(BaseExpression):
     """PostgreSQL ALTER TYPE ... ADD VALUE statement expression.
 
     Adds a new value to an existing enum type.
@@ -173,7 +173,7 @@ class AlterEnumAddValueExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> add_value = AlterEnumAddValueExpression(
+        >>> add_value = PostgresAlterEnumAddValueExpression(
         ...     dialect=dialect,
         ...     type_name="order_status",
         ...     new_value="returned",
@@ -183,7 +183,7 @@ class AlterEnumAddValueExpression(BaseExpression):
         "ALTER TYPE order_status ADD VALUE 'returned'"
 
         >>> # Add in order
-        >>> add_value = AlterEnumAddValueExpression(
+        >>> add_value = PostgresAlterEnumAddValueExpression(
         ...     dialect=dialect,
         ...     type_name="order_status",
         ...     new_value="refunded",
@@ -219,7 +219,7 @@ class AlterEnumAddValueExpression(BaseExpression):
         return self.dialect.format_alter_enum_add_value(self)
 
 
-class AlterEnumTypeAddValueExpression(BaseExpression):
+class PostgresAlterEnumTypeAddValueExpression(BaseExpression):
     """PostgreSQL ALTER TYPE ... ADD VALUE statement.
 
     Adds a new value to an existing enum type with validation.
@@ -264,18 +264,10 @@ class AlterEnumTypeAddValueExpression(BaseExpression):
         Returns:
             Tuple of (SQL string, empty params tuple).
         """
-        full_type_name = f"{self.schema}.{self.type_name}" if self.schema else self.type_name
-        sql = f"ALTER TYPE {full_type_name} ADD VALUE '{self.new_value}'"
-
-        if self.before:
-            sql += f" BEFORE '{self.before}'"
-        elif self.after:
-            sql += f" AFTER '{self.after}'"
-
-        return (sql, ())
+        return self.dialect.format_alter_enum_type_add_value(self)
 
 
-class AlterEnumTypeRenameValueExpression(BaseExpression):
+class PostgresAlterEnumTypeRenameValueExpression(BaseExpression):
     """PostgreSQL ALTER TYPE ... RENAME VALUE statement.
 
     Renames an existing value in an enum type.
@@ -317,12 +309,10 @@ class AlterEnumTypeRenameValueExpression(BaseExpression):
         Returns:
             Tuple of (SQL string, empty params tuple).
         """
-        full_type_name = f"{self.schema}.{self.type_name}" if self.schema else self.type_name
-        sql = f"ALTER TYPE {full_type_name} RENAME VALUE '{self.old_value}' TO '{self.new_value}'"
-        return (sql, ())
+        return self.dialect.format_alter_enum_type_rename_value(self)
 
 
-class CreateRangeTypeExpression(BaseExpression):
+class PostgresCreateRangeTypeExpression(BaseExpression):
     """PostgreSQL CREATE TYPE ... AS RANGE statement expression.
 
     Creates a new range type for representing ranges of values.
@@ -344,7 +334,7 @@ class CreateRangeTypeExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> create_range = CreateRangeTypeExpression(
+        >>> create_range = PostgresCreateRangeTypeExpression(
         ...     dialect=dialect,
         ...     name="int4range",
         ...     subtype="int4",
@@ -354,7 +344,7 @@ class CreateRangeTypeExpression(BaseExpression):
         "CREATE TYPE int4range AS RANGE (subtype=int4)"
 
         >>> # Date range with custom functions (PG 9.2+)
-        >>> create_range = CreateRangeTypeExpression(
+        >>> create_range = PostgresCreateRangeTypeExpression(
         ...     dialect=dialect,
         ...     name="date_range",
         ...     subtype="date",
@@ -395,20 +385,4 @@ class CreateRangeTypeExpression(BaseExpression):
         Returns:
             Tuple of (SQL string, empty params tuple).
         """
-        exists_clause = "IF NOT EXISTS " if self.if_not_exists else ""
-        type_name = f"{self.schema}.{self.name}" if self.schema else self.name
-
-        options = [f"subtype={self.subtype}"]
-
-        if self.subtype_opclass:
-            options.append(f"subtype_opclass={self.subtype_opclass}")
-        if self.collation:
-            options.append(f"collation={self.collation}")
-        if self.canonical:
-            options.append(f"canonical={self.canonical}")
-        if self.subtype_diff:
-            options.append(f"subtype_diff={self.subtype_diff}")
-
-        options_str = ", ".join(options)
-        sql = f"CREATE TYPE {exists_clause}{type_name} AS RANGE ({options_str})"
-        return (sql, ())
+        return self.dialect.format_create_range_type(self)

@@ -15,10 +15,10 @@ from rhosocial.activerecord.backend.impl.postgres.types import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
 from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumTypeAddValueExpression,
-    AlterEnumTypeRenameValueExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumTypeAddValueExpression,
+    PostgresAlterEnumTypeRenameValueExpression,
 )
 
 
@@ -98,8 +98,8 @@ class TestPostgresEnumType:
         assert result == ('app.status', ())
 
     def test_create_type_sql(self):
-        """Test CREATE TYPE SQL generation using CreateEnumTypeExpression."""
-        expr = CreateEnumTypeExpression(
+        """Test CREATE TYPE SQL generation using PostgresCreateEnumTypeExpression."""
+        expr = PostgresCreateEnumTypeExpression(
             dialect=self.dialect,
             name='status',
             values=['pending', 'ready']
@@ -112,7 +112,7 @@ class TestPostgresEnumType:
 
     def test_create_type_sql_if_not_exists(self):
         """Test CREATE TYPE IF NOT EXISTS SQL generation."""
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             dialect=self.dialect,
             name='status',
             values=['a', 'b'],
@@ -123,8 +123,8 @@ class TestPostgresEnumType:
         assert params == ()
 
     def test_drop_type_sql(self):
-        """Test DROP TYPE SQL generation using DropEnumTypeExpression."""
-        expr = DropEnumTypeExpression(
+        """Test DROP TYPE SQL generation using PostgresDropEnumTypeExpression."""
+        expr = PostgresDropEnumTypeExpression(
             dialect=self.dialect,
             name='status'
         )
@@ -134,7 +134,7 @@ class TestPostgresEnumType:
 
     def test_drop_type_sql_if_exists(self):
         """Test DROP TYPE IF EXISTS SQL generation."""
-        expr = DropEnumTypeExpression(
+        expr = PostgresDropEnumTypeExpression(
             dialect=self.dialect,
             name='status',
             if_exists=True
@@ -145,7 +145,7 @@ class TestPostgresEnumType:
 
     def test_drop_type_sql_cascade(self):
         """Test DROP TYPE CASCADE SQL generation."""
-        expr = DropEnumTypeExpression(
+        expr = PostgresDropEnumTypeExpression(
             dialect=self.dialect,
             name='status',
             cascade=True
@@ -155,8 +155,8 @@ class TestPostgresEnumType:
         assert params == ()
 
     def test_add_value_sql(self):
-        """Test ALTER TYPE ADD VALUE SQL generation using AlterEnumTypeAddValueExpression."""
-        expr = AlterEnumTypeAddValueExpression(
+        """Test ALTER TYPE ADD VALUE SQL generation using PostgresAlterEnumTypeAddValueExpression."""
+        expr = PostgresAlterEnumTypeAddValueExpression(
             dialect=self.dialect,
             type_name='status',
             new_value='failed'
@@ -167,7 +167,7 @@ class TestPostgresEnumType:
 
     def test_add_value_sql_before(self):
         """Test ADD VALUE with BEFORE clause."""
-        expr = AlterEnumTypeAddValueExpression(
+        expr = PostgresAlterEnumTypeAddValueExpression(
             dialect=self.dialect,
             type_name='status',
             new_value='processing',
@@ -179,7 +179,7 @@ class TestPostgresEnumType:
 
     def test_add_value_sql_after(self):
         """Test ADD VALUE with AFTER clause."""
-        expr = AlterEnumTypeAddValueExpression(
+        expr = PostgresAlterEnumTypeAddValueExpression(
             dialect=self.dialect,
             type_name='status',
             new_value='processing',
@@ -192,7 +192,7 @@ class TestPostgresEnumType:
     def test_add_value_both_before_and_after_raises_error(self):
         """Test that specifying both before and after raises error."""
         with pytest.raises(ValueError, match="Cannot specify both 'before' and 'after'"):
-            AlterEnumTypeAddValueExpression(
+            PostgresAlterEnumTypeAddValueExpression(
                 dialect=self.dialect,
                 type_name='status',
                 new_value='processing',
@@ -201,8 +201,8 @@ class TestPostgresEnumType:
             )
 
     def test_rename_value_sql(self):
-        """Test ALTER TYPE RENAME VALUE SQL generation using AlterEnumTypeRenameValueExpression."""
-        expr = AlterEnumTypeRenameValueExpression(
+        """Test ALTER TYPE RENAME VALUE SQL generation using PostgresAlterEnumTypeRenameValueExpression."""
+        expr = PostgresAlterEnumTypeRenameValueExpression(
             dialect=self.dialect,
             type_name='status',
             old_value='pending',
@@ -215,7 +215,7 @@ class TestPostgresEnumType:
     def test_rename_value_empty_raises_error(self):
         """Test that empty value raises error."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            AlterEnumTypeRenameValueExpression(
+            PostgresAlterEnumTypeRenameValueExpression(
                 dialect=self.dialect,
                 type_name='status',
                 old_value='',

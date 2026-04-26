@@ -8,7 +8,7 @@ statement generation with PostgreSQL-specific options.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import VacuumExpression, AnalyzeExpression
+    from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
 
 
 class PostgresVacuumMixin:
@@ -29,8 +29,8 @@ class PostgresVacuumMixin:
         """PROCESS_TOAST control is native feature, PG 14+."""
         return self.version >= (14, 0, 0)
 
-    def format_vacuum_statement(self, expr: "VacuumExpression") -> Tuple[str, tuple]:
-        """Format VACUUM statement from VacuumExpression."""
+    def format_vacuum_statement(self, expr: "PostgresVacuumExpression") -> Tuple[str, tuple]:
+        """Format VACUUM statement from PostgresVacuumExpression."""
         parts = ["VACUUM"]
 
         # Add options
@@ -90,8 +90,8 @@ class PostgresVacuumMixin:
 
         return (" ".join(parts), ())
 
-    def format_analyze_statement(self, expr: "AnalyzeExpression") -> Tuple[str, tuple]:
-        """Format ANALYZE statement from AnalyzeExpression."""
+    def format_analyze_statement(self, expr: "PostgresAnalyzeExpression") -> Tuple[str, tuple]:
+        """Format ANALYZE statement from PostgresAnalyzeExpression."""
         parts = ["ANALYZE"]
 
         if expr.verbose:

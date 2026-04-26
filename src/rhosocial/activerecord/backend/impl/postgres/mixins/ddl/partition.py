@@ -10,9 +10,9 @@ from typing import Any, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        CreatePartitionExpression,
-        DetachPartitionExpression,
-        AttachPartitionExpression,
+        PostgresCreatePartitionExpression,
+        PostgresDetachPartitionExpression,
+        PostgresAttachPartitionExpression,
     )
 
 
@@ -50,7 +50,7 @@ class PostgresPartitionMixin:
         """Partitionwise aggregate is native feature, PG 11+."""
         return self.version >= (11, 0, 0)
 
-    def format_create_partition_statement(self, expr: "CreatePartitionExpression") -> Tuple[str, tuple]:
+    def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression."""
         partition_type = expr.partition_type.upper()
         if partition_type not in ("RANGE", "LIST", "HASH"):
@@ -140,7 +140,7 @@ class PostgresPartitionMixin:
         else:
             return str(value)
 
-    def format_detach_partition_statement(self, expr: "DetachPartitionExpression") -> Tuple[str, tuple]:
+    def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression."""
         parts = ["ALTER TABLE"]
 
@@ -168,7 +168,7 @@ class PostgresPartitionMixin:
 
         return (" ".join(parts), ())
 
-    def format_attach_partition_statement(self, expr: "AttachPartitionExpression") -> Tuple[str, tuple]:
+    def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression."""
         parts = ["ALTER TABLE"]
 
