@@ -7,12 +7,14 @@ that extend beyond standard SQL.
 
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
+
 if TYPE_CHECKING:
-    from ...expression.ddl import ReindexExpression
+    from ...expression.ddl import PostgresReindexExpression
 
 
 @runtime_checkable
-class PostgresIndexSupport(Protocol):
+class PostgresIndexSupport(IndexSupport, Protocol):
     """PostgreSQL index enhancements protocol.
 
     Feature Source: Native support (no extension required)
@@ -109,11 +111,11 @@ class PostgresIndexSupport(Protocol):
         """
         ...
 
-    def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Args:
-            expr: ReindexExpression containing all REINDEX options
+            expr: PostgresReindexExpression containing all REINDEX options
 
         Returns:
             Tuple of (SQL string, parameters tuple)

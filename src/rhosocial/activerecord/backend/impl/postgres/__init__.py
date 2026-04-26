@@ -24,11 +24,11 @@ from .transaction import PostgresTransactionManager, AsyncPostgresTransactionMan
 from .types import PostgresEnumType
 from .explain import PostgresExplainResult, PostgresExplainPlanLine
 from .expression.ddl import (
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumTypeAddValueExpression,
-    AlterEnumTypeRenameValueExpression,
-    CreateRangeTypeExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumTypeAddValueExpression,
+    PostgresAlterEnumTypeRenameValueExpression,
+    PostgresCreateRangeTypeExpression,
 )
 from .adapters import (
     PostgresEnumAdapter,
@@ -194,11 +194,11 @@ __all__ = [
     "PostgresExplainResult",
     "PostgresExplainPlanLine",
     # PostgreSQL DDL Statements
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumTypeAddValueExpression",
-    "AlterEnumTypeRenameValueExpression",
-    "CreateRangeTypeExpression",
+    "PostgresCreateEnumTypeExpression",
+    "PostgresDropEnumTypeExpression",
+    "PostgresAlterEnumTypeAddValueExpression",
+    "PostgresAlterEnumTypeRenameValueExpression",
+    "PostgresCreateRangeTypeExpression",
     # Range Types
     "PostgresRange",
     "PostgresRangeAdapter",

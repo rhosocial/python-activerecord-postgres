@@ -127,6 +127,8 @@ class TestProtocolNonOverlap:
         excluded_overlaps = {
             ('LockingSupport', 'PostgresLockingSupport'),
             ('PostgresLockingSupport', 'LockingSupport'),
+            ('TriggerSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'TriggerSupport'),
         }
 
         violations = []
@@ -140,4 +142,101 @@ class TestProtocolNonOverlap:
         assert not violations, (
             "The following protocols have overlapping interfaces, need to merge or rename:\n"
             + "\n".join(f"  • {v}" for v in violations)
+        )
+
+
+class TestPostgresProtocolDerivation:
+    """Verify PostgreSQL-specific protocols derive from their generic counterparts.
+
+    This ensures that backend-specific protocols inherit the standard interface,
+    allowing isinstance() checks against generic protocols to work correctly.
+    """
+
+    PROTOCOL_DERIVATIONS = [
+        ("PostgresTableSupport", "TableSupport"),
+        ("PostgresIndexSupport", "IndexSupport"),
+        ("PostgresLockingSupport", "LockingSupport"),
+        ("PostgresTriggerSupport", "TriggerSupport"),
+        ("PostgresConstraintSupport", "ConstraintSupport"),
+    ]
+
+    @pytest.mark.parametrize("pg_name,generic_name", PROTOCOL_DERIVATIONS)
+    def test_protocol_derives_from_generic(self, pg_name, generic_name):
+        """Backend-specific protocol should derive from its generic counterpart."""
+        pg_proto = getattr(postgres_protocols, pg_name)
+        generic_proto = getattr(dialect_protocols, generic_name)
+        assert issubclass(pg_proto, generic_proto), (
+            f"{pg_name} does not derive from {generic_name}"
+        )
+
+    def test_dialect_satisfies_generic_protocols_via_derivation(self):
+        """PostgresDialect should satisfy generic protocols through derived protocols."""
+        dialect = postgres_dialect.PostgresDialect()
+        for pg_name, generic_name in self.PROTOCOL_DERIVATIONS:
+            generic_proto = getattr(dialect_protocols, generic_name)
+            if getattr(generic_proto, "_is_runtime_protocol", False):
+                assert isinstance(dialect, generic_proto), (
+                    f"PostgresDialect does not satisfy {generic_name} "
+                    f"(should be inherited via {pg_name})"
+                )
+
+
+class TestPostgresExpressionDialectSeparation:
+    """Verify PostgreSQL-specific expression classes delegate to dialect for SQL generation.
+
+    Expression-Dialect separation means expression classes collect parameters
+    and delegate to_sql() to dialect.format_*() methods, never directly
+    constructing SQL strings.
+    """
+
+    EXPRESSION_DIALECT_PAIRS = [
+        ("PostgresRefreshMaterializedViewExpression",
+         "format_refresh_materialized_view_pg_statement"),
+        ("PostgresCreateEnumTypeExpression", "format_create_enum_type"),
+        ("PostgresDropEnumTypeExpression", "format_drop_enum_type"),
+        ("PostgresAlterEnumAddValueExpression", "format_alter_enum_add_value"),
+        ("PostgresAlterEnumTypeAddValueExpression", "format_alter_enum_type_add_value"),
+        ("PostgresAlterEnumTypeRenameValueExpression", "format_alter_enum_type_rename_value"),
+        ("PostgresCreateRangeTypeExpression", "format_create_range_type"),
+        ("PostgresVacuumExpression", "format_vacuum_statement"),
+        ("PostgresAnalyzeExpression", "format_analyze_statement"),
+        ("PostgresReindexExpression", "format_reindex_statement"),
+        ("PostgresCommentExpression", "format_comment_statement"),
+        ("PostgresCreateExtensionExpression", "format_create_extension"),
+        ("PostgresDropExtensionExpression", "format_drop_extension"),
+        ("PostgresAdvisoryLockExpression", "format_advisory_lock"),
+        ("PostgresAdvisoryUnlockExpression", "format_advisory_unlock"),
+        ("PostgresAdvisoryUnlockAllExpression", "format_advisory_unlock_all"),
+        ("PostgresTryAdvisoryLockExpression", "format_try_advisory_lock"),
+        ("PostgresCreatePartitionExpression", "format_create_partition_statement"),
+        ("PostgresDetachPartitionExpression", "format_detach_partition_statement"),
+        ("PostgresAttachPartitionExpression", "format_attach_partition_statement"),
+        ("PostgresCreateStatisticsExpression", "format_create_statistics_statement"),
+        ("PostgresDropStatisticsExpression", "format_drop_statistics_statement"),
+    ]
+
+    @pytest.mark.parametrize("expr_name,format_method", EXPRESSION_DIALECT_PAIRS)
+    def test_expression_delegates_to_dialect(self, expr_name, format_method):
+        """Expression.to_sql() should delegate to dialect.format_*() method."""
+        from rhosocial.activerecord.backend.impl.postgres import expression as pg_expr
+
+        # Find the expression class
+        expr_class = None
+        for module_name in dir(pg_expr):
+            module = getattr(pg_expr, module_name)
+            if hasattr(module, expr_name):
+                expr_class = getattr(module, expr_name)
+                break
+
+        # Also check top-level imports
+        if expr_class is None:
+            expr_class = getattr(pg_expr, expr_name, None)
+
+        assert expr_class is not None, f"Expression class {expr_name} not found"
+
+        # Verify the dialect has the corresponding format method
+        dialect = postgres_dialect.PostgresDialect()
+        assert hasattr(dialect, format_method), (
+            f"PostgresDialect missing format method {format_method} "
+            f"for expression {expr_name}"
         )

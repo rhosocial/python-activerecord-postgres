@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 
 if TYPE_CHECKING:
-    from ...expression.ddl import ReindexExpression
+    from ...expression.ddl import PostgresReindexExpression
     from rhosocial.activerecord.backend.expression.statements.ddl_index import (
         CreateIndexExpression,
     )
@@ -201,7 +201,7 @@ class PostgresIndexMixin:
 
         return " ".join(parts), tuple(all_params)
 
-    def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options."""
         target_type = expr.target_type.upper()
         if target_type not in ("INDEX", "TABLE", "SCHEMA", "DATABASE", "SYSTEM"):

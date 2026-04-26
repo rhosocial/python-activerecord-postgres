@@ -9,7 +9,7 @@ Tests for:
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import ReindexExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresReindexExpression
 
 
 class TestIndexFeatureDetection:
@@ -102,7 +102,7 @@ class TestFormatReindexStatement:
     def test_reindex_index_basic(self):
         """Test basic REINDEX INDEX."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_users_email"
@@ -114,7 +114,7 @@ class TestFormatReindexStatement:
     def test_reindex_table(self):
         """Test REINDEX TABLE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="TABLE",
             name="users"
@@ -125,7 +125,7 @@ class TestFormatReindexStatement:
     def test_reindex_schema(self):
         """Test REINDEX SCHEMA."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="SCHEMA",
             name="public"
@@ -136,7 +136,7 @@ class TestFormatReindexStatement:
     def test_reindex_database(self):
         """Test REINDEX DATABASE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="DATABASE",
             name="mydb"
@@ -147,7 +147,7 @@ class TestFormatReindexStatement:
     def test_reindex_system(self):
         """Test REINDEX SYSTEM."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="SYSTEM",
             name="mydb"
@@ -158,7 +158,7 @@ class TestFormatReindexStatement:
     def test_reindex_invalid_target_type(self):
         """Test REINDEX with invalid target type."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INVALID",
             name="test"
@@ -169,7 +169,7 @@ class TestFormatReindexStatement:
     def test_reindex_concurrently_pg11_raises_error(self):
         """REINDEX CONCURRENTLY should raise error on PostgreSQL 11."""
         dialect = PostgresDialect((11, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -181,7 +181,7 @@ class TestFormatReindexStatement:
     def test_reindex_concurrently_pg12(self):
         """Test REINDEX CONCURRENTLY on PostgreSQL 12."""
         dialect = PostgresDialect((12, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -193,7 +193,7 @@ class TestFormatReindexStatement:
     def test_reindex_with_tablespace(self):
         """Test REINDEX with TABLESPACE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -205,7 +205,7 @@ class TestFormatReindexStatement:
     def test_reindex_verbose(self):
         """Test REINDEX VERBOSE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -217,7 +217,7 @@ class TestFormatReindexStatement:
     def test_reindex_with_schema(self):
         """Test REINDEX with schema."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = ReindexExpression(
+        expr = PostgresReindexExpression(
             dialect,
             target_type="INDEX",
             name="idx_test",

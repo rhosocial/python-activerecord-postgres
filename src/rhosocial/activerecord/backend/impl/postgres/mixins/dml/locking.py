@@ -30,7 +30,7 @@ class PostgresLockingMixin:
         """FOR UPDATE SKIP LOCKED is native feature, PG 9.5+."""
         return self.version >= (9, 5, 0)
 
-    def format_postgres_for_update_clause(self, clause) -> Tuple[str, tuple]:
+    def format_for_update_clause(self, clause) -> Tuple[str, tuple]:
         """Format PostgreSQL-specific FOR UPDATE clause.
 
         Handles PostgreSQL-specific lock strengths (FOR NO KEY UPDATE,

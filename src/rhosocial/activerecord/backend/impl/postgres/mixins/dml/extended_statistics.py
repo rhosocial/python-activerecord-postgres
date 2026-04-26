@@ -8,7 +8,7 @@ which help the query planner make better estimates for combined column values.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import CreateStatisticsExpression, DropStatisticsExpression
+    from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression
 
 
 class PostgresExtendedStatisticsMixin:
@@ -34,11 +34,11 @@ class PostgresExtendedStatisticsMixin:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12."""
         return self.version >= (12, 0, 0)
 
-    def format_create_statistics_statement(self, expr: "CreateStatisticsExpression") -> Tuple[str, tuple]:
+    def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsExpression") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
         Args:
-            expr: CreateStatisticsExpression containing all options
+            expr: PostgresCreateStatisticsExpression containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -69,11 +69,11 @@ class PostgresExtendedStatisticsMixin:
 
         return sql, ()
 
-    def format_drop_statistics_statement(self, expr: "DropStatisticsExpression") -> Tuple[str, tuple]:
+    def format_drop_statistics_statement(self, expr: "PostgresDropStatisticsExpression") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
         Args:
-            expr: DropStatisticsExpression containing all options
+            expr: PostgresDropStatisticsExpression containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

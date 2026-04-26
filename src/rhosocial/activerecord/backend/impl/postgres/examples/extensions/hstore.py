@@ -4,7 +4,7 @@ hstore extension - key-value pair storage.
 
 This example demonstrates:
 1. Check if hstore extension is available
-2. Create extension using CreateExtensionExpression
+2. Create extension using PostgresCreateExtensionExpression
 3. Create table with HSTORE column
 4. Insert hstore data using InsertExpression + ValuesSource
 5. Query hstore data using QueryExpression with hstore operators and functions
@@ -43,7 +43,7 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    CreateExtensionExpression,
+    PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -76,7 +76,7 @@ print(f"Extension: hstore available = {available}, installed = {installed}")
 
 # Create extension using expression
 if available and not installed:
-    create_ext = CreateExtensionExpression(
+    create_ext = PostgresCreateExtensionExpression(
         dialect=dialect,
         name="hstore",
     )

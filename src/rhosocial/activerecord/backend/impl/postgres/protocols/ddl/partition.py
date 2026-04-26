@@ -9,8 +9,8 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        CreatePartitionExpression,
-        DetachPartitionExpression,
+        PostgresCreatePartitionExpression,
+        PostgresDetachPartitionExpression,
     )
 
 
@@ -99,22 +99,22 @@ class PostgresPartitionSupport(Protocol):
         """
         ...
 
-    def format_create_partition_statement(self, expr: "CreatePartitionExpression") -> Tuple[str, tuple]:
+    def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
 
         Args:
-            expr: CreatePartitionExpression with partition details
+            expr: PostgresCreatePartitionExpression with partition details
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...
 
-    def format_detach_partition_statement(self, expr: "DetachPartitionExpression") -> Tuple[str, tuple]:
+    def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
         Args:
-            expr: DetachPartitionExpression with detach details
+            expr: PostgresDetachPartitionExpression with detach details
 
         Returns:
             Tuple of (SQL string, parameters tuple)

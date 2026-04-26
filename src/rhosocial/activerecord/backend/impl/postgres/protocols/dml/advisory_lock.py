@@ -11,10 +11,10 @@ from typing import Protocol, Tuple, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
-        AdvisoryLockExpression,
-        AdvisoryUnlockExpression,
-        AdvisoryUnlockAllExpression,
-        TryAdvisoryLockExpression,
+        PostgresAdvisoryLockExpression,
+        PostgresAdvisoryUnlockExpression,
+        PostgresAdvisoryUnlockAllExpression,
+        PostgresTryAdvisoryLockExpression,
     )
 
 
@@ -47,48 +47,48 @@ class PostgresAdvisoryLockSupport(Protocol):
         """
         ...  # pragma: no cover
 
-    def format_advisory_lock(self, expr: "AdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_advisory_lock(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for acquiring an advisory lock.
 
         Args:
-            expr: AdvisoryLockExpression with lock parameters
+            expr: PostgresAdvisoryLockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)
         """
         ...  # pragma: no cover
 
-    def format_advisory_unlock(self, expr: "AdvisoryUnlockExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing an advisory lock.
 
         Args:
-            expr: AdvisoryUnlockExpression with lock parameters
+            expr: PostgresAdvisoryUnlockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)
         """
         ...  # pragma: no cover
 
-    def format_advisory_unlock_all(self, expr: "AdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_all(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing all advisory locks.
 
         Args:
-            expr: AdvisoryUnlockAllExpression
+            expr: PostgresAdvisoryUnlockAllExpression
 
         Returns:
             Tuple of (SQL string, parameters)
         """
         ...  # pragma: no cover
 
-    def format_try_advisory_lock(self, expr: "TryAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_try_advisory_lock(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for non-blocking advisory lock acquisition.
 
         Args:
-            expr: TryAdvisoryLockExpression with lock parameters
+            expr: PostgresTryAdvisoryLockExpression with lock parameters
 
         Returns:
             Tuple of (SQL string, parameters)

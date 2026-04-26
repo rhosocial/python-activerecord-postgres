@@ -8,7 +8,7 @@ which provide advanced query planning statistics for better performance.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import CreateStatisticsExpression, DropStatisticsExpression
+    from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression
 
 
 @runtime_checkable
@@ -64,22 +64,22 @@ class PostgresExtendedStatisticsSupport(Protocol):
         """
         ...
 
-    def format_create_statistics_statement(self, expr: "CreateStatisticsExpression") -> Tuple[str, tuple]:
+    def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsExpression") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
         Args:
-            expr: CreateStatisticsExpression containing all options
+            expr: PostgresCreateStatisticsExpression containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
         ...
 
-    def format_drop_statistics_statement(self, expr: "DropStatisticsExpression") -> Tuple[str, tuple]:
+    def format_drop_statistics_statement(self, expr: "PostgresDropStatisticsExpression") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
         Args:
-            expr: DropStatisticsExpression containing all options
+            expr: PostgresDropStatisticsExpression containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

@@ -43,7 +43,7 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    CreateExtensionExpression,
+    PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -74,7 +74,7 @@ print(f"Extension check: ltree available = {available}, installed = {installed}"
 
 # Create extension using expression
 if available and not installed:
-    create_ext = CreateExtensionExpression(
+    create_ext = PostgresCreateExtensionExpression(
         dialect=dialect,
         name="ltree",
     )
