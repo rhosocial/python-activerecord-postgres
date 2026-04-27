@@ -44,7 +44,19 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
-        # Options to wait for postgres to be healthy before starting the job
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      postgres-exts:
+        image: vistart/postgres-exts:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -80,6 +92,12 @@ jobs:
               database: test_db
               username: root
               password: password
+            postgres_exts:
+              host: 127.0.0.1
+              port: 5433
+              database: test_db
+              username: root
+              password: password
           EOF
           echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
 
@@ -95,6 +113,11 @@ jobs:
             sleep 2
           done
           echo "postgres is ready!"
+          until pg_isready -h 127.0.0.1 -p 5433 -U root; do
+            echo "Waiting for postgres-exts..."
+            sleep 2
+          done
+          echo "postgres-exts is ready!"
 
       - name: Run tests (skip for postgres 18)
         if: matrix.postgres-version != '18'
