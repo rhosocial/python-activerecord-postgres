@@ -48,9 +48,9 @@ from ..introspection import SyncPostgreSQLIntrospector
 
 
 class PostgresBackend(
-    SyncExplainBackendMixin,
     IntrospectorBackendMixin,
     PostgresBackendMixin,
+    SyncExplainBackendMixin,
     PostgresConcurrencyMixin,
     StorageBackend,
 ):

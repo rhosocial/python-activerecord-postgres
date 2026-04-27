@@ -337,7 +337,7 @@ class TestAsyncDeferrableTransaction:
         tx_manager = async_postgres_backend.transaction_manager
 
         tx_manager.isolation_level = IsolationLevel.SERIALIZABLE
-        await tx_manager.set_deferrable(True)
+        tx_manager.set_deferrable(True)
 
         async with async_postgres_backend.transaction():
             await tx_manager.defer_constraint("async_deferred_fk")

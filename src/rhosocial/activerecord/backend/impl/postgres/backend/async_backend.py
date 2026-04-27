@@ -48,9 +48,9 @@ from ..transaction import AsyncPostgresTransactionManager
 
 
 class AsyncPostgresBackend(
-    AsyncExplainBackendMixin,
     IntrospectorBackendMixin,
     PostgresBackendMixin,
+    AsyncExplainBackendMixin,
     PostgresConcurrencyMixin,
     AsyncStorageBackend,
 ):
