@@ -39,21 +39,7 @@ from rhosocial.activerecord.backend.errors import (
     QueryError,
 )
 from rhosocial.activerecord.backend.result import QueryResult
-from ..adapters import (
-    PostgresListAdapter,
-    PostgresJSONBAdapter,
-    PostgresNetworkAddressAdapter,
-    PostgresEnumAdapter,
-    PostgresRangeAdapter,
-    PostgresMultirangeAdapter,
-)
-from ..adapters.geometric import PostgresGeometryAdapter
-from ..adapters.monetary import PostgresMoneyAdapter
-from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
-from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
-from ..adapters.pg_lsn import PostgresLsnAdapter
-from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
-from ..config import PostgresConnectionConfig, RangeAdapterMode
+from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
@@ -61,7 +47,13 @@ from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
 
 
-class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, PostgresBackendMixin, PostgresConcurrencyMixin, StorageBackend):
+class PostgresBackend(
+    SyncExplainBackendMixin,
+    IntrospectorBackendMixin,
+    PostgresBackendMixin,
+    PostgresConcurrencyMixin,
+    StorageBackend,
+):
     """PostgreSQL-specific backend implementation."""
 
     def __init__(self, **kwargs):
@@ -164,72 +156,6 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         from rhosocial.activerecord.backend.introspection.executor import SyncIntrospectorExecutor
 
         return SyncPostgreSQLIntrospector(self, SyncIntrospectorExecutor(self))
-
-    def _register_postgres_adapters(self):
-        """Register PostgreSQL-specific type adapters.
-
-        Range and Multirange adapter registration is controlled by configuration:
-        - range_adapter_mode: Controls how Range types are handled
-          - NATIVE (default): Use psycopg's native Range type (pass-through)
-          - CUSTOM: Use PostgresRange custom type
-          - BOTH: Register both adapters, with custom taking precedence
-        - multirange_adapter_mode: Same for Multirange types (PG 14+ only)
-
-        Note: The following adapters are NOT registered by default due to str->str
-        type mapping conflicts with existing string handling:
-        - PostgresXMLAdapter: XML type
-        - PostgresBitStringAdapter: bit/varbit types
-        - PostgresJsonPathAdapter: jsonpath type
-
-        Users should specify these explicitly when working with such columns.
-        """
-        pg_adapters = [
-            PostgresListAdapter(),
-            PostgresJSONBAdapter(),
-            PostgresNetworkAddressAdapter(),
-            PostgresGeometryAdapter(),
-            PostgresEnumAdapter(),
-            PostgresMoneyAdapter(),
-            PostgresMacaddrAdapter(),
-            PostgresMacaddr8Adapter(),
-            PostgresTsVectorAdapter(),
-            PostgresTsQueryAdapter(),
-            PostgresLsnAdapter(),
-            PostgresOidAdapter(),
-            PostgresXidAdapter(),
-            PostgresTidAdapter(),
-            # PostgresJsonPathAdapter(), # Not registered: str->str conflict
-            # PostgresXMLAdapter is NOT registered by default
-            # due to str->str type pair conflict
-        ]
-
-        for adapter in pg_adapters:
-            for py_type, db_types in adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(adapter, py_type, db_type)
-
-        # Register Range adapters based on configuration
-        range_mode = getattr(self.config, "range_adapter_mode", RangeAdapterMode.NATIVE)
-        if range_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
-            range_adapter = PostgresRangeAdapter()
-            for py_type, db_types in range_adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(range_adapter, py_type, db_type)
-            self.log(logging.DEBUG, "Registered PostgresRangeAdapter (custom range type)")
-
-        # Register Multirange adapters based on configuration (PG 14+ only)
-        # Note: Version check happens in dialect, but at this point we haven't
-        # connected yet, so we register if configured. The adapter itself will
-        # handle version-specific logic if needed.
-        multirange_mode = getattr(self.config, "multirange_adapter_mode", RangeAdapterMode.NATIVE)
-        if multirange_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
-            multirange_adapter = PostgresMultirangeAdapter()
-            for py_type, db_types in multirange_adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(multirange_adapter, py_type, db_type)
-            self.log(logging.DEBUG, "Registered PostgresMultirangeAdapter (custom multirange type)")
-
-        self.log(logging.DEBUG, "Registered PostgreSQL-specific type adapters")
 
     @property
     def dialect(self):
@@ -593,60 +519,6 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
                     return False
             return False
 
-    # PostgreSQL connection error SQLSTATE codes
-    # Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
-    CONNECTION_ERROR_SQLSTATES = {
-        "08000",  # CONNECTION_EXCEPTION
-        "08001",  # SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION
-        "08003",  # CONNECTION_DOES_NOT_EXIST
-        "08004",  # SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION
-        "08006",  # CONNECTION_FAILURE
-        "08007",  # TRANSACTION_RESOLUTION_UNKNOWN
-        "08P01",  # PROTOCOL_VIOLATION
-        "57P01",  # ADMIN_SHUTDOWN
-        "57P02",  # CRASH_SHUTDOWN
-        "57P03",  # CANNOT_CONNECT_NOW
-        "57P04",  # DATABASE_DROPPED
-    }
-
-    def _is_connection_error(self, error: Exception) -> bool:
-        """
-        Check if an error indicates a connection loss.
-
-        This method identifies errors that result from lost or invalid connections,
-        which should trigger automatic reconnection attempts.
-
-        Args:
-            error: The exception to check
-
-        Returns:
-            True if the error indicates a connection problem, False otherwise
-        """
-        if isinstance(error, PsycopgOperationalError):
-            # Check SQLSTATE code if available
-            sqlstate = getattr(error, 'sqlstate', None)
-            if sqlstate and sqlstate in self.CONNECTION_ERROR_SQLSTATES:
-                return True
-
-            # Check for common connection error patterns in message
-            error_msg = str(error).lower()
-            connection_error_patterns = [
-                'connection',
-                'connect',
-                'closed',
-                'terminated',
-                'unexpectedly',
-                'broken pipe',
-                'reset by peer',
-                'server closed',
-                'server has gone away',
-            ]
-            for pattern in connection_error_patterns:
-                if pattern in error_msg:
-                    return True
-
-        return False
-
     def _reconnect(self) -> bool:
         """
         Attempt to reconnect to the PostgreSQL server.
@@ -661,39 +533,6 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
         except Exception as e:
             self.log(logging.ERROR, f"Failed to reconnect: {str(e)}")
             return False
-
-    def _is_connection_error_message(self, error_msg: str) -> bool:
-        """
-        Check if an error message indicates a connection loss.
-
-        This method identifies error messages that result from lost or invalid connections,
-        which should trigger automatic reconnection attempts.
-
-        Args:
-            error_msg: The error message to check
-
-        Returns:
-            True if the message indicates a connection problem, False otherwise
-        """
-        error_msg_lower = error_msg.lower()
-        connection_error_patterns = [
-            'connection',
-            'connect',
-            'closed',
-            'terminated',
-            'terminating connection due to administrator command',
-            'unexpectedly',
-            'broken pipe',
-            'reset by peer',
-            'server closed',
-            'server has gone away',
-            'ssl connection has been closed',
-            'consuming input failed',
-        ]
-        for pattern in connection_error_patterns:
-            if pattern in error_msg_lower:
-                return True
-        return False
 
     def execute(
         self,
@@ -864,20 +703,6 @@ class PostgresBackend(SyncExplainBackendMixin, IntrospectorBackendMixin, Postgre
             if not getattr(self.config, "autocommit", False):
                 self._connection.commit()
                 self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
-
-    def log(self, level: int, message: str):
-        """Log a message with the specified level."""
-        if hasattr(self, "_logger") and self._logger:
-            self._logger.log(level, message)
-        else:
-            # Fallback logging
-            print(f"[{logging.getLevelName(level)}] {message}")
-
-    def _parse_explain_result(self, raw_rows, sql, duration):
-        """Return a typed :class:`PostgresExplainResult` for PostgreSQL EXPLAIN output."""
-        from ..explain import PostgresExplainResult, PostgresExplainPlanLine
-        rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
-        return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
     # region Advisory Lock Methods
 
