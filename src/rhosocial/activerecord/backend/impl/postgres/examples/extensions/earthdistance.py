@@ -82,7 +82,7 @@ if cube_available and not cube_installed:
         name="cube",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION (cube) ---")
+    print("\n--- CREATE EXTENSION (cube) ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     backend.introspect_and_adapt()
@@ -94,7 +94,7 @@ if available and not installed:
         name="earthdistance",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION (earthdistance) ---")
+    print("\n--- CREATE EXTENSION (earthdistance) ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -144,7 +144,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -165,7 +165,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT coordinate data ---")
+    print("\n--- INSERT coordinate data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -188,7 +188,7 @@ if installed:
         select=[distance_func.as_("distance_meters")],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Distance between New York and Los Angeles ---")
+    print("\n--- Distance between New York and Los Angeles ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Result: {result.data}")
@@ -238,7 +238,7 @@ if installed:
         ),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Cities within 500km of New York ---")
+    print("\n--- Cities within 500km of New York ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -281,7 +281,7 @@ if installed:
         ),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Cities within 1500km of Chicago ---")
+    print("\n--- Cities within 1500km of Chicago ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)

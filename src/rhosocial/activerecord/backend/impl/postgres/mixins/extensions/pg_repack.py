@@ -6,7 +6,7 @@ This module provides the PostgresPgRepackMixin class that adds support for
 pg_repack extension features.
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass

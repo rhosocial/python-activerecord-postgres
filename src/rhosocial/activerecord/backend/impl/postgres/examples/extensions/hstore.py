@@ -81,7 +81,7 @@ if available and not installed:
         name="hstore",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -145,7 +145,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT hstore data ---")
+    print("\n--- INSERT hstore data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -167,7 +167,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Get value by key (-> operator) ---")
+    print("\n--- Get value by key (-> operator) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -186,7 +186,7 @@ if installed:
         ),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Key exists (? operator) ---")
+    print("\n--- Key exists (? operator) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -205,7 +205,7 @@ if installed:
         ),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Contains operator (@>) ---")
+    print("\n--- Contains operator (@>) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Products with color=silver: {result.data}")
@@ -225,7 +225,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Concatenation operator (||) ---")
+    print("\n--- Concatenation operator (||) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
@@ -244,7 +244,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Get all keys (akeys function) ---")
+    print("\n--- Get all keys (akeys function) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
@@ -263,7 +263,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Get all values (avals function) ---")
+    print("\n--- Get all values (avals function) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
@@ -282,7 +282,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Get keys as set (skeys function) ---")
+    print("\n--- Get keys as set (skeys function) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
@@ -302,7 +302,7 @@ if installed:
         from_=TableExpression(dialect, "products"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Delete key (delete function) ---")
+    print("\n--- Delete key (delete function) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -332,7 +332,7 @@ if installed:
         ),
     )
     sql, params = update_expr.to_sql()
-    print(f"\n--- UPDATE with hstore concatenation ---")
+    print("\n--- UPDATE with hstore concatenation ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=dml_opts)

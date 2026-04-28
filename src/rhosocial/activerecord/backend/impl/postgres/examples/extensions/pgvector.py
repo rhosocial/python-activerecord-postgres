@@ -85,7 +85,7 @@ if available and not installed:
         name="vector",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -124,7 +124,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -157,7 +157,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT vector data ---")
+    print("\n--- INSERT vector data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -194,8 +194,8 @@ if installed:
         limit_offset=LimitOffsetClause(dialect, limit=3),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Cosine similarity search ---")
-    print(f"Query vector: [1.0, 0.55, 0.18] (similar to 'cat')")
+    print("\n--- Cosine similarity search ---")
+    print("Query vector: [1.0, 0.55, 0.18] (similar to 'cat')")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
@@ -229,8 +229,8 @@ if installed:
         limit_offset=LimitOffsetClause(dialect, limit=3),
     )
     sql, params = query.to_sql()
-    print(f"\n--- L2 distance search ---")
-    print(f"Query vector: [0.1, 0.2, 0.9] (similar to 'car')")
+    print("\n--- L2 distance search ---")
+    print("Query vector: [0.1, 0.2, 0.9] (similar to 'car')")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -250,7 +250,7 @@ if installed:
         dialect_options={"opclasses": {"embedding": "vector_cosine_ops"}},
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE HNSW INDEX ---")
+    print("\n--- CREATE HNSW INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("HNSW index created: idx_documents_embedding")

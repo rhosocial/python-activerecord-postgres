@@ -7,7 +7,7 @@ They provide a way for applications to coordinate activities across sessions
 without relying on table-level or row-level locks.
 """
 
-from typing import Protocol, Tuple, Union, TYPE_CHECKING
+from typing import Protocol, Tuple, TYPE_CHECKING
 from typing import runtime_checkable
 
 if TYPE_CHECKING:

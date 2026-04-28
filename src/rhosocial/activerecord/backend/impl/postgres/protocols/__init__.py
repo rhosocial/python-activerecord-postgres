@@ -83,6 +83,8 @@ __all__ = [
     "PostgresLockingSupport",
     # Type protocols
     "PostgresDataTypeSupport",
+    "PostgresMultirangeSupport",
+    "PostgresEnumTypeSupport",
     # Extension protocols
     "PostgresPgvectorSupport",
     "PostgresPostGISSupport",

@@ -41,7 +41,6 @@ backend.execute(sql, params)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
-    PostgresDropExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -74,7 +73,7 @@ if not installed:
         name="citext",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -113,7 +112,7 @@ create_expr = CreateTableExpression(
 )
 
 sql, params = create_expr.to_sql()
-print(f"\n--- CREATE TABLE ---")
+print("\n--- CREATE TABLE ---")
 print(f"SQL: {sql}")
 
 # Only execute if extension is available
@@ -133,7 +132,7 @@ if available:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT ---")
+    print("\n--- INSERT ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -151,7 +150,7 @@ if available:
         == Literal(dialect, "test@example.com"),
     )
     sql, params = query.to_sql()
-    print(f"\n--- SELECT (case-insensitive) ---")
+    print("\n--- SELECT (case-insensitive) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
 

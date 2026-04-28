@@ -63,7 +63,7 @@ if available and not installed:
         name="uuid-ossp",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -81,7 +81,7 @@ if installed:
         select=[uuid_v1_expr],
     )
     sql, params = query.to_sql()
-    print(f"\n--- UUID v1 (time-based) ---")
+    print("\n--- UUID v1 (time-based) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Generated UUID v1: {result.data}")
@@ -93,7 +93,7 @@ if installed:
         select=[uuid_v1mc_expr],
     )
     sql, params = query.to_sql()
-    print(f"\n--- UUID v1mc (random MAC) ---")
+    print("\n--- UUID v1mc (random MAC) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Generated UUID v1mc: {result.data}")
@@ -105,7 +105,7 @@ if installed:
         select=[uuid_v4_expr],
     )
     sql, params = query.to_sql()
-    print(f"\n--- UUID v4 (random) ---")
+    print("\n--- UUID v4 (random) ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Generated UUID v4: {result.data}")
@@ -119,7 +119,7 @@ if installed:
         select=[uuid_v5_expr],
     )
     sql, params = query.to_sql()
-    print(f"\n--- UUID v5 (SHA-1 name-based) ---")
+    print("\n--- UUID v5 (SHA-1 name-based) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -135,7 +135,7 @@ if installed:
         ],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Multiple UUIDs in one query ---")
+    print("\n--- Multiple UUIDs in one query ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
@@ -148,7 +148,7 @@ if installed:
         ],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Nil UUID constant ---")
+    print("\n--- Nil UUID constant ---")
     print(f"SQL: {sql}")
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")

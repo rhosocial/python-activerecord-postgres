@@ -82,7 +82,7 @@ if available and not installed:
         name="cube",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -122,7 +122,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -146,7 +146,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT cube data ---")
+    print("\n--- INSERT cube data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -168,8 +168,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Contains operator (@>) ---")
-    print(f"Points contained within range '(0.1,0.2,0.0),(0.5,0.6,0.3)':")
+    print("\n--- Contains operator (@>) ---")
+    print("Points contained within range '(0.1,0.2,0.0),(0.5,0.6,0.3)':")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -187,8 +187,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Contained by operator (<@) ---")
-    print(f"Points contained by the range cube:")
+    print("\n--- Contained by operator (<@) ---")
+    print("Points contained by the range cube:")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -239,8 +239,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Distance operator (<->) ---")
-    print(f"Products within distance 0.5 from point (0.5, 0.8, 0.2):")
+    print("\n--- Distance operator (<->) ---")
+    print("Products within distance 0.5 from point (0.5, 0.8, 0.2):")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     print(f"Results: {result.data}")
@@ -274,8 +274,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Nearest neighbor search ---")
-    print(f"3 nearest to point (0.4, 0.5, 0.6):")
+    print("\n--- Nearest neighbor search ---")
+    print("3 nearest to point (0.4, 0.5, 0.6):")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -289,7 +289,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE GIST INDEX ---")
+    print("\n--- CREATE GIST INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("GiST index created: idx_products_feature_vector")

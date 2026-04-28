@@ -82,7 +82,7 @@ if available and not installed:
         name="pg_trgm",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -117,7 +117,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -139,7 +139,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT text data ---")
+    print("\n--- INSERT text data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -170,11 +170,11 @@ if installed:
         order_by=OrderByClause(dialect, [(sim_order, "DESC")]),
     )
     sql, params = query.to_sql()
-    print(f"\n--- similarity() fuzzy search ---")
+    print("\n--- similarity() fuzzy search ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
-    print(f"Query: 'PostgreSQL intro'")
+    print("Query: 'PostgreSQL intro'")
     print(f"Results: {result.data}")
 
     # Example 4: Using % operator (similarity threshold)
@@ -190,11 +190,11 @@ if installed:
         order_by=OrderByClause(dialect, [(Column(dialect, "title"), "ASC")]),
     )
     sql, params = query.to_sql()
-    print(f"\n--- %% operator search ---")
+    print("\n--- %% operator search ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
-    print(f"Query: 'Postgres guide' (above default threshold 0.3)")
+    print("Query: 'Postgres guide' (above default threshold 0.3)")
     print(f"Results: {result.data}")
 
     # Example 5: Show similarity scores for comparison
@@ -218,7 +218,7 @@ if installed:
         order_by=OrderByClause(dialect, [(sim_pg_order, "DESC")]),
     )
     sql, params = query.to_sql()
-    print(f"\n--- Multiple similarity scores ---")
+    print("\n--- Multiple similarity scores ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -236,7 +236,7 @@ if installed:
         dialect_options={"opclasses": {"title": "gin_trgm_ops"}},
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE GIN INDEX ---")
+    print("\n--- CREATE GIN INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("GIN trigram index created: idx_articles_title_trgm")

@@ -5,7 +5,7 @@ This module provides functionality to detect and manage PostgreSQL extensions,
 including version checking and feature support verification.
 """
 
-from typing import Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 from ..protocols.base import PostgresExtensionInfo
 

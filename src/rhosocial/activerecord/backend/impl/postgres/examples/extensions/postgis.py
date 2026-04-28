@@ -56,7 +56,6 @@ from rhosocial.activerecord.backend.expression.core import (
     FunctionCall,
     Subquery,
 )
-from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -68,7 +67,6 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
 )
-from rhosocial.activerecord.backend.expression.query_parts import WhereClause
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -85,7 +83,7 @@ if available and not installed:
         name="postgis",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -124,7 +122,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -177,7 +175,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT spatial data ---")
+    print("\n--- INSERT spatial data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -222,7 +220,7 @@ if installed:
         ],
     )
     sql, params = distance_query.to_sql()
-    print(f"\n--- ST_Distance query ---")
+    print("\n--- ST_Distance query ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
@@ -256,7 +254,7 @@ if installed:
         ),
     )
     sql, params = dwithin_query.to_sql()
-    print(f"\n--- ST_DWithin query (within 500km of New York) ---")
+    print("\n--- ST_DWithin query (within 500km of New York) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -272,7 +270,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE GIST INDEX ---")
+    print("\n--- CREATE GIST INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("GIST spatial index created: idx_locations_geom")

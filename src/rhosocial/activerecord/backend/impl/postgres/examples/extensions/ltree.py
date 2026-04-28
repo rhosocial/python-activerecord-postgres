@@ -79,7 +79,7 @@ if available and not installed:
         name="ltree",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -121,7 +121,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -147,7 +147,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT hierarchical data ---")
+    print("\n--- INSERT hierarchical data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -169,8 +169,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Ancestor query (@>) ---")
-    print(f"Find descendants of 'electronics.computers':")
+    print("\n--- Ancestor query (@>) ---")
+    print("Find descendants of 'electronics.computers':")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -189,8 +189,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Descendant query (<@) ---")
-    print(f"Find ancestors of 'electronics.computers.laptops':")
+    print("\n--- Descendant query (<@) ---")
+    print("Find ancestors of 'electronics.computers.laptops':")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -210,8 +210,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Pattern matching query (~) ---")
-    print(f"Pattern: 'electronics.*{{1}}' (direct children of electronics):")
+    print("\n--- Pattern matching query (~) ---")
+    print("Pattern: 'electronics.*{1}' (direct children of electronics):")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -229,8 +229,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Pattern matching (any depth) ---")
-    print(f"Pattern: 'electronics.*' (all under electronics):")
+    print("\n--- Pattern matching (any depth) ---")
+    print("Pattern: 'electronics.*' (all under electronics):")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -244,7 +244,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE GIST INDEX ---")
+    print("\n--- CREATE GIST INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("GiST index created: idx_categories_path")

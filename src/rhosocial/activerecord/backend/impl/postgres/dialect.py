@@ -47,7 +47,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     ArraySupport,
     ExplainSupport,
     GraphSupport,
-    LockingSupport,
     MergeSupport,
     OrderedSetAggregationSupport,
     QualifyClauseSupport,
@@ -58,15 +57,12 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     JoinSupport,
     ViewSupport,
     SchemaSupport,
-    IndexSupport,
     SequenceSupport,
-    TableSupport,
     SetOperationSupport,
     TruncateSupport,
     ILIKESupport,
     IntrospectionSupport,
     TransactionControlSupport,
-    ConstraintSupport,
     SQLFunctionSupport,
 )
 from .mixins import (

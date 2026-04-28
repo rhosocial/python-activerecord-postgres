@@ -76,6 +76,7 @@ __all__ = [
     "PostgresTriggerMixin",
     "PostgresCommentMixin",
     "PostgresTypeMixin",
+    "PostgresConstraintMixin",
     # DML mixins
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",

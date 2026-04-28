@@ -14,7 +14,7 @@ Version Requirements:
 - ATTACH PARTITION with CONCURRENTLY: PostgreSQL 14+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 

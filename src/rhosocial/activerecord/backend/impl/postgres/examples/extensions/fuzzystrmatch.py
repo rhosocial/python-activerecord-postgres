@@ -61,7 +61,7 @@ if available and not installed:
         name="fuzzystrmatch",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -85,7 +85,7 @@ if installed:
         ],
     )
     sql, params = lev_query.to_sql()
-    print(f"\n--- Levenshtein distance ---")
+    print("\n--- Levenshtein distance ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -126,7 +126,7 @@ if installed:
         ],
     )
     sql, params = soundex_query.to_sql()
-    print(f"\n--- Soundex encoding ---")
+    print("\n--- Soundex encoding ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -160,7 +160,7 @@ if installed:
         ],
     )
     sql, params = diff_query.to_sql()
-    print(f"\n--- Difference (Soundex similarity) ---")
+    print("\n--- Difference (Soundex similarity) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -192,7 +192,7 @@ if installed:
         ],
     )
     sql, params = meta_query.to_sql()
-    print(f"\n--- Metaphone encoding ---")
+    print("\n--- Metaphone encoding ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -222,7 +222,7 @@ if installed:
         ],
     )
     sql, params = dmeta_query.to_sql()
-    print(f"\n--- Double Metaphone encoding ---")
+    print("\n--- Double Metaphone encoding ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -250,7 +250,7 @@ if installed:
         ],
     )
     sql, params = dmeta_alt_query.to_sql()
-    print(f"\n--- Double Metaphone alternate codes ---")
+    print("\n--- Double Metaphone alternate codes ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)

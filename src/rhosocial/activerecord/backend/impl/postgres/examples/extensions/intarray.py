@@ -80,7 +80,7 @@ if available and not installed:
         name="intarray",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -119,7 +119,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
-    print(f"\n--- CREATE TABLE ---")
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
@@ -140,7 +140,7 @@ if installed:
         ),
     )
     sql, params = insert_expr.to_sql()
-    print(f"\n--- INSERT integer array data ---")
+    print("\n--- INSERT integer array data ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     backend.execute(sql, params)
@@ -161,8 +161,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Contains operator (@>) ---")
-    print(f"Find articles with BOTH tag 1 AND 3:")
+    print("\n--- Contains operator (@>) ---")
+    print("Find articles with BOTH tag 1 AND 3:")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -180,8 +180,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- Overlap operator (&&) ---")
-    print(f"Find articles with tag 1 OR tag 6:")
+    print("\n--- Overlap operator (&&) ---")
+    print("Find articles with tag 1 OR tag 6:")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -197,8 +197,8 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- idx() function ---")
-    print(f"Position of element 3 in each array:")
+    print("\n--- idx() function ---")
+    print("Position of element 3 in each array:")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -221,7 +221,7 @@ if installed:
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
-    print(f"\n--- sort() and uniq() functions ---")
+    print("\n--- sort() and uniq() functions ---")
     print(f"SQL: {sql}")
     print(f"Results: {result.data}")
 
@@ -236,7 +236,7 @@ if installed:
         if_not_exists=True,
     )
     sql, params = create_idx.to_sql()
-    print(f"\n--- CREATE GIST INDEX ---")
+    print("\n--- CREATE GIST INDEX ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     print("GiST index created: idx_tags_tag_ids")

@@ -40,7 +40,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
 )
 from rhosocial.activerecord.backend.expression import (
     QueryExpression,
-    Column,
     FunctionCall,
     Literal,
 )
@@ -59,7 +58,7 @@ if available and not installed:
         name="pgcrypto",
     )
     sql, params = create_ext.to_sql()
-    print(f"\n--- CREATE EXTENSION ---")
+    print("\n--- CREATE EXTENSION ---")
     print(f"SQL: {sql}")
     backend.execute(sql, params)
     # Re-detect extensions after creation
@@ -85,7 +84,7 @@ if installed:
         select=[crypt_call],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Password hashing (crypt + gen_salt) ---")
+    print("\n--- Password hashing (crypt + gen_salt) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -106,7 +105,7 @@ if installed:
             select=[verify_crypt],
         )
         sql, params = verify_query.to_sql()
-        print(f"\n--- Password verification ---")
+        print("\n--- Password verification ---")
         print(f"SQL: {sql}")
         print(f"Params: {params}")
         result = backend.execute(sql, params, options=opts)
@@ -114,8 +113,8 @@ if installed:
         matches = rehashed == stored_hash
         print(f"Re-hashed: {rehashed}")
         print(f"Password matches: {matches}")
-    print(f"Note: In practice, store the hash from step 1, then verify with:")
-    print(f"  crypt(input_password, stored_hash) = stored_hash")
+    print("Note: In practice, store the hash from step 1, then verify with:")
+    print("  crypt(input_password, stored_hash) = stored_hash")
 
     # Example 3: Data digest (hash) using digest()
     # digest(data, algorithm) returns bytea
@@ -131,7 +130,7 @@ if installed:
         select=[encode_call],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Data digest (SHA-256) ---")
+    print("\n--- Data digest (SHA-256) ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -158,7 +157,7 @@ if installed:
         select=[md5_call, sha1_call, sha256_call],
     )
     sql, params = query.to_sql()
-    print(f"\n--- Multiple digest algorithms ---")
+    print("\n--- Multiple digest algorithms ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -180,7 +179,7 @@ if installed:
         select=[encode_hmac],
     )
     sql, params = query.to_sql()
-    print(f"\n--- HMAC-SHA256 ---")
+    print("\n--- HMAC-SHA256 ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -198,7 +197,7 @@ if installed:
         select=[encrypt_call],
     )
     sql, params = query.to_sql()
-    print(f"\n--- PGP symmetric encryption ---")
+    print("\n--- PGP symmetric encryption ---")
     print(f"SQL: {sql}")
     print(f"Params: {params}")
     result = backend.execute(sql, params, options=opts)
@@ -217,7 +216,7 @@ if installed:
             select=[decrypt_call],
         )
         sql, params = query.to_sql()
-        print(f"\n--- PGP symmetric decryption ---")
+        print("\n--- PGP symmetric decryption ---")
         print(f"SQL: {sql}")
         print(f"Params: {params}")
         result = backend.execute(sql, params, options=opts)
