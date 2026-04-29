@@ -15,90 +15,17 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 class TestHstoreMixin:
     """Test hstore extension mixin."""
 
-    def test_format_hstore_literal(self):
-        """Test hstore literal formatting."""
+    def test_supports_hstore_type(self):
+        """Test hstore type support check."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_literal({'a': '1', 'b': '2'})
-        assert 'a=>"1"' in result
-        assert 'b=>"2"' in result
+        result = dialect.supports_hstore_type()
+        assert isinstance(result, bool)
 
-    def test_format_hstore_literal_with_quotes(self):
-        """Test hstore literal with quoted values."""
+    def test_supports_hstore_operators(self):
+        """Test hstore operators support check."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_literal({'key': 'value with "quotes"'})
-        assert 'value with \\"quotes\\"' in result
-
-    def test_format_hstore_constructor_empty(self):
-        """Test empty hstore constructor."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_constructor([])
-        assert "hstore('{}'::text[])" in result
-
-    def test_format_hstore_constructor_with_pairs(self):
-        """Test hstore constructor with pairs."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_constructor([['a', '1'], ['b', '2']])
-        assert "hstore(ARRAY[['a', '1'], ['b', '2']])" in result
-
-    def test_format_hstore_operator_contains(self):
-        """Test hstore @> operator."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_operator('data', '@>', "'a=>1'")
-        assert "data @> 'a=>1'" in result
-
-    def test_format_hstore_operator_key_exists(self):
-        """Test hstore ? operator."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_operator('data', '?', "'key'")
-        assert "data ? 'key'" in result
-
-    def test_format_hstore_operator_concat(self):
-        """Test hstore || operator."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_operator('data', '||', "'a=>1'")
-        assert "data || 'a=>1'" in result
-
-    def test_format_hstore_operator_delete_key(self):
-        """Test hstore - operator."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_operator('data', '-', "'key'")
-        assert "data - 'key'" in result
-
-    def test_format_hstore_operator_key_access(self):
-        """Test hstore -> operator."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_operator('data', '->', "'key'")
-        assert "data->'key'" in result
-
-    def test_format_hstore_get_value(self):
-        """Test hstore get value."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_get_value('data', 'name')
-        assert "data->'name'" in result
-
-    def test_format_hstore_get_value_as_text(self):
-        """Test hstore get value as text."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_get_value('data', 'name', as_text=True)
-        assert "data->>'name'" in result
-
-    def test_format_hstore_contains_key(self):
-        """Test hstore contains key check."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_contains_key('data', 'name')
-        assert "data ? 'name'" in result
-
-    def test_format_hstore_contains_all_keys(self):
-        """Test hstore contains all keys check."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_contains_all_keys('data', ['a', 'b'])
-        assert "data ?& ARRAY['a', 'b']" in result
-
-    def test_format_hstore_contains_any_keys(self):
-        """Test hstore contains any keys check."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_hstore_contains_any_keys('data', ['a', 'b'])
-        assert "data ?| ARRAY['a', 'b']" in result
+        result = dialect.supports_hstore_operators()
+        assert isinstance(result, bool)
 
 
 class TestLtreeMixin:

@@ -1,704 +1,856 @@
 # src/rhosocial/activerecord/backend/impl/postgres/functions/hstore.py
 """
-PostgreSQL hstore functions for SQL expression generation.
+PostgreSQL hstore function factories.
 
-This module provides utility functions for generating PostgreSQL hstore SQL expressions.
+This module provides SQL expression generators for PostgreSQL hstore
+functions and operators. All functions return Expression objects
+that integrate with the Expression/Dialect architecture.
 
 hstore is a PostgreSQL extension that stores key/value pairs in a single value.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/hstore.html
 
+The hstore extension must be installed:
+    CREATE EXTENSION IF NOT EXISTS hstore;
+
 Supported functions:
-- Constructors: hstore(record), hstore(text, text)
+- Constructors: hstore(record), hstore(key, value)
 - Key/Value Extraction: akeys, skeys, avals, svals, each
 - Conversion: hstore_to_array, hstore_to_matrix, hstore_to_json, hstore_to_jsonb
-- Subsets: slice
+- Subset: slice
 - Existence: exist, defined
 - Delete: delete
-- Record: populate_record
 
 Supported operators:
-- -> text        - Access single key
-- -> text[]      - Access multiple keys
-- ||             - Concatenate
-- ?              - Key exists
-- ?&             - All keys exist
-- ?|             - Any key exists
-- @>             - Contains
-- <@             - Contained by
-- - text         - Delete by key
-- - text[]       - Delete by keys
-- - hstore       - Delete matching pairs
-- %%             - To array
-- %#             - To matrix
-- #=             - Record update
+- ->  : Access single key (value)
+- ->> : Access single key (text)
+- ||  : Concatenate
+- ?   : Key exists
+- ?&  : All keys exist
+- ?|  : Any key exists
+- @>  : Contains
+- <@  : Contained by
+- -   : Delete (by key, keys, or pairs)
+- #=  : Record update
 """
 
-from typing import Any
+from typing import Dict, List, Optional, Union, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.impl.postgres.types.hstore import PostgresHstore
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _to_sql(expr: Any) -> str:
-    """Convert an expression to its SQL string representation."""
-    if hasattr(expr, 'to_sql'):
-        return expr.to_sql()[0]
-    return str(expr)
+def _convert_to_expression(
+    dialect: "SQLDialectBase",
+    expr: Union[PostgresHstore, Dict[str, Optional[str]], str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert an input value to an appropriate BaseExpression.
+
+    Supports PostgresHstore objects, Dict, strings, and existing
+    BaseExpression objects.
+
+    For PostgresHstore and Dict inputs, generates a typed hstore literal
+    expression with ::hstore cast.
+
+    Args:
+        dialect: The SQL dialect instance
+        expr: Value to convert
+
+    Returns:
+        BaseExpression representing the value
+    """
+    if isinstance(expr, bases.BaseExpression):
+        return expr
+    elif isinstance(expr, PostgresHstore):
+        literal = core.Literal(dialect, expr.to_postgres_string())
+        return literal.cast("hstore")
+    elif isinstance(expr, dict):
+        hstore = PostgresHstore(data=expr)
+        literal = core.Literal(dialect, hstore.to_postgres_string())
+        return literal.cast("hstore")
+    elif isinstance(expr, str):
+        return core.Literal(dialect, expr)
+    else:
+        return core.Literal(dialect, expr)
 
 
 # ============== Constructors ==============
 
-def hstore_from_record(record: str) -> str:
-    """
-    Construct hstore from a record/row.
+def hstore_from_record(
+    dialect: "SQLDialectBase",
+    record: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Construct hstore from a record/row.
 
     Args:
-        record: The record expression (e.g., 'ROW(1,2)' or table column)
+        dialect: The SQL dialect instance
+        record: The record expression (e.g., table column)
 
     Returns:
-        SQL expression: hstore(record)
-
-    Example:
-        >>> hstore_from_record("ROW(1,2)")
-        "hstore(ROW(1,2))"
+        FunctionCall for hstore(record)
     """
-    return f"hstore({record})"
+    return core.FunctionCall(dialect, "hstore", _convert_to_expression(dialect, record))
 
 
-def hstore_from_key_value(key: str, value: str) -> str:
-    """
-    Construct hstore from a single key/value pair.
+def hstore_from_key_value(
+    dialect: "SQLDialectBase",
+    key: Union[str, "bases.BaseExpression"],
+    value: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Construct hstore from a single key/value pair.
 
     Args:
+        dialect: The SQL dialect instance
         key: The key string
         value: The value string
 
     Returns:
-        SQL expression: hstore(key, value)
-
-    Example:
-        >>> hstore_from_key_value("'name'", "'value'")
-        "hstore('name', 'value')"
+        FunctionCall for hstore(key, value)
     """
-    return f"hstore({key}, {value})"
+    return core.FunctionCall(
+        dialect, "hstore",
+        _convert_to_expression(dialect, key),
+        _convert_to_expression(dialect, value),
+    )
 
 
 # ============== Key/Value Extraction ==============
 
-def hstore_akeys(hstore_expr: str) -> str:
-    """
-    Get all keys from hstore as a text array.
+def hstore_akeys(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get all keys from hstore as a text array.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: akeys(hstore)
-
-    Example:
-        >>> hstore_akeys("data")
-        "akeys(data)"
+        FunctionCall for akeys(hstore)
     """
-    return f"akeys({hstore_expr})"
+    return core.FunctionCall(dialect, "akeys", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_skeys(hstore_expr: str) -> str:
-    """
-    Get all keys from hstore as a set.
+def hstore_skeys(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get all keys from hstore as a set.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: skeys(hstore)
-
-    Example:
-        >>> hstore_skeys("data")
-        "skeys(data)"
+        FunctionCall for skeys(hstore)
     """
-    return f"skeys({hstore_expr})"
+    return core.FunctionCall(dialect, "skeys", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_avals(hstore_expr: str) -> str:
-    """
-    Get all values from hstore as a text array.
+def hstore_avals(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get all values from hstore as a text array.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: avals(hstore)
-
-    Example:
-        >>> hstore_avals("data")
-        "avals(data)"
+        FunctionCall for avals(hstore)
     """
-    return f"avals({hstore_expr})"
+    return core.FunctionCall(dialect, "avals", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_svals(hstore_expr: str) -> str:
-    """
-    Get all values from hstore as a set.
+def hstore_svals(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get all values from hstore as a set.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: svals(hstore)
-
-    Example:
-        >>> hstore_svals("data")
-        "svals(data)"
+        FunctionCall for svals(hstore)
     """
-    return f"svals({hstore_expr})"
+    return core.FunctionCall(dialect, "svals", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_each(hstore_expr: str) -> str:
-    """
-    Get all key/value pairs from hstore as a set of (key, value) records.
+def hstore_each(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get all key/value pairs from hstore as a set of (key, value) records.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: each(hstore)
-
-    Example:
-        >>> hstore_each("data")
-        "each(data)"
+        FunctionCall for each(hstore)
     """
-    return f"each({hstore_expr})"
+    return core.FunctionCall(dialect, "each", _convert_to_expression(dialect, hstore_expr))
 
 
 # ============== Conversion Functions ==============
 
-def hstore_to_array(hstore_expr: str) -> str:
-    """
-    Convert hstore to text array (alternating keys and values).
+def hstore_to_array(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to text array (alternating keys and values).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_array(hstore)
-
-    Example:
-        >>> hstore_to_array("data")
-        "hstore_to_array(data)"
+        FunctionCall for hstore_to_array(hstore)
     """
-    return f"hstore_to_array({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_array", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_to_matrix(hstore_expr: str) -> str:
-    """
-    Convert hstore to 2D text array (key/value pairs as rows).
+def hstore_to_matrix(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to 2D text array (key/value pairs as rows).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_matrix(hstore)
-
-    Example:
-        >>> hstore_to_matrix("data")
-        "hstore_to_matrix(data)"
+        FunctionCall for hstore_to_matrix(hstore)
     """
-    return f"hstore_to_matrix({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_matrix", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_to_json(hstore_expr: str) -> str:
-    """
-    Convert hstore to JSON (values as strings).
+def hstore_to_json(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to JSON (values as strings).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_json(hstore)
-
-    Example:
-        >>> hstore_to_json("data")
-        "hstore_to_json(data)"
+        FunctionCall for hstore_to_json(hstore)
     """
-    return f"hstore_to_json({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_json", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_to_jsonb(hstore_expr: str) -> str:
-    """
-    Convert hstore to JSONB (values as strings).
+def hstore_to_jsonb(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to JSONB (values as strings).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_jsonb(hstore)
-
-    Example:
-        >>> hstore_to_jsonb("data")
-        "hstore_to_jsonb(data)"
+        FunctionCall for hstore_to_jsonb(hstore)
     """
-    return f"hstore_to_jsonb({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_jsonb", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_to_json_loose(hstore_expr: str) -> str:
-    """
-    Convert hstore to JSON with loose type inference.
+def hstore_to_json_loose(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to JSON with loose type inference.
 
     Attempts to infer proper JSON types for values (numeric, boolean, etc).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_json_loose(hstore)
-
-    Example:
-        >>> hstore_to_json_loose("data")
-        "hstore_to_json_loose(data)"
+        FunctionCall for hstore_to_json_loose(hstore)
     """
-    return f"hstore_to_json_loose({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_json_loose", _convert_to_expression(dialect, hstore_expr))
 
 
-def hstore_to_jsonb_loose(hstore_expr: str) -> str:
-    """
-    Convert hstore to JSONB with loose type inference.
+def hstore_to_jsonb_loose(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Convert hstore to JSONB with loose type inference.
 
     Attempts to infer proper JSON types for values (numeric, boolean, etc).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
 
     Returns:
-        SQL expression: hstore_to_jsonb_loose(hstore)
-
-    Example:
-        >>> hstore_to_jsonb_loose("data")
-        "hstore_to_jsonb_loose(data)"
+        FunctionCall for hstore_to_jsonb_loose(hstore)
     """
-    return f"hstore_to_jsonb_loose({hstore_expr})"
+    return core.FunctionCall(dialect, "hstore_to_jsonb_loose", _convert_to_expression(dialect, hstore_expr))
 
 
 # ============== Subset Functions ==============
 
-def hstore_slice(hstore_expr: str, keys: str) -> str:
-    """
-    Extract subset of hstore by keys.
+def hstore_slice(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Extract subset of hstore by keys.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
-        keys: Array of keys to extract (e.g., "ARRAY['a', 'b']")
+        keys: Array of keys to extract
 
     Returns:
-        SQL expression: slice(hstore, keys)
-
-    Example:
-        >>> hstore_slice("data", "ARRAY['a', 'b']")
-        "slice(data, ARRAY['a', 'b'])"
+        FunctionCall for slice(hstore, keys)
     """
-    return f"slice({hstore_expr}, {keys})"
+    return core.FunctionCall(
+        dialect, "slice",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
 
 
 # ============== Existence Functions ==============
 
-def hstore_exist(hstore_expr: str, key: str) -> str:
-    """
-    Check if key exists in hstore (including NULL values).
+def hstore_exist(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Check if key exists in hstore (including NULL values).
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         key: The key to check
 
     Returns:
-        SQL expression: exist(hstore, key)
-
-    Example:
-        >>> hstore_exist("data", "'name'")
-        "exist(data, 'name')"
+        FunctionCall for exist(hstore, key)
     """
-    return f"exist({hstore_expr}, {key})"
+    return core.FunctionCall(
+        dialect, "exist",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
 
 
-def hstore_defined(hstore_expr: str, key: str) -> str:
-    """
-    Check if key exists and has a non-NULL value.
+def hstore_defined(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Check if key exists and has a non-NULL value.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         key: The key to check
 
     Returns:
-        SQL expression: defined(hstore, key)
-
-    Example:
-        >>> hstore_defined("data", "'name'")
-        "defined(data, 'name')"
+        FunctionCall for defined(hstore, key)
     """
-    return f"defined({hstore_expr}, {key})"
+    return core.FunctionCall(
+        dialect, "defined",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
 
 
 # ============== Delete Functions ==============
 
-def hstore_delete(hstore_expr: str, key: str) -> str:
-    """
-    Delete a key from hstore.
+def hstore_delete(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Delete a key from hstore.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         key: The key to delete
 
     Returns:
-        SQL expression: delete(hstore, key)
-
-    Example:
-        >>> hstore_delete("data", "'name'")
-        "delete(data, 'name')"
+        FunctionCall for delete(hstore, key)
     """
-    return f"delete({hstore_expr}, {key})"
+    return core.FunctionCall(
+        dialect, "delete",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
 
 
-def hstore_delete_keys(hstore_expr: str, keys: str) -> str:
-    """
-    Delete multiple keys from hstore.
+def hstore_delete_keys(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Delete multiple keys from hstore.
 
     Args:
-        hstore_expr: The hstore expression
-        keys: Array of keys to delete (e.g., "ARRAY['a', 'b']")
-
-    Returns:
-        SQL expression: delete(hstore, keys)
-
-    Example:
-        >>> hstore_delete_keys("data", "ARRAY['name', 'age']")
-        "delete(data, ARRAY['name', 'age'])"
-    """
-    return f"delete({hstore_expr}, {keys})"
-
-
-def hstore_delete_pairs(hstore_expr: str, pairs: str) -> str:
-    """
-    Delete matching key/value pairs from hstore.
-
-    Args:
-        hstore_expr: The hstore expression
-        pairs: The hstore containing keys/values to delete
-
-    Returns:
-        SQL expression: delete(hstore, hstore)
-
-    Example:
-        >>> hstore_delete_pairs("data", "'a=>1'::hstore")
-        "delete(data, 'a=>1'::hstore)"
-    """
-    return f"delete({hstore_expr}, {pairs})"
-
-
-# ============== Record Functions ==============
-
-def hstore_populate_record(record: str, hstore_expr: str) -> str:
-    """
-    Update a record/row with values from hstore.
-
-    Args:
-        record: The record expression to update
-        hstore_expr: The hstore containing field values
-
-    Returns:
-        SQL expression: populate_record(record, hstore)
-
-    Example:
-        >>> hstore_populate_record("ROW(1,2)", "'f1=>42'::hstore")
-        "populate_record(ROW(1,2), 'f1=>42'::hstore)"
-    """
-    return f"populate_record({record}, {hstore_expr})"
-
-
-# ============== Operators ==============
-
-def hstore_get_value(hstore_expr: str, key: str) -> str:
-    """
-    Get value by key (operator ->).
-
-    Args:
-        hstore_expr: The hstore expression
-        key: The key to access
-
-    Returns:
-        SQL expression: hstore -> key
-
-    Example:
-        >>> hstore_get_value("data", "'name'")
-        "data -> 'name'"
-    """
-    return f"{hstore_expr} -> {key}"
-
-
-def hstore_get_values(hstore_expr: str, keys: str) -> str:
-    """
-    Get values by multiple keys (operator -> text[]).
-
-    Args:
-        hstore_expr: The hstore expression
-        keys: Array of keys to access
-
-    Returns:
-        SQL expression: hstore -> text[]
-
-    Example:
-        >>> hstore_get_values("data", "ARRAY['name', 'age']")
-        "data -> ARRAY['name', 'age']"
-    """
-    return f"{hstore_expr} -> {keys}"
-
-
-def hstore_concat(left: str, right: str) -> str:
-    """
-    Concatenate two hstores (operator ||).
-
-    Args:
-        left: Left hstore expression
-        right: Right hstore expression
-
-    Returns:
-        SQL expression: hstore || hstore
-
-    Example:
-        >>> hstore_concat("'a=>1'::hstore", "'b=>2'::hstore")
-        "'a=>1'::hstore || 'b=>2'::hstore"
-    """
-    return f"{left} || {right}"
-
-
-def hstore_key_exists(hstore_expr: str, key: str) -> str:
-    """
-    Check if key exists (operator ?).
-
-    Args:
-        hstore_expr: The hstore expression
-        key: The key to check
-
-    Returns:
-        SQL expression: hstore ? key
-
-    Example:
-        >>> hstore_key_exists("data", "'name'")
-        "data ? 'name'"
-    """
-    return f"{hstore_expr} ? {key}"
-
-
-def hstore_all_keys_exist(hstore_expr: str, keys: str) -> str:
-    """
-    Check if all keys exist (operator ?&).
-
-    Args:
-        hstore_expr: The hstore expression
-        keys: Array of keys that must all exist
-
-    Returns:
-        SQL expression: hstore ?& keys
-
-    Example:
-        >>> hstore_all_keys_exist("data", "ARRAY['a', 'b']")
-        "data ?& ARRAY['a', 'b']"
-    """
-    return f"{hstore_expr} ?& {keys}"
-
-
-def hstore_any_key_exists(hstore_expr: str, keys: str) -> str:
-    """
-    Check if any key exists (operator ?|).
-
-    Args:
-        hstore_expr: The hstore expression
-        keys: Array of keys where any must exist
-
-    Returns:
-        SQL expression: hstore ?| keys
-
-    Example:
-        >>> hstore_any_key_exists("data", "ARRAY['a', 'b']")
-        "data ?| ARRAY['a', 'b']"
-    """
-    return f"{hstore_expr} ?| {keys}"
-
-
-def hstore_contains(left: str, right: str) -> str:
-    """
-    Check if left hstore contains right (operator @>).
-
-    Args:
-        left: Left hstore expression
-        right: Right hstore expression
-
-    Returns:
-        SQL expression: hstore @> hstore
-
-    Example:
-        >>> hstore_contains("data", "'a=>1'")
-        "data @> 'a=>1'"
-    """
-    return f"{left} @> {right}"
-
-
-def hstore_contained_by(left: str, right: str) -> str:
-    """
-    Check if left hstore is contained by right (operator <@).
-
-    Args:
-        left: Left hstore expression
-        right: Right hstore expression
-
-    Returns:
-        SQL expression: hstore <@ hstore
-
-    Example:
-        >>> hstore_contained_by("'a=>1'", "data")
-        "'a=>1' <@ data"
-    """
-    return f"{left} <@ {right}"
-
-
-def hstore_subtract_key(hstore_expr: str, key: str) -> str:
-    """
-    Delete key from hstore (operator - text).
-
-    Args:
-        hstore_expr: The hstore expression
-        key: The key to delete
-
-    Returns:
-        SQL expression: hstore - key
-
-    Example:
-        >>> hstore_subtract_key("data", "'name'")
-        "data - 'name'"
-    """
-    return f"{hstore_expr} - {key}"
-
-
-def hstore_subtract_keys(hstore_expr: str, keys: str) -> str:
-    """
-    Delete multiple keys from hstore (operator - text[]).
-
-    Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         keys: Array of keys to delete
 
     Returns:
-        SQL expression: hstore - text[]
-
-    Example:
-        >>> hstore_subtract_keys("data", "ARRAY['a', 'b']")
-        "data - ARRAY['a', 'b']"
+        FunctionCall for delete(hstore, keys)
     """
-    return f"{hstore_expr} - {keys}"
+    return core.FunctionCall(
+        dialect, "delete",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
 
 
-def hstore_subtract_pairs(left: str, right: str) -> str:
-    """
-    Delete matching pairs from hstore (operator - hstore).
+def hstore_delete_pairs(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    pairs: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Delete matching key/value pairs from hstore.
 
     Args:
-        left: Left hstore expression
-        right: Right hstore containing pairs to delete
-
-    Returns:
-        SQL expression: hstore - hstore
-
-    Example:
-        >>> hstore_subtract_pairs("data", "'a=>1'::hstore")
-        "data - 'a=>1'::hstore"
-    """
-    return f"{left} - {right}"
-
-
-def hstore_to_array_operator(hstore_expr: str) -> str:
-    """
-    Convert hstore to alternating key/value array (operator %%).
-
-    Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
+        pairs: The hstore containing keys/values to delete
 
     Returns:
-        SQL expression: %%hstore
-
-    Example:
-        >>> hstore_to_array_operator("data")
-        "%%data"
+        FunctionCall for delete(hstore, hstore)
     """
-    return f"%%{hstore_expr}"
+    return core.FunctionCall(
+        dialect, "delete",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, pairs),
+    )
 
 
-def hstore_to_matrix_operator(hstore_expr: str) -> str:
-    """
-    Convert hstore to 2D key/value array (operator %#).
+# ============== Record Functions ==============
+
+def hstore_populate_record(
+    dialect: "SQLDialectBase",
+    record: Union[str, "bases.BaseExpression"],
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Update a record/row with values from hstore.
 
     Args:
-        hstore_expr: The hstore expression
-
-    Returns:
-        SQL expression: %#hstore
-
-    Example:
-        >>> hstore_to_matrix_operator("data")
-        "%#data"
-    """
-    return f"%#{hstore_expr}"
-
-
-def hstore_record_update(record: str, hstore_expr: str) -> str:
-    """
-    Update record fields from hstore (operator #=).
-
-    Args:
+        dialect: The SQL dialect instance
         record: The record expression to update
         hstore_expr: The hstore containing field values
 
     Returns:
-        SQL expression: record #= hstore
-
-    Example:
-        >>> record_update("ROW(1,2)", "'f1=>42'::hstore")
-        "ROW(1,2) #= 'f1=>42'::hstore"
+        FunctionCall for populate_record(record, hstore)
     """
-    return f"{record} #= {hstore_expr}"
+    return core.FunctionCall(
+        dialect, "populate_record",
+        _convert_to_expression(dialect, record),
+        _convert_to_expression(dialect, hstore_expr),
+    )
 
 
-# ============== Subscript Access ==============
+# ============== Operators ==============
 
-def hstore_subscript_get(hstore_expr: str, key: str) -> str:
-    """
-    Get value by key using subscript syntax.
+def hstore_get_value(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Get value by key (operator ->).
+
+    Returns the value associated with the key, or NULL if not present.
 
     Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         key: The key to access
 
     Returns:
-        SQL expression: hstore[key]
-
-    Example:
-        >>> hstore_subscript_get("data", "'name'")
-        "data['name']"
+        BinaryExpression for hstore -> key
     """
-    return f"{hstore_expr}[{key}]"
+    return BinaryExpression(
+        dialect, "->",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
 
 
-def hstore_subscript_set(hstore_expr: str, key: str, value: str) -> str:
-    """
-    Set value by key using subscript syntax.
+def hstore_get_value_as_text(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Get value by key as text (operator ->>).
+
+    Returns the value associated with the key as text, or NULL if not present.
 
     Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        key: The key to access
+
+    Returns:
+        BinaryExpression for hstore ->> key
+    """
+    return BinaryExpression(
+        dialect, "->>",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
+
+
+def hstore_get_values(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Get values by multiple keys (operator -> text[]).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        keys: Array of keys to access
+
+    Returns:
+        BinaryExpression for hstore -> text[]
+    """
+    return BinaryExpression(
+        dialect, "->",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
+
+
+def hstore_concat(
+    dialect: "SQLDialectBase",
+    left: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    right: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Concatenate two hstores (operator ||).
+
+    Args:
+        dialect: The SQL dialect instance
+        left: Left hstore expression
+        right: Right hstore expression
+
+    Returns:
+        BinaryExpression for hstore || hstore
+    """
+    return BinaryExpression(
+        dialect, "||",
+        _convert_to_expression(dialect, left),
+        _convert_to_expression(dialect, right),
+    )
+
+
+def hstore_key_exists(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Check if key exists (operator ?).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        key: The key to check
+
+    Returns:
+        BinaryExpression for hstore ? key
+    """
+    return BinaryExpression(
+        dialect, "?",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
+
+
+def hstore_all_keys_exist(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Check if all keys exist (operator ?&).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        keys: Array of keys that must all exist
+
+    Returns:
+        BinaryExpression for hstore ?& keys
+    """
+    return BinaryExpression(
+        dialect, "?&",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
+
+
+def hstore_any_key_exists(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Check if any key exists (operator ?|).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        keys: Array of keys where any must exist
+
+    Returns:
+        BinaryExpression for hstore ?| keys
+    """
+    return BinaryExpression(
+        dialect, "?|",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
+
+
+def hstore_contains(
+    dialect: "SQLDialectBase",
+    left: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    right: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Check if left hstore contains right (operator @>).
+
+    Args:
+        dialect: The SQL dialect instance
+        left: Left hstore expression
+        right: Right hstore expression
+
+    Returns:
+        BinaryExpression for hstore @> hstore
+    """
+    return BinaryExpression(
+        dialect, "@>",
+        _convert_to_expression(dialect, left),
+        _convert_to_expression(dialect, right),
+    )
+
+
+def hstore_contained_by(
+    dialect: "SQLDialectBase",
+    left: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    right: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Check if left hstore is contained by right (operator <@).
+
+    Args:
+        dialect: The SQL dialect instance
+        left: Left hstore expression
+        right: Right hstore expression
+
+    Returns:
+        BinaryExpression for hstore <@ hstore
+    """
+    return BinaryExpression(
+        dialect, "<@",
+        _convert_to_expression(dialect, left),
+        _convert_to_expression(dialect, right),
+    )
+
+
+def hstore_subtract_key(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Delete key from hstore (operator - text).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        key: The key to delete
+
+    Returns:
+        BinaryExpression for hstore - key
+    """
+    return BinaryExpression(
+        dialect, "-",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, key),
+    )
+
+
+def hstore_subtract_keys(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    keys: Union[str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Delete multiple keys from hstore (operator - text[]).
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        keys: Array of keys to delete
+
+    Returns:
+        BinaryExpression for hstore - text[]
+    """
+    return BinaryExpression(
+        dialect, "-",
+        _convert_to_expression(dialect, hstore_expr),
+        _convert_to_expression(dialect, keys),
+    )
+
+
+def hstore_subtract_pairs(
+    dialect: "SQLDialectBase",
+    left: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    right: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Delete matching pairs from hstore (operator - hstore).
+
+    Args:
+        dialect: The SQL dialect instance
+        left: Left hstore expression
+        right: Right hstore containing pairs to delete
+
+    Returns:
+        BinaryExpression for hstore - hstore
+    """
+    return BinaryExpression(
+        dialect, "-",
+        _convert_to_expression(dialect, left),
+        _convert_to_expression(dialect, right),
+    )
+
+
+def hstore_to_array_operator(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Convert hstore to alternating key/value array (operator %%).
+
+    Note: This is a unary-style operator in PostgreSQL. We represent it
+    as a BinaryExpression with %% as the operator since PostgreSQL
+    treats it as a prefix operator.
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+
+    Returns:
+        BinaryExpression for %%hstore
+    """
+    return BinaryExpression(
+        dialect, "%%",
+        core.Literal(dialect, ""),
+        _convert_to_expression(dialect, hstore_expr),
+    )
+
+
+def hstore_to_matrix_operator(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Convert hstore to 2D key/value array (operator %#).
+
+    Note: This is a unary-style operator in PostgreSQL. We represent it
+    as a BinaryExpression with %# as the operator since PostgreSQL
+    treats it as a prefix operator.
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+
+    Returns:
+        BinaryExpression for %#hstore
+    """
+    return BinaryExpression(
+        dialect, "%#",
+        core.Literal(dialect, ""),
+        _convert_to_expression(dialect, hstore_expr),
+    )
+
+
+def hstore_record_update(
+    dialect: "SQLDialectBase",
+    record: Union[str, "bases.BaseExpression"],
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+) -> BinaryExpression:
+    """Update record fields from hstore (operator #=).
+
+    Args:
+        dialect: The SQL dialect instance
+        record: The record expression to update
+        hstore_expr: The hstore containing field values
+
+    Returns:
+        BinaryExpression for record #= hstore
+    """
+    return BinaryExpression(
+        dialect, "#=",
+        _convert_to_expression(dialect, record),
+        _convert_to_expression(dialect, hstore_expr),
+    )
+
+
+# ============== Subscript Access ==============
+
+def hstore_subscript_get(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Get value by key using subscript syntax.
+
+    Note: Subscript access (hstore['key']) is equivalent to the -> operator
+    in PostgreSQL. This function generates the -> operator expression
+    since subscript syntax is not directly representable in the Expression
+    system.
+
+    Args:
+        dialect: The SQL dialect instance
+        hstore_expr: The hstore expression
+        key: The key to access
+
+    Returns:
+        FunctionCall representing subscript access (using -> operator)
+    """
+    return hstore_get_value(dialect, hstore_expr, key)
+
+
+def hstore_subscript_set(
+    dialect: "SQLDialectBase",
+    hstore_expr: Union[PostgresHstore, Dict, str, "bases.BaseExpression"],
+    key: Union[str, "bases.BaseExpression"],
+    value: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """Set value by key using subscript syntax.
+
+    Generates an expression equivalent to hstore[key] = value using
+    the hstore concatenation operator (||) to set a single key.
+
+    Args:
+        dialect: The SQL dialect instance
         hstore_expr: The hstore expression
         key: The key to set
         value: The value to set
 
     Returns:
-        SQL expression: hstore[key] = value
-
-    Example:
-        >>> hstore_subscript_set("data", "'name'", "'value'")
-        "data['name'] = 'value'"
+        FunctionCall representing the update expression
     """
-    return f"{hstore_expr}[{key}] = {value}"
+    single_pair = hstore_from_key_value(dialect, key, value)
+    return hstore_concat(dialect, hstore_expr, single_pair)
 
 
 __all__ = [
@@ -731,6 +883,7 @@ __all__ = [
     "hstore_populate_record",
     # Operators
     "hstore_get_value",
+    "hstore_get_value_as_text",
     "hstore_get_values",
     "hstore_concat",
     "hstore_key_exists",

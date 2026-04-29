@@ -178,6 +178,25 @@ REGCOLLATION = "regcollation"
 PG_LSN = "pg_lsn"
 
 # =============================================================================
+# PostGIS Types (extension)
+# =============================================================================
+GEOMETRY = "geometry"
+GEOGRAPHY = "geography"
+
+# =============================================================================
+# pgvector Types (extension)
+# =============================================================================
+VECTOR = "vector"
+HALFVEC = "halfvec"
+BITVEC = "bitvec"
+SPARSEVEC = "sparsevec"
+
+# =============================================================================
+# hstore Type (extension)
+# =============================================================================
+HSTORE = "hstore"
+
+# =============================================================================
 # Pseudo-Types
 # =============================================================================
 ANYTYPE = "any"
@@ -318,6 +337,16 @@ __all__ = [
     "REGCOLLATION",
     # pg_lsn Type
     "PG_LSN",
+    # PostGIS Types
+    "GEOMETRY",
+    "GEOGRAPHY",
+    # pgvector Types
+    "VECTOR",
+    "HALFVEC",
+    "BITVEC",
+    "SPARSEVEC",
+    # hstore Type
+    "HSTORE",
     # Pseudo-Types
     "ANYTYPE",
     "ANYELEMENT",
