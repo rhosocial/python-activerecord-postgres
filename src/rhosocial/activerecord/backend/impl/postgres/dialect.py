@@ -708,6 +708,35 @@ class PostgresDialect(
         escaped = identifier.replace('"', '""')
         return f'"{escaped}"'
 
+    def format_column(self, name: str, table: Optional[str] = None,
+                      alias: Optional[str] = None,
+                      schema_name: Optional[str] = None) -> Tuple[str, Tuple]:
+        """Format column reference for PostgreSQL.
+
+        PostgreSQL rules for column references:
+        - When the table has an alias (used in FROM/JOIN), column references
+          must use the alias, not the schema-qualified name. For example,
+          when FROM clause has ``public.users AS "users"``, the column
+          reference must be ``"users"."id"``, not ``"public"."users"."id"``.
+        - When no alias is present but schema is specified, use the
+          full three-segment form: ``"schema"."table"."column"``.
+        - Otherwise use the standard two-segment or single-segment form.
+        """
+        if table:
+            # In PostgreSQL, when a table has an alias, column references
+            # must use the alias — schema_name is irrelevant in this context.
+            if schema_name and not alias:
+                col_sql = f"{self.format_identifier(schema_name)}.{self.format_identifier(table)}.{self.format_identifier(name)}"
+            else:
+                col_sql = f"{self.format_identifier(table)}.{self.format_identifier(name)}"
+        else:
+            col_sql = self.format_identifier(name)
+
+        if alias:
+            col_sql = f"{col_sql} AS {self.format_identifier(alias)}"
+
+        return col_sql, ()
+
     def format_on_conflict_clause(self, expr) -> Tuple[str, tuple]:
         """Format ON CONFLICT clause for PostgreSQL.
 
