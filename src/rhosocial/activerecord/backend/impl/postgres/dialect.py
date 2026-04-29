@@ -1338,7 +1338,7 @@ class PostgresDialect(
     from .function_versions import POSTGRES_FUNCTION_VERSIONS as _FV
     _POSTGRES_FUNCTION_VERSIONS = _FV
 
-    def supports_functions(self) -> Dict[str, FunctionSupportInfo]:
+    def supports_functions(self) -> Dict[str, "FunctionSupportInfo"]:
         """Return supported SQL functions with detailed support information.
 
         This method combines:
@@ -1369,7 +1369,7 @@ class PostgresDialect(
 
         return result
 
-    def _check_function_support(self, func_name: str) -> FunctionSupportInfo:
+    def _check_function_support(self, func_name: str) -> "FunctionSupportInfo":
         """Check function support status and return detailed information.
 
         Args:
@@ -1444,7 +1444,7 @@ class PostgresDialect(
         return True
 
     def _check_extension_requirement(
-        self, requirement: FunctionVersionRequirement
+        self, requirement: "FunctionVersionRequirement"
     ) -> bool:
         """Check extension requirements based on introspect_and_adapt() results.
 

@@ -3,12 +3,12 @@
 
 Tests for:
 - PostgresGeometry data class
-- PostgresGeometryAdapter conversion
+- PostgresPostGISAdapter conversion
 """
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
-from rhosocial.activerecord.backend.impl.postgres.adapters.postgis import PostgresGeometryAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.postgis import PostgresPostGISAdapter
 
 
 class TestPostgresGeometry:
@@ -150,83 +150,83 @@ class TestPostgresGeometry:
             g.wkt = "POINT(3 4)"
 
 
-class TestPostgresGeometryAdapter:
-    """Tests for PostgresGeometryAdapter."""
+class TestPostgresPostGISAdapter:
+    """Tests for PostgresPostGISAdapter."""
 
     def test_adapter_supported_types(self):
         """Test supported_types property."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         supported = adapter.supported_types
         assert PostgresGeometry in supported
 
     def test_to_database_geometry(self):
         """Test converting PostgresGeometry to database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         g = PostgresGeometry.point(1.0, 2.0, srid=4326)
         result = adapter.to_database(g, str)
         assert result == "ST_GeomFromText('POINT(1.0 2.0)', 4326)"
 
     def test_to_database_geography(self):
         """Test converting PostgresGeometry geography to database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         g = PostgresGeometry.point(1.0, 2.0, srid=4326, geometry_type="geography")
         result = adapter.to_database(g, str)
         assert result == "ST_GeogFromText('SRID=4326;POINT(1.0 2.0)')"
 
     def test_to_database_string(self):
         """Test converting string to database (passthrough)."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         result = adapter.to_database("ST_GeomFromText('POINT(1 2)')", str)
         assert result == "ST_GeomFromText('POINT(1 2)')"
 
     def test_to_database_none(self):
         """Test converting None to database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         result = adapter.to_database(None, str)
         assert result is None
 
     def test_to_database_invalid_type(self):
         """Test converting invalid type raises TypeError."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         with pytest.raises(TypeError, match="Cannot convert"):
             adapter.to_database(12345, str)
 
     def test_from_database_wkt(self):
         """Test converting WKT string from database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         result = adapter.from_database("POINT(1 2)", PostgresGeometry)
         assert isinstance(result, PostgresGeometry)
         assert result.wkt == "POINT(1 2)"
 
     def test_from_database_ewkt(self):
         """Test converting EWKT string from database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         result = adapter.from_database("SRID=4326;POINT(1 2)", PostgresGeometry)
         assert isinstance(result, PostgresGeometry)
         assert result.srid == 4326
 
     def test_from_database_geometry(self):
         """Test converting PostgresGeometry from database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         g = PostgresGeometry.point(1.0, 2.0)
         result = adapter.from_database(g, PostgresGeometry)
         assert result is g
 
     def test_from_database_none(self):
         """Test converting None from database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         result = adapter.from_database(None, PostgresGeometry)
         assert result is None
 
     def test_from_database_invalid_type(self):
         """Test converting invalid type from database raises TypeError."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         with pytest.raises(TypeError, match="Cannot convert"):
             adapter.from_database(12345, PostgresGeometry)
 
     def test_batch_to_database(self):
         """Test batch conversion to database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         values = [
             PostgresGeometry.point(1.0, 2.0, srid=4326),
             "ST_GeomFromText('POINT(3 4)')",
@@ -239,7 +239,7 @@ class TestPostgresGeometryAdapter:
 
     def test_batch_from_database(self):
         """Test batch conversion from database."""
-        adapter = PostgresGeometryAdapter()
+        adapter = PostgresPostGISAdapter()
         values = ["POINT(1 2)", "SRID=4326;POINT(3 4)", None]
         results = adapter.from_database_batch(values, PostgresGeometry)
         assert isinstance(results[0], PostgresGeometry)
