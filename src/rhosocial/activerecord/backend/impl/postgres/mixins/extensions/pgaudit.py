@@ -1,19 +1,23 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pgaudit.py
 """
-pgaudit audit logging functionality implementation.
+PostgreSQL pgaudit audit logging functionality mixin.
 
-This module provides the PostgresPgauditMixin class that adds support for
-pgaudit extension features.
+This module provides functionality to check pgaudit extension features
+and generate audit configuration statements.
+
+Note: The format_* methods in this mixin generate configuration statements
+(ALTER ROLE, SET) for audit setup, not data query function expressions.
+They remain here as they are DDL/configuration operations rather than
+query-level function calls.
 """
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 
 class PostgresPgauditMixin:
-    """pgaudit audit logging functionality implementation."""
+    """pgaudit audit logging functionality implementation.
+
+    The format_* methods generate configuration statements (ALTER ROLE, SET)
+    for audit setup, not data query function expressions.
+    """
 
     def supports_pgaudit(self) -> bool:
         """Check if pgaudit extension is available."""

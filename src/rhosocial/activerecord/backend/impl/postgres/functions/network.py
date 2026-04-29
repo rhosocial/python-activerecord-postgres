@@ -1,87 +1,149 @@
 # src/rhosocial/activerecord/backend/impl/postgres/functions/network.py
 """
-PostgreSQL Network Address Functions.
+PostgreSQL Network Address Functions and Operators.
 
 This module provides SQL expression generators for PostgreSQL network
-address functions and operators.
+address functions and operators. All functions return Expression objects
+that integrate with the Expression/Dialect architecture.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-net.html
 
-All functions follow the expression-dialect separation architecture:
-- First parameter is always the dialect instance
-- They return SQL expression strings
+Session information functions (no arguments):
+- inet_client_addr(): Client's IP address
+- inet_client_port(): Client's port number
+- inet_server_addr(): Server's IP address
+- inet_server_port(): Server's port number
+
+Network functions:
+- inet_merge(a, b): Smallest network including both inputs
+- inet_set_mask(a, mask): Set mask length for an IP address
+- inet_masklen(a): Extract mask length
+- inet_netmask(a): Construct network mask
+- inet_network(a): Extract network part of address
+- inet_recv(a): Internal: receive from binary string
+- inet_show(a): Display IP address as text
+- cidr_netmask(a): Construct cidr network mask
+- macaddr8_set7bit(mac): Set 7th bit of MAC address
+
+Network operators:
+- inet_and(a, b): Bitwise AND (a & b)
+- inet_or(a, b): Bitwise OR (a | b)
+- inetnot(a): Bitwise NOT (~a)
 """
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, Union, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression, UnaryExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _to_sql(expr: Any) -> str:
-    """Convert an expression to its SQL string representation."""
-    if hasattr(expr, 'to_sql'):
-        return expr.to_sql()[0]
-    return str(expr)
+def _convert_to_expression(
+    dialect: "SQLDialectBase",
+    expr: Union[str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert an input value to an appropriate BaseExpression.
+
+    Supports strings and existing BaseExpression objects.
+
+    Args:
+        dialect: The SQL dialect instance
+        expr: Value to convert
+
+    Returns:
+        BaseExpression representing the value
+    """
+    if isinstance(expr, bases.BaseExpression):
+        return expr
+    elif isinstance(expr, str):
+        return core.Literal(dialect, expr)
+    else:
+        return core.Literal(dialect, expr)
 
 
-def inet_client_addr(dialect: "SQLDialectBase") -> str:
+# ============== Session Information Functions ==============
+
+def inet_client_addr(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the client's IP address from the current session.
 
+    Args:
+        dialect: The SQL dialect instance
+
     Returns:
-        SQL expression: inet_client_addr()
+        FunctionCall: SQL expression for inet_client_addr()
 
     Example:
-        >>> inet_client_addr(dialect)
-        'inet_client_addr()'
+        >>> func = inet_client_addr(dialect)
+        >>> func.to_sql()
+        ('inet_client_addr()', ())
     """
-    return "inet_client_addr()"
+    return core.FunctionCall(dialect, "inet_client_addr")
 
 
-def inet_client_port(dialect: "SQLDialectBase") -> str:
+def inet_client_port(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the client's port number from the current session.
 
+    Args:
+        dialect: The SQL dialect instance
+
     Returns:
-        SQL expression: inet_client_port()
+        FunctionCall: SQL expression for inet_client_port()
 
     Example:
-        >>> inet_client_port(dialect)
-        'inet_client_port()'
+        >>> func = inet_client_port(dialect)
+        >>> func.to_sql()
+        ('inet_client_port()', ())
     """
-    return "inet_client_port()"
+    return core.FunctionCall(dialect, "inet_client_port")
 
 
-def inet_server_addr(dialect: "SQLDialectBase") -> str:
+def inet_server_addr(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the server's IP address for the current connection.
 
+    Args:
+        dialect: The SQL dialect instance
+
     Returns:
-        SQL expression: inet_server_addr()
+        FunctionCall: SQL expression for inet_server_addr()
 
     Example:
-        >>> inet_server_addr(dialect)
-        'inet_server_addr()'
+        >>> func = inet_server_addr(dialect)
+        >>> func.to_sql()
+        ('inet_server_addr()', ())
     """
-    return "inet_server_addr()"
+    return core.FunctionCall(dialect, "inet_server_addr")
 
 
-def inet_server_port(dialect: "SQLDialectBase") -> str:
+def inet_server_port(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the server's port number for the current connection.
 
+    Args:
+        dialect: The SQL dialect instance
+
     Returns:
-        SQL expression: inet_server_port()
+        FunctionCall: SQL expression for inet_server_port()
 
     Example:
-        >>> inet_server_port(dialect)
-        'inet_server_port()'
+        >>> func = inet_server_port(dialect)
+        >>> func.to_sql()
+        ('inet_server_port()', ())
     """
-    return "inet_server_port()"
+    return core.FunctionCall(dialect, "inet_server_port")
 
 
-def inet_merge(dialect: "SQLDialectBase", net1: Any, net2: Any) -> str:
+# ============== Network Functions ==============
+
+def inet_merge(
+    dialect: "SQLDialectBase",
+    net1: Any,
+    net2: Any,
+) -> core.FunctionCall:
     """
     Compute the smallest network that includes both input networks.
 
@@ -91,16 +153,27 @@ def inet_merge(dialect: "SQLDialectBase", net1: Any, net2: Any) -> str:
         net2: Second network (inet or cidr)
 
     Returns:
-        SQL expression: inet_merge(net1, net2)
+        FunctionCall: SQL expression for inet_merge(net1, net2)
 
     Example:
-        >>> inet_merge(dialect, "'192.168.1.0/24'", "'192.168.2.0/24'")
-        "inet_merge('192.168.1.0/24', '192.168.2.0/24')"
+        >>> func = inet_merge(dialect, "'192.168.1.0/24'", "'192.168.2.0/24'")
+        >>> func.to_sql()
+        ('inet_merge(%s, %s)', ('192.168.1.0/24', '192.168.2.0/24'))
     """
-    return f"inet_merge({_to_sql(net1)}, {_to_sql(net2)})"
+    return core.FunctionCall(
+        dialect, "inet_merge",
+        _convert_to_expression(dialect, net1),
+        _convert_to_expression(dialect, net2),
+    )
 
 
-def inet_and(dialect: "SQLDialectBase", addr1: Any, addr2: Any) -> str:
+# ============== Network Operators ==============
+
+def inet_and(
+    dialect: "SQLDialectBase",
+    addr1: Any,
+    addr2: Any,
+) -> BinaryExpression:
     """
     Compute bitwise AND of two IP addresses.
 
@@ -110,16 +183,25 @@ def inet_and(dialect: "SQLDialectBase", addr1: Any, addr2: Any) -> str:
         addr2: Second IP address (inet or cidr)
 
     Returns:
-        SQL expression: addr1 & addr2
+        BinaryExpression: SQL expression for addr1 & addr2
 
     Example:
-        >>> inet_and(dialect, "'192.168.1.1'", "'255.255.255.0'")
-        "inet_and('192.168.1.1', '255.255.255.0')"
+        >>> expr = inet_and(dialect, "'192.168.1.1'", "'255.255.255.0'")
+        >>> expr.to_sql()
+        ('(%s & %s)', ('192.168.1.1', '255.255.255.0'))
     """
-    return f"inet_and({_to_sql(addr1)}, {_to_sql(addr2)})"
+    return BinaryExpression(
+        dialect, "&",
+        _convert_to_expression(dialect, addr1),
+        _convert_to_expression(dialect, addr2),
+    )
 
 
-def inet_or(dialect: "SQLDialectBase", addr1: Any, addr2: Any) -> str:
+def inet_or(
+    dialect: "SQLDialectBase",
+    addr1: Any,
+    addr2: Any,
+) -> BinaryExpression:
     """
     Compute bitwise OR of two IP addresses.
 
@@ -129,16 +211,24 @@ def inet_or(dialect: "SQLDialectBase", addr1: Any, addr2: Any) -> str:
         addr2: Second IP address (inet or cidr)
 
     Returns:
-        SQL expression: addr1 | addr2
+        BinaryExpression: SQL expression for addr1 | addr2
 
     Example:
-        >>> inet_or(dialect, "'192.168.1.1'", "'0.0.0.255'")
-        "inet_or('192.168.1.1', '0.0.0.255')"
+        >>> expr = inet_or(dialect, "'192.168.1.1'", "'0.0.0.255'")
+        >>> expr.to_sql()
+        ('(%s | %s)', ('192.168.1.1', '0.0.0.255'))
     """
-    return f"inet_or({_to_sql(addr1)}, {_to_sql(addr2)})"
+    return BinaryExpression(
+        dialect, "|",
+        _convert_to_expression(dialect, addr1),
+        _convert_to_expression(dialect, addr2),
+    )
 
 
-def inetnot(dialect: "SQLDialectBase", addr: Any) -> str:
+def inetnot(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> UnaryExpression:
     """
     Compute bitwise NOT of an IP address.
 
@@ -147,16 +237,27 @@ def inetnot(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: IP address (inet or cidr)
 
     Returns:
-        SQL expression: ~addr
+        UnaryExpression: SQL expression for ~addr
 
     Example:
-        >>> inetnot(dialect, "'192.168.1.1'")
-        "inetnot('192.168.1.1')"
+        >>> expr = inetnot(dialect, "'192.168.1.1'")
+        >>> expr.to_sql()
+        ('(~%s)', ('192.168.1.1',))
     """
-    return f"inetnot({_to_sql(addr)})"
+    return UnaryExpression(
+        dialect, "~",
+        _convert_to_expression(dialect, addr),
+        pos="before",
+    )
 
 
-def inet_set_mask(dialect: "SQLDialectBase", addr: Any, mask_len: Any) -> str:
+# ============== Network Address Functions ==============
+
+def inet_set_mask(
+    dialect: "SQLDialectBase",
+    addr: Any,
+    mask_len: Any,
+) -> core.FunctionCall:
     """
     Set the mask length for an IP address.
 
@@ -166,16 +267,24 @@ def inet_set_mask(dialect: "SQLDialectBase", addr: Any, mask_len: Any) -> str:
         mask_len: The mask length
 
     Returns:
-        SQL expression: set_masklen(addr, mask_len)
+        FunctionCall: SQL expression for set_masklen(addr, mask_len)
 
     Example:
-        >>> inet_set_mask(dialect, "'192.168.1.1'", 24)
-        "set_masklen('192.168.1.1', 24)"
+        >>> func = inet_set_mask(dialect, "'192.168.1.1'", 24)
+        >>> func.to_sql()
+        ('set_masklen(%s, %s)', ('192.168.1.1', 24))
     """
-    return f"set_masklen({_to_sql(addr)}, {_to_sql(mask_len)})"
+    return core.FunctionCall(
+        dialect, "set_masklen",
+        _convert_to_expression(dialect, addr),
+        _convert_to_expression(dialect, mask_len),
+    )
 
 
-def inet_masklen(dialect: "SQLDialectBase", addr: Any) -> str:
+def inet_masklen(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
     Return the mask length of an IP address.
 
@@ -184,16 +293,20 @@ def inet_masklen(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: IP address (inet or cidr)
 
     Returns:
-        SQL expression: masklen(addr)
+        FunctionCall: SQL expression for masklen(addr)
 
     Example:
-        >>> inet_masklen(dialect, "'192.168.1.1/24'")
-        "masklen('192.168.1.1/24')"
+        >>> func = inet_masklen(dialect, "'192.168.1.1/24'")
+        >>> func.to_sql()
+        ('masklen(%s)', ('192.168.1.1/24',))
     """
-    return f"masklen({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "masklen", _convert_to_expression(dialect, addr))
 
 
-def inet_netmask(dialect: "SQLDialectBase", addr: Any) -> str:
+def inet_netmask(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
     Return the network mask of an IP address.
 
@@ -202,16 +315,20 @@ def inet_netmask(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: IP address (inet or cidr)
 
     Returns:
-        SQL expression: netmask(addr)
+        FunctionCall: SQL expression for netmask(addr)
 
     Example:
-        >>> inet_netmask(dialect, "'192.168.1.1/24'")
-        "netmask('192.168.1.1/24')"
+        >>> func = inet_netmask(dialect, "'192.168.1.1/24'")
+        >>> func.to_sql()
+        ('netmask(%s)', ('192.168.1.1/24',))
     """
-    return f"netmask({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "netmask", _convert_to_expression(dialect, addr))
 
 
-def inet_network(dialect: "SQLDialectBase", addr: Any) -> str:
+def inet_network(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
     Extract the network part of an IP address.
 
@@ -220,34 +337,42 @@ def inet_network(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: IP address (inet or cidr)
 
     Returns:
-        SQL expression: network(addr)
+        FunctionCall: SQL expression for network(addr)
 
     Example:
-        >>> inet_network(dialect, "'192.168.1.1/24'")
-        "network('192.168.1.1/24')"
+        >>> func = inet_network(dialect, "'192.168.1.1/24'")
+        >>> func.to_sql()
+        ('network(%s)', ('192.168.1.1/24',))
     """
-    return f"network({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "network", _convert_to_expression(dialect, addr))
 
 
-def inet_recv(dialect: "SQLDialectBase", addr: Any) -> str:
+def inet_recv(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
-    Extract the host part of an IP address.
+    Internal function: receive an IP address from a binary string.
 
     Args:
         dialect: The SQL dialect instance
-        addr: IP address (inet or cidr)
+        addr: Binary string value
 
     Returns:
-        SQL expression: host(addr)
+        FunctionCall: SQL expression for recv(addr)
 
     Example:
-        >>> inet_recv(dialect, "'192.168.1.1/24'")
-        "host('192.168.1.1/24')"
+        >>> func = inet_recv(dialect, "binary_value")
+        >>> func.to_sql()
+        ('recv(%s)', ('binary_value',))
     """
-    return f"host({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "recv", _convert_to_expression(dialect, addr))
 
 
-def inet_show(dialect: "SQLDialectBase", addr: Any) -> str:
+def inet_show(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
     Return the IP address as text.
 
@@ -256,16 +381,20 @@ def inet_show(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: IP address (inet or cidr)
 
     Returns:
-        SQL expression: text(addr)
+        FunctionCall: SQL expression for text(addr)
 
     Example:
-        >>> inet_show(dialect, "'192.168.1.1'")
-        "text('192.168.1.1')"
+        >>> func = inet_show(dialect, "'192.168.1.1'")
+        >>> func.to_sql()
+        ('text(%s)', ('192.168.1.1',))
     """
-    return f"text({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "text", _convert_to_expression(dialect, addr))
 
 
-def cidr_netmask(dialect: "SQLDialectBase", addr: Any) -> str:
+def cidr_netmask(
+    dialect: "SQLDialectBase",
+    addr: Any,
+) -> core.FunctionCall:
     """
     Return the broadcast address of the network.
 
@@ -274,16 +403,20 @@ def cidr_netmask(dialect: "SQLDialectBase", addr: Any) -> str:
         addr: CIDR address
 
     Returns:
-        SQL expression: broadcast(addr)
+        FunctionCall: SQL expression for broadcast(addr)
 
     Example:
-        >>> cidr_netmask(dialect, "'192.168.1.0/24'")
-        "broadcast('192.168.1.0/24')"
+        >>> func = cidr_netmask(dialect, "'192.168.1.0/24'")
+        >>> func.to_sql()
+        ('broadcast(%s)', ('192.168.1.0/24',))
     """
-    return f"broadcast({_to_sql(addr)})"
+    return core.FunctionCall(dialect, "broadcast", _convert_to_expression(dialect, addr))
 
 
-def macaddr8_set7bit(dialect: "SQLDialectBase", mac: Any) -> str:
+def macaddr8_set7bit(
+    dialect: "SQLDialectBase",
+    mac: Any,
+) -> core.FunctionCall:
     """
     Set the 7th bit of the MAC address (marking it as a multicast address).
 
@@ -292,13 +425,14 @@ def macaddr8_set7bit(dialect: "SQLDialectBase", mac: Any) -> str:
         mac: MAC address
 
     Returns:
-        SQL expression: macaddr8_set7bit(mac)
+        FunctionCall: SQL expression for macaddr8_set7bit(mac)
 
     Example:
-        >>> macaddr8_set7bit(dialect, "'08:00:2b:01:02:03'")
-        "macaddr8_set7bit('08:00:2b:01:02:03')"
+        >>> func = macaddr8_set7bit(dialect, "'08:00:2b:01:02:03'")
+        >>> func.to_sql()
+        ('macaddr8_set7bit(%s)', ('08:00:2b:01:02:03',))
     """
-    return f"macaddr8_set7bit({_to_sql(mac)})"
+    return core.FunctionCall(dialect, "macaddr8_set7bit", _convert_to_expression(dialect, mac))
 
 
 __all__ = [

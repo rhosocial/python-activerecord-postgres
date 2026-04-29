@@ -156,6 +156,10 @@ from .protocols import (
     # Type feature protocols
     PostgresMultirangeSupport,
     PostgresEnumTypeSupport,
+    PostgresFullTextSearchSupport,
+    PostgresRangeTypeSupport,
+    PostgresJSONBEnhancedSupport,
+    PostgresArrayEnhancedSupport,
     # New feature protocols
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,
@@ -330,6 +334,10 @@ class PostgresDialect(
     # Type feature protocols
     PostgresMultirangeSupport,
     PostgresEnumTypeSupport,
+    PostgresFullTextSearchSupport,
+    PostgresRangeTypeSupport,
+    PostgresJSONBEnhancedSupport,
+    PostgresArrayEnhancedSupport,
     # New feature protocols
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,
@@ -448,6 +456,14 @@ class PostgresDialect(
     def supports_array_access(self) -> bool:
         """Array subscript access is supported."""
         return True  # Supported in all modern versions
+
+    def supports_array_fill(self) -> bool:
+        """Whether array_fill function is supported (PostgreSQL 8.4+)."""
+        return self.version >= (8, 4, 0)
+
+    def supports_array_position(self) -> bool:
+        """Whether array_position / array_positions are supported (PostgreSQL 9.5+)."""
+        return self.version >= (9, 5, 0)
 
     def supports_explain_analyze(self) -> bool:
         """Whether EXPLAIN ANALYZE is supported."""
@@ -579,6 +595,42 @@ class PostgresDialect(
     def supports_multirange_constructor(self) -> bool:
         """Whether multirange constructor functions are supported (PostgreSQL 14+)."""
         return self.version >= (14, 0, 0)
+
+    # ── Range type support ──────────────────────────────────────
+
+    def supports_range_type(self) -> bool:
+        """Whether range data types are supported (PostgreSQL 9.2+)."""
+        return self.version >= (9, 2, 0)
+
+    def supports_range_operators(self) -> bool:
+        """Whether range operators are supported (PostgreSQL 9.2+)."""
+        return self.version >= (9, 2, 0)
+
+    def supports_range_functions(self) -> bool:
+        """Whether range functions are supported (PostgreSQL 9.2+)."""
+        return self.version >= (9, 2, 0)
+
+    def supports_range_constructors(self) -> bool:
+        """Whether range constructor functions are supported (PostgreSQL 9.2+)."""
+        return self.version >= (9, 2, 0)
+
+    # ── Full-text search support ────────────────────────────────
+
+    def supports_full_text_search(self) -> bool:
+        """Whether basic full-text search is supported (PostgreSQL 8.3+)."""
+        return self.version >= (8, 3, 0)
+
+    def supports_ts_rank_cd(self) -> bool:
+        """Whether coverage density ranking is supported (PostgreSQL 8.5+)."""
+        return self.version >= (8, 5, 0)
+
+    def supports_phrase_search(self) -> bool:
+        """Whether phrase search is supported (PostgreSQL 9.6+)."""
+        return self.version >= (9, 6, 0)
+
+    def supports_websearch_tsquery(self) -> bool:
+        """Whether web-style search is supported (PostgreSQL 11+)."""
+        return self.version >= (11, 0, 0)
 
     def supports_inner_join(self) -> bool:
         """INNER JOIN is supported."""
@@ -769,6 +821,14 @@ class PostgresDialect(
     def supports_jsonb(self) -> bool:
         """Check if PostgreSQL version supports JSONB type (introduced in 9.4)."""
         return self.version >= (9, 4, 0)
+
+    def supports_json_path(self) -> bool:
+        """Whether JSON path expressions are supported (PostgreSQL 12+)."""
+        return self.version >= (12, 0, 0)
+
+    def supports_infinity_numeric_infinity_jsonb(self) -> bool:
+        """Whether numeric infinity values are allowed in JSONB (PostgreSQL 17+)."""
+        return self.version >= (17, 0, 0)
 
     # region View Support
     def supports_or_replace_view(self) -> bool:

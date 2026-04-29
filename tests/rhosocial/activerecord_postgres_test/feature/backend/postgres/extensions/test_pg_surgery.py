@@ -1,22 +1,35 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_pg_surgery.py
-"""Unit tests for PostgreSQL pg_surgery extension mixin."""
+"""
+Unit tests for PostgreSQL pg_surgery extension functions.
 
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pg_surgery import PostgresPgSurgeryMixin
+Tests for:
+- pg_surgery_heap_freeze
+- pg_surgery_heap_page_header
+"""
+
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_surgery import (
+    pg_surgery_heap_freeze,
+    pg_surgery_heap_page_header,
+)
 
 
 class TestPgSurgeryMixin:
-    """Test pg_surgery extension mixin."""
+    """Test pg_surgery extension functions."""
 
-    def setup_method(self):
-        """Set up test fixture."""
-        self.mixin = PostgresPgSurgeryMixin()
+    def test_pg_surgery_heap_freeze(self):
+        """pg_surgery_heap_freeze should return FunctionCall with freeze_heap."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = pg_surgery_heap_freeze(dialect, 'users')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "freeze_heap" in sql.lower()
 
-    def test_format_pg_surgery_heap_freeze(self):
-        """Test heap freeze operation formatting."""
-        result = self.mixin.format_pg_surgery_heap_freeze('users')
-        assert "freeze_heap" in result
-
-    def test_format_pg_surgery_heap_page_header(self):
-        """Test heap page header repair formatting."""
-        result = self.mixin.format_pg_surgery_heap_page_header('users', 0, 1)
-        assert "set_heap_tuple_frozen" in result
+    def test_pg_surgery_heap_page_header(self):
+        """pg_surgery_heap_page_header should return FunctionCall with set_heap_tuple_frozen."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = pg_surgery_heap_page_header(dialect, 'users', 0, 1)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "set_heap_tuple_frozen" in sql.lower()

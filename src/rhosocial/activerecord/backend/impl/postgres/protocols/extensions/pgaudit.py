@@ -3,6 +3,10 @@
 
 This module defines the protocol for pgaudit audit logging
 functionality in PostgreSQL.
+
+Note: The format_* methods in this protocol generate configuration
+statements (ALTER ROLE, SET), not function expressions. They are
+retained here as configuration methods.
 """
 
 from typing import Protocol, runtime_checkable

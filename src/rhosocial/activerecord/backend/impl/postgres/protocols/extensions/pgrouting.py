@@ -3,6 +3,9 @@
 
 This module defines the protocol for pgRouting path finding
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/pgrouting.py`` instead of the removed format_* methods.
 """
 
 from typing import Protocol, runtime_checkable
@@ -52,33 +55,5 @@ class PostgresPgroutingSupport(Protocol):
 
         Requires pgrouting extension with Dijkstra feature support.
         Dijkstra algorithm finds the shortest path between two nodes.
-        """
-        ...
-
-    def format_pgr_dijkstra(self, edges_sql: str, start_vid: int, end_vid: int, directed: bool = True) -> str:
-        """Format pgr_dijkstra function call.
-
-        Args:
-            edges_sql: SQL query that returns edge data (id, source, target, cost, reverse_cost)
-            start_vid: Start vertex ID
-            end_vid: End vertex ID
-            directed: Whether the graph is directed (default: True)
-
-        Returns:
-            SQL function call string
-        """
-        ...
-
-    def format_pgr_astar(self, edges_sql: str, start_vid: int, end_vid: int, directed: bool = True) -> str:
-        """Format pgr_aStar function call.
-
-        Args:
-            edges_sql: SQL query that returns edge data with x/y coordinates
-            start_vid: Start vertex ID
-            end_vid: End vertex ID
-            directed: Whether the graph is directed (default: True)
-
-        Returns:
-            SQL function call string
         """
         ...

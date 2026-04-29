@@ -1,32 +1,55 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_hypopg.py
-"""Unit tests for PostgreSQL hypopg extension mixin."""
+"""
+Unit tests for PostgreSQL hypopg extension functions.
 
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.hypopg import PostgresHypoPgMixin
+Tests for:
+- hypopg_create_index
+- hypopg_reset
+- hypopg_show_indexes
+- hypopg_estimate_size
+"""
+
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.impl.postgres.functions.hypopg import (
+    hypopg_create_index,
+    hypopg_reset,
+    hypopg_show_indexes,
+    hypopg_estimate_size,
+)
 
 
-class TestHypoPgMixin:
-    """Test hypopg extension mixin."""
+class TestPostgresHypoPgFunctions:
+    """Tests for hypopg extension function factories."""
 
-    def setup_method(self):
-        """Set up test fixture."""
-        self.mixin = PostgresHypoPgMixin()
+    def test_hypopg_create_index(self):
+        """hypopg_create_index should return FunctionCall with hypopg_create_index."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = hypopg_create_index(dialect, "CREATE INDEX ON users USING btree (email)")
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "hypopg_create_index" in sql.lower()
 
-    def test_format_hypopg_create_index(self):
-        """Test hypothetical index creation formatting."""
-        result = self.mixin.format_hypopg_create_index('idx_test', 'users', ['name'])
-        assert "hypopg.create_index" in result
+    def test_hypopg_reset(self):
+        """hypopg_reset should return FunctionCall with hypopg_reset."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = hypopg_reset(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "hypopg_reset" in sql.lower()
 
-    def test_format_hypopg_reset(self):
-        """Test hypothetical index reset formatting."""
-        result = self.mixin.format_hypopg_reset()
-        assert "hypopg.reset" in result
+    def test_hypopg_show_indexes(self):
+        """hypopg_show_indexes should return FunctionCall with hypopg_index_detail."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = hypopg_show_indexes(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "hypopg" in sql.lower()
 
-    def test_format_hypopg_show_indexes(self):
-        """Test show hypothetical indexes formatting."""
-        result = self.mixin.format_hypopg_show_indexes()
-        assert "hypopg" in result
-
-    def test_format_hypopg_estimate_size(self):
-        """Test hypothetical index size estimation formatting."""
-        result = self.mixin.format_hypopg_estimate_size(1)
-        assert "hypopg_estimate_size" in result
+    def test_hypopg_estimate_size(self):
+        """hypopg_estimate_size should return FunctionCall with hypopg_estimate_size."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = hypopg_estimate_size(dialect, 1)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "hypopg_estimate_size" in sql.lower()

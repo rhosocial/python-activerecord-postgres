@@ -3,6 +3,9 @@
 
 This module defines the protocol for PostGIS raster data type
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/postgis_raster.py`` instead of the removed format_* methods.
 """
 
 from typing import Protocol, runtime_checkable
@@ -44,41 +47,5 @@ class PostgresPostgisRasterSupport(Protocol):
 
         Requires postgis_raster extension.
         raster type is used for storing and processing geospatial raster data.
-        """
-        ...
-
-    def format_raster_literal(self, raster_data: str, srid: int = 4326) -> str:
-        """Format a raster literal from HexWKB data.
-
-        Args:
-            raster_data: HexWKB representation of raster data
-            srid: Spatial reference system ID (default: 4326)
-
-        Returns:
-            SQL raster literal string
-        """
-        ...
-
-    def format_st_value(self, raster_expr: str, x: int, y: int) -> str:
-        """Format ST_Value function for pixel value extraction.
-
-        Args:
-            raster_expr: Raster expression
-            x: Column number (1-based)
-            y: Row number (1-based)
-
-        Returns:
-            SQL function call string
-        """
-        ...
-
-    def format_st_summary(self, raster_expr: str) -> str:
-        """Format ST_Summary function for raster metadata.
-
-        Args:
-            raster_expr: Raster expression
-
-        Returns:
-            SQL function call string
         """
         ...

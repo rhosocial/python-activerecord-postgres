@@ -1,15 +1,54 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_extensions.py
-"""Unit tests for PostgreSQL extension mixins.
+"""Unit tests for PostgreSQL extension mixins and functions.
 
 Tests for:
-- hstore extension
-- ltree extension
-- intarray extension
+- hstore extension mixin (supports_* methods)
+- ltree extension functions
+- intarray extension functions
+- earthdistance extension functions
+- pg_trgm extension functions
+- pgvector extension functions
+- PostGIS extension functions
 """
 import pytest
 from unittest.mock import MagicMock
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core, operators
+from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
+    ltree_literal,
+    lquery_literal,
+    ltxtquery_literal,
+    ltree_ancestor,
+    ltree_descendant,
+    ltree_matches,
+    ltree_subpath,
+    ltree_nlevel,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.earthdistance import (
+    earth_distance,
+    ll_to_earth,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_trgm import (
+    similarity,
+    similarity_operator,
+    show_trgm,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.pgvector import (
+    vector_l2_distance,
+    vector_cosine_distance,
+    vector_literal,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.postgis import (
+    st_geom_from_text,
+    st_geog_from_text,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.intarray import (
+    intarray_contains,
+    intarray_contained_by,
+    intarray_overlaps,
+)
 
 
 class TestHstoreMixin:
@@ -28,181 +67,209 @@ class TestHstoreMixin:
         assert isinstance(result, bool)
 
 
-class TestLtreeMixin:
-    """Test ltree extension mixin."""
+class TestLtreeFunctions:
+    """Test ltree extension functions."""
 
-    def test_format_ltree_literal(self):
-        """Test ltree literal formatting."""
+    def test_ltree_literal(self):
+        """Test ltree literal function."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_literal('Top.Science.Astronomy')
-        assert "'Top.Science.Astronomy'" in result
+        result = ltree_literal(dialect, 'Top.Science.Astronomy')
+        assert isinstance(result, core.Literal)
+        sql, params = result.to_sql()
+        assert 'Top.Science.Astronomy' in params
 
-    def test_format_lquery_literal(self):
-        """Test lquery literal formatting."""
+    def test_lquery_literal(self):
+        """Test lquery literal function."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_lquery_literal('*.Astronomy.*')
-        assert "'*.Astronomy.*'::lquery" in result
+        result = lquery_literal(dialect, '*.Astronomy.*')
+        sql, params = result.to_sql()
+        assert "lquery" in sql.lower()
 
-    def test_format_ltree_operator_ltree(self):
-        """Test ltree operator with ltree value."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_operator('path', '@>', 'Top.Science')
-        assert "path @> 'Top.Science'" in result
-
-    def test_format_ltree_operator_lquery(self):
-        """Test ltree operator with lquery value."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_operator('path', '~', '*.Astronomy.*', 'lquery')
-        assert "path ~ '*.Astronomy.*'::lquery" in result
-
-    def test_format_ltree_operator_ltxtquery(self):
-        """Test ltree operator with ltxtquery value."""
-        dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_operator('path', '@', 'Astronomy & Stars', 'ltxtquery')
-        assert "path @ 'Astronomy & Stars'::ltxtquery" in result
-
-    def test_format_ltree_is_ancestor(self):
+    def test_ltree_ancestor(self):
         """Test ltree ancestor check."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_is_ancestor('path', 'Top.Science.Astronomy')
-        assert "path @> 'Top.Science.Astronomy'" in result
+        result = ltree_ancestor(dialect, 'path', 'Top.Science.Astronomy')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "@>" in sql
 
-    def test_format_ltree_is_descendant(self):
+    def test_ltree_descendant(self):
         """Test ltree descendant check."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_is_descendant('path', 'Top.Science')
-        assert "path <@ 'Top.Science'" in result
+        result = ltree_descendant(dialect, 'path', 'Top.Science')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "<@" in sql
 
-    def test_format_ltree_matches(self):
+    def test_ltree_matches(self):
         """Test ltree lquery match."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_matches('path', '*.Astronomy.*')
-        assert "path ~ '*.Astronomy.*'::lquery" in result
+        result = ltree_matches(dialect, 'path', '*.Astronomy.*')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "~" in sql
 
-    def test_format_ltree_index_statement(self):
-        """Test ltree index statement."""
+    def test_ltree_index_statement(self):
+        """Test ltree index statement (DDL, still on mixin)."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path')
         assert "CREATE INDEX idx_path ON categories USING gist (path)" in sql
 
-    def test_format_ltree_index_statement_with_schema(self):
+    def test_ltree_index_statement_with_schema(self):
         """Test ltree index statement with schema."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path', schema='public')
         assert "ON public.categories" in sql
 
-    def test_format_ltree_index_statement_btree(self):
+    def test_ltree_index_statement_btree(self):
         """Test ltree index statement with btree."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path', index_type='btree')
         assert "USING btree" in sql
 
-    def test_format_ltree_subpath_with_length(self):
+    def test_ltree_subpath_with_length(self):
         """Test ltree subpath with length."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_subpath('path', 0, 2)
-        assert "subpath(path, 0, 2)" in result
+        result = ltree_subpath(dialect, 'path', 0, 2)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "subpath" in sql.lower()
 
-    def test_format_ltree_subpath_without_length(self):
+    def test_ltree_subpath_without_length(self):
         """Test ltree subpath without length."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_subpath('path', 1)
-        assert "subpath(path, 1)" in result
+        result = ltree_subpath(dialect, 'path', 1)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "subpath" in sql.lower()
 
-    def test_format_ltree_nlevel(self):
+    def test_ltree_nlevel(self):
         """Test ltree nlevel function."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_ltree_nlevel('path')
-        assert "nlevel(path)" in result
+        result = ltree_nlevel(dialect, 'path')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "nlevel" in sql.lower()
 
 
-class TestIntarrayMixin:
-    """Test intarray extension mixin."""
+class TestIntarrayFunctions:
+    """Test intarray extension functions."""
 
-    def test_format_intarray_operator_contains(self):
+    def test_intarray_contains(self):
         """Test intarray @> operator."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_intarray_operator('arr', '@>', 'ARRAY[1,2]')
-        assert "arr @> ARRAY[1,2]" in result
+        result = intarray_contains(dialect, 'arr', 'ARRAY[1,2]')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "@>" in sql
 
-    def test_format_intarray_operator_contained(self):
+    def test_intarray_contained_by(self):
         """Test intarray <@ operator."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_intarray_operator('arr', '<@', 'ARRAY[1,2,3]')
-        assert "arr <@ ARRAY[1,2,3]" in result
+        result = intarray_contained_by(dialect, 'arr', 'ARRAY[1,2,3]')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "<@" in sql
 
-    def test_format_intarray_operator_overlap(self):
+    def test_intarray_overlaps(self):
         """Test intarray && operator."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_intarray_operator('arr', '&&', 'ARRAY[1,2]')
-        assert "arr && ARRAY[1,2]" in result
+        result = intarray_overlaps(dialect, 'arr', 'ARRAY[1,2]')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "&&" in sql
 
 
-class TestEarthdistanceMixin:
-    """Test earthdistance extension mixin."""
+class TestEarthdistanceFunctions:
+    """Test earthdistance extension functions."""
 
-    def test_format_earth_distance(self):
+    def test_earth_distance(self):
         """Test earth distance calculation."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_earth_distance('point1', 'point2')
-        assert "earth_distance" in result
+        result = earth_distance(dialect, 'point1', 'point2')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "earth_distance" in sql.lower()
+
+    def test_ll_to_earth(self):
+        """Test ll_to_earth function."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = ll_to_earth(dialect, 40.7128, -74.0060)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "ll_to_earth" in sql.lower()
 
 
-class TestPgTrgmMixin:
-    """Test pg_trgm extension mixin."""
+class TestPgTrgmFunctions:
+    """Test pg_trgm extension functions."""
 
-    def test_format_similarity(self):
+    def test_similarity_function(self):
         """Test similarity function."""
         dialect = PostgresDialect((14, 0, 0))
-        # Test with function form (use_operator=False)
-        result = dialect.format_similarity_expression('col', 'pattern', use_operator=False)
-        assert "similarity" in result
+        result = similarity(dialect, 'col', 'pattern')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "similarity" in sql.lower()
 
-    def test_format_similarity_operator(self):
-        """Test similarity operator."""
+    def test_similarity_operator(self):
+        """Test similarity operator (%)."""
         dialect = PostgresDialect((14, 0, 0))
-        # Test with operator form (default)
-        result = dialect.format_similarity_expression('col', 'pattern')
-        assert "col % 'pattern'" in result
+        result = similarity_operator(dialect, 'col', 'pattern')
+        assert isinstance(result, operators.BinaryExpression)
+        sql, params = result.to_sql()
+        assert "%" in sql
 
-    def test_format_show_trgm(self):
+    def test_show_trgm(self):
         """Test show_trgm function."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_show_trgm('text')
-        assert "show_trgm" in result
+        result = show_trgm(dialect, 'text')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "show_trgm" in sql.lower()
 
 
-class TestPgvectorMixin:
-    """Test pgvector extension mixin."""
+class TestPgvectorFunctions:
+    """Test pgvector extension functions."""
 
-    def test_format_vector_literal(self):
-        """Test vector literal formatting."""
+    def test_vector_literal(self):
+        """Test vector literal function."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_vector_literal([1.0, 2.0, 3.0])
-        assert "[1.0, 2.0, 3.0]" in result
+        result = vector_literal(dialect, [1.0, 2.0, 3.0])
+        sql, params = result.to_sql()
+        assert "vector" in sql.lower()
 
-    def test_format_vector_cosine_distance(self):
+    def test_vector_cosine_distance(self):
         """Test vector cosine distance."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_vector_similarity_expression(
-            'embedding', '[1,2,3]', distance_metric='cosine'
-        )
-        assert "embedding <=> '[1,2,3]'" in result
+        result = vector_cosine_distance(dialect, 'embedding', '[1,2,3]')
+        assert isinstance(result, BinaryArithmeticExpression)
+        sql, params = result.to_sql()
+        assert "<=>" in sql
+
+    def test_vector_l2_distance(self):
+        """Test vector L2 distance."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = vector_l2_distance(dialect, 'embedding', '[1,2,3]')
+        assert isinstance(result, BinaryArithmeticExpression)
+        sql, params = result.to_sql()
+        assert "<->" in sql
 
 
-class TestPostGISMixin:
-    """Test PostGIS extension mixin."""
+class TestPostGISFunctions:
+    """Test PostGIS extension functions."""
 
-    def test_format_geometry_from_text(self):
+    def test_st_geom_from_text(self):
         """Test geometry from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_geometry_literal('POINT(0 0)', 4326)
-        assert "ST_GeomFromText" in result
+        result = st_geom_from_text(dialect, 'POINT(0 0)', srid=4326)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "st_geomfromtext" in sql.lower()
 
-    def test_format_geography_from_text(self):
+    def test_st_geog_from_text(self):
         """Test geography from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.format_geometry_literal(
-            'POINT(0 0)', 4326, geometry_type='geography'
-        )
-        assert "ST_GeogFromText" in result
+        result = st_geog_from_text(dialect, 'POINT(0 0)')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "st_geogfromtext" in sql.lower()

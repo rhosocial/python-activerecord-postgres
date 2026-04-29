@@ -1,15 +1,15 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/citext.py
 """
-citext case-insensitive text functionality implementation.
+PostgreSQL citext case-insensitive text functionality mixin.
 
-This module provides the PostgresCitextMixin class that adds support for
-citext extension features.
+This module provides functionality to check citext extension features
+and generate DDL column definitions for citext columns.
+
+For citext literal expression generation, use the function factories in
+``functions/citext.py`` instead of the removed format_citext_literal method.
 """
 
-from typing import TYPE_CHECKING, Optional
-
-if TYPE_CHECKING:
-    pass
+from typing import Optional
 
 
 class PostgresCitextMixin:
@@ -22,6 +22,9 @@ class PostgresCitextMixin:
     def format_citext_column(self, column_name: str, length: Optional[int] = None) -> str:
         """Format a citext column definition.
 
+        This generates a DDL column definition for use in CREATE TABLE or
+        ALTER TABLE statements, not a function expression.
+
         Args:
             column_name: Column name
             length: Optional maximum length
@@ -32,19 +35,3 @@ class PostgresCitextMixin:
         if length:
             return f"{column_name} CITEXT({length})"
         return f"{column_name} CITEXT"
-
-    def format_citext_literal(self, value: str) -> str:
-        """Format a citext type literal value.
-
-        Args:
-            value: The text value
-
-        Returns:
-            SQL citext literal string
-
-        Example:
-            >>> format_citext_literal('Hello World')
-            "'Hello World'::citext"
-        """
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'::citext"

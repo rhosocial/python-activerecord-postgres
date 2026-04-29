@@ -3,6 +3,9 @@
 
 This module defines the protocol for ltree (label tree) data type support,
 which provides hierarchical label path operations.
+
+For SQL expression generation, use the function factories in
+``functions/ltree.py`` instead of the removed format_* methods.
 """
 
 from typing import Optional, Protocol, Tuple, runtime_checkable
@@ -33,71 +36,19 @@ class PostgresLtreeSupport(Protocol):
     """
 
     def supports_ltree_type(self) -> bool:
-        """Whether ltree data type is supported.
-
-        Requires ltree extension.
-        Stores label paths like 'Top.Science.Astronomy'.
-        """
+        """Whether ltree data type is supported."""
         ...
 
     def supports_ltree_operators(self) -> bool:
-        """Whether ltree operators are supported.
-
-        Requires ltree extension.
-        Supports operators: <@, @>, ~, ? and more.
-        """
+        """Whether ltree operators are supported."""
         ...
 
     def supports_ltree_index(self) -> bool:
-        """Whether ltree indexes are supported.
-
-        Requires ltree extension.
-        Supports GiST and B-tree indexes on ltree.
-        """
-        ...
-
-    def format_ltree_literal(self, path: str) -> str:
-        """Format an ltree literal value."""
-        ...
-
-    def format_lquery_literal(self, pattern: str) -> str:
-        """Format an lquery pattern literal."""
-        ...
-
-    def format_ltree_operator(self, column: str, operator: str, value: str, value_type: str = "ltree") -> str:
-        """Format an ltree operator expression."""
-        ...
-
-    def format_ltree_is_ancestor(self, column: str, path: str) -> str:
-        """Format ltree ancestor check (column is ancestor of path)."""
-        ...
-
-    def format_ltree_is_descendant(self, column: str, path: str) -> str:
-        """Format ltree descendant check (column is descendant of path)."""
-        ...
-
-    def format_ltree_matches(self, column: str, pattern: str) -> str:
-        """Format ltree lquery match."""
+        """Whether ltree indexes are supported."""
         ...
 
     def format_ltree_index_statement(
         self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for ltree column."""
-        ...
-
-    def format_ltree_subpath(self, column: str, start: int, length: Optional[int] = None) -> str:
-        """Format subpath extraction."""
-        ...
-
-    def format_ltree_nlevel(self, column: str) -> str:
-        """Format nlevel function (count of labels)."""
-        ...
-
-    def format_ltree_concat(self, left: str, right: str) -> str:
-        """Format ltree path concatenation."""
-        ...
-
-    def format_ltree_lca(self, *paths: str) -> str:
-        """Format lca (lowest common ancestor) function."""
         ...

@@ -3,6 +3,10 @@
 
 This module defines the protocol for pg_partman partition management
 functionality in PostgreSQL.
+
+For SQL expression generation of partition creation and maintenance functions,
+use the function factories in ``functions/pg_partman.py`` instead of the
+removed format_* methods.
 """
 
 from typing import Optional, Protocol, runtime_checkable
@@ -17,7 +21,7 @@ class PostgresPgPartmanSupport(Protocol):
     pg_partman provides partition management:
     - Auto create partitions
     - Partition maintenance
-    - Time andserial partitioning
+    - Time and serial partitioning
 
     Extension Information:
     - Extension name: pg_partman
@@ -32,20 +36,6 @@ class PostgresPgPartmanSupport(Protocol):
 
     def supports_pg_partman_auto_partition(self) -> bool:
         """Whether pg_partman supports auto partitioning."""
-        ...
-
-    def format_create_partition_time(self, table_name: str, partition_type: str = "daily",
-                                      interval: Optional[str] = None, preload: bool = True) -> str:
-        """Format time-based partition creation."""
-        ...
-
-    def format_create_partition_id(self, table_name: str, interval: int = 10000,
-                                    preload: bool = True) -> str:
-        """Format ID-based partition creation."""
-        ...
-
-    def format_run_maintenance(self, config: Optional[str] = None) -> str:
-        """Format partition maintenance execution."""
         ...
 
     def format_auto_partition_config(self, table_name: str, automatic: bool = True,

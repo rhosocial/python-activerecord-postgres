@@ -33,6 +33,10 @@ from .dml.locking import PostgresLockingSupport
 from .types.data_type import PostgresDataTypeSupport
 from .types.multirange import PostgresMultirangeSupport
 from .types.enum import PostgresEnumTypeSupport
+from .types.full_text_search import PostgresFullTextSearchSupport
+from .types.range_type import PostgresRangeTypeSupport
+from .types.jsonb_enhanced import PostgresJSONBEnhancedSupport
+from .types.array_enhanced import PostgresArrayEnhancedSupport
 
 # Extension protocols
 from .extensions.pgvector import PostgresPgvectorSupport
@@ -85,6 +89,10 @@ __all__ = [
     "PostgresDataTypeSupport",
     "PostgresMultirangeSupport",
     "PostgresEnumTypeSupport",
+    "PostgresFullTextSearchSupport",
+    "PostgresRangeTypeSupport",
+    "PostgresJSONBEnhancedSupport",
+    "PostgresArrayEnhancedSupport",
     # Extension protocols
     "PostgresPgvectorSupport",
     "PostgresPostGISSupport",

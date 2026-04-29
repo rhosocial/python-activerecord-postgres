@@ -3,6 +3,9 @@
 
 This module defines the protocol for pg_repack online rebuild
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/pg_repack.py`` instead of the removed format_* methods.
 """
 
 from typing import Protocol, runtime_checkable
@@ -27,18 +30,4 @@ class PostgresPgRepackSupport(Protocol):
 
     def supports_pg_repack(self) -> bool:
         """Whether pg_repack extension is available."""
-        ...
-
-    def format_pg_repack_table(self, table_name: str) -> str:
-        """Format pg_repack table rebuild."""
-        ...
-
-    def format_pg_repack_index(self, index_name: str) -> str:
-        """Format pg_repack index rebuild."""
-        ...
-
-    def format_pg_repack_move_tablespace(
-        self, table_name: str, tablespace: str
-    ) -> str:
-        """Format pg_repack table move to tablespace."""
         ...

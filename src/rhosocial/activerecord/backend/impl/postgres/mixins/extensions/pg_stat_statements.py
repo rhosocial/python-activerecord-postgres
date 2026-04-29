@@ -1,5 +1,15 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pg_stat_statements.py
-"""pg_stat_statements extension mixin implementation."""
+"""
+PostgreSQL pg_stat_statements query statistics mixin.
+
+This module provides functionality to check pg_stat_statements extension
+features and format complete query patterns against the pg_stat_statements
+view (with ORDER BY, LIMIT, etc.).
+
+For SQL function expression generation (e.g. pg_stat_statements_reset),
+use the function factories in ``functions/pg_stat_statements.py``
+instead of the removed format_* methods.
+"""
 
 from typing import Tuple, Optional
 
@@ -42,18 +52,6 @@ class PostgresPgStatStatementsMixin:
         if limit:
             sql += f" LIMIT {limit}"
         return (sql, ())
-
-    def format_reset_stats_statement(self) -> Tuple[str, tuple]:
-        """Format statement to reset pg_stat_statements statistics.
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-
-        Example:
-            >>> format_reset_stats_statement()
-            ("SELECT pg_stat_statements_reset()", ())
-        """
-        return ("SELECT pg_stat_statements_reset()", ())
 
     def format_query_by_id_statement(self, queryid: int) -> Tuple[str, tuple]:
         """Format statement to get statistics for a specific query.

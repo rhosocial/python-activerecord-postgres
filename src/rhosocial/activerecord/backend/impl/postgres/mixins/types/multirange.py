@@ -3,15 +3,24 @@
 
 This module provides the MultirangeMixin class for handling PostgreSQL
 multirange type operations.
+
+For SQL expression generation of multirange operators and functions,
+use the function factories in ``functions/range.py`` instead of the
+removed format_* methods.
+
+Methods retained in this mixin:
+- supports_*: Capability detection
+- format_create_multirange_type_statement: DDL statement
+- format_multirange_agg_function: Complete SELECT query template
 """
 
 from typing import Optional, Tuple
 
 
 class MultirangeMixin:
-    """Mixin providing PostgreSQL multirange type formatting methods.
+    """Mixin providing PostgreSQL multirange type support methods.
 
-    This mixin implements the MultirangeSupport protocol.
+    This mixin implements the PostgresMultirangeSupport protocol.
     Designed for multiple inheritance with SQLDialectBase.
     """
 
@@ -81,117 +90,3 @@ class MultirangeMixin:
         if where_clause:
             sql += f" WHERE {where_clause}"
         return (sql, ())
-
-    def format_range_merge_function(self, multirange_column: str) -> str:
-        """Format range_merge function call on a multirange.
-
-        The range_merge function returns the smallest range that includes
-        all ranges in the multirange.
-
-        Args:
-            multirange_column: The multirange column/expression
-
-        Returns:
-            SQL function call string
-
-        Example:
-            >>> format_range_merge_function('my_multirange')
-            "range_merge(my_multirange)"
-        """
-        return f"range_merge({multirange_column})"
-
-    def format_multirange_contains(self, multirange_column: str, value: str) -> str:
-        """Format a containment check for multirange.
-
-        Args:
-            multirange_column: The multirange column
-            value: The value or range to check containment
-
-        Returns:
-            SQL containment expression
-
-        Example:
-            >>> format_multirange_contains('periods', '5')
-            "periods @> 5"
-        """
-        return f"{multirange_column} @> {value}"
-
-    def format_multirange_is_contained_by(self, multirange_column: str, value: str) -> str:
-        """Format an "is contained by" check for multirange.
-
-        Args:
-            multirange_column: The multirange column
-            value: The value or range to check
-
-        Returns:
-            SQL containment expression
-
-        Example:
-            >>> format_multirange_is_contained_by('periods', '[1,100)')
-            "periods <@ '[1,100)'"
-        """
-        return f"{multirange_column} <@ '{value}'"
-
-    def format_multirange_overlaps(self, multirange_column: str, other: str) -> str:
-        """Format an overlaps check for multirange.
-
-        Args:
-            multirange_column: The multirange column
-            other: The other multirange/range to check overlap with
-
-        Returns:
-            SQL overlaps expression
-
-        Example:
-            >>> format_multirange_overlaps('periods', '[10,20)')
-            "periods && '[10,20)'"
-        """
-        return f"{multirange_column} && '{other}'"
-
-    def format_multirange_union(self, multirange_column: str, other: str) -> str:
-        """Format multirange union operation.
-
-        Args:
-            multirange_column: The multirange column
-            other: The other multirange/range to union with
-
-        Returns:
-            SQL union expression
-
-        Example:
-            >>> format_multirange_union('periods', '[10,20)')
-            "periods + '[10,20)'"
-        """
-        return f"{multirange_column} + '{other}'"
-
-    def format_multirange_intersection(self, multirange_column: str, other: str) -> str:
-        """Format multirange intersection operation.
-
-        Args:
-            multirange_column: The multirange column
-            other: The other multirange/range to intersect with
-
-        Returns:
-            SQL intersection expression
-
-        Example:
-            >>> format_multirange_intersection('periods', '[10,20)')
-            "periods * '[10,20)'"
-        """
-        return f"{multirange_column} * '{other}'"
-
-    def format_multirange_difference(self, multirange_column: str, other: str) -> str:
-        """Format multirange difference operation.
-
-        Args:
-            multirange_column: The multirange column
-            other: The other multirange/range to subtract
-
-        Returns:
-            SQL difference expression
-
-        Example:
-            >>> format_multirange_difference('periods', '[10,20)')
-            "periods - '[10,20)'"
-        """
-        return f"{multirange_column} - '{other}'"

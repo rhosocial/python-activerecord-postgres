@@ -67,7 +67,7 @@ class FunctionVersionRequirement:
 
 # ── Core PG built-in functions ────────────────────────────────
 
-JSON_PATH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+JSON_PATH_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "jsonb_path_query": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
     "jsonb_path_query_first": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
     "jsonb_path_exists": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
@@ -79,7 +79,7 @@ JSON_PATH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "json_path_filter": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
 }
 
-RANGE_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+RANGE_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "range_contains": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
     "range_contained_by": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
     "range_contains_range": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
@@ -101,7 +101,7 @@ RANGE_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "range_upper_inf": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
 }
 
-GEOMETRIC_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+GEOMETRIC_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "geometry_distance": FunctionVersionRequirement(),
     "geometry_contains": FunctionVersionRequirement(),
     "geometry_contained_by": FunctionVersionRequirement(),
@@ -118,7 +118,7 @@ GEOMETRIC_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "geometry_npoints": FunctionVersionRequirement(),
 }
 
-ENUM_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+ENUM_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "enum_range": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "enum_first": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "enum_last": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
@@ -128,7 +128,7 @@ ENUM_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "enum_ge": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
 }
 
-BIT_STRING_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+BIT_STRING_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "bit_concat": FunctionVersionRequirement(),
     "bit_and": FunctionVersionRequirement(),
     "bit_or": FunctionVersionRequirement(),
@@ -144,7 +144,7 @@ BIT_STRING_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "bit_count": FunctionVersionRequirement(min_pg_version=(9, 5, 0)),
 }
 
-TEXT_SEARCH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+TEXT_SEARCH_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "to_tsvector": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "to_tsquery": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "plainto_tsquery": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
@@ -161,14 +161,14 @@ TEXT_SEARCH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "tsvector_length": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
 }
 
-XML_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+XML_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "xmlparse": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xpath_query": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xpath_exists": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xml_is_well_formed": FunctionVersionRequirement(min_pg_version=(9, 1, 0)),
 }
 
-MATH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+MATH_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "round_": FunctionVersionRequirement(),
     "pow": FunctionVersionRequirement(),
     "power": FunctionVersionRequirement(),
@@ -182,7 +182,7 @@ MATH_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "avg": FunctionVersionRequirement(),
 }
 
-ARRAY_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+ARRAY_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "array_agg": FunctionVersionRequirement(),
     "array_append": FunctionVersionRequirement(),
     "array_cat": FunctionVersionRequirement(),
@@ -203,7 +203,7 @@ ARRAY_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "string_to_array": FunctionVersionRequirement(),
 }
 
-NETWORK_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+NETWORK_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "inet_client_addr": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "inet_client_port": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "inet_server_addr": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
@@ -222,7 +222,7 @@ NETWORK_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "macaddr8_set7bit": FunctionVersionRequirement(min_pg_version=(10, 0, 0)),
 }
 
-RANGE_CONSTRUCTOR_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+RANGE_CONSTRUCTOR_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "int4range": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
     "int8range": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
     "numrange": FunctionVersionRequirement(min_pg_version=(9, 2, 0)),
@@ -233,7 +233,7 @@ RANGE_CONSTRUCTOR_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
 
 # ── Extension-provided functions ──────────────────────────────
 
-UUID_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+UUID_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     # Built-in since PG 13
     "gen_random_uuid": FunctionVersionRequirement(min_pg_version=(13, 0, 0)),
     # uuid-ossp extension functions
@@ -246,7 +246,7 @@ UUID_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "uuid_max": FunctionVersionRequirement(extension="uuid-ossp", min_ext_version="1.0"),
 }
 
-HSTORE_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+HSTORE_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "hstore_from_record": FunctionVersionRequirement(extension="hstore", min_ext_version="1.0"),
     "hstore_from_key_value": FunctionVersionRequirement(extension="hstore", min_ext_version="1.0"),
     "hstore_akeys": FunctionVersionRequirement(extension="hstore", min_ext_version="1.0"),
@@ -301,7 +301,7 @@ HSTORE_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     ),
 }
 
-PGVECTOR_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+PGVECTOR_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "vector_l2_distance": FunctionVersionRequirement(extension="vector", ext_feature="similarity_search"),
     "vector_cosine_distance": FunctionVersionRequirement(extension="vector", ext_feature="similarity_search"),
     "vector_inner_product": FunctionVersionRequirement(extension="vector", ext_feature="similarity_search"),
@@ -309,7 +309,7 @@ PGVECTOR_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
     "vector_literal": FunctionVersionRequirement(extension="vector", ext_feature="type"),
 }
 
-POSTGIS_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {
+POSTGIS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "st_make_point": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
     "st_geom_from_text": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
     "st_geog_from_text": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
@@ -352,6 +352,6 @@ _ALL_CATEGORIES = [
     POSTGIS_FUNCTION_VERSIONS,
 ]
 
-POSTGRES_FUNCTION_VERSIONS: dict[str, FunctionVersionRequirement] = {}
+POSTGRES_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {}
 for _cat in _ALL_CATEGORIES:
     POSTGRES_FUNCTION_VERSIONS.update(_cat)

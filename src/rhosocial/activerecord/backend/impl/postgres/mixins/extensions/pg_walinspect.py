@@ -1,15 +1,13 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pg_walinspect.py
 """
-pg_walinspect WAL inspection functionality implementation.
+PostgreSQL pg_walinspect WAL inspection functionality mixin.
 
-This module provides the PostgresPgWalinspectMixin class that adds support for
-pg_walinspect extension features.
+This module provides functionality to check pg_walinspect extension features.
+
+For SQL expression generation (e.g. pg_get_wal_records_info,
+pg_get_wal_blocks_info, pg_logical_emit_message), use the function factories
+in ``functions/pg_walinspect.py`` instead of the removed format_* methods.
 """
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 
 class PostgresPgWalinspectMixin:
@@ -18,34 +16,3 @@ class PostgresPgWalinspectMixin:
     def supports_pg_walinspect(self) -> bool:
         """Check if pg_walinspect extension is available."""
         return self.is_extension_installed("pg_walinspect")
-
-    def format_pg_get_wal_records_info(self) -> str:
-        """Format WAL records info query.
-
-        Returns:
-            SQL function call
-        """
-        return "SELECT * FROM pg_get_wal_records_info()"
-
-    def format_pg_get_wal_blocks_info(self) -> str:
-        """Format WAL blocks info query.
-
-        Returns:
-            SQL function call
-        """
-        return "SELECT * FROM pg_get_wal_blocks_info()"
-
-    def format_pg_logical_emit_message(
-        self, transactional: bool = False, prefix: str = "test"
-    ) -> str:
-        """Format logical WAL message emission.
-
-        Args:
-            transactional: Use transactional mode
-            prefix: Message prefix
-
-        Returns:
-            SQL SELECT statement
-        """
-        trans = "true" if transactional else "false"
-        return f"SELECT pg_logical_emit_message({trans}, '{prefix}', '')"

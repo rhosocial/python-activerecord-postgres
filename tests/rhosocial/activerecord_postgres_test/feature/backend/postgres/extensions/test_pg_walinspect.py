@@ -1,22 +1,35 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_pg_walinspect.py
-"""Unit tests for PostgreSQL pg_walinspect extension mixin."""
+"""
+Unit tests for PostgreSQL pg_walinspect extension functions.
 
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pg_walinspect import PostgresPgWalinspectMixin
+Tests for:
+- pg_get_wal_records_info
+- pg_get_wal_blocks_info
+"""
+
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_walinspect import (
+    pg_get_wal_records_info,
+    pg_get_wal_blocks_info,
+)
 
 
 class TestPgWalinspectMixin:
-    """Test pg_walinspect extension mixin."""
+    """Test pg_walinspect extension functions."""
 
-    def setup_method(self):
-        """Set up test fixture."""
-        self.mixin = PostgresPgWalinspectMixin()
+    def test_pg_get_wal_records_info(self):
+        """pg_get_wal_records_info should return FunctionCall with pg_get_wal_records_info."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = pg_get_wal_records_info(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "pg_get_wal_records_info" in sql.lower()
 
-    def test_format_pg_get_wal_records_info(self):
-        """Test WAL records info query formatting."""
-        result = self.mixin.format_pg_get_wal_records_info()
-        assert "pg_get_wal_records_info" in result
-
-    def test_format_pg_get_wal_blocks_info(self):
-        """Test WAL blocks info query formatting."""
-        result = self.mixin.format_pg_get_wal_blocks_info()
-        assert "pg_get_wal_blocks_info" in result
+    def test_pg_get_wal_blocks_info(self):
+        """pg_get_wal_blocks_info should return FunctionCall with pg_get_wal_blocks_info."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = pg_get_wal_blocks_info(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "pg_get_wal_blocks_info" in sql.lower()
