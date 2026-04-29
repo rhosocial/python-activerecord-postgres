@@ -7,6 +7,7 @@ function availability detection in PostgresDialect.
 """
 import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.function_versions import FunctionSupportInfo
 
 
 class TestPostgreSQLFunctionSupportBasic:
@@ -19,12 +20,12 @@ class TestPostgreSQLFunctionSupportBasic:
         assert isinstance(result, dict)
         assert len(result) > 0
 
-    def test_supports_functions_all_values_are_bool(self):
-        """Test that all values in the returned dict are booleans."""
+    def test_supports_functions_all_values_are_support_info(self):
+        """Test that all values in the returned dict are FunctionSupportInfo."""
         dialect = PostgresDialect()
         result = dialect.supports_functions()
-        for func_name, supported in result.items():
-            assert isinstance(supported, bool), f"Value for {func_name} is not bool"
+        for func_name, info in result.items():
+            assert isinstance(info, FunctionSupportInfo), f"Value for {func_name} is not FunctionSupportInfo"
 
     def test_core_functions_always_supported(self):
         """Test that core functions are marked as supported."""
@@ -33,7 +34,7 @@ class TestPostgreSQLFunctionSupportBasic:
         core_functions = ["count", "sum_", "avg", "min_", "max_", "coalesce", "nullif"]
         for func in core_functions:
             assert func in result, f"Core function {func} not in result"
-            assert result[func] is True, f"Core function {func} should be supported"
+            assert result[func].supported, f"Core function {func} should be supported"
 
 
 class TestPostgreSQLFunctionSupportVersionDependent:
@@ -49,12 +50,12 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(11, 99, 99))
         result_old = dialect_old.supports_functions()
         for func in json_path_functions:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(12, 0, 0))
         result_new = dialect_new.supports_functions()
         for func in json_path_functions:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_range_functions_require_pg_9_2(self):
         """Test that range functions require PostgreSQL 9.2+."""
@@ -65,12 +66,12 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(9, 1, 99))
         result_old = dialect_old.supports_functions()
         for func in range_functions:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(9, 2, 0))
         result_new = dialect_new.supports_functions()
         for func in range_functions:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_range_constructors_require_pg_9_2(self):
         """Test that range constructors require PostgreSQL 9.2+."""
@@ -80,12 +81,12 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(9, 1, 99))
         result_old = dialect_old.supports_functions()
         for func in range_constructors:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(9, 2, 0))
         result_new = dialect_new.supports_functions()
         for func in range_constructors:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_enum_functions_require_pg_8_3(self):
         """Test that enum functions require PostgreSQL 8.3+."""
@@ -95,12 +96,12 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(8, 2, 99))
         result_old = dialect_old.supports_functions()
         for func in enum_functions:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(8, 3, 0))
         result_new = dialect_new.supports_functions()
         for func in enum_functions:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_text_search_functions_require_pg_8_3(self):
         """Test that text search functions require PostgreSQL 8.3+."""
@@ -110,32 +111,32 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(8, 2, 99))
         result_old = dialect_old.supports_functions()
         for func in ts_functions:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(8, 3, 0))
         result_new = dialect_new.supports_functions()
         for func in ts_functions:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_phraseto_tsquery_requires_pg_9_6(self):
         """Test that phraseto_tsquery requires PostgreSQL 9.6+."""
         dialect_old = PostgresDialect(version=(9, 5, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("phraseto_tsquery") is False
+        assert not result_old.get("phraseto_tsquery").supported
 
         dialect_new = PostgresDialect(version=(9, 6, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("phraseto_tsquery") is True
+        assert result_new.get("phraseto_tsquery").supported
 
     def test_websearch_to_tsquery_requires_pg_11(self):
         """Test that websearch_to_tsquery requires PostgreSQL 11+."""
         dialect_old = PostgresDialect(version=(10, 99, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("websearch_to_tsquery") is False
+        assert not result_old.get("websearch_to_tsquery").supported
 
         dialect_new = PostgresDialect(version=(11, 0, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("websearch_to_tsquery") is True
+        assert result_new.get("websearch_to_tsquery").supported
 
     def test_array_functions_require_various_versions(self):
         """Test that array functions have various version requirements."""
@@ -147,24 +148,24 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         result_84 = dialect_84.supports_functions()
         result_95 = dialect_95.supports_functions()
 
-        assert result_83.get("array_fill") is False
-        assert result_84.get("array_fill") is True
+        assert not result_83.get("array_fill").supported
+        assert result_84.get("array_fill").supported
 
-        assert result_83.get("array_ndims") is False
-        assert result_84.get("array_ndims") is True
+        assert not result_83.get("array_ndims").supported
+        assert result_84.get("array_ndims").supported
 
-        assert result_84.get("array_position") is False
-        assert result_95.get("array_position") is True
+        assert not result_84.get("array_position").supported
+        assert result_95.get("array_position").supported
 
     def test_bit_count_requires_pg_9_5(self):
         """Test that bit_count requires PostgreSQL 9.5+."""
         dialect_old = PostgresDialect(version=(9, 4, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("bit_count") is False
+        assert not result_old.get("bit_count").supported
 
         dialect_new = PostgresDialect(version=(9, 5, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("bit_count") is True
+        assert result_new.get("bit_count").supported
 
     def test_xml_functions_require_pg_8_3(self):
         """Test that XML functions require PostgreSQL 8.3+."""
@@ -173,52 +174,60 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         dialect_old = PostgresDialect(version=(8, 2, 99))
         result_old = dialect_old.supports_functions()
         for func in xml_functions:
-            assert result_old.get(func) is False
+            assert not result_old.get(func).supported
 
         dialect_new = PostgresDialect(version=(8, 3, 0))
         result_new = dialect_new.supports_functions()
         for func in xml_functions:
-            assert result_new.get(func) is True
+            assert result_new.get(func).supported
 
     def test_xml_is_well_formed_requires_pg_9_1(self):
         """Test that xml_is_well_formed requires PostgreSQL 9.1+."""
         dialect_old = PostgresDialect(version=(9, 0, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("xml_is_well_formed") is False
+        assert not result_old.get("xml_is_well_formed").supported
 
         dialect_new = PostgresDialect(version=(9, 1, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("xml_is_well_formed") is True
+        assert result_new.get("xml_is_well_formed").supported
 
     def test_hstore_to_json_functions_require_pg_9_3(self):
-        """Test that hstore_to_json functions require PostgreSQL 9.3+."""
+        """Test that hstore_to_json functions require PostgreSQL 9.3+ and hstore extension."""
         dialect_old = PostgresDialect(version=(9, 2, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("hstore_to_json") is False
+        # Below PG version threshold → pg_version_too_low
+        assert not result_old.get("hstore_to_json").supported
+        assert result_old.get("hstore_to_json").reason == "pg_version_too_low"
 
         dialect_new = PostgresDialect(version=(9, 3, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("hstore_to_json") is True
+        # PG version sufficient but extension not probed → extension_not_probed
+        assert not result_new.get("hstore_to_json").supported
+        assert result_new.get("hstore_to_json").reason == "extension_not_probed"
 
     def test_hstore_to_jsonb_requires_pg_9_4(self):
-        """Test that hstore_to_jsonb requires PostgreSQL 9.4+."""
+        """Test that hstore_to_jsonb requires PostgreSQL 9.4+ and hstore extension."""
         dialect_old = PostgresDialect(version=(9, 3, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("hstore_to_jsonb") is False
+        # Below PG version threshold → pg_version_too_low
+        assert not result_old.get("hstore_to_jsonb").supported
+        assert result_old.get("hstore_to_jsonb").reason == "pg_version_too_low"
 
         dialect_new = PostgresDialect(version=(9, 4, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("hstore_to_jsonb") is True
+        # PG version sufficient but extension not probed → extension_not_probed
+        assert not result_new.get("hstore_to_jsonb").supported
+        assert result_new.get("hstore_to_jsonb").reason == "extension_not_probed"
 
     def test_macaddr8_set7bit_requires_pg_10(self):
         """Test that macaddr8_set7bit requires PostgreSQL 10+."""
         dialect_old = PostgresDialect(version=(9, 99, 99))
         result_old = dialect_old.supports_functions()
-        assert result_old.get("macaddr8_set7bit") is False
+        assert not result_old.get("macaddr8_set7bit").supported
 
         dialect_new = PostgresDialect(version=(10, 0, 0))
         result_new = dialect_new.supports_functions()
-        assert result_new.get("macaddr8_set7bit") is True
+        assert result_new.get("macaddr8_set7bit").supported
 
     def test_always_available_functions(self):
         """Test functions that are available in all PostgreSQL versions."""
@@ -232,7 +241,7 @@ class TestPostgreSQLFunctionSupportVersionDependent:
             "array_agg", "array_append", "array_cat", "array_length",
         ]
         for func in always_available:
-            assert result.get(func) is True, f"{func} should be always available"
+            assert result.get(func).supported, f"{func} should be always available"
 
 
 class TestPostgreSQLFunctionSupportPrivateMethod:
@@ -282,8 +291,8 @@ class TestPostgreSQLFunctionSupportIntegration:
         old_result = old_dialect.supports_functions()
         new_result = new_dialect.supports_functions()
 
-        assert old_result.get("enum_range") is False
-        assert new_result.get("enum_range") is True
+        assert not old_result.get("enum_range").supported
+        assert new_result.get("enum_range").supported
 
-        assert old_result.get("jsonb_path_query") is False
-        assert new_result.get("jsonb_path_query") is True
+        assert not old_result.get("jsonb_path_query").supported
+        assert new_result.get("jsonb_path_query").supported
