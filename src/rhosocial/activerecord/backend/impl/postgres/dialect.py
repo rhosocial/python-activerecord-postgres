@@ -1335,233 +1335,94 @@ class PostgresDialect(
 
     # PostgreSQL function version support: function_name -> (min_version, max_version)
     # min_version: minimum supported version (inclusive), None = all versions
-    # max_version: maximum supported version (inclusive), None = no upper limit
-    # Reference: https://www.postgresql.org/docs/current/functions.html
-    # Note: Most PostgreSQL functions have been available since early versions,
-    # only a few newer functions have version requirements.
-    _POSTGRES_FUNCTION_VERSIONS = {
-        # JSON path functions (JSONPath): PostgreSQL 12+
-        "jsonb_path_query": ((12, 0, 0), None),
-        "jsonb_path_query_first": ((12, 0, 0), None),
-        "jsonb_path_exists": ((12, 0, 0), None),
-        "jsonb_path_match": ((12, 0, 0), None),
-        "json_path_root": ((12, 0, 0), None),
-        "json_path_key": ((12, 0, 0), None),
-        "json_path_index": ((12, 0, 0), None),
-        "json_path_wildcard": ((12, 0, 0), None),
-        "json_path_filter": ((12, 0, 0), None),
-        # Range functions: PostgreSQL 9.2+ (range types introduced)
-        "range_contains": ((9, 2, 0), None),
-        "range_contained_by": ((9, 2, 0), None),
-        "range_contains_range": ((9, 2, 0), None),
-        "range_overlaps": ((9, 2, 0), None),
-        "range_adjacent": ((9, 2, 0), None),
-        "range_strictly_left_of": ((9, 2, 0), None),
-        "range_strictly_right_of": ((9, 2, 0), None),
-        "range_not_extend_right": ((9, 2, 0), None),
-        "range_not_extend_left": ((9, 2, 0), None),
-        "range_union": ((9, 2, 0), None),
-        "range_intersection": ((9, 2, 0), None),
-        "range_difference": ((9, 2, 0), None),
-        "range_lower": ((9, 2, 0), None),
-        "range_upper": ((9, 2, 0), None),
-        "range_is_empty": ((9, 2, 0), None),
-        "range_lower_inc": ((9, 2, 0), None),
-        "range_upper_inc": ((9, 2, 0), None),
-        "range_lower_inf": ((9, 2, 0), None),
-        "range_upper_inf": ((9, 2, 0), None),
-        # Geometric functions: All versions
-        "geometry_distance": (None, None),
-        "geometry_contains": (None, None),
-        "geometry_contained_by": (None, None),
-        "geometry_overlaps": (None, None),
-        "geometry_strictly_left": (None, None),
-        "geometry_strictly_right": (None, None),
-        "geometry_not_extend_right": (None, None),
-        "geometry_not_extend_left": (None, None),
-        "geometry_area": (None, None),
-        "geometry_center": (None, None),
-        "geometry_length": (None, None),
-        "geometry_width": (None, None),
-        "geometry_height": (None, None),
-        "geometry_npoints": (None, None),
-        # Enum functions: PostgreSQL 8.3+
-        "enum_range": ((8, 3, 0), None),
-        "enum_first": ((8, 3, 0), None),
-        "enum_last": ((8, 3, 0), None),
-        "enum_lt": ((8, 3, 0), None),
-        "enum_le": ((8, 3, 0), None),
-        "enum_gt": ((8, 3, 0), None),
-        "enum_ge": ((8, 3, 0), None),
-        # Bit string functions: All versions
-        "bit_concat": (None, None),
-        "bit_and": (None, None),
-        "bit_or": (None, None),
-        "bit_xor": (None, None),
-        "bit_not": (None, None),
-        "bit_shift_left": (None, None),
-        "bit_shift_right": (None, None),
-        "bit_length": (None, None),
-        "bit_length_func": (None, None),
-        "bit_octet_length": (None, None),
-        "bit_get_bit": (None, None),
-        "bit_set_bit": (None, None),
-        "bit_count": ((9, 5, 0), None),  # Added in 9.5
-        # Text search functions: PostgreSQL 8.3+
-        "to_tsvector": ((8, 3, 0), None),
-        "to_tsquery": ((8, 3, 0), None),
-        "plainto_tsquery": ((8, 3, 0), None),
-        "phraseto_tsquery": ((9, 6, 0), None),  # Added in 9.6
-        "websearch_to_tsquery": ((11, 0, 0), None),  # Added in 11
-        "ts_matches": ((8, 3, 0), None),
-        "ts_matches_expr": ((8, 3, 0), None),
-        "ts_rank": ((8, 3, 0), None),
-        "ts_rank_cd": ((8, 5, 0), None),  # Added in 8.5
-        "ts_headline": ((8, 3, 0), None),
-        "tsvector_concat": ((8, 3, 0), None),
-        "tsvector_strip": ((8, 3, 0), None),
-        "tsvector_setweight": ((8, 3, 0), None),
-        "tsvector_length": ((8, 3, 0), None),
-        # XML functions: PostgreSQL 8.3+
-        "xmlparse": ((8, 3, 0), None),
-        "xpath_query": ((8, 3, 0), None),
-        "xpath_exists": ((8, 3, 0), None),
-        "xml_is_well_formed": ((9, 1, 0), None),  # Added in 9.1
-        # Math enhanced functions: All versions
-        "round_": (None, None),
-        "pow": (None, None),
-        "power": (None, None),
-        "sqrt": (None, None),
-        "mod": (None, None),
-        "ceil": (None, None),
-        "floor": (None, None),
-        "trunc": (None, None),
-        "max_": (None, None),
-        "min_": (None, None),
-        "avg": (None, None),
-        # Array functions: All versions (arrays supported since early versions)
-        "array_agg": (None, None),
-        "array_append": (None, None),
-        "array_cat": (None, None),
-        "array_dims": (None, None),
-        "array_fill": ((8, 4, 0), None),  # Added in 8.4
-        "array_length": (None, None),
-        "array_lower": (None, None),
-        "array_ndims": ((8, 4, 0), None),  # Added in 8.4
-        "array_position": ((9, 5, 0), None),  # Added in 9.5
-        "array_positions": ((9, 5, 0), None),  # Added in 9.5
-        "array_prepend": (None, None),
-        "array_remove": (None, None),
-        "array_replace": ((8, 3, 0), None),  # Added in 8.3
-        "array_to_string": (None, None),
-        "array_upper": (None, None),
-        "unnest": ((8, 4, 0), None),  # Added in 8.4
-        "array_agg_distinct": (None, None),
-        "string_to_array": (None, None),
-        # Network address functions: PostgreSQL 8.3+
-        "inet_client_addr": ((8, 3, 0), None),
-        "inet_client_port": ((8, 3, 0), None),
-        "inet_server_addr": ((8, 3, 0), None),
-        "inet_server_port": ((8, 3, 0), None),
-        "inet_merge": ((9, 5, 0), None),  # Added in 9.5
-        "inet_and": ((8, 3, 0), None),
-        "inet_or": ((8, 3, 0), None),
-        "inetnot": ((8, 3, 0), None),
-        "inet_set_mask": ((8, 3, 0), None),
-        "inet_masklen": ((8, 3, 0), None),
-        "inet_netmask": ((8, 3, 0), None),
-        "inet_network": ((8, 3, 0), None),
-        "inet_recv": ((8, 3, 0), None),
-        "inet_show": ((8, 3, 0), None),
-        "cidr_netmask": ((8, 3, 0), None),
-        "macaddr8_set7bit": ((10, 0, 0), None),  # Added in 10
-        # UUID functions: uuid-ossp extension (varies by version)
-        # These require the uuid-ossp extension which is bundled
-        "uuid_generate_v1": (None, None),  # Extension function
-        "uuid_generate_v1mc": (None, None),
-        "uuid_generate_v3": (None, None),
-        "uuid_generate_v4": (None, None),
-        "uuid_generate_v5": (None, None),
-        "uuid_nil": (None, None),
-        "uuid_max": (None, None),
-        # hstore functions: hstore extension
-        # Available since 8.3 with hstore extension
-        "hstore_from_record": ((8, 3, 0), None),
-        "hstore_from_key_value": ((8, 3, 0), None),
-        "hstore_akeys": ((8, 3, 0), None),
-        "hstore_skeys": ((8, 3, 0), None),
-        "hstore_avals": ((8, 3, 0), None),
-        "hstore_svals": ((8, 3, 0), None),
-        "hstore_each": ((8, 3, 0), None),
-        "hstore_to_array": ((8, 3, 0), None),
-        "hstore_to_matrix": ((8, 3, 0), None),
-        "hstore_to_json": ((9, 3, 0), None),  # Added in 9.3
-        "hstore_to_jsonb": ((9, 4, 0), None),  # JSONB added in 9.4
-        "hstore_to_json_loose": ((9, 3, 0), None),
-        "hstore_to_jsonb_loose": ((9, 4, 0), None),
-        "hstore_slice": ((8, 3, 0), None),
-        "hstore_exist": ((8, 3, 0), None),
-        "hstore_defined": ((8, 3, 0), None),
-        "hstore_delete": ((8, 3, 0), None),
-        "hstore_delete_keys": ((8, 3, 0), None),
-        "hstore_delete_pairs": ((8, 3, 0), None),
-        "hstore_populate_record": ((8, 3, 0), None),
-        "hstore_get_value": ((8, 3, 0), None),
-        "hstore_get_values": ((8, 3, 0), None),
-        "hstore_concat": ((8, 3, 0), None),
-        "hstore_key_exists": ((8, 3, 0), None),
-        "hstore_all_keys_exist": ((8, 3, 0), None),
-        "hstore_any_key_exists": ((8, 3, 0), None),
-        "hstore_contains": ((8, 3, 0), None),
-        "hstore_contained_by": ((8, 3, 0), None),
-        "hstore_subtract_key": ((8, 3, 0), None),
-        "hstore_subtract_keys": ((8, 3, 0), None),
-        "hstore_subtract_pairs": ((8, 3, 0), None),
-        "hstore_to_array_operator": ((8, 3, 0), None),
-        "hstore_to_matrix_operator": ((8, 3, 0), None),
-        "hstore_record_update": ((8, 3, 0), None),
-        "hstore_subscript_get": ((9, 0, 0), None),  # Added in 9.0
-        "hstore_subscript_set": ((9, 0, 0), None),  # Added in 9.0
-        # Range constructors: PostgreSQL 9.2+
-        "int4range": ((9, 2, 0), None),
-        "int8range": ((9, 2, 0), None),
-        "numrange": ((9, 2, 0), None),
-        "tsrange": ((9, 2, 0), None),
-        "tstzrange": ((9, 2, 0), None),
-        "daterange": ((9, 2, 0), None),
-    }
+    # Function version requirements are defined in function_versions.py,
+    # categorized by topic (JSON Path, Range, hstore, pgvector, PostGIS, etc.)
+    # and assembled into POSTGRES_FUNCTION_VERSIONS.
+    from .function_versions import POSTGRES_FUNCTION_VERSIONS as _FV
+    _POSTGRES_FUNCTION_VERSIONS = _FV
 
-    def supports_functions(self) -> Dict[str, bool]:
-        """Return supported SQL functions as function_name -> bool mapping.
+    def supports_functions(self) -> Dict[str, "FunctionSupportInfo"]:
+        """Return supported SQL functions with detailed support information.
 
         This method combines:
         1. Core functions from rhosocial.activerecord.backend.expression.functions
         2. PostgreSQL-specific functions from rhosocial.activerecord.backend.impl.postgres.functions
 
-        PostgreSQL version-specific functions:
-        - JSONPath functions: PostgreSQL 12+
+        Each function is mapped to a FunctionSupportInfo indicating:
+        - Whether the function is supported
+        - If not, the reason why (PG version, extension status, etc.)
 
         Returns:
-            Dict mapping function names to True (supported) or False.
+            Dict mapping function names to FunctionSupportInfo.
         """
+        from .function_versions import FunctionSupportInfo
         from rhosocial.activerecord.backend.expression.functions import (
             __all__ as core_functions,
         )
         from rhosocial.activerecord.backend.impl.postgres import functions as postgres_functions
 
-        result = {}
+        result: Dict[str, FunctionSupportInfo] = {}
         for func_name in core_functions:
-            result[func_name] = self._is_postgres_function_supported(func_name)
+            result[func_name] = self._check_function_support(func_name)
 
         postgres_funcs = getattr(postgres_functions, "__all__", [])
         for func_name in postgres_funcs:
             if func_name not in result:
-                result[func_name] = self._is_postgres_function_supported(func_name)
+                result[func_name] = self._check_function_support(func_name)
 
         return result
 
+    def _check_function_support(self, func_name: str) -> "FunctionSupportInfo":
+        """Check function support status and return detailed information.
+
+        Args:
+            func_name: Name of the function to check
+
+        Returns:
+            FunctionSupportInfo with support status and reason if unsupported
+        """
+        from .function_versions import FunctionSupportInfo
+
+        requirement = self._POSTGRES_FUNCTION_VERSIONS.get(func_name)
+        if requirement is None:
+            return FunctionSupportInfo(supported=True)
+
+        # Check PostgreSQL server version
+        if requirement.min_pg_version is not None and self.version < requirement.min_pg_version:
+            return FunctionSupportInfo(supported=False, reason="pg_version_too_low")
+        if requirement.max_pg_version is not None and self.version > requirement.max_pg_version:
+            return FunctionSupportInfo(supported=False, reason="pg_version_too_high")
+
+        # Check extension requirements
+        if requirement.extension is not None:
+            if not hasattr(self, "_extensions"):
+                return FunctionSupportInfo(supported=False, reason="extension_not_probed")
+
+            if requirement.ext_feature is not None:
+                if not self.check_extension_feature(requirement.extension, requirement.ext_feature):
+                    if not self.is_extension_installed(requirement.extension):
+                        return FunctionSupportInfo(supported=False, reason="extension_not_installed")
+                    return FunctionSupportInfo(supported=False, reason="extension_version_insufficient")
+            else:
+                if not self.is_extension_installed(requirement.extension):
+                    return FunctionSupportInfo(supported=False, reason="extension_not_installed")
+                if requirement.min_ext_version is not None:
+                    installed = self.get_extension_version(requirement.extension)
+                    if installed is None or self._compare_versions(installed, requirement.min_ext_version) < 0:
+                        return FunctionSupportInfo(supported=False, reason="extension_version_insufficient")
+
+        return FunctionSupportInfo(supported=True)
+
     def _is_postgres_function_supported(self, func_name: str) -> bool:
-        """Check if a PostgreSQL-specific function is supported based on version.
+        """Check if a PostgreSQL function is supported based on version and extensions.
+
+        Checks:
+        1. PostgreSQL server version (for built-in and version-gated functions)
+        2. Extension installation and version (for extension-provided functions)
+
+        For extension functions, requires _extensions to have been populated
+        via introspect_and_adapt(). If _extensions is not available,
+        extension functions return False (cannot confirm availability).
 
         Args:
             func_name: Name of the PostgreSQL function
@@ -1569,17 +1430,54 @@ class PostgresDialect(
         Returns:
             True if supported, False otherwise
         """
-        version_range = self._POSTGRES_FUNCTION_VERSIONS.get(func_name)
-        if version_range is None:
-            return True
+        from .function_versions import FunctionVersionRequirement
 
-        min_version, max_version = version_range
+        requirement = self._POSTGRES_FUNCTION_VERSIONS.get(func_name)
+        if requirement is None:
+            return True  # Unregistered functions default to supported
 
-        if min_version is not None and self.version < min_version:
+        # Step 1: Check PostgreSQL server version
+        if requirement.min_pg_version is not None and self.version < requirement.min_pg_version:
+            return False
+        if requirement.max_pg_version is not None and self.version > requirement.max_pg_version:
             return False
 
-        if max_version is not None and self.version > max_version:
+        # Step 2: Check extension requirements
+        if requirement.extension is not None:
+            return self._check_extension_requirement(requirement)
+
+        return True
+
+    def _check_extension_requirement(
+        self, requirement: "FunctionVersionRequirement"
+    ) -> bool:
+        """Check extension requirements based on introspect_and_adapt() results.
+
+        Requires _extensions to have been populated via introspect_and_adapt().
+        If _extensions is not available, returns False (cannot confirm
+        extension availability without probing the database).
+        """
+        ext_name = requirement.extension
+
+        # _extensions is populated by introspect_and_adapt()
+        # If the attribute doesn't exist, introspect_and_adapt() hasn't been called
+        if not hasattr(self, "_extensions"):
             return False
+
+        # Use feature-level check if ext_feature is specified
+        if requirement.ext_feature is not None:
+            return self.check_extension_feature(ext_name, requirement.ext_feature)
+
+        # Check extension installed
+        if not self.is_extension_installed(ext_name):
+            return False
+
+        # Check extension version
+        if requirement.min_ext_version is not None:
+            installed = self.get_extension_version(ext_name)
+            if installed is None:
+                return False
+            return self._compare_versions(installed, requirement.min_ext_version) >= 0
 
         return True
 
