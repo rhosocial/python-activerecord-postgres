@@ -34,7 +34,7 @@ Supported operators:
 - #=  : Record update
 """
 
-from typing import Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Dict, Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression

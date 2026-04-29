@@ -13,7 +13,7 @@ Methods retained in this mixin:
 - format_create_range_type: DDL statement
 """
 
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class PostgresDataTypeMixin:

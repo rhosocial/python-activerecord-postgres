@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional, Set, Type
 from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
 
 
-class PostgresGeometryAdapter:
+class PostgresPostGISAdapter:
     """PostgreSQL PostGIS geometry/geography type adapter.
 
     This adapter converts between Python PostgresGeometry objects
@@ -60,7 +60,10 @@ class PostgresGeometryAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to geometry")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[PostgresGeometry]:
+    def from_database(
+        self, value: Any, target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Optional[PostgresGeometry]:
         """Convert PostgreSQL geometry/geography to Python object.
 
         Args:
@@ -95,5 +98,5 @@ class PostgresGeometryAdapter:
 
 
 __all__ = [
-    "PostgresGeometryAdapter",
+    "PostgresPostGISAdapter",
 ]

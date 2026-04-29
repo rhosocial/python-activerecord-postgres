@@ -12,7 +12,7 @@ The vector type requires the pgvector extension:
     CREATE EXTENSION IF NOT EXISTS vector;
 """
 
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Dict, Optional, Set, Type
 
 from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
 
@@ -66,7 +66,10 @@ class PostgresVectorAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to vector")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[PostgresVector]:
+    def from_database(
+        self, value: Any, target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Optional[PostgresVector]:
         """Convert PostgreSQL vector to Python object.
 
         Args:

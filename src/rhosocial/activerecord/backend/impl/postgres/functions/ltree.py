@@ -368,7 +368,8 @@ def ltree_lca(
         FunctionCall for lca(path1, path2, ...)
 
     Example:
-        >>> ltree_lca(dialect, ltree_literal(dialect, 'Top.Science.Astronomy'), ltree_literal(dialect, 'Top.Science.Physics'))
+        >>> ltree_lca(dialect, ltree_literal(dialect, 'Top.Science.Astronomy'),
+        ...           ltree_literal(dialect, 'Top.Science.Physics'))
         # Generates SQL: lca('Top.Science.Astronomy', 'Top.Science.Physics')
         # Returns: 'Top.Science'
     """

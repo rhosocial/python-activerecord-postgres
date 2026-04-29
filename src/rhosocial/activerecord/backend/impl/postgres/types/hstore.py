@@ -14,7 +14,7 @@ The hstore extension must be installed:
     CREATE EXTENSION IF NOT EXISTS hstore;
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 

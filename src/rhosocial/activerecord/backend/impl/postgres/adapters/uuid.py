@@ -15,7 +15,7 @@ For UUID generation functions, see:
 """
 
 import uuid
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Dict, Optional, Set, Type
 
 
 class PostgresUUIDAdapter:
@@ -67,7 +67,10 @@ class PostgresUUIDAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to UUID")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[uuid.UUID]:
+    def from_database(
+        self, value: Any, target_type: Type,
+        options: Optional[Dict[str, Any]] = None
+    ) -> Optional[uuid.UUID]:
         """Convert PostgreSQL uuid to Python object.
 
         Args:

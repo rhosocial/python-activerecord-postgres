@@ -280,7 +280,7 @@ def decode(
 
 # ============== Numeric Functions ==============
 
-def trunc(
+def orafce_trunc(
     dialect: "SQLDialectBase",
     value: Union[str, "bases.BaseExpression"],
     format: Optional[Union[str, "bases.BaseExpression"]] = None,
@@ -312,7 +312,7 @@ def trunc(
     return core.FunctionCall(dialect, "TRUNC", *args)
 
 
-def round(
+def orafce_round(
     dialect: "SQLDialectBase",
     value: Union[str, "bases.BaseExpression"],
     format: Optional[Union[str, "bases.BaseExpression"]] = None,
@@ -430,8 +430,8 @@ __all__ = [
     # Conditional functions
     "decode",
     # Numeric functions
-    "trunc",
-    "round",
+    "orafce_trunc",
+    "orafce_round",
     # String functions
     "instr",
     "substr",

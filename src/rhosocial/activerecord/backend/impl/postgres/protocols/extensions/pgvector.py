@@ -10,7 +10,7 @@ For DDL index creation, use ``format_create_vector_index_statement``
 or ``format_create_hnsw_index_statement``.
 """
 
-from typing import List, Optional, Protocol, Tuple, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable

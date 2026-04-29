@@ -498,8 +498,8 @@ from .orafce import (
     nvl,
     nvl2,
     decode,
-    trunc,
-    round,
+    orafce_trunc,
+    orafce_round,
     instr,
     substr,
 )
@@ -865,8 +865,8 @@ __all__ = [
     "nvl",
     "nvl2",
     "decode",
-    "trunc",
-    "round",
+    "orafce_trunc",
+    "orafce_round",
     "instr",
     "substr",
     # data_type functions

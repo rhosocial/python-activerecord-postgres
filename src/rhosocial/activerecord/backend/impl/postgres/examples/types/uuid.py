@@ -93,7 +93,7 @@ print(f"Params: {params}")
 # SECTION: Execution (run the expression)
 # ============================================================
 backend.execute(sql, params)
-print(f"Table created: events (with UUID primary key, auto-generated DEFAULT)")
+print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
 
 # 2. INSERT with auto-generated UUID (using DEFAULT)
 insert_default = InsertExpression(

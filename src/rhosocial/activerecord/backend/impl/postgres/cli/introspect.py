@@ -194,7 +194,10 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 if info.indexes:
                     provider.display_results(_serialize_for_output(info.indexes), title=f"Indexes of {args.name}")
                 if info.foreign_keys:
-                    provider.display_results(_serialize_for_output(info.foreign_keys), title=f"Foreign Keys of {args.name}")
+                    provider.display_results(
+                        _serialize_for_output(info.foreign_keys),
+                        title=f"Foreign Keys of {args.name}"
+                    )
             else:
                 print(f"Error: Table '{args.name}' not found", file=sys.stderr)
                 sys.exit(1)
@@ -299,7 +302,10 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 if info.indexes:
                     provider.display_results(_serialize_for_output(info.indexes), title=f"Indexes of {args.name}")
                 if info.foreign_keys:
-                    provider.display_results(_serialize_for_output(info.foreign_keys), title=f"Foreign Keys of {args.name}")
+                    provider.display_results(
+                        _serialize_for_output(info.foreign_keys),
+                        title=f"Foreign Keys of {args.name}"
+                    )
             else:
                 print(f"Error: Table '{args.name}' not found", file=sys.stderr)
                 sys.exit(1)

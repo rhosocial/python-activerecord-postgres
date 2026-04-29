@@ -82,7 +82,7 @@ from .uuid import PostgresUUIDAdapter
 from .pgvector import PostgresVectorAdapter
 
 # PostGIS types
-from .postgis import PostgresGeometryAdapter
+from .postgis import PostgresPostGISAdapter
 
 # hstore types
 from .hstore import PostgresHstoreAdapter
@@ -123,7 +123,7 @@ __all__ = [
     # pgvector types
     "PostgresVectorAdapter",
     # PostGIS types
-    "PostgresGeometryAdapter",
+    "PostgresPostGISAdapter",
     # hstore types
     "PostgresHstoreAdapter",
 ]

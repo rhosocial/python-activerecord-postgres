@@ -8,7 +8,6 @@ For SQL expression generation, use the function factories in
 ``functions/hstore.py`` instead of the removed format_* methods.
 """
 
-from typing import Dict
 
 
 class PostgresHstoreMixin:

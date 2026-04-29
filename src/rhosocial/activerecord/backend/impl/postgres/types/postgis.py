@@ -12,7 +12,6 @@ The geometry/geography types require the PostGIS extension:
     CREATE EXTENSION IF NOT EXISTS postgis;
 """
 
-import re
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -101,7 +100,7 @@ class PostgresGeometry:
             try:
                 srid = int(parts[0][5:])
             except ValueError:
-                raise ValueError(f"Invalid SRID in EWKT: {value!r}")
+                raise ValueError(f"Invalid SRID in EWKT: {value!r}") from None
             wkt = parts[1].strip()
         else:
             wkt = value

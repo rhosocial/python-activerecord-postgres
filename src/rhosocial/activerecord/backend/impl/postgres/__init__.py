@@ -61,7 +61,7 @@ from .adapters.uuid import PostgresUUIDAdapter
 from .types.pgvector import PostgresVector
 from .adapters.pgvector import PostgresVectorAdapter
 from .types.postgis import PostgresGeometry
-from .adapters.postgis import PostgresGeometryAdapter
+from .adapters.postgis import PostgresPostGISAdapter
 from .types.hstore import PostgresHstore
 from .adapters.hstore import PostgresHstoreAdapter
 from .types.text_search import (
@@ -434,7 +434,7 @@ __all__ = [
     "vector_literal",
     # PostGIS Types
     "PostgresGeometry",
-    "PostgresGeometryAdapter",
+    "PostgresPostGISAdapter",
     # hstore Types
     "PostgresHstore",
     "PostgresHstoreAdapter",

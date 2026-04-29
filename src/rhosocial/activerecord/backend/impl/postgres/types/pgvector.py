@@ -11,7 +11,6 @@ The vector type is provided by the pgvector extension.
 Install with: CREATE EXTENSION IF NOT EXISTS vector;
 """
 
-import re
 from dataclasses import dataclass
 from typing import List, Optional
 

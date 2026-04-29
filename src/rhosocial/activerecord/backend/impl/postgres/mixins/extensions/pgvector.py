@@ -11,7 +11,7 @@ For DDL index creation, use ``format_create_vector_index_statement``
 or ``format_create_hnsw_index_statement``.
 """
 
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 
 class PostgresPgvectorMixin:

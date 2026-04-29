@@ -163,7 +163,7 @@ def create_parser(subparsers):
 
 def handle(args):
     """Handle the info subcommand."""
-    provider = create_provider(args.output, ascii_borders=args.rich_ascii)
+    create_provider(args.output, ascii_borders=args.rich_ascii)
 
     # Track whether we're using actual database or defaults
     is_connected = False
@@ -466,7 +466,10 @@ def _display_info_rich(
     if is_connected:
         console.print(f"[bold]PostgreSQL Version:[/bold] {version_display} [dim](from actual connection)[/dim]\n")
     else:
-        console.print(f"[bold]PostgreSQL Version:[/bold] {version_display} [yellow](default value - no database connection)[/yellow]\n")
+        console.print(
+            f"[bold]PostgreSQL Version:[/bold] {version_display} "
+            f"[yellow](default value - no database connection)[/yellow]\n"
+        )
 
     # Display extensions if available
     if extensions:
