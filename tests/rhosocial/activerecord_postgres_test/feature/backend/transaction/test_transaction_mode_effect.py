@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_mode_effect.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_mode_effect.py
 """
 PostgreSQL transaction access mode effect tests.
 

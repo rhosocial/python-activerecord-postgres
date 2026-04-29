@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_savepoint.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_savepoint.py
 """
 PostgreSQL transaction savepoint tests.
 

@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_transaction_postgres.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_postgres.py
 """
 PostgreSQL-specific transaction tests.
 

@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_advanced_features.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_advanced_features.py
 """
 PostgreSQL advanced transaction feature tests.
 
