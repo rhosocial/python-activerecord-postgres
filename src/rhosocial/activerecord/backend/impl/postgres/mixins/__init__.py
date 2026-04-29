@@ -34,6 +34,10 @@ from .dml.locking import PostgresLockingMixin
 from .types.enum import EnumTypeMixin
 from .types.data_type import PostgresDataTypeMixin as TypesDataTypeMixin
 from .types.multirange import MultirangeMixin
+from .types.full_text_search import PostgresFullTextSearchMixin
+from .types.range_type import PostgresRangeTypeMixin
+from .types.jsonb_enhanced import PostgresJSONBEnhancedMixin
+from .types.array_enhanced import PostgresArrayEnhancedMixin
 
 # Extension mixins
 from .extensions.pgvector import PostgresPgvectorMixin
@@ -61,6 +65,7 @@ from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
 from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
+from .parallel_query import PostgresParallelQueryMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
@@ -87,6 +92,10 @@ __all__ = [
     "EnumTypeMixin",
     "TypesDataTypeMixin",
     "MultirangeMixin",
+    "PostgresFullTextSearchMixin",
+    "PostgresRangeTypeMixin",
+    "PostgresJSONBEnhancedMixin",
+    "PostgresArrayEnhancedMixin",
     # Extension mixins
     "PostgresPgvectorMixin",
     "PostgresPostGISMixin",
@@ -112,6 +121,7 @@ __all__ = [
     "PostgresDataTypeMixin",
     "PostgresSQLSyntaxMixin",
     "PostgresLogicalReplicationMixin",
+    "PostgresParallelQueryMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]

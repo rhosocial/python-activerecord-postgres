@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from ...expression.ddl import (
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
+        PostgresAttachPartitionExpression,
     )
 
 
@@ -115,6 +116,17 @@ class PostgresPartitionSupport(Protocol):
 
         Args:
             expr: PostgresDetachPartitionExpression with detach details
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...
+
+    def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
+        """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
+
+        Args:
+            expr: PostgresAttachPartitionExpression with attach details
 
         Returns:
             Tuple of (SQL string, parameters tuple)
