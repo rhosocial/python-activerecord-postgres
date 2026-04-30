@@ -1336,26 +1336,38 @@ class PostgresDialect(
             )
             # Generates: EXCLUDE USING gist (range WITH &&)
         """
-        parts = []
         params: list = []
 
         if constraint.name:
-            parts.append(f"CONSTRAINT {self.format_identifier(constraint.name)}")
+            parts = ["CONSTRAINT", self.format_identifier(constraint.name)]
+        else:
+            parts = []
 
-        # USING clause
-        using = 'gist'  # default
-        if constraint.dialect_options and 'using' in constraint.dialect_options:
-            using = constraint.dialect_options['using']
+        # USING clause - validate index access method.
+        valid_using = frozenset({"gist", "btree", "spgist", "hash", "gin", "brin"})
+        using = constraint.dialect_options.get("using", "gist") if constraint.dialect_options else "gist"
+        if using not in valid_using:
+            raise ValueError(
+                f"Invalid index access method '{using}': must be one of {valid_using}"
+            )
         parts.append(f"EXCLUDE USING {using}")
 
-        # Elements: (expression, operator) pairs
+        # Elements: (expression, operator) pairs - validate operators.
+        valid_ops = frozenset({
+            "=", "<", "<=", ">", ">=", "<>",
+            "&&", "@>", "<@", "<<", ">>", "&<", "&>",
+            "~=", "@@", "?|", "?&", "is", "is not",
+        })
         exclude_elements = []
-        if constraint.dialect_options and 'exclude_elements' in constraint.dialect_options:
-            for expr, op in constraint.dialect_options['exclude_elements']:
+        if constraint.dialect_options and "exclude_elements" in constraint.dialect_options:
+            for expr, op in constraint.dialect_options["exclude_elements"]:
+                if op not in valid_ops:
+                    raise ValueError(
+                        f"Invalid exclude operator '{op}': must be one of {valid_ops}"
+                    )
                 if isinstance(expr, str):
                     exclude_elements.append(f"{self.format_identifier(expr)} WITH {op}")
                 else:
-                    # expr is a BaseExpression
                     expr_sql, expr_params = expr.to_sql()
                     params.extend(expr_params)
                     exclude_elements.append(f"{expr_sql} WITH {op}")
