@@ -14,6 +14,10 @@ PostgreSQL Documentation: https://github.com/orafce/orafce
 The orafce extension must be installed:
     CREATE EXTENSION IF NOT EXISTS orafce;
 
+Note: orafce functions are installed in the "oracle" schema, so all function
+calls are schema-qualified (e.g., oracle.ADD_MONTHS) to ensure they resolve
+correctly regardless of the current search_path setting.
+
 Supported functions:
 - Date functions: ADD_MONTHS, LAST_DAY, MONTHS_BETWEEN, NEXT_DAY
 - Null handling: NVL, NVL2
@@ -83,7 +87,7 @@ def add_months(
         >>> add_months(dialect, '2024-01-31', 1)
     """
     return core.FunctionCall(
-        dialect, "ADD_MONTHS",
+        dialect, "oracle.ADD_MONTHS",
         _convert_to_expression(dialect, date_expr),
         _convert_to_expression(dialect, months),
     )
@@ -110,7 +114,7 @@ def last_day(
         >>> last_day(dialect, '2024-01-01')
     """
     return core.FunctionCall(
-        dialect, "LAST_DAY",
+        dialect, "oracle.LAST_DAY",
         _convert_to_expression(dialect, date_expr),
     )
 
@@ -140,7 +144,7 @@ def months_between(
         >>> months_between(dialect, '2024-06-20', '2024-01-10')
     """
     return core.FunctionCall(
-        dialect, "MONTHS_BETWEEN",
+        dialect, "oracle.MONTHS_BETWEEN",
         _convert_to_expression(dialect, date1),
         _convert_to_expression(dialect, date2),
     )
@@ -169,7 +173,7 @@ def next_day(
         >>> next_day(dialect, '2024-06-15', 'FRIDAY')
     """
     return core.FunctionCall(
-        dialect, "NEXT_DAY",
+        dialect, "oracle.NEXT_DAY",
         _convert_to_expression(dialect, date_expr),
         _convert_to_expression(dialect, day),
     )
@@ -200,7 +204,7 @@ def nvl(
         >>> nvl(dialect, 'discount', '0')
     """
     return core.FunctionCall(
-        dialect, "NVL",
+        dialect, "oracle.NVL",
         _convert_to_expression(dialect, expr1),
         _convert_to_expression(dialect, expr2),
     )
@@ -231,7 +235,7 @@ def nvl2(
         >>> nvl2(dialect, 'email', "'has email'", "'no email'")
     """
     return core.FunctionCall(
-        dialect, "NVL2",
+        dialect, "oracle.NVL2",
         _convert_to_expression(dialect, expr1),
         _convert_to_expression(dialect, expr2),
         _convert_to_expression(dialect, expr3),
@@ -275,7 +279,7 @@ def decode(
         args.append(_convert_to_expression(dialect, m))
     if default is not None:
         args.append(_convert_to_expression(dialect, default))
-    return core.FunctionCall(dialect, "DECODE", *args)
+    return core.FunctionCall(dialect, "oracle.DECODE", *args)
 
 
 # ============== Numeric Functions ==============
@@ -309,7 +313,7 @@ def orafce_trunc(
     args = [_convert_to_expression(dialect, value)]
     if format is not None:
         args.append(_convert_to_expression(dialect, format))
-    return core.FunctionCall(dialect, "TRUNC", *args)
+    return core.FunctionCall(dialect, "oracle.TRUNC", *args)
 
 
 def orafce_round(
@@ -341,7 +345,7 @@ def orafce_round(
     args = [_convert_to_expression(dialect, value)]
     if format is not None:
         args.append(_convert_to_expression(dialect, format))
-    return core.FunctionCall(dialect, "ROUND", *args)
+    return core.FunctionCall(dialect, "oracle.ROUND", *args)
 
 
 # ============== String Functions ==============
@@ -374,7 +378,7 @@ def instr(
         >>> instr(dialect, 'description', "'the'", position=1, occurrence=2)
     """
     return core.FunctionCall(
-        dialect, "INSTR",
+        dialect, "oracle.INSTR",
         _convert_to_expression(dialect, string_expr),
         _convert_to_expression(dialect, substring_expr),
         _convert_to_expression(dialect, position),
@@ -415,7 +419,7 @@ def substr(
     ]
     if length is not None:
         args.append(_convert_to_expression(dialect, length))
-    return core.FunctionCall(dialect, "SUBSTR", *args)
+    return core.FunctionCall(dialect, "oracle.SUBSTR", *args)
 
 
 __all__ = [

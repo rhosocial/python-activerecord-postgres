@@ -57,7 +57,8 @@ class TestPostgresPgLogicalFunctions:
         assert "pglogical.show_subscription_status" in sql.lower()
 
     def test_pglogical_alter_subscription_synchronize(self):
-        """pglogical_alter_subscription_synchronize should return FunctionCall with pglogical.alter_subscription_synchronize."""
+        """pglogical_alter_subscription_synchronize should return
+        FunctionCall with pglogical.alter_subscription_synchronize."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_alter_subscription_synchronize(dialect, "sub1")
         assert isinstance(result, core.FunctionCall)

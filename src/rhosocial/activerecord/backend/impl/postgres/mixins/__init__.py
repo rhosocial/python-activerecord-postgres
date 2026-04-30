@@ -59,6 +59,16 @@ from .extensions.uuid_ossp import PostgresUuidOssMixin
 from .extensions.bloom import PostgresBloomMixin
 from .extensions.btree_gin import PostgresBtreeGinMixin
 from .extensions.btree_gist import PostgresBtreeGistMixin
+from .extensions.pg_cron import PostgresPgCronMixin
+from .extensions.pg_partman import PostgresPgPartmanMixin
+from .extensions.pg_surgery import PostgresPgSurgeryMixin
+from .extensions.pg_walinspect import PostgresPgWalinspectMixin
+from .extensions.pglogical import PostgresPgLogicalMixin
+from .extensions.pgaudit import PostgresPgauditMixin
+from .extensions.pg_repack import PostgresPgRepackMixin
+from .extensions.hypopg import PostgresHypoPgMixin
+from .extensions.orafce import PostgresOrafceMixin
+from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
@@ -116,6 +126,16 @@ __all__ = [
     "PostgresBloomMixin",
     "PostgresBtreeGinMixin",
     "PostgresBtreeGistMixin",
+    "PostgresPgCronMixin",
+    "PostgresPgPartmanMixin",
+    "PostgresPgSurgeryMixin",
+    "PostgresPgWalinspectMixin",
+    "PostgresPgLogicalMixin",
+    "PostgresPgauditMixin",
+    "PostgresPgRepackMixin",
+    "PostgresHypoPgMixin",
+    "PostgresOrafceMixin",
+    "PostgresAddressStandardizerMixin",
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",

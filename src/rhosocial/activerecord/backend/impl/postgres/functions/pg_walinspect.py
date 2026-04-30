@@ -16,16 +16,23 @@ The pg_walinspect extension must be installed:
     CREATE EXTENSION IF NOT EXISTS pg_walinspect;
 
 Supported functions:
-- pg_get_wal_records_info: Get information about WAL records
+- pg_get_wal_records_info: Get information about WAL records in an LSN range
 - pg_get_wal_blocks_info: Get information about WAL block references
-- pg_logical_emit_message: Emit a logical decoding message
+
+The actual PostgreSQL function signatures are:
+- pg_get_wal_records_info(start_lsn pg_lsn, end_lsn pg_lsn)
+- pg_get_wal_blocks_info(start_lsn pg_lsn, end_lsn pg_lsn)
+
+Note: pg_logical_emit_message is a built-in PostgreSQL function (not part
+of pg_walinspect). It has been moved out of this module as it does not
+belong to the pg_walinspect extension.
 
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return Expression objects (FunctionCall, etc.)
 """
 
-from typing import Union, Optional, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -60,46 +67,42 @@ def _convert_to_expression(
 
 def pg_get_wal_records_info(
     dialect: "SQLDialectBase",
-    start_lsn: Optional[Union[str, "bases.BaseExpression"]] = None,
-    end_lsn: Optional[Union[str, "bases.BaseExpression"]] = None,
+    start_lsn: Union[str, "bases.BaseExpression"],
+    end_lsn: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """Get information about WAL records in a LSN range.
 
     Returns information about WAL records between the specified start and
-    end LSN (Log Sequence Number) positions. If start_lsn is not specified,
-    it defaults to the first LSN of the current WAL file. If end_lsn is
-    not specified, it defaults to the current insert LSN.
+    end LSN (Log Sequence Number) positions.
+
+    The actual PostgreSQL function signature is:
+        pg_get_wal_records_info(start_lsn pg_lsn, end_lsn pg_lsn)
+
+    Both start_lsn and end_lsn are required parameters. They accept LSN
+    string format like '0/16E9130'.
 
     Args:
         dialect: The SQL dialect instance
-        start_lsn: Start LSN position (e.g., '0/16E9130'), or None for default
-        end_lsn: End LSN position (e.g., '0/16E9130'), or None for default
+        start_lsn: Start LSN position (e.g., '0/16E9130')
+        end_lsn: End LSN position (e.g., '0/16E9200')
 
     Returns:
         FunctionCall for pg_get_wal_records_info(start_lsn, end_lsn)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-        >>> dialect = PostgresDialect()
-        >>> pg_get_wal_records_info(dialect)
-        # Generates: pg_get_wal_records_info()
-        >>> pg_get_wal_records_info(dialect, start_lsn='0/16E9130')
-        # Generates: pg_get_wal_records_info('0/16E9130')
-        >>> pg_get_wal_records_info(dialect, start_lsn='0/16E9130', end_lsn='0/16E9200')
-        # Generates: pg_get_wal_records_info('0/16E9130', '0/16E9200')
+        >>> pg_get_wal_records_info(dialect, '0/16E9130', '0/16E9200')
     """
-    args = []
-    if start_lsn is not None:
-        args.append(_convert_to_expression(dialect, start_lsn))
-    if end_lsn is not None:
-        args.append(_convert_to_expression(dialect, end_lsn))
-    return core.FunctionCall(dialect, "pg_get_wal_records_info", *args)
+    return core.FunctionCall(
+        dialect, "pg_get_wal_records_info",
+        _convert_to_expression(dialect, start_lsn),
+        _convert_to_expression(dialect, end_lsn),
+    )
 
 
 def pg_get_wal_blocks_info(
     dialect: "SQLDialectBase",
-    start_lsn: Optional[Union[str, "bases.BaseExpression"]] = None,
-    end_lsn: Optional[Union[str, "bases.BaseExpression"]] = None,
+    start_lsn: Union[str, "bases.BaseExpression"],
+    end_lsn: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """Get information about WAL block references in a LSN range.
 
@@ -107,79 +110,26 @@ def pg_get_wal_blocks_info(
     specified start and end LSN positions. This shows which data blocks
     (tables, indexes) are affected by WAL records.
 
-    If start_lsn is not specified, it defaults to the first LSN of the
-    current WAL file. If end_lsn is not specified, it defaults to the
-    current insert LSN.
+    The actual PostgreSQL function signature is:
+        pg_get_wal_blocks_info(start_lsn pg_lsn, end_lsn pg_lsn)
+
+    Both start_lsn and end_lsn are required parameters.
 
     Args:
         dialect: The SQL dialect instance
-        start_lsn: Start LSN position (e.g., '0/16E9130'), or None for default
-        end_lsn: End LSN position (e.g., '0/16E9130'), or None for default
+        start_lsn: Start LSN position (e.g., '0/16E9130')
+        end_lsn: End LSN position (e.g., '0/16E9200')
 
     Returns:
         FunctionCall for pg_get_wal_blocks_info(start_lsn, end_lsn)
 
     Example:
-        >>> pg_get_wal_blocks_info(dialect)
-        # Generates: pg_get_wal_blocks_info()
-        >>> pg_get_wal_blocks_info(dialect, start_lsn='0/16E9130')
-        # Generates: pg_get_wal_blocks_info('0/16E9130')
-        >>> pg_get_wal_blocks_info(dialect, start_lsn='0/16E9130', end_lsn='0/16E9200')
-        # Generates: pg_get_wal_blocks_info('0/16E9130', '0/16E9200')
-    """
-    args = []
-    if start_lsn is not None:
-        args.append(_convert_to_expression(dialect, start_lsn))
-    if end_lsn is not None:
-        args.append(_convert_to_expression(dialect, end_lsn))
-    return core.FunctionCall(dialect, "pg_get_wal_blocks_info", *args)
-
-
-# ============== Logical Decoding Functions ==============
-
-def pg_logical_emit_message(
-    dialect: "SQLDialectBase",
-    transactional: bool = False,
-    prefix: Union[str, "bases.BaseExpression"] = "test",
-    message: Union[str, "bases.BaseExpression"] = "",
-) -> core.FunctionCall:
-    """Emit a logical decoding message.
-
-    Emits a logical decoding message that will be included in the WAL stream.
-    This is useful for applications that use logical decoding to receive
-    custom messages along with data changes.
-
-    The transactional parameter determines whether the message is emitted
-    as part of the current transaction (true) or immediately (false). The
-    prefix is used to identify the message type, and the message is the
-    content to be emitted. Both are included in the WAL and can be consumed
-    by logical decoding plugins.
-
-    Args:
-        dialect: The SQL dialect instance
-        transactional: Whether the message is transactional (default: False).
-                       If True, the message is emitted only if the enclosing
-                       transaction commits; if False, it is emitted immediately.
-        prefix: The prefix string for the logical message (default: 'test').
-                Identifies the message type for consumers.
-        message: The message content to emit (default: '')
-
-    Returns:
-        FunctionCall for pg_logical_emit_message(transactional, prefix, message)
-
-    Example:
-        >>> pg_logical_emit_message(dialect)
-        # Generates: pg_logical_emit_message(False, 'test', '')
-        >>> pg_logical_emit_message(dialect, transactional=True, prefix='myapp', message='user login event')
-        # Generates: pg_logical_emit_message(True, 'myapp', 'user login event')
-        >>> pg_logical_emit_message(dialect, prefix='audit', message='critical action performed')
-        # Generates: pg_logical_emit_message(False, 'audit', 'critical action performed')
+        >>> pg_get_wal_blocks_info(dialect, '0/16E9130', '0/16E9200')
     """
     return core.FunctionCall(
-        dialect, "pg_logical_emit_message",
-        _convert_to_expression(dialect, transactional),
-        _convert_to_expression(dialect, prefix),
-        _convert_to_expression(dialect, message),
+        dialect, "pg_get_wal_blocks_info",
+        _convert_to_expression(dialect, start_lsn),
+        _convert_to_expression(dialect, end_lsn),
     )
 
 
@@ -187,6 +137,4 @@ __all__ = [
     # WAL inspection functions
     "pg_get_wal_records_info",
     "pg_get_wal_blocks_info",
-    # Logical decoding functions
-    "pg_logical_emit_message",
 ]

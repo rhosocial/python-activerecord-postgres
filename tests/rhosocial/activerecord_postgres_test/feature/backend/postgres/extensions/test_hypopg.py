@@ -47,9 +47,9 @@ class TestPostgresHypoPgFunctions:
         assert "hypopg" in sql.lower()
 
     def test_hypopg_estimate_size(self):
-        """hypopg_estimate_size should return FunctionCall with hypopg_estimate_size."""
+        """hypopg_estimate_size should return FunctionCall with hypopg_relation_size."""
         dialect = PostgresDialect((14, 0, 0))
         result = hypopg_estimate_size(dialect, 1)
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
-        assert "hypopg_estimate_size" in sql.lower()
+        assert "hypopg_relation_size" in sql.lower()

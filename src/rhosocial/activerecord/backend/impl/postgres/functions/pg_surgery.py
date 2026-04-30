@@ -16,8 +16,17 @@ The pg_surgery extension must be installed:
     CREATE EXTENSION IF NOT EXISTS pg_surgery;
 
 Supported functions:
-- pg_surgery_heap_freeze: Force-freeze tuples on a heap page
-- pg_surgery_heap_page_header: Set heap tuple frozen status
+- heap_force_freeze: Force-freeze tuples on a heap relation
+- heap_force_kill: Force-kill tuples on a heap relation
+
+The actual PostgreSQL function signatures are:
+- heap_force_freeze(reloid regclass, tids tid[])
+- heap_force_kill(reloid regclass, tids tid[])
+
+Note: These functions require regclass and tid[] types, which are complex
+to construct with expression objects alone. The function factories accept
+string representations that will be passed as literals. For more advanced
+usage, callers can pass BaseExpression objects directly.
 
 Warning:
     These functions are potentially dangerous and should only be used by
@@ -62,15 +71,19 @@ def _convert_to_expression(
 
 # ============== Heap Surgery Functions ==============
 
-def pg_surgery_heap_freeze(
+def heap_force_freeze(
     dialect: "SQLDialectBase",
-    table_name: Union[str, "bases.BaseExpression"],
+    reloid: Union[str, "bases.BaseExpression"],
+    tids: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
-    """Force-freeze tuples on a heap relation page.
+    """Force-freeze tuples on a heap relation.
 
-    Marks all tuples on the specified heap relation as frozen, which prevents
-    them from being visited by future VACUUM operations. This calls the
-    pg_surgery.freeze_heap() function.
+    Marks the specified tuples as frozen on the given heap relation.
+    The reloid parameter identifies the table, and tids specifies an
+    array of tuple identifiers (TID) to freeze.
+
+    The actual PostgreSQL function signature is:
+        heap_force_freeze(reloid regclass, tids tid[])
 
     Warning:
         This function is potentially dangerous. It should only be used by
@@ -79,34 +92,39 @@ def pg_surgery_heap_freeze(
 
     Args:
         dialect: The SQL dialect instance
-        table_name: The name of the table (optionally schema-qualified)
+        reloid: The table name (will be cast to regclass).
+                Can be a string like 'my_table' or 'public.users'.
+        tids: Array of tuple identifiers in tid[] format.
+              Can be a string expression like "'(0,1)'::tid" or
+              a BaseExpression for complex cases.
 
     Returns:
-        FunctionCall for pg_surgery.freeze_heap(table_name)
+        FunctionCall for heap_force_freeze(reloid, tids)
 
     Example:
-        >>> pg_surgery_heap_freeze(dialect, 'my_table')
-        # Generates: pg_surgery.freeze_heap('my_table')
-        >>> pg_surgery_heap_freeze(dialect, 'public.users')
-        # Generates: pg_surgery.freeze_heap('public.users')
+        >>> heap_force_freeze(dialect, 'my_table', "'{(0,1)}'::tid[]")
+        >>> heap_force_freeze(dialect, 'public.users', tid_array_expr)
     """
     return core.FunctionCall(
-        dialect, "pg_surgery.freeze_heap",
-        _convert_to_expression(dialect, table_name),
+        dialect, "heap_force_freeze",
+        _convert_to_expression(dialect, reloid),
+        _convert_to_expression(dialect, tids),
     )
 
 
-def pg_surgery_heap_page_header(
+def heap_force_kill(
     dialect: "SQLDialectBase",
-    table_name: Union[str, "bases.BaseExpression"],
-    page_offset: Union[int, "bases.BaseExpression"],
-    page_pid: Union[int, "bases.BaseExpression"],
+    reloid: Union[str, "bases.BaseExpression"],
+    tids: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
-    """Set heap tuple frozen status on a heap relation page.
+    """Force-kill tuples on a heap relation.
 
-    Marks the specified tuple as frozen on the given heap relation page.
-    This calls the pg_surgery.set_heap_tuple_frozen() function with the
-    table name, page offset, and page PID.
+    Marks the specified tuples as dead on the given heap relation.
+    The reloid parameter identifies the table, and tids specifies an
+    array of tuple identifiers (TID) to kill.
+
+    The actual PostgreSQL function signature is:
+        heap_force_kill(reloid regclass, tids tid[])
 
     Warning:
         This function is potentially dangerous. It should only be used by
@@ -115,27 +133,28 @@ def pg_surgery_heap_page_header(
 
     Args:
         dialect: The SQL dialect instance
-        table_name: The name of the table (optionally schema-qualified)
-        page_offset: The byte offset of the page
-        page_pid: The page identifier
+        reloid: The table name (will be cast to regclass).
+                Can be a string like 'my_table' or 'public.users'.
+        tids: Array of tuple identifiers in tid[] format.
+              Can be a string expression like "'(0,1)'::tid" or
+              a BaseExpression for complex cases.
 
     Returns:
-        FunctionCall for pg_surgery.set_heap_tuple_frozen(table_name, page_offset, page_pid)
+        FunctionCall for heap_force_kill(reloid, tids)
 
     Example:
-        >>> pg_surgery_heap_page_header(dialect, 'my_table', 0, 0)
-        # Generates: pg_surgery.set_heap_tuple_frozen('my_table', 0, 0)
+        >>> heap_force_kill(dialect, 'my_table', "'{(0,1)}'::tid[]")
+        >>> heap_force_kill(dialect, 'public.users', tid_array_expr)
     """
     return core.FunctionCall(
-        dialect, "pg_surgery.set_heap_tuple_frozen",
-        _convert_to_expression(dialect, table_name),
-        _convert_to_expression(dialect, page_offset),
-        _convert_to_expression(dialect, page_pid),
+        dialect, "heap_force_kill",
+        _convert_to_expression(dialect, reloid),
+        _convert_to_expression(dialect, tids),
     )
 
 
 __all__ = [
     # Heap surgery functions
-    "pg_surgery_heap_freeze",
-    "pg_surgery_heap_page_header",
+    "heap_force_freeze",
+    "heap_force_kill",
 ]

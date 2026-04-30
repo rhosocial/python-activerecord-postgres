@@ -121,19 +121,19 @@ def hypopg_show_indexes(
     in the current session. The result includes the index OID, name, and
     the original index definition.
 
-    This function calls hypopg_index_detail() which provides detailed
-    information about each hypothetical index.
+    This function calls hypopg() which is the actual PostgreSQL function
+    that returns hypothetical index information as a set of records.
 
     Args:
         dialect: The SQL dialect instance
 
     Returns:
-        FunctionCall for hypopg_index_detail()
+        FunctionCall for hypopg()
 
     Example:
         >>> hypopg_show_indexes(dialect)
     """
-    return core.FunctionCall(dialect, "hypopg_index_detail")
+    return core.FunctionCall(dialect, "hypopg")
 
 
 def hypopg_estimate_size(
@@ -146,19 +146,21 @@ def hypopg_estimate_size(
     occupy on disk if it were actually created. This is useful for evaluating
     the storage cost of a potential index.
 
+    Uses hypopg_relation_size() which is the actual PostgreSQL function.
+
     Args:
         dialect: The SQL dialect instance
         index_id: The OID of the hypothetical index (from hypopg_create_index
                   or hypopg_show_indexes)
 
     Returns:
-        FunctionCall for hypopg_estimate_size(index_id)
+        FunctionCall for hypopg_relation_size(index_id)
 
     Example:
         >>> hypopg_estimate_size(dialect, 12345)
     """
     return core.FunctionCall(
-        dialect, "hypopg_estimate_size",
+        dialect, "hypopg_relation_size",
         _convert_to_expression(dialect, index_id),
     )
 

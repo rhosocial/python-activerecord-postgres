@@ -58,6 +58,16 @@ from .extensions.uuid_ossp import PostgresUuidOssSupport
 from .extensions.bloom import PostgresBloomSupport
 from .extensions.btree_gin import PostgresBtreeGinSupport
 from .extensions.btree_gist import PostgresBtreeGistSupport
+from .extensions.pg_cron import PostgresPgCronSupport
+from .extensions.pg_partman import PostgresPgPartmanSupport
+from .extensions.pg_surgery import PostgresPgSurgerySupport
+from .extensions.pg_walinspect import PostgresPgWalinspectSupport
+from .extensions.pglogical import PostgresPgLogicalSupport
+from .extensions.pgaudit import PostgresPgauditSupport
+from .extensions.pg_repack import PostgresPgRepackSupport
+from .extensions.hypopg import PostgresHypoPgSupport
+from .extensions.orafce import PostgresOrafceSupport
+from .extensions.address_standardizer import PostgresAddressStandardizerSupport
 
 # Additional protocols from original file
 from .query_optimization import PostgresQueryOptimizationSupport
@@ -113,6 +123,16 @@ __all__ = [
     "PostgresBloomSupport",
     "PostgresBtreeGinSupport",
     "PostgresBtreeGistSupport",
+    "PostgresPgCronSupport",
+    "PostgresPgPartmanSupport",
+    "PostgresPgSurgerySupport",
+    "PostgresPgWalinspectSupport",
+    "PostgresPgLogicalSupport",
+    "PostgresPgauditSupport",
+    "PostgresPgRepackSupport",
+    "PostgresHypoPgSupport",
+    "PostgresOrafceSupport",
+    "PostgresAddressStandardizerSupport",
     # Additional protocols
     "PostgresQueryOptimizationSupport",
     "PostgresSQLSyntaxSupport",

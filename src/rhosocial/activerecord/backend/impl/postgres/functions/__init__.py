@@ -458,15 +458,14 @@ from .hypopg import (
 
 # pg_surgery functions
 from .pg_surgery import (
-    pg_surgery_heap_freeze,
-    pg_surgery_heap_page_header,
+    heap_force_freeze,
+    heap_force_kill,
 )
 
 # pg_walinspect functions
 from .pg_walinspect import (
     pg_get_wal_records_info,
     pg_get_wal_blocks_info,
-    pg_logical_emit_message,
 )
 
 # address_standardizer functions
@@ -477,16 +476,13 @@ from .address_standardizer import (
 
 # pg_partman functions
 from .pg_partman import (
-    create_time_partition,
-    create_id_partition,
+    create_parent,
     run_maintenance,
 )
 
 # pg_repack functions
 from .pg_repack import (
-    repack_table,
-    repack_index,
-    move_tablespace,
+    repack_version,
 )
 
 # orafce functions
@@ -840,23 +836,19 @@ __all__ = [
     "hypopg_show_indexes",
     "hypopg_estimate_size",
     # pg_surgery functions
-    "pg_surgery_heap_freeze",
-    "pg_surgery_heap_page_header",
+    "heap_force_freeze",
+    "heap_force_kill",
     # pg_walinspect functions
     "pg_get_wal_records_info",
     "pg_get_wal_blocks_info",
-    "pg_logical_emit_message",
     # address_standardizer functions
     "standardize_address",
     "parse_address",
     # pg_partman functions
-    "create_time_partition",
-    "create_id_partition",
+    "create_parent",
     "run_maintenance",
     # pg_repack functions
-    "repack_table",
-    "repack_index",
-    "move_tablespace",
+    "repack_version",
     # orafce functions
     "add_months",
     "last_day",

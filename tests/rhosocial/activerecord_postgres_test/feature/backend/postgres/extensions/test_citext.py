@@ -8,7 +8,6 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
 from rhosocial.activerecord.backend.impl.postgres.functions.citext import (
     citext_literal,
 )

@@ -5,8 +5,12 @@ PostgreSQL pg_walinspect WAL inspection functionality mixin.
 This module provides functionality to check pg_walinspect extension features.
 
 For SQL expression generation (e.g. pg_get_wal_records_info,
-pg_get_wal_blocks_info, pg_logical_emit_message), use the function factories
-in ``functions/pg_walinspect.py`` instead of the removed format_* methods.
+pg_get_wal_blocks_info), use the function factories in
+``functions/pg_walinspect.py`` instead of the removed format_* methods.
+
+Note: pg_logical_emit_message is a built-in PostgreSQL function, not part
+of the pg_walinspect extension. It has been removed from the pg_walinspect
+function factory module.
 """
 
 

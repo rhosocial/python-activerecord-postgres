@@ -3,33 +3,38 @@
 Unit tests for PostgreSQL pg_surgery extension functions.
 
 Tests for:
-- pg_surgery_heap_freeze
-- pg_surgery_heap_page_header
+- heap_force_freeze
+- heap_force_kill
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import core
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_surgery import (
-    pg_surgery_heap_freeze,
-    pg_surgery_heap_page_header,
+    heap_force_freeze,
+    heap_force_kill,
 )
 
 
 class TestPgSurgeryMixin:
-    """Test pg_surgery extension functions."""
+    """Test pg_surgery extension functions.
 
-    def test_pg_surgery_heap_freeze(self):
-        """pg_surgery_heap_freeze should return FunctionCall with freeze_heap."""
+    Note: The actual PostgreSQL functions are:
+    - heap_force_freeze(reloid regclass, tids tid[])
+    - heap_force_kill(reloid regclass, tids tid[])
+    """
+
+    def test_heap_force_freeze(self):
+        """heap_force_freeze should return FunctionCall with heap_force_freeze."""
         dialect = PostgresDialect((14, 0, 0))
-        result = pg_surgery_heap_freeze(dialect, 'users')
+        result = heap_force_freeze(dialect, 'users', "'{(0,1)}'::tid[]")
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
-        assert "freeze_heap" in sql.lower()
+        assert "heap_force_freeze" in sql.lower()
 
-    def test_pg_surgery_heap_page_header(self):
-        """pg_surgery_heap_page_header should return FunctionCall with set_heap_tuple_frozen."""
+    def test_heap_force_kill(self):
+        """heap_force_kill should return FunctionCall with heap_force_kill."""
         dialect = PostgresDialect((14, 0, 0))
-        result = pg_surgery_heap_page_header(dialect, 'users', 0, 1)
+        result = heap_force_kill(dialect, 'users', "'{(0,1)}'::tid[]")
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
-        assert "set_heap_tuple_frozen" in sql.lower()
+        assert "heap_force_kill" in sql.lower()
