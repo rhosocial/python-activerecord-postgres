@@ -102,6 +102,21 @@ from .xml import (
     PostgresXML,
 )
 
+# pgvector types
+from .pgvector import (
+    PostgresVector,
+)
+
+# PostGIS types
+from .postgis import (
+    PostgresGeometry,
+)
+
+# hstore types
+from .hstore import (
+    PostgresHstore,
+)
+
 # Type constants (convenience references)
 from .constants import (
     # Numeric Types
@@ -204,6 +219,8 @@ from .constants import (
     REGCOLLATION,
     # pg_lsn Type
     PG_LSN,
+    # hstore Type
+    HSTORE,
 )
 
 
@@ -256,6 +273,12 @@ __all__ = [
     "PostgresMoney",
     # XML type
     "PostgresXML",
+    # pgvector types
+    "PostgresVector",
+    # PostGIS types
+    "PostgresGeometry",
+    # hstore types
+    "PostgresHstore",
     # Type constants - Numeric
     "SMALLINT",
     "INTEGER",
@@ -354,6 +377,16 @@ __all__ = [
     "REGNAMESPACE",
     "REGROLE",
     "REGCOLLATION",
-    # Type constants - pg_lsn
+    # pg_lsn Type
     "PG_LSN",
+    # pgvector Types
+    "VECTOR",
+    "HALFVEC",
+    "BITVEC",
+    "SPARSEVEC",
+    # PostGIS Types
+    "GEOMETRY",
+    "GEOGRAPHY",
+    # hstore Types
+    "HSTORE",
 ]

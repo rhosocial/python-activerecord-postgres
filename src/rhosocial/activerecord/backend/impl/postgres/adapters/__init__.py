@@ -20,6 +20,8 @@ Adapter modules and their corresponding PostgreSQL documentation:
 - enum: Enum types - https://www.postgresql.org/docs/current/datatype-enum.html
 - xml: XML type - https://www.postgresql.org/docs/current/datatype-xml.html
 - pg_lsn: pg_lsn type - https://www.postgresql.org/docs/current/datatype-pg-lsn.html
+- uuid: UUID type - https://www.postgresql.org/docs/current/datatype-uuid.html
+- pgvector: pgvector vector type - https://github.com/pgvector/pgvector
 """
 
 # Base types
@@ -73,6 +75,18 @@ from .pg_lsn import PostgresLsnAdapter
 # XML type
 from .xml import PostgresXMLAdapter
 
+# UUID type
+from .uuid import PostgresUUIDAdapter
+
+# pgvector types
+from .pgvector import PostgresVectorAdapter
+
+# PostGIS types
+from .postgis import PostgresPostGISAdapter
+
+# hstore types
+from .hstore import PostgresHstoreAdapter
+
 __all__ = [
     # Basic types
     "PostgresListAdapter",
@@ -104,4 +118,12 @@ __all__ = [
     "PostgresLsnAdapter",
     # XML type
     "PostgresXMLAdapter",
+    # UUID type
+    "PostgresUUIDAdapter",
+    # pgvector types
+    "PostgresVectorAdapter",
+    # PostGIS types
+    "PostgresPostGISAdapter",
+    # hstore types
+    "PostgresHstoreAdapter",
 ]

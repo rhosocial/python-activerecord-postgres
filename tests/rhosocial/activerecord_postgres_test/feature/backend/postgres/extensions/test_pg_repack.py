@@ -1,22 +1,31 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_pg_repack.py
-"""Unit tests for PostgreSQL pg_repack extension mixin."""
+"""
+Unit tests for PostgreSQL pg_repack extension functions.
 
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pg_repack import PostgresPgRepackMixin
+Tests for:
+- repack_version
+"""
+
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_repack import (
+    repack_version,
+)
 
 
 class TestPgRepackMixin:
-    """Test pg_repack extension mixin."""
+    """Test pg_repack extension functions.
 
-    def setup_method(self):
-        """Set up test fixture."""
-        self.mixin = PostgresPgRepackMixin()
+    Note: pg_repack is primarily a CLI tool. The only public SQL-callable
+    function is repack.repack_version(). The internal functions (repack_apply,
+    repack_swap, etc.) are not intended for direct use.
+    """
 
-    def test_format_pg_repack_table(self):
-        """Test pg_repack table rebuild formatting."""
-        result = self.mixin.format_pg_repack_table('users')
-        assert "repack" in result
-
-    def test_format_pg_repack_index(self):
-        """Test pg_repack index rebuild formatting."""
-        result = self.mixin.format_pg_repack_index('idx_name')
-        assert "repack" in result
+    def test_repack_version(self):
+        """repack_version should return FunctionCall with repack.repack_version."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = repack_version(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "repack_version" in sql.lower()
+        assert "repack" in sql.lower()

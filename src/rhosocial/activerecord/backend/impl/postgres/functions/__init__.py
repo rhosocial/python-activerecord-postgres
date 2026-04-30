@@ -9,7 +9,7 @@ PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions.html
 
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
-- They return expression objects or SQL expression strings
+- They return Expression objects (FunctionCall, BinaryExpression, etc.)
 - They do not concatenate SQL strings directly
 
 Function modules and their corresponding PostgreSQL documentation:
@@ -21,6 +21,28 @@ Function modules and their corresponding PostgreSQL documentation:
 - text_search: Full-text search functions - https://www.postgresql.org/docs/current/functions-textsearch.html
 - xml: XML functions - https://www.postgresql.org/docs/current/functions-xml.html
 - math_enhanced: Enhanced math functions - https://www.postgresql.org/docs/current/functions-math.html
+- pgcrypto: Cryptographic functions - https://www.postgresql.org/docs/current/pgcrypto.html
+- ltree: Label tree functions - https://www.postgresql.org/docs/current/ltree.html
+- pg_trgm: Trigram similarity functions - https://www.postgresql.org/docs/current/pgtrgm.html
+- fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
+- earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
+- hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
+- pg_surgery: Heap surgery functions - https://www.postgresql.org/docs/current/pgsurgery.html
+- pg_walinspect: WAL inspection functions - https://www.postgresql.org/docs/current/pgwalinspect.html
+- address_standardizer: Address standardization functions - https://postgis.net/docs/Address_Standardizer.html
+- pg_partman: Partition management functions - https://github.com/pgpartman/pg_partman
+- pg_repack: Table reorganization functions - https://reorg.github.io/pg_repack/
+- orafce: Oracle compatibility functions - https://github.com/orafce/orafce
+- intarray: Integer array functions and operators - https://www.postgresql.org/docs/current/intarray.html
+- cube: Multidimensional cube functions and operators - https://www.postgresql.org/docs/current/cube.html
+- citext: Case-insensitive text functions - https://www.postgresql.org/docs/current/citext.html
+- pg_stat_statements: Query statistics functions - https://www.postgresql.org/docs/current/pgstatstatements.html
+- postgis_raster: PostGIS raster functions - https://postgis.net/docs/RT_reference.html
+- pglogical: Logical replication functions - https://github.com/2ndQuadrant/pglogical
+- pgrouting: Geospatial routing functions - https://docs.pgrouting.org/latest/en/
+- tablefunc: Pivot table and tree traversal functions - https://www.postgresql.org/docs/current/tablefunc.html
+- pg_cron: Cron-based job scheduler - https://github.com/citusdata/pg_cron
+- pgaudit: Audit logging configuration - https://github.com/pgaudit/pgaudit
 """
 
 # Range functions
@@ -44,6 +66,21 @@ from .range import (
     range_upper_inc,
     range_lower_inf,
     range_upper_inf,
+    multirange_contains,
+    multirange_is_contained_by,
+    multirange_overlaps,
+    multirange_union,
+    multirange_intersection,
+    multirange_difference,
+    range_merge,
+    multirange_literal,
+    multirange_constructor,
+    int4range,
+    int8range,
+    numrange,
+    tsrange,
+    tstzrange,
+    daterange,
 )
 
 # Geometric functions
@@ -201,6 +238,8 @@ from .uuid import (
     uuid_ns_x500,
     uuid_nil,
     uuid_max,
+    gen_random_uuid,
+    uuid_default_generator,
 )
 
 # hstore functions
@@ -226,6 +265,7 @@ from .hstore import (
     hstore_delete_pairs,
     hstore_populate_record,
     hstore_get_value,
+    hstore_get_value_as_text,
     hstore_get_values,
     hstore_concat,
     hstore_key_exists,
@@ -243,6 +283,228 @@ from .hstore import (
     hstore_subscript_set,
 )
 
+# pgvector functions
+from .pgvector import (
+    vector_l2_distance,
+    vector_cosine_distance,
+    vector_inner_product,
+    vector_cosine_similarity,
+    vector_literal,
+)
+
+# PostGIS functions
+from .postgis import (
+    st_make_point,
+    st_geom_from_text,
+    st_geog_from_text,
+    st_set_srid,
+    st_transform,
+    st_contains,
+    st_intersects,
+    st_within,
+    st_dwithin,
+    st_crosses,
+    st_touches,
+    st_overlaps,
+    st_distance,
+    st_area,
+    st_length,
+    st_as_geojson,
+    st_as_text,
+    st_buffer,
+    st_envelope,
+    st_centroid,
+)
+
+# pgcrypto functions
+from .pgcrypto import (
+    gen_salt,
+    crypt,
+    encrypt,
+    decrypt,
+    gen_random_bytes,
+    hmac,
+    digest,
+    pgp_sym_encrypt,
+    pgp_sym_decrypt,
+)
+
+# ltree functions
+from .ltree import (
+    ltree_literal,
+    lquery_literal,
+    ltxtquery_literal,
+    ltree_ancestor,
+    ltree_descendant,
+    ltree_matches,
+    ltree_text_search,
+    ltree_concat,
+    ltree_nlevel,
+    ltree_subpath,
+    ltree_lca,
+)
+
+# pg_trgm functions
+from .pg_trgm import (
+    similarity,
+    word_similarity,
+    show_trgm,
+    similarity_operator,
+)
+
+# fuzzystrmatch functions
+from .fuzzystrmatch import (
+    levenshtein,
+    levenshtein_less_equal,
+    soundex,
+    difference,
+    metaphone,
+    dmetaphone,
+    dmetaphone_alt,
+)
+
+# earthdistance functions
+from .earthdistance import (
+    ll_to_earth,
+    earth_distance,
+    earth_box,
+    earthdistance_operator,
+    point_inside_circle,
+)
+
+# intarray functions
+from .intarray import (
+    intarray_contains,
+    intarray_contained_by,
+    intarray_overlaps,
+    intarray_idx,
+    intarray_subarray,
+    intarray_uniq,
+    intarray_sort,
+    intarray_operator,
+)
+
+# cube functions
+from .cube import (
+    cube_literal,
+    cube_dimension,
+    cube_size,
+    cube_union,
+    cube_inter,
+    cube_contains,
+    cube_distance,
+)
+
+# citext functions
+from .citext import (
+    citext_literal,
+)
+
+# pg_stat_statements functions
+from .pg_stat_statements import (
+    pg_stat_statements_reset,
+)
+
+# postgis_raster functions
+from .postgis_raster import (
+    st_rast_from_hexwkb,
+    st_value,
+    st_summary,
+)
+
+# pglogical functions
+from .pglogical import (
+    pglogical_create_node,
+    pglogical_create_publication,
+    pglogical_create_subscription,
+    pglogical_show_subscription_status,
+    pglogical_alter_subscription_synchronize,
+)
+
+# pgrouting functions
+from .pgrouting import (
+    pgr_dijkstra,
+    pgr_astar,
+)
+
+# tablefunc functions
+from .tablefunc import (
+    crosstab,
+    connectby,
+    normal_rand,
+)
+
+# pg_cron functions
+from .pg_cron import (
+    cron_schedule,
+    cron_unschedule,
+    cron_run,
+)
+
+# pgaudit functions
+from .pgaudit import (
+    pgaudit_set_role,
+    pgaudit_log_level,
+    pgaudit_include_catalog,
+)
+
+# hypopg functions
+from .hypopg import (
+    hypopg_create_index,
+    hypopg_reset,
+    hypopg_show_indexes,
+    hypopg_estimate_size,
+)
+
+# pg_surgery functions
+from .pg_surgery import (
+    heap_force_freeze,
+    heap_force_kill,
+)
+
+# pg_walinspect functions
+from .pg_walinspect import (
+    pg_get_wal_records_info,
+    pg_get_wal_blocks_info,
+)
+
+# address_standardizer functions
+from .address_standardizer import (
+    standardize_address,
+    parse_address,
+)
+
+# pg_partman functions
+from .pg_partman import (
+    create_parent,
+    run_maintenance,
+)
+
+# pg_repack functions
+from .pg_repack import (
+    repack_version,
+)
+
+# orafce functions
+from .orafce import (
+    add_months,
+    last_day,
+    months_between,
+    next_day,
+    nvl,
+    nvl2,
+    decode,
+    orafce_trunc,
+    orafce_round,
+    instr,
+    substr,
+)
+
+# data_type functions
+from .data_type import (
+    xid8_literal,
+    array_literal,
+)
 
 __all__ = [
     # Range functions
@@ -265,6 +527,17 @@ __all__ = [
     "range_upper_inc",
     "range_lower_inf",
     "range_upper_inf",
+    # Multirange operators
+    "multirange_contains",
+    "multirange_is_contained_by",
+    "multirange_overlaps",
+    "multirange_union",
+    "multirange_intersection",
+    "multirange_difference",
+    # Multirange functions
+    "range_merge",
+    "multirange_literal",
+    "multirange_constructor",
     # Geometric functions
     "geometry_distance",
     "geometry_contains",
@@ -392,6 +665,8 @@ __all__ = [
     "uuid_ns_x500",
     "uuid_nil",
     "uuid_max",
+    "gen_random_uuid",
+    "uuid_default_generator",
     # hstore functions
     "hstore_from_record",
     "hstore_from_key_value",
@@ -414,6 +689,7 @@ __all__ = [
     "hstore_delete_pairs",
     "hstore_populate_record",
     "hstore_get_value",
+    "hstore_get_value_as_text",
     "hstore_get_values",
     "hstore_concat",
     "hstore_key_exists",
@@ -436,4 +712,156 @@ __all__ = [
     "tsrange",
     "tstzrange",
     "daterange",
+    # pgvector functions
+    "vector_l2_distance",
+    "vector_cosine_distance",
+    "vector_inner_product",
+    "vector_cosine_similarity",
+    "vector_literal",
+    # PostGIS functions - Construction
+    "st_make_point",
+    "st_geom_from_text",
+    "st_geog_from_text",
+    "st_set_srid",
+    "st_transform",
+    # PostGIS functions - Predicates
+    "st_contains",
+    "st_intersects",
+    "st_within",
+    "st_dwithin",
+    "st_crosses",
+    "st_touches",
+    "st_overlaps",
+    # PostGIS functions - Measurements
+    "st_distance",
+    "st_area",
+    "st_length",
+    # PostGIS functions - Output
+    "st_as_geojson",
+    "st_as_text",
+    # PostGIS functions - Operations
+    "st_buffer",
+    "st_envelope",
+    "st_centroid",
+    # pgcrypto functions
+    "gen_salt",
+    "crypt",
+    "encrypt",
+    "decrypt",
+    "gen_random_bytes",
+    "hmac",
+    "digest",
+    "pgp_sym_encrypt",
+    "pgp_sym_decrypt",
+    # ltree functions
+    "ltree_literal",
+    "lquery_literal",
+    "ltxtquery_literal",
+    "ltree_ancestor",
+    "ltree_descendant",
+    "ltree_matches",
+    "ltree_text_search",
+    "ltree_concat",
+    "ltree_nlevel",
+    "ltree_subpath",
+    "ltree_lca",
+    # pg_trgm functions
+    "similarity",
+    "word_similarity",
+    "show_trgm",
+    "similarity_operator",
+    # fuzzystrmatch functions
+    "levenshtein",
+    "levenshtein_less_equal",
+    "soundex",
+    "difference",
+    "metaphone",
+    "dmetaphone",
+    "dmetaphone_alt",
+    # earthdistance functions
+    "ll_to_earth",
+    "earth_distance",
+    "earth_box",
+    "earthdistance_operator",
+    "point_inside_circle",
+    # intarray functions
+    "intarray_contains",
+    "intarray_contained_by",
+    "intarray_overlaps",
+    "intarray_idx",
+    "intarray_subarray",
+    "intarray_uniq",
+    "intarray_sort",
+    "intarray_operator",
+    # cube functions
+    "cube_literal",
+    "cube_dimension",
+    "cube_size",
+    "cube_union",
+    "cube_inter",
+    "cube_contains",
+    "cube_distance",
+    # citext functions
+    "citext_literal",
+    # pg_stat_statements functions
+    "pg_stat_statements_reset",
+    # postgis_raster functions
+    "st_rast_from_hexwkb",
+    "st_value",
+    "st_summary",
+    # pglogical functions
+    "pglogical_create_node",
+    "pglogical_create_publication",
+    "pglogical_create_subscription",
+    "pglogical_show_subscription_status",
+    "pglogical_alter_subscription_synchronize",
+    # pgrouting functions
+    "pgr_dijkstra",
+    "pgr_astar",
+    # tablefunc functions
+    "crosstab",
+    "connectby",
+    "normal_rand",
+    # pg_cron functions
+    "cron_schedule",
+    "cron_unschedule",
+    "cron_run",
+    # pgaudit functions
+    "pgaudit_set_role",
+    "pgaudit_log_level",
+    "pgaudit_include_catalog",
+    # hypopg functions
+    "hypopg_create_index",
+    "hypopg_reset",
+    "hypopg_show_indexes",
+    "hypopg_estimate_size",
+    # pg_surgery functions
+    "heap_force_freeze",
+    "heap_force_kill",
+    # pg_walinspect functions
+    "pg_get_wal_records_info",
+    "pg_get_wal_blocks_info",
+    # address_standardizer functions
+    "standardize_address",
+    "parse_address",
+    # pg_partman functions
+    "create_parent",
+    "run_maintenance",
+    # pg_repack functions
+    "repack_version",
+    # orafce functions
+    "add_months",
+    "last_day",
+    "months_between",
+    "next_day",
+    "nvl",
+    "nvl2",
+    "decode",
+    "orafce_trunc",
+    "orafce_round",
+    "instr",
+    "substr",
+    # data_type functions
+    "xid8_literal",
+    "array_literal",
 ]

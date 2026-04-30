@@ -60,3 +60,48 @@ class PostgresQueryOptimizationSupport(Protocol):
         Enables parallel execution of foreign table scans.
         """
         ...
+
+    def supports_parallel_query(self) -> bool:
+        """Whether parallel query execution is supported.
+
+        Native feature, PostgreSQL 9.6+.
+        Includes parallel sequential scan, parallel joins, and parallel aggregates.
+        """
+        ...
+
+    def supports_parallel_append(self) -> bool:
+        """Whether Parallel Append merge is supported.
+
+        Native feature, PostgreSQL 10+.
+        Allows Append nodes to run in parallel, improving
+        UNION ALL and inheritance queries.
+        """
+        ...
+
+    def supports_parallel_index_scan(self) -> bool:
+        """Whether parallel index scan is supported.
+
+        Native feature, PostgreSQL 10+.
+        """
+        ...
+
+    def supports_parallel_index_only_scan(self) -> bool:
+        """Whether parallel index-only scan is supported.
+
+        Native feature, PostgreSQL 11+.
+        """
+        ...
+
+    def supports_parallel_hash_join(self) -> bool:
+        """Whether parallel hash join is supported.
+
+        Native feature, PostgreSQL 11+.
+        """
+        ...
+
+    def supports_parallel_gather_merge(self) -> bool:
+        """Whether Gather Merge node for parallel query is supported.
+
+        Native feature, PostgreSQL 10+.
+        """
+        ...

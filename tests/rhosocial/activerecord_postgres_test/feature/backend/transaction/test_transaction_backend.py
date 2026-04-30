@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_backend.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_backend.py
 """
 PostgreSQL backend transaction tests using real database connection.
 

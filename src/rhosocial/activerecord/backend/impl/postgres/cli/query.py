@@ -98,9 +98,17 @@ def handle(args):
             handler = RichHandler(rich_tracebacks=True, show_path=False, console=Console(stderr=True))
             logging.basicConfig(level=numeric_level, format="%(message)s", datefmt="[%X]", handlers=[handler])
         else:
-            logging.basicConfig(level=numeric_level, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stderr)
+            logging.basicConfig(
+                level=numeric_level,
+                format="%(asctime)s - %(levelname)s - %(message)s",
+                stream=sys.stderr
+            )
     else:
-        logging.basicConfig(level=numeric_level, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stderr)
+        logging.basicConfig(
+            level=numeric_level,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+            stream=sys.stderr
+        )
 
     provider.display_greeting()
 

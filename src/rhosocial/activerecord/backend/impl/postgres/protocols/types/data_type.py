@@ -4,7 +4,7 @@
 This module defines the protocol for PostgreSQL-specific data type features.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, Tuple
 
 
 @runtime_checkable
@@ -92,5 +92,16 @@ class PostgresDataTypeSupport(Protocol):
 
         Native feature, PostgreSQL 13+.
         Provides 64-bit transaction identifiers.
+        """
+        ...
+
+    def format_create_range_type(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TYPE AS RANGE statement from expression object.
+
+        Args:
+            expr: PostgresCreateRangeTypeExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
         """
         ...

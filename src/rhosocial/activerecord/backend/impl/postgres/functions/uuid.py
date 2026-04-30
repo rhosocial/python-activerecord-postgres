@@ -8,10 +8,16 @@ objects that integrate with the expression-dialect architecture.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-uuid.html
 
-Note: Some functions require the 'uuid-ossp' extension.
-Install with: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+UUID generation functions:
+- gen_random_uuid(): Built-in since PostgreSQL 13, no extension required
+- uuid_generate_v1/v3/v4/v5(): Require the 'uuid-ossp' extension
+  Install with: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+For DDL column defaults, use uuid_default_generator(dialect) which
+automatically selects the appropriate function based on server version.
 """
 
+import uuid as _uuid
 from typing import Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
@@ -22,11 +28,13 @@ if TYPE_CHECKING:
 
 def _convert_to_expression(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: Union[_uuid.UUID, str, "bases.BaseExpression"],
 ) -> "bases.BaseExpression":
     """Convert an input value to an appropriate BaseExpression."""
     if isinstance(expr, bases.BaseExpression):
         return expr
+    elif isinstance(expr, _uuid.UUID):
+        return core.Literal(dialect, str(expr))
     elif isinstance(expr, str):
         return core.Literal(dialect, expr)
     else:
@@ -69,7 +77,7 @@ def uuid_generate_v1mc(dialect: "SQLDialectBase") -> core.FunctionCall:
 
 def uuid_generate_v3(
     dialect: "SQLDialectBase",
-    namespace: Union[str, "bases.BaseExpression"],
+    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
     name: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """
@@ -114,7 +122,7 @@ def uuid_generate_v4(dialect: "SQLDialectBase") -> core.FunctionCall:
 
 def uuid_generate_v5(
     dialect: "SQLDialectBase",
-    namespace: Union[str, "bases.BaseExpression"],
+    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
     name: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """
@@ -223,6 +231,57 @@ def uuid_max(dialect: "SQLDialectBase") -> core.FunctionCall:
     return core.FunctionCall(dialect, "uuid_max")
 
 
+def gen_random_uuid(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Generate a version 4 (random) UUID.
+
+    This is a built-in function available since PostgreSQL 13.
+    For PostgreSQL < 13, use uuid_generate_v4() from the uuid-ossp extension.
+
+    No extension required for PostgreSQL 13+.
+
+    Returns:
+        FunctionCall: SQL expression for gen_random_uuid()
+
+    Example:
+        >>> func = gen_random_uuid(dialect)
+        >>> func.to_sql()
+        ('gen_random_uuid()', ())
+    """
+    return core.FunctionCall(dialect, "gen_random_uuid")
+
+
+def uuid_default_generator(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """Return the appropriate UUID generation function based on dialect version.
+
+    This is the recommended way to obtain a UUID default value generator
+    for DDL column definitions. It automatically selects the correct function:
+
+    - PostgreSQL 13+: gen_random_uuid() (built-in, no extension required)
+    - PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
+
+    Args:
+        dialect: The SQL dialect instance
+
+    Returns:
+        FunctionCall: SQL expression for the version-appropriate UUID generator
+
+    Example:
+        >>> from rhosocial.activerecord.backend.expression.statements import (
+        ...     ColumnDefinition, ColumnConstraint, ColumnConstraintType,
+        ... )
+        >>> uuid_func = uuid_default_generator(dialect)
+        >>> ColumnDefinition('id', 'UUID', constraints=[
+        ...     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+        ...     ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=uuid_func),
+        ... ])
+    """
+    version = dialect.get_server_version()
+    if version >= (13, 0, 0):
+        return gen_random_uuid(dialect)
+    return uuid_generate_v4(dialect)
+
+
 __all__ = [
     "uuid_generate_v1",
     "uuid_generate_v1mc",
@@ -235,4 +294,6 @@ __all__ = [
     "uuid_ns_x500",
     "uuid_nil",
     "uuid_max",
+    "gen_random_uuid",
+    "uuid_default_generator",
 ]

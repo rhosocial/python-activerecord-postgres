@@ -100,6 +100,34 @@ class PostgresExtensionSupport(Protocol):
         """
         ...
 
+    def check_extension_feature(self, ext_name: str, feature_name: str) -> bool:
+        """Check if an extension feature is supported based on installed version.
+
+        This method checks if:
+        1. The extension is installed
+        2. The extension version meets the minimum requirement for the feature
+
+        Args:
+            ext_name: Extension name (e.g., 'vector', 'postgis')
+            feature_name: Feature name defined in KNOWN_EXTENSIONS features dict
+
+        Returns:
+            True if extension is installed and version meets feature requirement
+        """
+        ...
+
+    def get_extension_min_version_for_feature(self, ext_name: str, feature_name: str) -> Optional[str]:
+        """Get the minimum extension version required for a feature.
+
+        Args:
+            ext_name: Extension name
+            feature_name: Feature name
+
+        Returns:
+            Minimum version string, or None if not defined
+        """
+        ...
+
     def format_create_extension(self, expr: "PostgresCreateExtensionExpression") -> "SQLQueryAndParams":
         """Format CREATE EXTENSION expression.
 

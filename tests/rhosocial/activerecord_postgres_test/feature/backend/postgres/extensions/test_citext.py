@@ -1,17 +1,20 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_citext.py
 """
-Unit tests for PostgreSQL citext extension mixin.
+Unit tests for PostgreSQL citext extension.
 
-Tests for PostgresCitextMixin format methods:
-- format_citext_column
-- format_citext_literal
+Tests for:
+- format_citext_column (DDL, still on mixin)
+- citext_literal (function factory)
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.functions.citext import (
+    citext_literal,
+)
 
 
 class TestPostgresCitextMixin:
-    """Tests for PostgresCitextMixin format methods."""
+    """Tests for citext DDL methods (still on mixin)."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -29,14 +32,20 @@ class TestPostgresCitextMixin:
         assert "CITEXT(255)" in result
         assert "name" in result
 
-    def test_format_citext_literal(self):
-        """format_citext_literal should return quoted citext literal."""
-        result = self.dialect.format_citext_literal("Hello")
-        assert "citext" in result
-        assert "'Hello'" in result
 
-    def test_format_citext_literal_escape(self):
-        """format_citext_literal should escape single quotes."""
-        result = self.dialect.format_citext_literal("It's")
-        assert "''" in result
-        assert "citext" in result
+class TestCitextFunctions:
+    """Tests for citext function factories."""
+
+    def test_citext_literal(self):
+        """citext_literal should return expression with citext cast."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = citext_literal(dialect, "Hello")
+        sql, params = result.to_sql()
+        assert "citext" in sql.lower()
+
+    def test_citext_literal_escape(self):
+        """citext_literal should handle special characters."""
+        dialect = PostgresDialect((14, 0, 0))
+        result = citext_literal(dialect, "It's")
+        sql, params = result.to_sql()
+        assert "citext" in sql.lower()

@@ -5,7 +5,7 @@ This module provides functionality to detect and manage PostgreSQL extensions,
 including version checking and feature support verification.
 """
 
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from ..protocols.base import PostgresExtensionInfo
 
@@ -372,6 +372,71 @@ class PostgresExtensionMixin:
             "requires_dialect": False,
         },
     }
+
+    # SQL queries for extension detection (shared by sync/async backends)
+    SQL_INSTALLED_EXTENSIONS: str = """
+        SELECT extname, extversion, nspname as schema_name
+        FROM pg_extension
+        JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
+    """
+
+    SQL_AVAILABLE_EXTENSIONS: str = """
+        SELECT name, default_version
+        FROM pg_available_extensions
+    """
+
+    @staticmethod
+    def build_extension_map(
+        installed_rows: List[Tuple[str, str, str]],
+        available_rows: List[Tuple[str, Optional[str]]],
+    ) -> Dict[str, PostgresExtensionInfo]:
+        """Build extension dictionary from query results.
+
+        This method contains the shared logic used by both sync and async
+        backends for processing extension detection query results.
+
+        Args:
+            installed_rows: Rows from pg_extension query (extname, extversion, schema_name)
+            available_rows: Rows from pg_available_extensions query (name, default_version)
+
+        Returns:
+            Dictionary mapping extension names to extension info
+        """
+        extensions = {}
+
+        for row in installed_rows:
+            ext_name = row[0]
+            extensions[ext_name] = PostgresExtensionInfo(
+                name=ext_name,
+                installed=True,
+                available=True,
+                version=row[1],
+                schema=row[2],
+            )
+
+        for row in available_rows:
+            ext_name = row[0]
+            if ext_name in extensions:
+                # Already installed, ensure available is True
+                extensions[ext_name].available = True
+            else:
+                # Not installed but available
+                extensions[ext_name] = PostgresExtensionInfo(
+                    name=ext_name,
+                    installed=False,
+                    available=True,
+                    version=row[1],
+                )
+
+        # Add known extensions that might not be in pg_available_extensions
+        for known_ext in PostgresExtensionMixin.KNOWN_EXTENSIONS:
+            if known_ext not in extensions:
+                extensions[known_ext] = PostgresExtensionInfo(
+                    name=known_ext,
+                    installed=False,
+                )
+
+        return extensions
 
     def detect_extensions(self, connection) -> Dict[str, PostgresExtensionInfo]:
         """Query installed and available extensions from database.

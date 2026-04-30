@@ -51,6 +51,17 @@ class PostgresBackendMixin:
             # Fallback logging
             print(f"[{logging.getLevelName(level)}] {message}")
 
+    def get_default_schema(self) -> str:
+        """Get the default schema name for PostgreSQL.
+
+        Returns the configured default_schema, or 'public' as the
+        PostgreSQL standard default if not explicitly set.
+
+        Returns:
+            str: Default schema name
+        """
+        return getattr(self.config, "default_schema", None) or "public"
+
     def create_expression(self, expression_str: str):
         """Create an expression object for raw SQL expressions."""
         from rhosocial.activerecord.backend.expression.operators import RawSQLExpression

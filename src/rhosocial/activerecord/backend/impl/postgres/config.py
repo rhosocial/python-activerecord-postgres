@@ -47,6 +47,9 @@ class PostgresConnectionMixin:
     service: Optional[str] = None
     gssencmode: Optional[str] = None
     channel_binding: Optional[str] = None
+    # Schema namespace support
+    search_path: Optional[str] = None  # Set connection's search_path (passed directly to psycopg)
+    default_schema: Optional[str] = None  # Default schema when Model doesn't specify __schema_name__
 
 
 @dataclass
@@ -108,6 +111,7 @@ class PostgresConnectionConfig(
             "service": self.service,
             "gssencmode": self.gssencmode,
             "channel_binding": self.channel_binding,
+            "search_path": self.search_path,
         }
 
         # Only include non-None values
@@ -162,6 +166,8 @@ class PostgresConnectionConfig(
             params.append(f"gssencmode={self.gssencmode}")
         if self.channel_binding:
             params.append(f"channel_binding={self.channel_binding}")
+        if self.search_path:
+            params.append(f"search_path={self.search_path}")
 
         # Add any additional options
         if self.options:

@@ -3,6 +3,9 @@
 
 This module defines the protocol for address_standardizer
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/address_standardizer.py`` instead of the removed format_* methods.
 """
 
 from typing import Protocol, runtime_checkable
@@ -27,14 +30,4 @@ class PostgresAddressStandardizerSupport(Protocol):
 
     def supports_address_standardizer(self) -> bool:
         """Whether address_standardizer is available."""
-        ...
-
-    def format_address_standardize(
-        self, address: str, use_tiger: bool = False
-    ) -> str:
-        """Format address standardization."""
-        ...
-
-    def format_address_parse(self, address: str) -> str:
-        """Format address parsing."""
         ...

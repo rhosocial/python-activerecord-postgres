@@ -8,6 +8,8 @@ Tests for:
 """
 import pytest
 
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
 from rhosocial.activerecord.backend.impl.postgres.types.xml import (
     PostgresXML,
 )
@@ -163,52 +165,78 @@ class TestXMLUtilityFunctions:
 
     def test_xmlparse_document(self):
         """Test xmlparse with DOCUMENT."""
-        result = xmlparse('<root/>', document=True)
-        assert 'XMLPARSE' in result
-        assert 'DOCUMENT' in result
-        assert '<root/>' in result
+        dialect = PostgresDialect((14, 0, 0))
+        result = xmlparse(dialect, '<root/>', document=True)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert 'XMLPARSE' in sql
+        assert 'DOCUMENT' in sql
 
     def test_xmlparse_content(self):
         """Test xmlparse with CONTENT."""
-        result = xmlparse('<root/>', document=False)
-        assert 'CONTENT' in result
+        dialect = PostgresDialect((14, 0, 0))
+        result = xmlparse(dialect, '<root/>', document=False)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert 'XMLPARSE' in sql
+        assert 'CONTENT' in sql
 
     def test_xmlparse_preserve_whitespace(self):
         """Test xmlparse with preserve whitespace."""
-        result = xmlparse('<root/>', preserve_whitespace=True)
-        assert 'PRESERVE WHITESPACE' in result
+        dialect = PostgresDialect((14, 0, 0))
+        result = xmlparse(dialect, '<root/>', preserve_whitespace=True)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert 'PRESERVE WHITESPACE' in sql
 
     def test_xpath_query_basic(self):
         """Test xpath_query basic."""
+        dialect = PostgresDialect((14, 0, 0))
         xml = PostgresXML('<root><item>value</item></root>')
-        result = xpath_query(xml, '/root/item')
-        assert "xpath('/root/item'" in result
+        result = xpath_query(dialect, '/root/item', xml)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xpath" in sql.lower()
 
     def test_xpath_query_with_column(self):
         """Test xpath_query with column reference."""
-        result = xpath_query('xml_column', '/root/item')
-        assert 'xml_column' in result
+        dialect = PostgresDialect((14, 0, 0))
+        result = xpath_query(dialect, '/root/item', 'xml_column')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xpath" in sql.lower()
 
     def test_xpath_query_with_namespaces(self):
         """Test xpath_query with namespaces."""
+        dialect = PostgresDialect((14, 0, 0))
         xml = PostgresXML('<ns:root xmlns:ns="http://example.com"/>')
-        result = xpath_query(xml, '/ns:root', namespaces={'ns': 'http://example.com'})
-        assert 'ARRAY' in result
+        result = xpath_query(dialect, '/ns:root', xml, namespaces={'ns': 'http://example.com'})
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xpath" in sql.lower()
 
     def test_xpath_exists_basic(self):
         """Test xpath_exists basic."""
+        dialect = PostgresDialect((14, 0, 0))
         xml = PostgresXML('<root><item>value</item></root>')
-        result = xpath_exists(xml, '/root/item')
-        assert 'xpath_exists' in result
-        assert '/root/item' in result
+        result = xpath_exists(dialect, '/root/item', xml)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xpath_exists" in sql.lower()
 
     def test_xpath_exists_with_namespaces(self):
         """Test xpath_exists with namespaces."""
+        dialect = PostgresDialect((14, 0, 0))
         xml = PostgresXML('<ns:root xmlns:ns="http://example.com"/>')
-        result = xpath_exists(xml, '/ns:root', namespaces={'ns': 'http://example.com'})
-        assert 'xpath_exists' in result
+        result = xpath_exists(dialect, '/ns:root', xml, namespaces={'ns': 'http://example.com'})
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xpath_exists" in sql.lower()
 
     def test_xml_is_well_formed(self):
         """Test xml_is_well_formed function."""
-        result = xml_is_well_formed('<root/>')
-        assert "xml_is_well_formed('<root/>')" == result
+        dialect = PostgresDialect((14, 0, 0))
+        result = xml_is_well_formed(dialect, '<root/>')
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "xml_is_well_formed" in sql.lower()

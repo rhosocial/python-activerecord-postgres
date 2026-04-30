@@ -53,3 +53,74 @@ class PostgresSQLSyntaxSupport(Protocol):
         Includes tied rows in result set.
         """
         ...
+
+    def supports_call_statement(self) -> bool:
+        """Whether CALL statement for stored procedures is supported.
+
+        Native feature, PostgreSQL 11+.
+        PostgreSQL 11 introduced stored procedures that can manage their own transactions.
+        """
+        ...
+
+    def supports_stored_procedure_transaction_control(self) -> bool:
+        """Whether stored procedures with transaction control are supported.
+
+        Native feature, PostgreSQL 11+.
+        Procedures can use COMMIT and ROLLBACK within the procedure body.
+        """
+        ...
+
+    def supports_sql_body_functions(self) -> bool:
+        """Whether SQL-body functions are supported.
+
+        Native feature, PostgreSQL 14+.
+        Functions can use SQL-standard function bodies with
+        BEGIN ATOMIC ... END syntax.
+        """
+        ...
+
+    def supports_nulls_not_distinct_unique(self) -> bool:
+        """Whether UNIQUE NULLS NOT DISTINCT is supported.
+
+        Native feature, PostgreSQL 15+.
+        Creates unique constraints that treat NULL values as equal.
+        """
+        ...
+
+    def supports_regexp_like(self) -> bool:
+        """Whether REGEXP_LIKE function is supported.
+
+        Native feature, PostgreSQL 16+.
+        SQL-standard regular expression matching function.
+        """
+        ...
+
+    def supports_random_normal(self) -> bool:
+        """Whether random_normal() function is supported.
+
+        Native feature, PostgreSQL 16+.
+        Returns normally distributed random values.
+        """
+        ...
+
+    def supports_json_table_nested_path(self) -> bool:
+        """Whether enhanced JSON_TABLE NESTED PATH is supported.
+
+        Native feature, PostgreSQL 17+.
+        """
+        ...
+
+    def supports_merge_with_cte(self) -> bool:
+        """Whether MERGE statement with CTE is supported.
+
+        Native feature, PostgreSQL 17+.
+        """
+        ...
+
+    def supports_update_returning_old(self) -> bool:
+        """Whether UPDATE RETURNING OLD is supported.
+
+        Native feature, PostgreSQL 17+.
+        Allows returning old values in UPDATE RETURNING.
+        """
+        ...

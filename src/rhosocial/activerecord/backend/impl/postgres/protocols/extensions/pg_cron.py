@@ -3,6 +3,9 @@
 
 This module defines the protocol for pg_cron job scheduling
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/pg_cron.py`` instead of the removed format_* methods.
 """
 
 from typing import Protocol, runtime_checkable

@@ -557,7 +557,9 @@ class SyncPostgreSQLStatusIntrospector(
                 rows = self._exec_query("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
             else:
                 # PG 9.6 and below use xlog terminology
-                rows = self._exec_query("SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes")
+                rows = self._exec_query(
+                    "SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes"
+                )
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
@@ -645,8 +647,12 @@ class SyncPostgreSQLStatusIntrospector(
             if rows:
                 is_in_recovery = list(rows[0].values())[0]
                 # pg_is_in_recovery returns False for primary, True for standby
-                replication_info.is_primary = not (is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true')
-                replication_info.is_standby = is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                replication_info.is_primary = not (
+                    is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                )
+                replication_info.is_standby = (
+                    is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                )
         except Exception:
             pass
 
@@ -1146,10 +1152,14 @@ class AsyncPostgreSQLStatusIntrospector(
         # PostgreSQL 9.6 and below: pg_current_xlog_location()
         try:
             if version >= (10, 0, 0):
-                rows = await self._exec_query_async("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
+                rows = await self._exec_query_async(
+                    "SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes"
+                )
             else:
                 # PG 9.6 and below use xlog terminology
-                rows = await self._exec_query_async("SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes")
+                rows = await self._exec_query_async(
+                    "SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes"
+                )
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
@@ -1237,8 +1247,12 @@ class AsyncPostgreSQLStatusIntrospector(
             if rows:
                 is_in_recovery = list(rows[0].values())[0]
                 # pg_is_in_recovery returns False for primary, True for standby
-                replication_info.is_primary = not (is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true')
-                replication_info.is_standby = is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                replication_info.is_primary = not (
+                    is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                )
+                replication_info.is_standby = (
+                    is_in_recovery is True or is_in_recovery == 't' or is_in_recovery == 'true'
+                )
         except Exception:
             pass
 

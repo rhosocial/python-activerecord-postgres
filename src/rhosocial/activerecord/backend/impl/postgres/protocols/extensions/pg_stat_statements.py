@@ -3,6 +3,10 @@
 
 This module defines the protocol for pg_stat_statements query statistics
 functionality in PostgreSQL.
+
+For SQL expression generation of simple function calls (e.g. pg_stat_statements_reset),
+use the function factories in ``functions/pg_stat_statements.py`` instead of
+the removed format_* methods.
 """
 
 from typing import Optional, Protocol, Tuple, runtime_checkable
@@ -57,10 +61,6 @@ class PostgresPgStatStatementsSupport(Protocol):
         self, limit: Optional[int] = None, sort_by: str = "total_exec_time", descending: bool = True
     ) -> Tuple[str, tuple]:
         """Format a query to retrieve statistics from pg_stat_statements."""
-        ...
-
-    def format_reset_stats_statement(self) -> Tuple[str, tuple]:
-        """Format statement to reset pg_stat_statements statistics."""
         ...
 
     def format_query_by_id_statement(self, queryid: int) -> Tuple[str, tuple]:

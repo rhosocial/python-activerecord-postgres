@@ -57,6 +57,13 @@ from .types.xml import PostgresXML
 from .adapters.xml import PostgresXMLAdapter
 from .types.network_address import PostgresMacaddr, PostgresMacaddr8
 from .adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
+from .adapters.uuid import PostgresUUIDAdapter
+from .types.pgvector import PostgresVector
+from .adapters.pgvector import PostgresVectorAdapter
+from .types.postgis import PostgresGeometry
+from .adapters.postgis import PostgresPostGISAdapter
+from .types.hstore import PostgresHstore
+from .adapters.hstore import PostgresHstoreAdapter
 from .types.text_search import (
     PostgresTsVector,
     PostgresTsQuery,
@@ -172,6 +179,83 @@ from .functions import (
     jsonb_path_query_first,
     jsonb_path_exists,
     jsonb_path_match,
+    # pgvector functions
+    vector_l2_distance,
+    vector_cosine_distance,
+    vector_inner_product,
+    vector_cosine_similarity,
+    vector_literal,
+    # PostGIS functions - Construction
+    st_make_point,
+    st_geom_from_text,
+    st_geog_from_text,
+    st_set_srid,
+    st_transform,
+    # PostGIS functions - Predicates
+    st_contains,
+    st_intersects,
+    st_within,
+    st_dwithin,
+    st_crosses,
+    st_touches,
+    st_overlaps,
+    # PostGIS functions - Measurements
+    st_distance,
+    st_area,
+    st_length,
+    # PostGIS functions - Output
+    st_as_geojson,
+    st_as_text,
+    # PostGIS functions - Operations
+    st_buffer,
+    st_envelope,
+    st_centroid,
+    # hstore functions - Constructors
+    hstore_from_record,
+    hstore_from_key_value,
+    # hstore functions - Key/Value Extraction
+    hstore_akeys,
+    hstore_skeys,
+    hstore_avals,
+    hstore_svals,
+    hstore_each,
+    # hstore functions - Conversion
+    hstore_to_array,
+    hstore_to_matrix,
+    hstore_to_json,
+    hstore_to_jsonb,
+    hstore_to_json_loose,
+    hstore_to_jsonb_loose,
+    # hstore functions - Subset
+    hstore_slice,
+    # hstore functions - Existence
+    hstore_exist,
+    hstore_defined,
+    # hstore functions - Delete
+    hstore_delete,
+    hstore_delete_keys,
+    hstore_delete_pairs,
+    # hstore functions - Record
+    hstore_populate_record,
+    # hstore functions - Operators
+    hstore_get_value,
+    hstore_get_value_as_text,
+    hstore_get_values,
+    hstore_concat,
+    hstore_key_exists,
+    hstore_all_keys_exist,
+    hstore_any_key_exists,
+    hstore_contains,
+    hstore_contained_by,
+    hstore_subtract_key,
+    hstore_subtract_keys,
+    hstore_subtract_pairs,
+    hstore_to_array_operator,
+    hstore_to_matrix_operator,
+    hstore_record_update,
+    # hstore functions - Subscript
+    hstore_subscript_get,
+    hstore_subscript_set,
 )
 
 
@@ -336,4 +420,88 @@ __all__ = [
     "jsonb_path_query_first",
     "jsonb_path_exists",
     "jsonb_path_match",
+    # UUID Type
+    "PostgresUUIDAdapter",
+    "gen_random_uuid",
+    "uuid_default_generator",
+    # pgvector Types
+    "PostgresVector",
+    "PostgresVectorAdapter",
+    "vector_l2_distance",
+    "vector_cosine_distance",
+    "vector_inner_product",
+    "vector_cosine_similarity",
+    "vector_literal",
+    # PostGIS Types
+    "PostgresGeometry",
+    "PostgresPostGISAdapter",
+    # hstore Types
+    "PostgresHstore",
+    "PostgresHstoreAdapter",
+    "st_make_point",
+    "st_geom_from_text",
+    "st_geog_from_text",
+    "st_set_srid",
+    "st_transform",
+    "st_contains",
+    "st_intersects",
+    "st_within",
+    "st_dwithin",
+    "st_crosses",
+    "st_touches",
+    "st_overlaps",
+    "st_distance",
+    "st_area",
+    "st_length",
+    "st_as_geojson",
+    "st_as_text",
+    "st_buffer",
+    "st_envelope",
+    "st_centroid",
+    # hstore functions - Constructors
+    "hstore_from_record",
+    "hstore_from_key_value",
+    # hstore functions - Key/Value Extraction
+    "hstore_akeys",
+    "hstore_skeys",
+    "hstore_avals",
+    "hstore_svals",
+    "hstore_each",
+    # hstore functions - Conversion
+    "hstore_to_array",
+    "hstore_to_matrix",
+    "hstore_to_json",
+    "hstore_to_jsonb",
+    "hstore_to_json_loose",
+    "hstore_to_jsonb_loose",
+    # hstore functions - Subset
+    "hstore_slice",
+    # hstore functions - Existence
+    "hstore_exist",
+    "hstore_defined",
+    # hstore functions - Delete
+    "hstore_delete",
+    "hstore_delete_keys",
+    "hstore_delete_pairs",
+    # hstore functions - Record
+    "hstore_populate_record",
+    # hstore functions - Operators
+    "hstore_get_value",
+    "hstore_get_value_as_text",
+    "hstore_get_values",
+    "hstore_concat",
+    "hstore_key_exists",
+    "hstore_all_keys_exist",
+    "hstore_any_key_exists",
+    "hstore_contains",
+    "hstore_contained_by",
+    "hstore_subtract_key",
+    "hstore_subtract_keys",
+    "hstore_subtract_pairs",
+    "hstore_to_array_operator",
+    "hstore_to_matrix_operator",
+    "hstore_record_update",
+    # hstore functions - Subscript
+    "hstore_subscript_get",
+    "hstore_subscript_set",
 ]

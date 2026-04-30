@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/test_transaction_deferrable.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/transaction/test_transaction_deferrable.py
 """
 PostgreSQL transaction deferrable constraint tests.
 

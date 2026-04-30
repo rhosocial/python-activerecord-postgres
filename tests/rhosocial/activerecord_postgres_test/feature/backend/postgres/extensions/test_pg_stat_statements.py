@@ -1,7 +1,11 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/extensions/test_pg_stat_statements.py
-"""Unit tests for PostgreSQL pg_stat_statements extension mixin."""
+"""Unit tests for PostgreSQL pg_stat_statements extension mixin and functions."""
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_stat_statements import (
+    pg_stat_statements_reset,
+)
 
 
 class TestPgStatStatementsMixin:
@@ -22,11 +26,12 @@ class TestPgStatStatementsMixin:
         assert "LIMIT 10" in sql
 
     def test_format_reset_stats_statement(self):
-        """Test reset stats statement formatting."""
+        """Test reset stats statement formatting via function factory."""
         dialect = PostgresDialect((14, 0, 0))
-        sql, params = dialect.format_reset_stats_statement()
-        assert "pg_stat_statements_reset" in sql
-        assert params == ()
+        result = pg_stat_statements_reset(dialect)
+        assert isinstance(result, core.FunctionCall)
+        sql, params = result.to_sql()
+        assert "pg_stat_statements_reset" in sql.lower()
 
     def test_format_query_by_id_statement(self):
         """Test query by ID statement formatting."""

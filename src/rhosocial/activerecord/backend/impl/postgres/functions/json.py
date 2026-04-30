@@ -2,24 +2,79 @@
 """
 PostgreSQL JSON Functions.
 
-This module provides SQL expression generators for PostgreSQL JSON
-functions and operators.
+This module provides two categories of functions:
+
+1. **JSON path builder functions** - Return PostgresJsonPath objects for
+   composing jsonpath expressions. These do not take a dialect parameter
+   since they build path objects, not SQL strings.
+
+2. **JSONB query functions** - Return core.FunctionCall Expression objects
+   that integrate with the Expression/Dialect architecture. These accept
+   a dialect parameter as their first argument.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-json.html
-
-All functions follow the expression-dialect separation architecture:
-- For SQL expression generators, first parameter is always the dialect instance
-- They return SQL expression strings or PostgresJsonPath objects
 """
 
+import json
 from typing import Any, Dict, Optional, Union, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression import bases, core
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
     from ..types.json import PostgresJsonPath
 
 
-# Path builder utility functions
+def _convert_to_expression(
+    dialect: "SQLDialectBase",
+    expr: Union[str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert an input value to an appropriate BaseExpression.
+
+    Supports strings and existing BaseExpression objects.
+
+    Args:
+        dialect: The SQL dialect instance
+        expr: Value to convert
+
+    Returns:
+        BaseExpression representing the value
+    """
+    if isinstance(expr, bases.BaseExpression):
+        return expr
+    elif isinstance(expr, str):
+        return core.Literal(dialect, expr)
+    else:
+        return core.Literal(dialect, expr)
+
+
+def _convert_jsonpath(
+    dialect: "SQLDialectBase",
+    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert a jsonpath value to an appropriate BaseExpression.
+
+    Handles PostgresJsonPath objects, strings, and existing
+    BaseExpression objects.
+
+    Args:
+        dialect: The SQL dialect instance
+        path: jsonpath value to convert
+
+    Returns:
+        BaseExpression representing the jsonpath literal
+    """
+    from ..types.json import PostgresJsonPath
+
+    if isinstance(path, PostgresJsonPath):
+        return core.Literal(dialect, str(path))
+    elif isinstance(path, bases.BaseExpression):
+        return path
+    else:
+        return core.Literal(dialect, str(path))
+
+
+# ============== Path Builder Functions ==============
 
 
 def json_path_root() -> "PostgresJsonPath":
@@ -137,131 +192,182 @@ def json_path_filter(path: Union["PostgresJsonPath", str], condition: str) -> "P
     return PostgresJsonPath(path).filter(condition)
 
 
-# SQL expression generators for common jsonpath operations
+# ============== JSONB Query Functions ==============
 
 
 def jsonb_path_query(
-    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
-) -> str:
-    """Generate jsonb_path_query SQL expression.
+    dialect: "SQLDialectBase",
+    column: Union[str, "bases.BaseExpression"],
+    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    vars: Optional[Dict[str, Any]] = None,
+    silent: bool = False,
+) -> core.FunctionCall:
+    """Generate jsonb_path_query function expression.
 
-    This function extracts JSON values that match the path.
+    This function extracts all JSON values that match the jsonpath
+    expression, returning a set of jsonb values.
 
     Args:
         dialect: The SQL dialect instance
-        column: Column name or JSON expression
-        path: jsonpath expression
-        vars: Optional variables for the path
+        column: Column name or expression referencing jsonb data
+        path: jsonpath expression (PostgresJsonPath, string, or BaseExpression)
+        vars: Optional variables for the path as a dict
+        silent: If True, suppress errors (PostgreSQL 13+)
 
     Returns:
-        SQL expression for jsonb_path_query function
+        FunctionCall expression for jsonb_path_query
 
     Examples:
-        >>> jsonb_path_query(dialect, 'data', '$.items[*]')
-        "jsonb_path_query(data, '$.items[*]')"
+        >>> func = jsonb_path_query(dialect, 'data', '$.items[*]')
+        >>> func.to_sql()
+        ('jsonb_path_query(%s, %s)', ('data', '$.items[*]'))
+
+        >>> func = jsonb_path_query(dialect, 'data', '$.items[*]', vars={'min': 10})
+        >>> func.to_sql()
+        ('jsonb_path_query(%s, %s, %s)', ('data', '$.items[*]', '{"min": 10}'))
+
+        >>> func = jsonb_path_query(dialect, 'data', '$.items[*]', silent=True)
+        >>> func.to_sql()
+        ('jsonb_path_query(%s, %s, %s)', ('data', '$.items[*]', True))
     """
-    from ..types.json import PostgresJsonPath
-    import json
-
-    path_str = path.path if isinstance(path, PostgresJsonPath) else path
-    path_literal = f"'{path_str}'"
-
-    if vars:
-        vars_json = json.dumps(vars).replace("'", "''")
-        return f"jsonb_path_query({column}, {path_literal}, '{vars_json}')"
-
-    return f"jsonb_path_query({column}, {path_literal})"
+    col_expr = _convert_to_expression(dialect, column)
+    path_expr = _convert_jsonpath(dialect, path)
+    args = [col_expr, path_expr]
+    if vars is not None:
+        vars_expr = core.Literal(dialect, json.dumps(vars))
+        args.append(vars_expr)
+    if silent:
+        args.append(core.Literal(dialect, True))
+    return core.FunctionCall(dialect, "jsonb_path_query", *args)
 
 
 def jsonb_path_query_first(
-    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
-) -> str:
-    """Generate jsonb_path_query_first SQL expression.
+    dialect: "SQLDialectBase",
+    column: Union[str, "bases.BaseExpression"],
+    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    vars: Optional[Dict[str, Any]] = None,
+    silent: bool = False,
+) -> core.FunctionCall:
+    """Generate jsonb_path_query_first function expression.
 
-    This function extracts the first JSON value that matches the path.
+    This function extracts the first JSON value that matches the
+    jsonpath expression, returning a single jsonb value.
 
     Args:
         dialect: The SQL dialect instance
-        column: Column name or JSON expression
-        path: jsonpath expression
-        vars: Optional variables for the path
+        column: Column name or expression referencing jsonb data
+        path: jsonpath expression (PostgresJsonPath, string, or BaseExpression)
+        vars: Optional variables for the path as a dict
+        silent: If True, suppress errors (PostgreSQL 13+)
 
     Returns:
-        SQL expression for jsonb_path_query_first function
+        FunctionCall expression for jsonb_path_query_first
+
+    Examples:
+        >>> func = jsonb_path_query_first(dialect, 'data', '$.items[0]')
+        >>> func.to_sql()
+        ('jsonb_path_query_first(%s, %s)', ('data', '$.items[0]'))
+
+        >>> func = jsonb_path_query_first(dialect, 'data', '$.name', vars={'lang': 'en'})
+        >>> func.to_sql()
+        ('jsonb_path_query_first(%s, %s, %s)', ('data', '$.name', '{"lang": "en"}'))
     """
-    from ..types.json import PostgresJsonPath
-    import json
-
-    path_str = path.path if isinstance(path, PostgresJsonPath) else path
-    path_literal = f"'{path_str}'"
-
-    if vars:
-        vars_json = json.dumps(vars).replace("'", "''")
-        return f"jsonb_path_query_first({column}, {path_literal}, '{vars_json}')"
-
-    return f"jsonb_path_query_first({column}, {path_literal})"
+    col_expr = _convert_to_expression(dialect, column)
+    path_expr = _convert_jsonpath(dialect, path)
+    args = [col_expr, path_expr]
+    if vars is not None:
+        vars_expr = core.Literal(dialect, json.dumps(vars))
+        args.append(vars_expr)
+    if silent:
+        args.append(core.Literal(dialect, True))
+    return core.FunctionCall(dialect, "jsonb_path_query_first", *args)
 
 
 def jsonb_path_exists(
-    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
-) -> str:
-    """Generate jsonb_path_exists SQL expression.
+    dialect: "SQLDialectBase",
+    column: Union[str, "bases.BaseExpression"],
+    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    vars: Optional[Dict[str, Any]] = None,
+    silent: bool = False,
+) -> core.FunctionCall:
+    """Generate jsonb_path_exists function expression.
 
-    This function checks if the path returns any values.
+    This function checks whether the jsonpath expression returns
+    any items for the specified jsonb value.
 
     Args:
         dialect: The SQL dialect instance
-        column: Column name or JSON expression
-        path: jsonpath expression
-        vars: Optional variables for the path
+        column: Column name or expression referencing jsonb data
+        path: jsonpath expression (PostgresJsonPath, string, or BaseExpression)
+        vars: Optional variables for the path as a dict
+        silent: If True, suppress errors (PostgreSQL 13+)
 
     Returns:
-        SQL expression for jsonb_path_exists function
+        FunctionCall expression for jsonb_path_exists
 
     Examples:
-        >>> jsonb_path_exists(dialect, 'data', '$.items[*]?(@.active)')
-        "jsonb_path_exists(data, '$.items[*]?(@.active)')"
+        >>> func = jsonb_path_exists(dialect, 'data', '$.items[*]?(@.active)')
+        >>> func.to_sql()
+        ('jsonb_path_exists(%s, %s)', ('data', '$.items[*]?(@.active)'))
+
+        >>> func = jsonb_path_exists(dialect, 'data', '$.items[*]', vars={'min': 5})
+        >>> func.to_sql()
+        ('jsonb_path_exists(%s, %s, %s)', ('data', '$.items[*]', '{"min": 5}'))
     """
-    from ..types.json import PostgresJsonPath
-    import json
-
-    path_str = path.path if isinstance(path, PostgresJsonPath) else path
-    path_literal = f"'{path_str}'"
-
-    if vars:
-        vars_json = json.dumps(vars).replace("'", "''")
-        return f"jsonb_path_exists({column}, {path_literal}, '{vars_json}')"
-
-    return f"jsonb_path_exists({column}, {path_literal})"
+    col_expr = _convert_to_expression(dialect, column)
+    path_expr = _convert_jsonpath(dialect, path)
+    args = [col_expr, path_expr]
+    if vars is not None:
+        vars_expr = core.Literal(dialect, json.dumps(vars))
+        args.append(vars_expr)
+    if silent:
+        args.append(core.Literal(dialect, True))
+    return core.FunctionCall(dialect, "jsonb_path_exists", *args)
 
 
 def jsonb_path_match(
-    dialect: "SQLDialectBase", column: str, path: Union["PostgresJsonPath", str], vars: Optional[Dict[str, Any]] = None
-) -> str:
-    """Generate jsonb_path_match SQL expression.
+    dialect: "SQLDialectBase",
+    column: Union[str, "bases.BaseExpression"],
+    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    vars: Optional[Dict[str, Any]] = None,
+    silent: bool = False,
+) -> core.FunctionCall:
+    """Generate jsonb_path_match function expression.
 
-    This function returns true if the path predicate is satisfied.
+    This function returns true if the jsonpath predicate is satisfied
+    for the specified jsonb value (i.e., returns a non-empty sequence).
+
+    Unlike jsonb_path_exists which checks for any match, jsonb_path_match
+    is used with predicate expressions that return boolean results.
 
     Args:
         dialect: The SQL dialect instance
-        column: Column name or JSON expression
-        path: jsonpath predicate expression
-        vars: Optional variables for the path
+        column: Column name or expression referencing jsonb data
+        path: jsonpath predicate expression (PostgresJsonPath, string, or BaseExpression)
+        vars: Optional variables for the path as a dict
+        silent: If True, suppress errors (PostgreSQL 13+)
 
     Returns:
-        SQL expression for jsonb_path_match function
+        FunctionCall expression for jsonb_path_match
+
+    Examples:
+        >>> func = jsonb_path_match(dialect, 'data', '$.items[*] ? (@.price > 10)')
+        >>> func.to_sql()
+        ('jsonb_path_match(%s, %s)', ('data', '$.items[*] ? (@.price > 10)'))
+
+        >>> func = jsonb_path_match(dialect, 'data', '$.count > $threshold', vars={'threshold': 5})
+        >>> func.to_sql()
+        ('jsonb_path_match(%s, %s, %s)', ('data', '$.count > $threshold', '{"threshold": 5}'))
     """
-    from ..types.json import PostgresJsonPath
-    import json
-
-    path_str = path.path if isinstance(path, PostgresJsonPath) else path
-    path_literal = f"'{path_str}'"
-
-    if vars:
-        vars_json = json.dumps(vars).replace("'", "''")
-        return f"jsonb_path_match({column}, {path_literal}, '{vars_json}')"
-
-    return f"jsonb_path_match({column}, {path_literal})"
+    col_expr = _convert_to_expression(dialect, column)
+    path_expr = _convert_jsonpath(dialect, path)
+    args = [col_expr, path_expr]
+    if vars is not None:
+        vars_expr = core.Literal(dialect, json.dumps(vars))
+        args.append(vars_expr)
+    if silent:
+        args.append(core.Literal(dialect, True))
+    return core.FunctionCall(dialect, "jsonb_path_match", *args)
 
 
 __all__ = [
