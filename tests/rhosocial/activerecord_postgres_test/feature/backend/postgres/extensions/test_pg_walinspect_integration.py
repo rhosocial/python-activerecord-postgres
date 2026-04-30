@@ -135,7 +135,8 @@ class TestPgWalinspectIntegration:
             error_msg = str(e).lower()
             if ("permission denied" in error_msg
                 or "must be superuser" in error_msg
-                or "could not find a valid record" in error_msg):
+                or "could not find a valid record" in error_msg
+                or "future start lsn" in error_msg):
                 pytest.skip(
                     "pg_walinspect requires superuser privileges or valid WAL range"
                 )
@@ -212,7 +213,8 @@ class TestAsyncPgWalinspectIntegration:
             error_msg = str(e).lower()
             if ("permission denied" in error_msg
                 or "must be superuser" in error_msg
-                or "could not find a valid record" in error_msg):
+                or "could not find a valid record" in error_msg
+                or "future start lsn" in error_msg):
                 pytest.skip(
                     "pg_walinspect requires superuser privileges or valid WAL range"
                 )

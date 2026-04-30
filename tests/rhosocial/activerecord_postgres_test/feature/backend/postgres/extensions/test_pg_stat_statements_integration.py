@@ -65,8 +65,10 @@ class TestPgStatStatementsIntegration:
             assert result.data is not None
         except Exception as e:
             error_msg = str(e).lower()
-            if "permission denied" in error_msg or "must be superuser" in error_msg:
-                pytest.skip("pg_stat_statements requires superuser privileges")
+            if ("permission denied" in error_msg
+                or "must be superuser" in error_msg
+                or "shared_preload_libraries" in error_msg):
+                pytest.skip("pg_stat_statements requires shared_preload_libraries or superuser privileges")
             raise
 
     def test_pg_stat_statements_reset(self, pg_stat_statements_env):
@@ -86,8 +88,10 @@ class TestPgStatStatementsIntegration:
             # If we got here, the reset succeeded
         except Exception as e:
             error_msg = str(e).lower()
-            if "permission denied" in error_msg or "must be superuser" in error_msg:
-                pytest.skip("pg_stat_statements_reset requires superuser privileges")
+            if ("permission denied" in error_msg
+                or "must be superuser" in error_msg
+                or "shared_preload_libraries" in error_msg):
+                pytest.skip("pg_stat_statements_reset requires shared_preload_libraries or superuser privileges")
             raise
 
 
@@ -126,8 +130,10 @@ class TestAsyncPgStatStatementsIntegration:
             assert result.data is not None
         except Exception as e:
             error_msg = str(e).lower()
-            if "permission denied" in error_msg or "must be superuser" in error_msg:
-                pytest.skip("pg_stat_statements requires superuser privileges")
+            if ("permission denied" in error_msg
+                or "must be superuser" in error_msg
+                or "shared_preload_libraries" in error_msg):
+                pytest.skip("pg_stat_statements requires shared_preload_libraries or superuser privileges")
             raise
 
     @pytest.mark.asyncio
@@ -148,6 +154,8 @@ class TestAsyncPgStatStatementsIntegration:
             # If we got here, the reset succeeded
         except Exception as e:
             error_msg = str(e).lower()
-            if "permission denied" in error_msg or "must be superuser" in error_msg:
-                pytest.skip("pg_stat_statements_reset requires superuser privileges")
+            if ("permission denied" in error_msg
+                or "must be superuser" in error_msg
+                or "shared_preload_libraries" in error_msg):
+                pytest.skip("pg_stat_statements_reset requires shared_preload_libraries or superuser privileges")
             raise
