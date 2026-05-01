@@ -51,7 +51,7 @@ class PostgresTypeMixin:
         if schema:
             type_name = f"{self.format_identifier(schema)}.{type_name}"
 
-        escaped_values = [f"'{v}'" for v in values]
+        escaped_values = [f"'{self._escape_sql_string(str(v))}'" for v in values]
         values_str = ", ".join(escaped_values)
 
         sql = f"CREATE TYPE {type_name} AS ENUM ({values_str})"

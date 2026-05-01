@@ -5,7 +5,7 @@ This module provides the PostgresIndexMixin class which implements
 PostgreSQL-specific index features and operations.
 """
 
-from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 
@@ -247,12 +247,18 @@ class PostgresIndexMixin:
         include_columns: Optional[List[str]] = None,
         with_options: Optional[Dict[str, Any]] = None,
         tablespace: Optional[str] = None,
-        where_clause: Optional[str] = None,
+        where_clause: Optional[Union[str, ToSQLProtocol]] = None,
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 
         This method provides a convenient way to create indexes with
         PostgreSQL-specific options without using expression objects.
+
+        Args:
+            where_clause: Accepts either a string (for hardcoded conditions)
+                or a ToSQLProtocol expression for parameterized queries.
+                WARNING: When using string, never pass user input directly;
+                always use ToSQLProtocol expressions for untrusted input.
         """
         parts = ["CREATE"]
 
@@ -312,6 +318,11 @@ class PostgresIndexMixin:
 
         # WHERE clause for partial index
         if where_clause:
-            parts.append(f"WHERE {where_clause}")
+            if isinstance(where_clause, ToSQLProtocol):
+                where_sql, where_params = where_clause.to_sql()
+                parts.append(f"WHERE {where_sql}")
+                all_params = list(all_params) + list(where_params)
+            else:
+                parts.append(f"WHERE {where_clause}")
 
         return (" ".join(parts), ())

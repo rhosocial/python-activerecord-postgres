@@ -46,8 +46,8 @@ class PostgresExtendedStatisticsMixin:
         if not self.supports_create_statistics():
             raise ValueError("CREATE STATISTICS requires PostgreSQL 10+")
 
-        full_name = f"{expr.schema}.{expr.name}" if expr.schema else expr.name
-        table_full = f"{expr.schema}.{expr.table_name}" if expr.schema else expr.table_name
+        full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}" if expr.schema else self.format_identifier(expr.name)
+        table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}" if expr.schema else self.format_identifier(expr.table_name)
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 
@@ -78,7 +78,7 @@ class PostgresExtendedStatisticsMixin:
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
-        full_name = f"{expr.schema}.{expr.name}" if expr.schema else expr.name
+        full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}" if expr.schema else self.format_identifier(expr.name)
         exists_clause = "IF EXISTS " if expr.if_exists else ""
 
         sql = f"DROP STATISTICS {exists_clause}{full_name}"
