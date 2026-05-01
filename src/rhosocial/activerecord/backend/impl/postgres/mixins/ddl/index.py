@@ -325,4 +325,4 @@ class PostgresIndexMixin:
             else:
                 parts.append(f"WHERE {where_clause}")
 
-        return (" ".join(parts), ())
+        return (" ".join(parts), tuple(all_params))
