@@ -437,6 +437,20 @@ class PostgresDialect(
         self.version = version
         super().__init__()
 
+    @staticmethod
+    def _validate_data_type(data_type: str) -> bool:
+        """Validate data type for safe embedding in SQL.
+
+        PostgreSQL supports array types like TEXT[], INTEGER[].
+
+        Note: rhosocial-activerecord base dialect will include this change in
+        a future release. This override can be removed after upgrading to that
+        version (expected: include brackets [] in the allowlist pattern).
+        """
+        import re
+
+        return bool(re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", data_type))
+
     def get_parameter_placeholder(self, position: int = 0) -> str:
         """psycopg uses '%s' for placeholders."""
         return "%s"
