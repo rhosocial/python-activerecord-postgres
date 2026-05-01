@@ -44,7 +44,19 @@ jobs:
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
-        # Options to wait for postgres to be healthy before starting the job
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      postgres-exts:
+        image: vistart/postgres-exts:${{ matrix.postgres-version }}
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -65,10 +77,10 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Install activerecord and testsuite from PyPI
+      - name: Install activerecord and testsuite from PyPI/git
         run: |
-          pip install rhosocial-activerecord==1.0.0.dev24
-          pip install rhosocial-activerecord-testsuite==1.0.0.dev11
+          pip install rhosocial-activerecord==1.0.0.dev25
+          pip install rhosocial-activerecord-testsuite==1.0.0.dev12
 
       - name: Create postgres scenario config
         run: |
@@ -77,6 +89,12 @@ jobs:
             postgres_default:
               host: 127.0.0.1
               port: 5432
+              database: test_db
+              username: root
+              password: password
+            postgres_exts:
+              host: 127.0.0.1
+              port: 5433
               database: test_db
               username: root
               password: password
@@ -95,17 +113,22 @@ jobs:
             sleep 2
           done
           echo "postgres is ready!"
+          until pg_isready -h 127.0.0.1 -p 5433 -U root; do
+            echo "Waiting for postgres-exts..."
+            sleep 2
+          done
+          echo "postgres-exts is ready!"
 
       - name: Run tests (skip for postgres 18)
         if: matrix.postgres-version != '18'
         run: |
-          export PYTHONPATH=src
+          export PYTHONPATH=src:tests
           python -m pytest tests/ --tb=short
 
       - name: Run tests with coverage (only for postgres 18)
         if: matrix.postgres-version == '18'
         run: |
-          export PYTHONPATH=src
+          export PYTHONPATH=src:tests
           pip install codecov
           coverage run --source=src -m pytest tests/ --tb=short
           coverage xml

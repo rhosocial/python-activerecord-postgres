@@ -7,12 +7,14 @@ that extend beyond standard SQL.
 
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
+
 if TYPE_CHECKING:
-    from ...expression.ddl import ReindexExpression
+    from ...expression.ddl import PostgresReindexExpression
 
 
 @runtime_checkable
-class PostgresIndexSupport(Protocol):
+class PostgresIndexSupport(IndexSupport, Protocol):
     """PostgreSQL index enhancements protocol.
 
     Feature Source: Native support (no extension required)
@@ -109,11 +111,61 @@ class PostgresIndexSupport(Protocol):
         """
         ...
 
-    def format_reindex_statement(self, expr: "ReindexExpression") -> Tuple[str, tuple]:
+    def supports_streaming_btree_index_build(self) -> bool:
+        """Whether streaming B-tree index build is supported.
+
+        Native feature, PostgreSQL 18+.
+        Allows concurrent index builds with less memory usage.
+        """
+        ...
+
+    def supports_create_statistics(self) -> bool:
+        """Whether CREATE STATISTICS for extended statistics is supported.
+
+        Native feature, PostgreSQL 10+.
+        Allows creating extended statistics objects for better
+        query planning on column correlations.
+        """
+        ...
+
+    def supports_statistics_mcv(self) -> bool:
+        """Whether MCV (Most Common Values) statistics are supported.
+
+        Native feature, PostgreSQL 12+.
+        Extended statistics can include MCV lists for better
+        estimation of combined column values.
+        """
+        ...
+
+    def supports_concurrent_unique_nulls_not_distinct(self) -> bool:
+        """Whether CONCURRENT unique index with NULLS NOT DISTINCT is supported.
+
+        Native feature, PostgreSQL 16+.
+        """
+        ...
+
+    def supports_statistics_dependencies(self) -> bool:
+        """Whether statistics dependencies are supported.
+
+        Native feature, PostgreSQL 10+.
+        Functional dependencies between columns can be tracked
+        for better row estimation.
+        """
+        ...
+
+    def supports_statistics_ndistinct(self) -> bool:
+        """Whether NDistinct statistics are supported.
+
+        Native feature, PostgreSQL 10+.
+        Tracks number of distinct values for column groups.
+        """
+        ...
+
+    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Args:
-            expr: ReindexExpression containing all REINDEX options
+            expr: PostgresReindexExpression containing all REINDEX options
 
         Returns:
             Tuple of (SQL string, parameters tuple)

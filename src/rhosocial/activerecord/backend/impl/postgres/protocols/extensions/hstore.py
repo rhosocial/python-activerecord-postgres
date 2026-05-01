@@ -1,8 +1,10 @@
-# src/rhosocial/activerecord/backend/impl/postgres/protocols/extensions/hstore.py
 """hstore extension protocol definition.
 
 hstore is a PostgreSQL extension that implements the hstore data type
 for storing key-value pairs within a single PostgreSQL value.
+
+For SQL expression generation, use the function factories in
+``functions/hstore.py`` instead of the removed format_* methods.
 
 See: https://www.postgresql.org/docs/current/hstore.html
 """

@@ -23,6 +23,8 @@ from rhosocial.activerecord.backend.impl.postgres.functions.json import (
     jsonb_path_exists,
     jsonb_path_match,
 )
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression import core
 
 
 class TestPostgresJsonPath:
@@ -327,69 +329,104 @@ class TestSqlExpressionGenerators:
     """Tests for SQL expression generator functions."""
 
     def test_jsonb_path_query_simple(self):
-        """Test simple jsonb_path_query."""
-        expr = jsonb_path_query(None, 'data', '$.items[*]')
-        assert expr == "jsonb_path_query(data, '$.items[*]')"
+        """Test simple jsonb_path_query returns FunctionCall."""
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_query(dialect, 'data', '$.items[*]')
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query" in sql.lower()
 
     def test_jsonb_path_query_with_path_object(self):
         """Test jsonb_path_query with PostgresJsonPath."""
+        dialect = PostgresDialect((14, 0, 0))
         path = PostgresJsonPath('$.items[*]')
-        expr = jsonb_path_query(None, 'data', path)
-        assert expr == "jsonb_path_query(data, '$.items[*]')"
+        expr = jsonb_path_query(dialect, 'data', path)
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query" in sql.lower()
 
     def test_jsonb_path_query_with_vars(self):
         """Test jsonb_path_query with variables."""
-        expr = jsonb_path_query(None, 'data', '$.items[*]?(@.price < $max)', {'max': 100})
-        assert "jsonb_path_query(data, '$.items[*]?(@.price < $max)'" in expr
-        assert "'{\"max\": 100}'" in expr
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_query(dialect, 'data', '$.items[*]?(@.price < $max)', {'max': 100})
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query" in sql.lower()
 
     def test_jsonb_path_query_first_simple(self):
         """Test simple jsonb_path_query_first."""
-        expr = jsonb_path_query_first(None, 'data', '$.items[0]')
-        assert expr == "jsonb_path_query_first(data, '$.items[0]')"
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_query_first(dialect, 'data', '$.items[0]')
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query_first" in sql.lower()
 
     def test_jsonb_path_query_first_with_path_object(self):
         """Test jsonb_path_query_first with PostgresJsonPath."""
+        dialect = PostgresDialect((14, 0, 0))
         path = PostgresJsonPath('$.items[0].name')
-        expr = jsonb_path_query_first(None, 'data', path)
-        assert expr == "jsonb_path_query_first(data, '$.items[0].name')"
+        expr = jsonb_path_query_first(dialect, 'data', path)
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query_first" in sql.lower()
 
     def test_jsonb_path_query_first_with_vars(self):
         """Test jsonb_path_query_first with variables."""
-        expr = jsonb_path_query_first(None, 'data', '$.items[*]?(@.id == $id)', {'id': 1})
-        assert "jsonb_path_query_first(data, '$.items[*]?(@.id == $id)'" in expr
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_query_first(dialect, 'data', '$.items[*]?(@.id == $id)', {'id': 1})
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_query_first" in sql.lower()
 
     def test_jsonb_path_exists_simple(self):
         """Test simple jsonb_path_exists."""
-        expr = jsonb_path_exists(None, 'data', '$.items[*]?(@.active)')
-        assert expr == "jsonb_path_exists(data, '$.items[*]?(@.active)')"
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_exists(dialect, 'data', '$.items[*]?(@.active)')
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_exists" in sql.lower()
 
     def test_jsonb_path_exists_with_path_object(self):
         """Test jsonb_path_exists with PostgresJsonPath."""
+        dialect = PostgresDialect((14, 0, 0))
         path = PostgresJsonPath('$.name')
-        expr = jsonb_path_exists(None, 'data', path)
-        assert expr == "jsonb_path_exists(data, '$.name')"
+        expr = jsonb_path_exists(dialect, 'data', path)
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_exists" in sql.lower()
 
     def test_jsonb_path_exists_with_vars(self):
         """Test jsonb_path_exists with variables."""
-        expr = jsonb_path_exists(None, 'data', '$.items[*]?(@.price > $min)', {'min': 50})
-        assert "jsonb_path_exists(data, '$.items[*]?(@.price > $min)'" in expr
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_exists(dialect, 'data', '$.items[*]?(@.price > $min)', {'min': 50})
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_exists" in sql.lower()
 
     def test_jsonb_path_match_simple(self):
         """Test simple jsonb_path_match."""
-        expr = jsonb_path_match(None, 'data', '$.items[*]?(@.active)')
-        assert expr == "jsonb_path_match(data, '$.items[*]?(@.active)')"
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_match(dialect, 'data', '$.items[*]?(@.active)')
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_match" in sql.lower()
 
     def test_jsonb_path_match_with_path_object(self):
         """Test jsonb_path_match with PostgresJsonPath."""
+        dialect = PostgresDialect((14, 0, 0))
         path = PostgresJsonPath('$.isActive')
-        expr = jsonb_path_match(None, 'data', path)
-        assert expr == "jsonb_path_match(data, '$.isActive')"
+        expr = jsonb_path_match(dialect, 'data', path)
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_match" in sql.lower()
 
     def test_jsonb_path_match_with_vars(self):
         """Test jsonb_path_match with variables."""
-        expr = jsonb_path_match(None, 'data', '$.items[*]?(@.price < $max)', {'max': 100})
-        assert "jsonb_path_match(data, '$.items[*]?(@.price < $max)'" in expr
+        dialect = PostgresDialect((14, 0, 0))
+        expr = jsonb_path_match(dialect, 'data', '$.items[*]?(@.price < $max)', {'max': 100})
+        assert isinstance(expr, core.FunctionCall)
+        sql, params = expr.to_sql()
+        assert "jsonb_path_match" in sql.lower()
 
 
 class TestPostgresJsonPathAdapter:

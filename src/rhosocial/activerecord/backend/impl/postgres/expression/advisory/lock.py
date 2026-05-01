@@ -37,7 +37,7 @@ class AdvisoryLockType(Enum):
     SHARED = "shared"  # Multiple sessions can hold the lock simultaneously
 
 
-class AdvisoryLockExpression(BaseExpression):
+class PostgresAdvisoryLockExpression(BaseExpression):
     """
     Expression for acquiring an advisory lock.
 
@@ -47,19 +47,19 @@ class AdvisoryLockExpression(BaseExpression):
 
     Usage:
         # Acquire exclusive session-level lock
-        expr = AdvisoryLockExpression(dialect, key=12345)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345)
         sql, params = expr.to_sql()  # SELECT pg_advisory_lock(12345)
 
         # Acquire shared session-level lock
-        expr = AdvisoryLockExpression(dialect, key=12345, shared=True)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345, shared=True)
         sql, params = expr.to_sql()  # SELECT pg_advisory_lock_shared(12345)
 
         # Transaction-level lock (auto-released on commit/rollback)
-        expr = AdvisoryLockExpression(dialect, key=12345, session=False)
+        expr = PostgresAdvisoryLockExpression(dialect, key=12345, session=False)
         sql, params = expr.to_sql()  # SELECT pg_advisory_xact_lock(12345)
 
         # Two-key variant
-        expr = AdvisoryLockExpression(dialect, key=(123, 456))
+        expr = PostgresAdvisoryLockExpression(dialect, key=(123, 456))
         sql, params = expr.to_sql()  # SELECT pg_advisory_lock(123, 456)
     """
 
@@ -94,21 +94,21 @@ class AdvisoryLockExpression(BaseExpression):
         return self.dialect.format_advisory_lock(self)
 
 
-class AdvisoryUnlockExpression(BaseExpression):
+class PostgresAdvisoryUnlockExpression(BaseExpression):
     """
     Expression for releasing an advisory lock.
 
     Usage:
         # Release session-level lock
-        expr = AdvisoryUnlockExpression(dialect, key=12345)
+        expr = PostgresAdvisoryUnlockExpression(dialect, key=12345)
         sql, params = expr.to_sql()  # SELECT pg_advisory_unlock(12345)
 
         # Release shared session-level lock
-        expr = AdvisoryUnlockExpression(dialect, key=12345, shared=True)
+        expr = PostgresAdvisoryUnlockExpression(dialect, key=12345, shared=True)
         # Note: pg_advisory_unlock works for both exclusive and shared locks
 
         # Two-key variant
-        expr = AdvisoryUnlockExpression(dialect, key=(123, 456))
+        expr = PostgresAdvisoryUnlockExpression(dialect, key=(123, 456))
         sql, params = expr.to_sql()  # SELECT pg_advisory_unlock(123, 456)
     """
 
@@ -140,12 +140,12 @@ class AdvisoryUnlockExpression(BaseExpression):
         return self.dialect.format_advisory_unlock(self)
 
 
-class AdvisoryUnlockAllExpression(BaseExpression):
+class PostgresAdvisoryUnlockAllExpression(BaseExpression):
     """
     Expression for releasing all advisory locks held by the current session.
 
     Usage:
-        expr = AdvisoryUnlockAllExpression(dialect)
+        expr = PostgresAdvisoryUnlockAllExpression(dialect)
         sql, params = expr.to_sql()  # SELECT pg_advisory_unlock_all()
     """
 
@@ -163,24 +163,24 @@ class AdvisoryUnlockAllExpression(BaseExpression):
         return self.dialect.format_advisory_unlock_all(self)
 
 
-class TryAdvisoryLockExpression(BaseExpression):
+class PostgresTryAdvisoryLockExpression(BaseExpression):
     """
     Expression for non-blocking advisory lock acquisition.
 
     Returns a boolean indicating whether the lock was acquired.
-    Unlike AdvisoryLockExpression, this does not wait if the lock is unavailable.
+    Unlike PostgresAdvisoryLockExpression, this does not wait if the lock is unavailable.
 
     Usage:
         # Non-blocking acquire exclusive session-level lock
-        expr = TryAdvisoryLockExpression(dialect, key=12345)
+        expr = PostgresTryAdvisoryLockExpression(dialect, key=12345)
         sql, params = expr.to_sql()  # SELECT pg_try_advisory_lock(12345)
 
         # Non-blocking acquire shared session-level lock
-        expr = TryAdvisoryLockExpression(dialect, key=12345, shared=True)
+        expr = PostgresTryAdvisoryLockExpression(dialect, key=12345, shared=True)
         sql, params = expr.to_sql()  # SELECT pg_try_advisory_lock_shared(12345)
 
         # Transaction-level variant
-        expr = TryAdvisoryLockExpression(dialect, key=12345, session=False)
+        expr = PostgresTryAdvisoryLockExpression(dialect, key=12345, session=False)
         sql, params = expr.to_sql()  # SELECT pg_try_advisory_xact_lock(12345)
     """
 

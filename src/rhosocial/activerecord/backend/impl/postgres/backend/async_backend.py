@@ -40,31 +40,18 @@ from rhosocial.activerecord.backend.errors import (
     QueryError,
 )
 from rhosocial.activerecord.backend.result import QueryResult
-from ..adapters import (
-    PostgresListAdapter,
-    PostgresJSONBAdapter,
-    PostgresNetworkAddressAdapter,
-    PostgresEnumAdapter,
-    PostgresRangeAdapter,
-    PostgresMultirangeAdapter,
-)
-from ..adapters.geometric import PostgresGeometryAdapter
-from ..adapters.monetary import PostgresMoneyAdapter
-from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
-from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
-from ..adapters.pg_lsn import PostgresLsnAdapter
-from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
-from ..config import PostgresConnectionConfig, RangeAdapterMode
+from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
-from .base import PostgresBackendMixin
+from .base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
 
 class AsyncPostgresBackend(
-    AsyncExplainBackendMixin,
     IntrospectorBackendMixin,
     PostgresBackendMixin,
+    AsyncExplainBackendMixin,
+    PostgresConcurrencyMixin,
     AsyncStorageBackend,
 ):
     """Asynchronous PostgreSQL-specific backend implementation."""
@@ -171,72 +158,6 @@ class AsyncPostgresBackend(
 
         return AsyncPostgreSQLIntrospector(self, AsyncIntrospectorExecutor(self))
 
-    def _register_postgres_adapters(self):
-        """Register PostgreSQL-specific type adapters.
-
-        Range and Multirange adapter registration is controlled by configuration:
-        - range_adapter_mode: Controls how Range types are handled
-          - NATIVE (default): Use psycopg's native Range type (pass-through)
-          - CUSTOM: Use PostgresRange custom type
-          - BOTH: Register both adapters, with custom taking precedence
-        - multirange_adapter_mode: Same for Multirange types (PG 14+ only)
-
-        Note: The following adapters are NOT registered by default due to str->str
-        type mapping conflicts with existing string handling:
-        - PostgresXMLAdapter: XML type
-        - PostgresBitStringAdapter: bit/varbit types
-        - PostgresJsonPathAdapter: jsonpath type
-
-        Users should specify these explicitly when working with such columns.
-        """
-        pg_adapters = [
-            PostgresListAdapter(),
-            PostgresJSONBAdapter(),
-            PostgresNetworkAddressAdapter(),
-            PostgresGeometryAdapter(),
-            PostgresEnumAdapter(),
-            PostgresMoneyAdapter(),
-            PostgresMacaddrAdapter(),
-            PostgresMacaddr8Adapter(),
-            PostgresTsVectorAdapter(),
-            PostgresTsQueryAdapter(),
-            PostgresLsnAdapter(),
-            PostgresOidAdapter(),
-            PostgresXidAdapter(),
-            PostgresTidAdapter(),
-            # PostgresJsonPathAdapter(), # Not registered: str->str conflict
-            # PostgresXMLAdapter is NOT registered by default
-            # due to str->str type pair conflict
-        ]
-
-        for adapter in pg_adapters:
-            for py_type, db_types in adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(adapter, py_type, db_type)
-
-        # Register Range adapters based on configuration
-        range_mode = getattr(self.config, "range_adapter_mode", RangeAdapterMode.NATIVE)
-        if range_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
-            range_adapter = PostgresRangeAdapter()
-            for py_type, db_types in range_adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(range_adapter, py_type, db_type)
-            self.log(logging.DEBUG, "Registered PostgresRangeAdapter (custom range type)")
-
-        # Register Multirange adapters based on configuration (PG 14+ only)
-        # Note: Version check happens in dialect, but at this point we haven't
-        # connected yet, so we register if configured. The adapter itself will
-        # handle version-specific logic if needed.
-        multirange_mode = getattr(self.config, "multirange_adapter_mode", RangeAdapterMode.NATIVE)
-        if multirange_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
-            multirange_adapter = PostgresMultirangeAdapter()
-            for py_type, db_types in multirange_adapter.supported_types.items():
-                for db_type in db_types:
-                    self.adapter_registry.register(multirange_adapter, py_type, db_type)
-            self.log(logging.DEBUG, "Registered PostgresMultirangeAdapter (custom multirange type)")
-
-        self.log(logging.DEBUG, "Registered PostgreSQL-specific type adapters")
-
     @property
     def dialect(self):
         """Get the PostgreSQL dialect instance."""
@@ -246,6 +167,7 @@ class AsyncPostgresBackend(
     def transaction_manager(self):
         """Get the async PostgreSQL transaction manager."""
         return self._transaction_manager
+
 
     async def connect(self):
         """Establish async connection to PostgreSQL database."""
@@ -320,6 +242,7 @@ class AsyncPostgresBackend(
                 conn_params.update(ssl_params)
 
             self._connection = await AsyncConnection.connect(**conn_params)
+            await self._connection.set_autocommit(True)  # Disable psycopg auto-transaction management
 
             self.log(
                 logging.INFO,
@@ -334,7 +257,7 @@ class AsyncPostgresBackend(
         if self._connection:
             try:
                 # Rollback any active transaction
-                if self.transaction_manager.is_active:
+                if self.in_transaction:
                     await self.transaction_manager.rollback()
 
                 await self._connection.close()
@@ -495,28 +418,15 @@ class AsyncPostgresBackend(
             self.log(logging.DEBUG, f"Extensions detected: {ext_info}")
 
     async def _detect_extensions(self) -> Dict[str, PostgresExtensionInfo]:
-        """Detect installed extensions."""
+        """Detect installed and available extensions."""
         async with self._connection.cursor() as cursor:
-            await cursor.execute("""
-                SELECT extname, extversion, nspname as schema_name
-                FROM pg_extension
-                JOIN pg_namespace ON pg_extension.extnamespace = pg_namespace.oid
-                """)
-            rows = await cursor.fetchall()
+            await cursor.execute(PostgresDialect.SQL_INSTALLED_EXTENSIONS)
+            installed_rows = await cursor.fetchall()
 
-            extensions = {}
-            for row in rows:
-                ext_name = row[0]
-                extensions[ext_name] = PostgresExtensionInfo(
-                    name=ext_name, installed=True, version=row[1], schema=row[2]
-                )
+            await cursor.execute(PostgresDialect.SQL_AVAILABLE_EXTENSIONS)
+            available_rows = await cursor.fetchall()
 
-            # Add known but not installed extensions
-            for known_ext in PostgresDialect.KNOWN_EXTENSIONS:
-                if known_ext not in extensions:
-                    extensions[known_ext] = PostgresExtensionInfo(name=known_ext, installed=False)
-
-            return extensions
+            return PostgresDialect.build_extension_map(installed_rows, available_rows)
 
     async def ping(self, reconnect: bool = True) -> bool:
         """
@@ -565,93 +475,6 @@ class AsyncPostgresBackend(
                     self.log(logging.ERROR, f"Failed to reconnect after ping failure: {str(connect_error)}")
                     return False
             return False
-
-    # PostgreSQL connection error SQLSTATE codes
-    # Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
-    CONNECTION_ERROR_SQLSTATES = {
-        "08000",  # CONNECTION_EXCEPTION
-        "08001",  # SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION
-        "08003",  # CONNECTION_DOES_NOT_EXIST
-        "08004",  # SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION
-        "08006",  # CONNECTION_FAILURE
-        "08007",  # TRANSACTION_RESOLUTION_UNKNOWN
-        "08P01",  # PROTOCOL_VIOLATION
-        "57P01",  # ADMIN_SHUTDOWN
-        "57P02",  # CRASH_SHUTDOWN
-        "57P03",  # CANNOT_CONNECT_NOW
-        "57P04",  # DATABASE_DROPPED
-    }
-
-    def _is_connection_error(self, error: Exception) -> bool:
-        """
-        Check if an error indicates a connection loss.
-
-        This method identifies errors that result from lost or invalid connections,
-        which should trigger automatic reconnection attempts.
-
-        Args:
-            error: The exception to check
-
-        Returns:
-            True if the error indicates a connection problem, False otherwise
-        """
-        if isinstance(error, PsycopgOperationalError):
-            # Check SQLSTATE code if available
-            sqlstate = getattr(error, 'sqlstate', None)
-            if sqlstate and sqlstate in self.CONNECTION_ERROR_SQLSTATES:
-                return True
-
-            # Check for common connection error patterns in message
-            error_msg = str(error).lower()
-            connection_error_patterns = [
-                'connection',
-                'connect',
-                'closed',
-                'terminated',
-                'unexpectedly',
-                'broken pipe',
-                'reset by peer',
-                'server closed',
-                'server has gone away',
-            ]
-            for pattern in connection_error_patterns:
-                if pattern in error_msg:
-                    return True
-
-        return False
-
-    def _is_connection_error_message(self, error_msg: str) -> bool:
-        """
-        Check if an error message indicates a connection loss.
-
-        This method identifies error messages that result from lost or invalid connections,
-        which should trigger automatic reconnection attempts.
-
-        Args:
-            error_msg: The error message to check
-
-        Returns:
-            True if the message indicates a connection problem, False otherwise
-        """
-        error_msg_lower = error_msg.lower()
-        connection_error_patterns = [
-            'connection',
-            'connect',
-            'closed',
-            'terminated',
-            'terminating connection due to administrator command',
-            'unexpectedly',
-            'broken pipe',
-            'reset by peer',
-            'server closed',
-            'server has gone away',
-            'ssl connection has been closed',
-            'consuming input failed',
-        ]
-        for pattern in connection_error_patterns:
-            if pattern in error_msg_lower:
-                return True
-        return False
 
     async def _reconnect(self) -> bool:
         """
@@ -787,7 +610,7 @@ class AsyncPostgresBackend(
         """
         try:
             # First, try the transaction manager if active
-            if self._transaction_manager and self._transaction_manager.is_active:
+            if self.in_transaction:
                 self.log(logging.INFO, "Attempting to rollback transaction after error")
                 await self._transaction_manager.rollback()
 
@@ -818,7 +641,7 @@ class AsyncPostgresBackend(
                 return
 
             # Check if we're not in an active transaction
-            if not self._transaction_manager or not self._transaction_manager.is_active:
+            if not self.in_transaction:
                 # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
                 if not getattr(self.config, "autocommit", False):
                     await self._connection.commit()
@@ -837,20 +660,6 @@ class AsyncPostgresBackend(
             if not getattr(self.config, "autocommit", False):
                 await self._connection.commit()
                 self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
-
-    def log(self, level: int, message: str):
-        """Log a message with the specified level."""
-        if hasattr(self, "_logger") and self._logger:
-            self._logger.log(level, message)
-        else:
-            # Fallback logging
-            print(f"[{logging.getLevelName(level)}] {message}")
-
-    def _parse_explain_result(self, raw_rows, sql, duration):
-        """Return a typed :class:`PostgresExplainResult` for PostgreSQL EXPLAIN output."""
-        from ..explain import PostgresExplainResult, PostgresExplainPlanLine
-        rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
-        return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
     # region Advisory Lock Methods
 
@@ -873,9 +682,9 @@ class AsyncPostgresBackend(
         Raises:
             DatabaseError: If the lock operation fails
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryLockExpression
 
-        expr = AdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        expr = PostgresAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
         await self.execute(sql, params)
 
@@ -890,9 +699,9 @@ class AsyncPostgresBackend(
         Returns:
             True if the lock was released, False if it was not held
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockExpression
 
-        expr = AdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
+        expr = PostgresAdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
         sql, params = expr.to_sql()
         result = await self.execute(sql, params)
         # pg_advisory_unlock returns boolean in first column
@@ -906,9 +715,9 @@ class AsyncPostgresBackend(
         """
         Release all advisory locks held by the current session asynchronously.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import AdvisoryUnlockAllExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockAllExpression
 
-        expr = AdvisoryUnlockAllExpression(self.dialect)
+        expr = PostgresAdvisoryUnlockAllExpression(self.dialect)
         sql, params = expr.to_sql()
         await self.execute(sql, params)
 
@@ -929,9 +738,9 @@ class AsyncPostgresBackend(
         Returns:
             True if the lock was acquired, False if it was not available
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import TryAdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresTryAdvisoryLockExpression
 
-        expr = TryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
+        expr = PostgresTryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
         result = await self.execute(sql, params)
         # pg_try_advisory_lock returns boolean in first column

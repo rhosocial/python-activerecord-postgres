@@ -2,7 +2,13 @@
 """
 PostgreSQL text search functions for SQL expression generation.
 
-This module provides utility functions for generating PostgreSQL full-text search SQL expressions.
+This module provides utility functions for generating PostgreSQL full-text search
+SQL expressions using the Expression/Dialect architecture.
+
+All functions follow the expression-dialect separation architecture:
+- First parameter is always the dialect instance
+- They return Expression objects (FunctionCall, BinaryExpression, etc.)
+- They do not concatenate SQL strings directly
 
 Supported functions:
 - to_tsvector() - Convert text to tsvector
@@ -20,341 +26,461 @@ Supported functions:
 - tsvector_setweight() - Set weight for all lexemes
 - tsvector_length() - Get number of lexemes
 
+PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-textsearch.html
+
 Examples:
     Generate tsvector from document:
-        >>> to_tsvector("hello world", config="english")
-        "to_tsvector('english', 'hello world')"
+        >>> to_tsvector(dialect, "hello world", config="english")
 
     Generate tsquery from query:
-        >>> to_tsquery("hello & world", config="english")
-        "to_tsquery('english', 'hello & world')"
+        >>> to_tsquery(dialect, "hello & world", config="english")
 
     Test if tsvector matches tsquery:
-        >>> ts_matches("title_tsvector", "to_tsquery('hello')")
-        "title_tsvector @@ to_tsquery('hello')"
+        >>> ts_matches(dialect, "title_tsvector", "to_tsquery('hello')")
 
     Calculate relevance rank:
-        >>> ts_rank("title_tsvector", "to_tsquery('hello')")
-        "ts_rank(title_tsvector, to_tsquery('hello'))"
+        >>> ts_rank(dialect, "title_tsvector", "to_tsquery('hello')")
 
     Get highlighted text with matches:
-        >>> ts_headline("content", "to_tsquery('hello')")
-        "ts_headline(content, to_tsquery('hello'))"
+        >>> ts_headline(dialect, "content", "to_tsquery('hello')")
 """
 
-from typing import List, Optional
+from typing import Any, List, Optional, Union, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def to_tsvector(document: str, config: Optional[str] = None) -> str:
+def _convert_to_expression(
+    dialect: "SQLDialectBase",
+    expr: Union[str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert an input value to an appropriate BaseExpression.
+
+    Supports strings and existing BaseExpression objects.
+
+    Args:
+        dialect: The SQL dialect instance
+        expr: Value to convert
+
+    Returns:
+        BaseExpression representing the value
+    """
+    if isinstance(expr, bases.BaseExpression):
+        return expr
+    elif isinstance(expr, str):
+        return core.Literal(dialect, expr)
+    else:
+        return core.Literal(dialect, expr)
+
+
+# ============== Full-Text Search Functions ==============
+
+
+def to_tsvector(
+    dialect: "SQLDialectBase",
+    document: Any,
+    config: str = "english",
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL to_tsvector function.
 
+    Converts a text document to a tsvector for full-text search.
+
     Args:
+        dialect: The SQL dialect instance
         document: The document text to convert to tsvector
-        config: Optional text search configuration (e.g., 'english', 'simple')
+        config: Text search configuration (default: 'english')
 
     Returns:
-        str: SQL expression for to_tsvector function
+        FunctionCall for to_tsvector(config, document)
 
-    Examples:
-        >>> to_tsvector("hello world")
-        "to_tsvector('hello world')"
-        >>> to_tsvector("hello world", "english")
-        "to_tsvector('english', 'hello world')"
+    Example:
+        >>> to_tsvector(dialect, 'hello world')
+        >>> to_tsvector(dialect, 'hello world', config='simple')
     """
-    if config:
-        return f"to_tsvector('{config}', {document})"
-    return f"to_tsvector({document})"
+    return core.FunctionCall(
+        dialect, "to_tsvector",
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, document),
+    )
 
 
-def to_tsquery(query: str, config: Optional[str] = None) -> str:
+def to_tsquery(
+    dialect: "SQLDialectBase",
+    query: Any,
+    config: str = "english",
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL to_tsquery function.
 
+    Converts a query string to a tsquery for full-text search.
+
     Args:
+        dialect: The SQL dialect instance
         query: The query string to convert to tsquery
-        config: Optional text search configuration
+        config: Text search configuration (default: 'english')
 
     Returns:
-        str: SQL expression for to_tsquery function
+        FunctionCall for to_tsquery(config, query)
 
-    Examples:
-        >>> to_tsquery("hello & world")
-        "to_tsquery('hello & world')"
-        >>> to_tsquery("hello & world", "english")
-        "to_tsquery('english', 'hello & world')"
+    Example:
+        >>> to_tsquery(dialect, 'hello & world')
+        >>> to_tsquery(dialect, 'hello & world', config='simple')
     """
-    if config:
-        return f"to_tsquery('{config}', '{query}')"
-    return f"to_tsquery('{query}')"
+    return core.FunctionCall(
+        dialect, "to_tsquery",
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, query),
+    )
 
 
-def plainto_tsquery(query: str, config: Optional[str] = None) -> str:
+def plainto_tsquery(
+    dialect: "SQLDialectBase",
+    query: Any,
+    config: str = "english",
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL plainto_tsquery function.
 
     Converts plain text to tsquery, handling special characters.
 
     Args:
+        dialect: The SQL dialect instance
         query: The plain text query
-        config: Optional text search configuration
+        config: Text search configuration (default: 'english')
 
     Returns:
-        str: SQL expression for plainto_tsquery function
+        FunctionCall for plainto_tsquery(config, query)
 
-    Examples:
-        >>> plainto_tsquery("hello world")
-        "plainto_tsquery('hello world')"
-        >>> plainto_tsquery("hello world", "english")
-        "plainto_tsquery('english', 'hello world')"
+    Example:
+        >>> plainto_tsquery(dialect, 'hello world')
+        >>> plainto_tsquery(dialect, 'hello world', config='simple')
     """
-    if config:
-        return f"plainto_tsquery('{config}', '{query}')"
-    return f"plainto_tsquery('{query}')"
+    return core.FunctionCall(
+        dialect, "plainto_tsquery",
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, query),
+    )
 
 
-def phraseto_tsquery(query: str, config: Optional[str] = None) -> str:
+def phraseto_tsquery(
+    dialect: "SQLDialectBase",
+    query: Any,
+    config: str = "english",
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL phraseto_tsquery function.
 
     Converts text to tsquery for phrase search.
 
     Args:
+        dialect: The SQL dialect instance
         query: The phrase query string
-        config: Optional text search configuration
+        config: Text search configuration (default: 'english')
 
     Returns:
-        str: SQL expression for phraseto_tsquery function
+        FunctionCall for phraseto_tsquery(config, query)
 
-    Examples:
-        >>> phraseto_tsquery("hello world")
-        "phraseto_tsquery('hello world')"
-        >>> phraseto_tsquery("hello world", "english")
-        "phraseto_tsquery('english', 'hello world')"
+    Example:
+        >>> phraseto_tsquery(dialect, 'hello world')
+        >>> phraseto_tsquery(dialect, 'hello world', config='simple')
     """
-    if config:
-        return f"phraseto_tsquery('{config}', '{query}')"
-    return f"phraseto_tsquery('{query}')"
+    return core.FunctionCall(
+        dialect, "phraseto_tsquery",
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, query),
+    )
 
 
-def websearch_to_tsquery(query: str, config: Optional[str] = None) -> str:
+def websearch_to_tsquery(
+    dialect: "SQLDialectBase",
+    query: Any,
+    config: str = "english",
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL websearch_to_tsquery function.
 
     Converts web search style query to tsquery (PostgreSQL 11+).
 
     Args:
+        dialect: The SQL dialect instance
         query: The web search query string
-        config: Optional text search configuration
+        config: Text search configuration (default: 'english')
 
     Returns:
-        str: SQL expression for websearch_to_tsquery function
+        FunctionCall for websearch_to_tsquery(config, query)
 
-    Examples:
-        >>> websearch_to_tsquery("hello -world")
-        "websearch_to_tsquery('hello -world')"
-        >>> websearch_to_tsquery("hello -world", "english")
-        "websearch_to_tsquery('english', 'hello -world')"
+    Example:
+        >>> websearch_to_tsquery(dialect, 'hello -world')
+        >>> websearch_to_tsquery(dialect, 'hello -world', config='simple')
     """
-    if config:
-        return f"websearch_to_tsquery('{config}', '{query}')"
-    return f"websearch_to_tsquery('{query}')"
+    return core.FunctionCall(
+        dialect, "websearch_to_tsquery",
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, query),
+    )
 
 
-def ts_matches(vector: str, query: str) -> str:
-    """Generate SQL expression for tsvector @@ tsquery match operator.
-
-    Args:
-        vector: The tsvector expression or column
-        query: The tsquery expression
-
-    Returns:
-        str: SQL expression using @@ operator
-
-    Examples:
-        >>> ts_matches("title_tsvector", "to_tsquery('hello')")
-        "title_tsvector @@ to_tsquery('hello')"
-    """
-    return f"{vector} @@ {query}"
-
-
-def ts_matches_expr(vector: str, query: str) -> str:
-    """Generate SQL expression for tsvector @@@ tsquery match operator.
-
-    The @@@ operator is a deprecated alias for @@.
-
-    Args:
-        vector: The tsvector expression or column
-        query: The tsquery expression
-
-    Returns:
-        str: SQL expression using @@@ operator
-
-    Examples:
-        >>> ts_matches_expr("title_tsvector", "to_tsquery('hello')")
-        "title_tsvector @@@ to_tsquery('hello')"
-    """
-    return f"{vector} @@@ {query}"
-
-
-def ts_rank(vector: str, query: str, weights: Optional[List[float]] = None, normalization: int = 0) -> str:
+def ts_rank(
+    dialect: "SQLDialectBase",
+    vector: Any,
+    query: Any,
+    weights: Optional[List[float]] = None,
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL ts_rank function.
 
     Calculates relevance rank for tsvector matching tsquery.
 
     Args:
+        dialect: The SQL dialect instance
         vector: The tsvector expression or column
         query: The tsquery expression
         weights: Optional list of 4 weights [D, C, B, A] (default [0.1, 0.2, 0.4, 1.0])
-        normalization: Normalization method (0-32, default 0)
 
     Returns:
-        str: SQL expression for ts_rank function
+        FunctionCall for ts_rank([weights,] vector, query)
 
-    Examples:
-        >>> ts_rank("title_tsvector", "to_tsquery('hello')")
-        "ts_rank(title_tsvector, to_tsquery('hello'))"
-        >>> ts_rank("title_tsvector", "to_tsquery('hello')", [0.1, 0.2, 0.4, 1.0])
-        "ts_rank(array[0.1, 0.2, 0.4, 1.0], title_tsvector, to_tsquery('hello'))"
-        >>> ts_rank("title_tsvector", "to_tsquery('hello')", normalization=1)
-        "ts_rank(title_tsvector, to_tsquery('hello'), 1)"
+    Example:
+        >>> ts_rank(dialect, 'title_tsvector', "to_tsquery('hello')")
+        >>> ts_rank(dialect, 'title_tsvector', "to_tsquery('hello')", [0.1, 0.2, 0.4, 1.0])
     """
-    if weights:
-        weights_str = f"array[{', '.join(str(w) for w in weights)}]"
-        if normalization != 0:
-            return f"ts_rank({weights_str}, {vector}, {query}, {normalization})"
-        return f"ts_rank({weights_str}, {vector}, {query})"
-    if normalization != 0:
-        return f"ts_rank({vector}, {query}, {normalization})"
-    return f"ts_rank({vector}, {query})"
+    args: list = []
+    if weights is not None:
+        weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
+        args.append(core.Literal(dialect, weights_str))
+    args.append(_convert_to_expression(dialect, vector))
+    args.append(_convert_to_expression(dialect, query))
+    return core.FunctionCall(dialect, "ts_rank", *args)
 
 
-def ts_rank_cd(vector: str, query: str, weights: Optional[List[float]] = None, normalization: int = 0) -> str:
+def ts_rank_cd(
+    dialect: "SQLDialectBase",
+    vector: Any,
+    query: Any,
+    weights: Optional[List[float]] = None,
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL ts_rank_cd function.
 
     Calculates relevance rank using cover density.
 
     Args:
+        dialect: The SQL dialect instance
         vector: The tsvector expression or column
         query: The tsquery expression
         weights: Optional list of 4 weights [D, C, B, A]
-        normalization: Normalization method (0-32, default 0)
 
     Returns:
-        str: SQL expression for ts_rank_cd function
+        FunctionCall for ts_rank_cd([weights,] vector, query)
 
-    Examples:
-        >>> ts_rank_cd("title_tsvector", "to_tsquery('hello')")
-        "ts_rank_cd(title_tsvector, to_tsquery('hello'))"
-        >>> ts_rank_cd("title_tsvector", "to_tsquery('hello')", [0.1, 0.2, 0.4, 1.0])
-        "ts_rank_cd(array[0.1, 0.2, 0.4, 1.0], title_tsvector, to_tsquery('hello'))"
+    Example:
+        >>> ts_rank_cd(dialect, 'title_tsvector', "to_tsquery('hello')")
+        >>> ts_rank_cd(dialect, 'title_tsvector', "to_tsquery('hello')", [0.1, 0.2, 0.4, 1.0])
     """
-    if weights:
-        weights_str = f"array[{', '.join(str(w) for w in weights)}]"
-        if normalization != 0:
-            return f"ts_rank_cd({weights_str}, {vector}, {query}, {normalization})"
-        return f"ts_rank_cd({weights_str}, {vector}, {query})"
-    if normalization != 0:
-        return f"ts_rank_cd({vector}, {query}, {normalization})"
-    return f"ts_rank_cd({vector}, {query})"
+    args: list = []
+    if weights is not None:
+        weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
+        args.append(core.Literal(dialect, weights_str))
+    args.append(_convert_to_expression(dialect, vector))
+    args.append(_convert_to_expression(dialect, query))
+    return core.FunctionCall(dialect, "ts_rank_cd", *args)
 
 
-def ts_headline(document: str, query: str, config: Optional[str] = None, options: Optional[str] = None) -> str:
+def ts_headline(
+    dialect: "SQLDialectBase",
+    document: Any,
+    query: Any,
+    config: str = "english",
+    options: Optional[Any] = None,
+) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL ts_headline function.
 
     Displays query matches in document with highlighting.
 
+    PostgreSQL signature: ts_headline([config,] document, query [, options])
+
     Args:
+        dialect: The SQL dialect instance
         document: The document text or expression
         query: The tsquery expression
-        config: Optional text search configuration
+        config: Text search configuration (default: 'english')
         options: Optional headline options string
 
     Returns:
-        str: SQL expression for ts_headline function
+        FunctionCall for ts_headline(config, document, query[, options])
 
-    Examples:
-        >>> ts_headline("content", "to_tsquery('hello')")
-        "ts_headline(content, to_tsquery('hello'))"
-        >>> ts_headline("content", "to_tsquery('hello')", config="english")
-        "ts_headline('english', content, to_tsquery('hello'))"
-        >>> ts_headline("content", "to_tsquery('hello')", options="StartSel=<b>, StopSel=</b>")
-        "ts_headline(content, to_tsquery('hello'), 'StartSel=<b>, StopSel=</b>')"
+    Example:
+        >>> ts_headline(dialect, 'content', "to_tsquery('hello')")
+        >>> ts_headline(dialect, 'content', "to_tsquery('hello')", config='english')
+        >>> ts_headline(dialect, 'content', "to_tsquery('hello')", options='StartSel=<b>, StopSel=</b>')
     """
-    if config:
-        if options:
-            return f"ts_headline('{config}', {document}, {query}, '{options}')"
-        return f"ts_headline('{config}', {document}, {query})"
-    if options:
-        return f"ts_headline({document}, {query}, '{options}')"
-    return f"ts_headline({document}, {query})"
+    args: list = [
+        core.Literal(dialect, config),
+        _convert_to_expression(dialect, document),
+        _convert_to_expression(dialect, query),
+    ]
+    if options is not None:
+        args.append(_convert_to_expression(dialect, options))
+    return core.FunctionCall(dialect, "ts_headline", *args)
 
 
-def tsvector_concat(vec1: str, vec2: str) -> str:
-    """Generate SQL expression for tsvector concatenation.
-
-    Args:
-        vec1: First tsvector expression
-        vec2: Second tsvector expression
-
-    Returns:
-        str: SQL expression using || operator
-
-    Examples:
-        >>> tsvector_concat("title_tsvector", "body_tsvector")
-        "title_tsvector || body_tsvector"
-    """
-    return f"{vec1} || {vec2}"
-
-
-def tsvector_strip(vec: str) -> str:
+def tsvector_strip(
+    dialect: "SQLDialectBase",
+    vector: Any,
+) -> core.FunctionCall:
     """Generate SQL expression for strip function.
 
     Removes positions and weights from tsvector.
 
+    Note: The PostgreSQL function name is "strip", not "tsvector_strip".
+
     Args:
-        vec: The tsvector expression
+        dialect: The SQL dialect instance
+        vector: The tsvector expression
 
     Returns:
-        str: SQL expression for strip function
+        FunctionCall for strip(vector)
 
-    Examples:
-        >>> tsvector_strip("title_tsvector")
-        "strip(title_tsvector)"
+    Example:
+        >>> tsvector_strip(dialect, 'title_tsvector')
     """
-    return f"strip({vec})"
+    return core.FunctionCall(
+        dialect, "strip",
+        _convert_to_expression(dialect, vector),
+    )
 
 
-def tsvector_setweight(vec: str, weight: str) -> str:
+def tsvector_setweight(
+    dialect: "SQLDialectBase",
+    vector: Any,
+    weight: Any,
+) -> core.FunctionCall:
     """Generate SQL expression for setweight function.
 
     Sets weight for all lexemes in tsvector.
 
+    Note: The PostgreSQL function name is "setweight", not "tsvector_setweight".
+
     Args:
-        vec: The tsvector expression
+        dialect: The SQL dialect instance
+        vector: The tsvector expression
         weight: Weight character ('A', 'B', 'C', or 'D')
 
     Returns:
-        str: SQL expression for setweight function
+        FunctionCall for setweight(vector, weight)
 
-    Examples:
-        >>> tsvector_setweight("title_tsvector", "A")
-        "setweight(title_tsvector, 'A')"
+    Example:
+        >>> tsvector_setweight(dialect, 'title_tsvector', 'A')
     """
-    return f"setweight({vec}, '{weight}')"
+    return core.FunctionCall(
+        dialect, "setweight",
+        _convert_to_expression(dialect, vector),
+        _convert_to_expression(dialect, weight),
+    )
 
 
-def tsvector_length(vec: str) -> str:
-    """Generate SQL expression for tsvector length.
+def tsvector_length(
+    dialect: "SQLDialectBase",
+    vector: Any,
+) -> core.FunctionCall:
+    """Generate SQL expression for length function.
 
     Returns the number of lexemes in tsvector.
 
+    Note: The PostgreSQL function name is "length", not "tsvector_length".
+
     Args:
-        vec: The tsvector expression
+        dialect: The SQL dialect instance
+        vector: The tsvector expression
 
     Returns:
-        str: SQL expression for length function
+        FunctionCall for length(vector)
 
-    Examples:
-        >>> tsvector_length("title_tsvector")
-        "length(title_tsvector)"
+    Example:
+        >>> tsvector_length(dialect, 'title_tsvector')
     """
-    return f"length({vec})"
+    return core.FunctionCall(
+        dialect, "length",
+        _convert_to_expression(dialect, vector),
+    )
+
+
+# ============== Full-Text Search Operators ==============
+
+
+def ts_matches(
+    dialect: "SQLDialectBase",
+    vector: Any,
+    query: Any,
+) -> BinaryExpression:
+    """Generate SQL expression for tsvector @@ tsquery match operator.
+
+    Args:
+        dialect: The SQL dialect instance
+        vector: The tsvector expression or column
+        query: The tsquery expression
+
+    Returns:
+        BinaryExpression for vector @@ query
+
+    Example:
+        >>> ts_matches(dialect, 'title_tsvector', "to_tsquery('hello')")
+    """
+    return BinaryExpression(
+        dialect, "@@",
+        _convert_to_expression(dialect, vector),
+        _convert_to_expression(dialect, query),
+    )
+
+
+def ts_matches_expr(
+    dialect: "SQLDialectBase",
+    vector: Any,
+    query: Any,
+) -> BinaryExpression:
+    """Generate SQL expression for tsvector @@@ tsquery match operator.
+
+    The @@@ operator is a deprecated alias for @@.
+
+    Args:
+        dialect: The SQL dialect instance
+        vector: The tsvector expression or column
+        query: The tsquery expression
+
+    Returns:
+        BinaryExpression for vector @@@ query
+
+    Example:
+        >>> ts_matches_expr(dialect, 'title_tsvector', "to_tsquery('hello')")
+    """
+    return BinaryExpression(
+        dialect, "@@@",
+        _convert_to_expression(dialect, vector),
+        _convert_to_expression(dialect, query),
+    )
+
+
+def tsvector_concat(
+    dialect: "SQLDialectBase",
+    vec1: Any,
+    vec2: Any,
+) -> BinaryExpression:
+    """Generate SQL expression for tsvector concatenation.
+
+    Args:
+        dialect: The SQL dialect instance
+        vec1: First tsvector expression
+        vec2: Second tsvector expression
+
+    Returns:
+        BinaryExpression for vec1 || vec2
+
+    Example:
+        >>> tsvector_concat(dialect, 'title_tsvector', 'body_tsvector')
+    """
+    return BinaryExpression(
+        dialect, "||",
+        _convert_to_expression(dialect, vec1),
+        _convert_to_expression(dialect, vec2),
+    )
 
 
 __all__ = [

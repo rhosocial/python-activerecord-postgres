@@ -6,8 +6,19 @@ Its primary responsibility is to configure the environment so that the external
 `rhosocial-activerecord-testsuite` can find and use the backend-specific
 implementations (Providers) defined within this project.
 """
+import asyncio
 import os
+import sys
 
+
+def ensure_compatible_event_loop():
+    if sys.platform == "win32":
+        policy = asyncio.get_event_loop_policy()
+        if not isinstance(policy, asyncio.WindowsSelectorEventLoopPolicy):
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+ensure_compatible_event_loop()
 
 
 # Set the environment variable that the testsuite uses to locate the provider registry.

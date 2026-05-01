@@ -24,10 +24,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 from ..expression.ddl import (
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumTypeAddValueExpression,
-    AlterEnumTypeRenameValueExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumTypeAddValueExpression,
+    PostgresAlterEnumTypeRenameValueExpression,
 )
 
 
@@ -38,10 +38,10 @@ class PostgresEnumType(BaseExpression):
     It is used in column definitions and type casts, NOT for DDL operations.
 
     For DDL operations (CREATE TYPE, DROP TYPE, etc.), use:
-    - CreateEnumTypeExpression
-    - DropEnumTypeExpression
-    - AlterEnumTypeAddValueExpression
-    - AlterEnumTypeRenameValueExpression
+    - PostgresCreateEnumTypeExpression
+    - PostgresDropEnumTypeExpression
+    - PostgresAlterEnumTypeAddValueExpression
+    - PostgresAlterEnumTypeRenameValueExpression
 
     PostgreSQL ENUM types are custom types created with CREATE TYPE.
     They are reusable across tables, unlike MySQL's inline ENUM.
@@ -216,7 +216,7 @@ class EnumTypeManager:
             enum_type: PostgresEnumType instance
             if_not_exists: Use IF NOT EXISTS clause
         """
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             dialect=self._backend.dialect,
             name=enum_type.name,
             values=enum_type.values,
@@ -235,7 +235,7 @@ class EnumTypeManager:
             if_exists: Use IF EXISTS clause
             cascade: Use CASCADE clause
         """
-        expr = DropEnumTypeExpression(
+        expr = PostgresDropEnumTypeExpression(
             dialect=self._backend.dialect,
             name=enum_type.name,
             schema=enum_type.schema,
@@ -264,7 +264,7 @@ class EnumTypeManager:
         if new_value in enum_type.values:
             raise ValueError(f"Value '{new_value}' already exists in enum")
 
-        expr = AlterEnumTypeAddValueExpression(
+        expr = PostgresAlterEnumTypeAddValueExpression(
             dialect=self._backend.dialect,
             type_name=enum_type.name,
             new_value=new_value,
@@ -289,7 +289,7 @@ class EnumTypeManager:
         if old_value not in enum_type.values:
             raise ValueError(f"Value '{old_value}' not found in enum")
 
-        expr = AlterEnumTypeRenameValueExpression(
+        expr = PostgresAlterEnumTypeRenameValueExpression(
             dialect=self._backend.dialect,
             type_name=enum_type.name,
             old_value=old_value,

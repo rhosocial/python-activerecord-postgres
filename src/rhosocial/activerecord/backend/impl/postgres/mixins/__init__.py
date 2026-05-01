@@ -34,10 +34,16 @@ from .dml.locking import PostgresLockingMixin
 from .types.enum import EnumTypeMixin
 from .types.data_type import PostgresDataTypeMixin as TypesDataTypeMixin
 from .types.multirange import MultirangeMixin
+from .types.full_text_search import PostgresFullTextSearchMixin
+from .types.range_type import PostgresRangeTypeMixin
+from .types.jsonb_enhanced import PostgresJSONBEnhancedMixin
+from .types.array_enhanced import PostgresArrayEnhancedMixin
 
 # Extension mixins
 from .extensions.pgvector import PostgresPgvectorMixin
 from .extensions.postgis import PostgresPostGISMixin
+from .extensions.postgis_raster import PostgresPostgisRasterMixin
+from .extensions.pgrouting import PostgresPgroutingMixin
 from .extensions.hstore import PostgresHstoreMixin
 from .extensions.ltree import PostgresLtreeMixin
 from .extensions.intarray import PostgresIntarrayMixin
@@ -45,12 +51,31 @@ from .extensions.pg_trgm import PostgresPgTrgmMixin
 from .extensions.earthdistance import PostgresEarthdistanceMixin
 from .extensions.tablefunc import PostgresTablefuncMixin
 from .extensions.pg_stat_statements import PostgresPgStatStatementsMixin
+from .extensions.citext import PostgresCitextMixin
+from .extensions.pgcrypto import PostgresPgcryptoMixin
+from .extensions.fuzzystrmatch import PostgresFuzzystrmatchMixin
+from .extensions.cube import PostgresCubeMixin
+from .extensions.uuid_ossp import PostgresUuidOssMixin
+from .extensions.bloom import PostgresBloomMixin
+from .extensions.btree_gin import PostgresBtreeGinMixin
+from .extensions.btree_gist import PostgresBtreeGistMixin
+from .extensions.pg_cron import PostgresPgCronMixin
+from .extensions.pg_partman import PostgresPgPartmanMixin
+from .extensions.pg_surgery import PostgresPgSurgeryMixin
+from .extensions.pg_walinspect import PostgresPgWalinspectMixin
+from .extensions.pglogical import PostgresPgLogicalMixin
+from .extensions.pgaudit import PostgresPgauditMixin
+from .extensions.pg_repack import PostgresPgRepackMixin
+from .extensions.hypopg import PostgresHypoPgMixin
+from .extensions.orafce import PostgresOrafceMixin
+from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
 from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
+from .parallel_query import PostgresParallelQueryMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
@@ -66,6 +91,7 @@ __all__ = [
     "PostgresTriggerMixin",
     "PostgresCommentMixin",
     "PostgresTypeMixin",
+    "PostgresConstraintMixin",
     # DML mixins
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",
@@ -76,9 +102,15 @@ __all__ = [
     "EnumTypeMixin",
     "TypesDataTypeMixin",
     "MultirangeMixin",
+    "PostgresFullTextSearchMixin",
+    "PostgresRangeTypeMixin",
+    "PostgresJSONBEnhancedMixin",
+    "PostgresArrayEnhancedMixin",
     # Extension mixins
     "PostgresPgvectorMixin",
     "PostgresPostGISMixin",
+    "PostgresPostgisRasterMixin",
+    "PostgresPgroutingMixin",
     "PostgresHstoreMixin",
     "PostgresLtreeMixin",
     "PostgresIntarrayMixin",
@@ -86,11 +118,30 @@ __all__ = [
     "PostgresEarthdistanceMixin",
     "PostgresTablefuncMixin",
     "PostgresPgStatStatementsMixin",
+    "PostgresCitextMixin",
+    "PostgresPgcryptoMixin",
+    "PostgresFuzzystrmatchMixin",
+    "PostgresCubeMixin",
+    "PostgresUuidOssMixin",
+    "PostgresBloomMixin",
+    "PostgresBtreeGinMixin",
+    "PostgresBtreeGistMixin",
+    "PostgresPgCronMixin",
+    "PostgresPgPartmanMixin",
+    "PostgresPgSurgeryMixin",
+    "PostgresPgWalinspectMixin",
+    "PostgresPgLogicalMixin",
+    "PostgresPgauditMixin",
+    "PostgresPgRepackMixin",
+    "PostgresHypoPgMixin",
+    "PostgresOrafceMixin",
+    "PostgresAddressStandardizerMixin",
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",
     "PostgresSQLSyntaxMixin",
     "PostgresLogicalReplicationMixin",
+    "PostgresParallelQueryMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]

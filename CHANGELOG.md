@@ -1,3 +1,23 @@
+## [v1.0.0.dev12] - 2026-05-01
+
+### Added
+
+- Added named query and named procedure CLI subcommands for PostgreSQL backend. Added ConcurrencyAware protocol implementation for PostgreSQL. Added named connection support with PostgreSQL CLI integration. Added comprehensive extension support with Protocol/Mixin definitions for 29 PostgreSQL extensions, CreateExtensionExpression/DropExtensionExpression DDL classes, and extension availability detection. ([#32](https://github.com/rhosocial/python-activerecord-postgres/issues/32))
+- Added schema namespace support for PostgreSQL backend, including get_default_schema() method, schema-aware column formatting with alias handling, and support for multiple PostgreSQL extensions (PostGIS, pgvector, UUID, hstore). ([#33](https://github.com/rhosocial/python-activerecord-postgres/issues/33))
+
+
+
+### Changed
+
+- Aligned expression system with three architectural principles. Modularized CLI from monolithic __main__.py to cli/ subpackage. Moved threadsafety to PostgresBackendMixin. Removed _convert_qmark_to_format fallback (now uses proper dialect placeholder conversion). Changed CI to install rhosocial-activerecord from git branch release/v1.0.0.dev25. Added postgres-exts service container for extension testing in CI. ([#32](https://github.com/rhosocial/python-activerecord-postgres/issues/32))
+
+
+
+### Fixed
+
+- Fixed ? → %s placeholder conversion for psycopg in _prepare_sql_and_params. Fixed ForUpdateClause handling without strength attribute. Fixed @runtime_checkable missing on PostgresAdvisoryLockSupport and PostgresMultirangeSupport. Fixed UUID v1 regex pattern to match standard 8-4-4-4-12 format. Fixed async marker for pytest-asyncio 1.3.0 compatibility. ([#32](https://github.com/rhosocial/python-activerecord-postgres/issues/32))
+
+
 ## [v1.0.0.dev11] - 2026-04-17
 
 ### Added

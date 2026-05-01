@@ -4,17 +4,17 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import CommentExpression
+    from ...expression.ddl import PostgresCommentExpression
 
 
 class PostgresCommentMixin:
     """PostgreSQL COMMENT ON implementation."""
 
-    def format_comment_statement(self, expr: "CommentExpression") -> Tuple[str, tuple]:
+    def format_comment_statement(self, expr: "PostgresCommentExpression") -> Tuple[str, tuple]:
         """Format COMMENT ON statement (PostgreSQL-specific).
 
         Args:
-            expr: CommentExpression containing all options
+            expr: PostgresCommentExpression containing all options
 
         Returns:
             Tuple of (SQL string, parameters)

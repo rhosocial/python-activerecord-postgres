@@ -2,7 +2,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import RefreshMaterializedViewPgExpression
+    from ...expression.ddl import PostgresRefreshMaterializedViewExpression
 
 
 class PostgresMaterializedViewMixin:
@@ -13,21 +13,21 @@ class PostgresMaterializedViewMixin:
         return self.version >= (9, 4, 0)
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "RefreshMaterializedViewPgExpression"
+        self, expr: "PostgresRefreshMaterializedViewExpression"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: RefreshMaterializedViewPgExpression containing all options
+            expr: PostgresRefreshMaterializedViewExpression containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
-        full_name = f"{expr.schema}.{expr.name}" if expr.schema else expr.name
+        full_name = f"{expr.schema}.{expr.view_name}" if expr.schema else expr.view_name
 
         sql = "REFRESH MATERIALIZED VIEW"
 
-        if expr.concurrently:
+        if expr.concurrent:
             if not self.supports_materialized_view_concurrent_refresh():
                 raise ValueError("CONCURRENTLY requires PostgreSQL 9.4+")
             sql += " CONCURRENTLY"

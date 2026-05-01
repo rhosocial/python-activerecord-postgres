@@ -13,35 +13,37 @@ Version Requirements:
 
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.statements.ddl_view import RefreshMaterializedViewExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["RefreshMaterializedViewPgExpression"]
+__all__ = ["PostgresRefreshMaterializedViewExpression"]
 
 
-class RefreshMaterializedViewPgExpression(BaseExpression):
+class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpression):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
 
     Replaces the contents of a materialized view by recalculating its query.
     The data is replaced atomically without affecting concurrent queries.
 
+    Extends the generic RefreshMaterializedViewExpression with PostgreSQL-specific
+    schema support and backward-compatible aliases.
+
     Attributes:
-        name: Name of the materialized view to refresh.
-        schema: Schema name for the materialized view.
-        concurrently: Refresh without locks (PG 9.4+, requires unique index).
-        with_data: Whether to repopulate data:
-                 - True: Refresh with data (default)
-                 - False: Refresh without data (PG 9.4+)
-                 None: Use default behavior
+        view_name: Name of the materialized view to refresh (inherited).
+        schema: Schema name for the materialized view (PostgreSQL-specific).
+        concurrent: Whether to refresh concurrently (inherited).
+        with_data: Whether to repopulate data (inherited).
+        name: Alias for view_name (backward compatibility).
+        concurrently: Alias for concurrent (backward compatibility).
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
-        >>> refresh = RefreshMaterializedViewPgExpression(
+        >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
         ...     name="monthly_sales_summary",
         ... )
@@ -50,14 +52,14 @@ class RefreshMaterializedViewPgExpression(BaseExpression):
         "REFRESH MATERIALIZED VIEW monthly_sales_summary"
 
         >>> # Concurrent refresh (PG 9.4+, requires unique index)
-        >>> refresh = RefreshMaterializedViewPgExpression(
+        >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
         ...     name="monthly_sales_summary",
         ...     concurrently=True,
         ... )
 
         >>> # Refresh without data (create empty, PG 9.4+)
-        >>> refresh = RefreshMaterializedViewPgExpression(
+        >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
         ...     name="monthly_sales_summary",
         ...     with_data=False,
@@ -74,12 +76,24 @@ class RefreshMaterializedViewPgExpression(BaseExpression):
         *,
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__(dialect)
-        self.name = name
+        super().__init__(
+            dialect,
+            view_name=name,
+            concurrent=concurrently,
+            with_data=with_data,
+            dialect_options=dialect_options,
+        )
         self.schema = schema
-        self.concurrently = concurrently
-        self.with_data = with_data
-        self.dialect_options = dialect_options or {}
+
+    @property
+    def name(self):
+        """Alias for view_name (backward compatibility)."""
+        return self.view_name
+
+    @property
+    def concurrently(self):
+        """Alias for concurrent (backward compatibility)."""
+        return self.concurrent
 
     def to_sql(self) -> Tuple[str, tuple]:
         """Generate REFRESH MATERIALIZED VIEW SQL statement.

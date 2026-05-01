@@ -10,8 +10,8 @@ import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    CreateStatisticsExpression,
-    DropStatisticsExpression,
+    PostgresCreateStatisticsExpression,
+    PostgresDropStatisticsExpression,
 )
 
 
@@ -65,7 +65,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_pg9_raises_error(self):
         """CREATE STATISTICS should raise error on PostgreSQL 9.5."""
         dialect = PostgresDialect((9, 5, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -77,7 +77,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_basic(self):
         """Test basic CREATE STATISTICS statement."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -92,7 +92,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_with_schema(self):
         """Test CREATE STATISTICS with schema."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -106,7 +106,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_if_not_exists(self):
         """Test CREATE STATISTICS IF NOT EXISTS."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -119,7 +119,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_with_ndistinct(self):
         """Test CREATE STATISTICS with ndistinct type."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -132,7 +132,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_with_dependencies(self):
         """Test CREATE STATISTICS with dependencies type."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -145,7 +145,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_with_mcv_pg12(self):
         """Test CREATE STATISTICS with MCV type on PostgreSQL 12."""
         dialect = PostgresDialect((12, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -158,7 +158,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_with_mcv_pg11_raises_error(self):
         """Test CREATE STATISTICS with MCV type on PostgreSQL 11 raises error."""
         dialect = PostgresDialect((11, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -171,7 +171,7 @@ class TestFormatCreateStatisticsStatement:
     def test_create_statistics_invalid_type_raises_error(self):
         """Test CREATE STATISTICS with invalid type raises error."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateStatisticsExpression(
+        expr = PostgresCreateStatisticsExpression(
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
@@ -188,7 +188,7 @@ class TestFormatDropStatisticsStatement:
     def test_drop_statistics_basic(self):
         """Test basic DROP STATISTICS statement."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropStatisticsExpression(
+        expr = PostgresDropStatisticsExpression(
             dialect,
             name="test_stats"
         )
@@ -199,7 +199,7 @@ class TestFormatDropStatisticsStatement:
     def test_drop_statistics_with_schema(self):
         """Test DROP STATISTICS with schema."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropStatisticsExpression(
+        expr = PostgresDropStatisticsExpression(
             dialect,
             name="test_stats",
             schema="public"
@@ -210,7 +210,7 @@ class TestFormatDropStatisticsStatement:
     def test_drop_statistics_if_exists(self):
         """Test DROP STATISTICS IF EXISTS."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropStatisticsExpression(
+        expr = PostgresDropStatisticsExpression(
             dialect,
             name="test_stats",
             if_exists=True

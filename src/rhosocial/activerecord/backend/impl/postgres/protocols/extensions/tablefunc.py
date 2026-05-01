@@ -3,9 +3,12 @@
 
 This module defines the protocol for tablefunc table functions
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/tablefunc.py`` instead of the removed format_* methods.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -54,4 +57,22 @@ class PostgresTablefuncSupport(Protocol):
         Requires tablefunc extension.
         Generates normal distribution random numbers.
         """
+        ...
+
+    def format_crosstab_with_definition(
+        self, source_sql: str, output_columns: str, categories_sql: Optional[str] = None
+    ) -> str:
+        """Format crosstab function with explicit column definition."""
+        ...
+
+    def format_connectby_full(
+        self,
+        table_name: str,
+        key_column: str,
+        parent_column: str,
+        start_value: str,
+        max_depth: int,
+        branch_delim: str = "~",
+    ) -> str:
+        """Format connectby function with full options."""
         ...

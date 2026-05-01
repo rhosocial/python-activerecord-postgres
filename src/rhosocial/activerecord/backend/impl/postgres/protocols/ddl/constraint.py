@@ -15,9 +15,11 @@ PostgreSQL-proprietary features:
 
 from typing import Protocol, runtime_checkable
 
+from rhosocial.activerecord.backend.dialect.protocols import ConstraintSupport
+
 
 @runtime_checkable
-class PostgresConstraintSupport(Protocol):
+class PostgresConstraintSupport(ConstraintSupport, Protocol):
     """PostgreSQL-proprietary constraint capabilities protocol.
 
     These features are PostgreSQL-specific and not part of the SQL standard.

@@ -7,17 +7,17 @@ which are application-level locks managed by the database server.
 """
 
 from .lock import (
-    AdvisoryLockExpression,
-    AdvisoryUnlockExpression,
-    AdvisoryUnlockAllExpression,
-    TryAdvisoryLockExpression,
+    PostgresAdvisoryLockExpression,
+    PostgresAdvisoryUnlockExpression,
+    PostgresAdvisoryUnlockAllExpression,
+    PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
 
 __all__ = [
-    "AdvisoryLockExpression",
-    "AdvisoryUnlockExpression",
-    "AdvisoryUnlockAllExpression",
-    "TryAdvisoryLockExpression",
+    "PostgresAdvisoryLockExpression",
+    "PostgresAdvisoryUnlockExpression",
+    "PostgresAdvisoryUnlockAllExpression",
+    "PostgresTryAdvisoryLockExpression",
     "AdvisoryLockType",
 ]

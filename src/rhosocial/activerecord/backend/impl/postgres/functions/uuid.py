@@ -1,66 +1,85 @@
 # src/rhosocial/activerecord/backend/impl/postgres/functions/uuid.py
 """
-PostgreSQL UUID Functions.
+PostgreSQL UUID function factories.
 
 This module provides SQL expression generators for PostgreSQL UUID
-functions and operators.
+functions and operators. All functions return FunctionCall expression
+objects that integrate with the expression-dialect architecture.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-uuid.html
 
-Note: Some functions require the 'uuid-ossp' extension.
-Install with: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+UUID generation functions:
+- gen_random_uuid(): Built-in since PostgreSQL 13, no extension required
+- uuid_generate_v1/v3/v4/v5(): Require the 'uuid-ossp' extension
+  Install with: CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-All functions follow the expression-dialect separation architecture:
-- First parameter is always the dialect instance
-- They return SQL expression strings
+For DDL column defaults, use uuid_default_generator(dialect) which
+automatically selects the appropriate function based on server version.
 """
 
-from typing import Any, TYPE_CHECKING
+import uuid as _uuid
+from typing import Union, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression import bases, core
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _to_sql(expr: Any) -> str:
-    """Convert an expression to its SQL string representation."""
-    if hasattr(expr, 'to_sql'):
-        return expr.to_sql()[0]
-    return str(expr)
+def _convert_to_expression(
+    dialect: "SQLDialectBase",
+    expr: Union[_uuid.UUID, str, "bases.BaseExpression"],
+) -> "bases.BaseExpression":
+    """Convert an input value to an appropriate BaseExpression."""
+    if isinstance(expr, bases.BaseExpression):
+        return expr
+    elif isinstance(expr, _uuid.UUID):
+        return core.Literal(dialect, str(expr))
+    elif isinstance(expr, str):
+        return core.Literal(dialect, expr)
+    else:
+        return core.Literal(dialect, expr)
 
 
-def uuid_generate_v1(dialect: "SQLDialectBase") -> str:
+def uuid_generate_v1(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Generate a version 1 (time-based) UUID.
 
     Requires the uuid-ossp extension.
 
     Returns:
-        SQL expression: uuid_generate_v1()
+        FunctionCall: SQL expression for uuid_generate_v1()
 
     Example:
-        >>> uuid_generate_v1(dialect)
-        'uuid_generate_v1()'
+        >>> func = uuid_generate_v1(dialect)
+        >>> func.to_sql()
+        ('uuid_generate_v1()', ())
     """
-    return "uuid_generate_v1()"
+    return core.FunctionCall(dialect, "uuid_generate_v1")
 
 
-def uuid_generate_v1mc(dialect: "SQLDialectBase") -> str:
+def uuid_generate_v1mc(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Generate a version 1 UUID using a random multicast MAC address.
 
     Requires the uuid-ossp extension.
 
     Returns:
-        SQL expression: uuid_generate_v1mc()
+        FunctionCall: SQL expression for uuid_generate_v1mc()
 
     Example:
-        >>> uuid_generate_v1mc(dialect)
-        'uuid_generate_v1mc()'
+        >>> func = uuid_generate_v1mc(dialect)
+        >>> func.to_sql()
+        ('uuid_generate_v1mc()', ())
     """
-    return "uuid_generate_v1mc()"
+    return core.FunctionCall(dialect, "uuid_generate_v1mc")
 
 
-def uuid_generate_v3(dialect: "SQLDialectBase", namespace: str, name: str) -> str:
+def uuid_generate_v3(
+    dialect: "SQLDialectBase",
+    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
+    name: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
     """
     Generate a version 3 (MD5 hash-based) UUID in the given namespace.
 
@@ -72,32 +91,40 @@ def uuid_generate_v3(dialect: "SQLDialectBase", namespace: str, name: str) -> st
         name: The name to hash
 
     Returns:
-        SQL expression: uuid_generate_v3(namespace, name)
+        FunctionCall: SQL expression for uuid_generate_v3(namespace, name)
 
     Example:
-        >>> uuid_generate_v3(dialect, "'dns'", "'example.com'")
-        "uuid_generate_v3('dns', 'example.com')"
+        >>> func = uuid_generate_v3(dialect, "dns", "example.com")
+        >>> func.to_sql()
+        ('uuid_generate_v3(%s, %s)', ('dns', 'example.com'))
     """
-    return f"uuid_generate_v3({_to_sql(namespace)}, {_to_sql(name)})"
+    ns_expr = _convert_to_expression(dialect, namespace)
+    name_expr = _convert_to_expression(dialect, name)
+    return core.FunctionCall(dialect, "uuid_generate_v3", ns_expr, name_expr)
 
 
-def uuid_generate_v4(dialect: "SQLDialectBase") -> str:
+def uuid_generate_v4(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Generate a version 4 (random) UUID.
 
     Requires the uuid-ossp extension.
 
     Returns:
-        SQL expression: uuid_generate_v4()
+        FunctionCall: SQL expression for uuid_generate_v4()
 
     Example:
-        >>> uuid_generate_v4(dialect)
-        'uuid_generate_v4()'
+        >>> func = uuid_generate_v4(dialect)
+        >>> func.to_sql()
+        ('uuid_generate_v4()', ())
     """
-    return "uuid_generate_v4()"
+    return core.FunctionCall(dialect, "uuid_generate_v4")
 
 
-def uuid_generate_v5(dialect: "SQLDialectBase", namespace: str, name: str) -> str:
+def uuid_generate_v5(
+    dialect: "SQLDialectBase",
+    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
+    name: Union[str, "bases.BaseExpression"],
+) -> core.FunctionCall:
     """
     Generate a version 5 (SHA-1 hash-based) UUID in the given namespace.
 
@@ -109,41 +136,150 @@ def uuid_generate_v5(dialect: "SQLDialectBase", namespace: str, name: str) -> st
         name: The name to hash
 
     Returns:
-        SQL expression: uuid_generate_v5(namespace, name)
+        FunctionCall: SQL expression for uuid_generate_v5(namespace, name)
 
     Example:
-        >>> uuid_generate_v5(dialect, "'dns'", "'example.com'")
-        "uuid_generate_v5('dns', 'example.com')"
+        >>> func = uuid_generate_v5(dialect, "dns", "example.com")
+        >>> func.to_sql()
+        ('uuid_generate_v5(%s, %s)', ('dns', 'example.com'))
     """
-    return f"uuid_generate_v5({_to_sql(namespace)}, {_to_sql(name)})"
+    ns_expr = _convert_to_expression(dialect, namespace)
+    name_expr = _convert_to_expression(dialect, name)
+    return core.FunctionCall(dialect, "uuid_generate_v5", ns_expr, name_expr)
 
 
-def uuid_nil(dialect: "SQLDialectBase") -> str:
+def uuid_ns_dns(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Return the DNS namespace UUID constant for use with uuid_generate_v3/v5.
+
+    Requires the uuid-ossp extension.
+
+    Returns:
+        FunctionCall: SQL expression for uuid_ns_dns()
+
+    Example:
+        >>> func = uuid_ns_dns(dialect)
+        >>> func.to_sql()
+        ('uuid_ns_dns()', ())
+    """
+    return core.FunctionCall(dialect, "uuid_ns_dns")
+
+
+def uuid_ns_url(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Return the URL namespace UUID constant for use with uuid_generate_v3/v5.
+
+    Requires the uuid-ossp extension.
+
+    Returns:
+        FunctionCall: SQL expression for uuid_ns_url()
+    """
+    return core.FunctionCall(dialect, "uuid_ns_url")
+
+
+def uuid_ns_oid(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Return the OID namespace UUID constant for use with uuid_generate_v3/v5.
+
+    Requires the uuid-ossp extension.
+
+    Returns:
+        FunctionCall: SQL expression for uuid_ns_oid()
+    """
+    return core.FunctionCall(dialect, "uuid_ns_oid")
+
+
+def uuid_ns_x500(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Return the X.500 namespace UUID constant for use with uuid_generate_v3/v5.
+
+    Requires the uuid-ossp extension.
+
+    Returns:
+        FunctionCall: SQL expression for uuid_ns_x500()
+    """
+    return core.FunctionCall(dialect, "uuid_ns_x500")
+
+
+def uuid_nil(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the nil UUID (all zeros).
 
     Returns:
-        SQL expression: uuid_nil()
+        FunctionCall: SQL expression for uuid_nil()
 
     Example:
-        >>> uuid_nil(dialect)
-        'uuid_nil()'
+        >>> func = uuid_nil(dialect)
+        >>> func.to_sql()
+        ('uuid_nil()', ())
     """
-    return "uuid_nil()"
+    return core.FunctionCall(dialect, "uuid_nil")
 
 
-def uuid_max(dialect: "SQLDialectBase") -> str:
+def uuid_max(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Return the maximum UUID (all ones except the first byte).
 
     Returns:
-        SQL expression: uuid_max()
+        FunctionCall: SQL expression for uuid_max()
 
     Example:
-        >>> uuid_max(dialect)
-        'uuid_max()'
+        >>> func = uuid_max(dialect)
+        >>> func.to_sql()
+        ('uuid_max()', ())
     """
-    return "uuid_max()"
+    return core.FunctionCall(dialect, "uuid_max")
+
+
+def gen_random_uuid(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """
+    Generate a version 4 (random) UUID.
+
+    This is a built-in function available since PostgreSQL 13.
+    For PostgreSQL < 13, use uuid_generate_v4() from the uuid-ossp extension.
+
+    No extension required for PostgreSQL 13+.
+
+    Returns:
+        FunctionCall: SQL expression for gen_random_uuid()
+
+    Example:
+        >>> func = gen_random_uuid(dialect)
+        >>> func.to_sql()
+        ('gen_random_uuid()', ())
+    """
+    return core.FunctionCall(dialect, "gen_random_uuid")
+
+
+def uuid_default_generator(dialect: "SQLDialectBase") -> core.FunctionCall:
+    """Return the appropriate UUID generation function based on dialect version.
+
+    This is the recommended way to obtain a UUID default value generator
+    for DDL column definitions. It automatically selects the correct function:
+
+    - PostgreSQL 13+: gen_random_uuid() (built-in, no extension required)
+    - PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
+
+    Args:
+        dialect: The SQL dialect instance
+
+    Returns:
+        FunctionCall: SQL expression for the version-appropriate UUID generator
+
+    Example:
+        >>> from rhosocial.activerecord.backend.expression.statements import (
+        ...     ColumnDefinition, ColumnConstraint, ColumnConstraintType,
+        ... )
+        >>> uuid_func = uuid_default_generator(dialect)
+        >>> ColumnDefinition('id', 'UUID', constraints=[
+        ...     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+        ...     ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=uuid_func),
+        ... ])
+    """
+    version = dialect.get_server_version()
+    if version >= (13, 0, 0):
+        return gen_random_uuid(dialect)
+    return uuid_generate_v4(dialect)
 
 
 __all__ = [
@@ -152,6 +288,12 @@ __all__ = [
     "uuid_generate_v3",
     "uuid_generate_v4",
     "uuid_generate_v5",
+    "uuid_ns_dns",
+    "uuid_ns_url",
+    "uuid_ns_oid",
+    "uuid_ns_x500",
     "uuid_nil",
     "uuid_max",
+    "gen_random_uuid",
+    "uuid_default_generator",
 ]

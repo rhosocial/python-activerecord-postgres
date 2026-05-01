@@ -3,9 +3,12 @@
 
 This module defines the protocol for ltree (label tree) data type support,
 which provides hierarchical label path operations.
+
+For SQL expression generation, use the function factories in
+``functions/ltree.py`` instead of the removed format_* methods.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, Tuple, runtime_checkable
 
 
 @runtime_checkable
@@ -33,25 +36,19 @@ class PostgresLtreeSupport(Protocol):
     """
 
     def supports_ltree_type(self) -> bool:
-        """Whether ltree data type is supported.
-
-        Requires ltree extension.
-        Stores label paths like 'Top.Science.Astronomy'.
-        """
+        """Whether ltree data type is supported."""
         ...
 
     def supports_ltree_operators(self) -> bool:
-        """Whether ltree operators are supported.
-
-        Requires ltree extension.
-        Supports operators: <@, @>, ~, ? and more.
-        """
+        """Whether ltree operators are supported."""
         ...
 
     def supports_ltree_index(self) -> bool:
-        """Whether ltree indexes are supported.
+        """Whether ltree indexes are supported."""
+        ...
 
-        Requires ltree extension.
-        Supports GiST and B-tree indexes on ltree.
-        """
+    def format_ltree_index_statement(
+        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
+    ) -> Tuple[str, tuple]:
+        """Format CREATE INDEX statement for ltree column."""
         ...

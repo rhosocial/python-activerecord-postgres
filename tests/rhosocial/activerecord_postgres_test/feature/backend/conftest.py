@@ -178,6 +178,41 @@ async def async_postgres_backend_single():
 # --- Control Backend for Session Modification Tests ---
 
 
+@pytest.fixture(scope="class")
+def postgres_backend_class():
+    """Class-scoped backend fixture for extension integration tests.
+
+    Uses the first available scenario. Suitable for test classes where
+    the backend is shared across all test methods in the class.
+    """
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = provider.setup_backend(scenario_name)
+    backend.scenario_name = scenario_name
+    yield backend
+    provider.cleanup()
+
+
+@pytest_asyncio.fixture(scope="class")
+async def async_postgres_backend_class():
+    """Class-scoped async backend fixture for extension integration tests."""
+    scenario_names = get_scenario_names()
+    if not scenario_names:
+        pytest.skip("No PostgreSQL scenarios configured")
+    scenario_name = scenario_names[0]
+    provider = BackendFeatureProvider()
+    backend = await provider.setup_async_backend(scenario_name)
+    backend.scenario_name = scenario_name
+    yield backend
+    await provider.async_cleanup()
+
+
+# --- Control Backend for Session Modification Tests ---
+
+
 @pytest.fixture(scope="function")
 def postgres_control_backend():
     """
@@ -225,3 +260,14 @@ def postgres_dialect():
     """Fixture providing PostgresDialect instance for testing transaction expressions."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     return PostgresDialect()
+
+
+# --- Extension Availability Utilities ---
+# These are defined in utils.py and automatically available via conftest
+# for tests that don't need explicit import.
+# For explicit import in test files, use: from rhosocial.activerecord_postgres_test.feature.backend.utils import requires_extension
+from rhosocial.activerecord_postgres_test.feature.backend.utils import (  # noqa: F401
+    requires_extension,
+    requires_extension_available,
+    skip_if_extension_missing,
+)

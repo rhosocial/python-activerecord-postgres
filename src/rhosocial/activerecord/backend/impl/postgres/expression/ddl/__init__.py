@@ -10,52 +10,57 @@ Directory structure:
 - comment.py   - COMMENT expressions
 - mv.py         - Materialized view expressions
 - type.py       - Enum/Range type expressions
+- extension.py  - Extension DDL expressions
 """
 
-from .vacuum import VacuumExpression, AnalyzeExpression
+from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
 from .partition import (
-    CreatePartitionExpression,
-    DetachPartitionExpression,
-    AttachPartitionExpression,
+    PostgresCreatePartitionExpression,
+    PostgresDetachPartitionExpression,
+    PostgresAttachPartitionExpression,
 )
-from .index import ReindexExpression
+from .index import PostgresReindexExpression
 from .statistics import (
-    CreateStatisticsExpression,
-    DropStatisticsExpression,
+    PostgresCreateStatisticsExpression,
+    PostgresDropStatisticsExpression,
 )
-from .comment import CommentExpression
-from .mv import RefreshMaterializedViewPgExpression
+from .comment import PostgresCommentExpression
+from .mv import PostgresRefreshMaterializedViewExpression
 from .type import (
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumAddValueExpression,
-    AlterEnumTypeAddValueExpression,
-    AlterEnumTypeRenameValueExpression,
-    CreateRangeTypeExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumAddValueExpression,
+    PostgresAlterEnumTypeAddValueExpression,
+    PostgresAlterEnumTypeRenameValueExpression,
+    PostgresCreateRangeTypeExpression,
 )
+from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 
 __all__ = [
     # vacuum
-    "VacuumExpression",
-    "AnalyzeExpression",
+    "PostgresVacuumExpression",
+    "PostgresAnalyzeExpression",
     # partition
-    "CreatePartitionExpression",
-    "DetachPartitionExpression",
-    "AttachPartitionExpression",
+    "PostgresCreatePartitionExpression",
+    "PostgresDetachPartitionExpression",
+    "PostgresAttachPartitionExpression",
     # index
-    "ReindexExpression",
+    "PostgresReindexExpression",
     # statistics
-    "CreateStatisticsExpression",
-    "DropStatisticsExpression",
+    "PostgresCreateStatisticsExpression",
+    "PostgresDropStatisticsExpression",
     # comment
-    "CommentExpression",
+    "PostgresCommentExpression",
     # mv
-    "RefreshMaterializedViewPgExpression",
+    "PostgresRefreshMaterializedViewExpression",
     # type (enum/range)
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
-    "AlterEnumTypeAddValueExpression",
-    "AlterEnumTypeRenameValueExpression",
-    "CreateRangeTypeExpression",
+    "PostgresCreateEnumTypeExpression",
+    "PostgresDropEnumTypeExpression",
+    "PostgresAlterEnumAddValueExpression",
+    "PostgresAlterEnumTypeAddValueExpression",
+    "PostgresAlterEnumTypeRenameValueExpression",
+    "PostgresCreateRangeTypeExpression",
+    # extension
+    "PostgresCreateExtensionExpression",
+    "PostgresDropExtensionExpression",
 ]

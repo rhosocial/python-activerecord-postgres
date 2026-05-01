@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["VacuumExpression", "AnalyzeExpression"]
+__all__ = ["PostgresVacuumExpression", "PostgresAnalyzeExpression"]
 
 
-class VacuumExpression(BaseExpression):
+class PostgresVacuumExpression(BaseExpression):
     """PostgreSQL VACUUM statement expression.
 
     Reclaims storage space and updates statistics for a database.
@@ -48,7 +48,7 @@ class VacuumExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> vacuum = VacuumExpression(
+        >>> vacuum = PostgresVacuumExpression(
         ...     dialect=dialect,
         ...     table_name="users",
         ...     analyze=True,
@@ -59,7 +59,7 @@ class VacuumExpression(BaseExpression):
         "VACUUM (ANALYZE, VERBOSE) users"
 
         >>> # Full vacuum with parallel workers (PG 13+)
-        >>> vacuum = VacuumExpression(
+        >>> vacuum = PostgresVacuumExpression(
         ...     dialect=dialect,
         ...     table_name="orders",
         ...     full=True,
@@ -109,7 +109,7 @@ class VacuumExpression(BaseExpression):
         return self.dialect.format_vacuum_statement(self)
 
 
-class AnalyzeExpression(BaseExpression):
+class PostgresAnalyzeExpression(BaseExpression):
     """PostgreSQL ANALYZE statement expression.
 
     Collects statistics about the contents of tables in the database.
@@ -125,7 +125,7 @@ class AnalyzeExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> analyze = AnalyzeExpression(
+        >>> analyze = PostgresAnalyzeExpression(
         ...     dialect=dialect,
         ...     table_name="users",
         ...     verbose=True,
@@ -135,7 +135,7 @@ class AnalyzeExpression(BaseExpression):
         "ANALYZE VERBOSE users"
 
         >>> # Analyze specific columns (PG 16+)
-        >>> analyze = AnalyzeExpression(
+        >>> analyze = PostgresAnalyzeExpression(
         ...     dialect=dialect,
         ...     table_name="orders",
         ...     columns=["status", "created_at"],

@@ -1,11 +1,13 @@
-# src/rhosocial/activerecord/backend/impl/postgres/protocols/extensions/intarray.py
 """intarray extension protocol definition.
 
 This module defines the protocol for intarray integer array operations
 functionality in PostgreSQL.
+
+For SQL expression generation, use the function factories in
+``functions/intarray.py`` instead of the removed format_* methods.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -53,4 +55,10 @@ class PostgresIntarraySupport(Protocol):
         Requires intarray extension.
         Supports GiST indexes for integer arrays.
         """
+        ...
+
+    def format_intarray_index_statement(
+        self, table_name: str, column_name: str, index_name: Optional[str] = None
+    ) -> str:
+        """Format CREATE INDEX statement with GIN intarray ops."""
         ...

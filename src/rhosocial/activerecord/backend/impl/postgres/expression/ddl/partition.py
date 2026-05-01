@@ -14,7 +14,7 @@ Version Requirements:
 - ATTACH PARTITION with CONCURRENTLY: PostgreSQL 14+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -23,13 +23,13 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "CreatePartitionExpression",
-    "DetachPartitionExpression",
-    "AttachPartitionExpression",
+    "PostgresCreatePartitionExpression",
+    "PostgresDetachPartitionExpression",
+    "PostgresAttachPartitionExpression",
 ]
 
 
-class CreatePartitionExpression(BaseExpression):
+class PostgresCreatePartitionExpression(BaseExpression):
     """PostgreSQL CREATE TABLE ... PARTITION OF statement expression.
 
     Creates a new partition as a child of a partitioned table.
@@ -49,7 +49,7 @@ class CreatePartitionExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # RANGE partition
-        >>> partition = CreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionExpression(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",
@@ -61,7 +61,7 @@ class CreatePartitionExpression(BaseExpression):
         "CREATE TABLE orders_2024_q1 PARTITION OF orders RANGE ('2024-01-01', '2024-04-01')"
 
         >>> # LIST partition
-        >>> partition = CreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionExpression(
         ...     dialect=dialect,
         ...     partition_name="orders_active",
         ...     parent_table="orders",
@@ -102,7 +102,7 @@ class CreatePartitionExpression(BaseExpression):
         return self.dialect.format_create_partition_statement(self)
 
 
-class DetachPartitionExpression(BaseExpression):
+class PostgresDetachPartitionExpression(BaseExpression):
     """PostgreSQL ALTER TABLE ... DETACH PARTITION statement expression.
 
     Detaches a partition from its parent table without dropping the data.
@@ -118,7 +118,7 @@ class DetachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> detach = DetachPartitionExpression(
+        >>> detach = PostgresDetachPartitionExpression(
         ...     dialect=dialect,
         ...     partition_name="orders_2023",
         ...     parent_table="orders",
@@ -157,7 +157,7 @@ class DetachPartitionExpression(BaseExpression):
         return self.dialect.format_detach_partition_statement(self)
 
 
-class AttachPartitionExpression(BaseExpression):
+class PostgresAttachPartitionExpression(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
@@ -172,7 +172,7 @@ class AttachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> attach = AttachPartitionExpression(
+        >>> attach = PostgresAttachPartitionExpression(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",

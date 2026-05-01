@@ -182,3 +182,4 @@ htmlcov/
 # Claude Code temporary files (local only)
 .claude/tmp/
 .claude/plans/
+.claude/plan/

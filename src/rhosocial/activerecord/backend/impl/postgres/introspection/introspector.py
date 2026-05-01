@@ -44,7 +44,6 @@ from rhosocial.activerecord.backend.introspection.types import (
     IndexColumnInfo,
     IndexInfo,
     IndexType,
-    IntrospectionScope,
     ReferentialAction,
     TableInfo,
     TableType,

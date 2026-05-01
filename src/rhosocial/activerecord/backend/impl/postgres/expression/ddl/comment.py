@@ -17,10 +17,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["CommentExpression"]
+__all__ = ["PostgresCommentExpression"]
 
 
-class CommentExpression(BaseExpression):
+class PostgresCommentExpression(BaseExpression):
     """PostgreSQL COMMENT ON statement expression.
 
     Stores a comment about a database object.
@@ -38,7 +38,7 @@ class CommentExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Comment on a table
-        >>> comment = CommentExpression(
+        >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="TABLE",
         ...     object_name="users",
@@ -49,7 +49,7 @@ class CommentExpression(BaseExpression):
         "COMMENT ON TABLE users IS 'User accounts table'"
 
         >>> # Comment on a column
-        >>> comment = CommentExpression(
+        >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="COLUMN",
         ...     object_name="users.email",
@@ -57,7 +57,7 @@ class CommentExpression(BaseExpression):
         ... )
 
         >>> # Remove comment
-        >>> comment = CommentExpression(
+        >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="INDEX",
         ...     object_name="users_email_idx",

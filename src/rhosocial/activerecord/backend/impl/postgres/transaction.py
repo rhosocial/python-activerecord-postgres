@@ -13,7 +13,6 @@ from rhosocial.activerecord.backend.transaction import (
     TransactionManager,
     AsyncTransactionManager,
     IsolationLevel,
-    TransactionState,
     TransactionMode,
 )
 
@@ -22,12 +21,19 @@ if TYPE_CHECKING:
     from .async_backend import AsyncPostgresBackend
 
 
-class PostgresTransactionManager(TransactionManager):
-    """Synchronous PostgreSQL transaction manager implementation.
+class PostgresTransactionMixin:
+    """PostgreSQL transaction shared methods mixin.
 
-    All transaction operations are delegated to the base class
-    which uses backend.execute() for SQL execution.
-    PostgreSQL-specific features like DEFERRABLE are supported.
+    This mixin provides non-I/O methods that are shared between sync and async
+    PostgreSQL transaction manager implementations.
+
+    Classes using this mixin must provide:
+    - self._isolation_level: Current isolation level
+    - self._transaction_mode: Current transaction mode
+    - self._is_deferrable: Deferrable mode flag
+    - self._deferred_constraints: List of deferred constraints
+    - self._active_savepoints: List of active savepoints
+    - self._backend: Backend instance with .dialect attribute
     """
 
     # PostgreSQL supported isolation level mappings
@@ -37,23 +43,6 @@ class PostgresTransactionManager(TransactionManager):
         IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
         IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
     }
-
-    def __init__(self, backend: "PostgresBackend", logger=None):
-        """Initialize PostgreSQL transaction manager.
-
-        Args:
-            backend: PostgreSQL backend instance.
-            logger: Optional logger instance.
-        """
-        super().__init__(backend, logger)
-        # PostgreSQL default isolation level is READ COMMITTED, but we don't
-        # set it here to allow SESSION CHARACTERISTICS to take effect.
-        # Users can explicitly set isolation_level property if needed.
-        # self._isolation_level = None (inherited from base class)
-        # DEFERRABLE mode for SERIALIZABLE transactions
-        self._is_deferrable: Optional[bool] = None
-        # Deferred constraints list
-        self._deferred_constraints: List[str] = []
 
     def _build_begin_sql(self) -> tuple:
         """Build BEGIN TRANSACTION SQL with PostgreSQL-specific options.
@@ -107,6 +96,42 @@ class PostgresTransactionManager(TransactionManager):
         """
         return self._deferred_constraints.copy()
 
+    def get_active_savepoint(self) -> Optional[str]:
+        """Get the name of the most recently created active savepoint.
+
+        Returns:
+            Name of the most recent savepoint, or None if no savepoints are active.
+        """
+        if self._active_savepoints:
+            return self._active_savepoints[-1]
+        return None
+
+
+class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
+    """Synchronous PostgreSQL transaction manager implementation.
+
+    All transaction operations are delegated to the base class
+    which uses backend.execute() for SQL execution.
+    PostgreSQL-specific features like DEFERRABLE are supported.
+    """
+
+    def __init__(self, backend: "PostgresBackend", logger=None):
+        """Initialize PostgreSQL transaction manager.
+
+        Args:
+            backend: PostgreSQL backend instance.
+            logger: Optional logger instance.
+        """
+        super().__init__(backend, logger)
+        # PostgreSQL default isolation level is READ COMMITTED, but we don't
+        # set it here to allow SESSION CHARACTERISTICS to take effect.
+        # Users can explicitly set isolation_level property if needed.
+        # self._isolation_level = None (inherited from base class)
+        # DEFERRABLE mode for SERIALIZABLE transactions
+        self._is_deferrable: Optional[bool] = None
+        # Deferred constraints list
+        self._deferred_constraints: List[str] = []
+
     def defer_constraint(self, constraint_name: str) -> None:
         """Defer constraint checking until transaction commit.
 
@@ -149,16 +174,6 @@ class PostgresTransactionManager(TransactionManager):
             self.log(logging.ERROR, error_msg)
             raise TransactionError(error_msg) from e
 
-    def get_active_savepoint(self) -> Optional[str]:
-        """Get the name of the most recently created active savepoint.
-
-        Returns:
-            Name of the most recent savepoint, or None if no savepoints are active.
-        """
-        if self._active_savepoints:
-            return self._active_savepoints[-1]
-        return None
-
     def commit(self) -> None:
         """Commit the current transaction and clear deferred constraints."""
         super().commit()
@@ -174,21 +189,13 @@ class PostgresTransactionManager(TransactionManager):
             self._deferred_constraints.clear()
 
 
-class AsyncPostgresTransactionManager(AsyncTransactionManager):
+class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransactionManager):
     """Asynchronous PostgreSQL transaction manager implementation.
 
     All transaction operations are delegated to the base class
     which uses backend.execute() for SQL execution.
     PostgreSQL-specific features like DEFERRABLE are supported.
     """
-
-    # PostgreSQL supported isolation level mappings
-    _ISOLATION_LEVELS: Dict[IsolationLevel, str] = {
-        IsolationLevel.READ_UNCOMMITTED: "READ UNCOMMITTED",
-        IsolationLevel.READ_COMMITTED: "READ COMMITTED",  # PostgreSQL default
-        IsolationLevel.REPEATABLE_READ: "REPEATABLE READ",
-        IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
-    }
 
     def __init__(self, backend: "AsyncPostgresBackend", logger=None):
         """Initialize async PostgreSQL transaction manager.
@@ -206,58 +213,6 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
         self._is_deferrable: Optional[bool] = None
         # Deferred constraints list
         self._deferred_constraints: List[str] = []
-
-    def _build_begin_sql(self) -> tuple:
-        """Build BEGIN TRANSACTION SQL with PostgreSQL-specific options.
-
-        This method creates a BeginTransactionExpression and delegates
-        SQL generation to the backend's dialect. All options including
-        DEFERRABLE are handled by the Expression/Dialect system.
-
-        Returns:
-            Tuple of (SQL string, parameters tuple).
-        """
-        from rhosocial.activerecord.backend.expression.transaction import BeginTransactionExpression
-
-        expr = BeginTransactionExpression(self._backend.dialect)
-
-        if self._isolation_level is not None:
-            expr.isolation_level(self._isolation_level)
-
-        if self._transaction_mode == TransactionMode.READ_ONLY:
-            expr.read_only()
-
-        # DEFERRABLE is handled by the Expression/Dialect system
-        if self._isolation_level == IsolationLevel.SERIALIZABLE and self._is_deferrable is not None:
-            expr.deferrable(self._is_deferrable)
-
-        return expr.to_sql()
-
-    async def set_deferrable(self, deferrable: bool = True) -> None:
-        """Set transaction deferrable mode.
-
-        In PostgreSQL, DEFERRABLE only affects SERIALIZABLE transactions.
-
-        Args:
-            deferrable: Whether constraints should be deferrable
-
-        Raises:
-            TransactionError: If called on active transaction
-        """
-        if self.is_active:
-            error_msg = "Cannot change deferrable mode of active transaction"
-            self.log(logging.ERROR, error_msg)
-            raise TransactionError(error_msg)
-        self._is_deferrable = deferrable
-        self.log(logging.DEBUG, f"Set deferrable mode to {deferrable}")
-
-    def get_deferred_constraints(self) -> List[str]:
-        """Get list of currently deferred constraints.
-
-        Returns:
-            Names of deferred constraints
-        """
-        return self._deferred_constraints.copy()
 
     async def defer_constraint(self, constraint_name: str) -> None:
         """Defer constraint checking until transaction commit.
@@ -300,16 +255,6 @@ class AsyncPostgresTransactionManager(AsyncTransactionManager):
             error_msg = f"Failed to get transaction isolation level: {str(e)}"
             self.log(logging.ERROR, error_msg)
             raise TransactionError(error_msg) from e
-
-    def get_active_savepoint(self) -> Optional[str]:
-        """Get the name of the most recently created active savepoint.
-
-        Returns:
-            Name of the most recent savepoint, or None if no savepoints are active.
-        """
-        if self._active_savepoints:
-            return self._active_savepoints[-1]
-        return None
 
     async def commit(self) -> None:
         """Commit the current transaction and clear deferred constraints."""
