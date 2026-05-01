@@ -66,7 +66,7 @@ class PostgresTriggerMixin:
             all_params.extend(cond_params)
 
         parts.append("EXECUTE FUNCTION")
-        parts.append(expr.function_name + "()")
+        parts.append(f"{self.format_identifier(expr.function_name)}()")
 
         return " ".join(parts), tuple(all_params)
 

@@ -63,7 +63,7 @@ class PostgresStoredProcedureMixin:
         if not self.supports_call_statement():
             raise ValueError("CREATE PROCEDURE requires PostgreSQL 11+")
 
-        full_name = f"{schema}.{name}" if schema else name
+        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)
 
         # OR REPLACE clause
         replace_clause = "OR REPLACE " if or_replace else ""
@@ -126,7 +126,7 @@ class PostgresStoredProcedureMixin:
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
-        full_name = f"{schema}.{name}" if schema else name
+        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)
 
         exists_clause = "IF EXISTS " if if_exists else ""
 
@@ -158,7 +158,7 @@ class PostgresStoredProcedureMixin:
         if not self.supports_call_statement():
             raise ValueError("CALL statement requires PostgreSQL 11+")
 
-        full_name = f"{schema}.{name}" if schema else name
+        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)
 
         if arguments:
             placeholders = ", ".join(["%s"] * len(arguments))
