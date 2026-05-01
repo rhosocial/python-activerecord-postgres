@@ -260,6 +260,7 @@ class PostgresIndexMixin:
                 WARNING: When using string, never pass user input directly;
                 always use ToSQLProtocol expressions for untrusted input.
         """
+        all_params = []
         parts = ["CREATE"]
 
         if unique:
