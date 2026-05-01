@@ -9,6 +9,7 @@ Tests are run against the actual PostgreSQL dialect.
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -16,6 +17,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraint,
     TableConstraintType,
 )
+from typing import Tuple, Any
 
 
 @pytest.fixture
@@ -168,3 +170,202 @@ def test_exclude_constraint_sql_injection_prevention(dialect):
     assert "; DROP" not in sql
     assert "--" not in sql
     assert "/*" not in sql
+
+
+class TestPostgresEnumSecurity:
+    """Tests for CREATE TYPE ENUM value escaping (fix for SQL injection risk)."""
+
+    def test_create_type_enum_values_escaped(self, dialect):
+        """Test ENUM values are properly escaped with single quote doubling."""
+        sql, params = dialect.format_create_type_statement(
+            name="test_enum",
+            values=["it's", "normal", "test's value"],
+        )
+
+        assert "it''s" in sql
+        assert "test''s value" in sql
+        assert "'; DROP" not in sql
+
+    def test_create_type_enum_sql_injection_blocked(self, dialect):
+        """Test SQL injection in ENUM values is blocked."""
+        sql, params = dialect.format_create_type_statement(
+            name="test_enum",
+            values=["normal", "'; DROP TABLE users--"],
+        )
+
+        assert "'; DROP" not in sql
+        assert "DROP TABLE" not in sql
+
+
+class TestPostgresTriggerFunctionNameSecurity:
+    """Tests for trigger function name using format_identifier."""
+
+    def test_trigger_function_name_quoted(self, dialect):
+        """Test trigger function name is properly quoted with double quotes."""
+        from rhosocial.activerecord.backend.expression.ddl import PostgresCreateTriggerExpression
+
+        expr = PostgresCreateTriggerExpression(
+            trigger_name="my_trigger",
+            table_name="users",
+            timing="BEFORE",
+            events=["INSERT"],
+            function_name="my_function",
+        )
+
+        sql, params = dialect.format_create_trigger_statement(expr)
+
+        assert '"my_function"' in sql
+
+    def test_trigger_function_name_special_chars_quoted(self, dialect):
+        """Test trigger function name with special characters is quoted."""
+        from rhosocial.activerecord.backend.expression.ddl import PostgresCreateTriggerExpression
+
+        expr = PostgresCreateTriggerExpression(
+            trigger_name="trigger",
+            table_name="users",
+            timing="BEFORE",
+            events=["INSERT"],
+            function_name="Function With Spaces",
+        )
+
+        sql, params = dialect.format_create_trigger_statement(expr)
+
+        assert '"Function With Spaces"' in sql
+
+
+class TestPostgresStoredProcedureNameSecurity:
+    """Tests for stored procedure names using format_identifier."""
+
+    def test_create_procedure_name_quoted(self, dialect):
+        """Test CREATE PROCEDURE name is properly quoted."""
+        sql, params = dialect.format_create_procedure_statement(
+            name="my_procedure",
+            body="BEGIN END",
+            language="PL/pgSQL",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_drop_procedure_name_quoted(self, dialect):
+        """Test DROP PROCEDURE name is properly quoted."""
+        sql, params = dialect.format_drop_procedure_statement(
+            name="my_procedure",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_call_procedure_name_quoted(self, dialect):
+        """Test CALL statement procedure name is properly quoted."""
+        sql, params = dialect.format_call_procedure_statement(
+            name="my_procedure",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_procedure_with_schema_quoted(self, dialect):
+        """Test procedure with schema is properly quoted."""
+        sql, params = dialect.format_create_procedure_statement(
+            schema="my_schema",
+            name="my_procedure",
+            body="BEGIN END",
+            language="PL/pgSQL",
+        )
+
+        assert '"my_schema"' in sql
+        assert '"my_procedure"' in sql
+
+
+class TestPostgresExtendedStatisticsNameSecurity:
+    """Tests for extended statistics names using format_identifier."""
+
+    def test_create_statistics_name_quoted(self, dialect):
+        """Test CREATE STATISTICS name is properly quoted."""
+        from rhosocial.activerecord.backend.expression.dml import PostgresCreateStatisticsExpression
+
+        expr = PostgresCreateStatisticsExpression(
+            name="my_stats",
+            table_name="users",
+            columns=["email"],
+            statistics_type="ndistinct",
+        )
+
+        sql, params = dialect.format_create_statistics_statement(expr)
+
+        assert '"my_stats"' in sql
+
+    def test_drop_statistics_name_quoted(self, dialect):
+        """Test DROP STATISTICS name is properly quoted."""
+        from rhosocial.activerecord.backend.expression.dml import PostgresDropStatisticsExpression
+
+        expr = PostgresDropStatisticsExpression(
+            name="my_stats",
+        )
+
+        sql, params = dialect.format_drop_statistics_statement(expr)
+
+        assert '"my_stats"' in sql
+
+
+class TestPostgresPartialIndexWhereClauseSecurity:
+    """Tests for partial index WHERE clause (ToSQLProtocol support)."""
+
+    def test_create_index_with_string_where_clause(self, dialect):
+        """Test CREATE INDEX with string WHERE clause (backward compatible)."""
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_test",
+            table_name="users",
+            columns=["email"],
+            where_clause="active = true",
+        )
+
+        assert "WHERE active = true" in sql
+
+    def test_create_index_with_to_sql_protocol(self, dialect):
+        """Test CREATE INDEX with ToSQLProtocol expression (parameterized)."""
+        from rhosocial.activerecord.backend.expression.operators import GreaterThanOrEqual
+        from rhosocial.activerecord.backend.expression.columns import Column
+
+        class FakeColumn:
+            def __init__(self):
+                pass
+
+            def __ge__(self, other):
+                return GreaterThanOrEqual(self, other)
+
+        fake_col = FakeColumn()
+        where_expr = fake_col >= 18
+
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_active",
+            table_name="users",
+            columns=["email"],
+            where_clause=where_expr,
+        )
+
+        assert "WHERE" in sql
+
+    def test_create_index_where_clause_params_collected(self, dialect):
+        """Test WHERE clause parameters are properly collected and returned."""
+        from rhosocial.activerecord.backend.expression.operators import Equal
+        from rhosocial.activerecord.backend.expression.values import Literal
+
+        class FakeColumn:
+            def __init__(self):
+                pass
+
+            def __eq__(self, other):
+                return Equal(self, other)
+
+        fake_col = FakeColumn()
+        where_expr = fake_col == Literal("active")
+
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_test",
+            table_name="users",
+            columns=["status"],
+            where_clause=where_expr,
+        )
+
+        assert "WHERE" in sql
+        assert params is not None
+        assert isinstance(params, tuple)
