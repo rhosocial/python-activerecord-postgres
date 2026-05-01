@@ -75,7 +75,7 @@ class TestFormatCreateTriggerStatement:
         assert 'CREATE TRIGGER "update_timestamp"' in sql
         assert "BEFORE UPDATE" in sql
         assert 'ON "users"' in sql
-        assert "EXECUTE FUNCTION update_updated_at_column()" in sql
+        assert 'EXECUTE FUNCTION "update_updated_at_column"()' in sql
 
     def test_create_trigger_basic_after(self):
         """Test basic CREATE TRIGGER AFTER statement."""

@@ -65,7 +65,7 @@ class TestFormatCreateProcedureStatement:
             name="test_proc",
             body="BEGIN NULL; END"
         )
-        assert "CREATE PROCEDURE test_proc" in sql
+        assert "CREATE PROCEDURE \"test_proc\"" in sql
         assert "LANGUAGE plpgsql" in sql
         assert "BEGIN NULL; END" in sql
         assert params == ()
@@ -78,7 +78,7 @@ class TestFormatCreateProcedureStatement:
             schema="public",
             body="BEGIN NULL; END"
         )
-        assert "public.test_proc" in sql
+        assert '"public"."test_proc"' in sql
 
     def test_create_procedure_with_or_replace(self):
         """Test CREATE OR REPLACE PROCEDURE statement."""
@@ -181,7 +181,7 @@ class TestFormatDropProcedureStatement:
         sql, params = dialect.format_drop_procedure_statement(
             name="test_proc"
         )
-        assert sql == "DROP PROCEDURE test_proc"
+        assert sql == "DROP PROCEDURE \"test_proc\""
         assert params == ()
 
     def test_drop_procedure_with_schema(self):
@@ -191,7 +191,7 @@ class TestFormatDropProcedureStatement:
             name="test_proc",
             schema="public"
         )
-        assert "DROP PROCEDURE public.test_proc" in sql
+        assert 'DROP PROCEDURE "public"."test_proc"' in sql
 
     def test_drop_procedure_if_exists(self):
         """Test DROP PROCEDURE IF EXISTS."""
@@ -200,7 +200,7 @@ class TestFormatDropProcedureStatement:
             name="test_proc",
             if_exists=True
         )
-        assert "DROP PROCEDURE IF EXISTS test_proc" in sql
+        assert "DROP PROCEDURE IF EXISTS \"test_proc\"" in sql
 
     def test_drop_procedure_cascade(self):
         """Test DROP PROCEDURE CASCADE."""
@@ -209,7 +209,7 @@ class TestFormatDropProcedureStatement:
             name="test_proc",
             cascade=True
         )
-        assert "DROP PROCEDURE test_proc CASCADE" in sql
+        assert "DROP PROCEDURE \"test_proc\" CASCADE" in sql
 
     def test_drop_procedure_with_parameter_types(self):
         """Test DROP PROCEDURE with parameter types for overload resolution."""
@@ -221,7 +221,7 @@ class TestFormatDropProcedureStatement:
                 {"type": "varchar"}
             ]
         )
-        assert "test_proc(integer, varchar)" in sql
+        assert '"test_proc"(integer, varchar)' in sql
 
     def test_drop_procedure_with_parameter_type_strings(self):
         """Test DROP PROCEDURE with parameter types as strings."""
@@ -230,7 +230,7 @@ class TestFormatDropProcedureStatement:
             name="test_proc",
             parameters=["integer", "varchar"]
         )
-        assert "test_proc(integer, varchar)" in sql
+        assert '"test_proc"(integer, varchar)' in sql
 
 
 class TestFormatCallStatement:
@@ -246,7 +246,7 @@ class TestFormatCallStatement:
         """Test CALL statement without arguments."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_call_statement(name="test_proc")
-        assert sql == "CALL test_proc()"
+        assert sql == 'CALL "test_proc"()'
         assert params == ()
 
     def test_call_statement_with_args(self):
@@ -256,7 +256,7 @@ class TestFormatCallStatement:
             name="test_proc",
             arguments=[1, "test", None]
         )
-        assert "CALL test_proc(%s, %s, %s)" in sql
+        assert 'CALL "test_proc"(%s, %s, %s)' in sql
         assert params == (1, "test", None)
 
     def test_call_statement_with_schema(self):
@@ -266,4 +266,4 @@ class TestFormatCallStatement:
             name="test_proc",
             schema="public"
         )
-        assert "CALL public.test_proc()" in sql
+        assert 'CALL "public"."test_proc"()' in sql
