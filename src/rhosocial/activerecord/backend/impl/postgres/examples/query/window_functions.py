@@ -10,11 +10,11 @@ from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
-    host=os.getenv('PG_HOST', 'localhost'),
-    port=int(os.getenv('PG_PORT', 5432)),
-    database=os.getenv('PG_DATABASE', 'test'),
-    username=os.getenv('PG_USERNAME', 'postgres'),
-    password=os.getenv('PG_PASSWORD', ''),
+    host=os.getenv('POSTGRES_HOST', 'localhost'),
+    port=int(os.getenv('POSTGRES_PORT', 5432)),
+    database=os.getenv('POSTGRES_DATABASE', 'test'),
+    username=os.getenv('POSTGRES_USER', 'postgres'),
+    password=os.getenv('POSTGRES_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
