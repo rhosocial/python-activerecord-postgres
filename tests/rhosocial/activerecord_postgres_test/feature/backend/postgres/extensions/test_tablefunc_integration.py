@@ -67,7 +67,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table_name="test_tf_sales",
+        table="test_tf_sales",
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -106,7 +106,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_tf_tree",
+        table="test_tf_tree",
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -134,7 +134,7 @@ def tablefunc_env(postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table_name="test_tf_sales",
+        table="test_tf_sales",
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -142,7 +142,7 @@ def tablefunc_env(postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table_name="test_tf_tree",
+        table="test_tf_tree",
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()
@@ -258,7 +258,7 @@ class TestTablefuncIntegration:
         )
         sql, params = connectby_func.to_sql()
         assert "CONNECTBY" in sql
-        # 5 args: table_name, key_column, parent_column, start_value, max_depth
+        # 5 args: table, key_column, parent_column, start_value, max_depth
         assert len(params) == 5
 
         # Verify with branch_delim expression generation
@@ -273,7 +273,7 @@ class TestTablefuncIntegration:
         )
         sql2, params2 = connectby_func2.to_sql()
         assert "CONNECTBY" in sql2
-        # 6 args: table_name, key_column, parent_column, start_value, max_depth, branch_delim
+        # 6 args: table, key_column, parent_column, start_value, max_depth, branch_delim
         assert len(params2) == 6
 
     def test_connectby_execution(self, tablefunc_env):
@@ -345,7 +345,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table_name="test_tf_sales_async",
+        table="test_tf_sales_async",
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -384,7 +384,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_tf_tree_async",
+        table="test_tf_tree_async",
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -412,7 +412,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table_name="test_tf_sales_async",
+        table="test_tf_sales_async",
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -420,7 +420,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table_name="test_tf_tree_async",
+        table="test_tf_tree_async",
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()
@@ -541,7 +541,7 @@ class TestAsyncTablefuncIntegration:
         )
         sql, params = connectby_func.to_sql()
         assert "CONNECTBY" in sql
-        # 5 args: table_name, key_column, parent_column, start_value, max_depth
+        # 5 args: table, key_column, parent_column, start_value, max_depth
         assert len(params) == 5
 
         # Verify with branch_delim expression generation
@@ -556,7 +556,7 @@ class TestAsyncTablefuncIntegration:
         )
         sql2, params2 = connectby_func2.to_sql()
         assert "CONNECTBY" in sql2
-        # 6 args: table_name, key_column, parent_column, start_value, max_depth, branch_delim
+        # 6 args: table, key_column, parent_column, start_value, max_depth, branch_delim
         assert len(params2) == 6
 
     @pytest.mark.asyncio

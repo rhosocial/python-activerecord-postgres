@@ -62,7 +62,7 @@ def btree_gin_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_btree_gin",
+        table="test_btree_gin",
         columns=columns,
         if_not_exists=True,
     )
@@ -89,7 +89,7 @@ def btree_gin_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_btree_gin",
+        table="test_btree_gin",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -217,7 +217,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_btree_gin_async",
+        table="test_btree_gin_async",
         columns=columns,
         if_not_exists=True,
     )
@@ -244,7 +244,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_btree_gin_async",
+        table="test_btree_gin_async",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

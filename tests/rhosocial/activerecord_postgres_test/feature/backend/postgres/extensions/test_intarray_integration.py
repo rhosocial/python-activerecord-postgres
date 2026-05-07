@@ -44,7 +44,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 # --- Helper functions ---
 
 
-def _setup_intarray_table(backend, dialect, table_name):
+def _setup_intarray_table(backend, dialect, table):
     """Create and populate the basic intarray test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -58,7 +58,7 @@ def _setup_intarray_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -67,7 +67,7 @@ def _setup_intarray_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -82,7 +82,7 @@ def _setup_intarray_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_intarray_overlap_table(backend, dialect, table_name):
+def _setup_intarray_overlap_table(backend, dialect, table):
     """Create and populate the intarray overlap test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -96,7 +96,7 @@ def _setup_intarray_overlap_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -105,7 +105,7 @@ def _setup_intarray_overlap_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -120,7 +120,7 @@ def _setup_intarray_overlap_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_intarray_contained_table(backend, dialect, table_name):
+def _setup_intarray_contained_table(backend, dialect, table):
     """Create and populate the intarray contained-by test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -134,7 +134,7 @@ def _setup_intarray_contained_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -143,7 +143,7 @@ def _setup_intarray_contained_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -158,7 +158,7 @@ def _setup_intarray_contained_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_intarray_idx_table(backend, dialect, table_name):
+def _setup_intarray_idx_table(backend, dialect, table):
     """Create and populate the intarray idx() test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -172,7 +172,7 @@ def _setup_intarray_idx_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -181,7 +181,7 @@ def _setup_intarray_idx_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -192,7 +192,7 @@ def _setup_intarray_idx_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_intarray_gin_table(backend, dialect, table_name, index_name):
+def _setup_intarray_gin_table(backend, dialect, table, index_name):
     """Create and populate the intarray GIN test table using expressions.
 
     The GIN index with gin__int_ops opclass is created using raw SQL
@@ -210,7 +210,7 @@ def _setup_intarray_gin_table(backend, dialect, table_name, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -221,12 +221,12 @@ def _setup_intarray_gin_table(backend, dialect, table_name, index_name):
     # (expression system does not support opclass specifications)
     backend.execute(
         f"CREATE INDEX IF NOT EXISTS {index_name} "
-        f"ON {table_name} USING gin (tags gin__int_ops)"
+        f"ON {table} USING gin (tags gin__int_ops)"
     )
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -237,18 +237,18 @@ def _setup_intarray_gin_table(backend, dialect, table_name, index_name):
     backend.execute(sql, params)
 
 
-def _teardown_table(backend, dialect, table_name):
+def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
 
-async def _async_setup_intarray_table(backend, dialect, table_name):
+async def _async_setup_intarray_table(backend, dialect, table):
     """Async: create and populate the basic intarray test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -262,7 +262,7 @@ async def _async_setup_intarray_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -271,7 +271,7 @@ async def _async_setup_intarray_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -286,7 +286,7 @@ async def _async_setup_intarray_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_intarray_overlap_table(backend, dialect, table_name):
+async def _async_setup_intarray_overlap_table(backend, dialect, table):
     """Async: create and populate the intarray overlap test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -300,7 +300,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -309,7 +309,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -324,7 +324,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_intarray_contained_table(backend, dialect, table_name):
+async def _async_setup_intarray_contained_table(backend, dialect, table):
     """Async: create and populate the intarray contained-by test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -338,7 +338,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -347,7 +347,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -362,7 +362,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_intarray_idx_table(backend, dialect, table_name):
+async def _async_setup_intarray_idx_table(backend, dialect, table):
     """Async: create and populate the intarray idx() test table using expressions."""
     columns = [
         ColumnDefinition(
@@ -376,7 +376,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -385,7 +385,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -396,7 +396,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_intarray_gin_table(backend, dialect, table_name, index_name):
+async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
     """Async: create and populate the intarray GIN test table using expressions.
 
     The GIN index with gin__int_ops opclass is created using raw SQL
@@ -414,7 +414,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table_name, index_na
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -424,12 +424,12 @@ async def _async_setup_intarray_gin_table(backend, dialect, table_name, index_na
     # GIN index with gin__int_ops opclass requires raw SQL
     await backend.execute(
         f"CREATE INDEX IF NOT EXISTS {index_name} "
-        f"ON {table_name} USING gin (tags gin__int_ops)"
+        f"ON {table} USING gin (tags gin__int_ops)"
     )
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -440,11 +440,11 @@ async def _async_setup_intarray_gin_table(backend, dialect, table_name, index_na
     await backend.execute(sql, params)
 
 
-async def _async_teardown_table(backend, dialect, table_name):
+async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -479,9 +479,9 @@ def intarray_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_INTARRAY, T_INTARRAY_OVERLAP, T_INTARRAY_CONTAINED,
+    for table in [T_INTARRAY, T_INTARRAY_OVERLAP, T_INTARRAY_CONTAINED,
                        T_INTARRAY_IDX, T_INTARRAY_GIN]:
-        _teardown_table(backend, dialect, table_name)
+        _teardown_table(backend, dialect, table)
 
     _setup_intarray_table(backend, dialect, T_INTARRAY)
     _setup_intarray_overlap_table(backend, dialect, T_INTARRAY_OVERLAP)
@@ -491,9 +491,9 @@ def intarray_env(postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_INTARRAY, T_INTARRAY_OVERLAP, T_INTARRAY_CONTAINED,
+    for table in [T_INTARRAY, T_INTARRAY_OVERLAP, T_INTARRAY_CONTAINED,
                        T_INTARRAY_IDX, T_INTARRAY_GIN]:
-        _teardown_table(backend, dialect, table_name)
+        _teardown_table(backend, dialect, table)
 
 
 class TestIntarrayIntegration:
@@ -686,10 +686,10 @@ async def async_intarray_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_INTARRAY_ASYNC, T_INTARRAY_OVERLAP_ASYNC,
+    for table in [T_INTARRAY_ASYNC, T_INTARRAY_OVERLAP_ASYNC,
                        T_INTARRAY_CONTAINED_ASYNC, T_INTARRAY_IDX_ASYNC,
                        T_INTARRAY_GIN_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+        await _async_teardown_table(backend, dialect, table)
 
     await _async_setup_intarray_table(backend, dialect, T_INTARRAY_ASYNC)
     await _async_setup_intarray_overlap_table(backend, dialect, T_INTARRAY_OVERLAP_ASYNC)
@@ -699,10 +699,10 @@ async def async_intarray_env(async_postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_INTARRAY_ASYNC, T_INTARRAY_OVERLAP_ASYNC,
+    for table in [T_INTARRAY_ASYNC, T_INTARRAY_OVERLAP_ASYNC,
                        T_INTARRAY_CONTAINED_ASYNC, T_INTARRAY_IDX_ASYNC,
                        T_INTARRAY_GIN_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+        await _async_teardown_table(backend, dialect, table)
 
 
 class TestAsyncIntarrayIntegration:

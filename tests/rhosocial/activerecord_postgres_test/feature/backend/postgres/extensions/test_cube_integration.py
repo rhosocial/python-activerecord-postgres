@@ -50,15 +50,15 @@ def cube_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_cubes table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cubes",
+        table="test_cubes",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -93,7 +93,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_dist table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cube_dist",
+        table="test_cube_dist",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -128,7 +128,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cube_idx",
+        table="test_cube_idx",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -172,10 +172,10 @@ def cube_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
+    for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -336,15 +336,15 @@ async def async_cube_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_cubes_async table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cubes_async",
+        table="test_cubes_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -379,7 +379,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_dist_async table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cube_dist_async",
+        table="test_cube_dist_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -414,7 +414,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table_name="test_cube_idx_async",
+        table="test_cube_idx_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -458,10 +458,10 @@ async def async_cube_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
+    for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

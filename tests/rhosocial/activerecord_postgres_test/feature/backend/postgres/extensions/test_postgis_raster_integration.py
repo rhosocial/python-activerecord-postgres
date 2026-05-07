@@ -93,7 +93,7 @@ def raster_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=TABLE_NAME,
+        table=TABLE_NAME,
         columns=columns,
         if_not_exists=True,
     )
@@ -124,7 +124,7 @@ def raster_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=TABLE_NAME,
+        table=TABLE_NAME,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -212,7 +212,7 @@ async def async_raster_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=ASYNC_TABLE_NAME,
+        table=ASYNC_TABLE_NAME,
         columns=columns,
         if_not_exists=True,
     )
@@ -243,7 +243,7 @@ async def async_raster_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=ASYNC_TABLE_NAME,
+        table=ASYNC_TABLE_NAME,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

@@ -59,15 +59,15 @@ def uuid_ossp_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_uuid_ossp", "test_uuid_explicit"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in ["test_uuid_ossp", "test_uuid_explicit"]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_uuid_ossp table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table_name="test_uuid_ossp",
+        table="test_uuid_ossp",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -103,7 +103,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Setup: create test_uuid_explicit table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table_name="test_uuid_explicit",
+        table="test_uuid_explicit",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -145,10 +145,10 @@ def uuid_ossp_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in ["test_uuid_ossp", "test_uuid_explicit"]:
+    for table in ["test_uuid_ossp", "test_uuid_explicit"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -264,15 +264,15 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_uuid_ossp_async table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table_name="test_uuid_ossp_async",
+        table="test_uuid_ossp_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -308,7 +308,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Setup: create test_uuid_explicit_async table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table_name="test_uuid_explicit_async",
+        table="test_uuid_explicit_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -350,10 +350,10 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
+    for table in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

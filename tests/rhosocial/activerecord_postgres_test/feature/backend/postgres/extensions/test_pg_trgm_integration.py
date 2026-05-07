@@ -51,7 +51,7 @@ TABLE_TRGM_IDX_ASYNC = "test_trgm_idx_async"
 TABLE_TRGM_WORD_ASYNC = "test_trgm_word_async"
 
 
-def _setup_trgm_table(backend, dialect, table_name):
+def _setup_trgm_table(backend, dialect, table):
     """Create and populate the test_trgm table using expressions."""
     columns = [
         ColumnDefinition(
@@ -65,7 +65,7 @@ def _setup_trgm_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -80,7 +80,7 @@ def _setup_trgm_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -88,7 +88,7 @@ def _setup_trgm_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_trgm_ops_table(backend, dialect, table_name):
+def _setup_trgm_ops_table(backend, dialect, table):
     """Create and populate the test_trgm_ops table using expressions."""
     columns = [
         ColumnDefinition(
@@ -102,7 +102,7 @@ def _setup_trgm_ops_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -116,7 +116,7 @@ def _setup_trgm_ops_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -124,7 +124,7 @@ def _setup_trgm_ops_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_trgm_idx_table(backend, dialect, table_name):
+def _setup_trgm_idx_table(backend, dialect, table):
     """Create test_trgm_idx table, GIN index with gin_trgm_ops, and insert data.
 
     Note: GIN index with gin_trgm_ops opclass is created via raw SQL because
@@ -143,7 +143,7 @@ def _setup_trgm_idx_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -153,7 +153,7 @@ def _setup_trgm_idx_table(backend, dialect, table_name):
     # Create GIN index with gin_trgm_ops opclass via raw SQL
     # (expression system lacks structural support for opclass specification)
     backend.execute(
-        f"CREATE INDEX IF NOT EXISTS idx_trgm_name ON {table_name} USING gin (name gin_trgm_ops)"
+        f"CREATE INDEX IF NOT EXISTS idx_trgm_name ON {table} USING gin (name gin_trgm_ops)"
     )
 
     rows = [
@@ -161,7 +161,7 @@ def _setup_trgm_idx_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -169,7 +169,7 @@ def _setup_trgm_idx_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_trgm_word_table(backend, dialect, table_name):
+def _setup_trgm_word_table(backend, dialect, table):
     """Create and populate the test_trgm_word table using expressions."""
     columns = [
         ColumnDefinition(
@@ -183,7 +183,7 @@ def _setup_trgm_word_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -195,7 +195,7 @@ def _setup_trgm_word_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )
@@ -203,18 +203,18 @@ def _setup_trgm_word_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _teardown_table(backend, dialect, table_name):
+def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
 
-async def _async_setup_trgm_table(backend, dialect, table_name):
+async def _async_setup_trgm_table(backend, dialect, table):
     """Async: create and populate the test_trgm table using expressions."""
     columns = [
         ColumnDefinition(
@@ -228,7 +228,7 @@ async def _async_setup_trgm_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -243,7 +243,7 @@ async def _async_setup_trgm_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -251,7 +251,7 @@ async def _async_setup_trgm_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_trgm_ops_table(backend, dialect, table_name):
+async def _async_setup_trgm_ops_table(backend, dialect, table):
     """Async: create and populate the test_trgm_ops table using expressions."""
     columns = [
         ColumnDefinition(
@@ -265,7 +265,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -279,7 +279,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -287,7 +287,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_trgm_idx_table(backend, dialect, table_name):
+async def _async_setup_trgm_idx_table(backend, dialect, table):
     """Async: create test_trgm_idx table, GIN index with gin_trgm_ops, and insert data.
 
     Note: GIN index with gin_trgm_ops opclass is created via raw SQL because
@@ -306,7 +306,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -316,7 +316,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table_name):
     # Create GIN index with gin_trgm_ops opclass via raw SQL
     # (expression system lacks structural support for opclass specification)
     await backend.execute(
-        f"CREATE INDEX IF NOT EXISTS idx_trgm_name_async ON {table_name} USING gin (name gin_trgm_ops)"
+        f"CREATE INDEX IF NOT EXISTS idx_trgm_name_async ON {table} USING gin (name gin_trgm_ops)"
     )
 
     rows = [
@@ -324,7 +324,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -332,7 +332,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_trgm_word_table(backend, dialect, table_name):
+async def _async_setup_trgm_word_table(backend, dialect, table):
     """Async: create and populate the test_trgm_word table using expressions."""
     columns = [
         ColumnDefinition(
@@ -346,7 +346,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -358,7 +358,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )
@@ -366,11 +366,11 @@ async def _async_setup_trgm_word_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_teardown_table(backend, dialect, table_name):
+async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -388,8 +388,8 @@ def pg_trgm_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [TABLE_TRGM, TABLE_TRGM_OPS, TABLE_TRGM_IDX, TABLE_TRGM_WORD]:
-        _teardown_table(backend, dialect, table_name)
+    for table in [TABLE_TRGM, TABLE_TRGM_OPS, TABLE_TRGM_IDX, TABLE_TRGM_WORD]:
+        _teardown_table(backend, dialect, table)
 
     _setup_trgm_table(backend, dialect, TABLE_TRGM)
     _setup_trgm_ops_table(backend, dialect, TABLE_TRGM_OPS)
@@ -632,8 +632,8 @@ async def async_pg_trgm_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [TABLE_TRGM_ASYNC, TABLE_TRGM_OPS_ASYNC, TABLE_TRGM_IDX_ASYNC, TABLE_TRGM_WORD_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+    for table in [TABLE_TRGM_ASYNC, TABLE_TRGM_OPS_ASYNC, TABLE_TRGM_IDX_ASYNC, TABLE_TRGM_WORD_ASYNC]:
+        await _async_teardown_table(backend, dialect, table)
 
     await _async_setup_trgm_table(backend, dialect, TABLE_TRGM_ASYNC)
     await _async_setup_trgm_ops_table(backend, dialect, TABLE_TRGM_OPS_ASYNC)

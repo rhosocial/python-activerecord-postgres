@@ -38,7 +38,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 # --- Helper functions ---
 
 
-def _setup_geo_points_table(backend, dialect, table_name):
+def _setup_geo_points_table(backend, dialect, table):
     """Create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
@@ -52,7 +52,7 @@ def _setup_geo_points_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -61,7 +61,7 @@ def _setup_geo_points_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -75,7 +75,7 @@ def _setup_geo_points_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_geo_distance_table(backend, dialect, table_name):
+def _setup_geo_distance_table(backend, dialect, table):
     """Create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
@@ -89,7 +89,7 @@ def _setup_geo_distance_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -98,7 +98,7 @@ def _setup_geo_distance_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -112,7 +112,7 @@ def _setup_geo_distance_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_geo_contains_table(backend, dialect, table_name):
+def _setup_geo_contains_table(backend, dialect, table):
     """Create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
@@ -126,7 +126,7 @@ def _setup_geo_contains_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -135,7 +135,7 @@ def _setup_geo_contains_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -155,7 +155,7 @@ def _setup_geo_contains_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_geo_index_table(backend, dialect, table_name, index_name):
+def _setup_geo_index_table(backend, dialect, table, index_name):
     """Create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
@@ -169,7 +169,7 @@ def _setup_geo_index_table(backend, dialect, table_name, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -178,7 +178,7 @@ def _setup_geo_index_table(backend, dialect, table_name, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -193,7 +193,7 @@ def _setup_geo_index_table(backend, dialect, table_name, index_name):
     create_index = CreateIndexExpression(
         dialect=dialect,
         index_name=index_name,
-        table_name=table_name,
+        table_name=table,
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -202,7 +202,7 @@ def _setup_geo_index_table(backend, dialect, table_name, index_name):
     backend.execute(sql, params)
 
 
-def _setup_geog_table(backend, dialect, table_name):
+def _setup_geog_table(backend, dialect, table):
     """Create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
@@ -216,7 +216,7 @@ def _setup_geog_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -225,7 +225,7 @@ def _setup_geog_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geog"],
         source=ValuesSource(
             dialect,
@@ -238,18 +238,18 @@ def _setup_geog_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _teardown_table(backend, dialect, table_name):
+def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
 
-async def _async_setup_geo_points_table(backend, dialect, table_name):
+async def _async_setup_geo_points_table(backend, dialect, table):
     """Async: create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
@@ -263,7 +263,7 @@ async def _async_setup_geo_points_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -272,7 +272,7 @@ async def _async_setup_geo_points_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -286,7 +286,7 @@ async def _async_setup_geo_points_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_geo_distance_table(backend, dialect, table_name):
+async def _async_setup_geo_distance_table(backend, dialect, table):
     """Async: create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
@@ -300,7 +300,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -309,7 +309,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -323,7 +323,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_geo_contains_table(backend, dialect, table_name):
+async def _async_setup_geo_contains_table(backend, dialect, table):
     """Async: create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
@@ -337,7 +337,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -346,7 +346,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -366,7 +366,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_geo_index_table(backend, dialect, table_name, index_name):
+async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     """Async: create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
@@ -380,7 +380,7 @@ async def _async_setup_geo_index_table(backend, dialect, table_name, index_name)
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -389,7 +389,7 @@ async def _async_setup_geo_index_table(backend, dialect, table_name, index_name)
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -404,7 +404,7 @@ async def _async_setup_geo_index_table(backend, dialect, table_name, index_name)
     create_index = CreateIndexExpression(
         dialect=dialect,
         index_name=index_name,
-        table_name=table_name,
+        table_name=table,
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -413,7 +413,7 @@ async def _async_setup_geo_index_table(backend, dialect, table_name, index_name)
     await backend.execute(sql, params)
 
 
-async def _async_setup_geog_table(backend, dialect, table_name):
+async def _async_setup_geog_table(backend, dialect, table):
     """Async: create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
@@ -427,7 +427,7 @@ async def _async_setup_geog_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -436,7 +436,7 @@ async def _async_setup_geog_table(backend, dialect, table_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["geog"],
         source=ValuesSource(
             dialect,
@@ -449,11 +449,11 @@ async def _async_setup_geog_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_teardown_table(backend, dialect, table_name):
+async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -488,8 +488,8 @@ def postgis_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_GEO_POINTS, T_GEO_DISTANCE, T_GEO_CONTAINS, T_GEO_INDEX, T_GEOG]:
-        _teardown_table(backend, dialect, table_name)
+    for table in [T_GEO_POINTS, T_GEO_DISTANCE, T_GEO_CONTAINS, T_GEO_INDEX, T_GEOG]:
+        _teardown_table(backend, dialect, table)
 
     _setup_geo_points_table(backend, dialect, T_GEO_POINTS)
     _setup_geo_distance_table(backend, dialect, T_GEO_DISTANCE)
@@ -499,8 +499,8 @@ def postgis_env(postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_GEO_POINTS, T_GEO_DISTANCE, T_GEO_CONTAINS, T_GEO_INDEX, T_GEOG]:
-        _teardown_table(backend, dialect, table_name)
+    for table in [T_GEO_POINTS, T_GEO_DISTANCE, T_GEO_CONTAINS, T_GEO_INDEX, T_GEOG]:
+        _teardown_table(backend, dialect, table)
 
 
 class TestPostGISIntegration:
@@ -819,8 +819,8 @@ async def async_postgis_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_GEO_POINTS_ASYNC, T_GEO_DISTANCE_ASYNC, T_GEO_CONTAINS_ASYNC, T_GEO_INDEX_ASYNC, T_GEOG_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+    for table in [T_GEO_POINTS_ASYNC, T_GEO_DISTANCE_ASYNC, T_GEO_CONTAINS_ASYNC, T_GEO_INDEX_ASYNC, T_GEOG_ASYNC]:
+        await _async_teardown_table(backend, dialect, table)
 
     await _async_setup_geo_points_table(backend, dialect, T_GEO_POINTS_ASYNC)
     await _async_setup_geo_distance_table(backend, dialect, T_GEO_DISTANCE_ASYNC)
@@ -830,8 +830,8 @@ async def async_postgis_env(async_postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_GEO_POINTS_ASYNC, T_GEO_DISTANCE_ASYNC, T_GEO_CONTAINS_ASYNC, T_GEO_INDEX_ASYNC, T_GEOG_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+    for table in [T_GEO_POINTS_ASYNC, T_GEO_DISTANCE_ASYNC, T_GEO_CONTAINS_ASYNC, T_GEO_INDEX_ASYNC, T_GEOG_ASYNC]:
+        await _async_teardown_table(backend, dialect, table)
 
 
 class TestAsyncPostGISIntegration:

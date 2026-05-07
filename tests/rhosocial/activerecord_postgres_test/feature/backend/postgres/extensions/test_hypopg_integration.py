@@ -56,7 +56,7 @@ def hypopg_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_hypopg_items",
+        table="test_hypopg_items",
         columns=columns,
         if_not_exists=True,
     )
@@ -96,7 +96,7 @@ def hypopg_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_hypopg_items",
+        table="test_hypopg_items",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -272,7 +272,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_hypopg_items_async",
+        table="test_hypopg_items_async",
         columns=columns,
         if_not_exists=True,
     )
@@ -312,7 +312,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_hypopg_items_async",
+        table="test_hypopg_items_async",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

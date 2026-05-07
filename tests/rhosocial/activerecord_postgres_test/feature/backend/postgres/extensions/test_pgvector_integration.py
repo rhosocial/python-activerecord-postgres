@@ -72,10 +72,10 @@ def vector_env(postgres_backend_single):
     ]
 
     # Clean up any leftover tables from prior runs
-    for table_name in table_names:
+    for table in table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -84,7 +84,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_items ---
     create_items = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_items",
+        table="test_vector_items",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_items.to_sql()
@@ -108,7 +108,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_l2 ---
     create_l2 = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_l2",
+        table="test_vector_l2",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_l2.to_sql()
@@ -133,7 +133,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_cosine ---
     create_cosine = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_cosine",
+        table="test_vector_cosine",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_cosine.to_sql()
@@ -158,7 +158,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_ip ---
     create_ip = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_ip",
+        table="test_vector_ip",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_ip.to_sql()
@@ -182,7 +182,7 @@ def vector_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in [
+    for table in [
         "test_vector_items",
         "test_vector_l2",
         "test_vector_cosine",
@@ -190,7 +190,7 @@ def vector_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -311,7 +311,7 @@ class TestPgvectorIntegration:
         # Create temporary table
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_update",
+            table="test_vector_update",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -356,7 +356,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_update",
+                table="test_vector_update",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -369,7 +369,7 @@ class TestPgvectorIntegration:
         # Create table for IVFFlat index test
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_ivfflat",
+            table="test_vector_ivfflat",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -413,7 +413,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_ivfflat",
+                table="test_vector_ivfflat",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -430,7 +430,7 @@ class TestPgvectorIntegration:
         # Create table for HNSW index test
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_hnsw",
+            table="test_vector_hnsw",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -474,7 +474,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_hnsw",
+                table="test_vector_hnsw",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -487,7 +487,7 @@ class TestPgvectorIntegration:
         # Create table with VECTOR(3) dimension constraint
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_dim",
+            table="test_vector_dim",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -510,7 +510,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_dim",
+                table="test_vector_dim",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -535,10 +535,10 @@ async def async_vector_env(async_postgres_backend_single):
     ]
 
     # Clean up any leftover tables from prior runs
-    for table_name in async_table_names:
+    for table in async_table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -547,7 +547,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_items_async ---
     create_items = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_items_async",
+        table="test_vector_items_async",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_items.to_sql()
@@ -571,7 +571,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_l2_async ---
     create_l2 = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_l2_async",
+        table="test_vector_l2_async",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_l2.to_sql()
@@ -596,7 +596,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_cosine_async ---
     create_cosine = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_cosine_async",
+        table="test_vector_cosine_async",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_cosine.to_sql()
@@ -621,7 +621,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_ip_async ---
     create_ip = CreateTableExpression(
         dialect=dialect,
-        table_name="test_vector_ip_async",
+        table="test_vector_ip_async",
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_ip.to_sql()
@@ -645,7 +645,7 @@ async def async_vector_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in [
+    for table in [
         "test_vector_items_async",
         "test_vector_l2_async",
         "test_vector_cosine_async",
@@ -653,7 +653,7 @@ async def async_vector_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -772,7 +772,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_update_async",
+            table="test_vector_update_async",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -814,7 +814,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_update_async",
+                table="test_vector_update_async",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -827,7 +827,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_ivfflat_async",
+            table="test_vector_ivfflat_async",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -869,7 +869,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_ivfflat_async",
+                table="test_vector_ivfflat_async",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -885,7 +885,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_hnsw_async",
+            table="test_vector_hnsw_async",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -927,7 +927,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_hnsw_async",
+                table="test_vector_hnsw_async",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -940,7 +940,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_vector_dim_async",
+            table="test_vector_dim_async",
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -962,7 +962,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_vector_dim_async",
+                table="test_vector_dim_async",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
