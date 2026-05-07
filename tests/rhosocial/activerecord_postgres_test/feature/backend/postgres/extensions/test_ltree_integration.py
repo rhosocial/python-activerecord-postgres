@@ -50,16 +50,16 @@ def ltree_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_ltree", "test_ltree_tree", "test_ltree_func",
+    for table in ["test_ltree", "test_ltree_tree", "test_ltree_func",
                        "test_ltree_idx", "test_ltree_txtq"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_ltree table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree",
+        table="test_ltree",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -97,7 +97,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_tree table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_tree",
+        table="test_ltree_tree",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -136,7 +136,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_func table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_func",
+        table="test_ltree_func",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -168,7 +168,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_idx",
+        table="test_ltree_idx",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -216,7 +216,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_txtq table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_txtq",
+        table="test_ltree_txtq",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -252,7 +252,7 @@ def ltree_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in [
+    for table in [
         "test_ltree",
         "test_ltree_tree",
         "test_ltree_func",
@@ -261,7 +261,7 @@ def ltree_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -555,17 +555,17 @@ async def async_ltree_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in ["test_ltree_async", "test_ltree_tree_async",
+    for table in ["test_ltree_async", "test_ltree_tree_async",
                        "test_ltree_func_async", "test_ltree_idx_async",
                        "test_ltree_txtq_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_ltree_async table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_async",
+        table="test_ltree_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -603,7 +603,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_tree_async table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_tree_async",
+        table="test_ltree_tree_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -642,7 +642,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_func_async table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_func_async",
+        table="test_ltree_func_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -674,7 +674,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_idx_async",
+        table="test_ltree_idx_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -722,7 +722,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_txtq_async table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table_name="test_ltree_txtq_async",
+        table="test_ltree_txtq_async",
         columns=[
             ColumnDefinition(
                 name="id",
@@ -758,7 +758,7 @@ async def async_ltree_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop tables
-    for table_name in [
+    for table in [
         "test_ltree_async",
         "test_ltree_tree_async",
         "test_ltree_func_async",
@@ -767,7 +767,7 @@ async def async_ltree_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table_name=table_name,
+            table=table,
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

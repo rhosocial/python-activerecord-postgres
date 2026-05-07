@@ -59,7 +59,7 @@ def pgrouting_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_route_edges",
+        table="test_route_edges",
         columns=columns,
         if_not_exists=True,
     )
@@ -108,7 +108,7 @@ def pgrouting_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_route_edges",
+        table="test_route_edges",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -188,7 +188,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="test_route_edges_async",
+        table="test_route_edges_async",
         columns=columns,
         if_not_exists=True,
     )
@@ -237,7 +237,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name="test_route_edges_async",
+        table="test_route_edges_async",
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

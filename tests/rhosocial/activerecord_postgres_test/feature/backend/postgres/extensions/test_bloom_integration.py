@@ -46,8 +46,8 @@ def bloom_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in [TABLE_NAME]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -65,7 +65,7 @@ def bloom_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=TABLE_NAME,
+        table=TABLE_NAME,
         columns=columns,
         if_not_exists=True,
     )
@@ -105,7 +105,7 @@ def bloom_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=TABLE_NAME,
+        table=TABLE_NAME,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -168,7 +168,7 @@ class TestBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_bloom_opts",
+            table="test_bloom_opts",
             columns=columns,
             if_not_exists=True,
         )
@@ -208,7 +208,7 @@ class TestBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_bloom_opts",
+                table="test_bloom_opts",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -223,8 +223,8 @@ async def async_bloom_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    for table in [ASYNC_TABLE_NAME]:
+        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -242,7 +242,7 @@ async def async_bloom_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=ASYNC_TABLE_NAME,
+        table=ASYNC_TABLE_NAME,
         columns=columns,
         if_not_exists=True,
     )
@@ -282,7 +282,7 @@ async def async_bloom_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=ASYNC_TABLE_NAME,
+        table=ASYNC_TABLE_NAME,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -345,7 +345,7 @@ class TestAsyncBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table_name="test_bloom_opts_async",
+            table="test_bloom_opts_async",
             columns=columns,
             if_not_exists=True,
         )
@@ -383,7 +383,7 @@ class TestAsyncBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table_name="test_bloom_opts_async",
+                table="test_bloom_opts_async",
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()

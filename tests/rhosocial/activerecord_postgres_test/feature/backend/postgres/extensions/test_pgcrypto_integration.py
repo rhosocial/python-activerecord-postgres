@@ -47,7 +47,7 @@ TABLE_USERS_ASYNC = "test_pgcrypto_users_async"
 TABLE_ENCRYPT_ASYNC = "test_pgcrypto_encrypt_async"
 
 
-def _setup_users_table(backend, dialect, table_name):
+def _setup_users_table(backend, dialect, table):
     """Create and populate the test_pgcrypto_users table using expressions."""
     columns = [
         ColumnDefinition(
@@ -62,7 +62,7 @@ def _setup_users_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -80,7 +80,7 @@ def _setup_users_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -88,7 +88,7 @@ def _setup_users_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _setup_encrypt_table(backend, dialect, table_name):
+def _setup_encrypt_table(backend, dialect, table):
     """Create and populate the test_pgcrypto_encrypt table using expressions."""
     columns = [
         ColumnDefinition(
@@ -102,7 +102,7 @@ def _setup_encrypt_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -120,7 +120,7 @@ def _setup_encrypt_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )
@@ -128,18 +128,18 @@ def _setup_encrypt_table(backend, dialect, table_name):
     backend.execute(sql, params)
 
 
-def _teardown_table(backend, dialect, table_name):
+def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
 
-async def _async_setup_users_table(backend, dialect, table_name):
+async def _async_setup_users_table(backend, dialect, table):
     """Async: create and populate the test_pgcrypto_users table using expressions."""
     columns = [
         ColumnDefinition(
@@ -154,7 +154,7 @@ async def _async_setup_users_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -172,7 +172,7 @@ async def _async_setup_users_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -180,7 +180,7 @@ async def _async_setup_users_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_setup_encrypt_table(backend, dialect, table_name):
+async def _async_setup_encrypt_table(backend, dialect, table):
     """Async: create and populate the test_pgcrypto_encrypt table using expressions."""
     columns = [
         ColumnDefinition(
@@ -194,7 +194,7 @@ async def _async_setup_encrypt_table(backend, dialect, table_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=columns,
         if_not_exists=True,
     )
@@ -212,7 +212,7 @@ async def _async_setup_encrypt_table(backend, dialect, table_name):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )
@@ -220,11 +220,11 @@ async def _async_setup_encrypt_table(backend, dialect, table_name):
     await backend.execute(sql, params)
 
 
-async def _async_teardown_table(backend, dialect, table_name):
+async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -242,8 +242,8 @@ def pgcrypto_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [TABLE_USERS, TABLE_ENCRYPT]:
-        _teardown_table(backend, dialect, table_name)
+    for table in [TABLE_USERS, TABLE_ENCRYPT]:
+        _teardown_table(backend, dialect, table)
 
     _setup_users_table(backend, dialect, TABLE_USERS)
     _setup_encrypt_table(backend, dialect, TABLE_ENCRYPT)
@@ -504,8 +504,8 @@ async def async_pgcrypto_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [TABLE_USERS_ASYNC, TABLE_ENCRYPT_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+    for table in [TABLE_USERS_ASYNC, TABLE_ENCRYPT_ASYNC]:
+        await _async_teardown_table(backend, dialect, table)
 
     await _async_setup_users_table(backend, dialect, TABLE_USERS_ASYNC)
     await _async_setup_encrypt_table(backend, dialect, TABLE_ENCRYPT_ASYNC)

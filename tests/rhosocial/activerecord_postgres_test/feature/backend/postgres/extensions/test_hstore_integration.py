@@ -57,11 +57,11 @@ def _make_hstore_columns():
     ]
 
 
-def _setup_hstore_table(backend, dialect, table_name, hstore_value):
+def _setup_hstore_table(backend, dialect, table, hstore_value):
     """Create and populate an hstore test table using expressions."""
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=_make_hstore_columns(),
         if_not_exists=True,
     )
@@ -70,7 +70,7 @@ def _setup_hstore_table(backend, dialect, table_name, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["data"],
         source=ValuesSource(
             dialect,
@@ -81,22 +81,22 @@ def _setup_hstore_table(backend, dialect, table_name, hstore_value):
     backend.execute(sql, params)
 
 
-def _teardown_table(backend, dialect, table_name):
+def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
 
-async def _async_setup_hstore_table(backend, dialect, table_name, hstore_value):
+async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
     """Async: create and populate an hstore test table using expressions."""
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         columns=_make_hstore_columns(),
         if_not_exists=True,
     )
@@ -105,7 +105,7 @@ async def _async_setup_hstore_table(backend, dialect, table_name, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=table,
         columns=["data"],
         source=ValuesSource(
             dialect,
@@ -116,11 +116,11 @@ async def _async_setup_hstore_table(backend, dialect, table_name, hstore_value):
     await backend.execute(sql, params)
 
 
-async def _async_teardown_table(backend, dialect, table_name):
+async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table,
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -159,10 +159,10 @@ def hstore_env(postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_HSTORE, T_HSTORE_OPS, T_HSTORE_KEY, T_HSTORE_CONCAT,
+    for table in [T_HSTORE, T_HSTORE_OPS, T_HSTORE_KEY, T_HSTORE_CONCAT,
                        T_HSTORE_EACH, T_HSTORE_KEYS_VALS, T_HSTORE_UPDATE,
                        T_HSTORE_DELETE]:
-        _teardown_table(backend, dialect, table_name)
+        _teardown_table(backend, dialect, table)
 
     _setup_hstore_table(backend, dialect, T_HSTORE, "a=>1, b=>2")
     _setup_hstore_table(backend, dialect, T_HSTORE_OPS, "color=>red, size=>large")
@@ -175,10 +175,10 @@ def hstore_env(postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_HSTORE, T_HSTORE_OPS, T_HSTORE_KEY, T_HSTORE_CONCAT,
+    for table in [T_HSTORE, T_HSTORE_OPS, T_HSTORE_KEY, T_HSTORE_CONCAT,
                        T_HSTORE_EACH, T_HSTORE_KEYS_VALS, T_HSTORE_UPDATE,
                        T_HSTORE_DELETE]:
-        _teardown_table(backend, dialect, table_name)
+        _teardown_table(backend, dialect, table)
 
 
 class TestHstoreIntegration:
@@ -554,11 +554,11 @@ async def async_hstore_env(async_postgres_backend_single):
     dialect = backend.dialect
 
     # Clean up residual tables from previous runs
-    for table_name in [T_HSTORE_ASYNC, T_HSTORE_OPS_ASYNC, T_HSTORE_KEY_ASYNC,
+    for table in [T_HSTORE_ASYNC, T_HSTORE_OPS_ASYNC, T_HSTORE_KEY_ASYNC,
                        T_HSTORE_CONCAT_ASYNC, T_HSTORE_EACH_ASYNC,
                        T_HSTORE_KEYS_VALS_ASYNC, T_HSTORE_UPDATE_ASYNC,
                        T_HSTORE_DELETE_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+        await _async_teardown_table(backend, dialect, table)
 
     await _async_setup_hstore_table(backend, dialect, T_HSTORE_ASYNC, "a=>1, b=>2")
     await _async_setup_hstore_table(backend, dialect, T_HSTORE_OPS_ASYNC, "color=>red, size=>large")
@@ -571,11 +571,11 @@ async def async_hstore_env(async_postgres_backend_single):
 
     yield backend, dialect
 
-    for table_name in [T_HSTORE_ASYNC, T_HSTORE_OPS_ASYNC, T_HSTORE_KEY_ASYNC,
+    for table in [T_HSTORE_ASYNC, T_HSTORE_OPS_ASYNC, T_HSTORE_KEY_ASYNC,
                        T_HSTORE_CONCAT_ASYNC, T_HSTORE_EACH_ASYNC,
                        T_HSTORE_KEYS_VALS_ASYNC, T_HSTORE_UPDATE_ASYNC,
                        T_HSTORE_DELETE_ASYNC]:
-        await _async_teardown_table(backend, dialect, table_name)
+        await _async_teardown_table(backend, dialect, table)
 
 
 class TestAsyncHstoreIntegration:
