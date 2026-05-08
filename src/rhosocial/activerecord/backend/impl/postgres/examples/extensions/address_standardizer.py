@@ -86,8 +86,12 @@ addr_installed = dialect.is_extension_installed("address_standardizer")
 if addr_installed:
     # Example 1: standardize_address
     # Normalize a free-form address string into a standardized format
+    # Requires lookup table names: lextab (lexer), gaztab (gazetteer), rultab (rules)
     std_func = standardize_address(
         dialect,
+        Literal(dialect, "pagc_lex"),
+        Literal(dialect, "pagc_gaz"),
+        Literal(dialect, "pagc_rules"),
         Literal(dialect, "123 Main St, Springfield, IL 62701"),
     )
     query = QueryExpression(

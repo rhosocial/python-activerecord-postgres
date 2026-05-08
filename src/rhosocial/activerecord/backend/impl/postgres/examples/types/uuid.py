@@ -32,11 +32,11 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', '5432')),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
@@ -54,7 +54,7 @@ print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
 # Clean up
 for table in ['events_v13', 'events_legacy']:
-    drop = DropTableExpression(dialect=dialect, table_name=table, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect, table, if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
@@ -66,9 +66,7 @@ for table in ['events_v13', 'events_legacy']:
 # uuid_default_generator(dialect) automatically picks the right function:
 #   PostgreSQL 13+: gen_random_uuid() (built-in, no extension)
 #   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
-create_table = CreateTableExpression(
-    dialect=dialect,
-    table_name='events',
+create_table = CreateTableExpression(dialect=dialect, table='events',
     columns=[
         ColumnDefinition('id', 'UUID', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -135,9 +133,7 @@ print(f"Events: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='events',
+drop_table = DropTableExpression(dialect=dialect, table='events',
     if_exists=True,
     cascade=True,
 )

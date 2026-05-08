@@ -84,6 +84,8 @@ if available and not installed:
 installed = dialect.is_extension_installed("pg_stat_statements")
 
 if installed:
+    opts = ExecutionOptions(stmt_type=StatementType.DQL)
+
     # Example 1: Query pg_stat_statements view for top queries by total execution time
     # This requires superuser or pg_read_all_stats role
     try:
@@ -96,12 +98,11 @@ if installed:
                 Column(dialect, "mean_exec_time"),
             ],
             from_=TableExpression(dialect, "pg_stat_statements"),
-            order_by=OrderByClause(dialect, [Column(dialect, "total_exec_time")], descending=True),
+            order_by=OrderByClause(dialect, [(Column(dialect, "total_exec_time"), "DESC")]),
         )
         sql, params = query.to_sql()
         print("\n--- Query top statements by total execution time ---")
         print(f"SQL: {sql}")
-        opts = ExecutionOptions(stmt_type=StatementType.DQL)
         result = backend.execute(sql, params, options=opts)
         print(f"Number of tracked statements: {len(result.data) if result.data else 0}")
         if result.data:
@@ -138,9 +139,7 @@ if installed:
         ColumnDefinition(name="value", data_type="INTEGER"),
     ]
 
-    create_expr = CreateTableExpression(
-        dialect=dialect,
-        table_name="stats_demo",
+    create_expr = CreateTableExpression(dialect=dialect, table="stats_demo",
         columns=columns,
         if_not_exists=True,
     )
@@ -195,7 +194,7 @@ if installed:
         print(f"Could not check statistics: {e}")
 
     # Cleanup demo table
-    drop_expr = DropTableExpression(dialect=dialect, table_name="stats_demo", if_exists=True)
+    drop_expr = DropTableExpression(dialect, "stats_demo", if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 

@@ -30,18 +30,18 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
 )
 
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', '5432')),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
 # Drop if exists for clean setup
-drop = DropTableExpression(dialect=dialect, table_name='products', if_exists=True)
+drop = DropTableExpression(dialect, 'products', if_exists=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
@@ -97,9 +97,7 @@ indexes = [
     ),
 ]
 
-create_expr = CreateTableExpression(
-    dialect=dialect,
-    table_name='products',
+create_expr = CreateTableExpression(dialect=dialect, table='products',
     columns=columns,
     indexes=indexes,
     if_not_exists=True,
@@ -124,7 +122,7 @@ for col in columns_info:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table_name='products', if_exists=True)
+drop_table = DropTableExpression(dialect, 'products', if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

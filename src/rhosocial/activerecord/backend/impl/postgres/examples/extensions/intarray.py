@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+drop_expr = DropTableExpression(dialect, "tags", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -112,9 +112,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
-        dialect=dialect,
-        table_name="tags",
+    create_expr = CreateTableExpression(dialect=dialect, table="tags",
         columns=columns,
         if_not_exists=True,
     )
@@ -248,7 +246,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+drop_expr = DropTableExpression(dialect, "tags", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

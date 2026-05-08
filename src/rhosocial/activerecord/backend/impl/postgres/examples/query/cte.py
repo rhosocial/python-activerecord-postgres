@@ -15,11 +15,11 @@ from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', 5432)),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
@@ -48,13 +48,11 @@ from rhosocial.activerecord.backend.schema import StatementType
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop table first for clean setup
-drop = DropTableExpression(dialect=dialect, table_name='employees', if_exists=True, cascade=True)
+drop = DropTableExpression(dialect, 'employees', if_exists=True, cascade=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
-    dialect=dialect,
-    table_name='employees',
+create_table = CreateTableExpression(dialect=dialect, table='employees',
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -186,7 +184,7 @@ print(f"MATERIALIZED hint CTE SQL: {sql}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table_name='employees', if_exists=True, cascade=True)
+drop_table = DropTableExpression(dialect, 'employees', if_exists=True, cascade=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

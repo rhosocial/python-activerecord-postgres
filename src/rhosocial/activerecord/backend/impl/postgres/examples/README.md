@@ -74,7 +74,7 @@ Each example file follows this structure:
 
 ## Environment Variables
 
-The examples use safe defaults for local development:
+All examples use a consistent set of environment variables:
 - `PG_HOST`: PostgreSQL server host (default: localhost)
 - `PG_PORT`: PostgreSQL server port (default: 5432)
 - `PG_DATABASE`: Database name (default: test)

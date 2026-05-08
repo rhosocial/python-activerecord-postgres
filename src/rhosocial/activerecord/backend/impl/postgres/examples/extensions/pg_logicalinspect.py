@@ -1,3 +1,4 @@
+# src/rhosocial/activerecord/backend/impl/postgres/examples/extensions/pg_logicalinspect.py
 """
 pg_logicalinspect extension - logical replication inspection.
 
@@ -9,6 +10,9 @@ This example demonstrates:
 Note: pg_logicalinspect is available from PostgreSQL 18+.
 """
 
+# ============================================================
+# SECTION: Setup (necessary for execution, reference only)
+# ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import (
@@ -27,28 +31,48 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
+# ============================================================
+# SECTION: Business Logic (the pattern to learn)
+# ============================================================
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresCreateExtensionExpression,
+)
+
+# Check if pg_logicalinspect extension is available
 available = dialect.is_extension_available("pg_logicalinspect")
 installed = dialect.is_extension_installed("pg_logicalinspect")
 print(f"Extension check: pg_logicalinspect available = {available}, installed = {installed}")
 
+# Create extension using expression
 if available and not installed:
-    from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateExtensionExpression,
+    create_ext = PostgresCreateExtensionExpression(
+        dialect=dialect,
+        name="pg_logicalinspect",
     )
-    create_ext = PostgresCreateExtensionExpression(dialect=dialect, name="pg_logicalinspect")
     sql, params = create_ext.to_sql()
+    print("\n--- CREATE EXTENSION ---")
+    print(f"SQL: {sql}")
     backend.execute(sql, params)
     backend.introspect_and_adapt()
 
+# Re-check after creation
 installed = dialect.is_extension_installed("pg_logicalinspect")
 
 if installed:
+    # Example 1: Print available features
     print("pg_logicalinspect extension is ready for use")
     print(f"Features: {dialect.supports_pg_logicalinspect()}")
 
+    # Example 2: Inspect a logical replication slot
     sql, params = dialect.format_inspect_slot_statement("my_slot", limit=50)
-    print(f"\nInspect logical slot: {sql}")
+    print("\n--- Inspect logical slot ---")
+    print(f"SQL: {sql}")
 else:
-    print("pg_logicalinspect not available on this server (requires PostgreSQL 18+)")
+    print("\nSkipping execution - pg_logicalinspect not available on this server")
+    print("Note: pg_logicalinspect is available from PostgreSQL 18+.")
+    print("To enable pg_logicalinspect, run: CREATE EXTENSION pg_logicalinspect;")
 
+# ============================================================
+# SECTION: Teardown (necessary for execution, reference only)
+# ============================================================
 backend.disconnect()

@@ -34,28 +34,24 @@ from rhosocial.activerecord.backend.expression.statements.explain import Explain
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', 5432)),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='users',
+drop_table = DropTableExpression(dialect=dialect, table='users',
     if_exists=True,
     cascade=True,
 )
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
-    dialect=dialect,
-    table_name='users',
+create_table = CreateTableExpression(dialect=dialect, table='users',
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -103,7 +99,7 @@ for name, email in users:
 # 1. EXPLAIN for table scan (no index on name column)
 query1 = QueryExpression(
     dialect=dialect,
-    select=[Column(dialect, '*')],
+    select=[Literal(dialect, '*')],
     from_=TableExpression(dialect, 'users'),
     where=ComparisonPredicate(
         dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice'),
@@ -124,7 +120,7 @@ for row in result.data:
 # 2. EXPLAIN for index scan (email has index)
 query2 = QueryExpression(
     dialect=dialect,
-    select=[Column(dialect, '*')],
+    select=[Literal(dialect, '*')],
     from_=TableExpression(dialect, 'users'),
     where=ComparisonPredicate(
         dialect, '=', Column(dialect, 'email'), Literal(dialect, 'alice@example.com'),
@@ -171,9 +167,7 @@ for row in result.data:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='users',
+drop_table = DropTableExpression(dialect=dialect, table='users',
     if_exists=True,
     cascade=True,
 )

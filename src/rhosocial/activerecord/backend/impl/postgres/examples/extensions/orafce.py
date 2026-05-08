@@ -33,7 +33,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="employees", if_exists=True)
+drop_expr = DropTableExpression(dialect, "employees", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -108,9 +108,7 @@ if installed:
         ColumnDefinition(name="description", data_type="TEXT"),
     ]
 
-    create_expr = CreateTableExpression(
-        dialect=dialect,
-        table_name="employees",
+    create_expr = CreateTableExpression(dialect=dialect, table="employees",
         columns=columns,
         if_not_exists=True,
     )
@@ -163,11 +161,12 @@ if installed:
         Literal(dialect, 6),
     ).as_("review_date")
 
+    from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), add_months_expr],
         from_=TableExpression(dialect, "employees"),
-        order_by=[Column(dialect, "id")],
+        order_by=OrderByClause(dialect, [Column(dialect, "id")]),
     )
     sql, params = query.to_sql()
     print("\n--- ADD_MONTHS ---")
@@ -185,7 +184,7 @@ if installed:
         dialect=dialect,
         select=[Column(dialect, "name"), last_day_expr],
         from_=TableExpression(dialect, "employees"),
-        order_by=[Column(dialect, "id")],
+        order_by=OrderByClause(dialect, [Column(dialect, "id")]),
     )
     sql, params = query.to_sql()
     print("\n--- LAST_DAY ---")
@@ -197,14 +196,14 @@ if installed:
     nvl_expr = nvl(
         dialect,
         Column(dialect, "bonus"),
-        Literal(dialect, 0.0),
+        Literal(dialect, 0.0).cast("numeric"),
     ).as_("safe_bonus")
 
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), nvl_expr],
         from_=TableExpression(dialect, "employees"),
-        order_by=[Column(dialect, "id")],
+        order_by=OrderByClause(dialect, [Column(dialect, "id")]),
     )
     sql, params = query.to_sql()
     print("\n--- NVL ---")
@@ -227,7 +226,7 @@ if installed:
         dialect=dialect,
         select=[Column(dialect, "name"), decode_expr],
         from_=TableExpression(dialect, "employees"),
-        order_by=[Column(dialect, "id")],
+        order_by=OrderByClause(dialect, [Column(dialect, "id")]),
     )
     sql, params = query.to_sql()
     print("\n--- DECODE ---")
@@ -250,7 +249,7 @@ if installed:
             instr_expr,
         ],
         from_=TableExpression(dialect, "employees"),
-        order_by=[Column(dialect, "id")],
+        order_by=OrderByClause(dialect, [Column(dialect, "id")]),
     )
     sql, params = query.to_sql()
     print("\n--- INSTR ---")
@@ -265,7 +264,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="employees", if_exists=True)
+drop_expr = DropTableExpression(dialect, "employees", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

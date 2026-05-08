@@ -36,11 +36,11 @@ from rhosocial.activerecord.backend.schema import StatementType
 
 # Create connection configuration
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', '5432')),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 
 # Create backend instance and connect
@@ -60,9 +60,7 @@ def execute_expression(expression, options=None):
 
 
 def create_demo_tables():
-    users_table = CreateTableExpression(
-        dialect=dialect,
-        table_name='quickstart_users',
+    users_table = CreateTableExpression(dialect=dialect, table='quickstart_users',
         columns=[
             ColumnDefinition(
                 'id',
@@ -82,9 +80,7 @@ def create_demo_tables():
     )
     execute_expression(users_table, ddl_options)
 
-    logs_table = CreateTableExpression(
-        dialect=dialect,
-        table_name='quickstart_logs',
+    logs_table = CreateTableExpression(dialect=dialect, table='quickstart_logs',
         columns=[
             ColumnDefinition(
                 'id',
@@ -229,10 +225,10 @@ except Exception as error:
 # ============================================================
 # SECTION: Disconnect
 # ============================================================
-drop_logs = DropTableExpression(dialect=dialect, table_name='quickstart_logs', if_exists=True)
+drop_logs = DropTableExpression(dialect, 'quickstart_logs', if_exists=True)
 execute_expression(drop_logs, ddl_options)
 
-drop_users = DropTableExpression(dialect=dialect, table_name='quickstart_users', if_exists=True)
+drop_users = DropTableExpression(dialect, 'quickstart_users', if_exists=True)
 execute_expression(drop_users, ddl_options)
 
 backend.disconnect()

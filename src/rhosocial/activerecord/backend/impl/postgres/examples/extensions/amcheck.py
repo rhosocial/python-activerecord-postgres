@@ -1,3 +1,4 @@
+# src/rhosocial/activerecord/backend/impl/postgres/examples/extensions/amcheck.py
 """
 amcheck extension - index integrity checking.
 
@@ -8,6 +9,9 @@ This example demonstrates:
 4. Verify all indexes on a table
 """
 
+# ============================================================
+# SECTION: Setup (necessary for execution, reference only)
+# ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import (
@@ -26,34 +30,55 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
+# ============================================================
+# SECTION: Business Logic (the pattern to learn)
+# ============================================================
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresCreateExtensionExpression,
+)
+
+# Check if amcheck extension is available
 available = dialect.is_extension_available("amcheck")
 installed = dialect.is_extension_installed("amcheck")
 print(f"Extension check: amcheck available = {available}, installed = {installed}")
 
+# Create extension using expression
 if available and not installed:
-    from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateExtensionExpression,
+    create_ext = PostgresCreateExtensionExpression(
+        dialect=dialect,
+        name="amcheck",
     )
-    create_ext = PostgresCreateExtensionExpression(dialect=dialect, name="amcheck")
     sql, params = create_ext.to_sql()
+    print("\n--- CREATE EXTENSION ---")
+    print(f"SQL: {sql}")
     backend.execute(sql, params)
     backend.introspect_and_adapt()
 
+# Re-check after creation
 installed = dialect.is_extension_installed("amcheck")
 
 if installed:
+    # Example 1: Print available features
     print("amcheck extension is ready for use")
     print("Features:")
     print(f"  bt_index_check: {dialect.supports_amcheck_bt_index_check()}")
     print(f"  bt_index_parent_check: {dialect.supports_amcheck_bt_index_parent_check()}")
     print(f"  heap verification: {dialect.supports_amcheck_heap_verification()}")
 
+    # Example 2: Verify a single B-tree index
     sql, params = dialect.format_verify_index_statement("some_index")
-    print(f"\nVerify single index: {sql}")
+    print("\n--- Verify single index ---")
+    print(f"SQL: {sql}")
 
+    # Example 3: Verify all indexes on a table
     sql, params = dialect.format_verify_table_statement("some_table")
-    print(f"Verify all indexes on table: {sql}")
+    print("\n--- Verify all indexes on table ---")
+    print(f"SQL: {sql}")
 else:
-    print("amcheck not available on this server")
+    print("\nSkipping execution - amcheck not available on this server")
+    print("To enable amcheck, run: CREATE EXTENSION amcheck;")
 
+# ============================================================
+# SECTION: Teardown (necessary for execution, reference only)
+# ============================================================
 backend.disconnect()

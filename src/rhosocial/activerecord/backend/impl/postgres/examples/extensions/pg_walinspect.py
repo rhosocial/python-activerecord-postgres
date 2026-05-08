@@ -43,6 +43,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_walinspect import (
     pg_get_wal_records_info,
 )
@@ -73,7 +74,7 @@ if installed:
     # Example 1: Get current WAL LSN position
     current_lsn_query = QueryExpression(
         dialect=dialect,
-        select=[dialect.parse_expression("pg_current_wal_lsn()").as_("current_lsn")],
+        select=[FunctionCall(dialect, "pg_current_wal_lsn").as_("current_lsn")],
     )
     sql, params = current_lsn_query.to_sql()
     print("\n--- GET CURRENT WAL LSN ---")

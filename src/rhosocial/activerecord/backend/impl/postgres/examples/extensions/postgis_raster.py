@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="terrain_data", if_exists=True)
+drop_expr = DropTableExpression(dialect, "terrain_data", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -110,9 +110,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
-        dialect=dialect,
-        table_name="terrain_data",
+    create_expr = CreateTableExpression(dialect=dialect, table="terrain_data",
         columns=columns,
         if_not_exists=True,
     )
@@ -123,7 +121,7 @@ if installed:
 
     # Example 2: Insert raster data using st_rast_from_hexwkb
     # A minimal 1x1 pixel raster in HexWKB format
-    hex_wkb = "01000001000000000000000000000000000000000000F03F000000000000F03F000000000000000000000000000000000000000000000000E6100000010001004400010101"
+    hex_wkb = "0100000100000000000000F03F000000000000F0BF0000000000000000000000000000000000000000000000000000000000000000E610000001000100040064"
     insert_expr = InsertExpression(
         dialect=dialect,
         into="terrain_data",
@@ -184,7 +182,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="terrain_data", if_exists=True)
+drop_expr = DropTableExpression(dialect, "terrain_data", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

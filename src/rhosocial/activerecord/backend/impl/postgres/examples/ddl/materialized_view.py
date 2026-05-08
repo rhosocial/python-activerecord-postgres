@@ -38,11 +38,11 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
 config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
+    host=os.getenv('PG_HOST', 'localhost'),
+    port=int(os.getenv('PG_PORT', 5432)),
+    database=os.getenv('PG_DATABASE', 'test'),
+    username=os.getenv('PG_USERNAME', 'postgres'),
+    password=os.getenv('PG_PASSWORD', ''),
 )
 backend = PostgresBackend(connection_config=config)
 backend.connect()
@@ -50,18 +50,14 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='sales',
+drop_table = DropTableExpression(dialect=dialect, table='sales',
     if_exists=True,
     cascade=True,
 )
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
-    dialect=dialect,
-    table_name='sales',
+create_table = CreateTableExpression(dialect=dialect, table='sales',
     columns=[
         ColumnDefinition(
             'id',
@@ -242,9 +238,7 @@ backend.execute(sql, params)
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
-    dialect=dialect,
-    table_name='sales',
+drop_table = DropTableExpression(dialect=dialect, table='sales',
     if_exists=True,
     cascade=True,
 )
