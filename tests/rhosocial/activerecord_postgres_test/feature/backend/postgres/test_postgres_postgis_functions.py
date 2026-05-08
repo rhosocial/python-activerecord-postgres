@@ -33,6 +33,25 @@ from rhosocial.activerecord.backend.impl.postgres.functions.postgis import (
     st_buffer,
     st_envelope,
     st_centroid,
+    st_union,
+    st_intersection,
+    st_difference,
+    st_sym_difference,
+    st_collect,
+    st_make_line,
+    st_convex_hull,
+    st_simplify,
+    st_simplify_vw,
+    st_is_valid,
+    st_is_valid_reason,
+    st_make_valid,
+    st_as_binary,
+    st_x,
+    st_y,
+    st_equals,
+    st_disjoint,
+    st_relate,
+    st_cluster_dbscan,
 )
 from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
 from rhosocial.activerecord.backend.expression import bases
@@ -231,6 +250,116 @@ class TestPostgisOperationFunctions:
         assert "ST_CENTROID" in result.to_sql()[0]
 
 
+class TestPostgisSetOperations:
+    """Tests for PostGIS set operation functions."""
+
+    def test_st_union(self, postgres_dialect: PostgresDialect):
+        result = st_union(postgres_dialect, "geom1", "geom2")
+        assert isinstance(result, FunctionCall)
+        sql, params = result.to_sql()
+        assert "ST_UNION" in sql
+
+    def test_st_intersection(self, postgres_dialect: PostgresDialect):
+        result = st_intersection(postgres_dialect, "geom1", "geom2")
+        assert "ST_INTERSECTION" in result.to_sql()[0]
+
+    def test_st_difference(self, postgres_dialect: PostgresDialect):
+        result = st_difference(postgres_dialect, "geom1", "geom2")
+        assert "ST_DIFFERENCE" in result.to_sql()[0]
+
+    def test_st_sym_difference(self, postgres_dialect: PostgresDialect):
+        result = st_sym_difference(postgres_dialect, "geom1", "geom2")
+        assert "ST_SYMDIFFERENCE" in result.to_sql()[0]
+
+
+class TestPostgisCollection:
+    """Tests for PostGIS aggregation/collection functions."""
+
+    def test_st_collect_single(self, postgres_dialect: PostgresDialect):
+        result = st_collect(postgres_dialect, "geom")
+        assert "ST_COLLECT" in result.to_sql()[0]
+
+    def test_st_collect_two(self, postgres_dialect: PostgresDialect):
+        result = st_collect(postgres_dialect, "a", "b")
+        assert "ST_COLLECT" in result.to_sql()[0]
+
+    def test_st_make_line(self, postgres_dialect: PostgresDialect):
+        result = st_make_line(postgres_dialect, "a", "b")
+        assert "ST_MAKELINE" in result.to_sql()[0]
+
+    def test_st_convex_hull(self, postgres_dialect: PostgresDialect):
+        result = st_convex_hull(postgres_dialect, "geom")
+        assert "ST_CONVEXHULL" in result.to_sql()[0]
+
+
+class TestPostgisSimplification:
+    """Tests for PostGIS simplification functions."""
+
+    def test_st_simplify(self, postgres_dialect: PostgresDialect):
+        result = st_simplify(postgres_dialect, "geom", 0.01)
+        assert "ST_SIMPLIFY" in result.to_sql()[0]
+
+    def test_st_simplify_vw(self, postgres_dialect: PostgresDialect):
+        result = st_simplify_vw(postgres_dialect, "geom", 0.01)
+        assert "ST_SIMPLIFYVW" in result.to_sql()[0]
+
+
+class TestPostgisValidation:
+    """Tests for PostGIS validation functions."""
+
+    def test_st_is_valid(self, postgres_dialect: PostgresDialect):
+        result = st_is_valid(postgres_dialect, "geom")
+        assert "ST_ISVALID" in result.to_sql()[0]
+
+    def test_st_is_valid_reason(self, postgres_dialect: PostgresDialect):
+        result = st_is_valid_reason(postgres_dialect, "geom")
+        assert "ST_ISVALIDREASON" in result.to_sql()[0]
+
+    def test_st_make_valid(self, postgres_dialect: PostgresDialect):
+        result = st_make_valid(postgres_dialect, "geom")
+        assert "ST_MAKEVALID" in result.to_sql()[0]
+
+
+class TestPostgisCoordinateAccess:
+    """Tests for PostGIS coordinate access functions."""
+
+    def test_st_x(self, postgres_dialect: PostgresDialect):
+        result = st_x(postgres_dialect, "geom")
+        assert "ST_X" in result.to_sql()[0]
+
+    def test_st_y(self, postgres_dialect: PostgresDialect):
+        result = st_y(postgres_dialect, "geom")
+        assert "ST_Y" in result.to_sql()[0]
+
+
+class TestPostgisSpatialRelationships:
+    """Tests for PostGIS spatial relationship functions."""
+
+    def test_st_equals(self, postgres_dialect: PostgresDialect):
+        result = st_equals(postgres_dialect, "a", "b")
+        assert "ST_EQUALS" in result.to_sql()[0]
+
+    def test_st_disjoint(self, postgres_dialect: PostgresDialect):
+        result = st_disjoint(postgres_dialect, "a", "b")
+        assert "ST_DISJOINT" in result.to_sql()[0]
+
+    def test_st_relate(self, postgres_dialect: PostgresDialect):
+        result = st_relate(postgres_dialect, "a", "b")
+        assert "ST_RELATE" in result.to_sql()[0]
+
+    def test_st_relate_with_pattern(self, postgres_dialect: PostgresDialect):
+        result = st_relate(postgres_dialect, "a", "b", "****")
+        assert "ST_RELATE" in result.to_sql()[0]
+
+    def test_st_as_binary(self, postgres_dialect: PostgresDialect):
+        result = st_as_binary(postgres_dialect, "geom")
+        assert "ST_ASBINARY" in result.to_sql()[0]
+
+    def test_st_cluster_dbscan(self, postgres_dialect: PostgresDialect):
+        result = st_cluster_dbscan(postgres_dialect, "geom", 100, 2)
+        assert "ST_CLUSTERDBSCAN" in result.to_sql()[0]
+
+
 class TestPostgisNestedExpressions:
     """Tests for nested PostGIS expressions."""
 
@@ -261,3 +390,22 @@ class TestPostgisNestedExpressions:
         assert isinstance(st_buffer(postgres_dialect, "geom", 100), bases.BaseExpression)
         assert isinstance(st_envelope(postgres_dialect, "geom"), bases.BaseExpression)
         assert isinstance(st_centroid(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_union(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_intersection(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_difference(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_sym_difference(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_collect(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_make_line(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_convex_hull(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_simplify(postgres_dialect, "geom", 0.01), bases.BaseExpression)
+        assert isinstance(st_simplify_vw(postgres_dialect, "geom", 0.01), bases.BaseExpression)
+        assert isinstance(st_is_valid(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_is_valid_reason(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_make_valid(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_as_binary(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_x(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_y(postgres_dialect, "geom"), bases.BaseExpression)
+        assert isinstance(st_equals(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_disjoint(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_relate(postgres_dialect, "a", "b"), bases.BaseExpression)
+        assert isinstance(st_cluster_dbscan(postgres_dialect, "geom", 100, 2), bases.BaseExpression)

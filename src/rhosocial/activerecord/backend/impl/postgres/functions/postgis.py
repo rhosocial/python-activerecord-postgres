@@ -419,6 +419,264 @@ def st_centroid(
     return core.FunctionCall(dialect, "ST_Centroid", _convert_to_expression(dialect, geom))
 
 
+# === Set Operations ===
+
+def st_union(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Union(geom1, geom2) - Compute geometric union of two geometries."""
+    return core.FunctionCall(
+        dialect, "ST_Union",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_intersection(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Intersection(geom1, geom2) - Compute geometric intersection."""
+    return core.FunctionCall(
+        dialect, "ST_Intersection",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_difference(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Difference(geom1, geom2) - Compute geometric difference."""
+    return core.FunctionCall(
+        dialect, "ST_Difference",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_sym_difference(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_SymDifference(geom1, geom2) - Compute symmetric difference."""
+    return core.FunctionCall(
+        dialect, "ST_SymDifference",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_union_agg(expr: str = "geom") -> str:
+    """Placeholder for ST_Union as aggregate - use raw function call for now."""
+    return f"ST_Union({expr})"
+
+
+# === Aggregation & Collection ===
+
+def st_collect(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Optional[Union[str, PostgresGeometry, "bases.BaseExpression"]] = None,
+) -> core.FunctionCall:
+    """ST_Collect(geom1 [, geom2]) - Collect geometries into a multi/collection.
+
+    When called with one argument on a column, acts as an aggregate.
+    """
+    args = [_convert_to_expression(dialect, geom1)]
+    if geom2 is not None:
+        args.append(_convert_to_expression(dialect, geom2))
+    return core.FunctionCall(dialect, "ST_Collect", *args)
+
+
+def st_make_line(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_MakeLine(geom1, geom2) - Create line from two points.
+
+    When called with one argument on a column, acts as an aggregate.
+    """
+    return core.FunctionCall(
+        dialect, "ST_MakeLine",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_convex_hull(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_ConvexHull(geom) - Compute convex hull of geometry."""
+    return core.FunctionCall(dialect, "ST_ConvexHull", _convert_to_expression(dialect, geom))
+
+
+# === Simplification ===
+
+def st_simplify(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    tolerance: Union[float, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Simplify(geom, tolerance) - Simplify geometry using Douglas-Peucker."""
+    return core.FunctionCall(
+        dialect, "ST_Simplify",
+        _convert_to_expression(dialect, geom),
+        _convert_to_expression(dialect, tolerance),
+    )
+
+
+def st_simplify_vw(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    tolerance: Union[float, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_SimplifyVW(geom, tolerance) - Simplify using Visvalingam-Whyatt."""
+    return core.FunctionCall(
+        dialect, "ST_SimplifyVW",
+        _convert_to_expression(dialect, geom),
+        _convert_to_expression(dialect, tolerance),
+    )
+
+
+# === Validation ===
+
+def st_is_valid(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_IsValid(geom) - Test if geometry is valid."""
+    return core.FunctionCall(dialect, "ST_IsValid", _convert_to_expression(dialect, geom))
+
+
+def st_is_valid_reason(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_IsValidReason(geom) - Return reason if geometry is invalid."""
+    return core.FunctionCall(dialect, "ST_IsValidReason", _convert_to_expression(dialect, geom))
+
+
+def st_make_valid(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_MakeValid(geom) - Attempt to make invalid geometry valid."""
+    return core.FunctionCall(dialect, "ST_MakeValid", _convert_to_expression(dialect, geom))
+
+
+# === Output ===
+
+def st_as_binary(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_AsBinary(geom) - Convert geometry to WKB (Well-Known Binary)."""
+    return core.FunctionCall(dialect, "ST_AsBinary", _convert_to_expression(dialect, geom))
+
+
+# === Coordinate Access ===
+
+def st_x(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_X(geom) - Get X coordinate of a point."""
+    return core.FunctionCall(dialect, "ST_X", _convert_to_expression(dialect, geom))
+
+
+def st_y(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Y(geom) - Get Y coordinate of a point."""
+    return core.FunctionCall(dialect, "ST_Y", _convert_to_expression(dialect, geom))
+
+
+# === Spatial Relationships ===
+
+def st_equals(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Equals(geom1, geom2) - Test if geometries are spatially equal."""
+    return core.FunctionCall(
+        dialect, "ST_Equals",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_disjoint(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_Disjoint(geom1, geom2) - Test if geometries are disjoint."""
+    return core.FunctionCall(
+        dialect, "ST_Disjoint",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
+def st_relate(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    pattern: Optional[Union[str, "bases.BaseExpression"]] = None,
+) -> core.FunctionCall:
+    """ST_Relate(geom1, geom2 [, pattern]) - Test DE-9IM spatial relationship."""
+    args = [
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    ]
+    if pattern is not None:
+        args.append(_convert_to_expression(dialect, pattern))
+    return core.FunctionCall(dialect, "ST_Relate", *args)
+
+
+# === Clustering ===
+
+def st_cluster_dbscan(
+    dialect: "SQLDialectBase",
+    geom: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    tolerance: Union[float, "bases.BaseExpression"],
+    min_points: Union[int, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_ClusterDBSCAN(geom, tolerance, min_points) - DBSCAN clustering (window function)."""
+    return core.FunctionCall(
+        dialect, "ST_ClusterDBSCAN",
+        _convert_to_expression(dialect, geom),
+        _convert_to_expression(dialect, tolerance),
+        _convert_to_expression(dialect, min_points),
+    )
+
+
+# === Coverage ===
+
+def st_coverage_invalid_edges(
+    dialect: "SQLDialectBase",
+    geom1: Union[str, PostgresGeometry, "bases.BaseExpression"],
+    geom2: Union[str, PostgresGeometry, "bases.BaseExpression"],
+) -> core.FunctionCall:
+    """ST_CoverageInvalidEdges(geom1, geom2) - Find invalid edges in coverage."""
+    return core.FunctionCall(
+        dialect, "ST_CoverageInvalidEdges",
+        _convert_to_expression(dialect, geom1),
+        _convert_to_expression(dialect, geom2),
+    )
+
+
 __all__ = [
     # Construction
     "st_make_point",
@@ -441,8 +699,37 @@ __all__ = [
     # Output
     "st_as_geojson",
     "st_as_text",
+    "st_as_binary",
     # Operations
     "st_buffer",
     "st_envelope",
     "st_centroid",
+    # Set operations
+    "st_union",
+    "st_intersection",
+    "st_difference",
+    "st_sym_difference",
+    "st_union_agg",
+    # Aggregation & Collection
+    "st_collect",
+    "st_make_line",
+    "st_convex_hull",
+    # Simplification
+    "st_simplify",
+    "st_simplify_vw",
+    # Validation
+    "st_is_valid",
+    "st_is_valid_reason",
+    "st_make_valid",
+    # Coordinate Access
+    "st_x",
+    "st_y",
+    # Spatial Relationships
+    "st_equals",
+    "st_disjoint",
+    "st_relate",
+    # Clustering
+    "st_cluster_dbscan",
+    # Coverage
+    "st_coverage_invalid_edges",
 ]

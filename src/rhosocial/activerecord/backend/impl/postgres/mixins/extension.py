@@ -262,16 +262,22 @@ class PostgresExtensionMixin:
             "description": "Index integrity checking",
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/amcheck.html",
-            "features": {},
-            "requires_dialect": False,
+            "features": {
+                "bt_index_check": {"min_version": "1.0"},
+                "bt_index_parent_check": {"min_version": "1.0"},
+                "verify_heapam": {"min_version": "1.5"},
+            },
         },
         "pageinspect": {
             "min_version": "1.0",
             "description": "Page-level inspection",
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/pageinspect.html",
-            "features": {},
-            "requires_dialect": False,
+            "features": {
+                "heap": {"min_version": "1.0"},
+                "btree": {"min_version": "1.0"},
+                "brin": {"min_version": "1.7"},
+            },
         },
         # Replication
         "pglogical": {
@@ -287,8 +293,9 @@ class PostgresExtensionMixin:
             "min_version": "1.0",
             "description": "Logical replication inspection",
             "category": "replication",
-            "features": {},
-            "requires_dialect": False,
+            "features": {
+                "functions": {"min_version": "1.0"},
+            },
         },
         # Security & Auditing
         "pgaudit": {

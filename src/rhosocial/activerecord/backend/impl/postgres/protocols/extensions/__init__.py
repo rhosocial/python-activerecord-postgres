@@ -25,6 +25,9 @@ from .pg_walinspect import PostgresPgWalinspectSupport
 from .fuzzystrmatch import PostgresFuzzystrmatchSupport
 from .cube import PostgresCubeSupport
 from .pgcrypto import PostgresPgcryptoSupport
+from .amcheck import PostgresAmcheckSupport
+from .pageinspect import PostgresPageinspectSupport
+from .pg_logicalinspect import PostgresPgLogicalinspectSupport
 from .btree_gin import PostgresBtreeGinSupport
 from .btree_gist import PostgresBtreeGistSupport
 from .uuid_ossp import PostgresUuidOssSupport
@@ -56,6 +59,9 @@ __all__ = [
     "PostgresFuzzystrmatchSupport",
     "PostgresCubeSupport",
     "PostgresPgcryptoSupport",
+    "PostgresAmcheckSupport",
+    "PostgresPageinspectSupport",
+    "PostgresPgLogicalinspectSupport",
     "PostgresBtreeGinSupport",
     "PostgresBtreeGistSupport",
     "PostgresUuidOssSupport",

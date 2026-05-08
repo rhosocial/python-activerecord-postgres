@@ -69,6 +69,9 @@ from .extensions.pg_repack import PostgresPgRepackMixin
 from .extensions.hypopg import PostgresHypoPgMixin
 from .extensions.orafce import PostgresOrafceMixin
 from .extensions.address_standardizer import PostgresAddressStandardizerMixin
+from .extensions.amcheck import PostgresAmcheckMixin
+from .extensions.pageinspect import PostgresPageinspectMixin
+from .extensions.pg_logicalinspect import PostgresPgLogicalinspectMixin
 
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
@@ -136,6 +139,9 @@ __all__ = [
     "PostgresHypoPgMixin",
     "PostgresOrafceMixin",
     "PostgresAddressStandardizerMixin",
+    "PostgresAmcheckMixin",
+    "PostgresPageinspectMixin",
+    "PostgresPgLogicalinspectMixin",
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",

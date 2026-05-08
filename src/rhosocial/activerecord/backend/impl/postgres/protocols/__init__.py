@@ -68,6 +68,9 @@ from .extensions.pg_repack import PostgresPgRepackSupport
 from .extensions.hypopg import PostgresHypoPgSupport
 from .extensions.orafce import PostgresOrafceSupport
 from .extensions.address_standardizer import PostgresAddressStandardizerSupport
+from .extensions.amcheck import PostgresAmcheckSupport
+from .extensions.pageinspect import PostgresPageinspectSupport
+from .extensions.pg_logicalinspect import PostgresPgLogicalinspectSupport
 
 # Additional protocols from original file
 from .query_optimization import PostgresQueryOptimizationSupport
@@ -133,6 +136,9 @@ __all__ = [
     "PostgresHypoPgSupport",
     "PostgresOrafceSupport",
     "PostgresAddressStandardizerSupport",
+    "PostgresAmcheckSupport",
+    "PostgresPageinspectSupport",
+    "PostgresPgLogicalinspectSupport",
     # Additional protocols
     "PostgresQueryOptimizationSupport",
     "PostgresSQLSyntaxSupport",
