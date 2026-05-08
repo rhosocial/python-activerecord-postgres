@@ -117,6 +117,23 @@ from .hstore import (
     PostgresHstore,
 )
 
+# ltree types
+from .ltree import (
+    PostgresLtree,
+    PostgresLquery,
+    PostgresLtxtquery,
+)
+
+# Cube types
+from .cube import (
+    PostgresCube,
+)
+
+# Citext types
+from .citext import (
+    PostgresCitext,
+)
+
 # Type constants (convenience references)
 from .constants import (
     # Numeric Types
@@ -221,6 +238,14 @@ from .constants import (
     PG_LSN,
     # hstore Type
     HSTORE,
+    # citext Type
+    CITEXT,
+    # ltree Types
+    LTREE,
+    LQUERY,
+    LTXTQUERY,
+    # cube Type
+    CUBE,
 )
 
 
@@ -279,6 +304,14 @@ __all__ = [
     "PostgresGeometry",
     # hstore types
     "PostgresHstore",
+    # ltree types
+    "PostgresLtree",
+    "PostgresLquery",
+    "PostgresLtxtquery",
+    # Cube types
+    "PostgresCube",
+    # Citext types
+    "PostgresCitext",
     # Type constants - Numeric
     "SMALLINT",
     "INTEGER",
@@ -389,4 +422,12 @@ __all__ = [
     "GEOGRAPHY",
     # hstore Types
     "HSTORE",
+    # citext Type
+    "CITEXT",
+    # ltree Types
+    "LTREE",
+    "LQUERY",
+    "LTXTQUERY",
+    # cube Type
+    "CUBE",
 ]

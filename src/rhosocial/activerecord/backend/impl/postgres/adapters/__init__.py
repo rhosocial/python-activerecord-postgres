@@ -87,6 +87,19 @@ from .postgis import PostgresPostGISAdapter
 # hstore types
 from .hstore import PostgresHstoreAdapter
 
+# ltree types
+from .ltree import (
+    PostgresLtreeAdapter,
+    PostgresLqueryAdapter,
+    PostgresLtxtqueryAdapter,
+)
+
+# Cube types
+from .cube import PostgresCubeAdapter
+
+# Citext types
+from .citext import PostgresCitextAdapter
+
 __all__ = [
     # Basic types
     "PostgresListAdapter",
@@ -126,4 +139,12 @@ __all__ = [
     "PostgresPostGISAdapter",
     # hstore types
     "PostgresHstoreAdapter",
+    # ltree types
+    "PostgresLtreeAdapter",
+    "PostgresLqueryAdapter",
+    "PostgresLtxtqueryAdapter",
+    # Cube types
+    "PostgresCubeAdapter",
+    # Citext types
+    "PostgresCitextAdapter",
 ]
