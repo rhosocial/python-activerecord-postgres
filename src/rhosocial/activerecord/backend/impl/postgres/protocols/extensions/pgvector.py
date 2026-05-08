@@ -71,6 +71,6 @@ class PostgresPgvectorSupport(Protocol):
         index_name: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with HNSW index for vector column."""
         ...

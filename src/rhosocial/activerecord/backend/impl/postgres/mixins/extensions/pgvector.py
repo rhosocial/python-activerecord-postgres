@@ -88,7 +88,7 @@ class PostgresPgvectorMixin:
         index_name: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with HNSW index for vector column.
 
         Args:
@@ -99,7 +99,7 @@ class PostgresPgvectorMixin:
             ef_construction: HNSW ef_construction parameter
 
         Returns:
-            SQL CREATE INDEX statement
+            Tuple of (SQL statement, parameters)
         """
         idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
         with_clauses = []
@@ -108,7 +108,8 @@ class PostgresPgvectorMixin:
         if ef_construction is not None:
             with_clauses.append(f"ef_construction = {ef_construction}")
         with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
-        return (
+        sql = (
             f"CREATE INDEX {idx_name} ON {table_name} "
             f"USING hnsw ({column_name} vector_cosine_ops){with_clause}"
         )
+        return (sql, ())
