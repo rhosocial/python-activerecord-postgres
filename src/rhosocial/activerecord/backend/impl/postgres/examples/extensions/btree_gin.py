@@ -130,7 +130,7 @@ if installed:
         columns=["name"],
         index_type="GIN",
         if_not_exists=True,
-        dialect_options={"opclasses": {"name": "int4_ops"}},
+        dialect_options={"opclasses": {"name": "text_ops"}},
     )
     sql, params = create_idx.to_sql()
     print("\n--- CREATE GIN INDEX with btree_gin operator class ---")

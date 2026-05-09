@@ -143,11 +143,14 @@ if installed:
     result = backend.execute(sql, params, options=opts)
     print(f"Result: {result.data}")
     if result.data and result.data[0]["index_id"] is not None:
-        index_id = result.data[0]["index_id"]
+        raw_id = result.data[0]["index_id"]
+        # In PostgreSQL 18+, hypopg_create_index returns (oid, name) tuple
+        # In earlier versions it returns a plain OID integer
+        index_id = raw_id[0] if isinstance(raw_id, (tuple, list)) else raw_id
         print(f"Hypothetical index created with ID: {index_id}")
 
         # Example 3: Estimate the size of the hypothetical index
-        size_func = hypopg_estimate_size(dialect, index_id)
+        size_func = hypopg_estimate_size(dialect, int(index_id))
         query = QueryExpression(
             dialect=dialect,
             select=[size_func.as_("estimated_size")],

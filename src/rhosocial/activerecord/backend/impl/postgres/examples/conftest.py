@@ -325,8 +325,8 @@ EXAMPLES_META = {
         'dialect_protocols': [],
         'priority': 5,
         'min_version': '9',
-        'max_version': '15',
-        'note': 'tablefunc not available in PG13/14/16/17/18 docker images',
+        'max_version': '18',
+        'note': 'tablefunc not available in PG13/14/16 docker images',
     },
     'extensions/pg_stat_statements.py': {
         'title': 'Query Execution Statistics',

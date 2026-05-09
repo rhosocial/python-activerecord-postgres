@@ -131,7 +131,7 @@ if installed:
         columns=["created_at"],
         index_type="GIST",
         if_not_exists=True,
-        dialect_options={"opclasses": {"created_at": "int4_ops"}},
+        dialect_options={"opclasses": {"created_at": "gist_timestamp_ops"}},
     )
     sql, params = create_idx.to_sql()
     print("\n--- CREATE GIST INDEX with btree_gist operator class ---")

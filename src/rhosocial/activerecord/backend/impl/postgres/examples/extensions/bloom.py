@@ -146,8 +146,9 @@ if installed:
         select=[Column(dialect, "name"), Column(dialect, "email"), Column(dialect, "city")],
         from_=TableExpression(dialect, "customers"),
         where=ComparisonPredicate(
-            Column(dialect, "city"),
+            dialect,
             "=",
+            Column(dialect, "city"),
             Literal(dialect, "New York"),
         ),
     )

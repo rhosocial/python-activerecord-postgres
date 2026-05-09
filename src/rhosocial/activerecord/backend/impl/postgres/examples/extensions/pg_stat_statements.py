@@ -165,8 +165,9 @@ if installed:
         select=[Column(dialect, "name"), Column(dialect, "value")],
         from_=TableExpression(dialect, "stats_demo"),
         where=ComparisonPredicate(
-            Column(dialect, "value"),
+            dialect,
             ">",
+            Column(dialect, "value"),
             Literal(dialect, 20),
         ),
     )
