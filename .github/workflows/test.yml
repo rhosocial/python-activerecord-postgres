@@ -130,8 +130,7 @@ jobs:
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          coverage run --source=src -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup
-          coverage xml
+          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup --cov=src --cov-report=xml
 
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18'
