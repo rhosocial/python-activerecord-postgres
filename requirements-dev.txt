@@ -5,3 +5,4 @@ pytest-asyncio
 pydantic[email]
 pytest-timeout
 pytest-mock
+pytest-xdist
