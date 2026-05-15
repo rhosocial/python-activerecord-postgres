@@ -6,14 +6,9 @@ This module provides fixtures for testing database introspection
 functionality with PostgreSQL backends.
 """
 
-import os
 import pytest
 import pytest_asyncio
-import yaml
-from typing import Dict, Any, Tuple, Type
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
-from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 # SQL statements for test tables
 _TABLES_SQL = [
@@ -151,214 +146,99 @@ _CLEANUP_TRIGGER_SQL = [
 ]
 
 
-# --- Scenario Loading Logic (consistent with feature/backend/conftest.py) ---
-
-SCENARIO_MAP: Dict[str, Dict[str, Any]] = {}
-
-
-def _load_scenarios_from_config():
-    """Load scenarios from configuration file."""
-    config_path = None
-    env_config_path = os.getenv("POSTGRES_SCENARIOS_CONFIG_PATH")
-
-    if env_config_path and os.path.exists(env_config_path):
-        config_path = env_config_path
-    else:
-        default_path = os.path.join(os.path.dirname(__file__), "../../../../../config", "postgres_scenarios.yaml")
-        if os.path.exists(default_path):
-            config_path = default_path
-
-    if not config_path:
-        raise FileNotFoundError(
-            "No PostgreSQL scenarios configuration file found. "
-            "Set POSTGRES_SCENARIOS_CONFIG_PATH or place postgres_scenarios.yaml in tests/config."
-        )
-
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config_data = yaml.safe_load(f)
-
-    if 'scenarios' not in config_data:
-        raise ValueError(f"Configuration file {config_path} does not contain 'scenarios' key")
-
-    for scenario_name, config in config_data['scenarios'].items():
-        if config:
-            SCENARIO_MAP[scenario_name] = config
-
-
-_load_scenarios_from_config()
-
-
-def get_scenario(name: str) -> Tuple[Type[PostgresBackend], PostgresConnectionConfig]:
-    """Get backend class and connection config for a scenario."""
-    if name not in SCENARIO_MAP:
-        if SCENARIO_MAP:
-            name = next(iter(SCENARIO_MAP))
-        else:
-            raise ValueError("No scenarios registered")
-
-    config_dict = SCENARIO_MAP[name].copy()
-    config_dict.pop('enabled', None)
-    config = PostgresConnectionConfig(**config_dict)
-    return PostgresBackend, config
-
-
-def get_enabled_scenarios() -> Dict[str, Any]:
-    """Return all enabled scenarios."""
-    return SCENARIO_MAP
-
-
 def _execute_sql_list(backend, sql_list):
     """Execute a list of SQL statements."""
     for sql in sql_list:
         backend.execute(sql)
 
 
-@pytest.fixture(scope="function")
-def postgres_backend_single(request):
-    """Fixture providing a single PostgreSQL backend for introspection tests."""
-    # Get first available scenario
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    backend_class, config = get_scenario(first_scenario)
-    backend = backend_class(connection_config=config)
-    backend.connect()
-    backend.introspect_and_adapt()
-    yield backend
-    backend.disconnect()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def async_postgres_backend_single(request):
-    """Async fixture providing a single PostgreSQL backend for introspection tests."""
-    # Get first available scenario
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    _backend_class, config = get_scenario(first_scenario)
-    backend = AsyncPostgresBackend(connection_config=config)
-    await backend.connect()
-    await backend.introspect_and_adapt()
-    yield backend
-    await backend.disconnect()
+async def _async_execute_sql_list(backend, sql_list):
+    """Execute a list of SQL statements asynchronously."""
+    for sql in sql_list:
+        await backend.execute(sql)
 
 
 @pytest.fixture(scope="function")
-def backend_with_tables(request):
+def backend_with_tables(postgres_backend):
     """Fixture providing backend with test tables created."""
-    # Get first available scenario
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    backend_class, config = get_scenario(first_scenario)
-    backend = backend_class(connection_config=config)
-    backend.connect()
-    backend.introspect_and_adapt()
-
-    # Create tables
-    _execute_sql_list(backend, _TABLES_SQL)
-    # Add foreign keys
-    _execute_sql_list(backend, _FK_SQL)
-    # Clear introspection cache
-    backend.introspector.clear_cache()
-    yield backend
-
+    postgres_backend.introspector.clear_cache()
+    _execute_sql_list(postgres_backend, _TABLES_SQL)
+    _execute_sql_list(postgres_backend, _FK_SQL)
+    postgres_backend.introspector.clear_cache()
+    yield postgres_backend
     try:
-        backend.introspector.clear_cache()
-        _execute_sql_list(backend, _CLEANUP_TABLES_SQL)
+        postgres_backend.introspector.clear_cache()
+        _execute_sql_list(postgres_backend, _CLEANUP_TABLES_SQL)
     except Exception:
         pass
-    finally:
-        backend.disconnect()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_backend_with_tables(request):
+async def async_backend_with_tables(async_postgres_backend):
     """Async fixture providing backend with test tables created."""
-    # Get first available scenario
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    _backend_class, config = get_scenario(first_scenario)
-    backend = AsyncPostgresBackend(connection_config=config)
-    await backend.connect()
-    await backend.introspect_and_adapt()
-
-    # Create tables
-    for sql in _TABLES_SQL:
-        await backend.execute(sql)
-    # Add foreign keys
-    for sql in _FK_SQL:
-        await backend.execute(sql)
-    # Clear introspection cache
-    backend.introspector.clear_cache()
-    yield backend
-
+    async_postgres_backend.introspector.clear_cache()
+    await _async_execute_sql_list(async_postgres_backend, _TABLES_SQL)
+    await _async_execute_sql_list(async_postgres_backend, _FK_SQL)
+    async_postgres_backend.introspector.clear_cache()
+    yield async_postgres_backend
     try:
-        backend.introspector.clear_cache()
-        for sql in _CLEANUP_TABLES_SQL:
-            await backend.execute(sql)
+        async_postgres_backend.introspector.clear_cache()
+        await _async_execute_sql_list(async_postgres_backend, _CLEANUP_TABLES_SQL)
     except Exception:
         pass
-    finally:
-        await backend.disconnect()
 
 
 @pytest.fixture(scope="function")
-def backend_with_view(request):
-    """Fixture providing backend with test view created."""
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    backend_class, config = get_scenario(first_scenario)
-    backend = backend_class(connection_config=config)
-    backend.connect()
-    backend.introspect_and_adapt()
-
-    _execute_sql_list(backend, _VIEW_SQL)
-    backend.introspector.clear_cache()
-    yield backend
-
+def backend_with_view(postgres_backend):
+    """Fixture providing backend with a test view."""
+    postgres_backend.introspector.clear_cache()
+    _execute_sql_list(postgres_backend, _VIEW_SQL)
+    postgres_backend.introspector.clear_cache()
+    yield postgres_backend
     try:
-        backend.introspector.clear_cache()
-        _execute_sql_list(backend, _CLEANUP_VIEW_SQL)
+        postgres_backend.introspector.clear_cache()
+        _execute_sql_list(postgres_backend, _CLEANUP_VIEW_SQL)
     except Exception:
         pass
-    finally:
-        backend.disconnect()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_backend_with_view(async_postgres_backend):
+    """Async fixture providing backend with a test view."""
+    async_postgres_backend.introspector.clear_cache()
+    await _async_execute_sql_list(async_postgres_backend, _VIEW_SQL)
+    async_postgres_backend.introspector.clear_cache()
+    yield async_postgres_backend
+    try:
+        async_postgres_backend.introspector.clear_cache()
+        await _async_execute_sql_list(async_postgres_backend, _CLEANUP_VIEW_SQL)
+    except Exception:
+        pass
 
 
 @pytest.fixture(scope="function")
-def backend_with_trigger(request):
-    """Fixture providing backend with test trigger created."""
-    enabled_scenarios = get_enabled_scenarios()
-    if not enabled_scenarios:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    first_scenario = list(enabled_scenarios.keys())[0]
-    backend_class, config = get_scenario(first_scenario)
-    backend = backend_class(connection_config=config)
-    backend.connect()
-    backend.introspect_and_adapt()
-
-    _execute_sql_list(backend, _TRIGGER_SQL)
-    backend.introspector.clear_cache()
-    yield backend
-
+def backend_with_trigger(postgres_backend):
+    """Fixture providing backend with a test trigger."""
+    postgres_backend.introspector.clear_cache()
+    _execute_sql_list(postgres_backend, _TRIGGER_SQL)
+    postgres_backend.introspector.clear_cache()
+    yield postgres_backend
     try:
-        backend.introspector.clear_cache()
-        _execute_sql_list(backend, _CLEANUP_TRIGGER_SQL)
+        postgres_backend.introspector.clear_cache()
+        _execute_sql_list(postgres_backend, _CLEANUP_TRIGGER_SQL)
     except Exception:
         pass
-    finally:
-        backend.disconnect()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_backend_with_trigger(async_postgres_backend):
+    """Async fixture providing backend with a test trigger."""
+    async_postgres_backend.introspector.clear_cache()
+    await _async_execute_sql_list(async_postgres_backend, _TRIGGER_SQL)
+    async_postgres_backend.introspector.clear_cache()
+    yield async_postgres_backend
+    try:
+        async_postgres_backend.introspector.clear_cache()
+        await _async_execute_sql_list(async_postgres_backend, _CLEANUP_TRIGGER_SQL)
+    except Exception:
+        pass
