@@ -1,3 +1,10 @@
+## [v1.0.0.dev13] - 2026-05-15
+
+### Security
+
+- **SECURITY**: Resolved SQL injection risks in PostgreSQL backend ([#35](https://github.com/rhosocial/python-activerecord-postgres/issues/35))
+
+
 ## [v1.0.0.dev12] - 2026-05-01
 
 ### Added
