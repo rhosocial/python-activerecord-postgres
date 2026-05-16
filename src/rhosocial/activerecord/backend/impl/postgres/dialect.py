@@ -472,9 +472,17 @@ class PostgresDialect(
         """MATERIALIZED hint is supported since PostgreSQL 12."""
         return self.version >= (12, 0, 0)
 
-    def supports_returning_clause(self) -> bool:
-        """RETURNING clause is supported since PostgreSQL 8.2."""
-        return True  # Supported in all modern versions
+    def supports_returning_insert(self) -> bool:
+        """RETURNING clause is supported for INSERT since PostgreSQL 8.2."""
+        return self.version >= (8, 2, 0)
+
+    def supports_returning_update(self) -> bool:
+        """RETURNING clause is supported for UPDATE since PostgreSQL 8.2."""
+        return self.version >= (8, 2, 0)
+
+    def supports_returning_delete(self) -> bool:
+        """RETURNING clause is supported for DELETE since PostgreSQL 8.2."""
+        return self.version >= (8, 2, 0)
 
     def supports_window_functions(self) -> bool:
         """Window functions are supported since PostgreSQL 8.4."""
