@@ -23,7 +23,7 @@ from typing import Tuple, Any
 @pytest.fixture
 def dialect():
     """Create a PostgreSQL test dialect."""
-    return PostgresDialect()
+    return PostgresDialect((13, 0, 0))
 
 
 def test_postgres_escape_sql_string(dialect):
