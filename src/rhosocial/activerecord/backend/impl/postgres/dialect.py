@@ -427,15 +427,19 @@ class PostgresDialect(
     Use introspect_and_adapt() to detect installed extensions automatically.
     """
 
-    def __init__(self, version: Tuple[int, int, int] = (13, 0, 0)):
+    def __init__(self, version: Optional[Tuple[int, int, int]] = None):
         """
         Initialize PostgreSQL dialect with specific version.
 
         Args:
-            version: PostgreSQL version tuple (major, minor, patch)
+            version: PostgreSQL version tuple (major, minor, patch).
+                If None, the dialect must be adapted via
+                backend.introspect_and_adapt() before version-dependent
+                features can be used.
         """
-        self.version = version
         super().__init__()
+        if version is not None:
+            self.version = version
 
     @staticmethod
     def _validate_data_type(data_type: str) -> bool:

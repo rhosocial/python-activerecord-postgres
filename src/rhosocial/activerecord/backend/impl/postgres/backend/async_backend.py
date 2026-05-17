@@ -138,8 +138,8 @@ class AsyncPostgresBackend(
         super().__init__(**kwargs)
 
         # Initialize PostgreSQL-specific components
-        # Use default version (9.6.0) - actual version detected via introspect_and_adapt()
-        self._dialect = PostgresDialect((9, 6, 0))
+        # Version is None until introspect_and_adapt() is called
+        self._dialect = PostgresDialect()
 
         # Register PostgreSQL-specific type adapters (same as sync backend)
         # Note: XML adapter is NOT registered by default due to potential conflicts.

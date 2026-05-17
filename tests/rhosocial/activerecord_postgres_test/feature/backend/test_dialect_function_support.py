@@ -15,21 +15,21 @@ class TestPostgreSQLFunctionSupportBasic:
 
     def test_supports_functions_returns_dict(self):
         """Test that supports_functions returns a dictionary."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect.supports_functions()
         assert isinstance(result, dict)
         assert len(result) > 0
 
     def test_supports_functions_all_values_are_support_info(self):
         """Test that all values in the returned dict are FunctionSupportInfo."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect.supports_functions()
         for func_name, info in result.items():
             assert isinstance(info, FunctionSupportInfo), f"Value for {func_name} is not FunctionSupportInfo"
 
     def test_core_functions_always_supported(self):
         """Test that core functions are marked as supported."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect.supports_functions()
         core_functions = ["count", "sum_", "avg", "min_", "max_", "coalesce", "nullif"]
         for func in core_functions:
@@ -231,7 +231,7 @@ class TestPostgreSQLFunctionSupportVersionDependent:
 
     def test_always_available_functions(self):
         """Test functions that are available in all PostgreSQL versions."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect.supports_functions()
 
         always_available = [
@@ -249,7 +249,7 @@ class TestPostgreSQLFunctionSupportPrivateMethod:
 
     def test_unknown_function_returns_true(self):
         """Test that unknown functions return True (no restriction)."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect._is_postgres_function_supported("unknown_function_xyz")
         assert result is True
 
@@ -277,7 +277,7 @@ class TestPostgreSQLFunctionSupportIntegration:
 
     def test_function_dict_contains_both_core_and_backend_functions(self):
         """Test that the result contains both core and PostgreSQL-specific functions."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect((13, 0, 0))
         result = dialect.supports_functions()
 
         assert any(func in result for func in ["count", "sum", "avg"])
