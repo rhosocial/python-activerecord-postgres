@@ -9,7 +9,7 @@ PostgreSQL 复杂订单处理工作流示例。
 - 静态图和实例图生成
 - PostgreSQL 特有的 NOWAIT, RETURNING 等特性
 """
-from rhosocial.activerecord.backend.named_query import (
+from rhosocial.activerecord.backend.named_expression import (
     Procedure,
     ProcedureContext,
     ParallelStep,
@@ -192,7 +192,7 @@ class AsyncOrderProcessingProcedure(Procedure):
 
 
 if __name__ == "__main__":
-    from rhosocial.activerecord.backend.named_query import ProcedureDiagram
+    from rhosocial.activerecord.backend.named_expression import ProcedureDiagram
 
     print("=== 静态流程图 ===")
     print(OrderProcessingProcedure.static_diagram("flowchart"))
