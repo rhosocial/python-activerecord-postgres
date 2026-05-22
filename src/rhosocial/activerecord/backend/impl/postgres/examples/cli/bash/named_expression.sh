@@ -1,5 +1,5 @@
 #!/bin/bash
-# named_query.sh - PostgreSQL CLI named-query command example
+# named_expression.sh - PostgreSQL CLI named-expression command example
 
 set -e
 
@@ -14,8 +14,8 @@ export POSTGRES_HOST POSTGRES_PORT POSTGRES_DATABASE POSTGRES_USER POSTGRES_PASS
 PYTHON_CMD="python -m rhosocial.activerecord.backend.impl.postgres"
 
 echo "=========================================="
-echo "PostgreSQL CLI - named-query command examples"
+echo "PostgreSQL CLI - named-expression command examples"
 echo "=========================================="
 
-$PYTHON_CMD named-query --list rhosocial.activerecord.backend.impl.postgres.examples.named_queries 2>/dev/null || echo "(No named queries found)"
+$PYTHON_CMD named-expression --list rhosocial.activerecord.backend.impl.postgres.examples.named_expressions 2>/dev/null || echo "(No named expressions found)"
 $PYTHON_CMD named-connection --list rhosocial.activerecord.backend.impl.postgres.examples.named_connections
