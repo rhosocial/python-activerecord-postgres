@@ -135,8 +135,8 @@ class PostgresPartitionMixin:
             upper_val = value.upper()
             if upper_val == "MAXVALUE" or upper_val == "MINVALUE":
                 return upper_val
-            # Add quotes around string values
-            return f"'{value}'"
+            # Add quotes around string values, escaping internal single quotes
+            return f"'{value.replace(chr(39), chr(39)+chr(39))}'"  # escape ' to ''
         else:
             return str(value)
 

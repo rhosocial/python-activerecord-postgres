@@ -104,20 +104,6 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
     # ========== Helper Methods ==========
 
-    def _quote_identifier(self, name: str) -> str:
-        """Quote an identifier for PostgreSQL.
-
-        PostgreSQL uses double quotes for identifiers.
-
-        Args:
-            name: The identifier name to quote.
-
-        Returns:
-            The quoted identifier.
-        """
-        escaped = name.replace('"', '""')
-        return f'"{escaped}"'
-
     def _get_default_schema(self) -> str:
         """Get default schema name.
 
