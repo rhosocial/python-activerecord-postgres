@@ -381,3 +381,110 @@ class TestPostgresExtendedStatisticsNameSecurity:
         sql, params = dialect.format_drop_statistics_statement(expr)
 
         assert '"my_stats"' in sql
+
+
+# ============================================================
+# _format_partition_value — single-quote escaping
+# ============================================================
+
+def test_partition_value_none(dialect):
+    """None partition value returns NULL."""
+    result = dialect._format_partition_value(None)
+    assert result == "NULL"
+
+
+def test_partition_value_maxvalue(dialect):
+    """MAXVALUE is returned as-is (case-insensitive)."""
+    result = dialect._format_partition_value("MAXVALUE")
+    assert result == "MAXVALUE"
+
+
+def test_partition_value_minvalue(dialect):
+    """MINVALUE is returned as-is (case-insensitive)."""
+    result = dialect._format_partition_value("minvalue")
+    assert result == "MINVALUE"
+
+
+def test_partition_value_normal_string(dialect):
+    """Normal string value is single-quoted."""
+    result = dialect._format_partition_value("2024-01-01")
+    assert result == "'2024-01-01'"
+
+
+def test_partition_value_escaped_single_quote(dialect):
+    """String value with single quote is properly escaped."""
+    result = dialect._format_partition_value("it's")
+    assert result == "'it''s'"
+    assert "'; DROP" not in result
+
+
+def test_partition_value_injection_blocked(dialect):
+    """SQL injection in partition value is safely escaped (inside quotes)."""
+    result = dialect._format_partition_value("x'; DROP TABLE users--")
+    assert result.count("'") % 2 == 0
+    assert result.startswith("'")
+    assert result.endswith("'")
+
+
+def test_partition_value_integer(dialect):
+    """Integer partition value is returned as str()."""
+    result = dialect._format_partition_value(42)
+    assert result == "42"
+
+
+# ============================================================
+# format_identifier — identifier quoting equivalence and injection immunity
+# ============================================================
+
+def test_format_identifier_normal(dialect):
+    """Normal identifier is double-quoted."""
+    result = dialect.format_identifier("users")
+    assert result == '"users"'
+
+
+def test_format_identifier_with_quote(dialect):
+    """Identifier with embedded double-quote is properly escaped."""
+    result = dialect.format_identifier('table"name')
+    assert result == '"table""name"'
+
+
+def test_format_identifier_injection_payload(dialect):
+    """Identifier with injection payload is safely contained (balanced quotes)."""
+    payload = 'users"; DROP TABLE users--'
+    result = dialect.format_identifier(payload)
+    assert result.count('"') % 2 == 0, f"Unbalanced quotes: {result}"
+    assert result == '"users""; DROP TABLE users--"'
+
+
+def test_format_identifier_naive_vs_proper_safe(dialect):
+    """For safe input, naive and proper quoting produce same structure."""
+    names = ["users", "orders", "products", "table_1", "camelCase"]
+    for name in names:
+        naive = f'"{name}"'
+        proper = dialect.format_identifier(name)
+        assert naive == proper, f"Mismatch for '{name}': naive={naive}, proper={proper}"
+
+
+def test_format_identifier_naive_vs_proper_malicious(dialect):
+    """For malicious input, proper quoting prevents breakout that naive allows."""
+    payloads = [
+        'x"; DROP TABLE users--',
+        'y"; DELETE FROM t--',
+        'z"; UPDATE t SET a=1--',
+    ]
+    for payload in payloads:
+        naive = f'"{payload}"'
+        proper = dialect.format_identifier(payload)
+
+        # Naive produces odd quote count => breakout
+        assert naive.count('"') % 2 != 0, \
+            f"Naive quoting should unbalance quotes for '{payload}': {naive}"
+
+        # Proper produces even quote count => contained
+        assert proper.count('"') % 2 == 0, \
+            f"Proper quoting should balance quotes for '{payload}': {proper}"
+
+
+def test_format_identifier_empty_string(dialect):
+    """Empty identifier produces empty double quotes."""
+    assert dialect.format_identifier("") == '""'
