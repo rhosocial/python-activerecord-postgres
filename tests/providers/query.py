@@ -220,7 +220,20 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         return self._setup_multiple_models(models_and_tables, scenario_name)
 
     def setup_json_user_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
-        """Sets up the database for the JSON user model."""
+        """Sets up the database for the JSON user model.
+
+        Registers PostgresJSONBAdapter for JSON fields so that psycopg3's
+        automatic JSONB deserialization (dict/list) is converted back to str
+        before Pydantic validation, matching the model's Optional[str] type.
+        """
+        from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJSONBAdapter
+
+        jsonb_adapter = PostgresJSONBAdapter()
+        json_fields = ["settings", "tags", "profile", "roles", "scores", "subscription", "preferences"]
+        for field_name in json_fields:
+            if field_name not in JsonUser.__field_adapters__:
+                JsonUser.__field_adapters__[field_name] = (jsonb_adapter, str)
+
         models_and_tables = [
             (JsonUser, "json_users"),
         ]
@@ -289,8 +302,21 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         ], scenario_name)
 
     async def setup_async_json_user_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
-        """Sets up the database for the async JSON user model."""
+        """Sets up the database for the async JSON user model.
+
+        Registers PostgresJSONBAdapter for JSON fields so that psycopg3's
+        automatic JSONB deserialization (dict/list) is converted back to str
+        before Pydantic validation, matching the model's Optional[str] type.
+        """
         from rhosocial.activerecord.testsuite.feature.query.fixtures.async_json_models import AsyncJsonUser
+        from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJSONBAdapter
+
+        jsonb_adapter = PostgresJSONBAdapter()
+        json_fields = ["settings", "tags", "profile", "roles", "scores", "subscription", "preferences"]
+        for field_name in json_fields:
+            if field_name not in AsyncJsonUser.__field_adapters__:
+                AsyncJsonUser.__field_adapters__[field_name] = (jsonb_adapter, str)
+
         return await self._setup_multiple_models_async([
             (AsyncJsonUser, "json_users"),
         ], scenario_name)
