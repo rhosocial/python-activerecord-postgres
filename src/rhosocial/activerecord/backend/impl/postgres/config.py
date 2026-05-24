@@ -124,6 +124,10 @@ class PostgresConnectionConfig(
     def to_connection_string(self) -> str:
         """Convert configuration to postgres connection URI.
 
+        Warning:
+            The returned connection string includes the password in plaintext.
+            Avoid logging or storing this string.
+
         Returns:
             postgres connection URI string
 

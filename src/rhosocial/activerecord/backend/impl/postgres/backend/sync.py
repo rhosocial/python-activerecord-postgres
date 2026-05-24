@@ -251,7 +251,7 @@ class PostgresBackend(
             )
         except PsycopgError as e:
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
-            raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}") from None
+            raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}") from e
 
     def disconnect(self):
         """Close connection to PostgreSQL database."""
@@ -266,7 +266,7 @@ class PostgresBackend(
                 self.log(logging.INFO, "Disconnected from PostgreSQL database")
             except PsycopgError as e:
                 self.log(logging.ERROR, f"Error during disconnection: {str(e)}")
-                raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from None
+                raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from e
 
     def _get_cursor(self):
         """Get a database cursor, ensuring connection is active.
@@ -320,13 +320,13 @@ class PostgresBackend(
 
         except PsycopgIntegrityError as e:
             self.log(logging.ERROR, f"Integrity error in batch: {str(e)}")
-            raise IntegrityError(str(e)) from None
+            raise IntegrityError(str(e)) from e
         except PsycopgError as e:
             self.log(logging.ERROR, f"PostgreSQL error in batch: {str(e)}")
-            raise DatabaseError(str(e)) from None
+            raise DatabaseError(str(e)) from e
         except Exception as e:
             self.log(logging.ERROR, f"Unexpected error during batch execution: {str(e)}")
-            raise QueryError(str(e)) from None
+            raise QueryError(str(e)) from e
         finally:
             if cursor:
                 cursor.close()
@@ -577,27 +577,27 @@ class PostgresBackend(
         if isinstance(error, PsycopgIntegrityError):
             if "duplicate key value violates unique constraint" in error_msg.lower():
                 self.log(logging.ERROR, f"Unique constraint violation: {error_msg}")
-                raise IntegrityError(f"Unique constraint violation: {error_msg}")
+                raise IntegrityError(f"Unique constraint violation: {error_msg}") from error
             elif "violates foreign key constraint" in error_msg.lower():
                 self.log(logging.ERROR, f"Foreign key constraint violation: {error_msg}")
-                raise IntegrityError(f"Foreign key constraint violation: {error_msg}")
+                raise IntegrityError(f"Foreign key constraint violation: {error_msg}") from error
             self.log(logging.ERROR, f"Integrity error: {error_msg}")
-            raise IntegrityError(error_msg)
+            raise IntegrityError(error_msg) from error
         elif isinstance(error, PsycopgOperationalError):
             if "deadlock detected" in error_msg.lower():
                 self.log(logging.ERROR, f"Deadlock error: {error_msg}")
-                raise DeadlockError(error_msg)
+                raise DeadlockError(error_msg) from error
             self.log(logging.ERROR, f"Operational error: {error_msg}")
-            raise OperationalError(error_msg)
+            raise OperationalError(error_msg) from error
         elif isinstance(error, PsycopgProgrammingError):
             self.log(logging.ERROR, f"Programming error: {error_msg}")
-            raise QueryError(error_msg)
+            raise QueryError(error_msg) from error
         elif isinstance(error, PsycopgDeadlockError):
             self.log(logging.ERROR, f"Deadlock error: {error_msg}")
-            raise DeadlockError(error_msg)
+            raise DeadlockError(error_msg) from error
         elif isinstance(error, PsycopgError):
             self.log(logging.ERROR, f"PostgreSQL error: {error_msg}")
-            raise DatabaseError(error_msg)
+            raise DatabaseError(error_msg) from error
         else:
             self.log(logging.ERROR, f"Unexpected error: {error_msg}")
             raise error
