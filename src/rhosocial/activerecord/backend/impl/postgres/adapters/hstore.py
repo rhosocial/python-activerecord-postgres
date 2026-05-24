@@ -9,13 +9,13 @@ hstore string representations.
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/hstore.html
 """
 
-from typing import Dict, Optional, Type, Union, List
+from typing import Any, Dict, Optional, Type, Union, List
 
-from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
+from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
 from rhosocial.activerecord.backend.impl.postgres.types.hstore import PostgresHstore
 
 
-class PostgresHstoreAdapter(SQLTypeAdapter):
+class PostgresHstoreAdapter(BaseSQLTypeAdapter):
     """Adapter for converting between PostgresHstore and database values.
 
     Supports conversion from:
@@ -30,34 +30,17 @@ class PostgresHstoreAdapter(SQLTypeAdapter):
     - None → None
     """
 
-    @property
-    def supported_types(self) -> Dict[Type, Type]:
-        """Return mapping of Python types to their database representation types."""
-        return {
-            PostgresHstore: str,
-            dict: str,
-        }
+    def __init__(self):
+        super().__init__()
+        self._register_type(PostgresHstore, str)
+        self._register_type(dict, str)
 
-    def to_database(
+    def _do_to_database(
         self,
-        value: Union[PostgresHstore, Dict[str, Optional[str]], str, None],
+        value: Union[PostgresHstore, Dict[str, Optional[str]], str],
         target_type: Type,
+        options: Optional[Dict[str, Any]] = None,
     ) -> Optional[str]:
-        """Convert a Python value to a database-compatible format.
-
-        Args:
-            value: The Python value to convert
-            target_type: The target database type
-
-        Returns:
-            hstore literal string or None
-
-        Raises:
-            TypeError: If value type is not supported
-        """
-        if value is None:
-            return None
-
         if isinstance(value, PostgresHstore):
             return value.to_postgres_string()
 
@@ -73,26 +56,12 @@ class PostgresHstoreAdapter(SQLTypeAdapter):
             f"Expected PostgresHstore, dict, str, or None."
         )
 
-    def from_database(
+    def _do_from_database(
         self,
-        value: Union[str, PostgresHstore, Dict, None],
-        source_type: Type,
+        value: Union[str, PostgresHstore, Dict],
+        target_type: Type,
+        options: Optional[Dict[str, Any]] = None,
     ) -> Optional[PostgresHstore]:
-        """Convert a database value to a Python PostgresHstore object.
-
-        Args:
-            value: The database value to convert
-            source_type: The source database type
-
-        Returns:
-            PostgresHstore instance or None
-
-        Raises:
-            TypeError: If value type is not supported
-        """
-        if value is None:
-            return None
-
         if isinstance(value, PostgresHstore):
             return value
 

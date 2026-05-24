@@ -16,16 +16,16 @@ storage format. jsonb is generally preferred for query purposes.
 """
 
 import json
-from typing import Any, Dict, List, Optional, Set, Type, Union
+from typing import Any, Dict, List, Optional, Set, Type, Union, get_args, get_origin
 
 from psycopg.types.json import Jsonb
 
-from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
+from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
 
 from ..types.json import PostgresJsonPath
 
 
-class PostgresJSONBAdapter(SQLTypeAdapter):
+class PostgresJSONBAdapter(BaseSQLTypeAdapter):
     """
     Adapts Python dict to PostgreSQL JSONB and vice-versa.
 
@@ -34,26 +34,22 @@ class PostgresJSONBAdapter(SQLTypeAdapter):
     we need to serialize back to JSON string.
     """
 
-    @property
-    def supported_types(self) -> Dict[Type, List[Any]]:
-        return {dict: [Jsonb]}
+    def __init__(self):
+        super().__init__()
+        self._register_type(dict, Jsonb)
 
-    def to_database(self, value: Union[dict, list], target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
-        if value is None:
-            return None
+    def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         return Jsonb(value)
 
-    def from_database(
+    def _do_from_database(
         self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
-    ) -> Union[dict, list]:
-        if value is None:
-            return None
+    ) -> Union[dict, list, str]:
         # For string target type, serialize dict/list back to JSON string
         # This is needed because psycopg auto-deserializes JSON to dict,
-        # but model fields may be defined as str type
+        # but model fields may be defined as Optional[str] type
         if target_type is str:
             if isinstance(value, (dict, list)):
-                return json.dumps(value)
+                return json.dumps(value, ensure_ascii=False)
             return value
         # For dict/list target types, return as-is
         if isinstance(value, dict):

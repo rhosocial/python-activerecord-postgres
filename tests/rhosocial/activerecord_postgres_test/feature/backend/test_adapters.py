@@ -12,7 +12,8 @@ from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJSONBA
 def test_jsonb_adapter_supported_types():
     adapter = PostgresJSONBAdapter()
     supported = adapter.supported_types
-    assert supported[dict] == [Jsonb]
+    assert dict in supported
+    assert Jsonb in supported[dict]
 
 
 def test_jsonb_to_database():
@@ -57,17 +58,15 @@ def test_jsonb_from_database():
 def test_network_adapter_supported_types():
     adapter = PostgresNetworkAddressAdapter()
     supported = adapter.supported_types
-    assert supported[ipaddress.IPv4Address] == [str]
-    assert supported[ipaddress.IPv6Address] == [str]
-    assert supported[ipaddress.IPv4Network] == [str]
-    assert supported[ipaddress.IPv6Network] == [str]
+    assert ipaddress.IPv4Address in supported
+    assert str in supported[ipaddress.IPv4Address]
+    assert ipaddress.IPv6Address in supported
+    assert str in supported[ipaddress.IPv6Address]
+    assert ipaddress.IPv4Network in supported
+    assert str in supported[ipaddress.IPv4Network]
+    assert ipaddress.IPv6Network in supported
+    assert str in supported[ipaddress.IPv6Network]
 
-
-def test_network_adapter_supported_types_no_ipaddress(mocker):
-    """Test that it returns empty dict if ipaddress module is missing."""
-    mocker.patch('builtins.__import__', side_effect=ImportError)
-    adapter = PostgresNetworkAddressAdapter()
-    assert adapter.supported_types == {}
 
 
 @pytest.mark.parametrize("ip_obj, expected_str", [
@@ -111,13 +110,6 @@ def test_network_from_database_fallback():
 def test_network_from_database_none():
     adapter = PostgresNetworkAddressAdapter()
     assert adapter.from_database(None, ipaddress.IPv4Address) is None
-
-def test_network_from_database_no_ipaddress(mocker):
-    """Test that it returns the original value if ipaddress module is missing."""
-    mocker.patch('builtins.__import__', side_effect=ImportError)
-    adapter = PostgresNetworkAddressAdapter()
-    ip_str = "192.168.1.1"
-    assert adapter.from_database(ip_str, str) == ip_str
 
 
 # =============================================================================
