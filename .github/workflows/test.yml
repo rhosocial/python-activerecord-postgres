@@ -17,6 +17,133 @@ permissions:
   contents: read
 
 jobs:
+  benchmark-python-314-postgres-18:
+    name: Run benchmarks with Python 3.14 / postgres 18
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      postgres-exts:
+        image: vistart/postgres-exts:18
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install activerecord and testsuite
+        run: |
+          pip install git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev27
+          pip install git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev14
+
+      - name: Create postgres scenario config
+        run: |
+          cat > postgres_scenarios.yaml << EOF
+          scenarios:
+            postgres_default:
+              host: 127.0.0.1
+              port: 5432
+              database: test_db
+              username: root
+              password: password
+            postgres_exts:
+              host: 127.0.0.1
+              port: 5433
+              database: test_db
+              username: root
+              password: password
+          EOF
+          echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
+
+      - name: Install postgres client for health check
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Wait for postgres service
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U root; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "postgres is ready!"
+          until pg_isready -h 127.0.0.1 -p 5433 -U root; do
+            echo "Waiting for postgres-exts..."
+            sleep 2
+          done
+          echo "postgres-exts is ready!"
+
+      - name: Run benchmark suite
+        run: |
+          set -o pipefail
+          export PYTHONPATH=src:tests
+          TESTSUITE_DIR=$(python - <<'PY'
+          import pathlib
+          import rhosocial.activerecord.testsuite as testsuite
+
+          print(pathlib.Path(testsuite.__file__).parent)
+          PY
+          )
+          python -m pytest \
+            --rootdir=. \
+            --confcutdir=. \
+            "$TESTSUITE_DIR/benchmark" \
+            -m benchmark \
+            --benchmark-size=small \
+            --benchmark-sort=mean \
+            --tb=short | tee benchmark-output.txt
+
+      - name: Write benchmark conclusion
+        if: always()
+        run: |
+          {
+            echo "## Python 3.14 / postgres 18 Benchmark Conclusion"
+            echo
+            echo "- Python: 3.14"
+            echo "- postgres: 18"
+            echo "- Scope: testsuite benchmark suite"
+            echo "- Size: small"
+            echo "- Result: benchmark job fails only when benchmark execution or correctness checks fail."
+            echo
+            echo '```text'
+            grep -A 120 "benchmark:" benchmark-output.txt || cat benchmark-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   test:
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
     runs-on: ubuntu-latest
