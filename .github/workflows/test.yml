@@ -201,8 +201,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          if [ "${{ matrix.python-version }}" == "3.8" ]; then
+            pip install -r requirements-3.8.txt
+            pip install -r requirements-dev-3.8.txt
+          else
+            pip install -r requirements.txt
+            pip install -r requirements-dev.txt
+          fi
 
       - name: Install activerecord and testsuite
         run: |

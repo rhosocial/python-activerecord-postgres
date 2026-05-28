@@ -1,0 +1,31 @@
+# requirements-dev-3.8.txt
+# Testing framework for unit and integration tests
+# Version ~=8.3.5 is the latest pytest version compatible with Python 3.8
+pytest~=8.3.5
+pytest-asyncio
+
+# Pytest plugin for mocking
+pytest-mock
+
+# Async SQLite support and async file operations for tests
+aiosqlite>=0.19.0
+aiofiles>=23.0.0
+
+# Parallel test execution plugin for pytest
+pytest-xdist
+
+# Code coverage measurement tool and pytest integration
+coverage
+pytest-cov>=4.0.0
+
+# Pydantic with email validation support
+pydantic[email]
+
+# YAML file processing library
+pyyaml
+
+# Rich terminal output library
+rich
+
+# Test timeout plugin for long-running database integration tests
+pytest-timeout
