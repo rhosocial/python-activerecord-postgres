@@ -12,8 +12,8 @@ from .mixins import MixinsProvider
 from .query import QueryProvider
 from .basic_connection import BasicConnectionProvider
 from .query_connection import QueryConnectionProvider
-from .backend_benchmark import BackendBenchmarkProvider
 from .crud_benchmark import CrudBenchmarkProvider
+from .fastapi_benchmark import FastAPIBenchmarkProvider
 from .mixin_benchmark import MixinBenchmarkProvider
 from .query_benchmark import QueryBenchmarkProvider
 from .transaction_benchmark import TransactionBenchmarkProvider
@@ -39,7 +39,6 @@ provider_registry.register(
 )
 
 # Register benchmark providers.
-provider_registry.register("benchmark.backend.IBackendBenchmarkProvider", BackendBenchmarkProvider)
 provider_registry.register("benchmark.crud.ICrudBenchmarkProvider", CrudBenchmarkProvider)
 provider_registry.register("benchmark.query.IQueryBenchmarkProvider", QueryBenchmarkProvider)
 provider_registry.register(
@@ -47,3 +46,4 @@ provider_registry.register(
     TransactionBenchmarkProvider,
 )
 provider_registry.register("benchmark.mixin.IMixinBenchmarkProvider", MixinBenchmarkProvider)
+provider_registry.register("benchmark.fastapi.IFastAPIBenchmarkProvider", FastAPIBenchmarkProvider)

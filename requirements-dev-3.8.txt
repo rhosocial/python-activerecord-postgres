@@ -4,6 +4,10 @@
 pytest~=8.3.5
 pytest-asyncio
 
+# Pytest plugin for performance benchmarking
+# Provides benchmark fixtures and marker registration used during collection
+pytest-benchmark
+
 # Pytest plugin for mocking
 pytest-mock
 
