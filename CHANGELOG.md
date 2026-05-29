@@ -1,3 +1,10 @@
+## [v1.0.0.dev14] - 2026-05-30
+
+### Changed
+
+- Changed PostgresDialect to default to version=None instead of fixed version, requiring introspect_and_adapt() or explicit version before version-dependent features can be used. ([#37](https://github.com/rhosocial/python-activerecord-postgres/issues/37))
+
+
 ## [v1.0.0.dev13] - 2026-05-15
 
 ### Security
