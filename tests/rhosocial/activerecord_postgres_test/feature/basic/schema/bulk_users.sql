@@ -1,0 +1,6 @@
+CREATE TABLE bulk_users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    age INTEGER DEFAULT 0,
+    email VARCHAR(255) DEFAULT ''
+);
