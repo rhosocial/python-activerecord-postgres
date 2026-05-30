@@ -34,6 +34,9 @@ from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
     MappedUser as MappedUserBase, MappedPost as MappedPostBase, MappedComment as MappedCommentBase,
     ColumnMappingModel as ColumnMappingModelBase, MixedAnnotationModel as MixedAnnotationModelBase
 )
+from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
+    BulkUser as BulkUserBase, AsyncBulkUser as AsyncBulkUserBase
+)
 # Import async base models
 from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
     AsyncUser as AsyncUserBase, AsyncTypeCase as AsyncTypeCaseBase,
@@ -169,6 +172,8 @@ AsyncMappedPost = _select_model_class(AsyncMappedPostBase, AsyncMappedPost312, A
 AsyncMappedComment = _select_model_class(AsyncMappedCommentBase, AsyncMappedComment312, AsyncMappedComment311, AsyncMappedComment310, "AsyncMappedComment")
 AsyncColumnMappingModel = _select_model_class(AsyncColumnMappingModelBase, AsyncColumnMappingModel312, AsyncColumnMappingModel311, AsyncColumnMappingModel310, "AsyncColumnMappingModel")
 AsyncMixedAnnotationModel = _select_model_class(AsyncMixedAnnotationModelBase, AsyncMixedAnnotationModel312, AsyncMixedAnnotationModel311, AsyncMixedAnnotationModel310, "AsyncMixedAnnotationModel")
+BulkUser = BulkUserBase
+AsyncBulkUser = AsyncBulkUserBase
 
 # ...and the scenarios are defined specifically for this backend.
 from .scenarios import get_enabled_scenarios, get_scenario
@@ -337,6 +342,14 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
         if scenario_name is None:
             scenario_name = self.get_test_scenarios()[0] if self.get_test_scenarios() else "default"
         return await self._setup_async_model(AsyncTypeAdapterTest, scenario_name, "type_adapter_tests")
+
+    def setup_bulk_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        """Sets up the database for the `BulkUser` model tests."""
+        return self._setup_model(BulkUser, scenario_name, "bulk_users")
+
+    async def setup_async_bulk_user_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        """Sets up the database for the `AsyncBulkUser` model tests."""
+        return await self._setup_async_model(AsyncBulkUser, scenario_name, "bulk_users")
 
     def get_yes_no_adapter(self) -> 'BaseSQLTypeAdapter':
         """Returns an instance of the YesOrNoBooleanAdapter."""
