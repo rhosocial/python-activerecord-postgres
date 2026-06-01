@@ -9,6 +9,18 @@ class PostgresTriggerMixin:
     the SQL:1999 standard 'EXECUTE func_name'.
     """
 
+    def supports_trigger(self) -> bool:
+        """Triggers are supported in all versions."""
+        return True
+
+    def supports_create_trigger(self) -> bool:
+        """CREATE TRIGGER is supported in all versions."""
+        return True
+
+    def supports_drop_trigger(self) -> bool:
+        """DROP TRIGGER is supported in all versions."""
+        return True
+
     def supports_trigger_referencing(self) -> bool:
         """REFERENCING clause is supported since PostgreSQL 10."""
         return self.version >= (10, 0, 0)
