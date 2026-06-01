@@ -1029,11 +1029,41 @@ class PostgresDialect(
 
     def supports_index_if_not_exists(self) -> bool:
         """Whether CREATE INDEX IF NOT EXISTS is supported."""
-        return True  # PostgreSQL 9.5+ supports IF NOT EXISTS
+        return self.version >= (9, 5, 0)  # PostgreSQL 9.5+ supports IF NOT EXISTS
 
     def supports_index_if_exists(self) -> bool:
         """Whether DROP INDEX IF EXISTS is supported."""
         return True
+
+    def format_add_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE ADD INDEX.
+
+        Raises UnsupportedFeatureError — use CREATE INDEX instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE ADD INDEX",
+            suggestion="Use CREATE INDEX to create an index on the table.",
+        )
+
+    def format_drop_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE DROP INDEX.
+
+        Raises UnsupportedFeatureError — use DROP INDEX statement instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE DROP INDEX",
+            suggestion="Use DROP INDEX statement to remove an index.",
+        )
 
     # endregion
 
@@ -1051,7 +1081,7 @@ class PostgresDialect(
     # region Table Support
     def supports_if_not_exists_table(self) -> bool:
         """Whether CREATE TABLE IF NOT EXISTS is supported."""
-        return True
+        return self.version >= (9, 5, 0)
 
     def supports_if_exists_table(self) -> bool:
         """Whether DROP TABLE IF EXISTS is supported."""
@@ -1067,7 +1097,7 @@ class PostgresDialect(
 
     def supports_table_partitioning(self) -> bool:
         """Whether table partitioning is supported."""
-        return True  # PostgreSQL supports partitioning
+        return self.version >= (10, 0, 0)
 
     def supports_table_tablespace(self) -> bool:
         """Whether tablespace specification is supported."""
