@@ -1081,7 +1081,7 @@ class PostgresDialect(
     # region Table Support
     def supports_if_not_exists_table(self) -> bool:
         """Whether CREATE TABLE IF NOT EXISTS is supported."""
-        return True
+        return self.version >= (9, 5, 0)
 
     def supports_if_exists_table(self) -> bool:
         """Whether DROP TABLE IF EXISTS is supported."""
@@ -1097,7 +1097,7 @@ class PostgresDialect(
 
     def supports_table_partitioning(self) -> bool:
         """Whether table partitioning is supported."""
-        return True  # PostgreSQL supports partitioning
+        return self.version >= (10, 0, 0)
 
     def supports_table_tablespace(self) -> bool:
         """Whether tablespace specification is supported."""
