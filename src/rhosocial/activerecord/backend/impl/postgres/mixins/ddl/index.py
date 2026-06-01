@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
         PostgresAlterIndexExpression,
         PostgresReindexExpression,

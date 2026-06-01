@@ -9,6 +9,7 @@ Tests for:
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.trigger import PostgresTriggerMixin
 from rhosocial.activerecord.backend.expression.statements import (
     CreateTriggerExpression,
     DropTriggerExpression,
@@ -195,6 +196,41 @@ class TestFormatCreateTriggerStatement:
         sql, params = dialect.format_create_trigger_statement(expr)
         assert "OLD TABLE AS old NEW TABLE AS new" in sql
 
+    def test_create_trigger_no_level(self):
+        """Test CREATE TRIGGER without FOR EACH clause (level=None)."""
+        from rhosocial.activerecord.backend.expression.statements import TriggerLevel
+        dialect = PostgresDialect((14, 0, 0))
+        expr = CreateTriggerExpression(
+            dialect,
+            trigger_name="simple_trigger",
+            table_name="users",
+            timing=TriggerTiming.BEFORE,
+            events=[TriggerEvent.INSERT],
+            function_name="simple_func",
+            level=None,
+        )
+        sql, params = dialect.format_create_trigger_statement(expr)
+        assert "FOR EACH" not in sql
+
+    def test_create_trigger_with_condition(self):
+        """Test CREATE TRIGGER with WHEN condition expression."""
+        from rhosocial.activerecord.backend.expression import Column, Literal
+        dialect = PostgresDialect((14, 0, 0))
+        condition = Column(dialect, "status") == Literal(dialect, "ACTIVE")
+        expr = CreateTriggerExpression(
+            dialect,
+            trigger_name="check_status",
+            table_name="users",
+            timing=TriggerTiming.BEFORE,
+            events=[TriggerEvent.UPDATE],
+            function_name="validate_status",
+            condition=condition,
+        )
+        sql, params = dialect.format_create_trigger_statement(expr)
+        assert "WHEN" in sql
+        assert "%s" in sql
+        assert params == ("ACTIVE",)
+
     def test_create_trigger_instead_of(self):
         """Test CREATE TRIGGER INSTEAD OF for views."""
         dialect = PostgresDialect((14, 0, 0))
@@ -244,3 +280,31 @@ class TestFormatDropTriggerStatement:
         )
         sql, params = dialect.format_drop_trigger_statement(expr)
         assert "DROP TRIGGER IF EXISTS" in sql
+
+
+class TestPostgresTriggerMixinDirect:
+    """Test PostgresTriggerMixin directly (not through PostgresDialect)."""
+
+    class _Host:
+        version = (9, 5, 0)
+
+    class _LowHost:
+        version = (9, 4, 0)
+
+    class _TriggerMixin(_Host, PostgresTriggerMixin):
+        pass
+
+    class _TriggerMixinLow(_LowHost, PostgresTriggerMixin):
+        pass
+
+    def test_supports_trigger(self):
+        assert self._TriggerMixin().supports_trigger() is True
+
+    def test_supports_create_trigger(self):
+        assert self._TriggerMixin().supports_create_trigger() is True
+
+    def test_supports_drop_trigger(self):
+        assert self._TriggerMixin().supports_drop_trigger() is True
+
+    def test_supports_trigger_if_not_exists_low(self):
+        assert self._TriggerMixinLow().supports_trigger_if_not_exists() is False

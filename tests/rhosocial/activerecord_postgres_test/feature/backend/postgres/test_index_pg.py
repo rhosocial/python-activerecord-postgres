@@ -20,6 +20,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
 from rhosocial.activerecord.backend.expression.statements.ddl_table import IndexDefinition
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.index import PostgresIndexMixin
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
     PostgresDropIndexExpression,
@@ -862,3 +863,87 @@ class TestPostgresAlterIndexExpressionErrorPaths:
         )
         with pytest.raises(ValueError, match="column_number"):
             expr.to_sql()
+
+
+class TestPostgresIndexMixinDirect:
+    """Test PostgresIndexMixin directly (not through PostgresDialect)."""
+
+    class _Host:
+        version = (9, 0, 0)
+        name = "PostgreSQL"
+        def format_identifier(self, s): return f'"{s}"'
+
+    class _IndexMixinLow(_Host, PostgresIndexMixin):
+        pass
+
+    class _HostHigh:
+        version = (15, 0, 0)
+        name = "PostgreSQL"
+        def format_identifier(self, s): return f'"{s}"'
+
+    class _IndexMixinHigh(_HostHigh, PostgresIndexMixin):
+        pass
+
+    def test_supports_create_statistics_low(self):
+        assert not self._IndexMixinLow().supports_create_statistics()
+
+    def test_supports_statistics_mcv_low(self):
+        assert not self._IndexMixinLow().supports_statistics_mcv()
+
+    def test_supports_statistics_dependencies_low(self):
+        assert not self._IndexMixinLow().supports_statistics_dependencies()
+
+    def test_supports_statistics_ndistinct_low(self):
+        assert not self._IndexMixinLow().supports_statistics_ndistinct()
+
+    def test_supports_create_index(self):
+        assert self._IndexMixinHigh().supports_create_index() is True
+
+    def test_supports_drop_index(self):
+        assert self._IndexMixinHigh().supports_drop_index() is True
+
+    def test_supports_unique_index(self):
+        assert self._IndexMixinHigh().supports_unique_index() is True
+
+    def test_supports_index_if_not_exists_low(self):
+        assert not self._IndexMixinLow().supports_index_if_not_exists()
+
+    def test_supports_index_if_exists(self):
+        assert self._IndexMixinHigh().supports_index_if_exists() is True
+
+    def test_format_create_index_expression_column(self):
+        from rhosocial.activerecord.backend.expression import Column, Literal
+        expr = PostgresCreateIndexExpression(
+            PostgresDialect((15, 0, 0)), "idx_e", "t", [Column(PostgresDialect((15, 0, 0)), "a")],
+        )
+        sql, _ = expr.to_sql()
+        assert '"a"' in sql
+
+    def test_include_gist_low_raises(self):
+        d = PostgresDialect((11, 0, 0))
+        expr = PostgresCreateIndexExpression(
+            d, "idx_g", "t", ["a"], include=["b"], index_type="gist",
+        )
+        with pytest.raises(ValueError, match="INCLUDE for GiST"):
+            expr.to_sql()
+
+    def test_include_spgist_low_raises(self):
+        d = PostgresDialect((12, 0, 0))
+        expr = PostgresCreateIndexExpression(
+            d, "idx_s", "t", ["a"], include=["b"], index_type="spgist",
+        )
+        with pytest.raises(ValueError, match="INCLUDE for SP-GiST"):
+            expr.to_sql()
+
+    def test_unsupported_alter_index_action_raises(self):
+        d = PostgresDialect()
+        expr = PostgresAlterIndexExpression(d, "idx", "INVALID")
+        with pytest.raises(ValueError, match="Unsupported ALTER INDEX action"):
+            expr.to_sql()
+
+    def test_reindex_expression_to_sql(self):
+        d = PostgresDialect((15, 0, 0))
+        expr = PostgresReindexExpression(d, "INDEX", "idx_test")
+        sql, _ = expr.to_sql()
+        assert "REINDEX INDEX" in sql
+        assert "idx_test" in sql

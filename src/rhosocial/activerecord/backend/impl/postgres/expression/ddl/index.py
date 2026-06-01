@@ -26,7 +26,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
     DropIndexExpression,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
     from rhosocial.activerecord.backend.expression import SQLPredicate
 
