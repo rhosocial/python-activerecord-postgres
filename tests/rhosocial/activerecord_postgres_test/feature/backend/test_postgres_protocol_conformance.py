@@ -354,6 +354,17 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     (postgres_protocols.PostgresBloomSupport, postgres_mixins.PostgresBloomMixin),
     (postgres_protocols.PostgresBtreeGinSupport, postgres_mixins.PostgresBtreeGinMixin),
     (postgres_protocols.PostgresBtreeGistSupport, postgres_mixins.PostgresBtreeGistMixin),
+    # Unpaired extension protocols
+    (postgres_protocols.PostgresAddressStandardizerSupport, postgres_mixins.PostgresAddressStandardizerMixin),
+    (postgres_protocols.PostgresHypoPgSupport, postgres_mixins.PostgresHypoPgMixin),
+    (postgres_protocols.PostgresOrafceSupport, postgres_mixins.PostgresOrafceMixin),
+    (postgres_protocols.PostgresPgCronSupport, postgres_mixins.PostgresPgCronMixin),
+    (postgres_protocols.PostgresPgLogicalSupport, postgres_mixins.PostgresPgLogicalMixin),
+    (postgres_protocols.PostgresPgPartmanSupport, postgres_mixins.PostgresPgPartmanMixin),
+    (postgres_protocols.PostgresPgRepackSupport, postgres_mixins.PostgresPgRepackMixin),
+    (postgres_protocols.PostgresPgSurgerySupport, postgres_mixins.PostgresPgSurgeryMixin),
+    (postgres_protocols.PostgresPgWalinspectSupport, postgres_mixins.PostgresPgWalinspectMixin),
+    (postgres_protocols.PostgresPgauditSupport, postgres_mixins.PostgresPgauditMixin),
 ]
 
 
