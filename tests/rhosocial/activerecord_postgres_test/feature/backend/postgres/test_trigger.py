@@ -21,6 +21,21 @@ from rhosocial.activerecord.backend.expression.statements import (
 class TestTriggerFeatureDetection:
     """Test trigger feature detection methods."""
 
+    def test_supports_trigger(self):
+        """Triggers are supported in all versions."""
+        dialect = PostgresDialect((9, 5, 0))
+        assert dialect.supports_trigger() is True
+
+    def test_supports_create_trigger(self):
+        """CREATE TRIGGER is supported in all versions."""
+        dialect = PostgresDialect((9, 5, 0))
+        assert dialect.supports_create_trigger() is True
+
+    def test_supports_drop_trigger(self):
+        """DROP TRIGGER is supported in all versions."""
+        dialect = PostgresDialect((9, 5, 0))
+        assert dialect.supports_drop_trigger() is True
+
     def test_supports_trigger_referencing_pg9(self):
         """PostgreSQL 9.5 does not support REFERENCING clause."""
         dialect = PostgresDialect((9, 5, 0))

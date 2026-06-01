@@ -135,6 +135,26 @@ class PostgresIndexMixin:
     # IndexSupport Protocol Overrides (all supported by PostgreSQL)
     # =========================================================================
 
+    def supports_create_index(self) -> bool:
+        """CREATE INDEX is supported in all versions."""
+        return True
+
+    def supports_drop_index(self) -> bool:
+        """DROP INDEX is supported in all versions."""
+        return True
+
+    def supports_unique_index(self) -> bool:
+        """UNIQUE indexes are supported in all versions."""
+        return True
+
+    def supports_index_if_not_exists(self) -> bool:
+        """IF NOT EXISTS is supported since PostgreSQL 9.5."""
+        return self.version >= (9, 5, 0)
+
+    def supports_index_if_exists(self) -> bool:
+        """DROP INDEX IF EXISTS is supported in all versions."""
+        return True
+
     def supports_index_type(self) -> bool:
         """PostgreSQL supports USING BTREE | HASH | GIST | GIN | SPGIST | BRIN."""
         return True
@@ -166,6 +186,53 @@ class PostgresIndexMixin:
     def get_supported_index_types(self) -> List[str]:
         """Return all index access methods supported by PostgreSQL."""
         return ["BTREE", "HASH", "GIST", "GIN", "SPGIST", "BRIN"]
+
+    # =========================================================================
+    # Fulltext methods — PostgreSQL does NOT use MySQL-style FULLTEXT indexes
+    # =========================================================================
+
+    def supports_fulltext_index(self) -> bool:
+        """PostgreSQL uses GIN index + tsvector/tsquery, not MySQL-style FULLTEXT."""
+        return False
+
+    def supports_fulltext_parser(self) -> bool:
+        """PostgreSQL does not have MySQL-style FULLTEXT parsers."""
+        return False
+
+    def supports_fulltext_boolean_mode(self) -> bool:
+        """PostgreSQL does not support MySQL-style FULLTEXT boolean mode."""
+        return False
+
+    def supports_fulltext_query_expansion(self) -> bool:
+        """PostgreSQL does not support MySQL-style FULLTEXT query expansion."""
+        return False
+
+    def format_fulltext_match(self, columns, search_term, mode=None) -> Tuple[str, Tuple]:
+        """Not supported — PostgreSQL uses tsvector @@ tsquery instead."""
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+        raise UnsupportedFeatureError(
+            "PostgreSQL",
+            "FULLTEXT MATCH",
+            suggestion="Use tsvector @@ tsquery for full-text search.",
+        )
+
+    def format_create_fulltext_index_statement(self, expr) -> Tuple[str, tuple]:
+        """Not supported — use CREATE INDEX with GIN and tsvector expression."""
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+        raise UnsupportedFeatureError(
+            "PostgreSQL",
+            "CREATE FULLTEXT INDEX",
+            suggestion="Use CREATE INDEX ... ON ... USING GIN (to_tsvector(...))",
+        )
+
+    def format_drop_fulltext_index_statement(self, expr) -> Tuple[str, tuple]:
+        """Not supported — use DROP INDEX instead."""
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+        raise UnsupportedFeatureError(
+            "PostgreSQL",
+            "DROP FULLTEXT INDEX",
+            suggestion="Use DROP INDEX to remove a GIN index.",
+        )
 
     def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.

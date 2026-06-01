@@ -1029,7 +1029,7 @@ class PostgresDialect(
 
     def supports_index_if_not_exists(self) -> bool:
         """Whether CREATE INDEX IF NOT EXISTS is supported."""
-        return True  # PostgreSQL 9.5+ supports IF NOT EXISTS
+        return self.version >= (9, 5, 0)  # PostgreSQL 9.5+ supports IF NOT EXISTS
 
     def supports_index_if_exists(self) -> bool:
         """Whether DROP INDEX IF EXISTS is supported."""

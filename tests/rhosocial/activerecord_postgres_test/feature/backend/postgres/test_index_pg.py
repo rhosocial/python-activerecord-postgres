@@ -416,7 +416,25 @@ class TestFormatCreateIndexPgStatement:
 
 
 class TestIndexSupportProtocol:
-    """Test the 7 IndexSupport protocol methods that were previously missing."""
+    """Test IndexSupport protocol methods."""
+
+    def test_supports_create_index(self):
+        assert PostgresDialect().supports_create_index() is True
+
+    def test_supports_drop_index(self):
+        assert PostgresDialect().supports_drop_index() is True
+
+    def test_supports_unique_index(self):
+        assert PostgresDialect().supports_unique_index() is True
+
+    def test_supports_index_if_not_exists(self):
+        assert PostgresDialect((9, 5, 0)).supports_index_if_not_exists() is True
+
+    def test_supports_index_if_not_exists_pg94(self):
+        assert PostgresDialect((9, 4, 0)).supports_index_if_not_exists() is False
+
+    def test_supports_index_if_exists(self):
+        assert PostgresDialect().supports_index_if_exists() is True
 
     def test_supports_index_type(self):
         d = PostgresDialect()
@@ -449,6 +467,34 @@ class TestIndexSupportProtocol:
     def test_get_supported_index_types(self):
         types = PostgresDialect().get_supported_index_types()
         assert types == ["BTREE", "HASH", "GIST", "GIN", "SPGIST", "BRIN"]
+
+
+class TestFulltextNotSupported:
+    """PostgreSQL does not support MySQL-style FULLTEXT indexes."""
+
+    def test_supports_fulltext_index(self):
+        assert PostgresDialect().supports_fulltext_index() is False
+
+    def test_supports_fulltext_parser(self):
+        assert PostgresDialect().supports_fulltext_parser() is False
+
+    def test_supports_fulltext_boolean_mode(self):
+        assert PostgresDialect().supports_fulltext_boolean_mode() is False
+
+    def test_supports_fulltext_query_expansion(self):
+        assert PostgresDialect().supports_fulltext_query_expansion() is False
+
+    def test_format_fulltext_match_raises(self):
+        with pytest.raises(UnsupportedFeatureError):
+            PostgresDialect().format_fulltext_match(["col"], "search")
+
+    def test_format_create_fulltext_index_statement_raises(self):
+        with pytest.raises(UnsupportedFeatureError):
+            PostgresDialect().format_create_fulltext_index_statement(None)
+
+    def test_format_drop_fulltext_index_statement_raises(self):
+        with pytest.raises(UnsupportedFeatureError):
+            PostgresDialect().format_drop_fulltext_index_statement(None)
 
 
 class TestPostgresCreateIndexExpression:
@@ -666,7 +712,7 @@ class TestDialectIndexSupport:
         assert PostgresDialect().supports_unique_index() is True
 
     def test_supports_index_if_not_exists(self):
-        assert PostgresDialect().supports_index_if_not_exists() is True
+        assert PostgresDialect((15, 0, 0)).supports_index_if_not_exists() is True
 
     def test_supports_index_if_exists(self):
         assert PostgresDialect().supports_index_if_exists() is True
