@@ -19,7 +19,13 @@ from .partition import (
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
 )
-from .index import PostgresReindexExpression
+from .index import (
+    PostgresCreateIndexExpression,
+    PostgresDropIndexExpression,
+    PostgresAlterIndexExpression,
+    PostgresAlterIndexActionType,
+    PostgresReindexExpression,
+)
 from .statistics import (
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
@@ -45,6 +51,10 @@ __all__ = [
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
     # index
+    "PostgresCreateIndexExpression",
+    "PostgresDropIndexExpression",
+    "PostgresAlterIndexExpression",
+    "PostgresAlterIndexActionType",
     "PostgresReindexExpression",
     # statistics
     "PostgresCreateStatisticsExpression",

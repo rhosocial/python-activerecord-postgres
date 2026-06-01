@@ -5,12 +5,17 @@ This module defines the protocol for PostgreSQL-specific index features
 that extend beyond standard SQL.
 """
 
+from enum import Enum
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresReindexExpression
+    from ...expression.ddl import (
+        PostgresAlterIndexExpression,
+        PostgresAlterIndexActionType,
+        PostgresReindexExpression,
+    )
 
 
 @runtime_checkable
@@ -158,6 +163,22 @@ class PostgresIndexSupport(IndexSupport, Protocol):
 
         Native feature, PostgreSQL 10+.
         Tracks number of distinct values for column groups.
+        """
+        ...
+
+    def format_alter_index_statement(
+        self, expr: "PostgresAlterIndexExpression"
+    ) -> Tuple[str, tuple]:
+        """Format ALTER INDEX statement with PostgreSQL-specific operations.
+
+        Supports RENAME TO, SET TABLESPACE, SET/RESET storage parameters,
+        ALTER COLUMN SET STATISTICS, and ALL IN TABLESPACE operations.
+
+        Args:
+            expr: PostgresAlterIndexExpression containing action details
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
         """
         ...
 
