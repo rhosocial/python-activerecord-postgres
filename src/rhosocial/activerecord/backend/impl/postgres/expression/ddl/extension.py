@@ -56,6 +56,7 @@ class PostgresCreateExtensionExpression(BaseExpression):
         ...     version="3.4.0",
         ...     if_not_exists=True,
         ... )
+
     """
 
     def __init__(
@@ -82,6 +83,7 @@ class PostgresCreateExtensionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_create_extension(self)
 
@@ -110,6 +112,7 @@ class PostgresDropExtensionExpression(BaseExpression):
         >>> sql, params = drop_ext.to_sql()
         >>> sql
         'DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE'
+
     """
 
     def __init__(
@@ -136,5 +139,6 @@ class PostgresDropExtensionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_drop_extension(self)

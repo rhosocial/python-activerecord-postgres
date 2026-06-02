@@ -47,8 +47,7 @@ class PostgresLockingMixin:
 
         all_params = []
 
-        # Handle both base ForUpdateClause (no strength) and PostgresForUpdateClause
-        strength = getattr(clause, 'strength', LockStrength.UPDATE)
+        strength = clause.dialect_options.get("lock_strength", LockStrength.UPDATE)
 
         # Check version support for lock strength
         if strength == LockStrength.NO_KEY_UPDATE:

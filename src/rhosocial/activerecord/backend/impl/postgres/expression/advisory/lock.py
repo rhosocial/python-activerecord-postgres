@@ -78,6 +78,7 @@ class PostgresAdvisoryLockExpression(BaseExpression):
             key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
             shared: If True, acquire shared lock; otherwise exclusive lock
             session: If True (default), session-level lock; otherwise transaction-level
+
         """
         super().__init__(dialect)
         self.key = key
@@ -90,6 +91,7 @@ class PostgresAdvisoryLockExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
         """
         return self.dialect.format_advisory_lock(self)
 
@@ -125,6 +127,7 @@ class PostgresAdvisoryUnlockExpression(BaseExpression):
             dialect: The SQL dialect to use for formatting
             key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
             shared: If True, indicates this was a shared lock (informational only)
+
         """
         super().__init__(dialect)
         self.key = key
@@ -136,6 +139,7 @@ class PostgresAdvisoryUnlockExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
         """
         return self.dialect.format_advisory_unlock(self)
 
@@ -159,6 +163,7 @@ class PostgresAdvisoryUnlockAllExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
         """
         return self.dialect.format_advisory_unlock_all(self)
 
@@ -199,6 +204,7 @@ class PostgresTryAdvisoryLockExpression(BaseExpression):
             key: Lock key - either a single 64-bit integer or tuple of two 32-bit integers
             shared: If True, acquire shared lock; otherwise exclusive lock
             session: If True (default), session-level lock; otherwise transaction-level
+
         """
         super().__init__(dialect)
         self.key = key
@@ -211,5 +217,6 @@ class PostgresTryAdvisoryLockExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
         """
         return self.dialect.format_try_advisory_lock(self)

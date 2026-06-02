@@ -65,6 +65,7 @@ class PostgresVacuumExpression(BaseExpression):
         ...     full=True,
         ...     parallel=4,
         ... )
+
     """
 
     def __init__(
@@ -105,6 +106,7 @@ class PostgresVacuumExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_vacuum_statement(self)
 
@@ -140,6 +142,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         ...     table_name="orders",
         ...     columns=["status", "created_at"],
         ... )
+
     """
 
     def __init__(
@@ -166,5 +169,6 @@ class PostgresAnalyzeExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_analyze_statement(self)

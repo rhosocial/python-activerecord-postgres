@@ -18,9 +18,9 @@ Version requirements:
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.expression.query_parts import ForUpdateClause
 from rhosocial.activerecord.backend.impl.postgres.expression.locking import (
     LockStrength,
-    PostgresForUpdateClause,
 )
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -62,13 +62,13 @@ class TestRowLevelLockStrength:
             assert dialect.supports_for_key_share() is False
 
 
-class TestPostgresForUpdateClauseFormatting:
+class TestForUpdateClauseFormatting:
     """Test FOR UPDATE clause SQL formatting."""
 
     def test_for_update_basic(self, postgres_backend_single):
         """Test basic FOR UPDATE clause."""
         dialect = postgres_backend_single.dialect
-        clause = PostgresForUpdateClause(dialect)
+        clause = ForUpdateClause(dialect)
         sql, params = clause.to_sql()
         assert sql == "FOR UPDATE"
         assert params == ()
@@ -79,7 +79,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_share():
             pytest.skip("FOR SHARE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE})
         sql, params = clause.to_sql()
         assert sql == "FOR SHARE"
         assert params == ()
@@ -90,7 +90,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_no_key_update():
             pytest.skip("FOR NO KEY UPDATE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.NO_KEY_UPDATE)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.NO_KEY_UPDATE})
         sql, params = clause.to_sql()
         assert sql == "FOR NO KEY UPDATE"
         assert params == ()
@@ -101,7 +101,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_key_share():
             pytest.skip("FOR KEY SHARE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.KEY_SHARE)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.KEY_SHARE})
         sql, params = clause.to_sql()
         assert sql == "FOR KEY SHARE"
         assert params == ()
@@ -109,7 +109,7 @@ class TestPostgresForUpdateClauseFormatting:
     def test_for_update_with_nowait(self, postgres_backend_single):
         """Test FOR UPDATE with NOWAIT."""
         dialect = postgres_backend_single.dialect
-        clause = PostgresForUpdateClause(dialect, nowait=True)
+        clause = ForUpdateClause(dialect, nowait=True)
         sql, params = clause.to_sql()
         assert sql == "FOR UPDATE NOWAIT"
         assert params == ()
@@ -120,7 +120,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_share():
             pytest.skip("FOR SHARE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE, nowait=True)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE}, nowait=True)
         sql, params = clause.to_sql()
         assert sql == "FOR SHARE NOWAIT"
         assert params == ()
@@ -131,7 +131,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_update_skip_locked():
             pytest.skip("SKIP LOCKED not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, skip_locked=True)
+        clause = ForUpdateClause(dialect, skip_locked=True)
         sql, params = clause.to_sql()
         assert sql == "FOR UPDATE SKIP LOCKED"
         assert params == ()
@@ -144,7 +144,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_update_skip_locked():
             pytest.skip("SKIP LOCKED not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE, skip_locked=True)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE}, skip_locked=True)
         sql, params = clause.to_sql()
         assert sql == "FOR SHARE SKIP LOCKED"
         assert params == ()
@@ -152,7 +152,7 @@ class TestPostgresForUpdateClauseFormatting:
     def test_for_update_with_of_columns(self, postgres_backend_single):
         """Test FOR UPDATE with OF columns."""
         dialect = postgres_backend_single.dialect
-        clause = PostgresForUpdateClause(dialect, of_columns=["users", "orders"])
+        clause = ForUpdateClause(dialect, of_columns=["users", "orders"])
         sql, params = clause.to_sql()
         assert sql == 'FOR UPDATE OF "users", "orders"'
         assert params == ()
@@ -163,7 +163,7 @@ class TestPostgresForUpdateClauseFormatting:
         if not dialect.supports_for_share():
             pytest.skip("FOR SHARE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE, of_columns=["users"])
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE}, of_columns=["users"])
         sql, params = clause.to_sql()
         assert sql == 'FOR SHARE OF "users"'
         assert params == ()
@@ -177,7 +177,7 @@ class TestPostgresForUpdateClauseFormatting:
             # Skip if this version actually supports it
             pytest.skip("This test requires a PostgreSQL version < 9.0")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE})
         with pytest.raises(UnsupportedFeatureError):
             clause.to_sql()
 
@@ -202,7 +202,7 @@ class TestAsyncRowLevelLockStrength:
     async def test_async_for_update_basic(self, async_postgres_backend_single):
         """Test basic FOR UPDATE clause (async)."""
         dialect = async_postgres_backend_single.dialect
-        clause = PostgresForUpdateClause(dialect)
+        clause = ForUpdateClause(dialect)
         sql, params = clause.to_sql()
         assert sql == "FOR UPDATE"
         assert params == ()
@@ -213,7 +213,7 @@ class TestAsyncRowLevelLockStrength:
         if not dialect.supports_for_share():
             pytest.skip("FOR SHARE not supported on this PostgreSQL version")
 
-        clause = PostgresForUpdateClause(dialect, strength=LockStrength.SHARE)
+        clause = ForUpdateClause(dialect, dialect_options={"lock_strength": LockStrength.SHARE})
         sql, params = clause.to_sql()
         assert sql == "FOR SHARE"
         assert params == ()

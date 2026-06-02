@@ -71,6 +71,7 @@ class PostgresCreateEnumTypeExpression(BaseExpression):
         ...     schema="app",
         ...     if_not_exists=True,
         ... )
+
     """
 
     def __init__(
@@ -95,6 +96,7 @@ class PostgresCreateEnumTypeExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_create_enum_type(self)
 
@@ -129,6 +131,7 @@ class PostgresDropEnumTypeExpression(BaseExpression):
         ...     if_exists=True,
         ...     cascade=True,
         ... )
+
     """
 
     def __init__(
@@ -153,6 +156,7 @@ class PostgresDropEnumTypeExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_drop_enum_type(self)
 
@@ -189,6 +193,7 @@ class PostgresAlterEnumAddValueExpression(BaseExpression):
         ...     new_value="refunded",
         ...     after="cancelled",
         ... )
+
     """
 
     def __init__(
@@ -215,6 +220,7 @@ class PostgresAlterEnumAddValueExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_alter_enum_add_value(self)
 
@@ -233,6 +239,7 @@ class PostgresAlterEnumTypeAddValueExpression(BaseExpression):
 
     Raises:
         ValueError: If type_name or new_value is empty, or both before and after specified.
+
     """
 
     def __init__(
@@ -263,6 +270,7 @@ class PostgresAlterEnumTypeAddValueExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_alter_enum_type_add_value(self)
 
@@ -280,6 +288,7 @@ class PostgresAlterEnumTypeRenameValueExpression(BaseExpression):
 
     Raises:
         ValueError: If type_name, old_value, or new_value is empty.
+
     """
 
     def __init__(
@@ -308,6 +317,7 @@ class PostgresAlterEnumTypeRenameValueExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_alter_enum_type_rename_value(self)
 
@@ -350,6 +360,7 @@ class PostgresCreateRangeTypeExpression(BaseExpression):
         ...     subtype="date",
         ...     collation="en_US",
         ... )
+
     """
 
     def __init__(
@@ -384,5 +395,6 @@ class PostgresCreateRangeTypeExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_create_range_type(self)

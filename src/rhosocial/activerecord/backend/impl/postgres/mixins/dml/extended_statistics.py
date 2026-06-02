@@ -37,17 +37,32 @@ class PostgresExtendedStatisticsMixin:
     def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsExpression") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.name`` — statistics object name.
+        - ``expr.table_name`` — source table name.
+        - ``expr.if_not_exists`` — add ``IF NOT EXISTS``.
+        - ``expr.statistics_type`` — optional type (``ndistinct``, ``dependencies``, ``mcv``; MCV requires PG 12+).
+        - ``expr.columns`` — list of column names.
+
         Args:
-            expr: PostgresCreateStatisticsExpression containing all options
+            expr: PostgresCreateStatisticsExpression instance
 
         Returns:
-            Tuple of (SQL statement, parameters tuple)
+            Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If statistics type is unsupported or MCV is used before PG 12.
+
         """
         if not self.supports_create_statistics():
             raise ValueError("CREATE STATISTICS requires PostgreSQL 10+")
 
-        full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}" if expr.schema else self.format_identifier(expr.name)
-        table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}" if expr.schema else self.format_identifier(expr.table_name)
+        if expr.schema:
+            full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
+            table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}"
+        else:
+            full_name = self.format_identifier(expr.name)
+            table_full = self.format_identifier(expr.table_name)
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 
@@ -72,13 +87,22 @@ class PostgresExtendedStatisticsMixin:
     def format_drop_statistics_statement(self, expr: "PostgresDropStatisticsExpression") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.name`` — statistics object name.
+        - ``expr.if_exists`` — add ``IF EXISTS``.
+
         Args:
-            expr: PostgresDropStatisticsExpression containing all options
+            expr: PostgresDropStatisticsExpression instance
 
         Returns:
-            Tuple of (SQL statement, parameters tuple)
+            Tuple of (SQL string, empty params tuple)
+
         """
-        full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}" if expr.schema else self.format_identifier(expr.name)
+        full_name = (
+            f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
+            if expr.schema
+            else self.format_identifier(expr.name)
+        )
         exists_clause = "IF EXISTS " if expr.if_exists else ""
 
         sql = f"DROP STATISTICS {exists_clause}{full_name}"

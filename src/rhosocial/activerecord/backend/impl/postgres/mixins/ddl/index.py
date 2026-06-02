@@ -70,6 +70,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if CREATE STATISTICS is supported
+
         """
         return self.version >= (10, 0, 0)
 
@@ -81,6 +82,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if MCV statistics are supported
+
         """
         return self.version >= (12, 0, 0)
 
@@ -92,6 +94,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if statistics dependencies are supported
+
         """
         return self.version >= (10, 0, 0)
 
@@ -102,6 +105,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if ndistinct statistics are supported
+
         """
         return self.version >= (10, 0, 0)
 
@@ -114,6 +118,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if supported
+
         """
         return self.version >= (16, 0, 0)
 
@@ -128,6 +133,7 @@ class PostgresIndexMixin:
 
         Returns:
             True if supported
+
         """
         return self.version >= (18, 0, 0)
 
@@ -242,6 +248,7 @@ class PostgresIndexMixin:
         - CONCURRENTLY clause
         - INCLUDE clause with version checks
         - NULLS NOT DISTINCT via dialect_options["nulls_not_distinct"]
+        - WITH storage parameters via dialect_options["with"]
         """
         all_params = []
         parts = ["CREATE"]
@@ -345,7 +352,30 @@ class PostgresIndexMixin:
     def format_alter_index_statement(
         self, expr: "PostgresAlterIndexExpression"
     ) -> Tuple[str, tuple]:
-        """Format ALTER INDEX statement with PostgreSQL-specific operations."""
+        """Format ALTER INDEX statement with PostgreSQL-specific operations.
+
+        Supports the following action types:
+
+        - ``RENAME TO`` — rename an index; requires ``expr.new_name``.
+        - ``SET TABLESPACE`` — move index to a different tablespace; requires ``expr.tablespace``.
+        - ``SET ( storage_parameters )`` — set index storage parameters; requires ``expr.storage_parameters`` dict.
+        - ``RESET ( storage_parameters )`` — reset index storage parameters; requires ``expr.storage_parameters`` dict.
+        - ``ALTER COLUMN SET STATISTICS`` — set per-column statistics target;
+          requires ``expr.column_number`` and ``expr.statistics_target``.
+        - ``ALL IN TABLESPACE … SET TABLESPACE … NOWAIT`` — move all indexes
+          in a tablespace; requires ``expr.source_tablespace`` and
+          ``expr.target_tablespace``.
+
+        Args:
+            expr: PostgresAlterIndexExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If required parameters for an action are missing or the action is unrecognised.
+
+        """
         from ...expression.ddl import PostgresAlterIndexActionType
 
         parts = ["ALTER INDEX"]
@@ -412,7 +442,25 @@ class PostgresIndexMixin:
         return " ".join(parts), ()
 
     def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
-        """Format REINDEX statement with PostgreSQL-specific options."""
+        """Format REINDEX statement with PostgreSQL-specific options.
+
+        Supports target types: ``INDEX``, ``TABLE``, ``SCHEMA``, ``DATABASE``, ``SYSTEM``.
+
+        - ``expr.concurrently`` — add ``CONCURRENTLY`` (PG 12+).
+        - ``expr.schema`` — schema qualifier for INDEX and TABLE targets.
+        - ``expr.tablespace`` — move index to a different tablespace (PG 14+).
+        - ``expr.verbose`` — add ``VERBOSE``.
+
+        Args:
+            expr: PostgresReindexExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If target_type is invalid or CONCURRENTLY is used before PG 12.
+
+        """
         target_type = expr.target_type.upper()
         if target_type not in ("INDEX", "TABLE", "SCHEMA", "DATABASE", "SYSTEM"):
             raise ValueError(f"Invalid target_type: {target_type}")
@@ -469,6 +517,7 @@ class PostgresIndexMixin:
                 or a ToSQLProtocol expression for parameterized queries.
                 WARNING: When using string, never pass user input directly;
                 always use ToSQLProtocol expressions for untrusted input.
+
         """
         all_params = []
         parts = ["CREATE"]

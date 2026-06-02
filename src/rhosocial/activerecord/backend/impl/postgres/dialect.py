@@ -436,6 +436,7 @@ class PostgresDialect(
                 If None, the dialect must be adapted via
                 backend.introspect_and_adapt() before version-dependent
                 features can be used.
+
         """
         super().__init__()
         if version is not None:
@@ -532,10 +533,17 @@ class PostgresDialect(
 
         PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``
 
-        Supported options assembled here:
+        Supported options:
         - ``ANALYZE``
         - ``FORMAT { TEXT | XML | JSON | YAML }``
-        - ``VERBOSE``  (passed through ``ExplainOptions.verbose`` if present)
+        - ``QUERY PLAN`` type — silently omitted (plain EXPLAIN is equivalent).
+
+        Args:
+            explain_expr: ExplainExpression instance
+
+        Returns:
+            Tuple of (SQL string, params tuple)
+
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
 
@@ -591,6 +599,7 @@ class PostgresDialect(
 
         Returns:
             True if the lock strength is supported, False otherwise
+
         """
         from rhosocial.activerecord.backend.impl.postgres.expression.locking import LockStrength
 
@@ -628,6 +637,7 @@ class PostgresDialect(
 
         Returns:
             'ON CONFLICT' (PostgreSQL) or 'ON DUPLICATE KEY' (MySQL)
+
         """
         return "ON CONFLICT"
 
@@ -681,7 +691,17 @@ class PostgresDialect(
         return True
 
     def format_ilike_expression(self, column: Any, pattern: str, negate: bool = False) -> Tuple[str, Tuple]:
-        """Format ILIKE expression for PostgreSQL."""
+        """Format ILIKE expression for PostgreSQL.
+
+        Args:
+            column: Column name string or expression with ``to_sql()``.
+            pattern: Right-hand-side pattern (replaced with ``%s`` placeholder).
+            negate: If ``True``, produces ``NOT ILIKE`` instead of ``ILIKE``.
+
+        Returns:
+            Tuple of (SQL string, (pattern,) params tuple)
+
+        """
         if isinstance(column, str):
             col_sql = self.format_identifier(column)
         else:
@@ -745,7 +765,19 @@ class PostgresDialect(
         return True
 
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
-        """Format TRUNCATE statement for PostgreSQL."""
+        """Format TRUNCATE statement for PostgreSQL.
+
+        - ``expr.table_name`` — target table.
+        - ``expr.restart_identity`` — add ``RESTART IDENTITY`` (PG 8.4+).
+        - ``expr.cascade`` — add ``CASCADE``.
+
+        Args:
+            expr: TruncateExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["TRUNCATE TABLE"]
         parts.append(self.format_identifier(expr.table_name))
 
@@ -769,6 +801,7 @@ class PostgresDialect(
 
         Returns:
             Quoted identifier with escaped internal quotes
+
         """
         # Escape any internal double quotes by doubling them
         escaped = identifier.replace('"', '""')
@@ -792,7 +825,11 @@ class PostgresDialect(
             # In PostgreSQL, when a table has an alias, column references
             # must use the alias — schema_name is irrelevant in this context.
             if schema_name and not alias:
-                col_sql = f"{self.format_identifier(schema_name)}.{self.format_identifier(table)}.{self.format_identifier(name)}"
+                col_sql = (
+                    f"{self.format_identifier(schema_name)}."
+                    f"{self.format_identifier(table)}."
+                    f"{self.format_identifier(name)}"
+                )
             else:
                 col_sql = f"{self.format_identifier(table)}.{self.format_identifier(name)}"
         else:
@@ -809,6 +846,18 @@ class PostgresDialect(
         Overrides the base implementation to handle EXCLUDED pseudo-table
         references without quoting, as EXCLUDED is a special PostgreSQL
         keyword in ON CONFLICT context and must not be double-quoted.
+
+        - ``expr.conflict_target`` — optional list of column names / expressions.
+        - ``expr.do_nothing`` — ``DO NOTHING``.
+        - ``expr.update_assignments`` — dict of ``{column: expression}`` for ``DO UPDATE SET``.
+        - ``expr.update_where`` — optional WHERE predicate for the update.
+
+        Args:
+            expr: OnConflictClause expression instance
+
+        Returns:
+            Tuple of (SQL string, params tuple)
+
         """
         from rhosocial.activerecord.backend.expression import bases
         from rhosocial.activerecord.backend.expression.core import Column
@@ -904,7 +953,22 @@ class PostgresDialect(
         return True  # PostgreSQL supports CASCADE
 
     def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
-        """Format CREATE VIEW statement for PostgreSQL."""
+        """Format CREATE VIEW statement for PostgreSQL.
+
+        - ``expr.temporary`` — add ``TEMPORARY``.
+        - ``expr.replace`` — add ``OR REPLACE``.
+        - ``expr.view_name`` — view name (identifier).
+        - ``expr.column_aliases`` — optional list of column aliases.
+        - ``expr.query`` — source SELECT expression.
+        - ``expr.options.check_option`` — ``WITH {LOCAL|CASCADED} CHECK OPTION``.
+
+        Args:
+            expr: CreateViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, params tuple)
+
+        """
         parts = ["CREATE"]
 
         if expr.temporary:
@@ -930,7 +994,19 @@ class PostgresDialect(
         return " ".join(parts), query_params
 
     def format_drop_view_statement(self, expr: "DropViewExpression") -> Tuple[str, tuple]:
-        """Format DROP VIEW statement for PostgreSQL."""
+        """Format DROP VIEW statement for PostgreSQL.
+
+        - ``expr.if_exists`` — add ``IF EXISTS``.
+        - ``expr.view_name`` — view name (identifier).
+        - ``expr.cascade`` — add ``CASCADE``.
+
+        Args:
+            expr: DropViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["DROP VIEW"]
         if expr.if_exists:
             parts.append("IF EXISTS")
@@ -940,7 +1016,22 @@ class PostgresDialect(
         return " ".join(parts), ()
 
     def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewExpression") -> Tuple[str, tuple]:
-        """Format CREATE MATERIALIZED VIEW statement for PostgreSQL."""
+        """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
+
+        - ``expr.view_name`` — view name (identifier).
+        - ``expr.column_aliases`` — optional list of column aliases.
+        - ``expr.tablespace`` — optional tablespace.
+        - ``expr.storage_options`` — optional dict of storage parameters (``WITH (… )``).
+        - ``expr.query`` — source SELECT expression.
+        - ``expr.with_data`` — ``WITH DATA`` / ``WITH NO DATA``.
+
+        Args:
+            expr: CreateMaterializedViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, params tuple)
+
+        """
         parts = ["CREATE MATERIALIZED VIEW"]
         parts.append(self.format_identifier(expr.view_name))
 
@@ -968,7 +1059,19 @@ class PostgresDialect(
         return " ".join(parts), query_params
 
     def format_drop_materialized_view_statement(self, expr: "DropMaterializedViewExpression") -> Tuple[str, tuple]:
-        """Format DROP MATERIALIZED VIEW statement for PostgreSQL."""
+        """Format DROP MATERIALIZED VIEW statement for PostgreSQL.
+
+        - ``expr.if_exists`` — add ``IF EXISTS``.
+        - ``expr.view_name`` — view name (identifier).
+        - ``expr.cascade`` — add ``CASCADE``.
+
+        Args:
+            expr: DropMaterializedViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["DROP MATERIALIZED VIEW"]
         if expr.if_exists:
             parts.append("IF EXISTS")
@@ -980,7 +1083,19 @@ class PostgresDialect(
     def format_refresh_materialized_view_statement(
         self, expr: "RefreshMaterializedViewExpression"
     ) -> Tuple[str, tuple]:
-        """Format REFRESH MATERIALIZED VIEW statement for PostgreSQL."""
+        """Format REFRESH MATERIALIZED VIEW statement for PostgreSQL.
+
+        - ``expr.concurrent`` — add ``CONCURRENTLY`` (PG 9.4+).
+        - ``expr.view_name`` — view name (identifier).
+        - ``expr.with_data`` — ``WITH DATA`` / ``WITH NO DATA``.
+
+        Args:
+            expr: RefreshMaterializedViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["REFRESH MATERIALIZED VIEW"]
         if expr.concurrent and self.supports_materialized_view_concurrent_refresh():
             parts.append("CONCURRENTLY")
@@ -1210,6 +1325,7 @@ class PostgresDialect(
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
         """
         # Check for LIKE syntax in dialect_options (highest priority)
         if "like_table" in expr.dialect_options:
@@ -1303,6 +1419,7 @@ class PostgresDialect(
             For chained type conversions, each ::type is appended:
             >>> col.cast('money').cast('numeric').cast('float8')
             # Generates: col::money::numeric::float8
+
         """
         sql = f"{expr_sql}::{target_type}"
         if alias:
@@ -1391,6 +1508,7 @@ class PostgresDialect(
                 }
             )
             # Generates: EXCLUDE USING gist (range WITH &&)
+
         """
         params: list = []
 
@@ -1488,6 +1606,7 @@ class PostgresDialect(
 
         Returns:
             Dict mapping function names to FunctionSupportInfo.
+
         """
         from .function_versions import FunctionSupportInfo
         from rhosocial.activerecord.backend.expression.functions import (
@@ -1514,6 +1633,7 @@ class PostgresDialect(
 
         Returns:
             FunctionSupportInfo with support status and reason if unsupported
+
         """
         from .function_versions import FunctionSupportInfo
 
@@ -1563,6 +1683,7 @@ class PostgresDialect(
 
         Returns:
             True if supported, False otherwise
+
         """
         requirement = self._POSTGRES_FUNCTION_VERSIONS.get(func_name)
         if requirement is None:
@@ -1672,7 +1793,17 @@ class PostgresDialect(
     def format_commit_transaction(
         self, expr: "CommitTransactionExpression"
     ) -> Tuple[str, tuple]:
-        """Format COMMIT TRANSACTION statement for PostgreSQL."""
+        """Format COMMIT TRANSACTION statement for PostgreSQL.
+
+        Always returns ``COMMIT``; ``expr`` is ignored.
+
+        Args:
+            expr: CommitTransactionExpression instance (unused)
+
+        Returns:
+            Tuple of ("COMMIT", ())
+
+        """
         return "COMMIT", ()
 
     def format_rollback_transaction(
@@ -1691,7 +1822,17 @@ class PostgresDialect(
     def format_savepoint(
         self, expr: "SavepointExpression"
     ) -> Tuple[str, tuple]:
-        """Format SAVEPOINT statement for PostgreSQL."""
+        """Format SAVEPOINT statement for PostgreSQL.
+
+        ``expr.get_params()["name"]`` — savepoint name (identifier).
+
+        Args:
+            expr: SavepointExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         params = expr.get_params()
         name = params.get("name", "")
         return f"SAVEPOINT {self.format_identifier(name)}", ()
@@ -1699,7 +1840,17 @@ class PostgresDialect(
     def format_release_savepoint(
         self, expr: "ReleaseSavepointExpression"
     ) -> Tuple[str, tuple]:
-        """Format RELEASE SAVEPOINT statement for PostgreSQL."""
+        """Format RELEASE SAVEPOINT statement for PostgreSQL.
+
+        ``expr.get_params()["name"]`` — savepoint name (identifier).
+
+        Args:
+            expr: ReleaseSavepointExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         params = expr.get_params()
         name = params.get("name", "")
         return f"RELEASE SAVEPOINT {self.format_identifier(name)}", ()

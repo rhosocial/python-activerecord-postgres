@@ -64,6 +64,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         ...     name="monthly_sales_summary",
         ...     with_data=False,
         ... )
+
     """
 
     def __init__(
@@ -100,5 +101,6 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_refresh_materialized_view_pg_statement(self)

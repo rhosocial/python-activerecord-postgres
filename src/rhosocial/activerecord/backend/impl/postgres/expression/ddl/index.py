@@ -1,154 +1,76 @@
 # src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/index.py
 """
-PostgreSQL DDL expressions: Index operations (CREATE/DROP/ALTER INDEX, REINDEX).
+PostgreSQL DDL expressions: Index operations (ALTER INDEX, REINDEX).
 
 PostgreSQL Documentation:
-- CREATE INDEX: https://www.postgresql.org/docs/current/sql-createindex.html
-- DROP INDEX: https://www.postgresql.org/docs/current/sql-dropindex.html
 - ALTER INDEX: https://www.postgresql.org/docs/current/sql-alterindex.html
 - REINDEX: https://www.postgresql.org/docs/current/sql-reindex.html
 
 Version Requirements:
 - REINDEX: PostgreSQL 8.0+
-- DROP INDEX CONCURRENTLY: PostgreSQL 18+
-- CONCURRENTLY option: PostgreSQL 12+
 - TABLESPACE option: PostgreSQL 14+
-- NULLS NOT DISTINCT: PostgreSQL 15+
-- CONCURRENTLY + NULLS NOT DISTINCT: PostgreSQL 16+
+- CONCURRENTLY option: PostgreSQL 12+
+
+CREATE / DROP INDEX — use the generic expressions with ``dialect_options``
+==========================================================================
+This module intentionally does **not** define ``PostgresCreateIndexExpression``
+or ``PostgresDropIndexExpression``.  The generic classes from the core
+package already serve this purpose:
+
+    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
+        CreateIndexExpression,
+        DropIndexExpression,
+    )
+
+PostgreSQL‑specific options are supplied via the ``dialect_options`` dict and
+consumed by ``PostgresIndexMixin.format_create_index_statement`` /
+``format_drop_index_statement``.  Supported keys:
+
+======================= =======================================================
+Key                     Description
+======================= =======================================================
+``nulls_not_distinct``  ``bool`` — add ``NULLS NOT DISTINCT`` (PG 15+, unique
+                        index only).  Passed to ``CreateIndexExpression``.
+``opclasses``           ``dict[str, str]`` — operator classes per column, e.g.
+                        ``{"a": "text_pattern_ops"}``.  Passed to
+                        ``CreateIndexExpression``.
+``with``                ``dict[str, Any]`` — storage parameters, e.g.
+                        ``{"fillfactor": 70}``.  Passed to
+                        ``CreateIndexExpression``.
+``concurrent``          ``bool`` — add ``CONCURRENTLY`` to ``DROP INDEX``
+                        (PG 18+).  Passed to ``DropIndexExpression``.
+                        (For ``CREATE INDEX`` the generic class already has
+                        a ``concurrent`` named parameter.)
+======================= =======================================================
+
+Example::
+
+    from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+
+    d = PostgresDialect((15, 0, 0))
+
+    expr = CreateIndexExpression(
+        d, "idx_uniq_abc", "t", ["a", "b"],
+        unique=True,
+        dialect_options={"nulls_not_distinct": True},
+    )
+    sql, _ = expr.to_sql()   # → CREATE UNIQUE INDEX … NULLS NOT DISTINCT
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-    CreateIndexExpression,
-    DropIndexExpression,
-)
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-    from rhosocial.activerecord.backend.expression import SQLPredicate
 
 
 __all__ = [
-    "PostgresCreateIndexExpression",
-    "PostgresDropIndexExpression",
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
     "PostgresReindexExpression",
 ]
-
-
-class PostgresCreateIndexExpression(CreateIndexExpression):
-    """PostgreSQL-specific CREATE INDEX expression.
-
-    Extends the standard CreateIndexExpression with PostgreSQL-specific
-    features such as NULLS NOT DISTINCT.
-
-    The option is stored in dialect_options under the key ``"nulls_not_distinct"``
-    and is consumed by ``PostgresIndexMixin.format_create_index_statement``.
-
-    Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-        >>> dialect = PostgresDialect((15, 0, 0))
-        >>> idx = PostgresCreateIndexExpression(
-        ...     dialect=dialect,
-        ...     index_name="idx_uniq_abc",
-        ...     table_name="t",
-        ...     columns=["a", "b", "c"],
-        ...     unique=True,
-        ...     nulls_not_distinct_unique=True,
-        ... )
-        >>> sql, params = idx.to_sql()
-        >>> sql
-        'CREATE UNIQUE INDEX "idx_uniq_abc" ON "t" ("a", "b", "c") NULLS NOT DISTINCT'
-    """
-
-    def __init__(
-        self,
-        dialect: "SQLDialectBase",
-        index_name: str,
-        table_name: str,
-        columns: List[Union[str, "BaseExpression"]],
-        unique: bool = False,
-        if_not_exists: bool = False,
-        index_type: Optional[str] = None,
-        where: Optional["SQLPredicate"] = None,
-        include: Optional[List[str]] = None,
-        tablespace: Optional[str] = None,
-        concurrent: bool = False,
-        nulls_not_distinct_unique: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
-    ):
-        merged_options = dict(dialect_options or {})
-        if nulls_not_distinct_unique:
-            merged_options["nulls_not_distinct"] = True
-        super().__init__(
-            dialect=dialect,
-            index_name=index_name,
-            table_name=table_name,
-            columns=columns,
-            unique=unique,
-            if_not_exists=if_not_exists,
-            index_type=index_type,
-            where=where,
-            include=include,
-            tablespace=tablespace,
-            concurrent=concurrent,
-            dialect_options=merged_options,
-        )
-
-    def to_sql(self) -> Tuple[str, tuple]:
-        return self.dialect.format_create_index_statement(self)
-
-
-class PostgresDropIndexExpression(DropIndexExpression):
-    """PostgreSQL-specific DROP INDEX expression.
-
-    Extends the standard DropIndexExpression with PostgreSQL-specific
-    features such as CONCURRENTLY (PG 18+).
-
-    ``concurrent`` is stored in ``dialect_options["concurrent"]`` and
-    consumed by ``PostgresIndexMixin.format_drop_index_statement``.
-
-    Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-        >>> dialect = PostgresDialect((18, 0, 0))
-        >>> expr = PostgresDropIndexExpression(
-        ...     dialect=dialect,
-        ...     index_name="idx_old",
-        ...     concurrent=True,
-        ... )
-        >>> sql, params = expr.to_sql()
-        >>> sql
-        'DROP INDEX CONCURRENTLY "idx_old"'
-    """
-
-    def __init__(
-        self,
-        dialect: "SQLDialectBase",
-        index_name: str,
-        table_name: Optional[str] = None,
-        if_exists: bool = False,
-        concurrent: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
-    ):
-        merged_options = dict(dialect_options or {})
-        if concurrent:
-            merged_options["concurrent"] = True
-        super().__init__(
-            dialect=dialect,
-            index_name=index_name,
-            table_name=table_name,
-            if_exists=if_exists,
-            dialect_options=merged_options,
-        )
-
-    def to_sql(self) -> Tuple[str, tuple]:
-        return self.dialect.format_drop_index_statement(self)
 
 
 class PostgresAlterIndexActionType(Enum):
@@ -184,6 +106,7 @@ class PostgresAlterIndexExpression(BaseExpression):
         >>> sql, params = expr.to_sql()
         >>> sql
         'ALTER INDEX "idx_old" RENAME TO "idx_new"'
+
     """
 
     def __init__(
@@ -264,6 +187,7 @@ class PostgresReindexExpression(BaseExpression):
         ...     name="mydb",
         ...     tablespace="fast_tablespace",
         ... )
+
     """
 
     def __init__(
@@ -292,5 +216,6 @@ class PostgresReindexExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_reindex_statement(self)

@@ -44,7 +44,27 @@ class PostgresTriggerMixin:
     def format_create_trigger_statement(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TRIGGER statement (PostgreSQL syntax).
 
-        PostgreSQL uses 'EXECUTE FUNCTION func_name()' instead of standard 'EXECUTE func_name'.
+        PostgreSQL uses ``EXECUTE FUNCTION func_name()`` instead of standard ``EXECUTE func_name``.
+
+        Supported expression attributes:
+
+        - ``expr.if_not_exists`` — add ``IF NOT EXISTS`` (PG 9.5+).
+        - ``expr.trigger_name`` — trigger name (identifier).
+        - ``expr.timing`` — ``BEFORE``, ``AFTER``, or ``INSTEAD OF``.
+        - ``expr.events`` — list of event types (``INSERT``, ``UPDATE``, ``DELETE``, ``TRUNCATE``).
+        - ``expr.update_columns`` — column list for ``UPDATE OF``.
+        - ``expr.table_name`` — target table (identifier).
+        - ``expr.referencing`` — ``REFERENCING`` clause string (PG 10+).
+        - ``expr.level`` — ``FOR EACH ROW`` or ``FOR EACH STATEMENT``.
+        - ``expr.condition`` — ``WHEN`` predicate expression.
+        - ``expr.function_name`` — function to execute.
+
+        Args:
+            expr: Expression instance with trigger attributes
+
+        Returns:
+            Tuple of (SQL string, params tuple)
+
         """
         parts = ["CREATE TRIGGER"]
 
@@ -83,7 +103,19 @@ class PostgresTriggerMixin:
         return " ".join(parts), tuple(all_params)
 
     def format_drop_trigger_statement(self, expr) -> Tuple[str, tuple]:
-        """Format DROP TRIGGER statement (PostgreSQL syntax)."""
+        """Format DROP TRIGGER statement (PostgreSQL syntax).
+
+        - ``expr.if_exists`` — add ``IF EXISTS``.
+        - ``expr.trigger_name`` — trigger name (identifier).
+        - ``expr.table_name`` — optional ``ON table_name`` clause.
+
+        Args:
+            expr: Expression instance with trigger attributes
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["DROP TRIGGER"]
 
         if expr.if_exists:
