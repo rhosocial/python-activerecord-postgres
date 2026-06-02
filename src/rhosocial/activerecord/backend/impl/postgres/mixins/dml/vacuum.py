@@ -30,7 +30,34 @@ class PostgresVacuumMixin:
         return self.version >= (14, 0, 0)
 
     def format_vacuum_statement(self, expr: "PostgresVacuumExpression") -> Tuple[str, tuple]:
-        """Format VACUUM statement from PostgresVacuumExpression."""
+        """Format VACUUM statement from PostgresVacuumExpression.
+
+        Supported expression attributes:
+
+        - ``expr.full`` — ``FULL``.
+        - ``expr.freeze`` — ``FREEZE``.
+        - ``expr.verbose`` — ``VERBOSE``.
+        - ``expr.analyze`` — ``ANALYZE``.
+        - ``expr.parallel`` — ``PARALLEL N`` (PG 13+).
+        - ``expr.index_cleanup`` — ``INDEX_CLEANUP {AUTO|ON|OFF}`` (PG 14+).
+        - ``expr.process_toast`` — ``PROCESS_TOAST {TRUE|FALSE}`` (PG 14+).
+        - ``expr.skip_locked`` — ``SKIP_LOCKED``.
+        - ``expr.truncate`` — ``TRUNCATE`` (mutually exclusive with FULL).
+        - ``expr.table_name`` — optional table name.
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.columns`` — optional column list (for ANALYZE).
+
+        Args:
+            expr: PostgresVacuumExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If a version-gated option is used on an unsupported PostgreSQL version,
+                        or if TRUNCATE and FULL are used together.
+
+        """
         parts = ["VACUUM"]
 
         # Add options
@@ -91,7 +118,21 @@ class PostgresVacuumMixin:
         return (" ".join(parts), ())
 
     def format_analyze_statement(self, expr: "PostgresAnalyzeExpression") -> Tuple[str, tuple]:
-        """Format ANALYZE statement from PostgresAnalyzeExpression."""
+        """Format ANALYZE statement from PostgresAnalyzeExpression.
+
+        - ``expr.verbose`` — ``VERBOSE``.
+        - ``expr.skip_locked`` — ``SKIP_LOCKED``.
+        - ``expr.table_name`` — optional table name.
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.columns`` — optional column list.
+
+        Args:
+            expr: PostgresAnalyzeExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["ANALYZE"]
 
         if expr.verbose:

@@ -68,6 +68,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         ...     partition_type="LIST",
         ...     partition_values={"values": ["active", "pending"]},
         ... )
+
     """
 
     def __init__(
@@ -98,6 +99,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_create_partition_statement(self)
 
@@ -127,6 +129,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         >>> sql, params = detach.to_sql()
         >>> sql
         "ALTER TABLE orders DETACH PARTITION orders_2023 CONCURRENTLY"
+
     """
 
     def __init__(
@@ -153,6 +156,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_detach_partition_statement(self)
 
@@ -182,6 +186,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         >>> sql, params = attach.to_sql()
         >>> sql
         "ALTER TABLE orders ATTACH PARTITION orders_2024_q1 RANGE ('2024-01-01', '2024-04-01')"
+
     """
 
     def __init__(
@@ -208,5 +213,6 @@ class PostgresAttachPartitionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_attach_partition_statement(self)

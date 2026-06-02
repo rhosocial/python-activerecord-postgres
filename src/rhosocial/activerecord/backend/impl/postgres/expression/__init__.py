@@ -18,15 +18,13 @@ from .advisory import (
     PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
-from .locking import LockStrength, PostgresForUpdateClause
+from .locking import LockStrength
 from .ddl import (
     PostgresVacuumExpression,
     PostgresAnalyzeExpression,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
-    PostgresCreateIndexExpression,
-    PostgresDropIndexExpression,
     PostgresAlterIndexExpression,
     PostgresAlterIndexActionType,
     PostgresReindexExpression,
@@ -53,15 +51,12 @@ __all__ = [
     "AdvisoryLockType",
     # locking
     "LockStrength",
-    "PostgresForUpdateClause",
     # ddl
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
-    "PostgresCreateIndexExpression",
-    "PostgresDropIndexExpression",
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
     "PostgresReindexExpression",

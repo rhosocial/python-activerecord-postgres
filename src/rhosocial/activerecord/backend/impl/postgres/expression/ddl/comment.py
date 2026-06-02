@@ -63,6 +63,7 @@ class PostgresCommentExpression(BaseExpression):
         ...     object_name="users_email_idx",
         ...     comment=None,
         ... )
+
     """
 
     def __init__(
@@ -87,5 +88,6 @@ class PostgresCommentExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_comment_statement(self)

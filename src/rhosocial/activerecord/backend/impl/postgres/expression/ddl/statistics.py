@@ -61,6 +61,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         ...     table_name="orders",
         ...     statistics_type="ndistinct, mcv",
         ... )
+
     """
 
     def __init__(
@@ -89,6 +90,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_create_statistics_statement(self)
 
@@ -113,6 +115,7 @@ class PostgresDropStatisticsExpression(BaseExpression):
         >>> sql, params = drop.to_sql()
         >>> sql
         "DROP STATISTICS users_status_expr"
+
     """
 
     def __init__(
@@ -135,5 +138,6 @@ class PostgresDropStatisticsExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
         """
         return self.dialect.format_drop_statistics_statement(self)

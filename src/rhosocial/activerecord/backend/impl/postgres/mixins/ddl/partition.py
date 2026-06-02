@@ -51,7 +51,34 @@ class PostgresPartitionMixin:
         return self.version >= (11, 0, 0)
 
     def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
-        """Format CREATE TABLE ... PARTITION OF statement from expression."""
+        """Format CREATE TABLE ... PARTITION OF statement from expression.
+
+        Supported partition types are ``RANGE``, ``LIST``, and ``HASH``.
+
+        - ``expr.partition_type`` — partition method (``RANGE`` / ``LIST`` / ``HASH``).
+        - ``expr.if_not_exists`` — add ``IF NOT EXISTS``.
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.partition_name`` — new partition name.
+        - ``expr.parent_table`` — parent partitioned table.
+        - ``expr.partition_values`` — bound values (see below).
+        - ``expr.tablespace`` — optional tablespace.
+
+        ``partition_values`` dict format:
+
+        - RANGE: ``{"from": ..., "to": ...}`` or ``{"default": True}``.
+        - LIST: ``{"values": [..., ...]}`` or ``{"default": True}``.
+        - HASH: ``{"modulus": N, "remainder": M}``.
+
+        Args:
+            expr: PostgresCreatePartitionExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If partition_type is invalid or required bound values are missing.
+
+        """
         partition_type = expr.partition_type.upper()
         if partition_type not in ("RANGE", "LIST", "HASH"):
             raise ValueError(f"Invalid partition_type: {partition_type}")
@@ -128,6 +155,7 @@ class PostgresPartitionMixin:
             For string values that represent dates or other literals,
             pass the raw value without quotes. The method will add quotes.
             Example: Pass '2024-01-01' not "'2024-01-01'"
+
         """
         if value is None:
             return "NULL"
@@ -141,7 +169,21 @@ class PostgresPartitionMixin:
             return str(value)
 
     def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
-        """Format ALTER TABLE ... DETACH PARTITION statement from expression."""
+        """Format ALTER TABLE ... DETACH PARTITION statement from expression.
+
+        - ``expr.parent_table`` — partitioned table name.
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.partition_name`` — partition to detach.
+        - ``expr.concurrently`` — add ``DETACH CONCURRENTLY`` (PG 14+).
+        - ``expr.finalize`` — add ``FINALIZE`` (valid only with CONCURRENTLY).
+
+        Args:
+            expr: PostgresDetachPartitionExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["ALTER TABLE"]
 
         if expr.schema:
@@ -169,7 +211,21 @@ class PostgresPartitionMixin:
         return (" ".join(parts), ())
 
     def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
-        """Format ALTER TABLE ... ATTACH PARTITION statement from expression."""
+        """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
+
+        - ``expr.parent_table`` — partitioned table name.
+        - ``expr.schema`` — optional schema qualifier.
+        - ``expr.partition_name`` — partition to attach.
+        - ``expr.partition_type`` — partition method (``RANGE`` / ``LIST`` / ``HASH``).
+        - ``expr.partition_values`` — bound values (see ``format_create_partition_statement``).
+
+        Args:
+            expr: PostgresAttachPartitionExpression instance
+
+        Returns:
+            Tuple of (SQL string, empty params tuple)
+
+        """
         parts = ["ALTER TABLE"]
 
         if expr.schema:

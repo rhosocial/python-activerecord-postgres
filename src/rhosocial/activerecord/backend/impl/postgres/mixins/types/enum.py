@@ -30,6 +30,7 @@ class EnumTypeMixin:
 
         Returns:
             Formatted type name (e.g., 'schema.name' or 'name')
+
         """
         if schema:
             return f"{schema}.{name}"
@@ -43,6 +44,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL-formatted values string
+
         """
         return ", ".join(f"'{v}'" for v in values)
 
@@ -59,6 +61,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         full_name = self.format_enum_type_name(name, schema)
         values_str = self.format_enum_values(values)
@@ -78,6 +81,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         full_name = self.format_enum_type_name(name, schema)
         exists_clause = "IF EXISTS " if if_exists else ""
@@ -99,6 +103,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         full_name = self.format_enum_type_name(type_name, schema)
         sql = f"ALTER TYPE {full_name} ADD VALUE '{new_value}'"
@@ -127,6 +132,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         return self.format_create_enum_type_raw(name, values, schema, if_not_exists)
 
@@ -145,6 +151,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         return self.format_drop_enum_type_raw(name, schema, if_exists, cascade)
 
@@ -171,6 +178,7 @@ class EnumTypeMixin:
 
         Returns:
             SQL statement string
+
         """
         return self.format_alter_enum_add_value_raw(type_name, new_value, schema, before, after)
 
@@ -185,7 +193,30 @@ class EnumTypeMixin:
         schema: Optional[str] = None,
         if_not_exists: bool = False,
     ) -> Union[str, Tuple[str, tuple]]:
-        """Format CREATE TYPE for either the legacy or expression-based API."""
+        """Format CREATE TYPE for either the legacy or expression-based API.
+
+        **Expression mode** — if ``expr_or_name`` has a ``values`` attribute,
+        its ``.name``, ``.values``, ``.schema``, and ``.if_not_exists`` are
+        used and the result is wrapped in ``(sql, ())``.
+
+        **Legacy mode** — ``expr_or_name`` is treated as a type name string;
+        ``values``, ``schema``, and ``if_not_exists`` must be supplied as
+        keyword arguments.
+
+        Args:
+            expr_or_name: Expression instance or type name string.
+            values: List of enum values (required in legacy mode).
+            schema: Optional schema name.
+            if_not_exists: Add ``IF NOT EXISTS``.
+
+        Returns:
+            Tuple of (SQL string, params tuple) in expression mode,
+            plain SQL string in legacy mode.
+
+        Raises:
+            TypeError: If ``values`` is ``None`` in legacy mode.
+
+        """
         if hasattr(expr_or_name, "values"):
             sql = self.format_create_enum_type_raw(
                 expr_or_name.name,
@@ -207,7 +238,27 @@ class EnumTypeMixin:
         if_exists: bool = False,
         cascade: bool = False,
     ) -> Union[str, Tuple[str, tuple]]:
-        """Format DROP TYPE for either the legacy or expression-based API."""
+        """Format DROP TYPE for either the legacy or expression-based API.
+
+        **Expression mode** — if ``expr_or_name`` has an ``if_exists`` attribute,
+        its ``.name``, ``.schema``, ``.if_exists``, and ``.cascade`` are used
+        and the result is wrapped in ``(sql, ())``.
+
+        **Legacy mode** — ``expr_or_name`` is treated as a type name string;
+        ``schema``, ``if_exists``, and ``cascade`` must be supplied as keyword
+        arguments.
+
+        Args:
+            expr_or_name: Expression instance or type name string.
+            schema: Optional schema name.
+            if_exists: Add ``IF EXISTS``.
+            cascade: Add ``CASCADE``.
+
+        Returns:
+            Tuple of (SQL string, params tuple) in expression mode,
+            plain SQL string in legacy mode.
+
+        """
         if hasattr(expr_or_name, "if_exists"):
             sql = self.format_drop_enum_type_raw(
                 expr_or_name.name,
@@ -227,7 +278,31 @@ class EnumTypeMixin:
         before: Optional[str] = None,
         after: Optional[str] = None,
     ) -> Union[str, Tuple[str, tuple]]:
-        """Format ALTER TYPE ADD VALUE for either the legacy or expression-based API."""
+        """Format ALTER TYPE ADD VALUE for either the legacy or expression-based API.
+
+        **Expression mode** — if ``expr_or_type_name`` has a ``new_value`` attribute,
+        its ``.type_name``, ``.new_value``, ``.schema``, ``.before``, and ``.after``
+        are used and the result is wrapped in ``(sql, ())``.
+
+        **Legacy mode** — ``expr_or_type_name`` is treated as a type name string;
+        ``new_value``, ``schema``, ``before``, and ``after`` must be supplied as
+        keyword arguments.
+
+        Args:
+            expr_or_type_name: Expression instance or type name string.
+            new_value: New enum value (required in legacy mode).
+            schema: Optional schema name.
+            before: Insert before this existing value.
+            after: Insert after this existing value.
+
+        Returns:
+            Tuple of (SQL string, params tuple) in expression mode,
+            plain SQL string in legacy mode.
+
+        Raises:
+            TypeError: If ``new_value`` is ``None`` in legacy mode.
+
+        """
         if hasattr(expr_or_type_name, "new_value"):
             sql = self.format_alter_enum_add_value_raw(
                 expr_or_type_name.type_name,
@@ -251,6 +326,7 @@ class EnumTypeMixin:
 
         Returns:
             Tuple of (SQL string, empty params tuple)
+
         """
         sql = self.format_alter_enum_add_value_raw(
             expr.type_name,
@@ -269,6 +345,7 @@ class EnumTypeMixin:
 
         Returns:
             Tuple of (SQL string, empty params tuple)
+
         """
         full_name = self.format_enum_type_name(expr.type_name, expr.schema)
         sql = f"ALTER TYPE {full_name} RENAME VALUE '{expr.old_value}' TO '{expr.new_value}'"
