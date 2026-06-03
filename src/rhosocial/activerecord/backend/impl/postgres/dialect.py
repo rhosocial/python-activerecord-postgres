@@ -9,6 +9,7 @@ based on the PostgreSQL version provided at initialization.
 from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.collation import CollationName
     from .function_versions import FunctionSupportInfo, FunctionVersionRequirement
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
@@ -474,7 +475,7 @@ class PostgresDialect(
         """PostgreSQL supports expression-level COLLATE."""
         return True
 
-    def validate_collation_name(self, collation) -> str:
+    def validate_collation_name(self, collation: "CollationName") -> str:
         """Validate PostgreSQL collation names and return their SQL representation."""
         if collation.keyword is not None:
             raise ValueError(f"Unsupported PostgreSQL collation keyword: {collation.keyword!r}")
