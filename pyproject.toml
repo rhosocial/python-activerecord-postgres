@@ -46,9 +46,9 @@ pooling = [
 ]
 # Development dependencies
 test = [
-    "pytest>=7.0.0",
+    "pytest",
     "coverage>=7.0.0",
-    "pytest-mock>=3.0.0",
+    "pytest-mock",
     "fastapi>=0.110",
     "httpx>=0.27",
 ]

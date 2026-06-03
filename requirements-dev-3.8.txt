@@ -1,7 +1,7 @@
 # requirements-dev-3.8.txt
 # Testing framework for unit and integration tests
 # Version ~=8.3.5 is the latest pytest version compatible with Python 3.8
-pytest~=8.3.5
+pytest
 pytest-asyncio
 
 # Pytest plugin for performance benchmarking
@@ -20,7 +20,7 @@ pytest-xdist
 
 # Code coverage measurement tool and pytest integration
 coverage
-pytest-cov>=4.0.0
+pytest-cov
 
 # Pydantic with email validation support
 pydantic[email]
