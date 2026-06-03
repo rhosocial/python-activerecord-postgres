@@ -38,6 +38,10 @@ class PostgresJSONBEnhancedSupport(Protocol):
     - Numeric infinity in JSONB: PostgreSQL 17+
     """
 
+    def format_json_expression(self, expr):
+        """Format a PostgreSQL JSON expression."""
+        ...
+
     def supports_json_type(self) -> bool:
         """Whether JSON data type is supported.
 
