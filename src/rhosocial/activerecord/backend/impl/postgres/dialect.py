@@ -474,8 +474,8 @@ class PostgresDialect(
         """PostgreSQL supports expression-level COLLATE."""
         return True
 
-    def format_collation_name(self, collation) -> str:
-        """Format PostgreSQL collation names with whitelist validation."""
+    def validate_collation_name(self, collation) -> str:
+        """Validate PostgreSQL collation names and return their SQL representation."""
         if collation.keyword is not None:
             raise ValueError(f"Unsupported PostgreSQL collation keyword: {collation.keyword!r}")
         validate_postgres_collation_name(collation.name, getattr(self, "version", None))
