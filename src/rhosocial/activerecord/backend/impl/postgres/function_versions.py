@@ -67,6 +67,15 @@ class FunctionVersionRequirement:
 
 # ── Core PG built-in functions ────────────────────────────────
 
+JSON_EXPRESSION_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "json_extract": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
+    "json_extract_text": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
+    "json_build_object": FunctionVersionRequirement(max_pg_version=(0, 0, 0)),
+    "json_array_elements": FunctionVersionRequirement(),
+    "json_objectagg": FunctionVersionRequirement(max_pg_version=(0, 0, 0)),
+    "json_arrayagg": FunctionVersionRequirement(max_pg_version=(0, 0, 0)),
+}
+
 JSON_PATH_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "jsonb_path_query": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
     "jsonb_path_query_first": FunctionVersionRequirement(min_pg_version=(12, 0, 0)),
@@ -335,6 +344,7 @@ POSTGIS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
 # ── Assemble ──────────────────────────────────────────────────
 
 _ALL_CATEGORIES = [
+    JSON_EXPRESSION_FUNCTION_VERSIONS,
     JSON_PATH_FUNCTION_VERSIONS,
     RANGE_FUNCTION_VERSIONS,
     GEOMETRIC_FUNCTION_VERSIONS,

@@ -227,6 +227,7 @@ class PostgresDialect(
     CTEMixin,
     FilterClauseMixin,
     WindowFunctionMixin,
+    PostgresJSONBEnhancedMixin,
     JSONMixin,
     ReturningMixin,
     AdvancedGroupingMixin,
@@ -303,7 +304,6 @@ class PostgresDialect(
     MultirangeMixin,
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
-    PostgresJSONBEnhancedMixin,
     PostgresArrayEnhancedMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
