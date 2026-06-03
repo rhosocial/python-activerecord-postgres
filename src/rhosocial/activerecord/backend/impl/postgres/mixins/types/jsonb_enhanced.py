@@ -13,6 +13,31 @@ class PostgresJSONBEnhancedMixin:
     JSON and JSONB features beyond the standard JSONSupport protocol.
     """
 
+    def format_json_expression(self, expr):
+        from rhosocial.activerecord.backend.expression import bases
+
+        if isinstance(expr.column, bases.BaseExpression):
+            col_sql, col_params = expr.column.to_sql()
+        else:
+            col_sql, col_params = self.format_identifier(str(expr.column)), ()
+
+        placeholder = self.get_parameter_placeholder()
+        value_sql = f"jsonb_path_query_first({col_sql}, {placeholder}::jsonpath)"
+        if expr.operation == "->>":
+            sql = f"({value_sql} #>> '{{}}')"
+        else:
+            sql = value_sql
+        params = col_params + (expr.path,)
+
+        if expr.cast_types:
+            for target_type in expr.cast_types:
+                sql, params = self.format_cast_expression(sql, target_type, params, None)
+
+        if expr.alias:
+            sql = f"{sql} AS {self.format_identifier(expr.alias)}"
+
+        return sql, params
+
     def supports_json_type(self) -> bool:
         """JSON is supported since PostgreSQL 9.2."""
         return self.version >= (9, 2, 0)
