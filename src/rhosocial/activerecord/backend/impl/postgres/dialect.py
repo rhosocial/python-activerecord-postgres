@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
+    CollationMixin,
     CTEMixin,
     FilterClauseMixin,
     WindowFunctionMixin,
@@ -41,6 +42,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ConstraintMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
+    CollationSupport,
     CTESupport,
     FilterClauseSupport,
     WindowFunctionSupport,
@@ -133,6 +135,8 @@ from .mixins import (
     PostgresIntrospectionCapabilityMixin,
 )
 
+from .collation import validate_postgres_collation_name
+
 # PostgreSQL-specific imports
 from .protocols import (
     PostgresExtensionSupport,
@@ -221,6 +225,7 @@ if TYPE_CHECKING:
 
 class PostgresDialect(
     SQLDialectBase,
+    CollationMixin,
     SetOperationMixin,
     TruncateMixin,
     ILIKEMixin,
@@ -310,6 +315,7 @@ class PostgresDialect(
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
     # Protocol supports
+    CollationSupport,
     SetOperationSupport,
     TruncateSupport,
     ILIKESupport,
@@ -463,6 +469,19 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_collate_expression(self) -> bool:
+        """PostgreSQL supports expression-level COLLATE."""
+        return True
+
+    def format_collation_name(self, collation) -> str:
+        """Format PostgreSQL collation names with whitelist validation."""
+        if collation.keyword is not None:
+            raise ValueError(f"Unsupported PostgreSQL collation keyword: {collation.keyword!r}")
+        validate_postgres_collation_name(collation.name, getattr(self, "version", None))
+        if collation.schema is not None:
+            return f"{self.format_identifier(collation.schema)}.{self.format_identifier(collation.name)}"
+        return self.format_identifier(collation.name)
 
     # region Protocol Support Checks based on version
     def supports_basic_cte(self) -> bool:
