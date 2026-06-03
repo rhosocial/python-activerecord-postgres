@@ -16,6 +16,8 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
     async_ensure_extension_installed,
 )
+from rhosocial.activerecord.backend.impl.postgres.adapters.pgvector import PostgresVectorAdapter
+from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
 from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -52,6 +54,36 @@ def _id_column():
 
 def _embedding_column(dim=3):
     return ColumnDefinition(name="embedding", data_type=f"VECTOR({dim})")
+
+
+def _vector_literal(value, vector_type="vector"):
+    adapter = PostgresVectorAdapter()
+    database_value = adapter.to_database(value, str)
+    if database_value is None:
+        return "NULL"
+    return f"'{database_value}'::{vector_type}"
+
+
+def _ensure_vector_subtype_supported(backend, vector_type):
+    probe_table = f"test_pgvector_{vector_type}_probe"
+    backend.execute(f"DROP TABLE IF EXISTS {probe_table}")
+    try:
+        backend.execute(f"CREATE TABLE {probe_table} (value {vector_type}(3))")
+    except DatabaseError:
+        pytest.skip(f"pgvector type '{vector_type}' not supported on this server")
+    finally:
+        backend.execute(f"DROP TABLE IF EXISTS {probe_table}")
+
+
+async def _async_ensure_vector_subtype_supported(backend, vector_type):
+    probe_table = f"test_pgvector_{vector_type}_probe_async"
+    await backend.execute(f"DROP TABLE IF EXISTS {probe_table}")
+    try:
+        await backend.execute(f"CREATE TABLE {probe_table} (value {vector_type}(3))")
+    except DatabaseError:
+        pytest.skip(f"pgvector type '{vector_type}' not supported on this server")
+    finally:
+        await backend.execute(f"DROP TABLE IF EXISTS {probe_table}")
 
 
 # --- Sync fixture and tests ---
@@ -217,6 +249,45 @@ class TestPgvectorIntegration:
         assert len(result.data) == 2
         assert result.data[0]['embedding'] is not None
         assert result.data[1]['embedding'] is not None
+
+    def test_halfvec_round_trip(self, vector_env):
+        """Insert a halfvec value and verify PostgreSQL returns canonical text."""
+        backend, _ = vector_env
+        _ensure_vector_subtype_supported(backend, "halfvec")
+        literal = _vector_literal(PostgresVector([1.0, 2.0, 3.0]), "halfvec")
+
+        result = backend.fetch_one(f"SELECT {literal}::text AS embedding")
+
+        assert result["embedding"] == "[1,2,3]"
+
+    def test_sparsevec_round_trip(self, vector_env):
+        """Insert a sparsevec value and verify PostgreSQL returns canonical text."""
+        backend, _ = vector_env
+        _ensure_vector_subtype_supported(backend, "sparsevec")
+
+        result = backend.fetch_one(
+            "SELECT '{1:1.0,3:3.0}/3'::sparsevec::text AS embedding"
+        )
+
+        assert result["embedding"] == "{1:1,3:3}/3"
+
+    def test_halfvec_null_round_trip(self, vector_env):
+        """Insert a NULL halfvec value and verify fetched value is None."""
+        backend, _ = vector_env
+        _ensure_vector_subtype_supported(backend, "halfvec")
+
+        result = backend.fetch_one("SELECT NULL::halfvec AS embedding")
+
+        assert result["embedding"] is None
+
+    def test_sparsevec_null_round_trip(self, vector_env):
+        """Insert a NULL sparsevec value and verify fetched value is None."""
+        backend, _ = vector_env
+        _ensure_vector_subtype_supported(backend, "sparsevec")
+
+        result = backend.fetch_one("SELECT NULL::sparsevec AS embedding")
+
+        assert result["embedding"] is None
 
     def test_l2_distance(self, vector_env):
         """Test L2 (Euclidean) distance operator <->."""
@@ -681,6 +752,49 @@ class TestAsyncPgvectorIntegration:
         assert len(result.data) == 2
         assert result.data[0]['embedding'] is not None
         assert result.data[1]['embedding'] is not None
+
+    @pytest.mark.asyncio
+    async def test_async_halfvec_round_trip(self, async_vector_env):
+        """Insert a halfvec value asynchronously and verify canonical text."""
+        backend, _ = async_vector_env
+        await _async_ensure_vector_subtype_supported(backend, "halfvec")
+        literal = _vector_literal(PostgresVector([1.0, 2.0, 3.0]), "halfvec")
+
+        result = await backend.fetch_one(f"SELECT {literal}::text AS embedding")
+
+        assert result["embedding"] == "[1,2,3]"
+
+    @pytest.mark.asyncio
+    async def test_async_sparsevec_round_trip(self, async_vector_env):
+        """Insert a sparsevec value asynchronously and verify canonical text."""
+        backend, _ = async_vector_env
+        await _async_ensure_vector_subtype_supported(backend, "sparsevec")
+
+        result = await backend.fetch_one(
+            "SELECT '{1:1.0,3:3.0}/3'::sparsevec::text AS embedding"
+        )
+
+        assert result["embedding"] == "{1:1,3:3}/3"
+
+    @pytest.mark.asyncio
+    async def test_async_halfvec_null_round_trip(self, async_vector_env):
+        """Insert a NULL halfvec value asynchronously and verify fetched value is None."""
+        backend, _ = async_vector_env
+        await _async_ensure_vector_subtype_supported(backend, "halfvec")
+
+        result = await backend.fetch_one("SELECT NULL::halfvec AS embedding")
+
+        assert result["embedding"] is None
+
+    @pytest.mark.asyncio
+    async def test_async_sparsevec_null_round_trip(self, async_vector_env):
+        """Insert a NULL sparsevec value asynchronously and verify fetched value is None."""
+        backend, _ = async_vector_env
+        await _async_ensure_vector_subtype_supported(backend, "sparsevec")
+
+        result = await backend.fetch_one("SELECT NULL::sparsevec AS embedding")
+
+        assert result["embedding"] is None
 
     @pytest.mark.asyncio
     async def test_async_l2_distance(self, async_vector_env):

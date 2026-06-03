@@ -77,6 +77,21 @@ class _KeywordLiteral(bases.BaseExpression):
         return self.keyword, ()
 
 
+class _XMLParseCall(core.FunctionCall):
+    def to_sql(self) -> "bases.SQLQueryAndParams":
+        doc_type_sql, doc_type_params = self.args[0].to_sql()
+        content_sql, content_params = self.args[1].to_sql()
+        params = doc_type_params + content_params
+        sql = f"XMLPARSE({doc_type_sql} {content_sql}"
+
+        if len(self.args) > 2:
+            whitespace_sql, whitespace_params = self.args[2].to_sql()
+            sql += f" {whitespace_sql}"
+            params += whitespace_params
+
+        return f"{sql})", params
+
+
 def xmlparse(
     dialect: "SQLDialectBase",
     content: Union[PostgresXML, str, "bases.BaseExpression"],
@@ -114,7 +129,7 @@ def xmlparse(
     if preserve_whitespace:
         args.append(_KeywordLiteral(dialect, "PRESERVE WHITESPACE"))
 
-    return core.FunctionCall(dialect, "XMLPARSE", *args)
+    return _XMLParseCall(dialect, "XMLPARSE", *args)
 
 
 def xpath_query(
