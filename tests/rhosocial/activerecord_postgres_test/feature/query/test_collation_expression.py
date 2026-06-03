@@ -5,7 +5,7 @@ Tests for expression-level COLLATE support on PostgreSQL.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import CollationName, Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.impl.postgres import PostgresCollation, PostgresDialect
 
 
@@ -32,9 +32,7 @@ class TestPostgresCollationExpression:
         assert params == ("Alice",)
 
     def test_schema_qualified_collation_generates_sql(self, dialect):
-        expr = Column(dialect, "name").collate(
-            CollationName(PostgresCollation.C.value, schema="pg_catalog")
-        )
+        expr = Column(dialect, "name").collate(PostgresCollation.C.value, schema="pg_catalog")
 
         sql, params = expr.to_sql()
 
