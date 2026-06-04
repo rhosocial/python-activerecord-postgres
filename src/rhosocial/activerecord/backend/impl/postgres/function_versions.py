@@ -171,7 +171,6 @@ TEXT_SEARCH_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
 }
 
 XML_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
-    "xmlparse": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xpath_query": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xpath_exists": FunctionVersionRequirement(min_pg_version=(8, 3, 0)),
     "xml_is_well_formed": FunctionVersionRequirement(min_pg_version=(9, 1, 0)),

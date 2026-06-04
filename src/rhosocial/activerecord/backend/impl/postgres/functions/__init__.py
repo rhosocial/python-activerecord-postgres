@@ -162,7 +162,6 @@ from .text_search import (
 
 # XML functions
 from .xml import (
-    xmlparse,
     xpath_query,
     xpath_exists,
     xml_is_well_formed,
@@ -601,7 +600,6 @@ __all__ = [
     "tsvector_setweight",
     "tsvector_length",
     # XML functions
-    "xmlparse",
     "xpath_query",
     "xpath_exists",
     "xml_is_well_formed",

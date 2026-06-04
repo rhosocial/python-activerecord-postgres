@@ -12,10 +12,10 @@ import pytest
 import pytest_asyncio
 
 from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.xml import xmlparse
 from rhosocial.activerecord.backend.impl.postgres.adapters.xml import PostgresXMLAdapter
 from rhosocial.activerecord.backend.impl.postgres.functions.xml import (
     xml_is_well_formed,
-    xmlparse,
     xpath_exists,
     xpath_query,
 )
