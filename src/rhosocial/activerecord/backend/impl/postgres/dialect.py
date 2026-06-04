@@ -9,10 +9,12 @@ based on the PostgreSQL version provided at initialization.
 from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.collation import CollateExpression
     from .function_versions import FunctionSupportInfo, FunctionVersionRequirement
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
+    CollationMixin,
     CTEMixin,
     FilterClauseMixin,
     WindowFunctionMixin,
@@ -41,6 +43,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ConstraintMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
+    CollationSupport,
     CTESupport,
     FilterClauseSupport,
     WindowFunctionSupport,
@@ -133,6 +136,8 @@ from .mixins import (
     PostgresIntrospectionCapabilityMixin,
 )
 
+from .collation import validate_postgres_collation_name
+
 # PostgreSQL-specific imports
 from .protocols import (
     PostgresExtensionSupport,
@@ -221,6 +226,7 @@ if TYPE_CHECKING:
 
 class PostgresDialect(
     SQLDialectBase,
+    CollationMixin,
     SetOperationMixin,
     TruncateMixin,
     ILIKEMixin,
@@ -310,6 +316,7 @@ class PostgresDialect(
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
     # Protocol supports
+    CollationSupport,
     SetOperationSupport,
     TruncateSupport,
     ILIKESupport,
@@ -463,6 +470,22 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_collate_expression(self) -> bool:
+        """PostgreSQL supports expression-level COLLATE."""
+        return True
+
+    def validate_collation_name(self, expr: "CollateExpression") -> str:
+        """Validate PostgreSQL collation names and return their SQL representation."""
+        schema = expr.collation_options.get("schema")
+        unsupported = set(expr.collation_options) - {"schema"}
+        if unsupported:
+            options = ", ".join(sorted(unsupported))
+            raise UnsupportedFeatureError(self.name, f"COLLATE options: {options}")
+        validate_postgres_collation_name(expr.collation_name, getattr(self, "version", None))
+        if schema is not None:
+            return f"{self.format_identifier(str(schema))}.{self.format_identifier(expr.collation_name)}"
+        return self.format_identifier(expr.collation_name)
 
     # region Protocol Support Checks based on version
     def supports_basic_cte(self) -> bool:

@@ -77,6 +77,7 @@ def get_postgres_protocols():
     from typing import runtime_checkable
 
     protocols = [
+        dialect_protocols.CollationSupport,
         dialect_protocols.CTESupport,
         dialect_protocols.FilterClauseSupport,
         dialect_protocols.WindowFunctionSupport,
