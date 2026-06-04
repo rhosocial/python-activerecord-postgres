@@ -5,7 +5,6 @@ Test SQLFunctionSupport protocol implementation for PostgreSQL dialect.
 This module tests the supports_functions() method and version-dependent
 function availability detection in PostgresDialect.
 """
-import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.function_versions import FunctionSupportInfo
 
@@ -169,7 +168,7 @@ class TestPostgreSQLFunctionSupportVersionDependent:
 
     def test_xml_functions_require_pg_8_3(self):
         """Test that XML functions require PostgreSQL 8.3+."""
-        xml_functions = ["xmlparse", "xpath_query", "xpath_exists"]
+        xml_functions = ["xpath_query", "xpath_exists"]
 
         dialect_old = PostgresDialect(version=(8, 2, 99))
         result_old = dialect_old.supports_functions()
@@ -180,6 +179,51 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         result_new = dialect_new.supports_functions()
         for func in xml_functions:
             assert result_new.get(func).supported
+
+    def test_sqlxml_expression_constructors_are_capabilities(self):
+        """Test that SQL/XML constructors are exposed as capabilities."""
+        constructors = {
+            "xmlagg",
+            "xmlattributes",
+            "xmlcomment",
+            "xmlconcat",
+            "xmlelement",
+            "xmlexists",
+            "xmlforest",
+            "xmlparse",
+            "xmlpi",
+            "xmlquery",
+            "xmlroot",
+            "xmlserialize",
+            "xmltable",
+        }
+
+        dialect_old = PostgresDialect(version=(8, 2, 99))
+        result_old = dialect_old.supports_functions()
+        assert constructors.isdisjoint(result_old)
+        assert dialect_old.supports_xmlparse() is False
+        assert dialect_old.supports_xmlserialize() is False
+        assert dialect_old.supports_xmlelement() is False
+        assert dialect_old.supports_xmlagg() is False
+        assert dialect_old.supports_xmlexists() is False
+        assert dialect_old.supports_xmltable() is False
+
+        dialect_new = PostgresDialect(version=(10, 0, 0))
+        result_new = dialect_new.supports_functions()
+        assert constructors.isdisjoint(result_new)
+        assert dialect_new.supports_xmlparse() is True
+        assert dialect_new.supports_xmlserialize() is True
+        assert dialect_new.supports_xmlelement() is True
+        assert dialect_new.supports_xmlattributes() is True
+        assert dialect_new.supports_xmlforest() is True
+        assert dialect_new.supports_xmlconcat() is True
+        assert dialect_new.supports_xmlcomment() is True
+        assert dialect_new.supports_xmlpi() is True
+        assert dialect_new.supports_xmlroot() is True
+        assert dialect_new.supports_xmlagg() is True
+        assert dialect_new.supports_xmlquery() is False
+        assert dialect_new.supports_xmlexists() is True
+        assert dialect_new.supports_xmltable() is True
 
     def test_xml_is_well_formed_requires_pg_9_1(self):
         """Test that xml_is_well_formed requires PostgreSQL 9.1+."""
