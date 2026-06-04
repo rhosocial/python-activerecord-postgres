@@ -3,23 +3,17 @@
 PostgreSQL XML function factories.
 
 This module provides SQL expression generators for PostgreSQL XML
-functions. All functions return FunctionCall expression objects that
-integrate with the expression-dialect architecture.
+functions. SQL/XML expression constructors such as XMLPARSE live in
+rhosocial.activerecord.backend.expression.functions.xml.
 
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-xml.html
 
 Supported functions:
-- xmlparse() - Parse XML content
 - xpath_query() - Execute XPath query on XML
 - xpath_exists() - Test if XPath expression matches
 - xml_is_well_formed() - Check if XML is well-formed
 
 Examples:
-    Parse XML document:
-        >>> func = xmlparse(dialect, '<root><item>value</item></root>')
-        >>> func.to_sql()
-        ('XMLPARSE(DOCUMENT, %s, PRESERVE WHITESPACE)', ('<root><item>value</item></root>',))
-
     Query XML with XPath:
         >>> func = xpath_query(dialect, "/root/item", "xml_column")
         >>> func.to_sql()
@@ -61,75 +55,6 @@ def _convert_to_expression(
     else:
         return core.Literal(dialect, expr)
 
-
-class _KeywordLiteral(bases.BaseExpression):
-    """Represents a SQL keyword that should be rendered as-is (unquoted, unparameterized).
-
-    Used for SQL keywords that appear inside function call arguments,
-    such as DOCUMENT, CONTENT, PRESERVE WHITESPACE in XMLPARSE.
-    """
-
-    def __init__(self, dialect: "SQLDialectBase", keyword: str):
-        super().__init__(dialect)
-        self.keyword = keyword
-
-    def to_sql(self) -> "bases.SQLQueryAndParams":
-        return self.keyword, ()
-
-
-class _XMLParseCall(core.FunctionCall):
-    def to_sql(self) -> "bases.SQLQueryAndParams":
-        doc_type_sql, doc_type_params = self.args[0].to_sql()
-        content_sql, content_params = self.args[1].to_sql()
-        params = doc_type_params + content_params
-        sql = f"XMLPARSE({doc_type_sql} {content_sql}"
-
-        if len(self.args) > 2:
-            whitespace_sql, whitespace_params = self.args[2].to_sql()
-            sql += f" {whitespace_sql}"
-            params += whitespace_params
-
-        return f"{sql})", params
-
-
-def xmlparse(
-    dialect: "SQLDialectBase",
-    content: Union[PostgresXML, str, "bases.BaseExpression"],
-    document: bool = True,
-    preserve_whitespace: bool = False,
-) -> core.FunctionCall:
-    """Generate XMLPARSE expression.
-
-    XMLPARSE parses XML content from a string. It produces either
-    a DOCUMENT or CONTENT value, optionally preserving whitespace.
-
-    Args:
-        dialect: The SQL dialect instance
-        content: XML content string, PostgresXML instance, or expression
-        document: Parse as DOCUMENT (default) or CONTENT
-        preserve_whitespace: Preserve whitespace (default False)
-
-    Returns:
-        FunctionCall: SQL expression for XMLPARSE
-
-    Example:
-        >>> func = xmlparse(dialect, '<root><item>value</item></root>')
-        >>> func.to_sql()
-        ('XMLPARSE(DOCUMENT, %s)', ('<root><item>value</item></root>',))
-
-        >>> func = xmlparse(dialect, '<root/>', document=False, preserve_whitespace=True)
-        >>> func.to_sql()
-        ('XMLPARSE(CONTENT, %s, PRESERVE WHITESPACE)', ('<root/>',))
-    """
-    doc_type = "DOCUMENT" if document else "CONTENT"
-    content_expr = _convert_to_expression(dialect, content)
-
-    args = [_KeywordLiteral(dialect, doc_type), content_expr]
-
-    if preserve_whitespace:
-        args.append(_KeywordLiteral(dialect, "PRESERVE WHITESPACE"))
-
-    return _XMLParseCall(dialect, "XMLPARSE", *args)
 
 
 def xpath_query(
@@ -237,7 +162,6 @@ def xml_is_well_formed(
 
 
 __all__ = [
-    "xmlparse",
     "xpath_query",
     "xpath_exists",
     "xml_is_well_formed",

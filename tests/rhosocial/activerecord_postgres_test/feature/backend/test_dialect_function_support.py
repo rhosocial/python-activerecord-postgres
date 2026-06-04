@@ -5,7 +5,6 @@ Test SQLFunctionSupport protocol implementation for PostgreSQL dialect.
 This module tests the supports_functions() method and version-dependent
 function availability detection in PostgresDialect.
 """
-import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.function_versions import FunctionSupportInfo
 
@@ -169,7 +168,7 @@ class TestPostgreSQLFunctionSupportVersionDependent:
 
     def test_xml_functions_require_pg_8_3(self):
         """Test that XML functions require PostgreSQL 8.3+."""
-        xml_functions = ["xmlparse", "xpath_query", "xpath_exists"]
+        xml_functions = ["xpath_query", "xpath_exists"]
 
         dialect_old = PostgresDialect(version=(8, 2, 99))
         result_old = dialect_old.supports_functions()
@@ -180,6 +179,18 @@ class TestPostgreSQLFunctionSupportVersionDependent:
         result_new = dialect_new.supports_functions()
         for func in xml_functions:
             assert result_new.get(func).supported
+
+    def test_xmlparse_is_expression_capability(self):
+        """Test that XMLPARSE is exposed as SQL/XML capability."""
+        dialect_old = PostgresDialect(version=(8, 2, 99))
+        result_old = dialect_old.supports_functions()
+        assert "xmlparse" not in result_old
+        assert dialect_old.supports_xmlparse() is False
+
+        dialect_new = PostgresDialect(version=(8, 3, 0))
+        result_new = dialect_new.supports_functions()
+        assert "xmlparse" not in result_new
+        assert dialect_new.supports_xmlparse() is True
 
     def test_xml_is_well_formed_requires_pg_9_1(self):
         """Test that xml_is_well_formed requires PostgreSQL 9.1+."""

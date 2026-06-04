@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
+    SQLXMLMixin,
     CollationMixin,
     CTEMixin,
     FilterClauseMixin,
@@ -43,6 +44,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ConstraintMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
+    SQLXMLSupport,
     CollationSupport,
     CTESupport,
     FilterClauseSupport,
@@ -226,6 +228,7 @@ if TYPE_CHECKING:
 
 class PostgresDialect(
     SQLDialectBase,
+    SQLXMLMixin,
     CollationMixin,
     SetOperationMixin,
     TruncateMixin,
@@ -316,6 +319,7 @@ class PostgresDialect(
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
     # Protocol supports
+    SQLXMLSupport,
     CollationSupport,
     SetOperationSupport,
     TruncateSupport,
@@ -470,6 +474,10 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_xmlparse(self) -> bool:
+        """XMLPARSE is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
 
     def supports_collate_expression(self) -> bool:
         """PostgreSQL supports expression-level COLLATE."""
@@ -1637,9 +1645,11 @@ class PostgresDialect(
         )
         from rhosocial.activerecord.backend.impl.postgres import functions as postgres_functions
 
+        expression_constructors = {"xmlparse"}
         result: Dict[str, FunctionSupportInfo] = {}
         for func_name in core_functions:
-            result[func_name] = self._check_function_support(func_name)
+            if func_name not in expression_constructors:
+                result[func_name] = self._check_function_support(func_name)
 
         postgres_funcs = getattr(postgres_functions, "__all__", [])
         for func_name in postgres_funcs:

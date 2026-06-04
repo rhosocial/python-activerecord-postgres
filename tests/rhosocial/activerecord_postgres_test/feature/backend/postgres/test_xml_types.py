@@ -9,12 +9,12 @@ Tests for:
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression import XMLParseExpression, core
+from rhosocial.activerecord.backend.expression.functions.xml import xmlparse
 from rhosocial.activerecord.backend.impl.postgres.types.xml import (
     PostgresXML,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.xml import (
-    xmlparse,
     xpath_query,
     xpath_exists,
     xml_is_well_formed,
@@ -167,27 +167,28 @@ class TestXMLUtilityFunctions:
         """Test xmlparse with DOCUMENT."""
         dialect = PostgresDialect((14, 0, 0))
         result = xmlparse(dialect, '<root/>', document=True)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, XMLParseExpression)
         sql, params = result.to_sql()
-        assert 'XMLPARSE' in sql
-        assert 'DOCUMENT' in sql
+        assert sql == "XMLPARSE(DOCUMENT %s)"
+        assert params == ('<root/>',)
 
     def test_xmlparse_content(self):
         """Test xmlparse with CONTENT."""
         dialect = PostgresDialect((14, 0, 0))
         result = xmlparse(dialect, '<root/>', document=False)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, XMLParseExpression)
         sql, params = result.to_sql()
-        assert 'XMLPARSE' in sql
-        assert 'CONTENT' in sql
+        assert sql == "XMLPARSE(CONTENT %s)"
+        assert params == ('<root/>',)
 
     def test_xmlparse_preserve_whitespace(self):
         """Test xmlparse with preserve whitespace."""
         dialect = PostgresDialect((14, 0, 0))
         result = xmlparse(dialect, '<root/>', preserve_whitespace=True)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, XMLParseExpression)
         sql, params = result.to_sql()
-        assert 'PRESERVE WHITESPACE' in sql
+        assert sql == "XMLPARSE(DOCUMENT %s PRESERVE WHITESPACE)"
+        assert params == ('<root/>',)
 
     def test_xpath_query_basic(self):
         """Test xpath_query basic."""
