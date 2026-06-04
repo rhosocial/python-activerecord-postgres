@@ -78,6 +78,11 @@ def get_postgres_protocols():
 
     protocols = [
         dialect_protocols.SQLXMLSupport,
+        dialect_protocols.SQLXMLParsingSupport,
+        dialect_protocols.SQLXMLSerializationSupport,
+        dialect_protocols.SQLXMLConstructionSupport,
+        dialect_protocols.SQLXMLAggregationSupport,
+        dialect_protocols.SQLXMLQueryingSupport,
         dialect_protocols.CollationSupport,
         dialect_protocols.CTESupport,
         dialect_protocols.FilterClauseSupport,
@@ -167,6 +172,17 @@ class TestProtocolNonOverlap:
             ('PostgresLockingSupport', 'LockingSupport'),
             ('TriggerSupport', 'PostgresTriggerSupport'),
             ('PostgresTriggerSupport', 'TriggerSupport'),
+            # SQLXMLSupport aggregates standard SQL/XML capability-family protocols
+            ('SQLXMLSupport', 'SQLXMLParsingSupport'),
+            ('SQLXMLParsingSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLSerializationSupport'),
+            ('SQLXMLSerializationSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLConstructionSupport'),
+            ('SQLXMLConstructionSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLAggregationSupport'),
+            ('SQLXMLAggregationSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLQueryingSupport'),
+            ('SQLXMLQueryingSupport', 'SQLXMLSupport'),
             # PG enhanced protocols extend generic protocols with same method names
             ('JSONSupport', 'PostgresJSONBEnhancedSupport'),
             ('PostgresJSONBEnhancedSupport', 'JSONSupport'),

@@ -45,6 +45,11 @@ from rhosocial.activerecord.backend.dialect.mixins import (
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     SQLXMLSupport,
+    SQLXMLParsingSupport,
+    SQLXMLSerializationSupport,
+    SQLXMLConstructionSupport,
+    SQLXMLAggregationSupport,
+    SQLXMLQueryingSupport,
     CollationSupport,
     CTESupport,
     FilterClauseSupport,
@@ -320,6 +325,11 @@ class PostgresDialect(
     PostgresAdvisoryLockMixin,
     # Protocol supports
     SQLXMLSupport,
+    SQLXMLParsingSupport,
+    SQLXMLSerializationSupport,
+    SQLXMLConstructionSupport,
+    SQLXMLAggregationSupport,
+    SQLXMLQueryingSupport,
     CollationSupport,
     SetOperationSupport,
     TruncateSupport,
@@ -478,6 +488,54 @@ class PostgresDialect(
     def supports_xmlparse(self) -> bool:
         """XMLPARSE is supported since PostgreSQL 8.3."""
         return self.version >= (8, 3, 0)
+
+    def supports_xmlserialize(self) -> bool:
+        """XMLSERIALIZE is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlelement(self) -> bool:
+        """XMLELEMENT is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlattributes(self) -> bool:
+        """XMLATTRIBUTES is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlforest(self) -> bool:
+        """XMLFOREST is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlconcat(self) -> bool:
+        """XMLCONCAT is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlcomment(self) -> bool:
+        """XMLCOMMENT is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlpi(self) -> bool:
+        """XMLPI is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlroot(self) -> bool:
+        """XMLROOT is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlagg(self) -> bool:
+        """XMLAGG is supported since PostgreSQL 8.3."""
+        return self.version >= (8, 3, 0)
+
+    def supports_xmlquery(self) -> bool:
+        """PostgreSQL does not implement standard SQL/XML XMLQUERY."""
+        return False
+
+    def supports_xmlexists(self) -> bool:
+        """XMLEXISTS is supported since PostgreSQL 8.4."""
+        return self.version >= (8, 4, 0)
+
+    def supports_xmltable(self) -> bool:
+        """XMLTABLE is supported since PostgreSQL 10."""
+        return self.version >= (10, 0, 0)
 
     def supports_collate_expression(self) -> bool:
         """PostgreSQL supports expression-level COLLATE."""
@@ -1645,7 +1703,21 @@ class PostgresDialect(
         )
         from rhosocial.activerecord.backend.impl.postgres import functions as postgres_functions
 
-        expression_constructors = {"xmlparse"}
+        expression_constructors = {
+            "xmlagg",
+            "xmlattributes",
+            "xmlcomment",
+            "xmlconcat",
+            "xmlelement",
+            "xmlexists",
+            "xmlforest",
+            "xmlparse",
+            "xmlpi",
+            "xmlquery",
+            "xmlroot",
+            "xmlserialize",
+            "xmltable",
+        }
         result: Dict[str, FunctionSupportInfo] = {}
         for func_name in core_functions:
             if func_name not in expression_constructors:
