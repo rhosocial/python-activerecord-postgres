@@ -18,6 +18,7 @@ Architecture:
 """
 
 from .backend import PostgresBackend, AsyncPostgresBackend
+from .collation import PostgresCollation
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
