@@ -36,3 +36,10 @@ class PostgresTableSupport(TableSupport, Protocol):
         Syntax: CREATE TABLE child (...) INHERITS (parent);
         """
         ...
+
+    def supports_table_partitioning(self) -> bool:
+        """Whether declarative table partitioning is supported.
+
+        PostgreSQL supports declarative table partitioning since version 10.
+        """
+        ...
