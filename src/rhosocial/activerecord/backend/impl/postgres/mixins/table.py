@@ -18,10 +18,6 @@ class PostgresTableMixin:
         """PostgreSQL supports table inheritance."""
         return True
 
-    def supports_table_partitioning(self) -> bool:
-        """Table partitioning is supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
-
     def supports_table_tablespace(self) -> bool:
         """TABLESPACE specification is supported in all versions."""
         return True
