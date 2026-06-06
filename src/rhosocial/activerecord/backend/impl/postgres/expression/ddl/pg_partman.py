@@ -13,6 +13,7 @@ __all__ = [
     "PostgresPgPartmanCreateParentExpression",
     "PostgresPgPartmanRunMaintenanceExpression",
     "PostgresPgPartmanUpdateConfigExpression",
+    "PostgresPgPartmanDeleteConfigExpression",
 ]
 
 
@@ -87,3 +88,21 @@ class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
     def to_sql(self) -> Tuple[str, tuple]:
         """Generate SQL for updating pg_partman part_config."""
         return self.dialect.format_pg_partman_update_config(self)
+
+
+class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
+    """Expression for deleting a pg_partman part_config row."""
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        parent_table: str,
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect)
+        self.parent_table = parent_table
+        self.schema = schema
+
+    def to_sql(self) -> Tuple[str, tuple]:
+        """Generate SQL for deleting a pg_partman part_config row."""
+        return self.dialect.format_pg_partman_delete_config(self)

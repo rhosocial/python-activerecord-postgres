@@ -8,17 +8,23 @@ asynchronous test method names identical across test classes.
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
+    DropTableExpression,
     PartitionKey,
     PartitionClause,
     PartitionStrategy,
+    TruncateExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
+    PostgresPgPartmanCreateParentExpression,
+    PostgresPgPartmanDeleteConfigExpression,
+    PostgresPgPartmanRunMaintenanceExpression,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 from rhosocial.activerecord_postgres_test.feature.backend.utils import (
@@ -93,8 +99,22 @@ def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_valu
     return expr.to_sql()
 
 
-def _quote_identifier(identifier: str) -> str:
-    return '"' + identifier.replace('"', '""') + '"'
+def _drop_table_sql(dialect, table_name: str):
+    expr = DropTableExpression(
+        dialect=dialect,
+        table=table_name,
+        if_exists=True,
+        cascade=True,
+    )
+    return expr.to_sql()
+
+
+def _truncate_table_sql(dialect, table_name: str):
+    expr = TruncateExpression(
+        dialect=dialect,
+        table_name=table_name,
+    )
+    return expr.to_sql()
 
 
 def _pg_partman_schema(backend) -> str:
@@ -127,32 +147,44 @@ async def _async_pg_partman_schema(backend) -> str:
     return row["schema_name"]
 
 
-def _pg_partman_create_parent_sql(partman_schema: str):
-    schema_sql = _quote_identifier(partman_schema)
-    return (
-        f"""
-        SELECT {schema_sql}.create_parent(
-            p_parent_table := %s::text,
-            p_control := %s::text,
-            p_interval := %s::text,
-            p_type := %s::text,
-            p_premake := %s::int
-        )
-        """,
-        (_qualified("ar_partman_events"), "created_at", "1 month", "range", 1),
+def _pg_partman_create_parent_sql(dialect, partman_schema: str):
+    expr = PostgresPgPartmanCreateParentExpression(
+        dialect=dialect,
+        parent_table=_qualified("ar_partman_events"),
+        control="created_at",
+        interval="1 month",
+        partition_type="range",
+        premake=1,
+        schema=partman_schema,
     )
+    return expr.to_sql()
 
 
-def _pg_partman_run_maintenance_sql(partman_schema: str):
-    schema_sql = _quote_identifier(partman_schema)
-    return (
-        f"SELECT {schema_sql}.run_maintenance(%s::text)",
-        (_qualified("ar_partman_events"),),
+def _pg_partman_run_maintenance_sql(dialect, partman_schema: str):
+    expr = PostgresPgPartmanRunMaintenanceExpression(
+        dialect=dialect,
+        parent_table=_qualified("ar_partman_events"),
+        schema=partman_schema,
     )
+    return expr.to_sql()
 
 
-def _pg_partman_config_table(partman_schema: str) -> str:
-    return f"{_quote_identifier(partman_schema)}.part_config"
+def _pg_partman_delete_config_sql(dialect, partman_schema: str):
+    expr = PostgresPgPartmanDeleteConfigExpression(
+        dialect=dialect,
+        parent_table=_qualified("ar_partman_events"),
+        schema=partman_schema,
+    )
+    return expr.to_sql()
+
+
+def _pg_partman_config_table_sql(dialect, partman_schema: str) -> str:
+    sql, _ = QualifiedIdentifierExpression(
+        dialect=dialect,
+        schema=partman_schema,
+        name="part_config",
+    ).to_sql()
+    return sql
 
 
 @pytest.fixture
@@ -163,7 +195,8 @@ def partitioned_event_table(postgres_backend):
         pytest.skip("PostgreSQL scenario does not support declarative partitioning")
 
     for table_name in PARTITION_TABLES:
-        postgres_backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        postgres_backend.execute(sql, params)
 
     sql, params = _create_partitioned_parent_sql(dialect, "ar_partition_events")
     postgres_backend.execute(sql, params)
@@ -178,7 +211,8 @@ def partitioned_event_table(postgres_backend):
     yield "ar_partition_events"
 
     for table_name in PARTITION_TABLES:
-        postgres_backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        postgres_backend.execute(sql, params)
 
 
 @pytest_asyncio.fixture
@@ -189,7 +223,8 @@ async def async_partitioned_event_table(async_postgres_backend):
         pytest.skip("PostgreSQL scenario does not support declarative partitioning")
 
     for table_name in PARTITION_TABLES:
-        await async_postgres_backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        await async_postgres_backend.execute(sql, params)
 
     sql, params = _create_partitioned_parent_sql(dialect, "ar_partition_events")
     await async_postgres_backend.execute(sql, params)
@@ -204,7 +239,8 @@ async def async_partitioned_event_table(async_postgres_backend):
     yield "ar_partition_events"
 
     for table_name in PARTITION_TABLES:
-        await async_postgres_backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        await async_postgres_backend.execute(sql, params)
 
 
 @pytest.fixture
@@ -214,24 +250,22 @@ def pg_partman_table(postgres_backend_single):
     dialect = postgres_backend_single.dialect
 
     partman_schema = _pg_partman_schema(postgres_backend_single)
-    postgres_backend_single.execute(
-        f"DELETE FROM {_pg_partman_config_table(partman_schema)} WHERE parent_table = %s",
-        (_qualified("ar_partman_events"),),
-    )
+    sql, params = _pg_partman_delete_config_sql(dialect, partman_schema)
+    postgres_backend_single.execute(sql, params)
     for table_name in PARTMAN_TABLES:
-        postgres_backend_single.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        postgres_backend_single.execute(sql, params)
 
     sql, params = _create_partitioned_parent_sql(dialect, "ar_partman_events")
     postgres_backend_single.execute(sql, params)
 
     yield "ar_partman_events"
 
-    postgres_backend_single.execute(
-        f"DELETE FROM {_pg_partman_config_table(partman_schema)} WHERE parent_table = %s",
-        (_qualified("ar_partman_events"),),
-    )
+    sql, params = _pg_partman_delete_config_sql(dialect, partman_schema)
+    postgres_backend_single.execute(sql, params)
     for table_name in PARTMAN_TABLES:
-        postgres_backend_single.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        postgres_backend_single.execute(sql, params)
 
 
 @pytest_asyncio.fixture
@@ -241,24 +275,22 @@ async def async_pg_partman_table(async_postgres_backend_single):
     dialect = async_postgres_backend_single.dialect
 
     partman_schema = await _async_pg_partman_schema(async_postgres_backend_single)
-    await async_postgres_backend_single.execute(
-        f"DELETE FROM {_pg_partman_config_table(partman_schema)} WHERE parent_table = %s",
-        (_qualified("ar_partman_events"),),
-    )
+    sql, params = _pg_partman_delete_config_sql(dialect, partman_schema)
+    await async_postgres_backend_single.execute(sql, params)
     for table_name in PARTMAN_TABLES:
-        await async_postgres_backend_single.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        await async_postgres_backend_single.execute(sql, params)
 
     sql, params = _create_partitioned_parent_sql(dialect, "ar_partman_events")
     await async_postgres_backend_single.execute(sql, params)
 
     yield "ar_partman_events"
 
-    await async_postgres_backend_single.execute(
-        f"DELETE FROM {_pg_partman_config_table(partman_schema)} WHERE parent_table = %s",
-        (_qualified("ar_partman_events"),),
-    )
+    sql, params = _pg_partman_delete_config_sql(dialect, partman_schema)
+    await async_postgres_backend_single.execute(sql, params)
     for table_name in PARTMAN_TABLES:
-        await async_postgres_backend_single.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+        sql, params = _drop_table_sql(dialect, table_name)
+        await async_postgres_backend_single.execute(sql, params)
 
 
 class TestPostgreSQLPartitionOperations:
@@ -360,7 +392,8 @@ class TestPostgreSQLPartitionOperations:
             "INSERT INTO ar_partition_events (id, created_at, payload) VALUES (%s, %s, %s)",
             (1, "2026-01-15", "jan"),
         )
-        postgres_backend.execute("TRUNCATE TABLE ar_partition_events_p2026_01")
+        sql, params = _truncate_table_sql(postgres_backend.dialect, "ar_partition_events_p2026_01")
+        postgres_backend.execute(sql, params)
 
         count = postgres_backend.fetch_one(
             "SELECT COUNT(*) AS count FROM ar_partition_events"
@@ -496,7 +529,8 @@ class TestAsyncPostgreSQLPartitionOperations:
             "INSERT INTO ar_partition_events (id, created_at, payload) VALUES (%s, %s, %s)",
             (1, "2026-01-15", "jan"),
         )
-        await async_postgres_backend.execute("TRUNCATE TABLE ar_partition_events_p2026_01")
+        sql, params = _truncate_table_sql(async_postgres_backend.dialect, "ar_partition_events_p2026_01")
+        await async_postgres_backend.execute(sql, params)
 
         count = (await async_postgres_backend.fetch_one(
             "SELECT COUNT(*) AS count FROM ar_partition_events"
@@ -523,21 +557,22 @@ class TestPostgreSQLPgPartmanOperations:
     ):
         """pg_partman can register a parent table and run scoped maintenance."""
         partman_schema = _pg_partman_schema(postgres_backend_single)
-        sql, params = _pg_partman_create_parent_sql(partman_schema)
+        sql, params = _pg_partman_create_parent_sql(postgres_backend_single.dialect, partman_schema)
         options = ExecutionOptions(stmt_type=StatementType.DQL)
         postgres_backend_single.execute(sql, params, options=options)
 
+        config_table_sql = _pg_partman_config_table_sql(postgres_backend_single.dialect, partman_schema)
         row = postgres_backend_single.fetch_one(
             f"""
             SELECT parent_table
-            FROM {_pg_partman_config_table(partman_schema)}
+            FROM {config_table_sql}
             WHERE parent_table = %s
             """,
             (_qualified(pg_partman_table),),
         )
         assert row is not None
 
-        sql, params = _pg_partman_run_maintenance_sql(partman_schema)
+        sql, params = _pg_partman_run_maintenance_sql(postgres_backend_single.dialect, partman_schema)
         postgres_backend_single.execute(sql, params, options=options)
 
 
@@ -552,19 +587,20 @@ class TestAsyncPostgreSQLPgPartmanOperations:
     ):
         """pg_partman can register a parent table and run scoped maintenance."""
         partman_schema = await _async_pg_partman_schema(async_postgres_backend_single)
-        sql, params = _pg_partman_create_parent_sql(partman_schema)
+        sql, params = _pg_partman_create_parent_sql(async_postgres_backend_single.dialect, partman_schema)
         options = ExecutionOptions(stmt_type=StatementType.DQL)
         await async_postgres_backend_single.execute(sql, params, options=options)
 
+        config_table_sql = _pg_partman_config_table_sql(async_postgres_backend_single.dialect, partman_schema)
         row = await async_postgres_backend_single.fetch_one(
             f"""
             SELECT parent_table
-            FROM {_pg_partman_config_table(partman_schema)}
+            FROM {config_table_sql}
             WHERE parent_table = %s
             """,
             (_qualified(async_pg_partman_table),),
         )
         assert row is not None
 
-        sql, params = _pg_partman_run_maintenance_sql(partman_schema)
+        sql, params = _pg_partman_run_maintenance_sql(async_postgres_backend_single.dialect, partman_schema)
         await async_postgres_backend_single.execute(sql, params, options=options)

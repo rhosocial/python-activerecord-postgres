@@ -81,6 +81,7 @@ from .pg_partman import (
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanRunMaintenanceExpression,
     PostgresPgPartmanUpdateConfigExpression,
+    PostgresPgPartmanDeleteConfigExpression,
 )
 
 __all__ = [
@@ -116,4 +117,5 @@ __all__ = [
     "PostgresPgPartmanCreateParentExpression",
     "PostgresPgPartmanRunMaintenanceExpression",
     "PostgresPgPartmanUpdateConfigExpression",
+    "PostgresPgPartmanDeleteConfigExpression",
 ]

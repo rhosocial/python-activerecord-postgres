@@ -8,6 +8,7 @@ if TYPE_CHECKING:
         PostgresPgPartmanCreateParentExpression,
         PostgresPgPartmanRunMaintenanceExpression,
         PostgresPgPartmanUpdateConfigExpression,
+        PostgresPgPartmanDeleteConfigExpression,
     )
 
 
@@ -42,4 +43,11 @@ class PostgresPgPartmanSupport(Protocol):
         expr: "PostgresPgPartmanUpdateConfigExpression",
     ) -> tuple:
         """Format pg_partman part_config update expression."""
+        ...
+
+    def format_pg_partman_delete_config(
+        self,
+        expr: "PostgresPgPartmanDeleteConfigExpression",
+    ) -> tuple:
+        """Format pg_partman part_config delete expression."""
         ...

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         PostgresPgPartmanCreateParentExpression,
         PostgresPgPartmanRunMaintenanceExpression,
         PostgresPgPartmanUpdateConfigExpression,
+        PostgresPgPartmanDeleteConfigExpression,
     )
 
 
@@ -107,4 +108,20 @@ class PostgresPgPartmanMixin:
             f"SET {', '.join(assignments)} "
             f"WHERE parent_table = {placeholder}",
             tuple(params),
+        )
+
+    def format_pg_partman_delete_config(
+        self,
+        expr: "PostgresPgPartmanDeleteConfigExpression",
+    ) -> tuple:
+        """Format pg_partman part_config delete expression."""
+        from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+        schema = expr.schema or "partman"
+        config_table_sql, _ = QualifiedIdentifierExpression(
+            dialect=self, schema=schema, name="part_config"
+        ).to_sql()
+        placeholder = self.get_parameter_placeholder()
+        return (
+            f"DELETE FROM {config_table_sql} WHERE parent_table = {placeholder}",
+            (expr.parent_table,),
         )

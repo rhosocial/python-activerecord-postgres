@@ -18,6 +18,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresPgPartmanCreateParentExpression,  # noqa: F401
     PostgresPgPartmanRunMaintenanceExpression,  # noqa: F401
     PostgresPgPartmanUpdateConfigExpression,
+    PostgresPgPartmanDeleteConfigExpression,
 )
 
 
@@ -72,3 +73,17 @@ class TestPgPartmanMixin:
         )
         sql, params = dialect.format_pg_partman_update_config(expr)
         assert "part_config" in sql
+
+    def test_format_delete_config(self):
+        """Test part_config delete formatting via dialect."""
+        dialect = PostgresDialect((14, 0, 0))
+        expr = PostgresPgPartmanDeleteConfigExpression(
+            dialect=dialect,
+            parent_table='public.events',
+            schema='custom_partman',
+        )
+        sql, params = dialect.format_pg_partman_delete_config(expr)
+        assert "DELETE FROM" in sql
+        assert '"custom_partman"."part_config"' in sql
+        assert "WHERE parent_table = %s" in sql
+        assert params == ('public.events',)
