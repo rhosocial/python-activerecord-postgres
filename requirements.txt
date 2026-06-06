@@ -1,2 +1,6 @@
+# requirements.txt
+# Backend-specific dependencies only
+# Core dependency (rhosocial-activerecord) is installed via CI workflow from git
+
+# PostgreSQL driver
 psycopg[binary]
-rhosocial-activerecord
