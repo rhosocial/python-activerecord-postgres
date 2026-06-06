@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 import yaml
 import os
-from typing import Dict, Any, Tuple, Type
+from typing import Dict, Any, Tuple, Type  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
@@ -63,7 +63,7 @@ def _load_scenarios_from_config():
                 register_scenario(scenario_name, config)
 
     except ImportError:
-        raise ImportError("PyYAML is required to load scenario configuration files")
+        raise ImportError("PyYAML is required to load scenario configuration files")  # noqa: B904
 
 _load_scenarios_from_config()
 
@@ -265,8 +265,8 @@ def postgres_dialect():
 # --- Extension Availability Utilities ---
 # These are defined in utils.py and automatically available via conftest
 # for tests that don't need explicit import.
-# For explicit import in test files, use: from rhosocial.activerecord_postgres_test.feature.backend.utils import requires_extension
-from rhosocial.activerecord_postgres_test.feature.backend.utils import (  # noqa: F401
+# For explicit import in test files, use: from rhosocial.activerecord_postgres_test.feature.backend.utils import requires_extension  # noqa: E501
+from rhosocial.activerecord_postgres_test.feature.backend.utils import (  # noqa: E402, F401
     requires_extension,
     requires_extension_available,
     skip_if_extension_missing,

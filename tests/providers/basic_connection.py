@@ -9,7 +9,7 @@ from typing import Type, Tuple, Optional, List
 
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
-from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig  # noqa: F401
 from rhosocial.activerecord.connection.pool import BackendPool, AsyncBackendPool, PoolConfig
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -65,7 +65,7 @@ class BasicConnectionProvider(IBasicConnectionProvider):
     async def _create_test_table_async(self, backend):
         """Create the test_users table asynchronously."""
         try:
-            await backend.execute("DROP TABLE IF EXISTS test_users", options=ExecutionOptions(stmt_type=StatementType.DDL))
+            await backend.execute("DROP TABLE IF EXISTS test_users", options=ExecutionOptions(stmt_type=StatementType.DDL))  # noqa: E501
         except Exception:
             pass
 

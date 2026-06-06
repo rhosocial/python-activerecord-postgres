@@ -4,11 +4,11 @@ Tests for PostgreSQL CLI parameter resolution.
 
 This module tests the CLI parameter resolution priority for PostgreSQL.
 """
-import os
-import tempfile
-import types
+import os  # noqa: F401
+import tempfile  # noqa: F401
+import types  # noqa: F401
 from unittest.mock import MagicMock, patch
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
@@ -114,7 +114,7 @@ class TestPostgresConnectionConfigPriority:
             "rhosocial.activerecord.backend.named_connection.NamedConnectionResolver",
             return_value=mock_resolver,
         ):
-            config = resolve_connection_config_from_args(args)
+            config = resolve_connection_config_from_args(args)  # noqa: F841
 
         mock_resolver.resolve.assert_called_once_with({"database": "custom_db"})
 

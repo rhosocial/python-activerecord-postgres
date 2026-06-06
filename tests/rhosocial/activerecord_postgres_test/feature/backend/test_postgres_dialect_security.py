@@ -9,7 +9,7 @@ Tests are run against the actual PostgreSQL dialect.
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F401
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraint,
     TableConstraintType,
 )
-from typing import Tuple, Any
+from typing import Tuple, Any  # noqa: F401
 
 
 @pytest.fixture
@@ -257,7 +257,7 @@ class TestPostgresPartialIndexWhereClauseSecurity:
 
     def test_create_index_with_to_sql_protocol(self, dialect):
         """Test CREATE INDEX with ToSQLProtocol expression (parameterized)."""
-        from rhosocial.activerecord.backend.expression.bases import BaseExpression
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
 
         class MockWhereExpr(BaseExpression):
             def __init__(self):
@@ -279,7 +279,7 @@ class TestPostgresPartialIndexWhereClauseSecurity:
 
     def test_create_index_where_clause_params_collected(self, dialect):
         """Test WHERE clause parameters are properly collected and returned."""
-        from rhosocial.activerecord.backend.expression.bases import BaseExpression
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
 
         class MockWhereExpr(BaseExpression):
             def __init__(self):

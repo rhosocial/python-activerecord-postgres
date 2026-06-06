@@ -1,6 +1,6 @@
 
 import ipaddress
-import json
+import json  # noqa: F401
 import pytest
 from psycopg.types.json import Jsonb
 
@@ -116,10 +116,10 @@ def test_network_from_database_none():
 # Batch Operation Tests
 # =============================================================================
 
-from rhosocial.activerecord.backend.impl.postgres.adapters.base import (
+from rhosocial.activerecord.backend.impl.postgres.adapters.base import (  # noqa: E402
     PostgresListAdapter,
-    PostgresJSONBAdapter,
-    PostgresNetworkAddressAdapter,
+    PostgresJSONBAdapter,  # noqa: F811
+    PostgresNetworkAddressAdapter,  # noqa: F811
 )
 
 

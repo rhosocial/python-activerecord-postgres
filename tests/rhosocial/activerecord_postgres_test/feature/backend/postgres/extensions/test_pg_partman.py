@@ -14,7 +14,11 @@ from rhosocial.activerecord.backend.impl.postgres.functions.pg_partman import (
     create_parent,
     run_maintenance,
 )
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pg_partman import PostgresPgPartmanMixin
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresPgPartmanCreateParentExpression,  # noqa: F401
+    PostgresPgPartmanRunMaintenanceExpression,  # noqa: F401
+    PostgresPgPartmanUpdateConfigExpression,
+)
 
 
 class TestPgPartmanMixin:
@@ -59,7 +63,12 @@ class TestPgPartmanMixin:
         assert sql.count("%s") == 1
 
     def test_format_auto_partition_config(self):
-        """Test auto partition config formatting."""
-        mixin = PostgresPgPartmanMixin()
-        result = mixin.format_auto_partition_config('events')
-        assert "part_config" in result
+        """Test auto partition config formatting via dialect."""
+        dialect = PostgresDialect((14, 0, 0))
+        expr = PostgresPgPartmanUpdateConfigExpression(
+            dialect=dialect,
+            parent_table='public.events',
+            automatic_maintenance='on',
+        )
+        sql, params = dialect.format_pg_partman_update_config(expr)
+        assert "part_config" in sql

@@ -11,6 +11,7 @@ from .events import EventsProvider
 from .mixins import MixinsProvider
 from .query import QueryProvider
 from .relation import RelationProvider
+from .partition import PartitionProvider
 from .basic_connection import BasicConnectionProvider
 from .query_connection import QueryConnectionProvider
 from .crud_benchmark import CrudBenchmarkProvider
@@ -29,6 +30,7 @@ provider_registry.register("feature.events.IEventsProvider", EventsProvider)
 provider_registry.register("feature.mixins.IMixinsProvider", MixinsProvider)
 provider_registry.register("feature.query.IQueryProvider", QueryProvider)
 provider_registry.register("feature.relation.IRelationProvider", RelationProvider)
+provider_registry.register("feature.partition.IPartitionProvider", PartitionProvider)
 
 # Register connection pool context awareness providers
 provider_registry.register(

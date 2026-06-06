@@ -104,7 +104,7 @@ class TestPostgresMacaddr8:
         """Test bytes conversion."""
         mac = PostgresMacaddr8('08:00:2b:01:02:03:04:05')
         result = bytes(mac)
-        expected = b'\\x08\\x00\\x2b\\x01\\x02\\x03\\x04\\x05'
+        expected = b'\\x08\\x00\\x2b\\x01\\x02\\x03\\x04\\x05'  # noqa: F841
         assert len(result) == 8
         assert result[0] == 0x08
         assert result[1] == 0x00

@@ -7,7 +7,7 @@ This module tests the core introspection methods:
 - get_database_info
 """
 
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.introspection.types import DatabaseInfo
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin

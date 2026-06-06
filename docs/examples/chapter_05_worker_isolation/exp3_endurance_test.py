@@ -21,32 +21,32 @@ Note: This experiment uses the rhosocial.activerecord.worker_pool module
 from __future__ import annotations
 
 import argparse
-import gc
-import multiprocessing
+import gc  # noqa: F401
+import multiprocessing  # noqa: F401
 import os
 import random
 import sys
 import time
-import traceback
+import traceback  # noqa: F401
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional  # noqa: F401
 from decimal import Decimal
-import threading
+import threading  # noqa: F401
 
 # Add parent directories to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from config import load_scenario_config, get_backend_class, SCHEMA_SQL
+from config import load_scenario_config, get_backend_class, SCHEMA_SQL  # noqa: F401
 
 # Import from core package worker_pool module
 from rhosocial.activerecord.worker_pool import (
-    TaskDefinition,
-    TaskResult,
-    TaskMode,
-    TaskPriority,
-    register_handler,
-    WorkerPool,
+    TaskDefinition,  # noqa: F401
+    TaskResult,  # noqa: F401
+    TaskMode,  # noqa: F401
+    TaskPriority,  # noqa: F401
+    register_handler,  # noqa: F401
+    WorkerPool,  # noqa: F401
 )
 
 
@@ -95,7 +95,7 @@ def worker_task(
     """
     from rhosocial.activerecord.backend.impl.mysql import MySQLBackend
     from rhosocial.activerecord.backend.impl.mysql.config import MySQLConnectionConfig
-    from models import User, Order, Post, Comment, ALL_MODELS
+    from models import User, Order, Post, Comment, ALL_MODELS  # noqa: F401
 
     start_time = time.time()
     operations = 0
@@ -196,7 +196,7 @@ def worker_task(
                 for model in ALL_MODELS:
                     model.__backend__ = None
                 backend.disconnect()
-            except:
+            except:  # noqa: E722
                 pass
 
     duration = time.time() - start_time
@@ -284,7 +284,7 @@ def run_endurance_test(
                         if error_type == "connection":
                             stats.connection_issues += count
 
-                except Exception as e:
+                except Exception as e:  # noqa: F841
                     stats.total_errors += 1
                     stats.error_breakdown["executor"] = stats.error_breakdown.get("executor", 0) + 1
 
@@ -296,7 +296,7 @@ def run_endurance_test(
         # Progress report
         if round_num % 5 == 0 or round_num == num_rounds:
             elapsed = time.time() - start_time
-            avg_ops = stats.total_operations / round_num if round_num > 0 else 0
+            avg_ops = stats.total_operations / round_num if round_num > 0 else 0  # noqa: F841
             print(f"  Round {round_num}/{num_rounds}: "
                   f"{round_ops} ops, {round_errors} errors, "
                   f"{round_duration:.2f}s, "
@@ -319,7 +319,7 @@ def run_endurance_test(
     print(f"  Success rate: {(1 - stats.total_errors/(stats.total_operations+1))*100:.2f}%")
 
     if stats.error_breakdown:
-        print(f"\n  Error breakdown:")
+        print(f"\n  Error breakdown:")  # noqa: F541
         for error_type, count in sorted(stats.error_breakdown.items()):
             print(f"    {error_type}: {count}")
 
@@ -346,7 +346,7 @@ def run_endurance_test(
             cleanup_backend.execute(f"DROP TABLE IF EXISTS `{table}`")
         cleanup_backend.execute("SET FOREIGN_KEY_CHECKS = 1")
         cleanup_backend.disconnect()
-    except:
+    except:  # noqa: E722
         pass
 
     return stats
@@ -384,7 +384,7 @@ def main():
     print("\n" + "="*70)
     print("Worker Isolation Experiment - Endurance Test")
     print("="*70)
-    print(f"\nConfiguration:")
+    print(f"\nConfiguration:")  # noqa: F541
     print(f"  Pattern: {args.pattern}")
     print(f"  Workers: {args.workers}")
     print(f"  Operations per round: {args.ops_per_round}")

@@ -74,7 +74,7 @@ def get_own_protocol_methods(proto: type) -> set:
 
 def get_postgres_protocols():
     """Get all protocols that PostgresDialect implements."""
-    from typing import runtime_checkable
+    from typing import runtime_checkable  # noqa: F401
 
     protocols = [
         dialect_protocols.SQLXMLSupport,

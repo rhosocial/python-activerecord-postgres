@@ -7,7 +7,7 @@ This module tests the protocol-based feature detection methods:
 - PostgresIndexSupport
 - PostgresMaterializedViewSupport
 """
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
@@ -15,15 +15,41 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 class TestPostgresPartitionSupportFeatureDetection:
     """Test PostgresPartitionSupport feature detection methods."""
 
-    def test_supports_hash_partitioning_pg10(self):
+    def test_supports_hash_table_partitioning_pg10(self):
         """HASH partitioning requires PG 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
-        assert dialect.supports_hash_partitioning() is False
+        assert dialect.supports_hash_table_partitioning() is False
 
-    def test_supports_hash_partitioning_pg11(self):
+    def test_supports_hash_table_partitioning_pg11(self):
         """PostgreSQL 11 supports HASH partitioning."""
         dialect = PostgresDialect(version=(11, 0, 0))
-        assert dialect.supports_hash_partitioning() is True
+        assert dialect.supports_hash_table_partitioning() is True
+
+    def test_supports_partitioned_table_creation_pg9(self):
+        """Declarative partitioned table creation requires PG 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_partitioned_table_creation() is False
+
+    def test_supports_partitioned_table_creation_pg10(self):
+        """PostgreSQL 10 supports partitioned parent table creation."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_partitioned_table_creation() is True
+
+    def test_supports_range_and_list_partitioning_pg10(self):
+        """PostgreSQL 10 supports RANGE and LIST partitioning."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_range_table_partitioning() is True
+        assert dialect.supports_list_table_partitioning() is True
+
+    def test_does_not_support_key_partitioning(self):
+        """PostgreSQL does not support MySQL-style KEY partitioning."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_key_table_partitioning() is False
+
+    def test_partition_introspection_not_implemented_yet(self):
+        """Detailed partition metadata introspection is not implemented yet."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_partition_metadata_introspection() is False
 
     def test_supports_default_partition_pg10(self):
         """DEFAULT partition requires PG 11+."""

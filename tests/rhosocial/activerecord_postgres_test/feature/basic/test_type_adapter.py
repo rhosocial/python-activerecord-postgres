@@ -8,9 +8,9 @@ package and make them discoverable by `pytest` within this project's test run.
 
 # Import the fixture that provides the configured model and backend for type adapter tests.
 from rhosocial.activerecord.testsuite.feature.basic.conftest import (
-    type_adapter_fixtures,
-    async_type_adapter_fixtures,
+    type_adapter_fixtures,  # noqa: F401
+    async_type_adapter_fixtures,  # noqa: F401
 )
 
 # Import all tests from the generic testsuite file.
-from rhosocial.activerecord.testsuite.feature.basic.test_type_adapter import *
+from rhosocial.activerecord.testsuite.feature.basic.test_type_adapter import *  # noqa: F403

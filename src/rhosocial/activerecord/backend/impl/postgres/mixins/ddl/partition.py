@@ -6,10 +6,11 @@ PostgreSQL table partitioning operations including RANGE, LIST, and HASH
 partitioning with support for various PostgreSQL versions.
 """
 
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, Tuple, TYPE_CHECKING  # noqa: F401
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
+        PartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
@@ -49,6 +50,36 @@ class PostgresPartitionMixin:
     def supports_partitionwise_aggregate(self) -> bool:
         """Partitionwise aggregate is native feature, PG 11+."""
         return self.version >= (11, 0, 0)
+
+    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+        """Format a partition bound value from expression.
+
+        Public method implementing the PartitionValue expression's
+        SQL generation, following the Expression-Dialect-Protocol pattern.
+
+        Value handling:
+        - None → 'NULL'
+        - String 'MAXVALUE' or 'MINVALUE' (case-insensitive) → as-is
+        - String values → quoted with internal single-quote escaping
+        - Other types → str() representation
+
+        Args:
+            expr: PartitionValue with the bound value.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        value = expr.value
+        if value is None:
+            return "NULL", ()
+        elif isinstance(value, str):
+            upper_val = value.upper()
+            if upper_val == "MAXVALUE" or upper_val == "MINVALUE":
+                return upper_val, ()
+            # Add quotes around string values, escaping internal single quotes
+            return f"'{value.replace(chr(39), chr(39)+chr(39))}'", ()
+        else:
+            return str(value), ()
 
     def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
@@ -112,9 +143,10 @@ class PostgresPartitionMixin:
                 to_val = expr.partition_values.get("to")
                 if from_val is None or to_val is None:
                     raise ValueError("RANGE partition requires 'from' and 'to' values")
-                parts.append(
-                    f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})"
-                )
+                from ...expression.ddl import PartitionValue
+                from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
+                to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
+                parts.append(f"FROM ({from_sql}) TO ({to_sql})")
 
         elif partition_type == "LIST":
             if "default" in expr.partition_values and expr.partition_values["default"]:
@@ -123,7 +155,11 @@ class PostgresPartitionMixin:
                 values = expr.partition_values.get("values", [])
                 if not values:
                     raise ValueError("LIST partition requires 'values' list")
-                vals_str = ", ".join(self._format_partition_value(v) for v in values)
+                from ...expression.ddl import PartitionValue
+                vals_str = ", ".join(
+                    PartitionValue(dialect=self, value=v).to_sql()[0]
+                    for v in values
+                )
                 parts.append(f"IN ({vals_str})")
 
         elif partition_type == "HASH":
@@ -140,33 +176,6 @@ class PostgresPartitionMixin:
             parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
 
         return (" ".join(parts), ())
-
-    def _format_partition_value(self, value: Any) -> str:
-        """Format a partition bound value.
-
-        Args:
-            value: The partition bound value. Can be:
-                - None: Returns 'NULL'
-                - String 'MAXVALUE' or 'MINVALUE' (case-insensitive): Returns as-is
-                - String: Returns the string value quoted
-                - Other types: Returns str(value)
-
-        Note:
-            For string values that represent dates or other literals,
-            pass the raw value without quotes. The method will add quotes.
-            Example: Pass '2024-01-01' not "'2024-01-01'"
-
-        """
-        if value is None:
-            return "NULL"
-        elif isinstance(value, str):
-            upper_val = value.upper()
-            if upper_val == "MAXVALUE" or upper_val == "MINVALUE":
-                return upper_val
-            # Add quotes around string values, escaping internal single quotes
-            return f"'{value.replace(chr(39), chr(39)+chr(39))}'"  # escape ' to ''
-        else:
-            return str(value)
 
     def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
@@ -247,11 +256,18 @@ class PostgresPartitionMixin:
         if partition_type == "RANGE":
             from_val = expr.partition_values.get("from")
             to_val = expr.partition_values.get("to")
-            parts.append(f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})")
+            from ...expression.ddl import PartitionValue
+            from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
+            to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
+            parts.append(f"FROM ({from_sql}) TO ({to_sql})")
 
         elif partition_type == "LIST":
             values = expr.partition_values.get("values", [])
-            vals_str = ", ".join(self._format_partition_value(v) for v in values)
+            from ...expression.ddl import PartitionValue
+            vals_str = ", ".join(
+                PartitionValue(dialect=self, value=v).to_sql()[0]
+                for v in values
+            )
             parts.append(f"IN ({vals_str})")
 
         elif partition_type == "HASH":

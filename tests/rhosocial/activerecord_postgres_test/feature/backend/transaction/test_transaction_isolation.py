@@ -184,7 +184,7 @@ class TestAsyncTransactionIsolation:
         assert len(rows) == 1
 
     @pytest.mark.asyncio
-    async def test_async_cannot_change_isolation_during_active_transaction(self, async_postgres_backend, async_test_table):
+    async def test_async_cannot_change_isolation_during_active_transaction(self, async_postgres_backend, async_test_table):  # noqa: E501
         """Test that isolation level cannot be changed during active transaction (async)."""
         tx_manager = async_postgres_backend.transaction_manager
         tx_manager.isolation_level = IsolationLevel.READ_COMMITTED

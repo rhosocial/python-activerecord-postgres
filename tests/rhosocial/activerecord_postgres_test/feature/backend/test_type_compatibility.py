@@ -4,13 +4,13 @@
 This module tests the extended type compatibility checking
 functionality including warnings and suggestions.
 """
-import pytest
+import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.impl.postgres.type_compatibility import (
     WARNED_CASTS,
     INTERMEDIATE_SUGGESTIONS,
-    TYPE_CATEGORIES,
+    TYPE_CATEGORIES,  # noqa: F401
     check_cast_compatibility,
     get_type_category,
     get_intermediate_type,

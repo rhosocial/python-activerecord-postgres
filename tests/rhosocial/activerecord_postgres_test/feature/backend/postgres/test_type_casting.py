@@ -7,7 +7,7 @@ Tests for:
 - Chained type conversions
 - Type compatibility warnings
 """
-import pytest
+import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal
@@ -20,8 +20,8 @@ from rhosocial.activerecord.backend.impl.postgres.type_compatibility import (
     check_cast_compatibility,
     get_compatible_types,
     get_intermediate_type,
-    WARNED_CASTS,
-    DIRECT_COMPATIBLE_CASTS,
+    WARNED_CASTS,  # noqa: F401
+    DIRECT_COMPATIBLE_CASTS,  # noqa: F401
 )
 
 
@@ -257,7 +257,7 @@ class TestComplexCastScenarios:
         # This should trigger a warning
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            expr = col.cast("float8")
+            expr = col.cast("float8")  # noqa: F841
             # The warning should suggest using numeric as intermediate
             if len(w) > 0:
                 assert "numeric" in str(w[0].message)

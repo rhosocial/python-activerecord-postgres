@@ -21,17 +21,17 @@ from rhosocial.activerecord.model import ActiveRecord
 logger = logging.getLogger(__name__)
 
 # Import the fixture selector utility
-from rhosocial.activerecord.testsuite.utils import select_fixture
+from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 
 # Import base version models (Python 3.8+)
-from rhosocial.activerecord.testsuite.feature.query.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.query.fixtures.models import (  # noqa: E402
     User as UserBase, JsonUser as JsonUserBase,
     Order as OrderBase, OrderItem as OrderItemBase,
     Post as PostBase, Comment as CommentBase,
     MappedUser as MappedUserBase, MappedPost as MappedPostBase, MappedComment as MappedCommentBase
 )
-from rhosocial.activerecord.testsuite.feature.query.fixtures.cte_models import Node
-from rhosocial.activerecord.testsuite.feature.query.fixtures.extended_models import ExtendedOrder, ExtendedOrderItem
+from rhosocial.activerecord.testsuite.feature.query.fixtures.cte_models import Node  # noqa: E402
+from rhosocial.activerecord.testsuite.feature.query.fixtures.extended_models import ExtendedOrder, ExtendedOrderItem  # noqa: E402
 
 # Conditionally import Python 3.10+ models
 User310 = JsonUser310 = Order310 = OrderItem310 = Post310 = Comment310 = None
@@ -97,12 +97,12 @@ Post = _select_model_class(PostBase, Post312, Post311, Post310, "Post")
 Comment = _select_model_class(CommentBase, Comment312, Comment311, Comment310, "Comment")
 MappedUser = _select_model_class(MappedUserBase, MappedUser312, MappedUser311, MappedUser310, "MappedUser")
 MappedPost = _select_model_class(MappedPostBase, MappedPost312, MappedPost311, MappedPost310, "MappedPost")
-MappedComment = _select_model_class(MappedCommentBase, MappedComment312, MappedComment311, MappedComment310, "MappedComment")
+MappedComment = _select_model_class(MappedCommentBase, MappedComment312, MappedComment311, MappedComment310, "MappedComment")  # noqa: E501
 
-from rhosocial.activerecord.testsuite.feature.query.interfaces import IQueryProvider
-from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol
+from rhosocial.activerecord.testsuite.feature.query.interfaces import IQueryProvider  # noqa: E402
+from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol  # noqa: E402
 # The scenarios are defined specifically for this backend.
-from .scenarios import get_enabled_scenarios, get_scenario
+from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
 
 class QueryProvider(IQueryProvider, WorkerTestProtocol):
@@ -123,7 +123,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         if backend_instance not in collection:
             collection.append(backend_instance)
 
-    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str, shared_backend=None) -> Type[ActiveRecord]:
+    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str, shared_backend=None) -> Type[ActiveRecord]:  # noqa: E501
         """A generic helper method to handle the setup for any given model."""
         backend_class, config = get_scenario(scenario_name)
 
@@ -147,7 +147,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
         return model_class
 
-    async def _setup_model_async(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str, shared_backend=None) -> Type[ActiveRecord]:
+    async def _setup_model_async(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str, shared_backend=None) -> Type[ActiveRecord]:  # noqa: E501
         """A generic helper method to handle the setup for any given async model."""
         from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 
@@ -173,7 +173,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
         return model_class
 
-    def _setup_multiple_models(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+    def _setup_multiple_models(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:  # noqa: E501
         """A helper to set up multiple models for fixture groups, sharing the same backend."""
         result = []
         shared_backend = None
@@ -182,11 +182,11 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
                 configured_model = self._setup_model(model_class, scenario_name, table_name)
                 shared_backend = configured_model.__backend__
             else:
-                configured_model = self._setup_model(model_class, scenario_name, table_name, shared_backend=shared_backend)
+                configured_model = self._setup_model(model_class, scenario_name, table_name, shared_backend=shared_backend)  # noqa: E501
             result.append(configured_model)
         return tuple(result)
 
-    async def _setup_multiple_models_async(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+    async def _setup_multiple_models_async(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:  # noqa: E501
         """A helper to set up multiple async models for fixture groups, sharing the same backend."""
         result = []
         shared_backend = None
@@ -195,13 +195,13 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
                 configured_model = await self._setup_model_async(model_class, scenario_name, table_name)
                 shared_backend = configured_model.__backend__
             else:
-                configured_model = await self._setup_model_async(model_class, scenario_name, table_name, shared_backend=shared_backend)
+                configured_model = await self._setup_model_async(model_class, scenario_name, table_name, shared_backend=shared_backend)  # noqa: E501
             result.append(configured_model)
         return tuple(result)
 
     # --- Implementation of the IQueryProvider interface ---
 
-    def setup_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for order-related models (User, Order, OrderItem) tests."""
         models_and_tables = [
             (User, "users"),
@@ -210,7 +210,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         ]
         return self._setup_multiple_models(models_and_tables, scenario_name)
 
-    def setup_blog_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_blog_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for blog-related models (User, Post, Comment) tests."""
         models_and_tables = [
             (User, "users"),
@@ -246,7 +246,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         ]
         return self._setup_multiple_models(models_and_tables, scenario_name)
 
-    def setup_extended_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_extended_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for extended order-related models (User, ExtendedOrder, ExtendedOrderItem) tests."""
         models_and_tables = [
             (User, "users"),
@@ -255,7 +255,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
         ]
         return self._setup_multiple_models(models_and_tables, scenario_name)
 
-    def setup_combined_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_combined_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for combined models (User, Order, OrderItem, Post, Comment) tests."""
         models_and_tables = [
             (User, "users"),
@@ -273,7 +273,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
             (SearchableItem, "searchable_items"),
         ], scenario_name)
 
-    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for MappedUser, MappedPost, and MappedComment models."""
         return self._setup_multiple_models([
             (MappedUser, "users"),
@@ -283,18 +283,18 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
     # --- Async implementations ---
 
-    async def setup_async_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    async def setup_async_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for async order-related models (AsyncUser, AsyncOrder, AsyncOrderItem) tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser, AsyncOrder, AsyncOrderItem
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser, AsyncOrder, AsyncOrderItem  # noqa: E501
         return await self._setup_multiple_models_async([
             (AsyncUser, "users"),
             (AsyncOrder, "orders"),
             (AsyncOrderItem, "order_items")
         ], scenario_name)
 
-    async def setup_async_blog_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    async def setup_async_blog_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for async blog-related models (AsyncUser, AsyncPost, AsyncComment) tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_blog_models import AsyncUser, AsyncPost, AsyncComment
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_blog_models import AsyncUser, AsyncPost, AsyncComment  # noqa: E501
         return await self._setup_multiple_models_async([
             (AsyncUser, "users"),
             (AsyncPost, "posts"),
@@ -328,18 +328,18 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
             (AsyncNode, "nodes"),
         ], scenario_name)
 
-    async def setup_async_extended_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
-        """Sets up the database for async extended order-related models (AsyncUser, AsyncExtendedOrder, AsyncExtendedOrderItem) tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_extended_models import AsyncUser, AsyncExtendedOrder, AsyncExtendedOrderItem
+    async def setup_async_extended_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
+        """Sets up the database for async extended order-related models (AsyncUser, AsyncExtendedOrder, AsyncExtendedOrderItem) tests."""  # noqa: E501
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_extended_models import AsyncUser, AsyncExtendedOrder, AsyncExtendedOrderItem  # noqa: E501
         return await self._setup_multiple_models_async([
             (AsyncUser, "users"),
             (AsyncExtendedOrder, "extended_orders"),
             (AsyncExtendedOrderItem, "extended_order_items")
         ], scenario_name)
 
-    async def setup_async_combined_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
-        """Sets up the database for async combined models (AsyncUser, AsyncOrder, AsyncOrderItem, AsyncPost, AsyncComment) tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser, AsyncOrder, AsyncOrderItem
+    async def setup_async_combined_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
+        """Sets up the database for async combined models (AsyncUser, AsyncOrder, AsyncOrderItem, AsyncPost, AsyncComment) tests."""  # noqa: E501
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser, AsyncOrder, AsyncOrderItem  # noqa: E501
         from rhosocial.activerecord.testsuite.feature.query.fixtures.async_blog_models import AsyncPost, AsyncComment
         return await self._setup_multiple_models_async([
             (AsyncUser, "users"),
@@ -351,14 +351,14 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
     async def setup_async_annotated_query_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
         """Sets up the database for the async SearchableItem model tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_annotated_adapter_models import AsyncSearchableItem
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_annotated_adapter_models import AsyncSearchableItem  # noqa: E501
         return await self._setup_multiple_models_async([
             (AsyncSearchableItem, "searchable_items"),
         ], scenario_name)
 
-    async def setup_async_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    async def setup_async_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for AsyncMappedUser, AsyncMappedPost, and AsyncMappedComment models."""
-        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncMappedUser, AsyncMappedPost, AsyncMappedComment
+        from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import AsyncMappedUser, AsyncMappedPost, AsyncMappedComment  # noqa: E501
         return await self._setup_multiple_models_async([
             (AsyncMappedUser, "users"),
             (AsyncMappedPost, "posts"),
@@ -381,14 +381,14 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
             finally:
                 try:
                     await backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     pass
         self._active_async_backends.clear()
 
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""
         # Schemas are stored in the centralized location for query feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "query", "schema")
+        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "query", "schema")  # noqa: E501
         schema_path = os.path.join(schema_dir, filename)
 
         with open(schema_path, 'r', encoding='utf-8') as f:
@@ -417,7 +417,7 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
                 # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     # Ignore errors during disconnect
                     pass
 

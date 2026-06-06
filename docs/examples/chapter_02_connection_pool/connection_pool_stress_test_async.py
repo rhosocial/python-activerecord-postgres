@@ -129,9 +129,9 @@ async def main():
         test_backend = AsyncPostgresBackend(**postgres_config)
         await test_backend.connect()
         print(f"Backend threadsafety: {test_backend.threadsafety}")
-        print(f"  0 = None (not thread-safe)")
-        print(f"  1 = driver (only supports SQL)")
-        print(f"  2 = Full thread-safe (psycopg)")
+        print(f"  0 = None (not thread-safe)")  # noqa: F541
+        print(f"  1 = driver (only supports SQL)")  # noqa: F541
+        print(f"  2 = Full thread-safe (psycopg)")  # noqa: F541
         await test_backend.disconnect()
         
         # Create connection pool with higher load
@@ -144,7 +144,7 @@ async def main():
             backend_factory=lambda: AsyncPostgresBackend(**postgres_config)
         )
         
-        print(f"\nPool configuration:")
+        print(f"\nPool configuration:")  # noqa: F541
         print(f"  min_size: {config.min_size}")
         print(f"  max_size: {config.max_size}")
         print(f"  connection_mode: {config.connection_mode}")

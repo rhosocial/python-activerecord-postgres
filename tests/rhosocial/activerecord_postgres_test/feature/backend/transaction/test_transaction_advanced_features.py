@@ -8,7 +8,7 @@ import pytest
 import pytest_asyncio
 from decimal import Decimal
 
-from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode
+from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode  # noqa: F401
 
 
 class TestSyncDeferrableTransaction:

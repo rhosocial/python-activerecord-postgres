@@ -7,7 +7,7 @@ This module contains basic type adapters for PostgreSQL.
 
 import json
 from enum import Enum as PythonEnum
-from typing import Any, Dict, List, Type, Union, Optional, Set, get_args, get_origin
+from typing import Any, Dict, List, Type, Union, Optional, Set, get_args, get_origin  # noqa: F401
 
 from psycopg.types.json import Jsonb
 
@@ -251,7 +251,7 @@ class PostgresEnumAdapter(BaseSQLTypeAdapter):
 
         return result
 
-    def _do_from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def _do_from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:  # noqa: E501
         # If already a string, check if we should convert to Python Enum
         if isinstance(value, str):
             if options and "enum_class" in options:

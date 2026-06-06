@@ -23,10 +23,60 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "PartitionValue",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
 ]
+
+
+class PartitionValue(BaseExpression):
+    """Represents a partition bound value in PostgreSQL DDL.
+
+    Handles the formatting of partition boundary values used in
+    FOR VALUES clauses of PARTITION OF and ATTACH PARTITION statements.
+
+    Value handling:
+    - None → NULL
+    - String 'MAXVALUE' or 'MINVALUE' (case-insensitive) → as-is
+    - String values → quoted with internal single-quote escaping
+    - Other types → str() representation
+
+    Delegates to dialect.format_partition_value() for SQL generation.
+
+    Attributes:
+        value: The partition bound value.
+
+    Example:
+        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> dialect = PostgresDialect()
+        >>> PartitionValue(dialect=dialect, value=None).to_sql()
+        ('NULL', ())
+        >>> PartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
+        ('MAXVALUE', ())
+        >>> PartitionValue(dialect=dialect, value='2024-01-01').to_sql()
+        ("'2024-01-01'", ())
+        >>> PartitionValue(dialect=dialect, value=42).to_sql()
+        ('42', ())
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        value: Any,
+    ):
+        super().__init__(dialect)
+        self.value = value
+
+    def to_sql(self) -> Tuple[str, tuple]:
+        """Generate SQL for a partition bound value.
+
+        Delegates to the dialect's format_partition_value() method.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        return self.dialect.format_partition_value(self)
 
 
 class PostgresCreatePartitionExpression(BaseExpression):

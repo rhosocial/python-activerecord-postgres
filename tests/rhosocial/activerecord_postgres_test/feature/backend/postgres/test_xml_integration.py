@@ -116,7 +116,7 @@ class TestSyncXMLIntegration:
 
     def test_invalid_xml_rejected_by_postgres(self, postgres_backend, xml_test_table):
         """Insert malformed XML and verify PostgreSQL rejects it during execution."""
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             postgres_backend.execute(
                 f"INSERT INTO {xml_test_table} (document) VALUES ('<root>'::xml)"
             )

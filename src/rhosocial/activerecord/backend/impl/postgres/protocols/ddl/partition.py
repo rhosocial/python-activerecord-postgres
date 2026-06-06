@@ -7,8 +7,11 @@ the interface for PostgreSQL's native partitioning features.
 
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
+
 if TYPE_CHECKING:
     from ...expression.ddl import (
+        PartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
@@ -16,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
-class PostgresPartitionSupport(Protocol):
+class PostgresPartitionSupport(PartitionSupport, Protocol):
     """PostgreSQL partitioning enhancements protocol.
 
     Feature Source: Native support (no extension required)
@@ -105,6 +108,17 @@ class PostgresPartitionSupport(Protocol):
 
         Args:
             expr: PostgresCreatePartitionExpression with partition details
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...
+
+    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+        """Format a partition bound value from expression.
+
+        Args:
+            expr: PartitionValue with the bound value.
 
         Returns:
             Tuple of (SQL string, parameters tuple)

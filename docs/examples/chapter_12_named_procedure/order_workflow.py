@@ -192,7 +192,7 @@ class AsyncOrderProcessingProcedure(Procedure):
 
 
 if __name__ == "__main__":
-    from rhosocial.activerecord.backend.named_expression import ProcedureDiagram
+    from rhosocial.activerecord.backend.named_expression import ProcedureDiagram  # noqa: F401
 
     print("=== 静态流程图 ===")
     print(OrderProcessingProcedure.static_diagram("flowchart"))

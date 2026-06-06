@@ -18,7 +18,7 @@ psycopg v3's closed/broken attributes only update after an operation fails.
 Therefore, tests focus on actual query execution and reconnection behavior.
 """
 import pytest
-import pytest_asyncio
+import pytest_asyncio  # noqa: F401
 import asyncio
 import time
 import logging

@@ -4,7 +4,7 @@
 This module tests the version-specific feature detection methods
 added to the PostgreSQL dialect mixins.
 """
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 

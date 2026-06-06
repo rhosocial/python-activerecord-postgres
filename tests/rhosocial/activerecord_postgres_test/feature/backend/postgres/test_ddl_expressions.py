@@ -6,7 +6,13 @@ including materialized view refresh, comment, and partition expressions.
 """
 import pytest
 
-import pytest
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    CreateTableExpression,
+    PartitionKey,
+    PartitionClause,
+    PartitionStrategy,
+)
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresRefreshMaterializedViewExpression,
@@ -14,11 +20,11 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
-    PostgresVacuumExpression,
-    PostgresAnalyzeExpression,
+    PostgresVacuumExpression,  # noqa: F401
+    PostgresAnalyzeExpression,  # noqa: F401
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
-    PostgresExtendedStatisticsMixin,
+    PostgresExtendedStatisticsMixin,  # noqa: F401
 )
 
 
@@ -212,6 +218,123 @@ class TestPostgresCommentExpression:
         sql, params = expr.to_sql()
         assert "public.users" in sql
         assert params == ("Public users table",)
+
+
+class TestPostgresPartitionedTableCreation:
+    """Test PostgreSQL CREATE TABLE ... PARTITION BY support."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create_range_partitioned_parent_table(self, dialect):
+        """Test creating a RANGE-partitioned parent table."""
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[
+                ColumnDefinition("id", "BIGINT"),
+                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
+            ],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy=PartitionStrategy.RANGE,
+                key=PartitionKey(columns=["created_at"]),
+            ),
+        )
+        sql, params = expr.to_sql()
+
+        assert sql.startswith('CREATE TABLE "events"')
+        assert 'PARTITION BY RANGE ("created_at")' in sql
+        assert params == ()
+
+    def test_create_list_partitioned_parent_table(self, dialect):
+        """Test creating a LIST-partitioned parent table."""
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[
+                ColumnDefinition("id", "BIGINT"),
+                ColumnDefinition("status", "TEXT NOT NULL"),
+            ],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy=PartitionStrategy.LIST,
+                key=PartitionKey(columns=["status"]),
+            ),
+        )
+        sql, params = expr.to_sql()
+
+        assert 'PARTITION BY LIST ("status")' in sql
+        assert params == ()
+
+    def test_create_hash_partitioned_parent_table_pg10(self):
+        """HASH parent table partitioning requires PostgreSQL 11+."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy=PartitionStrategy.HASH,
+                key=PartitionKey(columns=["tenant_id"]),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+            expr.to_sql()
+
+    def test_create_hash_partitioned_parent_table_pg11(self):
+        """Test HASH parent table partitioning on PostgreSQL 11+."""
+        dialect = PostgresDialect(version=(11, 0, 0))
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy=PartitionStrategy.HASH,
+                key=PartitionKey(columns=["tenant_id"]),
+            ),
+        )
+        sql, params = expr.to_sql()
+
+        assert 'PARTITION BY HASH ("tenant_id")' in sql
+        assert params == ()
+
+    def test_create_partitioned_parent_table_pg9(self):
+        """Declarative parent table partitioning requires PostgreSQL 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[ColumnDefinition("created_at", "TIMESTAMP NOT NULL")],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy=PartitionStrategy.RANGE,
+                key=PartitionKey(columns=["created_at"]),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="Declarative table partitioning requires PostgreSQL 10"):
+            expr.to_sql()
+
+    def test_key_partitioning_is_rejected(self, dialect):
+        """PostgreSQL rejects MySQL-style KEY partitioning."""
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[ColumnDefinition("id", "BIGINT NOT NULL")],
+            partition=PartitionClause(
+                dialect=dialect,
+                strategy="KEY",
+                key=PartitionKey(columns=["id"]),
+            ),
+        )
+
+        with pytest.raises(ValueError, match="PostgreSQL does not support KEY partitioning"):
+            expr.to_sql()
 
 
 class TestPostgresCreatePartitionExpression:

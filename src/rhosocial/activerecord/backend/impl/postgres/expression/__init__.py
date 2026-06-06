@@ -40,6 +40,9 @@ from .ddl import (
     PostgresCreateRangeTypeExpression,
     PostgresCreateExtensionExpression,
     PostgresDropExtensionExpression,
+    PostgresPgPartmanCreateParentExpression,
+    PostgresPgPartmanRunMaintenanceExpression,
+    PostgresPgPartmanUpdateConfigExpression,
 )
 
 __all__ = [
@@ -72,4 +75,7 @@ __all__ = [
     "PostgresCreateRangeTypeExpression",
     "PostgresCreateExtensionExpression",
     "PostgresDropExtensionExpression",
+    "PostgresPgPartmanCreateParentExpression",
+    "PostgresPgPartmanRunMaintenanceExpression",
+    "PostgresPgPartmanUpdateConfigExpression",
 ]

@@ -13,9 +13,9 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
-    PostgresReindexExpression,
-    PostgresCreateStatisticsExpression,
-    PostgresDropStatisticsExpression,
+    PostgresReindexExpression,  # noqa: F401
+    PostgresCreateStatisticsExpression,  # noqa: F401
+    PostgresDropStatisticsExpression,  # noqa: F401
 )
 
 

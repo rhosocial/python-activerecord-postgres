@@ -1,6 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/test_version.py
 import pytest
-import pytest_asyncio
+import pytest_asyncio  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
 

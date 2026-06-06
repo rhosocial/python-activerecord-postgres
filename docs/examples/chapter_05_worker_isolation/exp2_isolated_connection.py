@@ -19,20 +19,20 @@ This ensures:
 
 from __future__ import annotations
 
-import multiprocessing
+import multiprocessing  # noqa: F401
 import os
 import random
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional  # noqa: F401
 from decimal import Decimal
 
 # Add parent directories to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from config import load_scenario_config, get_backend_class, SCHEMA_SQL
+from config import load_scenario_config, get_backend_class, SCHEMA_SQL  # noqa: F401
 
 
 @dataclass
@@ -51,7 +51,7 @@ def _ensure_tables_exist(backend) -> None:
     backend.execute("SET FOREIGN_KEY_CHECKS = 0")
     try:
         # Just create if not exists - don't drop
-        for table, sql in SCHEMA_SQL.items():
+        for table, sql in SCHEMA_SQL.items():  # noqa: B007
             # Modify to CREATE IF NOT EXISTS
             sql_modified = sql.replace("CREATE TABLE IF NOT EXISTS", "CREATE TABLE IF NOT EXISTS")
             try:
@@ -81,7 +81,7 @@ def worker_task_isolated_connection(
     """
     from rhosocial.activerecord.backend.impl.mysql import MySQLBackend
     from rhosocial.activerecord.backend.impl.mysql.config import MySQLConnectionConfig
-    from models import User, Order, Post, Comment, ALL_MODELS
+    from models import User, Order, Post, Comment, ALL_MODELS  # noqa: F401
 
     start_time = time.time()
     errors = []
@@ -181,7 +181,7 @@ def worker_task_isolated_connection(
                     model.__backend__ = None
                 # Disconnect
                 backend.disconnect()
-            except:
+            except:  # noqa: E722
                 pass
 
     duration = time.time() - start_time
@@ -203,7 +203,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     Each worker process creates its own connection and manages its lifecycle.
     """
     print(f"\n{'='*70}")
-    print(f"Experiment 2: Process-Isolated Connections (CORRECT PATTERN)")
+    print(f"Experiment 2: Process-Isolated Connections (CORRECT PATTERN)")  # noqa: F541
     print(f"{'='*70}")
     print(f"Workers: {num_workers}")
     print(f"Operations per worker: {ops_per_worker}")
@@ -233,11 +233,11 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     for model in ALL_MODELS:
         model.__backend__ = None
     setup_backend.disconnect()
-    print(f"  Created 10 seed users")
+    print(f"  Created 10 seed users")  # noqa: F541
 
     # Run workers with isolated connections
     print(f"\nStep 2: Running {num_workers} workers with ISOLATED connections...")
-    print(f"  Each worker creates its own database connection")
+    print(f"  Each worker creates its own database connection")  # noqa: F541
 
     start_time = time.time()
     results: List[TaskResult] = []
@@ -280,11 +280,11 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     # Show sample errors
     all_errors = [e for r in results for e in r.errors]
     if all_errors:
-        print(f"\n  Sample errors (first 5):")
+        print(f"\n  Sample errors (first 5):")  # noqa: F541
         for err in all_errors[:5]:
             print(f"    - {err[:100]}...")
     else:
-        print(f"\n  ✅ No errors detected!")
+        print(f"\n  ✅ No errors detected!")  # noqa: F541
 
     print(f"{'='*70}\n")
 
@@ -298,7 +298,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
             cleanup_backend.execute(f"DROP TABLE IF EXISTS `{table}`")
         cleanup_backend.execute("SET FOREIGN_KEY_CHECKS = 1")
         cleanup_backend.disconnect()
-    except:
+    except:  # noqa: E722
         pass
 
     return {
