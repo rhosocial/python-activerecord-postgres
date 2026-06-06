@@ -23,6 +23,38 @@ class PostgresPartitionMixin:
     All features are native, using version number for detection.
     """
 
+    def supports_table_partitioning(self) -> bool:
+        """Declarative table partitioning is native feature, PG 10+."""
+        return self.version >= (10, 0, 0)
+
+    def supports_partitioned_table_creation(self) -> bool:
+        """CREATE TABLE can create partitioned parent tables in PG 10+."""
+        return self.supports_table_partitioning()
+
+    def supports_range_table_partitioning(self) -> bool:
+        """RANGE table partitioning is native feature, PG 10+."""
+        return self.supports_table_partitioning()
+
+    def supports_list_table_partitioning(self) -> bool:
+        """LIST table partitioning is native feature, PG 10+."""
+        return self.supports_table_partitioning()
+
+    def supports_hash_table_partitioning(self) -> bool:
+        """HASH table partitioning is native feature, PG 11+."""
+        return self.supports_hash_partitioning()
+
+    def supports_key_table_partitioning(self) -> bool:
+        """PostgreSQL does not support MySQL-style KEY partitioning."""
+        return False
+
+    def supports_subpartitioning(self) -> bool:
+        """Nested partitioned partitions are not exposed by this API yet."""
+        return False
+
+    def supports_partition_metadata_introspection(self) -> bool:
+        """Detailed partition metadata introspection is not implemented yet."""
+        return False
+
     def supports_hash_partitioning(self) -> bool:
         """HASH partitioning is native feature, PG 11+."""
         return self.version >= (11, 0, 0)

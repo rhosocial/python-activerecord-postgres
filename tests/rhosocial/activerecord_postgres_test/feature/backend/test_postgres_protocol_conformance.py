@@ -108,6 +108,7 @@ def get_postgres_protocols():
         dialect_protocols.IndexSupport,
         dialect_protocols.SequenceSupport,
         dialect_protocols.TableSupport,
+        dialect_protocols.PartitionSupport,
         dialect_protocols.ConstraintSupport,
         dialect_protocols.TruncateSupport,
         dialect_protocols.IntrospectionSupport,
@@ -166,6 +167,8 @@ class TestProtocolNonOverlap:
             ('PostgresIndexSupport', 'IndexSupport'),
             ('TableSupport', 'PostgresTableSupport'),
             ('PostgresTableSupport', 'TableSupport'),
+            ('PartitionSupport', 'PostgresPartitionSupport'),
+            ('PostgresPartitionSupport', 'PartitionSupport'),
             ('ConstraintSupport', 'PostgresConstraintSupport'),
             ('PostgresConstraintSupport', 'ConstraintSupport'),
             ('LockingSupport', 'PostgresLockingSupport'),
@@ -225,6 +228,7 @@ class TestPostgresProtocolDerivation:
 
     PROTOCOL_DERIVATIONS = [
         ("PostgresTableSupport", "TableSupport"),
+        ("PostgresPartitionSupport", "PartitionSupport"),
         ("PostgresIndexSupport", "IndexSupport"),
         ("PostgresLockingSupport", "LockingSupport"),
         ("PostgresTriggerSupport", "TriggerSupport"),

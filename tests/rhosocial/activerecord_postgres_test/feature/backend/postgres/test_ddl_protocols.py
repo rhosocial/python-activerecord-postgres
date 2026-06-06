@@ -10,10 +10,21 @@ This module tests the protocol-based feature detection methods:
 import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.partition import PostgresPartitionMixin
 
 
 class TestPostgresPartitionSupportFeatureDetection:
     """Test PostgresPartitionSupport feature detection methods."""
+
+    def test_supports_table_partitioning_pg9(self):
+        """Declarative table partitioning requires PG 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_table_partitioning() is False
+
+    def test_supports_table_partitioning_pg10(self):
+        """PostgreSQL 10 supports declarative table partitioning."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_table_partitioning() is True
 
     def test_supports_hash_table_partitioning_pg10(self):
         """HASH partitioning requires PG 11+."""
@@ -45,6 +56,11 @@ class TestPostgresPartitionSupportFeatureDetection:
         """PostgreSQL does not support MySQL-style KEY partitioning."""
         dialect = PostgresDialect(version=(14, 0, 0))
         assert dialect.supports_key_table_partitioning() is False
+
+    def test_subpartitioning_not_exposed_yet(self):
+        """Nested partitioning is not exposed by this API yet."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_subpartitioning() is False
 
     def test_partition_introspection_not_implemented_yet(self):
         """Detailed partition metadata introspection is not implemented yet."""
@@ -110,6 +126,64 @@ class TestPostgresPartitionSupportFeatureDetection:
         """PostgreSQL 11 supports partitionwise aggregate."""
         dialect = PostgresDialect(version=(11, 0, 0))
         assert dialect.supports_partitionwise_aggregate() is True
+
+
+class TestPostgresPartitionMixinDirect:
+    """Test PostgresPartitionMixin partition capability methods directly."""
+
+    class _Host:
+        version = (15, 0, 0)
+
+    class _Pg10Host:
+        version = (10, 0, 0)
+
+    class _LowHost:
+        version = (9, 6, 0)
+
+    class _PartitionMixin(_Host, PostgresPartitionMixin):
+        pass
+
+    class _PartitionMixinPg10(_Pg10Host, PostgresPartitionMixin):
+        pass
+
+    class _PartitionMixinLow(_LowHost, PostgresPartitionMixin):
+        pass
+
+    def test_supports_table_partitioning_direct(self):
+        """PostgreSQL 15 supports declarative table partitioning."""
+        assert self._PartitionMixin().supports_table_partitioning() is True
+
+    def test_supports_table_partitioning_low(self):
+        """PostgreSQL 9.6 does not support declarative table partitioning."""
+        assert self._PartitionMixinLow().supports_table_partitioning() is False
+
+    def test_supports_partitioned_table_creation_direct(self):
+        """Partitioned parent table creation follows table partitioning."""
+        assert self._PartitionMixin().supports_partitioned_table_creation() is True
+        assert self._PartitionMixinLow().supports_partitioned_table_creation() is False
+
+    def test_supports_range_and_list_partitioning_direct(self):
+        """PostgreSQL 10 supports RANGE and LIST partitioning."""
+        mixin = self._PartitionMixinPg10()
+        assert mixin.supports_range_table_partitioning() is True
+        assert mixin.supports_list_table_partitioning() is True
+
+    def test_supports_hash_table_partitioning_direct(self):
+        """HASH table partitioning follows PostgreSQL 11+ support."""
+        assert self._PartitionMixin().supports_hash_table_partitioning() is True
+        assert self._PartitionMixinPg10().supports_hash_table_partitioning() is False
+
+    def test_does_not_support_key_partitioning_direct(self):
+        """PostgreSQL does not support MySQL-style KEY partitioning."""
+        assert self._PartitionMixin().supports_key_table_partitioning() is False
+
+    def test_subpartitioning_not_exposed_direct(self):
+        """Nested partitioning is not exposed by this API yet."""
+        assert self._PartitionMixin().supports_subpartitioning() is False
+
+    def test_partition_introspection_not_implemented_direct(self):
+        """Detailed partition metadata introspection is not implemented yet."""
+        assert self._PartitionMixin().supports_partition_metadata_introspection() is False
 
 
 class TestPostgresIndexSupportFeatureDetection:

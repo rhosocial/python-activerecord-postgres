@@ -20,12 +20,6 @@ class TestTableSupport:
     def test_supports_table_inheritance(self):
         assert PostgresDialect().supports_table_inheritance() is True
 
-    def test_supports_table_partitioning_pg10(self):
-        assert PostgresDialect((10, 0, 0)).supports_table_partitioning() is True
-
-    def test_supports_table_partitioning_pg94(self):
-        assert PostgresDialect((9, 4, 0)).supports_table_partitioning() is False
-
     def test_supports_table_tablespace(self):
         assert PostgresDialect().supports_table_tablespace() is True
 
@@ -59,12 +53,6 @@ class TestPostgresTableMixinDirect:
 
     def test_supports_table_inheritance_direct(self):
         assert self._TableMixin().supports_table_inheritance() is True
-
-    def test_supports_table_partitioning_direct(self):
-        assert self._TableMixin().supports_table_partitioning() is True
-
-    def test_supports_table_partitioning_low(self):
-        assert not self._TableMixinLow().supports_table_partitioning()
 
     def test_supports_table_tablespace_direct(self):
         assert self._TableMixin().supports_table_tablespace() is True

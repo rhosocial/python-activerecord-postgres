@@ -268,6 +268,7 @@ class PostgresDialect(
     SequenceMixin,
     TableMixin,
     ConstraintMixin,
+    PostgresPartitionMixin,
     PartitionMixin,
     PostgresIntrospectionCapabilityMixin,
     # PostgreSQL-specific mixins
@@ -281,7 +282,6 @@ class PostgresDialect(
     PostgresPgTrgmMixin,
     PostgresHstoreMixin,
     # Native feature mixins
-    PostgresPartitionMixin,
     PostgresVacuumMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
@@ -1333,38 +1333,6 @@ class PostgresDialect(
     def supports_table_inheritance(self) -> bool:
         """Whether table inheritance is supported."""
         return True  # PostgreSQL supports INHERITS
-
-    def supports_table_partitioning(self) -> bool:
-        """Whether PostgreSQL supports declarative table partitioning."""
-        return self.version >= (10, 0, 0)
-
-    def supports_partitioned_table_creation(self) -> bool:
-        """Whether CREATE TABLE can create partitioned parent tables."""
-        return self.supports_table_partitioning()
-
-    def supports_range_table_partitioning(self) -> bool:
-        """Whether RANGE partitioning is supported."""
-        return self.supports_table_partitioning()
-
-    def supports_list_table_partitioning(self) -> bool:
-        """Whether LIST partitioning is supported."""
-        return self.supports_table_partitioning()
-
-    def supports_hash_table_partitioning(self) -> bool:
-        """Whether HASH parent table partitioning is supported."""
-        return self.supports_hash_partitioning()
-
-    def supports_key_table_partitioning(self) -> bool:
-        """PostgreSQL does not support MySQL-style KEY partitioning."""
-        return False
-
-    def supports_subpartitioning(self) -> bool:
-        """Whether nested partitioned partitions are supported by this API."""
-        return False
-
-    def supports_partition_metadata_introspection(self) -> bool:
-        """Detailed partition metadata introspection is not implemented yet."""
-        return False
 
     def supports_table_tablespace(self) -> bool:
         """Whether tablespace specification is supported."""
