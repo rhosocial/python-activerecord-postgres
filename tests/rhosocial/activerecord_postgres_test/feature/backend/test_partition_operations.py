@@ -14,6 +14,7 @@ import pytest_asyncio
 from rhosocial.activerecord.backend.expression import (
     Column,
     CreateIndexExpression,
+    DeleteExpression,
     FunctionCall,
     InsertExpression,
     Literal,
@@ -43,6 +44,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanDeleteConfigExpression,
     PostgresPgPartmanRunMaintenanceExpression,
+    PostgresPgPartmanUpdateConfigExpression,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 from rhosocial.activerecord_postgres_test.feature.backend.utils import (
@@ -55,6 +57,7 @@ PARTITION_TABLES = (
     "ar_partition_events_p2026_01",
     "ar_partition_events_p2026_02",
     "ar_partition_events_p2026_03",
+    "ar_partition_events_default",
     "ar_partition_events_archive",
     "ar_partition_events",
 )
@@ -95,6 +98,38 @@ def _create_range_partition_sql(dialect, partition_name: str, from_value: str, t
         partition_values={"from": from_value, "to": to_value},
     )
     return expr.to_sql()
+
+
+def _create_default_partition_sql(dialect, partition_name: str):
+    expr = PostgresCreatePartitionExpression(
+        dialect=dialect,
+        partition_name=partition_name,
+        parent_table="ar_partition_events",
+        partition_type="RANGE",
+        partition_values={"default": True},
+    )
+    return expr.to_sql()
+
+
+def _delete_partition_events_for_range_expression(dialect, start, end):
+    return DeleteExpression(
+        dialect=dialect,
+        tables="ar_partition_events",
+        where=(Column(dialect, "created_at") >= Literal(dialect, start))
+        & (Column(dialect, "created_at") < Literal(dialect, end)),
+    )
+
+
+def _insert_partition_events_expression(dialect, rows):
+    return InsertExpression(
+        dialect=dialect,
+        into="ar_partition_events",
+        columns=["id", "created_at", "payload"],
+        source=ValuesSource(
+            dialect,
+            [[Literal(dialect, value) for value in row] for row in rows],
+        ),
+    )
 
 
 def _detach_partition_sql(dialect, partition_name: str):
@@ -416,6 +451,25 @@ def _pg_partman_run_maintenance_sql(dialect, partman_schema: str):
     return expr.to_sql()
 
 
+def _pg_partman_global_run_maintenance_sql(dialect, partman_schema: str):
+    expr = PostgresPgPartmanRunMaintenanceExpression(
+        dialect=dialect,
+        schema=partman_schema,
+    )
+    return expr.to_sql()
+
+
+def _pg_partman_update_config_sql(dialect, partman_schema: str):
+    expr = PostgresPgPartmanUpdateConfigExpression(
+        dialect=dialect,
+        parent_table=_qualified("ar_partman_events"),
+        automatic_maintenance="on",
+        infinite_time_partitions=True,
+        schema=partman_schema,
+    )
+    return expr.to_sql()
+
+
 def _pg_partman_delete_config_sql(dialect, partman_schema: str):
     expr = PostgresPgPartmanDeleteConfigExpression(
         dialect=dialect,
@@ -622,8 +676,10 @@ class TestPostgreSQLPartitionOperations:
         )
         postgres_backend.execute(sql, params)
         postgres_backend.execute(
-            "INSERT INTO ar_partition_events (id, created_at, payload) VALUES (%s, %s, %s)",
-            (3, "2026-03-15", "mar"),
+            *_insert_partition_events_expression(
+                dialect,
+                [(3, "2026-03-15", "mar")],
+            ).to_sql()
         )
 
         row = postgres_backend.fetch_one(
@@ -635,6 +691,93 @@ class TestPostgreSQLPartitionOperations:
             (3,),
         )
         assert row["partition_name"] == "ar_partition_events_p2026_03"
+
+    def test_default_partition_catches_overflow_and_blocks_conflicting_range(
+        self,
+        postgres_backend,
+        partitioned_event_table,
+    ):
+        """DEFAULT partition catches overflow until operators split a concrete range.
+
+                Scenario: a DEFAULT partition keeps out-of-range events writable while
+                operators prepare the next explicit range partition.
+
+                Steps: create a DEFAULT partition, insert an April row into it, prove a
+                conflicting April partition cannot be added, delete the conflicting row,
+                then add the April range partition and insert a replacement row.
+
+                Assertions: overflow rows route to the DEFAULT partition; PostgreSQL
+                rejects a concrete partition whose range overlaps data already stored in
+                DEFAULT; after cleanup, the new concrete range accepts the replacement row.
+
+                Production value: this captures the default-partition maintenance runbook
+                and proves that cleanup is required before splitting catch-all data.
+        """
+        dialect = postgres_backend.dialect
+        if not dialect.supports_default_partition():
+            pytest.skip("PostgreSQL scenario does not support DEFAULT partitions")
+        postgres_backend.execute(
+            *_create_default_partition_sql(dialect, "ar_partition_events_default")
+        )
+        postgres_backend.execute(
+            *_insert_partition_events_expression(
+                dialect,
+                [(30, "2026-04-15", "default-overflow")],
+            ).to_sql()
+        )
+
+        row = postgres_backend.fetch_one(
+            """
+            SELECT tableoid::regclass::text AS partition_name, payload
+            FROM ar_partition_events
+            WHERE id = %s
+            """,
+            (30,),
+        )
+        assert row["partition_name"] == "ar_partition_events_default"
+        assert row["payload"] == "default-overflow"
+
+        with pytest.raises(Exception):
+            postgres_backend.execute(
+                *_create_range_partition_sql(
+                    dialect,
+                    "ar_partition_events_p2026_03",
+                    "2026-04-01",
+                    "2026-05-01",
+                )
+            )
+        postgres_backend.execute(
+            *_delete_partition_events_for_range_expression(
+                dialect,
+                "2026-04-01",
+                "2026-05-01",
+            ).to_sql()
+        )
+        postgres_backend.execute(
+            *_create_range_partition_sql(
+                dialect,
+                "ar_partition_events_p2026_03",
+                "2026-04-01",
+                "2026-05-01",
+            )
+        )
+        postgres_backend.execute(
+            *_insert_partition_events_expression(
+                dialect,
+                [(31, "2026-04-16", "split-range")],
+            ).to_sql()
+        )
+
+        row = postgres_backend.fetch_one(
+            """
+            SELECT tableoid::regclass::text AS partition_name, payload
+            FROM ar_partition_events
+            WHERE id = %s
+            """,
+            (31,),
+        )
+        assert row["partition_name"] == "ar_partition_events_p2026_03"
+        assert row["payload"] == "split-range"
 
     def test_detach_partition_for_archive_and_reattach(self, postgres_backend, partitioned_event_table):
         """A partition can be detached for archive work and attached back."""
@@ -750,8 +893,10 @@ class TestAsyncPostgreSQLPartitionOperations:
         )
         await async_postgres_backend.execute(sql, params)
         await async_postgres_backend.execute(
-            "INSERT INTO ar_partition_events (id, created_at, payload) VALUES (%s, %s, %s)",
-            (3, "2026-03-15", "mar"),
+            *_insert_partition_events_expression(
+                dialect,
+                [(3, "2026-03-15", "mar")],
+            ).to_sql()
         )
 
         row = await async_postgres_backend.fetch_one(
@@ -763,6 +908,94 @@ class TestAsyncPostgreSQLPartitionOperations:
             (3,),
         )
         assert row["partition_name"] == "ar_partition_events_p2026_03"
+
+    @pytest.mark.asyncio
+    async def test_default_partition_catches_overflow_and_blocks_conflicting_range(
+        self,
+        async_postgres_backend,
+        async_partitioned_event_table,
+    ):
+        """DEFAULT partition catches overflow until operators split a concrete range.
+
+                Scenario: a DEFAULT partition keeps out-of-range events writable while
+                operators prepare the next explicit range partition.
+
+                Steps: create a DEFAULT partition, insert an April row into it, prove a
+                conflicting April partition cannot be added, delete the conflicting row,
+                then add the April range partition and insert a replacement row.
+
+                Assertions: overflow rows route to the DEFAULT partition; PostgreSQL
+                rejects a concrete partition whose range overlaps data already stored in
+                DEFAULT; after cleanup, the new concrete range accepts the replacement row.
+
+                Production value: this captures the default-partition maintenance runbook
+                and proves that cleanup is required before splitting catch-all data.
+        """
+        dialect = async_postgres_backend.dialect
+        if not dialect.supports_default_partition():
+            pytest.skip("PostgreSQL scenario does not support DEFAULT partitions")
+        await async_postgres_backend.execute(
+            *_create_default_partition_sql(dialect, "ar_partition_events_default")
+        )
+        await async_postgres_backend.execute(
+            *_insert_partition_events_expression(
+                dialect,
+                [(30, "2026-04-15", "default-overflow")],
+            ).to_sql()
+        )
+
+        row = await async_postgres_backend.fetch_one(
+            """
+            SELECT tableoid::regclass::text AS partition_name, payload
+            FROM ar_partition_events
+            WHERE id = %s
+            """,
+            (30,),
+        )
+        assert row["partition_name"] == "ar_partition_events_default"
+        assert row["payload"] == "default-overflow"
+
+        with pytest.raises(Exception):
+            await async_postgres_backend.execute(
+                *_create_range_partition_sql(
+                    dialect,
+                    "ar_partition_events_p2026_03",
+                    "2026-04-01",
+                    "2026-05-01",
+                )
+            )
+        await async_postgres_backend.execute(
+            *_delete_partition_events_for_range_expression(
+                dialect,
+                "2026-04-01",
+                "2026-05-01",
+            ).to_sql()
+        )
+        await async_postgres_backend.execute(
+            *_create_range_partition_sql(
+                dialect,
+                "ar_partition_events_p2026_03",
+                "2026-04-01",
+                "2026-05-01",
+            )
+        )
+        await async_postgres_backend.execute(
+            *_insert_partition_events_expression(
+                dialect,
+                [(31, "2026-04-16", "split-range")],
+            ).to_sql()
+        )
+
+        row = await async_postgres_backend.fetch_one(
+            """
+            SELECT tableoid::regclass::text AS partition_name, payload
+            FROM ar_partition_events
+            WHERE id = %s
+            """,
+            (31,),
+        )
+        assert row["partition_name"] == "ar_partition_events_p2026_03"
+        assert row["payload"] == "split-range"
 
     @pytest.mark.asyncio
     async def test_detach_partition_for_archive_and_reattach(
@@ -1316,25 +1549,56 @@ class TestPostgreSQLPgPartmanOperations:
         postgres_backend_single,
         pg_partman_table,
     ):
-        """pg_partman can register a parent table and run scoped maintenance."""
+        """pg_partman can register a parent table, update config, and maintain it.
+
+                Scenario: production automation delegates future partition maintenance to
+                pg_partman while keeping configuration changes explicit.
+
+                Steps: register the partitioned parent, update part_config options, run
+                scoped maintenance, then run global maintenance.
+
+                Assertions: part_config stores the parent and updated options; maintenance
+                calls complete; partition metadata can be inspected after maintenance.
+
+                Production value: this verifies the pg_partman runbook used by operators
+                to keep future partitions maintained without manual DDL for every window.
+        """
         partman_schema = _pg_partman_schema(postgres_backend_single)
         sql, params = _pg_partman_create_parent_sql(postgres_backend_single.dialect, partman_schema)
         options = ExecutionOptions(stmt_type=StatementType.DQL)
         postgres_backend_single.execute(sql, params, options=options)
 
+        postgres_backend_single.execute(
+            *_pg_partman_update_config_sql(postgres_backend_single.dialect, partman_schema)
+        )
+
         config_table_sql = _pg_partman_config_table_sql(postgres_backend_single.dialect, partman_schema)
         row = postgres_backend_single.fetch_one(
             f"""
-            SELECT parent_table
+            SELECT parent_table, automatic_maintenance, infinite_time_partitions
             FROM {config_table_sql}
             WHERE parent_table = %s
             """,
             (_qualified(pg_partman_table),),
         )
         assert row is not None
+        assert row["automatic_maintenance"] == "on"
+        assert row["infinite_time_partitions"] is True
 
         sql, params = _pg_partman_run_maintenance_sql(postgres_backend_single.dialect, partman_schema)
         postgres_backend_single.execute(sql, params, options=options)
+        sql, params = _pg_partman_global_run_maintenance_sql(
+            postgres_backend_single.dialect,
+            partman_schema,
+        )
+        postgres_backend_single.execute(sql, params, options=options)
+
+        metadata_sql, metadata_params = _partition_metadata_sql(
+            postgres_backend_single.dialect,
+            pg_partman_table,
+        )
+        metadata = postgres_backend_single.fetch_all(metadata_sql, metadata_params)
+        assert isinstance(metadata, list)
 
 
 class TestAsyncPostgreSQLPgPartmanOperations:
@@ -1346,22 +1610,65 @@ class TestAsyncPostgreSQLPgPartmanOperations:
         async_postgres_backend_single,
         async_pg_partman_table,
     ):
-        """pg_partman can register a parent table and run scoped maintenance."""
+        """pg_partman can register a parent table, update config, and maintain it.
+
+                Scenario: production automation delegates future partition maintenance to
+                pg_partman while keeping configuration changes explicit.
+
+                Steps: register the partitioned parent, update part_config options, run
+                scoped maintenance, then run global maintenance.
+
+                Assertions: part_config stores the parent and updated options; maintenance
+                calls complete; partition metadata can be inspected after maintenance.
+
+                Production value: this verifies the pg_partman runbook used by operators
+                to keep future partitions maintained without manual DDL for every window.
+        """
         partman_schema = await _async_pg_partman_schema(async_postgres_backend_single)
-        sql, params = _pg_partman_create_parent_sql(async_postgres_backend_single.dialect, partman_schema)
+        sql, params = _pg_partman_create_parent_sql(
+            async_postgres_backend_single.dialect,
+            partman_schema,
+        )
         options = ExecutionOptions(stmt_type=StatementType.DQL)
         await async_postgres_backend_single.execute(sql, params, options=options)
 
-        config_table_sql = _pg_partman_config_table_sql(async_postgres_backend_single.dialect, partman_schema)
+        await async_postgres_backend_single.execute(
+            *_pg_partman_update_config_sql(
+                async_postgres_backend_single.dialect,
+                partman_schema,
+            )
+        )
+
+        config_table_sql = _pg_partman_config_table_sql(
+            async_postgres_backend_single.dialect,
+            partman_schema,
+        )
         row = await async_postgres_backend_single.fetch_one(
             f"""
-            SELECT parent_table
+            SELECT parent_table, automatic_maintenance, infinite_time_partitions
             FROM {config_table_sql}
             WHERE parent_table = %s
             """,
             (_qualified(async_pg_partman_table),),
         )
         assert row is not None
+        assert row["automatic_maintenance"] == "on"
+        assert row["infinite_time_partitions"] is True
 
-        sql, params = _pg_partman_run_maintenance_sql(async_postgres_backend_single.dialect, partman_schema)
+        sql, params = _pg_partman_run_maintenance_sql(
+            async_postgres_backend_single.dialect,
+            partman_schema,
+        )
         await async_postgres_backend_single.execute(sql, params, options=options)
+        sql, params = _pg_partman_global_run_maintenance_sql(
+            async_postgres_backend_single.dialect,
+            partman_schema,
+        )
+        await async_postgres_backend_single.execute(sql, params, options=options)
+
+        metadata_sql, metadata_params = _partition_metadata_sql(
+            async_postgres_backend_single.dialect,
+            async_pg_partman_table,
+        )
+        metadata = await async_postgres_backend_single.fetch_all(metadata_sql, metadata_params)
+        assert isinstance(metadata, list)

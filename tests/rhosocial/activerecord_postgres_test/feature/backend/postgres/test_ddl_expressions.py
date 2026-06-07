@@ -25,6 +25,10 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
     PostgresPartitionMetadataExpression,
+    PostgresPgPartmanCreateParentExpression,
+    PostgresPgPartmanDeleteConfigExpression,
+    PostgresPgPartmanRunMaintenanceExpression,
+    PostgresPgPartmanUpdateConfigExpression,
     PostgresVacuumExpression,  # noqa: F401
     PostgresAnalyzeExpression,  # noqa: F401
 )
@@ -411,6 +415,22 @@ class TestPostgresCreatePartitionExpression:
         assert "IN" in sql
         assert params == ()
 
+    @pytest.mark.parametrize("partition_type", ["RANGE", "LIST"])
+    def test_create_default_partition(self, dialect, partition_type):
+        """Test CREATE TABLE ... PARTITION OF for DEFAULT catch-all partitions."""
+        expr = PostgresCreatePartitionExpression(
+            dialect=dialect,
+            partition_name="orders_default",
+            parent_table="orders",
+            partition_type=partition_type,
+            partition_values={"default": True},
+        )
+        sql, params = expr.to_sql()
+        assert "PARTITION OF" in sql
+        assert sql.endswith(" DEFAULT")
+        assert "FOR VALUES" not in sql
+        assert params == ()
+
     def test_create_hash_partition_pg10(self):
         """Test HASH partitioning requires PG 11+."""
         dialect_pg10 = PostgresDialect(version=(10, 0, 0))
@@ -657,3 +677,88 @@ class TestPostgresPartitionMetadataExpression:
         )
         with pytest.raises(Exception, match="partition metadata introspection"):
             expr.to_sql()
+
+
+class TestPostgresPgPartmanExpressions:
+    """Test pg_partman maintenance expression SQL generation."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create_parent_expression(self, dialect):
+        """pg_partman create_parent uses named arguments and bound parameters."""
+        expr = PostgresPgPartmanCreateParentExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            control="created_at",
+            interval="1 month",
+            partition_type="range",
+            premake=2,
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert '"partman"."create_parent"' in sql
+        assert "p_parent_table" in sql
+        assert params == ("public.events", "created_at", "1 month", "range", 2)
+
+    def test_update_config_expression(self, dialect):
+        """pg_partman update_config updates only requested options."""
+        expr = PostgresPgPartmanUpdateConfigExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            automatic_maintenance="on",
+            infinite_time_partitions=True,
+            retention="3 months",
+            retention_keep_table=False,
+            retention_keep_index=True,
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert 'UPDATE "partman"."part_config"' in sql
+        assert "automatic_maintenance" in sql
+        assert "infinite_time_partitions" in sql
+        assert "retention_keep_index" in sql
+        assert params == ("on", True, "3 months", False, True, "public.events")
+
+    def test_update_config_requires_at_least_one_option(self, dialect):
+        """pg_partman update_config rejects empty updates."""
+        expr = PostgresPgPartmanUpdateConfigExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            schema="partman",
+        )
+        with pytest.raises(ValueError, match="At least one pg_partman config option"):
+            expr.to_sql()
+
+    def test_delete_config_expression(self, dialect):
+        """pg_partman delete_config targets one parent table."""
+        expr = PostgresPgPartmanDeleteConfigExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert sql == 'DELETE FROM "partman"."part_config" WHERE parent_table = %s'
+        assert params == ("public.events",)
+
+    def test_run_maintenance_scoped_expression(self, dialect):
+        """pg_partman scoped maintenance targets one parent table."""
+        expr = PostgresPgPartmanRunMaintenanceExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert sql == 'SELECT "partman"."run_maintenance"(%s::text)'
+        assert params == ("public.events",)
+
+    def test_run_maintenance_global_expression(self, dialect):
+        """pg_partman global maintenance omits the parent table argument."""
+        expr = PostgresPgPartmanRunMaintenanceExpression(
+            dialect=dialect,
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert sql == 'SELECT "partman"."run_maintenance"()'
+        assert params == ()

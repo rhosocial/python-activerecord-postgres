@@ -247,13 +247,11 @@ class PostgresPartitionMixin:
         else:
             parts.append(f"PARTITION OF {self.format_identifier(expr.parent_table)}")
 
-        # FOR VALUES clause
-        parts.append("FOR VALUES")
-
         if partition_type == "RANGE":
             if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
+                parts.append("FOR VALUES")
                 from_val = expr.partition_values.get("from")
                 to_val = expr.partition_values.get("to")
                 if from_val is None or to_val is None:
@@ -267,6 +265,7 @@ class PostgresPartitionMixin:
             if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
+                parts.append("FOR VALUES")
                 values = expr.partition_values.get("values", [])
                 if not values:
                     raise ValueError("LIST partition requires 'values' list")
@@ -278,6 +277,7 @@ class PostgresPartitionMixin:
                 parts.append(f"IN ({vals_str})")
 
         elif partition_type == "HASH":
+            parts.append("FOR VALUES")
             modulus = expr.partition_values.get("modulus")
             remainder = expr.partition_values.get("remainder")
             if modulus is None or remainder is None:
