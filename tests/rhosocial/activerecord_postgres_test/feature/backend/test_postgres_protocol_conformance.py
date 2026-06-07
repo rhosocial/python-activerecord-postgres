@@ -286,6 +286,7 @@ class TestPostgresExpressionDialectSeparation:
         ("PostgresCreatePartitionExpression", "format_create_partition_statement"),
         ("PostgresDetachPartitionExpression", "format_detach_partition_statement"),
         ("PostgresAttachPartitionExpression", "format_attach_partition_statement"),
+        ("PostgresPartitionMetadataExpression", "format_partition_metadata_query"),
         ("PostgresCreateStatisticsExpression", "format_create_statistics_statement"),
         ("PostgresDropStatisticsExpression", "format_drop_statistics_statement"),
         ("PostgresAlterIndexExpression", "format_alter_index_statement"),

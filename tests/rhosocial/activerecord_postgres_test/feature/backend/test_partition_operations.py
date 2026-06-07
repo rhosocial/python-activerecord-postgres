@@ -8,12 +8,11 @@ asynchronous test method names identical across test classes.
 import pytest
 import pytest_asyncio
 
-from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+from rhosocial.activerecord.backend.expression import Column, QualifiedIdentifierExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
     DropTableExpression,
-    PartitionKey,
     PartitionClause,
     PartitionStrategy,
     TruncateExpression,
@@ -22,6 +21,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
+    PostgresPartitionMetadataExpression,
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanDeleteConfigExpression,
     PostgresPgPartmanRunMaintenanceExpression,
@@ -61,8 +61,8 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
         ],
         partition=PartitionClause(
             dialect=dialect,
-            strategy=PartitionStrategy.RANGE,
-            key=PartitionKey(columns=["created_at"]),
+            method=PartitionStrategy.RANGE,
+            keys=[Column(dialect, "created_at")],
         ),
     )
     return expr.to_sql()
@@ -113,6 +113,14 @@ def _truncate_table_sql(dialect, table_name: str):
     expr = TruncateExpression(
         dialect=dialect,
         table_name=table_name,
+    )
+    return expr.to_sql()
+
+
+def _partition_metadata_sql(dialect, table_name: str):
+    expr = PostgresPartitionMetadataExpression(
+        dialect=dialect,
+        parent_table=table_name,
     )
     return expr.to_sql()
 
@@ -318,15 +326,13 @@ class TestPostgreSQLPartitionOperations:
             "ar_partition_events_p2026_02",
         ]
 
-        metadata = postgres_backend.fetch_one(
-            """
-            SELECT pg_get_partkeydef(c.oid) AS partition_key
-            FROM pg_class c
-            WHERE c.relname = %s
-            """,
-            (partitioned_event_table,),
-        )
-        assert metadata["partition_key"] == "RANGE (created_at)"
+        sql, params = _partition_metadata_sql(postgres_backend.dialect, partitioned_event_table)
+        metadata = postgres_backend.fetch_all(sql, params)
+        assert metadata[0]["partition_key"] == "RANGE (created_at)"
+        assert {row["name"] for row in metadata} == {
+            "ar_partition_events_p2026_01",
+            "ar_partition_events_p2026_02",
+        }
 
     def test_add_partition_for_future_range(self, postgres_backend, partitioned_event_table):
         """A future range partition can be added for normal operations."""
@@ -440,15 +446,16 @@ class TestAsyncPostgreSQLPartitionOperations:
             "ar_partition_events_p2026_02",
         ]
 
-        metadata = await async_postgres_backend.fetch_one(
-            """
-            SELECT pg_get_partkeydef(c.oid) AS partition_key
-            FROM pg_class c
-            WHERE c.relname = %s
-            """,
-            (async_partitioned_event_table,),
+        sql, params = _partition_metadata_sql(
+            async_postgres_backend.dialect,
+            async_partitioned_event_table,
         )
-        assert metadata["partition_key"] == "RANGE (created_at)"
+        metadata = await async_postgres_backend.fetch_all(sql, params)
+        assert metadata[0]["partition_key"] == "RANGE (created_at)"
+        assert {row["name"] for row in metadata} == {
+            "ar_partition_events_p2026_01",
+            "ar_partition_events_p2026_02",
+        }
 
     @pytest.mark.asyncio
     async def test_add_partition_for_future_range(

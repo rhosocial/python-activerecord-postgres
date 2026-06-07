@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
+        PostgresPartitionMetadataExpression,
     )
 
 
@@ -141,6 +142,17 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
 
         Args:
             expr: PostgresAttachPartitionExpression with attach details
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...
+
+    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+        """Format partition metadata introspection query from expression.
+
+        Args:
+            expr: PostgresPartitionMetadataExpression with parent table details.
 
         Returns:
             Tuple of (SQL string, parameters tuple)

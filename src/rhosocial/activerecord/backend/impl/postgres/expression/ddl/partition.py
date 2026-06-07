@@ -14,6 +14,9 @@ Version Requirements:
 - ATTACH PARTITION with CONCURRENTLY: PostgreSQL 14+
 """
 
+from datetime import date, datetime
+from decimal import Decimal
+from math import isfinite
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
@@ -27,6 +30,7 @@ __all__ = [
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
+    "PostgresPartitionMetadataExpression",
 ]
 
 
@@ -38,9 +42,9 @@ class PartitionValue(BaseExpression):
 
     Value handling:
     - None → NULL
-    - String 'MAXVALUE' or 'MINVALUE' (case-insensitive) → as-is
-    - String values → quoted with internal single-quote escaping
-    - Other types → str() representation
+    - String 'MAXVALUE', 'MINVALUE', or 'DEFAULT' (case-insensitive) → as-is
+    - String/date/datetime/Decimal/numeric values → whitelist-formatted SQL literal
+    - Arbitrary objects are rejected to prevent unsafe ``str(value)`` fallback
 
     Delegates to dialect.format_partition_value() for SQL generation.
 
@@ -66,6 +70,17 @@ class PartitionValue(BaseExpression):
         value: Any,
     ):
         super().__init__(dialect)
+        if isinstance(value, bool):
+            raise TypeError("partition value must not be bool")
+        if isinstance(value, float) and not isfinite(value):
+            raise ValueError("partition value float must be finite")
+        if isinstance(value, Decimal) and not value.is_finite():
+            raise ValueError("partition value Decimal must be finite")
+        if not isinstance(value, (str, int, float, Decimal, date, datetime, type(None))):
+            raise TypeError(
+                "partition value must be str, int, float, Decimal, "
+                f"date, datetime, or None, got {type(value).__name__}"
+            )
         self.value = value
 
     def to_sql(self) -> Tuple[str, tuple]:
@@ -266,3 +281,34 @@ class PostgresAttachPartitionExpression(BaseExpression):
 
         """
         return self.dialect.format_attach_partition_statement(self)
+
+
+class PostgresPartitionMetadataExpression(BaseExpression):
+    """PostgreSQL partition metadata query expression.
+
+    This expression builds the public metadata query used by tests and provider
+    code to inspect a partitioned parent table through PostgreSQL catalogs. It
+    keeps catalog SQL construction behind the Expression-Dialect protocol
+    boundary instead of embedding raw SQL in tests.
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        parent_table: str,
+        schema: Optional[str] = None,
+        *,
+        include_partitions: bool = True,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        if not parent_table:
+            raise ValueError("parent_table must not be empty")
+        self.parent_table = parent_table
+        self.schema = schema
+        self.include_partitions = include_partitions
+        self.dialect_options = dialect_options or {}
+
+    def to_sql(self) -> Tuple[str, tuple]:
+        """Generate PostgreSQL partition metadata query SQL."""
+        return self.dialect.format_partition_metadata_query(self)

@@ -56,6 +56,7 @@ from .partition import (
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
+    PostgresPartitionMetadataExpression,
 )
 from .index import (
     PostgresAlterIndexExpression,
@@ -93,6 +94,7 @@ __all__ = [
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
+    "PostgresPartitionMetadataExpression",
     # index
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",

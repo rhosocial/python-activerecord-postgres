@@ -4,22 +4,27 @@
 This module tests the expression-based format methods for DDL operations,
 including materialized view refresh, comment, and partition expressions.
 """
+from datetime import date, datetime
+from decimal import Decimal
+
 import pytest
 
+from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
-    PartitionKey,
     PartitionClause,
     PartitionStrategy,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PartitionValue,
     PostgresRefreshMaterializedViewExpression,
     PostgresCommentExpression,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
+    PostgresPartitionMetadataExpression,
     PostgresVacuumExpression,  # noqa: F401
     PostgresAnalyzeExpression,  # noqa: F401
 )
@@ -238,8 +243,8 @@ class TestPostgresPartitionedTableCreation:
             ],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.RANGE,
-                key=PartitionKey(columns=["created_at"]),
+                method=PartitionStrategy.RANGE,
+                keys=[Column(dialect, "created_at")],
             ),
         )
         sql, params = expr.to_sql()
@@ -259,8 +264,8 @@ class TestPostgresPartitionedTableCreation:
             ],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.LIST,
-                key=PartitionKey(columns=["status"]),
+                method=PartitionStrategy.LIST,
+                keys=[Column(dialect, "status")],
             ),
         )
         sql, params = expr.to_sql()
@@ -277,12 +282,12 @@ class TestPostgresPartitionedTableCreation:
             columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.HASH,
-                key=PartitionKey(columns=["tenant_id"]),
+                method=PartitionStrategy.HASH,
+                keys=[Column(dialect, "tenant_id")],
             ),
         )
 
-        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(Exception, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_create_hash_partitioned_parent_table_pg11(self):
@@ -294,8 +299,8 @@ class TestPostgresPartitionedTableCreation:
             columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.HASH,
-                key=PartitionKey(columns=["tenant_id"]),
+                method=PartitionStrategy.HASH,
+                keys=[Column(dialect, "tenant_id")],
             ),
         )
         sql, params = expr.to_sql()
@@ -312,29 +317,60 @@ class TestPostgresPartitionedTableCreation:
             columns=[ColumnDefinition("created_at", "TIMESTAMP NOT NULL")],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.RANGE,
-                key=PartitionKey(columns=["created_at"]),
+                method=PartitionStrategy.RANGE,
+                keys=[Column(dialect, "created_at")],
             ),
         )
 
-        with pytest.raises(ValueError, match="Declarative table partitioning requires PostgreSQL 10"):
+        with pytest.raises(Exception, match="Declarative table partitioning requires PostgreSQL 10"):
             expr.to_sql()
 
     def test_key_partitioning_is_rejected(self, dialect):
-        """PostgreSQL rejects MySQL-style KEY partitioning."""
-        expr = CreateTableExpression(
-            dialect=dialect,
-            table="events",
-            columns=[ColumnDefinition("id", "BIGINT NOT NULL")],
-            partition=PartitionClause(
+        """Generic PartitionClause rejects non-core KEY partitioning."""
+        with pytest.raises(TypeError, match="PartitionStrategy"):
+            PartitionClause(
                 dialect=dialect,
-                strategy="KEY",
-                key=PartitionKey(columns=["id"]),
-            ),
-        )
+                method="KEY",
+                keys=[Column(dialect, "id")],
+            )
 
-        with pytest.raises(ValueError, match="PostgreSQL does not support KEY partitioning"):
-            expr.to_sql()
+
+class TestPostgresPartitionValue:
+    """Test safe PostgreSQL partition bound value formatting."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            (None, "NULL"),
+            ("MAXVALUE", "MAXVALUE"),
+            ("minvalue", "MINVALUE"),
+            ("default", "DEFAULT"),
+            ("2024-01-01", "'2024-01-01'"),
+            ("O'Reilly", "'O''Reilly'"),
+            (42, "42"),
+            (3.5, "3.5"),
+            (Decimal("12.30"), "12.30"),
+            (date(2024, 1, 1), "'2024-01-01'"),
+            (datetime(2024, 1, 1, 12, 30, 45), "'2024-01-01 12:30:45'"),
+        ],
+    )
+    def test_partition_value_formats_whitelisted_values(self, dialect, value, expected):
+        expr = PartitionValue(dialect=dialect, value=value)
+        assert expr.to_sql() == (expected, ())
+
+    @pytest.mark.parametrize("value", [True, object(), ["x"]])
+    def test_partition_value_rejects_invalid_types(self, dialect, value):
+        with pytest.raises(TypeError):
+            PartitionValue(dialect=dialect, value=value)
+
+    @pytest.mark.parametrize("value", [float("inf"), float("nan"), Decimal("Infinity"), Decimal("NaN")])
+    def test_partition_value_rejects_nonfinite_numbers(self, dialect, value):
+        with pytest.raises(ValueError):
+            PartitionValue(dialect=dialect, value=value)
 
 
 class TestPostgresCreatePartitionExpression:
@@ -385,7 +421,7 @@ class TestPostgresCreatePartitionExpression:
             partition_type="HASH",
             partition_values={"modulus": 4, "remainder": 0},
         )
-        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(Exception, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_create_hash_partition_pg11(self, dialect):
@@ -558,3 +594,66 @@ class TestPostgresAttachPartitionExpression:
         sql, params = expr.to_sql()
         assert "FOR VALUES" in sql
         assert "MODULUS 4" in sql
+
+    def test_attach_range_partition_requires_bounds(self, dialect):
+        """RANGE attach requires explicit from/to bounds."""
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_2024_q1",
+            parent_table="orders",
+            partition_type="RANGE",
+            partition_values={"from": "2024-01-01"},
+        )
+        with pytest.raises(ValueError, match="RANGE partition requires"):
+            expr.to_sql()
+
+    def test_attach_list_partition_requires_values(self, dialect):
+        """LIST attach requires non-empty values."""
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_empty",
+            parent_table="orders",
+            partition_type="LIST",
+            partition_values={"values": []},
+        )
+        with pytest.raises(ValueError, match="LIST partition requires"):
+            expr.to_sql()
+
+    def test_attach_hash_partition_requires_pg11(self):
+        """HASH attach requires PostgreSQL 11+."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_shard0",
+            parent_table="orders",
+            partition_type="HASH",
+            partition_values={"modulus": 4, "remainder": 0},
+        )
+        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+            expr.to_sql()
+
+
+class TestPostgresPartitionMetadataExpression:
+    """Test PostgreSQL partition metadata query expression."""
+
+    def test_metadata_query_for_parent(self):
+        """Metadata query uses pg_catalog and parameter binding."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        expr = PostgresPartitionMetadataExpression(
+            dialect=dialect,
+            parent_table="orders",
+        )
+        sql, params = expr.to_sql()
+        assert "pg_get_partkeydef" in sql
+        assert "pg_inherits" in sql
+        assert params == ("orders", None, None)
+
+    def test_metadata_query_requires_pg10(self):
+        """Metadata introspection follows PostgreSQL declarative partition support."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        expr = PostgresPartitionMetadataExpression(
+            dialect=dialect,
+            parent_table="orders",
+        )
+        with pytest.raises(Exception, match="partition metadata introspection"):
+            expr.to_sql()

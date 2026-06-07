@@ -6,18 +6,21 @@ from decimal import Decimal
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 
 from rhosocial.activerecord.base.field_proxy import FieldProxy
+from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
-    PartitionKey,
+    DropTableExpression,
     PartitionClause,
     PartitionStrategy,
+    TruncateExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
+    PostgresPartitionMetadataExpression,
 )
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.testsuite.feature.partition.interfaces import IPartitionProvider
@@ -83,11 +86,13 @@ class PartitionProvider(IPartitionProvider):
 
     def truncate_partition(self, scenario_name: str, partition_key: str) -> None:
         backend = self._ensure_backend(scenario_name)
-        backend.execute(f'TRUNCATE TABLE "{self._partition_name(partition_key)}"')
+        sql, params = self._truncate_partition_sql(backend.dialect, self._partition_name(partition_key))
+        backend.execute(sql, params)
 
     async def async_truncate_partition(self, scenario_name: str, partition_key: str) -> None:
         backend = await self._ensure_async_backend(scenario_name)
-        await backend.execute(f'TRUNCATE TABLE "{self._partition_name(partition_key)}"')
+        sql, params = self._truncate_partition_sql(backend.dialect, self._partition_name(partition_key))
+        await backend.execute(sql, params)
 
     def detach_partition(self, scenario_name: str, partition_key: str) -> None:
         backend = self._ensure_backend(scenario_name)
@@ -186,17 +191,19 @@ class PartitionProvider(IPartitionProvider):
         return backend
 
     def _capabilities(self, backend) -> Dict[str, bool]:
-        supports_creation = backend.dialect.supports_partitioned_table_creation()
+        dialect = backend.dialect
+        supports_creation = dialect.supports_partitioned_table_creation()
+        supports_pg11 = dialect.version >= (11, 0, 0)
         return {
-            "range_partitioning": supports_creation and backend.dialect.supports_range_table_partitioning(),
-            "add_partition": supports_creation,
-            "truncate_partition": supports_creation,
-            "detach_partition": supports_creation,
-            "attach_partition": supports_creation,
-            "partition_introspection": supports_creation,
-            "partition_bounds": supports_creation,
-            "partitioned_unique_constraint": supports_creation and backend.dialect.version >= (11, 0, 0),
-            "unique_requires_partition_key": supports_creation and backend.dialect.version >= (11, 0, 0),
+            "range_partitioning": supports_creation and dialect.supports_range_table_partitioning(),
+            "add_partition": dialect.supports_add_partition(),
+            "truncate_partition": dialect.supports_truncate_partition(),
+            "detach_partition": dialect.supports_detach_partition(),
+            "attach_partition": dialect.supports_attach_partition(),
+            "partition_introspection": dialect.supports_partition_metadata_introspection(),
+            "partition_bounds": dialect.supports_partition_bounds_expression(),
+            "partitioned_unique_constraint": supports_creation and supports_pg11,
+            "unique_requires_partition_key": supports_creation and supports_pg11,
         }
 
     def _reset_partition_table(self, backend) -> None:
@@ -219,11 +226,13 @@ class PartitionProvider(IPartitionProvider):
 
     def _drop_partition_tables(self, backend) -> None:
         for table_name in self._all_table_names():
-            backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+            sql, params = self._drop_partition_sql(backend.dialect, table_name)
+            backend.execute(sql, params)
 
     async def _drop_partition_tables_async(self, backend) -> None:
         for table_name in self._all_table_names():
-            await backend.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+            sql, params = self._drop_partition_sql(backend.dialect, table_name)
+            await backend.execute(sql, params)
 
     def _all_table_names(self) -> Tuple[str, ...]:
         return tuple(partition[0] for partition in self.PARTITIONS.values()) + (self.TABLE_NAME,)
@@ -244,8 +253,8 @@ class PartitionProvider(IPartitionProvider):
             ],
             partition=PartitionClause(
                 dialect=dialect,
-                strategy=PartitionStrategy.RANGE,
-                key=PartitionKey(columns=["created_at"]),
+                method=PartitionStrategy.RANGE,
+                keys=[Column(dialect, "created_at")],
             ),
         )
         return expr.to_sql()
@@ -275,6 +284,26 @@ class PartitionProvider(IPartitionProvider):
             parent_table=self.TABLE_NAME,
             partition_type="RANGE",
             partition_values={"from": from_value, "to": to_value},
+        )
+        return expr.to_sql()
+
+    def _truncate_partition_sql(self, dialect, partition_name: str):
+        expr = TruncateExpression(dialect=dialect, table_name=partition_name)
+        return expr.to_sql()
+
+    def _drop_partition_sql(self, dialect, table_name: str):
+        expr = DropTableExpression(
+            dialect=dialect,
+            table=table_name,
+            if_exists=True,
+            cascade=True,
+        )
+        return expr.to_sql()
+
+    def _partition_metadata_sql(self, dialect):
+        expr = PostgresPartitionMetadataExpression(
+            dialect=dialect,
+            parent_table=self.TABLE_NAME,
         )
         return expr.to_sql()
 
@@ -313,48 +342,25 @@ class PartitionProvider(IPartitionProvider):
         return AsyncPartitionEvent
 
     def _metadata(self, backend) -> Dict[str, Any]:
-        parent = backend.fetch_one(
-            """
-            SELECT pg_get_partkeydef(c.oid) AS partition_key
-            FROM pg_class c
-            WHERE c.relname = %s
-            """,
-            (self.TABLE_NAME,),
-        )
-        partitions = backend.fetch_all(self._metadata_partitions_sql(), (self.TABLE_NAME,))
-        return self._metadata_dict(parent, partitions)
+        sql, params = self._partition_metadata_sql(backend.dialect)
+        rows = backend.fetch_all(sql, params)
+        return self._metadata_dict(rows)
 
     async def _metadata_async(self, backend) -> Dict[str, Any]:
-        parent = await backend.fetch_one(
-            """
-            SELECT pg_get_partkeydef(c.oid) AS partition_key
-            FROM pg_class c
-            WHERE c.relname = %s
-            """,
-            (self.TABLE_NAME,),
-        )
-        partitions = await backend.fetch_all(self._metadata_partitions_sql(), (self.TABLE_NAME,))
-        return self._metadata_dict(parent, partitions)
+        sql, params = self._partition_metadata_sql(backend.dialect)
+        rows = await backend.fetch_all(sql, params)
+        return self._metadata_dict(rows)
 
-    def _metadata_partitions_sql(self) -> str:
-        return """
-            SELECT child.relname AS name,
-                   pg_get_expr(child.relpartbound, child.oid) AS bound
-            FROM pg_inherits i
-            JOIN pg_class parent ON parent.oid = i.inhparent
-            JOIN pg_class child ON child.oid = i.inhrelid
-            WHERE parent.relname = %s
-            ORDER BY child.relname
-        """
-
-    def _metadata_dict(self, parent, partitions) -> Dict[str, Any]:
-        partition_key = parent["partition_key"] if parent else ""
+    def _metadata_dict(self, rows) -> Dict[str, Any]:
+        first = rows[0] if rows else None
+        partition_key = first["partition_key"] if first else ""
         return {
             "is_partitioned": bool(partition_key),
             "strategy": "range" if partition_key.upper().startswith("RANGE") else "unknown",
             "key_columns": ["created_at"] if "created_at" in partition_key.lower() else [],
             "partitions": [
                 {"name": row["name"], "bound": row["bound"]}
-                for row in partitions
+                for row in rows
+                if row["name"] is not None
             ],
         }
