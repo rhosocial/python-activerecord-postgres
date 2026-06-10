@@ -540,7 +540,8 @@ class TestPostgresDetachPartitionExpression:
             concurrently=True,
         )
         sql, params = expr.to_sql()
-        assert "DETACH CONCURRENTLY" in sql
+        assert "DETACH PARTITION" in sql
+        assert "CONCURRENTLY" in sql
 
     def test_detach_finalize_requires_concurrently(self, dialect):
         """Test FINALIZE requires CONCURRENTLY."""

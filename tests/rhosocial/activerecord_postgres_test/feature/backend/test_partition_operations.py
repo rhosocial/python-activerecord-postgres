@@ -1598,7 +1598,8 @@ class TestPostgreSQLPgPartmanOperations:
             pg_partman_table,
         )
         metadata = postgres_backend_single.fetch_all(metadata_sql, metadata_params)
-        assert isinstance(metadata, list)
+        assert metadata
+        assert all(row["bound"] for row in metadata)
 
 
 class TestAsyncPostgreSQLPgPartmanOperations:
@@ -1671,4 +1672,5 @@ class TestAsyncPostgreSQLPgPartmanOperations:
             async_pg_partman_table,
         )
         metadata = await async_postgres_backend_single.fetch_all(metadata_sql, metadata_params)
-        assert isinstance(metadata, list)
+        assert metadata
+        assert all(row["bound"] for row in metadata)

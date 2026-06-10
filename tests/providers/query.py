@@ -294,7 +294,8 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
     async def setup_async_blog_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for async blog-related models (AsyncUser, AsyncPost, AsyncComment) tests."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_blog_models import AsyncUser, AsyncPost, AsyncComment  # noqa: E501
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_blog_models import AsyncPost, AsyncComment
         return await self._setup_multiple_models_async([
             (AsyncUser, "users"),
             (AsyncPost, "posts"),

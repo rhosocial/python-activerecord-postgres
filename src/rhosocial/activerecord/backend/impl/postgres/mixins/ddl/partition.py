@@ -315,17 +315,17 @@ class PostgresPartitionMixin:
         else:
             parts.append(self.format_identifier(expr.parent_table))
 
-        if expr.concurrently:
-            if not self.supports_concurrent_detach():
-                raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
-            parts.append("DETACH CONCURRENTLY")
-        else:
-            parts.append("DETACH PARTITION")
+        if expr.concurrently and not self.supports_concurrent_detach():
+            raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
+        parts.append("DETACH PARTITION")
 
         if expr.schema:
             parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
         else:
             parts.append(self.format_identifier(expr.partition_name))
+
+        if expr.concurrently:
+            parts.append("CONCURRENTLY")
 
         if expr.finalize:
             if not expr.concurrently:
