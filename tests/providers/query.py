@@ -281,6 +281,14 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
             (MappedComment, "comments")
         ], scenario_name)
 
+    def setup_profile_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
+        """Sets up the database for User and Profile models."""
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.models import Profile
+        return self._setup_multiple_models([
+            (User, "users"),
+            (Profile, "profiles"),
+        ], scenario_name)
+
     # --- Async implementations ---
 
     async def setup_async_order_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
@@ -364,6 +372,14 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
             (AsyncMappedUser, "users"),
             (AsyncMappedPost, "posts"),
             (AsyncMappedComment, "comments")
+        ], scenario_name)
+
+    async def setup_async_profile_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
+        """Sets up the database for AsyncUser and AsyncProfile models."""
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import AsyncUser, AsyncProfile
+        return await self._setup_multiple_models_async([
+            (AsyncUser, "users"),
+            (AsyncProfile, "profiles"),
         ], scenario_name)
 
     async def cleanup_after_test_async(self, scenario_name: str):
