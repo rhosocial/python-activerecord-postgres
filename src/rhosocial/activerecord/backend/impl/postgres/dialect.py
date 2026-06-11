@@ -44,6 +44,15 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ILIKEMixin,
     ConstraintMixin,
     PartitionMixin,
+    # New Mixins
+    IdentifierMixin,
+    PredicateMixin,
+    ExpressionMixin,
+    DateTimeMixin,
+    DQLMixin,
+    DMLMixin,
+    DDLColumnMixin,
+    TransactionControlMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     SQLXMLSupport,
@@ -266,15 +275,15 @@ class PostgresDialect(
     PostgresIndexMixin,
     IndexMixin,
     SequenceMixin,
+    # PostgreSQL-specific mixins
+    PostgresExtensionMixin,
+    PostgresMaterializedViewMixin,
+    PostgresTableMixin,  # Before TableMixin to override supports_table_like_syntax
     TableMixin,
     ConstraintMixin,
     PostgresPartitionMixin,
     PartitionMixin,
     PostgresIntrospectionCapabilityMixin,
-    # PostgreSQL-specific mixins
-    PostgresExtensionMixin,
-    PostgresMaterializedViewMixin,
-    PostgresTableMixin,
     PostgresPgvectorMixin,
     PostgresPostGISMixin,
     PostgresPostgisRasterMixin,
@@ -328,6 +337,15 @@ class PostgresDialect(
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
+    # New Mixins
+    IdentifierMixin,
+    PredicateMixin,
+    ExpressionMixin,
+    DateTimeMixin,
+    DQLMixin,
+    DMLMixin,
+    DDLColumnMixin,
+    TransactionControlMixin,
     # Protocol supports
     SQLXMLSupport,
     SQLXMLParsingSupport,

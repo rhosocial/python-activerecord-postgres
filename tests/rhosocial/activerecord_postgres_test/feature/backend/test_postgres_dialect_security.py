@@ -69,7 +69,7 @@ def test_postgres_format_default_constraint_string_escaping(dialect):
         default_value="test's value",
     )
 
-    sql, params = dialect._format_default_constraint(constraint)
+    sql, params = dialect.format_default_constraint(constraint)
     assert "test''s value" in sql
     assert "'; DROP" not in sql
 
@@ -77,7 +77,7 @@ def test_postgres_format_default_constraint_string_escaping(dialect):
 def test_postgres_format_storage_options_string_escaping(dialect):
     """Test storage options string values are escaped."""
     storage_opts = {"key": "value's"}
-    sql, params = dialect._format_storage_options(storage_opts)
+    sql, params = dialect.format_storage_options(storage_opts)
     assert "value''s" in sql
     assert "'; DROP" not in sql
 

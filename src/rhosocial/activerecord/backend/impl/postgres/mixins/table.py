@@ -21,3 +21,15 @@ class PostgresTableMixin:
     def supports_table_tablespace(self) -> bool:
         """TABLESPACE specification is supported in all versions."""
         return True
+
+    def supports_table_like_syntax(self) -> bool:
+        """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
+        return True
+
+    def format_create_table_like(self, expr) -> tuple:
+        """Format CREATE TABLE (LIKE ...) statement for PostgreSQL.
+
+        Delegates to format_create_table_statement which already handles
+        the 'like_table' key in dialect_options.
+        """
+        return self.format_create_table_statement(expr)
