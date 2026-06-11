@@ -47,4 +47,7 @@ class PostgresTableSupport(TableSupport, Protocol):
 
     def format_create_table_like(self, expr) -> tuple:
         """Format CREATE TABLE (LIKE ...) statement."""
+
+    def format_column_definition(self, col_def) -> tuple:
+        """Format a column definition for PostgreSQL, allowing array types."""
         ...
