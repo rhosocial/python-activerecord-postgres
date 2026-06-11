@@ -1,4 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/table.py
+import re
+from typing import Any, List, Tuple
+
 class PostgresTableMixin:
     """PostgreSQL table extended features implementation."""
 
@@ -33,3 +36,22 @@ class PostgresTableMixin:
         the 'like_table' key in dialect_options.
         """
         return self.format_create_table_statement(expr)
+
+    def format_column_definition(self, col_def) -> Tuple[str, tuple]:
+        from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
+        all_params: List[Any] = []
+        data_type = col_def.data_type
+        if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", data_type):
+            raise ValueError(
+                f"Invalid data type '{data_type}': "
+                "must contain only alphanumeric characters, spaces, parentheses, commas, and brackets."
+            )
+        col_sql = f"{self.format_identifier(col_def.name)} {data_type}"
+        for constraint in col_def.constraints:
+            suffix, params = self.format_column_constraint(constraint)
+            col_sql += suffix
+            all_params.extend(params)
+        if col_def.comment:
+            escaped_comment = SQLDialectBase._escape_sql_string(col_def.comment)
+            col_sql += f" COMMENT '{escaped_comment}'"
+        return col_sql, tuple(all_params)
