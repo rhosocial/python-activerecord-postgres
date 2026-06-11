@@ -28,13 +28,14 @@ from rhosocial.activerecord.testsuite.feature.query.fixtures.models import (  # 
     User as UserBase, JsonUser as JsonUserBase,
     Order as OrderBase, OrderItem as OrderItemBase,
     Post as PostBase, Comment as CommentBase,
+    Profile as ProfileBase,
     MappedUser as MappedUserBase, MappedPost as MappedPostBase, MappedComment as MappedCommentBase
 )
 from rhosocial.activerecord.testsuite.feature.query.fixtures.cte_models import Node  # noqa: E402
 from rhosocial.activerecord.testsuite.feature.query.fixtures.extended_models import ExtendedOrder, ExtendedOrderItem  # noqa: E402
 
 # Conditionally import Python 3.10+ models
-User310 = JsonUser310 = Order310 = OrderItem310 = Post310 = Comment310 = None
+User310 = JsonUser310 = Order310 = OrderItem310 = Post310 = Comment310 = Profile310 = None
 MappedUser310 = MappedPost310 = MappedComment310 = None
 
 if sys.version_info >= (3, 10):
@@ -43,13 +44,14 @@ if sys.version_info >= (3, 10):
             User as User310, JsonUser as JsonUser310,
             Order as Order310, OrderItem as OrderItem310,
             Post as Post310, Comment as Comment310,
+            Profile as Profile310,
             MappedUser as MappedUser310, MappedPost as MappedPost310, MappedComment as MappedComment310
         )
     except ImportError as e:
         logger.warning(f"Failed to import Python 3.10+ fixtures: {e}")
 
 # Conditionally import Python 3.11+ models
-User311 = JsonUser311 = Order311 = OrderItem311 = Post311 = Comment311 = None
+User311 = JsonUser311 = Order311 = OrderItem311 = Post311 = Comment311 = Profile311 = None
 MappedUser311 = MappedPost311 = MappedComment311 = None
 
 if sys.version_info >= (3, 11):
@@ -58,13 +60,14 @@ if sys.version_info >= (3, 11):
             User as User311, JsonUser as JsonUser311,
             Order as Order311, OrderItem as OrderItem311,
             Post as Post311, Comment as Comment311,
+            Profile as Profile311,
             MappedUser as MappedUser311, MappedPost as MappedPost311, MappedComment as MappedComment311
         )
     except ImportError as e:
         logger.warning(f"Failed to import Python 3.11+ fixtures: {e}")
 
 # Conditionally import Python 3.12+ models
-User312 = JsonUser312 = Order312 = OrderItem312 = Post312 = Comment312 = None
+User312 = JsonUser312 = Order312 = OrderItem312 = Post312 = Comment312 = Profile312 = None
 MappedUser312 = MappedPost312 = MappedComment312 = None
 
 if sys.version_info >= (3, 12):
@@ -73,6 +76,7 @@ if sys.version_info >= (3, 12):
             User as User312, JsonUser as JsonUser312,
             Order as Order312, OrderItem as OrderItem312,
             Post as Post312, Comment as Comment312,
+            Profile as Profile312,
             MappedUser as MappedUser312, MappedPost as MappedPost312, MappedComment as MappedComment312
         )
     except ImportError as e:
@@ -98,6 +102,7 @@ Comment = _select_model_class(CommentBase, Comment312, Comment311, Comment310, "
 MappedUser = _select_model_class(MappedUserBase, MappedUser312, MappedUser311, MappedUser310, "MappedUser")
 MappedPost = _select_model_class(MappedPostBase, MappedPost312, MappedPost311, MappedPost310, "MappedPost")
 MappedComment = _select_model_class(MappedCommentBase, MappedComment312, MappedComment311, MappedComment310, "MappedComment")  # noqa: E501
+Profile = _select_model_class(ProfileBase, Profile312, Profile311, Profile310, "Profile")
 
 from rhosocial.activerecord.testsuite.feature.query.interfaces import IQueryProvider  # noqa: E402
 from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol  # noqa: E402
@@ -283,7 +288,6 @@ class QueryProvider(IQueryProvider, WorkerTestProtocol):
 
     def setup_profile_fixtures(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for User and Profile models."""
-        from rhosocial.activerecord.testsuite.feature.query.fixtures.models import Profile
         return self._setup_multiple_models([
             (User, "users"),
             (Profile, "profiles"),
