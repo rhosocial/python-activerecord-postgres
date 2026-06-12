@@ -66,6 +66,12 @@ class TestPGQGraphVertexFormat:
         assert sql == '(p IS "person")'
         assert params == ()
 
+    def test_anonymous(self, pg19_dialect: PostgresDialect):
+        v = GraphVertex(pg19_dialect, variable=None, table="person")
+        sql, params = v.to_sql()
+        assert sql == '("person")'
+        assert params == ()
+
     def test_with_where(self, pg19_dialect: PostgresDialect):
         where = WhereClause(pg19_dialect,
                             condition=Column(pg19_dialect, "age") > Literal(pg19_dialect, 18))
@@ -74,6 +80,13 @@ class TestPGQGraphVertexFormat:
         assert "(p IS" in sql
         assert "WHERE" in sql
         assert params == (18,)
+
+    def test_invalid_variable_name(self, pg19_dialect: PostgresDialect):
+        v = GraphVertex(pg19_dialect, "bad var", "person")
+        with pytest.raises(ValueError, match="Invalid variable name"):
+            v.to_sql()
+
+
 
 
 class TestPGQGraphEdgeFormat:
@@ -96,9 +109,23 @@ class TestPGQGraphEdgeFormat:
         e = GraphEdge(pg19_dialect, direction=GraphEdgeDirection.RIGHT)
         assert e.to_sql()[0] == '-[]->'
 
+    def test_none_direction(self, pg19_dialect: PostgresDialect):
+        e = GraphEdge(pg19_dialect, "e", "knows", GraphEdgeDirection.NONE)
+        assert e.to_sql()[0] == '-[e IS "knows"]-'
+
+    def test_table_without_variable(self, pg19_dialect: PostgresDialect):
+        e = GraphEdge(pg19_dialect, table="knows", direction=GraphEdgeDirection.RIGHT)
+        sql = e.to_sql()[0]
+        assert sql == '-[]->'
+
     def test_variable_only(self, pg19_dialect: PostgresDialect):
         e = GraphEdge(pg19_dialect, variable="e", direction=GraphEdgeDirection.RIGHT)
         assert e.to_sql()[0] == '-[e]->'
+
+    def test_invalid_variable_name(self, pg19_dialect: PostgresDialect):
+        e = GraphEdge(pg19_dialect, variable="bad var", table="knows", direction=GraphEdgeDirection.RIGHT)
+        with pytest.raises(ValueError, match="Invalid variable name"):
+            e.to_sql()
 
 
 class TestPGQMatchClauseFormat:
@@ -121,6 +148,19 @@ class TestPGQMatchClauseFormat:
         assert "(a IS" in sql
         assert "[e IS" in sql
         assert "(b IS" in sql
+
+    def test_empty_path(self, pg19_dialect: PostgresDialect):
+        m = MatchClause(pg19_dialect)
+        sql, params = m.to_sql()
+        assert sql == "MATCH "
+        assert params == ()
+
+    def test_anonymous_vertex(self, pg19_dialect: PostgresDialect):
+        v = GraphVertex(pg19_dialect, variable=None, table="person")
+        m = MatchClause(pg19_dialect, v)
+        sql, params = m.to_sql()
+        assert sql == 'MATCH ("person")'
+        assert params == ()
 
 
 class TestPGQGraphTableFormat:
@@ -148,6 +188,21 @@ class TestPGQGraphTableFormat:
         assert "WHERE" in sql
         assert params == (18,)
 
+    def test_with_alias(self, pg19_dialect: PostgresDialect):
+        v = GraphVertex(pg19_dialect, "p", "person")
+        cols = ColumnsClause(pg19_dialect, GraphColumn("p", "name"))
+        m = MatchClause(pg19_dialect, v)
+        gt = GraphTableExpression(pg19_dialect, "g", m, cols, alias="t")
+        sql, params = gt.to_sql()
+        assert 'GRAPH_TABLE ("g" MATCH' in sql
+        assert 'AS "t"' in sql
+
+    def test_graph_column_without_alias(self, pg19_dialect: PostgresDialect):
+        cols = ColumnsClause(pg19_dialect, GraphColumn("p", "name"))
+        sql, params = cols.to_sql()
+        assert sql == 'COLUMNS ("p"."name")'
+        assert params == ()
+
 
 class TestPGQDDLFormat:
     """SQL formatting tests for PGQ DDL expressions with PG19 dialect."""
@@ -169,6 +224,51 @@ class TestPGQDDLFormat:
         assert '"knows"' in sql
         assert "SOURCE KEY" in sql
         assert "DESTINATION KEY" in sql
+
+    def test_create_property_graph_if_not_exists(self, pg19_dialect: PostgresDialect):
+        vt = VertexTable(pg19_dialect, "person")
+        expr = CreatePropertyGraphExpression(pg19_dialect, "my_graph", [vt],
+                                              if_not_exists=True)
+        sql, params = expr.to_sql()
+        assert "CREATE PROPERTY GRAPH IF NOT EXISTS" in sql
+
+    def test_create_property_graph_no_edges(self, pg19_dialect: PostgresDialect):
+        vt = VertexTable(pg19_dialect, "person")
+        expr = CreatePropertyGraphExpression(pg19_dialect, "my_graph", [vt])
+        sql, params = expr.to_sql()
+        assert "EDGE TABLES" not in sql
+        assert 'VERTEX TABLES ("person"' in sql
+
+    def test_vertex_table_with_alias(self, pg19_dialect: PostgresDialect):
+        vt = VertexTable(pg19_dialect, "person", alias="p",
+                         labels=["Person"],
+                         key_columns=["id"])
+        sql, params = vt.to_sql()
+        assert '"person" AS "p"' in sql or '"person" AS p' in sql
+        assert "LABEL" in sql
+        assert "KEY" in sql
+
+    def test_edge_table_with_alias(self, pg19_dialect: PostgresDialect):
+        et = EdgeTable(pg19_dialect, "knows", ["pid"], ["fid"],
+                       alias="k",
+                       labels=["Knows"])
+        sql, params = et.to_sql()
+        assert '"knows" AS "k"' in sql or '"knows" AS k' in sql
+        assert "SOURCE KEY" in sql
+        assert "DESTINATION KEY" in sql
+        assert "LABEL" in sql
+
+    def test_properties_all_columns(self, pg19_dialect: PostgresDialect):
+        p = TablePropertiesClause(pg19_dialect, columns=None)
+        sql, params = p.to_sql()
+        assert sql == "PROPERTIES ALL COLUMNS"
+        assert params == ()
+
+    def test_properties_none(self, pg19_dialect: PostgresDialect):
+        p = TablePropertiesClause(pg19_dialect, columns=[])
+        sql, params = p.to_sql()
+        assert sql == "PROPERTIES NONE"
+        assert params == ()
 
     def test_drop_property_graph(self, pg19_dialect: PostgresDialect):
         expr = DropPropertyGraphExpression(pg19_dialect, "test_graph", if_exists=True)
@@ -202,6 +302,15 @@ class TestPGQDDLFormat:
         sql, params = expr.to_sql()
         assert "ALTER PROPERTY GRAPH" in sql
         assert "ADD" in sql
+
+    def test_alter_drop_vertex_tables(self, pg19_dialect: PostgresDialect):
+        vt = VertexTable(pg19_dialect, "old_table")
+        expr = AlterPropertyGraphExpression(pg19_dialect, "g", "DROP", "VERTEX TABLES",
+                                            vertex_tables=[vt])
+        sql, params = expr.to_sql()
+        assert "DROP" in sql
+        assert "VERTEX TABLES" in sql
+        assert '"old_table"' in sql
 
     def test_alter_with_edge_tables(self, pg19_dialect: PostgresDialect):
         et = EdgeTable(pg19_dialect, "knows", ["pid"], ["fid"])
@@ -273,3 +382,18 @@ class TestPGQUnsupportedFormat:
                                             vertex_tables=[vt])
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
+
+    def test_table_properties_clause_unsupported(self, pg15_dialect: PostgresDialect):
+        p = TablePropertiesClause(pg15_dialect, columns=["id"])
+        with pytest.raises(UnsupportedFeatureError):
+            p.to_sql()
+
+    def test_table_properties_all_columns_unsupported(self, pg15_dialect: PostgresDialect):
+        p = TablePropertiesClause(pg15_dialect, columns=None)
+        with pytest.raises(UnsupportedFeatureError):
+            p.to_sql()
+
+    def test_table_properties_none_unsupported(self, pg15_dialect: PostgresDialect):
+        p = TablePropertiesClause(pg15_dialect, columns=[])
+        with pytest.raises(UnsupportedFeatureError):
+            p.to_sql()
