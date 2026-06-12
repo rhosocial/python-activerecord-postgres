@@ -21,10 +21,10 @@ from rhosocial.activerecord.model import ActiveRecord
 logger = logging.getLogger(__name__)
 
 # Import the fixture selector utility
-from rhosocial.activerecord.testsuite.utils import select_fixture
+from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 
 # Import base version models (Python 3.8+)
-from rhosocial.activerecord.testsuite.feature.events.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.events.fixtures.models import (  # noqa: E402
     EventTestModel as EventTestModelBase,
     EventTrackingModel as EventTrackingModelBase
 )
@@ -76,12 +76,12 @@ def _select_model_class(base_cls, py312_cls, py311_cls, py310_cls, model_name: s
 
 
 # Select models
-EventTestModel = _select_model_class(EventTestModelBase, EventTestModel312, EventTestModel311, EventTestModel310, "EventTestModel")
-EventTrackingModel = _select_model_class(EventTrackingModelBase, EventTrackingModel312, EventTrackingModel311, EventTrackingModel310, "EventTrackingModel")
+EventTestModel = _select_model_class(EventTestModelBase, EventTestModel312, EventTestModel311, EventTestModel310, "EventTestModel")  # noqa: E501
+EventTrackingModel = _select_model_class(EventTrackingModelBase, EventTrackingModel312, EventTrackingModel311, EventTrackingModel310, "EventTrackingModel")  # noqa: E501
 
-from rhosocial.activerecord.testsuite.feature.events.interfaces import IEventsProvider
+from rhosocial.activerecord.testsuite.feature.events.interfaces import IEventsProvider  # noqa: E402
 # ...and the scenarios are defined specifically for this backend.
-from .scenarios import get_enabled_scenarios, get_scenario
+from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
 
 class EventsProvider(IEventsProvider):
@@ -140,7 +140,7 @@ class EventsProvider(IEventsProvider):
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""
         # Schemas are stored in the centralized location for events feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "events", "schema")
+        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "events", "schema")  # noqa: E501
         schema_path = os.path.join(schema_dir, filename)
 
         with open(schema_path, 'r', encoding='utf-8') as f:
@@ -164,7 +164,7 @@ class EventsProvider(IEventsProvider):
                 # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     # Ignore errors during disconnect
                     pass
 

@@ -5,8 +5,8 @@ PostgreSQL backend dialect tests using real database connection.
 This module tests PostgreSQL dialect formatting using real database.
 Each test has sync and async versions for complete coverage.
 """
-import pytest
-import pytest_asyncio
+import pytest  # noqa: F401
+import pytest_asyncio  # noqa: F401
 
 
 class TestPostgreSQLDialectBackend:

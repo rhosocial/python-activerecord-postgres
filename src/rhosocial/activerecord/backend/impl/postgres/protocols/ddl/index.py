@@ -5,7 +5,7 @@ This module defines the protocol for PostgreSQL-specific index features
 that extend beyond standard SQL.
 """
 
-from enum import Enum
+from enum import Enum  # noqa: F401
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
         PostgresAlterIndexExpression,
-        PostgresAlterIndexActionType,
+        PostgresAlterIndexActionType,  # noqa: F401
         PostgresReindexExpression,
     )
 

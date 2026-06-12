@@ -6,7 +6,7 @@ Tests for:
 - Format CREATE TRIGGER statement
 - Format DROP TRIGGER statement
 """
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.trigger import PostgresTriggerMixin
@@ -198,7 +198,7 @@ class TestFormatCreateTriggerStatement:
 
     def test_create_trigger_no_level(self):
         """Test CREATE TRIGGER without FOR EACH clause (level=None)."""
-        from rhosocial.activerecord.backend.expression.statements import TriggerLevel
+        from rhosocial.activerecord.backend.expression.statements import TriggerLevel  # noqa: F401
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,

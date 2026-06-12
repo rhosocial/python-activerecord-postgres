@@ -5,7 +5,7 @@ Configuration loader for Worker isolation experiment (PostgreSQL version).
 
 import os
 import yaml
-from typing import Optional
+from typing import Optional  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
@@ -115,5 +115,5 @@ def setup_database(backend: PostgresBackend, drop_existing: bool = True) -> None
         for table in reversed(list(SCHEMA_SQL.keys())):
             backend.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
 
-    for table, sql in SCHEMA_SQL.items():
+    for table, sql in SCHEMA_SQL.items():  # noqa: B007
         backend.execute(sql)

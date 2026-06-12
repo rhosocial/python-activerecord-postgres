@@ -7,23 +7,84 @@ This module tests the protocol-based feature detection methods:
 - PostgresIndexSupport
 - PostgresMaterializedViewSupport
 """
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.partition import PostgresPartitionMixin
 
 
 class TestPostgresPartitionSupportFeatureDetection:
     """Test PostgresPartitionSupport feature detection methods."""
 
-    def test_supports_hash_partitioning_pg10(self):
+    def test_supports_table_partitioning_pg9(self):
+        """Declarative table partitioning requires PG 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_table_partitioning() is False
+
+    def test_supports_table_partitioning_pg10(self):
+        """PostgreSQL 10 supports declarative table partitioning."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_table_partitioning() is True
+
+    def test_supports_hash_table_partitioning_pg10(self):
         """HASH partitioning requires PG 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
-        assert dialect.supports_hash_partitioning() is False
+        assert dialect.supports_hash_table_partitioning() is False
 
-    def test_supports_hash_partitioning_pg11(self):
+    def test_supports_hash_table_partitioning_pg11(self):
         """PostgreSQL 11 supports HASH partitioning."""
         dialect = PostgresDialect(version=(11, 0, 0))
-        assert dialect.supports_hash_partitioning() is True
+        assert dialect.supports_hash_table_partitioning() is True
+
+    def test_supports_partitioned_table_creation_pg9(self):
+        """Declarative partitioned table creation requires PG 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_partitioned_table_creation() is False
+
+    def test_supports_partitioned_table_creation_pg10(self):
+        """PostgreSQL 10 supports partitioned parent table creation."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_partitioned_table_creation() is True
+
+    def test_supports_range_and_list_partitioning_pg10(self):
+        """PostgreSQL 10 supports RANGE and LIST partitioning."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_range_table_partitioning() is True
+        assert dialect.supports_list_table_partitioning() is True
+
+    def test_subpartitioning_not_exposed_yet(self):
+        """Nested partitioning is not exposed by this API yet."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_subpartitioning() is False
+
+    def test_partition_introspection_pg9(self):
+        """Partition metadata introspection follows declarative partitioning support."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_partition_metadata_introspection() is False
+
+    def test_partition_introspection_pg10(self):
+        """PostgreSQL 10 supports partition metadata through pg_catalog."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_partition_metadata_introspection() is True
+
+    def test_partition_maintenance_capabilities_pg9(self):
+        """Generic partition maintenance capabilities require PG 10+."""
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_add_partition() is False
+        assert dialect.supports_drop_partition() is False
+        assert dialect.supports_truncate_partition() is False
+        assert dialect.supports_attach_partition() is False
+        assert dialect.supports_detach_partition() is False
+
+    def test_partition_maintenance_capabilities_pg10(self):
+        """PostgreSQL maps generic maintenance capabilities to PG operations."""
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_add_partition() is True
+        assert dialect.supports_drop_partition() is True
+        assert dialect.supports_truncate_partition() is True
+        assert dialect.supports_attach_partition() is True
+        assert dialect.supports_detach_partition() is True
+        assert dialect.supports_reorganize_partition() is False
 
     def test_supports_default_partition_pg10(self):
         """DEFAULT partition requires PG 11+."""
@@ -55,6 +116,16 @@ class TestPostgresPartitionSupportFeatureDetection:
         dialect = PostgresDialect(version=(14, 0, 0))
         assert dialect.supports_concurrent_detach() is True
 
+    def test_supports_concurrent_attach_pg13(self):
+        """CONCURRENTLY ATTACH requires PG 14+."""
+        dialect = PostgresDialect(version=(13, 0, 0))
+        assert dialect.supports_concurrent_attach() is False
+
+    def test_supports_concurrent_attach_pg14(self):
+        """PostgreSQL 14 supports CONCURRENTLY ATTACH."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_concurrent_attach() is True
+
     def test_supports_partition_bounds_expression_pg11(self):
         """Partition bounds expression requires PG 12+."""
         dialect = PostgresDialect(version=(11, 0, 0))
@@ -84,6 +155,76 @@ class TestPostgresPartitionSupportFeatureDetection:
         """PostgreSQL 11 supports partitionwise aggregate."""
         dialect = PostgresDialect(version=(11, 0, 0))
         assert dialect.supports_partitionwise_aggregate() is True
+
+
+class TestPostgresPartitionMixinDirect:
+    """Test PostgresPartitionMixin partition capability methods directly."""
+
+    class _Host:
+        version = (15, 0, 0)
+
+    class _Pg10Host:
+        version = (10, 0, 0)
+
+    class _LowHost:
+        version = (9, 6, 0)
+
+    class _PartitionMixin(_Host, PostgresPartitionMixin):
+        pass
+
+    class _PartitionMixinPg10(_Pg10Host, PostgresPartitionMixin):
+        pass
+
+    class _PartitionMixinLow(_LowHost, PostgresPartitionMixin):
+        pass
+
+    def test_supports_table_partitioning_direct(self):
+        """PostgreSQL 15 supports declarative table partitioning."""
+        assert self._PartitionMixin().supports_table_partitioning() is True
+
+    def test_supports_table_partitioning_low(self):
+        """PostgreSQL 9.6 does not support declarative table partitioning."""
+        assert self._PartitionMixinLow().supports_table_partitioning() is False
+
+    def test_supports_partitioned_table_creation_direct(self):
+        """Partitioned parent table creation follows table partitioning."""
+        assert self._PartitionMixin().supports_partitioned_table_creation() is True
+        assert self._PartitionMixinLow().supports_partitioned_table_creation() is False
+
+    def test_supports_range_and_list_partitioning_direct(self):
+        """PostgreSQL 10 supports RANGE and LIST partitioning."""
+        mixin = self._PartitionMixinPg10()
+        assert mixin.supports_range_table_partitioning() is True
+        assert mixin.supports_list_table_partitioning() is True
+
+    def test_supports_hash_table_partitioning_direct(self):
+        """HASH table partitioning follows PostgreSQL 11+ support."""
+        assert self._PartitionMixin().supports_hash_table_partitioning() is True
+        assert self._PartitionMixinPg10().supports_hash_table_partitioning() is False
+
+    def test_subpartitioning_not_exposed_direct(self):
+        """Nested partitioning is not exposed by this API yet."""
+        assert self._PartitionMixin().supports_subpartitioning() is False
+
+    def test_partition_introspection_direct(self):
+        """Partition metadata introspection follows table partitioning support."""
+        assert self._PartitionMixin().supports_partition_metadata_introspection() is True
+        assert self._PartitionMixinLow().supports_partition_metadata_introspection() is False
+
+    def test_partition_maintenance_capabilities_direct(self):
+        """Generic partition maintenance capabilities map to PostgreSQL operations."""
+        mixin = self._PartitionMixin()
+        assert mixin.supports_add_partition() is True
+        assert mixin.supports_drop_partition() is True
+        assert mixin.supports_truncate_partition() is True
+        assert mixin.supports_attach_partition() is True
+        assert mixin.supports_detach_partition() is True
+        assert mixin.supports_reorganize_partition() is False
+
+    def test_supports_concurrent_attach_direct(self):
+        """CONCURRENTLY ATTACH follows PG version."""
+        assert self._PartitionMixin().supports_concurrent_attach() is True
+        assert self._PartitionMixinPg10().supports_concurrent_attach() is False
 
 
 class TestPostgresIndexSupportFeatureDetection:

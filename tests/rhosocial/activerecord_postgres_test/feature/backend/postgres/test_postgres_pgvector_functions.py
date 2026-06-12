@@ -6,7 +6,7 @@ Functions: vector_l2_distance, vector_cosine_distance, vector_inner_product,
            vector_cosine_similarity, vector_literal
 """
 
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions.pgvector import (

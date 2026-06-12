@@ -14,6 +14,9 @@ Version Requirements:
 - ATTACH PARTITION with CONCURRENTLY: PostgreSQL 14+
 """
 
+from datetime import date, datetime
+from decimal import Decimal
+from math import isfinite
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
@@ -23,10 +26,72 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "PartitionValue",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
+    "PostgresPartitionMetadataExpression",
 ]
+
+
+class PartitionValue(BaseExpression):
+    """Represents a partition bound value in PostgreSQL DDL.
+
+    Handles the formatting of partition boundary values used in
+    FOR VALUES clauses of PARTITION OF and ATTACH PARTITION statements.
+
+    Value handling:
+    - None → NULL
+    - String 'MAXVALUE', 'MINVALUE', or 'DEFAULT' (case-insensitive) → as-is
+    - String/date/datetime/Decimal/numeric values → whitelist-formatted SQL literal
+    - Arbitrary objects are rejected to prevent unsafe ``str(value)`` fallback
+
+    Delegates to dialect.format_partition_value() for SQL generation.
+
+    Attributes:
+        value: The partition bound value.
+
+    Example:
+        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> dialect = PostgresDialect()
+        >>> PartitionValue(dialect=dialect, value=None).to_sql()
+        ('NULL', ())
+        >>> PartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
+        ('MAXVALUE', ())
+        >>> PartitionValue(dialect=dialect, value='2024-01-01').to_sql()
+        ("'2024-01-01'", ())
+        >>> PartitionValue(dialect=dialect, value=42).to_sql()
+        ('42', ())
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        value: Any,
+    ):
+        super().__init__(dialect)
+        if isinstance(value, bool):
+            raise TypeError("partition value must not be bool")
+        if isinstance(value, float) and not isfinite(value):
+            raise ValueError("partition value float must be finite")
+        if isinstance(value, Decimal) and not value.is_finite():
+            raise ValueError("partition value Decimal must be finite")
+        if not isinstance(value, (str, int, float, Decimal, date, datetime, type(None))):
+            raise TypeError(
+                "partition value must be str, int, float, Decimal, "
+                f"date, datetime, or None, got {type(value).__name__}"
+            )
+        self.value = value
+
+    def to_sql(self) -> Tuple[str, tuple]:
+        """Generate SQL for a partition bound value.
+
+        Delegates to the dialect's format_partition_value() method.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        return self.dialect.format_partition_value(self)
 
 
 class PostgresCreatePartitionExpression(BaseExpression):
@@ -165,6 +230,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
+    Supports CONCURRENTLY mode on PostgreSQL 14+.
 
     Attributes:
         partition_name: Name of the table to attach.
@@ -172,6 +238,10 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_type: Partition type: 'RANGE', 'LIST', or 'HASH'.
         partition_values: Partition bounds values.
         schema: Schema name for the partition.
+        concurrently: Use non-blocking ATTACH mode (PG 14+).
+
+    Raises:
+        ValueError: If concurrent_attach is used on PostgreSQL < 14.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
@@ -185,7 +255,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         ... )
         >>> sql, params = attach.to_sql()
         >>> sql
-        "ALTER TABLE orders ATTACH PARTITION orders_2024_q1 RANGE ('2024-01-01', '2024-04-01')"
+        "ALTER TABLE orders ATTACH PARTITION orders_2024_q1 FOR VALUES FROM ('2024-01-01') TO ('2024-04-01')"
 
     """
 
@@ -197,6 +267,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_type: str,
         partition_values: Dict[str, Any],
         schema: Optional[str] = None,
+        concurrently: bool = False,
         *,
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
@@ -206,6 +277,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         self.partition_type = partition_type
         self.partition_values = partition_values
         self.schema = schema
+        self.concurrently = concurrently
         self.dialect_options = dialect_options or {}
 
     def to_sql(self) -> Tuple[str, tuple]:
@@ -214,5 +286,39 @@ class PostgresAttachPartitionExpression(BaseExpression):
         Returns:
             Tuple of (SQL string, empty params tuple).
 
+        Raises:
+            ValueError: If concurrently is used on PostgreSQL < 14.
+
         """
         return self.dialect.format_attach_partition_statement(self)
+
+
+class PostgresPartitionMetadataExpression(BaseExpression):
+    """PostgreSQL partition metadata query expression.
+
+    This expression builds the public metadata query used by tests and provider
+    code to inspect a partitioned parent table through PostgreSQL catalogs. It
+    keeps catalog SQL construction behind the Expression-Dialect protocol
+    boundary instead of embedding raw SQL in tests.
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        parent_table: str,
+        schema: Optional[str] = None,
+        *,
+        include_partitions: bool = True,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        if not parent_table:
+            raise ValueError("parent_table must not be empty")
+        self.parent_table = parent_table
+        self.schema = schema
+        self.include_partitions = include_partitions
+        self.dialect_options = dialect_options or {}
+
+    def to_sql(self) -> Tuple[str, tuple]:
+        """Generate PostgreSQL partition metadata query SQL."""
+        return self.dialect.format_partition_metadata_query(self)

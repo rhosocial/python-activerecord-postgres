@@ -25,7 +25,7 @@ class TestPostgresDialectSecurityIntegration:
         yield "test_security_chars"
         postgres_backend.execute("DROP TABLE IF EXISTS test_security_chars")
 
-    def test_default_string_with_single_quote_insert_and_retrieve(self, postgres_backend, test_table_with_special_chars):
+    def test_default_string_with_single_quote_insert_and_retrieve(self, postgres_backend, test_table_with_special_chars):  # noqa: E501
         """Test that single quotes in DEFAULT are properly escaped and retrieved correctly."""
         # Insert a row with special characters
         postgres_backend.execute(
@@ -59,7 +59,7 @@ class TestPostgresDialectSecurityIntegration:
         result = postgres_backend.fetch_one(f"""
             SELECT column_name FROM information_schema.columns
             WHERE table_name = 'test_data_type_security'
-        """)
+        """)  # noqa: F541
         assert result is not None
 
     def test_malicious_data_type_rejected_at_dialect_level(self, postgres_backend):
@@ -116,7 +116,7 @@ class TestPostgresExcludeConstraintSecurityIntegration:
         )
 
         # Try to insert overlapping range - should fail
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             postgres_backend.execute(
                 f"INSERT INTO {exclude_table} (range) VALUES ('[5,15)')"
             )

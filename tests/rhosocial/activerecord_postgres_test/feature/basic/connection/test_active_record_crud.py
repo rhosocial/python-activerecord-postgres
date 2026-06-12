@@ -6,9 +6,9 @@ This module imports and runs the shared tests from the testsuite package,
 ensuring PostgreSQL backend compatibility for connection pool CRUD operations.
 """
 from rhosocial.activerecord.testsuite.feature.basic.connection.conftest import (
-    sync_pool_for_crud,
-    async_pool_for_crud,
+    sync_pool_for_crud,  # noqa: F401
+    async_pool_for_crud,  # noqa: F401
 )
 
 # Import shared tests from testsuite package
-from rhosocial.activerecord.testsuite.feature.basic.connection.test_active_record_crud import *
+from rhosocial.activerecord.testsuite.feature.basic.connection.test_active_record_crud import *  # noqa: F403

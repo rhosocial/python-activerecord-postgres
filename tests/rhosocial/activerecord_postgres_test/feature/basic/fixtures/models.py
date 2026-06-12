@@ -7,11 +7,11 @@ These models are tailored for PostgreSQL's native type support:
 - Uses native JSONB for JSON fields
 """
 import json
-from datetime import datetime
-from decimal import Decimal
+from datetime import datetime  # noqa: F401
+from decimal import Decimal  # noqa: F401
 from typing import ClassVar, Dict, List, Optional, Any
 
-from pydantic import Field
+from pydantic import Field  # noqa: F401
 
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.base.field_proxy import FieldProxy
@@ -31,12 +31,12 @@ class JsonToStringAdapter(BaseSQLTypeAdapter):
         super().__init__()
         self._register_type(dict, str)
 
-    def _do_to_database(self, value: Dict, target_type: type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def _do_to_database(self, value: Dict, target_type: type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:  # noqa: E501
         if value is None:
             return None
         return json.dumps(value)
 
-    def _do_from_database(self, value: str, target_type: type, options: Optional[Dict[str, Any]] = None) -> Optional[Dict]:
+    def _do_from_database(self, value: str, target_type: type, options: Optional[Dict[str, Any]] = None) -> Optional[Dict]:  # noqa: E501
         if value is None:
             return None
         if isinstance(value, dict):

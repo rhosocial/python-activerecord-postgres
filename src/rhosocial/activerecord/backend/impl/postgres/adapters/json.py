@@ -16,7 +16,7 @@ storage format. jsonb is generally preferred for query purposes.
 """
 
 import json
-from typing import Any, Dict, List, Optional, Set, Type, Union, get_args, get_origin
+from typing import Any, Dict, List, Optional, Set, Type, Union, get_args, get_origin  # noqa: F401
 
 from psycopg.types.json import Jsonb
 

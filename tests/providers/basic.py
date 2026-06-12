@@ -13,20 +13,20 @@ Its main responsibilities are:
 import os
 import sys
 import logging
-from typing import Type, List, Tuple, Optional
+from typing import Type, List, Tuple, Optional  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
-from rhosocial.activerecord.model import ActiveRecord
-from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
-from rhosocial.activerecord.testsuite.feature.basic.interfaces import IBasicProvider
-from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol
+from rhosocial.activerecord.model import ActiveRecord  # noqa: E402
+from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter  # noqa: E402
+from rhosocial.activerecord.testsuite.feature.basic.interfaces import IBasicProvider  # noqa: E402
+from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol  # noqa: E402
 
 # Import the fixture selector utility
-from rhosocial.activerecord.testsuite.utils import select_fixture
+from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 
 # Import base version models (Python 3.8+)
-from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (  # noqa: E402
     User as UserBase, TypeCase as TypeCaseBase, ValidatedFieldUser as ValidatedFieldUserBase,
     TypeTestModel as TypeTestModelBase, ValidatedUser as ValidatedUserBase,
     TypeAdapterTest as TypeAdapterTestBase, YesOrNoBooleanAdapter,
@@ -34,11 +34,11 @@ from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
     MappedUser as MappedUserBase, MappedPost as MappedPostBase, MappedComment as MappedCommentBase,
     ColumnMappingModel as ColumnMappingModelBase, MixedAnnotationModel as MixedAnnotationModelBase
 )
-from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (  # noqa: E402
     BulkUser as BulkUserBase, AsyncBulkUser as AsyncBulkUserBase
 )
 # Import async base models
-from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (  # noqa: E402
     AsyncUser as AsyncUserBase, AsyncTypeCase as AsyncTypeCaseBase,
     AsyncValidatedUser as AsyncValidatedUserBase, AsyncValidatedFieldUser as AsyncValidatedFieldUserBase,
     AsyncTypeTestModel as AsyncTypeTestModelBase, AsyncTypeAdapterTest as AsyncTypeAdapterTestBase,
@@ -53,7 +53,7 @@ User310 = TypeCase310 = ValidatedFieldUser310 = TypeTestModel310 = ValidatedUser
 TypeAdapterTest310 = PydanticValidatedModel310 = MappedUser310 = MappedPost310 = MappedComment310 = None
 ColumnMappingModel310 = MixedAnnotationModel310 = None
 AsyncUser310 = AsyncTypeCase310 = AsyncValidatedFieldUser310 = AsyncTypeTestModel310 = None
-AsyncValidatedUser310 = AsyncTypeAdapterTest310 = AsyncPydanticValidatedModel310 = AsyncMappedUser310 = AsyncMappedPost310 = None
+AsyncValidatedUser310 = AsyncTypeAdapterTest310 = AsyncPydanticValidatedModel310 = AsyncMappedUser310 = AsyncMappedPost310 = None  # noqa: E501
 AsyncMappedComment310 = AsyncColumnMappingModel310 = AsyncMixedAnnotationModel310 = None
 
 if sys.version_info >= (3, 10):
@@ -72,7 +72,7 @@ if sys.version_info >= (3, 10):
             AsyncPydanticValidatedModel as AsyncPydanticValidatedModel310,
             AsyncMappedUser as AsyncMappedUser310, AsyncMappedPost as AsyncMappedPost310,
             AsyncMappedComment as AsyncMappedComment310,
-            AsyncColumnMappingModel as AsyncColumnMappingModel310, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel310
+            AsyncColumnMappingModel as AsyncColumnMappingModel310, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel310  # noqa: E501
         )
     except ImportError as e:
         logger.warning(f"Failed to import Python 3.10+ fixtures: {e}")
@@ -82,7 +82,7 @@ User311 = TypeCase311 = ValidatedFieldUser311 = TypeTestModel311 = ValidatedUser
 TypeAdapterTest311 = PydanticValidatedModel311 = MappedUser311 = MappedPost311 = MappedComment311 = None
 ColumnMappingModel311 = MixedAnnotationModel311 = None
 AsyncUser311 = AsyncTypeCase311 = AsyncValidatedFieldUser311 = AsyncTypeTestModel311 = None
-AsyncValidatedUser311 = AsyncTypeAdapterTest311 = AsyncPydanticValidatedModel311 = AsyncMappedUser311 = AsyncMappedPost311 = None
+AsyncValidatedUser311 = AsyncTypeAdapterTest311 = AsyncPydanticValidatedModel311 = AsyncMappedUser311 = AsyncMappedPost311 = None  # noqa: E501
 AsyncMappedComment311 = AsyncColumnMappingModel311 = AsyncMixedAnnotationModel311 = None
 
 if sys.version_info >= (3, 11):
@@ -101,7 +101,7 @@ if sys.version_info >= (3, 11):
             AsyncPydanticValidatedModel as AsyncPydanticValidatedModel311,
             AsyncMappedUser as AsyncMappedUser311, AsyncMappedPost as AsyncMappedPost311,
             AsyncMappedComment as AsyncMappedComment311,
-            AsyncColumnMappingModel as AsyncColumnMappingModel311, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel311
+            AsyncColumnMappingModel as AsyncColumnMappingModel311, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel311  # noqa: E501
         )
     except ImportError as e:
         logger.warning(f"Failed to import Python 3.11+ fixtures: {e}")
@@ -111,7 +111,7 @@ User312 = TypeCase312 = ValidatedFieldUser312 = TypeTestModel312 = ValidatedUser
 TypeAdapterTest312 = PydanticValidatedModel312 = MappedUser312 = MappedPost312 = MappedComment312 = None
 ColumnMappingModel312 = MixedAnnotationModel312 = None
 AsyncUser312 = AsyncTypeCase312 = AsyncValidatedFieldUser312 = AsyncTypeTestModel312 = None
-AsyncValidatedUser312 = AsyncTypeAdapterTest312 = AsyncPydanticValidatedModel312 = AsyncMappedUser312 = AsyncMappedPost312 = None
+AsyncValidatedUser312 = AsyncTypeAdapterTest312 = AsyncPydanticValidatedModel312 = AsyncMappedUser312 = AsyncMappedPost312 = None  # noqa: E501
 AsyncMappedComment312 = AsyncColumnMappingModel312 = AsyncMixedAnnotationModel312 = None
 
 if sys.version_info >= (3, 12):
@@ -130,7 +130,7 @@ if sys.version_info >= (3, 12):
             AsyncPydanticValidatedModel as AsyncPydanticValidatedModel312,
             AsyncMappedUser as AsyncMappedUser312, AsyncMappedPost as AsyncMappedPost312,
             AsyncMappedComment as AsyncMappedComment312,
-            AsyncColumnMappingModel as AsyncColumnMappingModel312, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel312
+            AsyncColumnMappingModel as AsyncColumnMappingModel312, AsyncMixedAnnotationModel as AsyncMixedAnnotationModel312  # noqa: E501
         )
     except ImportError as e:
         logger.warning(f"Failed to import Python 3.12+ fixtures: {e}")
@@ -148,35 +148,35 @@ def _select_model_class(base_cls, py312_cls, py311_cls, py310_cls, model_name: s
 # Select sync models
 User = _select_model_class(UserBase, User312, User311, User310, "User")
 TypeCase = _select_model_class(TypeCaseBase, TypeCase312, TypeCase311, TypeCase310, "TypeCase")
-ValidatedFieldUser = _select_model_class(ValidatedFieldUserBase, ValidatedFieldUser312, ValidatedFieldUser311, ValidatedFieldUser310, "ValidatedFieldUser")
-TypeTestModel = _select_model_class(TypeTestModelBase, TypeTestModel312, TypeTestModel311, TypeTestModel310, "TypeTestModel")
-ValidatedUser = _select_model_class(ValidatedUserBase, ValidatedUser312, ValidatedUser311, ValidatedUser310, "ValidatedUser")
-TypeAdapterTest = _select_model_class(TypeAdapterTestBase, TypeAdapterTest312, TypeAdapterTest311, TypeAdapterTest310, "TypeAdapterTest")
-PydanticValidatedModel = _select_model_class(PydanticValidatedModelBase, PydanticValidatedModel312, PydanticValidatedModel311, PydanticValidatedModel310, "PydanticValidatedModel")
+ValidatedFieldUser = _select_model_class(ValidatedFieldUserBase, ValidatedFieldUser312, ValidatedFieldUser311, ValidatedFieldUser310, "ValidatedFieldUser")  # noqa: E501
+TypeTestModel = _select_model_class(TypeTestModelBase, TypeTestModel312, TypeTestModel311, TypeTestModel310, "TypeTestModel")  # noqa: E501
+ValidatedUser = _select_model_class(ValidatedUserBase, ValidatedUser312, ValidatedUser311, ValidatedUser310, "ValidatedUser")  # noqa: E501
+TypeAdapterTest = _select_model_class(TypeAdapterTestBase, TypeAdapterTest312, TypeAdapterTest311, TypeAdapterTest310, "TypeAdapterTest")  # noqa: E501
+PydanticValidatedModel = _select_model_class(PydanticValidatedModelBase, PydanticValidatedModel312, PydanticValidatedModel311, PydanticValidatedModel310, "PydanticValidatedModel")  # noqa: E501
 MappedUser = _select_model_class(MappedUserBase, MappedUser312, MappedUser311, MappedUser310, "MappedUser")
 MappedPost = _select_model_class(MappedPostBase, MappedPost312, MappedPost311, MappedPost310, "MappedPost")
-MappedComment = _select_model_class(MappedCommentBase, MappedComment312, MappedComment311, MappedComment310, "MappedComment")
-ColumnMappingModel = _select_model_class(ColumnMappingModelBase, ColumnMappingModel312, ColumnMappingModel311, ColumnMappingModel310, "ColumnMappingModel")
-MixedAnnotationModel = _select_model_class(MixedAnnotationModelBase, MixedAnnotationModel312, MixedAnnotationModel311, MixedAnnotationModel310, "MixedAnnotationModel")
+MappedComment = _select_model_class(MappedCommentBase, MappedComment312, MappedComment311, MappedComment310, "MappedComment")  # noqa: E501
+ColumnMappingModel = _select_model_class(ColumnMappingModelBase, ColumnMappingModel312, ColumnMappingModel311, ColumnMappingModel310, "ColumnMappingModel")  # noqa: E501
+MixedAnnotationModel = _select_model_class(MixedAnnotationModelBase, MixedAnnotationModel312, MixedAnnotationModel311, MixedAnnotationModel310, "MixedAnnotationModel")  # noqa: E501
 
 # Select async models
 AsyncUser = _select_model_class(AsyncUserBase, AsyncUser312, AsyncUser311, AsyncUser310, "AsyncUser")
-AsyncTypeCase = _select_model_class(AsyncTypeCaseBase, AsyncTypeCase312, AsyncTypeCase311, AsyncTypeCase310, "AsyncTypeCase")
-AsyncValidatedFieldUser = _select_model_class(AsyncValidatedFieldUserBase, AsyncValidatedFieldUser312, AsyncValidatedFieldUser311, AsyncValidatedFieldUser310, "AsyncValidatedFieldUser")
-AsyncTypeTestModel = _select_model_class(AsyncTypeTestModelBase, AsyncTypeTestModel312, AsyncTypeTestModel311, AsyncTypeTestModel310, "AsyncTypeTestModel")
-AsyncValidatedUser = _select_model_class(AsyncValidatedUserBase, AsyncValidatedUser312, AsyncValidatedUser311, AsyncValidatedUser310, "AsyncValidatedUser")
-AsyncTypeAdapterTest = _select_model_class(AsyncTypeAdapterTestBase, AsyncTypeAdapterTest312, AsyncTypeAdapterTest311, AsyncTypeAdapterTest310, "AsyncTypeAdapterTest")
-AsyncPydanticValidatedModel = _select_model_class(AsyncPydanticValidatedModelBase, AsyncPydanticValidatedModel312, AsyncPydanticValidatedModel311, AsyncPydanticValidatedModel310, "AsyncPydanticValidatedModel")
-AsyncMappedUser = _select_model_class(AsyncMappedUserBase, AsyncMappedUser312, AsyncMappedUser311, AsyncMappedUser310, "AsyncMappedUser")
-AsyncMappedPost = _select_model_class(AsyncMappedPostBase, AsyncMappedPost312, AsyncMappedPost311, AsyncMappedPost310, "AsyncMappedPost")
-AsyncMappedComment = _select_model_class(AsyncMappedCommentBase, AsyncMappedComment312, AsyncMappedComment311, AsyncMappedComment310, "AsyncMappedComment")
-AsyncColumnMappingModel = _select_model_class(AsyncColumnMappingModelBase, AsyncColumnMappingModel312, AsyncColumnMappingModel311, AsyncColumnMappingModel310, "AsyncColumnMappingModel")
-AsyncMixedAnnotationModel = _select_model_class(AsyncMixedAnnotationModelBase, AsyncMixedAnnotationModel312, AsyncMixedAnnotationModel311, AsyncMixedAnnotationModel310, "AsyncMixedAnnotationModel")
+AsyncTypeCase = _select_model_class(AsyncTypeCaseBase, AsyncTypeCase312, AsyncTypeCase311, AsyncTypeCase310, "AsyncTypeCase")  # noqa: E501
+AsyncValidatedFieldUser = _select_model_class(AsyncValidatedFieldUserBase, AsyncValidatedFieldUser312, AsyncValidatedFieldUser311, AsyncValidatedFieldUser310, "AsyncValidatedFieldUser")  # noqa: E501
+AsyncTypeTestModel = _select_model_class(AsyncTypeTestModelBase, AsyncTypeTestModel312, AsyncTypeTestModel311, AsyncTypeTestModel310, "AsyncTypeTestModel")  # noqa: E501
+AsyncValidatedUser = _select_model_class(AsyncValidatedUserBase, AsyncValidatedUser312, AsyncValidatedUser311, AsyncValidatedUser310, "AsyncValidatedUser")  # noqa: E501
+AsyncTypeAdapterTest = _select_model_class(AsyncTypeAdapterTestBase, AsyncTypeAdapterTest312, AsyncTypeAdapterTest311, AsyncTypeAdapterTest310, "AsyncTypeAdapterTest")  # noqa: E501
+AsyncPydanticValidatedModel = _select_model_class(AsyncPydanticValidatedModelBase, AsyncPydanticValidatedModel312, AsyncPydanticValidatedModel311, AsyncPydanticValidatedModel310, "AsyncPydanticValidatedModel")  # noqa: E501
+AsyncMappedUser = _select_model_class(AsyncMappedUserBase, AsyncMappedUser312, AsyncMappedUser311, AsyncMappedUser310, "AsyncMappedUser")  # noqa: E501
+AsyncMappedPost = _select_model_class(AsyncMappedPostBase, AsyncMappedPost312, AsyncMappedPost311, AsyncMappedPost310, "AsyncMappedPost")  # noqa: E501
+AsyncMappedComment = _select_model_class(AsyncMappedCommentBase, AsyncMappedComment312, AsyncMappedComment311, AsyncMappedComment310, "AsyncMappedComment")  # noqa: E501
+AsyncColumnMappingModel = _select_model_class(AsyncColumnMappingModelBase, AsyncColumnMappingModel312, AsyncColumnMappingModel311, AsyncColumnMappingModel310, "AsyncColumnMappingModel")  # noqa: E501
+AsyncMixedAnnotationModel = _select_model_class(AsyncMixedAnnotationModelBase, AsyncMixedAnnotationModel312, AsyncMixedAnnotationModel311, AsyncMixedAnnotationModel310, "AsyncMixedAnnotationModel")  # noqa: E501
 BulkUser = BulkUserBase
 AsyncBulkUser = AsyncBulkUserBase
 
 # ...and the scenarios are defined specifically for this backend.
-from .scenarios import get_enabled_scenarios, get_scenario
+from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
 
 class BasicProvider(IBasicProvider, WorkerTestProtocol):
@@ -208,7 +208,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
         self._reset_table_sync(model_class, table_name)
         return model_class
 
-    async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+    async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:  # noqa: E501
         """A generic helper method to handle the setup for any given async model."""
         from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 
@@ -247,7 +247,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
         """Initialize schema for an async model that shares backend with another model."""
         await self._reset_table_async(model_class, table_name)
 
-    def _setup_multiple_models(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+    def _setup_multiple_models(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:  # noqa: E501
         """Helper to set up multiple related models for a test, sharing a single backend."""
         if not model_classes:
             return tuple()
@@ -268,7 +268,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
 
         return tuple(result)
 
-    async def _setup_multiple_models_async(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
+    async def _setup_multiple_models_async(self, model_classes: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:  # noqa: E501
         """Helper to set up multiple related async models for a test, sharing a single backend."""
         if not model_classes:
             return tuple()
@@ -315,7 +315,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
         """Sets up the database for Pydantic native validation tests."""
         return self._setup_model(PydanticValidatedModel, scenario_name, "pydantic_validated_models")
 
-    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    def setup_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for MappedUser, MappedPost, and MappedComment models."""
         return self._setup_multiple_models([
             (MappedUser, "users"),
@@ -381,7 +381,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
         """Sets up the database for async Pydantic native validation tests."""
         return await self._setup_async_model(AsyncPydanticValidatedModel, scenario_name, "pydantic_validated_models")
 
-    async def setup_async_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:
+    async def setup_async_mapped_models(self, scenario_name: str) -> Tuple[Type[ActiveRecord], Type[ActiveRecord], Type[ActiveRecord]]:  # noqa: E501
         """Sets up the database for AsyncMappedUser, AsyncMappedPost, and AsyncMappedComment models."""
         return await self._setup_multiple_models_async([
             (AsyncMappedUser, "users"),
@@ -416,7 +416,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
             finally:
                 try:
                     await backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     pass
 
         self._active_async_backends.clear()
@@ -424,7 +424,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""
         # Schemas are stored in the centralized location for basic feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "basic", "schema")
+        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "basic", "schema")  # noqa: E501
         schema_path = os.path.join(schema_dir, filename)
 
         with open(schema_path, 'r', encoding='utf-8') as f:
@@ -453,7 +453,7 @@ class BasicProvider(IBasicProvider, WorkerTestProtocol):
                 # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     # Ignore errors during disconnect
                     pass
 

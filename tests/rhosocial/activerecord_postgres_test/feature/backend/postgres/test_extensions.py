@@ -10,8 +10,8 @@ Tests for:
 - pgvector extension functions
 - PostGIS extension functions
 """
-import pytest
-from unittest.mock import MagicMock
+import pytest  # noqa: F401
+from unittest.mock import MagicMock  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import core, operators
@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.expression.operators import BinaryArithmetic
 from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
     ltree_literal,
     lquery_literal,
-    ltxtquery_literal,
+    ltxtquery_literal,  # noqa: F401
     ltree_ancestor,
     ltree_descendant,
     ltree_matches,

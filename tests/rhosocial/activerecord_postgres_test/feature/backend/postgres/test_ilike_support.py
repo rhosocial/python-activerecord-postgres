@@ -1,6 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_ilike_support.py
 """Tests for ILIKE protocol support in PostgreSQL dialect."""
-import pytest
+import pytest  # noqa: F401
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.protocols import ILIKESupport
 

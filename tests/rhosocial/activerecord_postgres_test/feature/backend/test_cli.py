@@ -244,7 +244,7 @@ class TestCLINamedProcedureArgs:
         """Test named-procedure with --transaction auto."""
         from rhosocial.activerecord.backend.impl.postgres.__main__ import parse_args
 
-        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'auto']):
+        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'auto']):  # noqa: E501
             args = parse_args()
 
             assert args.command == 'named-procedure'
@@ -254,7 +254,7 @@ class TestCLINamedProcedureArgs:
         """Test named-procedure with --transaction step."""
         from rhosocial.activerecord.backend.impl.postgres.__main__ import parse_args
 
-        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'step']):
+        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'step']):  # noqa: E501
             args = parse_args()
 
             assert args.command == 'named-procedure'
@@ -264,7 +264,7 @@ class TestCLINamedProcedureArgs:
         """Test named-procedure with --transaction none."""
         from rhosocial.activerecord.backend.impl.postgres.__main__ import parse_args
 
-        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'none']):
+        with patch.object(sys, 'argv', ['postgres', 'named-procedure', 'myapp.procedures.test', '--transaction', 'none']):  # noqa: E501
             args = parse_args()
 
             assert args.command == 'named-procedure'

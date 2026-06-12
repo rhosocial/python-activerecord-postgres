@@ -8,12 +8,12 @@ Tests for:
 """
 import pytest
 from enum import Enum
-from typing import Tuple
+from typing import Tuple  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
-from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport
+from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport  # noqa: F401
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateEnumTypeExpression,
     PostgresDropEnumTypeExpression,
@@ -375,7 +375,7 @@ class TestPostgresEnumTypeSupport:
         """Test that PostgresDialect implements PostgresEnumTypeSupport."""
         dialect = PostgresDialect()
         # Check via MRO
-        from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport
+        from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport  # noqa: F811
         assert PostgresEnumTypeSupport in dialect.__class__.__mro__
 
     def test_create_enum_type_method(self):

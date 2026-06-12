@@ -5,7 +5,7 @@ PostgreSQL CREATE TABLE ... LIKE syntax tests.
 This module tests the PostgreSQL-specific LIKE syntax for CREATE TABLE statements,
 including INCLUDING/EXCLUDING options.
 """
-import pytest
+import pytest  # noqa: F401
 from rhosocial.activerecord.backend.expression import CreateTableExpression, ColumnDefinition
 from rhosocial.activerecord.backend.expression.statements import ColumnConstraint, ColumnConstraintType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -95,7 +95,7 @@ class TestPostgreSQLCreateTableLike:
         )
         sql, params = create_expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, INCLUDING INDEXES)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, INCLUDING INDEXES)'  # noqa: E501
         assert params == ()
 
     def test_like_with_including_and_excluding_options(self):
@@ -115,7 +115,7 @@ class TestPostgreSQLCreateTableLike:
         )
         sql, params = create_expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, EXCLUDING INDEXES, EXCLUDING COMMENTS)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, EXCLUDING INDEXES, EXCLUDING COMMENTS)'  # noqa: E501
         assert params == ()
 
     def test_like_with_list_format_options(self):

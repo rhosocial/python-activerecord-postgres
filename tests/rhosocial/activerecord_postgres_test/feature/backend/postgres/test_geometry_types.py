@@ -6,7 +6,7 @@ Tests for:
 - Point, Line, LineSegment, Box, Path, Polygon, Circle data classes
 - PostgresGeometryAdapter conversion
 """
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.types.geometric import (
     Point,
@@ -67,19 +67,19 @@ class TestLine:
 
     def test_create_line(self):
         """Test creating a line."""
-        l = Line(1.0, -1.0, 0.0)
+        l = Line(1.0, -1.0, 0.0)  # noqa: E741
         assert l.A == 1.0
         assert l.B == -1.0
         assert l.C == 0.0
 
     def test_line_to_postgres_string(self):
         """Test line to PostgreSQL string conversion."""
-        l = Line(1.0, -1.0, 0.0)
+        l = Line(1.0, -1.0, 0.0)  # noqa: E741
         assert l.to_postgres_string() == '{1.0,-1.0,0.0}'
 
     def test_line_from_postgres_string(self):
         """Test parsing PostgreSQL line string."""
-        l = Line.from_postgres_string('{1.0,-1.0,0.0}')
+        l = Line.from_postgres_string('{1.0,-1.0,0.0}')  # noqa: E741
         assert l.A == 1.0
         assert l.B == -1.0
         assert l.C == 0.0

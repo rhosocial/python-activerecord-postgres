@@ -74,7 +74,7 @@ def get_own_protocol_methods(proto: type) -> set:
 
 def get_postgres_protocols():
     """Get all protocols that PostgresDialect implements."""
-    from typing import runtime_checkable
+    from typing import runtime_checkable  # noqa: F401
 
     protocols = [
         dialect_protocols.SQLXMLSupport,
@@ -108,6 +108,7 @@ def get_postgres_protocols():
         dialect_protocols.IndexSupport,
         dialect_protocols.SequenceSupport,
         dialect_protocols.TableSupport,
+        dialect_protocols.PartitionSupport,
         dialect_protocols.ConstraintSupport,
         dialect_protocols.TruncateSupport,
         dialect_protocols.IntrospectionSupport,
@@ -166,6 +167,8 @@ class TestProtocolNonOverlap:
             ('PostgresIndexSupport', 'IndexSupport'),
             ('TableSupport', 'PostgresTableSupport'),
             ('PostgresTableSupport', 'TableSupport'),
+            ('PartitionSupport', 'PostgresPartitionSupport'),
+            ('PostgresPartitionSupport', 'PartitionSupport'),
             ('ConstraintSupport', 'PostgresConstraintSupport'),
             ('PostgresConstraintSupport', 'ConstraintSupport'),
             ('LockingSupport', 'PostgresLockingSupport'),
@@ -225,6 +228,7 @@ class TestPostgresProtocolDerivation:
 
     PROTOCOL_DERIVATIONS = [
         ("PostgresTableSupport", "TableSupport"),
+        ("PostgresPartitionSupport", "PartitionSupport"),
         ("PostgresIndexSupport", "IndexSupport"),
         ("PostgresLockingSupport", "LockingSupport"),
         ("PostgresTriggerSupport", "TriggerSupport"),
@@ -282,6 +286,7 @@ class TestPostgresExpressionDialectSeparation:
         ("PostgresCreatePartitionExpression", "format_create_partition_statement"),
         ("PostgresDetachPartitionExpression", "format_detach_partition_statement"),
         ("PostgresAttachPartitionExpression", "format_attach_partition_statement"),
+        ("PostgresPartitionMetadataExpression", "format_partition_metadata_query"),
         ("PostgresCreateStatisticsExpression", "format_create_statistics_statement"),
         ("PostgresDropStatisticsExpression", "format_drop_statistics_statement"),
         ("PostgresAlterIndexExpression", "format_alter_index_statement"),

@@ -15,9 +15,9 @@ ensuring postgres backend compatibility.
 # in some IDEs. These fixtures are defined in the testsuite package and are
 # parameterized to run against the scenarios defined in `providers/scenarios.py`.
 from rhosocial.activerecord.testsuite.feature.basic.conftest import (
-    type_test_model,
-    async_type_test_model
+    type_test_model,  # noqa: F401
+    async_type_test_model  # noqa: F401
 )
 
 # Import shared tests from testsuite package
-from rhosocial.activerecord.testsuite.feature.basic.test_fields import *
+from rhosocial.activerecord.testsuite.feature.basic.test_fields import *  # noqa: F403

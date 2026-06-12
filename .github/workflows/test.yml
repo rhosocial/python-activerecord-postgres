@@ -219,6 +219,8 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   test-experimental-python-315:
+    # Temporarily disabled until Python 3.15 beta/toolchain compatibility stabilizes.
+    if: ${{ false }}
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }} (experimental)
     runs-on: ubuntu-latest
     permissions:

@@ -5,7 +5,7 @@ This module provides simplified transaction management for PostgreSQL.
 All SQL generation is delegated to the dialect's format_* methods via
 the Expression system, ensuring single SQL statement per format method.
 """
-from typing import Dict, Optional, List, TYPE_CHECKING
+from typing import Dict, Optional, List, TYPE_CHECKING, Tuple
 import logging
 
 from rhosocial.activerecord.backend.errors import TransactionError
@@ -44,7 +44,7 @@ class PostgresTransactionMixin:
         IsolationLevel.SERIALIZABLE: "SERIALIZABLE",
     }
 
-    def _build_begin_sql(self) -> tuple:
+    def _build_begin_sql(self) -> Tuple[str, tuple]:
         """Build BEGIN TRANSACTION SQL with PostgreSQL-specific options.
 
         This method creates a BeginTransactionExpression and delegates
@@ -115,7 +115,11 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
     PostgreSQL-specific features like DEFERRABLE are supported.
     """
 
-    def __init__(self, backend: "PostgresBackend", logger=None):
+    def __init__(
+        self,
+        backend: "PostgresBackend",
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
         """Initialize PostgreSQL transaction manager.
 
         Args:
@@ -197,7 +201,11 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
     PostgreSQL-specific features like DEFERRABLE are supported.
     """
 
-    def __init__(self, backend: "AsyncPostgresBackend", logger=None):
+    def __init__(
+        self,
+        backend: "AsyncPostgresBackend",
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
         """Initialize async PostgreSQL transaction manager.
 
         Args:

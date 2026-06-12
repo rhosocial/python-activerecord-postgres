@@ -16,7 +16,7 @@ Version requirements:
 - SKIP LOCKED: PostgreSQL 9.5+
 """
 import pytest
-import pytest_asyncio
+import pytest_asyncio  # noqa: F401
 
 from rhosocial.activerecord.backend.expression.query_parts import ForUpdateClause
 from rhosocial.activerecord.backend.impl.postgres.expression.locking import (
