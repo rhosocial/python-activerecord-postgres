@@ -452,3 +452,73 @@ jobs:
           flags: unittests,python-${{ matrix.python-version }},postgres-${{ matrix.postgres-version }}
           name: codecov-postgres-${{ matrix.python-version }}-${{ matrix.postgres-version }}
           fail_ci_if_error: false
+
+  test-postgres-19:
+    name: Python 3.14 / postgres 19beta1 (PGQ)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:19beta1
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Install activerecord and testsuite
+        run: |
+          pip install git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev28#egg=rhosocial-activerecord
+          pip install git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev15#egg=rhosocial-activerecord-testsuite
+
+      - name: Create postgres scenario config
+        run: |
+          cat > postgres_scenarios.yaml << EOF
+          scenarios:
+            postgres_default:
+              host: 127.0.0.1
+              port: 5432
+              database: test_db
+              username: root
+              password: password
+          EOF
+          echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
+
+      - name: Install postgres client for health check
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+
+      - name: Wait for postgres service
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U root; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "postgres is ready!"
+
+      - name: Run tests
+        run: |
+          export PYTHONPATH=src:tests
+          python -m pytest tests/ --tb=short -n 2 --dist=loadgroup
