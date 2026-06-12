@@ -26,6 +26,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ArrayMixin,
     ExplainMixin,
     GraphMixin,
+    GraphTableMixin,
     LockingMixin,
     MergeMixin,
     OrderedSetAggregationMixin,
@@ -71,6 +72,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     ArraySupport,
     ExplainSupport,
     GraphSupport,
+    GraphTableSupport,
     MergeSupport,
     OrderedSetAggregationSupport,
     QualifyClauseSupport,
@@ -101,6 +103,7 @@ from .mixins import (
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresPartitionMixin,
+    PostgresPropertyGraphQueryMixin,
     PostgresIndexMixin,
     PostgresVacuumMixin,
     PostgresQueryOptimizationMixin,
@@ -260,7 +263,9 @@ class PostgresDialect(
     AdvancedGroupingMixin,
     ArrayMixin,
     ExplainMixin,
+    PostgresPropertyGraphQueryMixin,
     GraphMixin,
+    GraphTableMixin,
     PostgresLockingMixin,
     LockingMixin,
     MergeMixin,
@@ -366,6 +371,7 @@ class PostgresDialect(
     ArraySupport,
     ExplainSupport,
     GraphSupport,
+    GraphTableSupport,
     MergeSupport,
     OrderedSetAggregationSupport,
     QualifyClauseSupport,
@@ -709,12 +715,6 @@ class PostgresDialect(
         if opts:
             return "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
         return f"EXPLAIN {statement_sql}", statement_params
-
-    def supports_graph_match(self) -> bool:
-        """Whether graph query MATCH clause is supported."""
-        # PostgreSQL doesn't have native MATCH clause like some other systems
-        # Though graph querying can be done with extensions like Apache AGE
-        return False
 
     def supports_for_update(self) -> bool:
         """Whether FOR UPDATE clause is supported in SELECT statements.
