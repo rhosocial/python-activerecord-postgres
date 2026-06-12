@@ -1,3 +1,4 @@
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pglogical.py
 """PostgreSQL pglogical logical replication functionality mixin.
 
 This module provides functionality to check pglogical extension features.

@@ -6,7 +6,7 @@ This module tests the list_columns and get_column_info methods for retrieving co
 """
 
 import pytest
-import pytest_asyncio
+import pytest_asyncio  # noqa: F401
 
 from rhosocial.activerecord.backend.introspection.types import (
     ColumnInfo,
@@ -150,12 +150,12 @@ class TestColumnDetails:
 
         id_col = next(col for col in columns if col.name == "id")
         assert id_col is not None
-        assert id_col.is_primary_key == True
+        assert id_col.is_primary_key == True  # noqa: E712
 
         # Other columns should not be primary key
         for col in columns:
             if col.name != "id":
-                assert col.is_primary_key == False
+                assert col.is_primary_key == False  # noqa: E712
 
     def test_column_comment(self, backend_with_tables):
         """Test that column comments are retrieved."""

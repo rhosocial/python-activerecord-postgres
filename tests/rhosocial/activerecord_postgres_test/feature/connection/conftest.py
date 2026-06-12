@@ -79,7 +79,7 @@ def _load_scenarios_from_config():
                 register_scenario(scenario_name, config)
 
     except ImportError:
-        raise ImportError("PyYAML is required to load scenario configuration files")
+        raise ImportError("PyYAML is required to load scenario configuration files")  # noqa: B904
 
 
 _load_scenarios_from_config()

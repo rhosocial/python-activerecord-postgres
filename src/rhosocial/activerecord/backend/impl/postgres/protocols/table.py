@@ -36,3 +36,18 @@ class PostgresTableSupport(TableSupport, Protocol):
         Syntax: CREATE TABLE child (...) INHERITS (parent);
         """
         ...
+
+    def supports_table_like_syntax(self) -> bool:
+        """Whether CREATE TABLE (LIKE ...) syntax is supported.
+
+        PostgreSQL supports CREATE TABLE (LIKE other_table) with
+        INCLUDING/EXCLUDING options to control what gets copied.
+        """
+        ...
+
+    def format_create_table_like(self, expr) -> tuple:
+        """Format CREATE TABLE (LIKE ...) statement."""
+
+    def format_column_definition(self, col_def) -> tuple:
+        """Format a column definition for PostgreSQL, allowing array types."""
+        ...

@@ -131,9 +131,9 @@ def main():
         test_backend = PostgresBackend(**postgres_config)
         test_backend.connect()
         print(f"Backend threadsafety: {test_backend.threadsafety}")
-        print(f"  0 = None (not thread-safe)")
-        print(f"  1 = driver (only supports SQL)")
-        print(f"  2 = Full thread-safe (psycopg)")
+        print(f"  0 = None (not thread-safe)")  # noqa: F541
+        print(f"  1 = driver (only supports SQL)")  # noqa: F541
+        print(f"  2 = Full thread-safe (psycopg)")  # noqa: F541
         test_backend.disconnect()
         
         # Create connection pool with higher load
@@ -146,7 +146,7 @@ def main():
             backend_factory=lambda: PostgresBackend(**postgres_config)
         )
         
-        print(f"\nPool configuration:")
+        print(f"\nPool configuration:")  # noqa: F541
         print(f"  min_size: {config.min_size}")
         print(f"  max_size: {config.max_size}")
         print(f"  connection_mode: {config.connection_mode}")

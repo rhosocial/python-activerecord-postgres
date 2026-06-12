@@ -15,9 +15,9 @@ ensuring PostgreSQL backend compatibility.
 # in some IDEs. These fixtures are defined in the testsuite package and are
 # parameterized to run against the scenarios defined in `providers/scenarios.py`.
 from rhosocial.activerecord.testsuite.feature.events.conftest import (
-    event_model,
-    event_tracking_model, # Assuming event_tracking_model is also needed here
+    event_model,  # noqa: F401
+    event_tracking_model, # Assuming event_tracking_model is also needed here  # noqa: F401
 )
 
 # Import shared tests from testsuite package
-from rhosocial.activerecord.testsuite.feature.events.test_lifecycle import *
+from rhosocial.activerecord.testsuite.feature.events.test_lifecycle import *  # noqa: F403

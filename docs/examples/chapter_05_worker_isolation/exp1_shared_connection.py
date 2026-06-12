@@ -19,22 +19,22 @@ The purpose of this experiment is to DEMONSTRATE why process isolation is necess
 
 from __future__ import annotations
 
-import multiprocessing
+import multiprocessing  # noqa: F401
 import os
 import random
 import sys
 import time
-import threading
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+import threading  # noqa: F401
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed  # noqa: F401
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional  # noqa: F401
 from decimal import Decimal
 
 # Add parent directories to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
-from config import load_scenario_config, get_backend_class, setup_database
-from models import User, Order, Post, Comment, ALL_MODELS
+from config import load_scenario_config, get_backend_class, setup_database  # noqa: F401
+from models import User, Order, Post, Comment, ALL_MODELS  # noqa: F401
 
 
 @dataclass
@@ -153,7 +153,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     and letting all worker processes share the same connection.
     """
     print(f"\n{'='*70}")
-    print(f"Experiment 1: Shared Global Connection (ANTI-PATTERN)")
+    print(f"Experiment 1: Shared Global Connection (ANTI-PATTERN)")  # noqa: F541
     print(f"{'='*70}")
     print(f"Workers: {num_workers}")
     print(f"Operations per worker: {ops_per_worker}")
@@ -183,7 +183,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     for i in range(10):
         user = User(username=f"seed_user_{i}", email=f"seed{i}@test.com", balance=100.0)
         user.save()
-    print(f"  Created 10 seed users")
+    print(f"  Created 10 seed users")  # noqa: F541
 
     # Run workers with shared connection
     print(f"\nStep 3: Running {num_workers} workers with SHARED connection...")
@@ -230,7 +230,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
     # Show sample errors
     all_errors = [e for r in results for e in r.errors]
     if all_errors:
-        print(f"\n  Sample errors (first 5):")
+        print(f"\n  Sample errors (first 5):")  # noqa: F541
         for err in all_errors[:5]:
             print(f"    - {err[:100]}...")
 
@@ -243,7 +243,7 @@ def run_experiment(config_dict: Dict[str, Any], num_workers: int, ops_per_worker
         for table in ['comments', 'orders', 'posts', 'users']:
             backend.execute(f"DROP TABLE IF EXISTS `{table}`")
         backend.execute("SET FOREIGN_KEY_CHECKS = 1")
-    except:
+    except:  # noqa: E722
         pass
 
     backend.disconnect()

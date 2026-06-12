@@ -9,7 +9,7 @@ Functions: st_make_point, st_geom_from_text, st_geog_from_text, st_set_srid,
            st_centroid
 """
 
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions.postgis import (

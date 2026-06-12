@@ -289,5 +289,5 @@ class TestExtensionExpressionExecution:
         )
         sql, params = expr.to_sql()
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             backend.execute(sql, params)

@@ -1,3 +1,4 @@
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/intarray.py
 """PostgreSQL intarray integer array functionality mixin.
 
 This module provides functionality to check intarray extension features,

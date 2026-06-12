@@ -128,7 +128,7 @@ class TestGetPrimaryKey:
         """)
 
         backend_with_tables.introspector.clear_cache()
-        pk = backend_with_tables.introspector.get_primary_key("no_pk_test")
+        pk = backend_with_tables.introspector.get_primary_key("no_pk_test")  # noqa: F841
 
         # PostgreSQL always has some index; may return None or first index
         # depending on implementation

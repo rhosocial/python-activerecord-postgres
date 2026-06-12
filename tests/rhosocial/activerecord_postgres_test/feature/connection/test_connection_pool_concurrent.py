@@ -13,13 +13,13 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Tuple
-from datetime import datetime
+from datetime import datetime  # noqa: F401
 
 import pytest
-import pytest_asyncio
+import pytest_asyncio  # noqa: F401
 
 from rhosocial.activerecord.connection.pool import (
-    PoolConfig,
+    PoolConfig,  # noqa: F401
     BackendPool,
     AsyncBackendPool,
 )

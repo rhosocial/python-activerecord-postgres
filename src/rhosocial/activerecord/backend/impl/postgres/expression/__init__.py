@@ -25,6 +25,7 @@ from .ddl import (
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
+    PostgresPartitionMetadataExpression,
     PostgresAlterIndexExpression,
     PostgresAlterIndexActionType,
     PostgresReindexExpression,
@@ -40,6 +41,10 @@ from .ddl import (
     PostgresCreateRangeTypeExpression,
     PostgresCreateExtensionExpression,
     PostgresDropExtensionExpression,
+    PostgresPgPartmanCreateParentExpression,
+    PostgresPgPartmanRunMaintenanceExpression,
+    PostgresPgPartmanUpdateConfigExpression,
+    PostgresPgPartmanDeleteConfigExpression,
 )
 
 __all__ = [
@@ -57,6 +62,7 @@ __all__ = [
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
+    "PostgresPartitionMetadataExpression",
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
     "PostgresReindexExpression",
@@ -72,4 +78,8 @@ __all__ = [
     "PostgresCreateRangeTypeExpression",
     "PostgresCreateExtensionExpression",
     "PostgresDropExtensionExpression",
+    "PostgresPgPartmanCreateParentExpression",
+    "PostgresPgPartmanRunMaintenanceExpression",
+    "PostgresPgPartmanUpdateConfigExpression",
+    "PostgresPgPartmanDeleteConfigExpression",
 ]

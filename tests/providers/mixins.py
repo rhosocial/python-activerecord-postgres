@@ -21,10 +21,10 @@ from rhosocial.activerecord.model import ActiveRecord
 logger = logging.getLogger(__name__)
 
 # Import the fixture selector utility
-from rhosocial.activerecord.testsuite.utils import select_fixture
+from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 
 # Import base version models (Python 3.8+)
-from rhosocial.activerecord.testsuite.feature.mixins.fixtures.models import (
+from rhosocial.activerecord.testsuite.feature.mixins.fixtures.models import (  # noqa: E402
     TimestampedPost as TimestampedPostBase,
     VersionedProduct as VersionedProductBase,
     Task as TaskBase,
@@ -84,14 +84,14 @@ def _select_model_class(base_cls, py312_cls, py311_cls, py310_cls, model_name: s
 
 
 # Select models
-TimestampedPost = _select_model_class(TimestampedPostBase, TimestampedPost312, TimestampedPost311, TimestampedPost310, "TimestampedPost")
-VersionedProduct = _select_model_class(VersionedProductBase, VersionedProduct312, VersionedProduct311, VersionedProduct310, "VersionedProduct")
+TimestampedPost = _select_model_class(TimestampedPostBase, TimestampedPost312, TimestampedPost311, TimestampedPost310, "TimestampedPost")  # noqa: E501
+VersionedProduct = _select_model_class(VersionedProductBase, VersionedProduct312, VersionedProduct311, VersionedProduct310, "VersionedProduct")  # noqa: E501
 Task = _select_model_class(TaskBase, Task312, Task311, Task310, "Task")
-CombinedArticle = _select_model_class(CombinedArticleBase, CombinedArticle312, CombinedArticle311, CombinedArticle310, "CombinedArticle")
+CombinedArticle = _select_model_class(CombinedArticleBase, CombinedArticle312, CombinedArticle311, CombinedArticle310, "CombinedArticle")  # noqa: E501
 
-from rhosocial.activerecord.testsuite.feature.mixins.interfaces import IMixinsProvider
+from rhosocial.activerecord.testsuite.feature.mixins.interfaces import IMixinsProvider  # noqa: E402
 # ...and the scenarios are defined specifically for this backend.
-from .scenarios import get_enabled_scenarios, get_scenario
+from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
 
 class MixinsProvider(IMixinsProvider):
@@ -168,7 +168,7 @@ class MixinsProvider(IMixinsProvider):
     def _load_postgres_schema(self, filename: str) -> str:
         """Helper to load a SQL schema file from this project's fixtures."""
         # Schemas are stored in the centralized location for mixins feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "mixins", "schema")
+        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "mixins", "schema")  # noqa: E501
         schema_path = os.path.join(schema_dir, filename)
 
         with open(schema_path, 'r', encoding='utf-8') as f:
@@ -193,7 +193,7 @@ class MixinsProvider(IMixinsProvider):
                 # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
-                except:
+                except:  # noqa: E722
                     # Ignore errors during disconnect
                     pass
 

@@ -9,7 +9,7 @@ from rhosocial.activerecord.backend.expression.transaction import (
     ReleaseSavepointExpression,
     SetTransactionExpression,
 )
-from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode
+from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode  # noqa: F401
 
 
 class TestPostgreSQLBeginTransactionExpression:
@@ -188,20 +188,20 @@ class TestPostgreSQLTransactionCapabilities:
 
     def test_supports_transaction_mode(self, postgres_dialect):
         """Test PostgreSQL supports transaction mode."""
-        assert postgres_dialect.supports_transaction_mode() == True
+        assert postgres_dialect.supports_transaction_mode() == True  # noqa: E712
 
     def test_supports_isolation_level_in_begin(self, postgres_dialect):
         """Test PostgreSQL supports isolation level in BEGIN."""
-        assert postgres_dialect.supports_isolation_level_in_begin() == True
+        assert postgres_dialect.supports_isolation_level_in_begin() == True  # noqa: E712
 
     def test_supports_read_only_transaction(self, postgres_dialect):
         """Test PostgreSQL supports READ ONLY transactions."""
-        assert postgres_dialect.supports_read_only_transaction() == True
+        assert postgres_dialect.supports_read_only_transaction() == True  # noqa: E712
 
     def test_supports_deferrable_transaction(self, postgres_dialect):
         """Test PostgreSQL supports DEFERRABLE transactions."""
-        assert postgres_dialect.supports_deferrable_transaction() == True
+        assert postgres_dialect.supports_deferrable_transaction() == True  # noqa: E712
 
     def test_supports_savepoint(self, postgres_dialect):
         """Test PostgreSQL supports savepoints."""
-        assert postgres_dialect.supports_savepoint() == True
+        assert postgres_dialect.supports_savepoint() == True  # noqa: E712

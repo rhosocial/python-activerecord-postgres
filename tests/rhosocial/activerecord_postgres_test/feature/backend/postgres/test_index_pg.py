@@ -691,13 +691,13 @@ class TestFormatAddDropIndexAction:
 
     def test_format_add_index_action_raises(self):
         d = PostgresDialect()
-        add = AddIndex(index=IndexDefinition(name="idx_test", columns=["a"]))
+        add = AddIndex(d, index=IndexDefinition(name="idx_test", columns=["a"]))
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE ADD INDEX"):
             d.format_add_index_action(add)
 
     def test_format_drop_index_action_raises(self):
         d = PostgresDialect()
-        drop = DropIndexAction(index_name="idx_test")
+        drop = DropIndexAction(d, index_name="idx_test")
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE DROP INDEX"):
             d.format_drop_index_action(drop)
 
@@ -914,7 +914,7 @@ class TestPostgresIndexMixinDirect:
         assert self._IndexMixinHigh().supports_index_if_exists() is True
 
     def test_format_create_index_expression_column(self):
-        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression import Column, Literal  # noqa: F401
         expr = CreateIndexExpression(
             PostgresDialect((15, 0, 0)), "idx_e", "t", [Column(PostgresDialect((15, 0, 0)), "a")],
         )

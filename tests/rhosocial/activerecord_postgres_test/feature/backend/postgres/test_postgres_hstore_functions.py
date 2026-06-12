@@ -18,7 +18,7 @@ Functions: hstore_from_record, hstore_from_key_value, hstore_akeys,
            hstore_subscript_get, hstore_subscript_set
 """
 
-import pytest
+import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions.hstore import (

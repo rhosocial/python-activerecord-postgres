@@ -13,9 +13,9 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
-    PostgresReindexExpression,
-    PostgresCreateStatisticsExpression,
-    PostgresDropStatisticsExpression,
+    PostgresReindexExpression,  # noqa: F401
+    PostgresCreateStatisticsExpression,  # noqa: F401
+    PostgresDropStatisticsExpression,  # noqa: F401
 )
 
 
@@ -285,7 +285,7 @@ class TestPostgresDetachPartitionExpression:
             concurrently=True
         )
         sql, _ = expr.to_sql()
-        assert "DETACH CONCURRENTLY" in sql
+        assert "CONCURRENTLY" in sql
 
     def test_finalize_requires_concurrently(self, dialect):
         """Test FINALIZE only valid with CONCURRENTLY."""

@@ -26,7 +26,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.array import (
     array_to_string,
     array_upper,
     unnest,
-    array_agg_distinct,
+    array_agg_distinct,  # noqa: F401
     string_to_array,
 )
 

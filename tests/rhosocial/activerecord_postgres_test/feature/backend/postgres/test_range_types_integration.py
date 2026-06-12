@@ -9,14 +9,14 @@ These tests require a live PostgreSQL connection and test:
 """
 import pytest
 import pytest_asyncio
-from datetime import date, datetime
-from decimal import Decimal
+from datetime import date, datetime  # noqa: F401
+from decimal import Decimal  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.types.range import (
-    PostgresRange,
-    PostgresMultirange,
+    PostgresRange,  # noqa: F401
+    PostgresMultirange,  # noqa: F401
 )
-from rhosocial.activerecord.backend.impl.postgres.adapters.range import PostgresRangeAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.range import PostgresRangeAdapter  # noqa: F401
 
 
 class TestSyncRangeTypesIntegration:
@@ -86,7 +86,7 @@ class TestSyncRangeTypesIntegration:
     def test_daterange_insert_and_select(self, postgres_backend, range_test_table):
         """Test DATERANGE insert and select."""
         postgres_backend.execute(
-            f"INSERT INTO {range_test_table} (date_range) VALUES (daterange('{date(2024, 1, 1)}', '{date(2024, 12, 31)}'))"
+            f"INSERT INTO {range_test_table} (date_range) VALUES (daterange('{date(2024, 1, 1)}', '{date(2024, 12, 31)}'))"  # noqa: E501
         )
         result = postgres_backend.fetch_one(
             f"SELECT date_range FROM {range_test_table}"

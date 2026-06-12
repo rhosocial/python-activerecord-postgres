@@ -86,7 +86,7 @@ def test_validation_invalid_session_attrs():
     with pytest.raises(ValueError, match="Invalid target_session_attrs"):
         config.validate()
         
-@pytest.mark.parametrize("valid_session_attr", ["any", "primary", "standby", "prefer-standby", "read-write", "read-only"])
+@pytest.mark.parametrize("valid_session_attr", ["any", "primary", "standby", "prefer-standby", "read-write", "read-only"])  # noqa: E501
 def test_validation_valid_session_attrs(valid_session_attr):
     """Test validation succeeds for valid target_session_attrs."""
     config = PostgresConnectionConfig(

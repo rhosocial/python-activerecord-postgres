@@ -6,7 +6,7 @@ Imports tests from testsuite and makes them discoverable by pytest.
 Note: Renamed to avoid conflict with feature/backend/test_transaction_isolation.py
 """
 from rhosocial.activerecord.testsuite.feature.query.worker.conftest import (
-    order_fixtures_for_worker,
-    async_order_fixtures_for_worker,
+    order_fixtures_for_worker,  # noqa: F401
+    async_order_fixtures_for_worker,  # noqa: F401
 )
-from rhosocial.activerecord.testsuite.feature.query.worker.test_transaction_isolation import *
+from rhosocial.activerecord.testsuite.feature.query.worker.test_transaction_isolation import *  # noqa: F403

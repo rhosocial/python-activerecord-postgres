@@ -1,4 +1,4 @@
-# /Users/vistart/PycharmProjects/rhosocial/python-activerecord-postgres/tests/rhosocial/activerecord_postgres_test/feature/backend/test_async_column_mapping_backend.py
+# /Users/vistart/PycharmProjects/rhosocial/python-activerecord-postgres/tests/rhosocial/activerecord_postgres_test/feature/backend/test_async_column_mapping_backend.py  # noqa: E501
 import pytest
 import pytest_asyncio
 from datetime import datetime

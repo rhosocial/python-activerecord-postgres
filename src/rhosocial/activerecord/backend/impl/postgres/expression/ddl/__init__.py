@@ -52,9 +52,11 @@ Example::
 
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
 from .partition import (
+    PartitionValue,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
+    PostgresPartitionMetadataExpression,
 )
 from .index import (
     PostgresAlterIndexExpression,
@@ -76,15 +78,23 @@ from .type import (
     PostgresCreateRangeTypeExpression,
 )
 from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
+from .pg_partman import (
+    PostgresPgPartmanCreateParentExpression,
+    PostgresPgPartmanRunMaintenanceExpression,
+    PostgresPgPartmanUpdateConfigExpression,
+    PostgresPgPartmanDeleteConfigExpression,
+)
 
 __all__ = [
     # vacuum
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
     # partition
+    "PartitionValue",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
+    "PostgresPartitionMetadataExpression",
     # index
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
@@ -106,4 +116,8 @@ __all__ = [
     # extension
     "PostgresCreateExtensionExpression",
     "PostgresDropExtensionExpression",
+    "PostgresPgPartmanCreateParentExpression",
+    "PostgresPgPartmanRunMaintenanceExpression",
+    "PostgresPgPartmanUpdateConfigExpression",
+    "PostgresPgPartmanDeleteConfigExpression",
 ]

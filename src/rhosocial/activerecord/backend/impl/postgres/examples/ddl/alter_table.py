@@ -87,6 +87,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
 
 # Add a new column
 add_email_action = AddColumn(
+    dialect=dialect,
     column=ColumnDefinition(
         name='email',
         data_type='VARCHAR(100)',
@@ -111,6 +112,7 @@ print("Column added successfully")
 
 # Add another column without default (PostgreSQL ALTER TABLE doesn't support parameterized DEFAULT well)
 add_age_action = AddColumn(
+    dialect=dialect,
     column=ColumnDefinition(
         'age',
         'INT',
@@ -129,6 +131,7 @@ print("Column age added successfully")
 
 # Rename a column
 rename_action = RenameColumn(
+    dialect=dialect,
     old_name='name',
     new_name='full_name',
 )

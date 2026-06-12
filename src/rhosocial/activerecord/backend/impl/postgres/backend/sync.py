@@ -16,7 +16,7 @@ Architecture:
 
 import datetime
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import psycopg
 from psycopg.errors import Error as PsycopgError
@@ -38,6 +38,7 @@ from rhosocial.activerecord.backend.errors import (
     OperationalError,
     QueryError,
 )
+from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.result import QueryResult
 from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
@@ -56,7 +57,7 @@ class PostgresBackend(
 ):
     """PostgreSQL-specific backend implementation."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize PostgreSQL backend with connection configuration.
 
         Note:
@@ -151,24 +152,24 @@ class PostgresBackend(
 
         self.log(logging.INFO, "PostgreSQLBackend initialized")
 
-    def _create_introspector(self):
+    def _create_introspector(self) -> Any:
         """Create and return a SyncPostgreSQLIntrospector with a sync executor."""
         from rhosocial.activerecord.backend.introspection.executor import SyncIntrospectorExecutor
 
         return SyncPostgreSQLIntrospector(self, SyncIntrospectorExecutor(self))
 
     @property
-    def dialect(self):
+    def dialect(self) -> PostgresDialect:
         """Get the PostgreSQL dialect instance."""
         return self._dialect
 
     @property
-    def transaction_manager(self):
+    def transaction_manager(self) -> PostgresTransactionManager:
         """Get the PostgreSQL transaction manager."""
         return self._transaction_manager
 
 
-    def connect(self):
+    def connect(self) -> None:
         """Establish connection to PostgreSQL database."""
         try:
             # Prepare connection parameters from config
@@ -253,7 +254,7 @@ class PostgresBackend(
             self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
             raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}") from e
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Close connection to PostgreSQL database."""
         if self._connection:
             try:
@@ -268,7 +269,7 @@ class PostgresBackend(
                 self.log(logging.ERROR, f"Error during disconnection: {str(e)}")
                 raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from e
 
-    def _get_cursor(self):
+    def _get_cursor(self) -> Any:
         """Get a database cursor, ensuring connection is active.
 
         This method implements automatic connection health checking (Plan A):
@@ -497,9 +498,9 @@ class PostgresBackend(
         sql: str,
         params: Optional[Tuple] = None,
         *,
-        options=None,
+        options: Optional[ExecutionOptions] = None,
         max_retries: int = 2,
-        **kwargs,
+        **kwargs: Any,
     ) -> QueryResult:
         """
         Execute a SQL statement with optional parameters.
@@ -517,7 +518,7 @@ class PostgresBackend(
         Returns:
             QueryResult containing the query results
         """
-        from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
+        from rhosocial.activerecord.backend.options import StatementType
 
         # If no options provided, create default options from kwargs
         if options is None:

@@ -8,7 +8,7 @@ import pytest
 import pytest_asyncio
 from decimal import Decimal
 
-from rhosocial.activerecord.backend.errors import TransactionError
+from rhosocial.activerecord.backend.errors import TransactionError  # noqa: F401
 
 
 class TestSyncTransactionDeferrable:
@@ -220,7 +220,7 @@ class TestAsyncTransactionDeferrable:
             assert "async_deferred_fk" in deferred
 
     @pytest.mark.asyncio
-    async def test_async_deferred_constraints_cleared_after_commit(self, async_postgres_backend, async_test_table_with_deferrable_fk):
+    async def test_async_deferred_constraints_cleared_after_commit(self, async_postgres_backend, async_test_table_with_deferrable_fk):  # noqa: E501
         """Test that deferred constraints list is cleared after commit (async)."""
         tx_manager = async_postgres_backend.transaction_manager
         
@@ -240,7 +240,7 @@ class TestAsyncTransactionDeferrable:
         assert len(tx_manager.get_deferred_constraints()) == 0
 
     @pytest.mark.asyncio
-    async def test_async_deferred_constraints_cleared_after_rollback(self, async_postgres_backend, async_test_table_with_deferrable_fk):
+    async def test_async_deferred_constraints_cleared_after_rollback(self, async_postgres_backend, async_test_table_with_deferrable_fk):  # noqa: E501
         """Test that deferred constraints list is cleared after rollback (async)."""
         tx_manager = async_postgres_backend.transaction_manager
         

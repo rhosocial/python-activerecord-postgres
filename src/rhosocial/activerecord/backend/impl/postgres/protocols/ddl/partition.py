@@ -7,16 +7,20 @@ the interface for PostgreSQL's native partitioning features.
 
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
+
 if TYPE_CHECKING:
     from ...expression.ddl import (
+        PartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
+        PostgresPartitionMetadataExpression,
     )
 
 
 @runtime_checkable
-class PostgresPartitionSupport(Protocol):
+class PostgresPartitionSupport(PartitionSupport, Protocol):
     """PostgreSQL partitioning enhancements protocol.
 
     Feature Source: Native support (no extension required)
@@ -76,6 +80,14 @@ class PostgresPartitionSupport(Protocol):
         """
         ...
 
+    def supports_concurrent_attach(self) -> bool:
+        """Whether CONCURRENTLY ATTACH PARTITION is supported.
+
+        Native feature, PostgreSQL 14+.
+        Enables non-blocking partition attachment.
+        """
+        ...
+
     def supports_partition_bounds_expression(self) -> bool:
         """Whether partition bounds can use expressions.
 
@@ -111,6 +123,17 @@ class PostgresPartitionSupport(Protocol):
         """
         ...
 
+    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+        """Format a partition bound value from expression.
+
+        Args:
+            expr: PartitionValue with the bound value.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...
+
     def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
@@ -125,10 +148,40 @@ class PostgresPartitionSupport(Protocol):
     def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
 
+        The expression supports:
+        - RANGE / LIST / HASH partition types with corresponding bound values.
+        - DEFAULT partition (PG 11+) via ``partition_values={"default": True}``.
+        - CONCURRENTLY mode (PG 14+) via ``concurrently=True``.
+
         Args:
-            expr: PostgresAttachPartitionExpression with attach details
+            expr: PostgresAttachPartitionExpression with attach details.
+                  ``expr.concurrently`` controls CONCURRENTLY mode.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
+        Raises:
+            ValueError: If partition_type is invalid or required bounds missing.
+            ValueError: If concurrently is used on PostgreSQL < 14.
+        """
+        ...
+
+    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+        """Format partition metadata introspection query from expression.
+
+        Builds a parameterised query against pg_catalog to inspect a partitioned
+        table's partition key, child partitions, and their bounds.
+
+        When schema is None, the query omits the namespace filter to search
+        across all schemas.
+
+        Args:
+            expr: PostgresPartitionMetadataExpression with parent table details.
+
+        Returns:
+            Tuple of (SQL string with %s placeholders, params tuple).
+
+        Raises:
+            UnsupportedFeatureError: If PostgreSQL version < 10.
         """
         ...

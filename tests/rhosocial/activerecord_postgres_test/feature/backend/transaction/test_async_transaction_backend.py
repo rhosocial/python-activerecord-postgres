@@ -74,7 +74,7 @@ async def test_nested_transaction_rollback_inner(async_postgres_backend, setup_t
 
         try:
             async with async_postgres_backend.transaction():
-                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 50))
+                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 50))  # noqa: E501
                 raise ValueError("Rollback inner transaction")
         except ValueError:
             pass
@@ -92,7 +92,7 @@ async def test_nested_transaction_rollback_outer(async_postgres_backend, setup_t
             await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("outer", 60))
 
             async with async_postgres_backend.transaction():
-                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 70))
+                await async_postgres_backend.execute("INSERT INTO test_table (name, age) VALUES (%s, %s)", ("inner", 70))  # noqa: E501
             
             raise ValueError("Rollback outer transaction")
     except ValueError:

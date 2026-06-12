@@ -50,7 +50,7 @@ def _load_scenarios_from_config():
     try:
         import yaml
     except ImportError:
-        raise ImportError("PyYAML is required to load postgres scenario configuration files. Please install it.")
+        raise ImportError("PyYAML is required to load postgres scenario configuration files. Please install it.")  # noqa: B904
 
     # First, try to load from path specified in environment variable
     env_config_path = os.getenv("POSTGRES_SCENARIOS_CONFIG_PATH")
@@ -80,7 +80,7 @@ def _load_scenarios_from_config():
             register_scenario(scenario_name, config)
 
     except Exception as e:
-        raise RuntimeError(f"Failed to load or parse scenario configuration file {config_path}: {e}")
+        raise RuntimeError(f"Failed to load or parse scenario configuration file {config_path}: {e}")  # noqa: B904
 
 
 def _register_default_scenarios():

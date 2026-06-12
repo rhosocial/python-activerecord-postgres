@@ -32,7 +32,7 @@ if _src not in sys.path:
 
 from rhosocial.activerecord.connection import BackendGroup
 from rhosocial.activerecord.connection.pool import PoolConfig, BackendPool
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig  # noqa: F401
 
 from config_loader import load_config
 from models import Comment, Post, User
@@ -266,7 +266,7 @@ def main():
     pool_time = time.time() - start_time
     pool.close()
     
-    print(f"\nResults (BackendPool):")
+    print(f"\nResults (BackendPool):")  # noqa: F541
     total_success = sum(r["success"] for r in results_pool)
     total_errors = sum(len(r["errors"]) for r in results_pool)
     for r in results_pool:
@@ -312,7 +312,7 @@ def main():
     group_time = time.time() - start_time
     group.disconnect()
     
-    print(f"\nResults (BackendGroup):")
+    print(f"\nResults (BackendGroup):")  # noqa: F541
     total_success = sum(r["success"] for r in results_group)
     total_errors = sum(len(r["errors"]) for r in results_group)
     for r in results_group:

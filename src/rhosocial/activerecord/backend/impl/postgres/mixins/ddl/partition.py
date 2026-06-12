@@ -6,13 +6,17 @@ PostgreSQL table partitioning operations including RANGE, LIST, and HASH
 partitioning with support for various PostgreSQL versions.
 """
 
-from typing import Any, Tuple, TYPE_CHECKING
+from typing import Any, List, Tuple, TYPE_CHECKING  # noqa: F401
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
+        PartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
+        PostgresPartitionMetadataExpression,
     )
 
 
@@ -22,33 +26,313 @@ class PostgresPartitionMixin:
     All features are native, using version number for detection.
     """
 
+    def supports_table_partitioning(self) -> bool:
+        """Check if declarative table partitioning is supported.
+
+        PostgreSQL 10+ supports declarative partitioning natively.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.version >= (10, 0, 0)
+
+    def supports_partitioned_table_creation(self) -> bool:
+        """Check if CREATE TABLE can create partitioned parent tables.
+
+        Alias for supports_table_partitioning(), PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_range_table_partitioning(self) -> bool:
+        """Check if RANGE table partitioning is supported.
+
+        Native feature, PostgreSQL 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_list_table_partitioning(self) -> bool:
+        """Check if LIST table partitioning is supported.
+
+        Native feature, PostgreSQL 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_hash_table_partitioning(self) -> bool:
+        """Check if HASH table partitioning is supported.
+
+        Native feature, PostgreSQL 11+.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
+        return self.supports_hash_partitioning()
+
+    def supports_subpartitioning(self) -> bool:
+        """Check if nested (sub)partitioning is exposed through this API.
+
+        PostgreSQL supports sub-partitioning but this API does not expose it yet.
+
+        Returns:
+            Always False.
+        """
+        return False
+
+    def supports_partition_metadata_introspection(self) -> bool:
+        """Check if partition metadata introspection is available.
+
+        Uses pg_catalog views to introspect partition structure, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_add_partition(self) -> bool:
+        """Check if adding a partition is supported.
+
+        Maps to CREATE TABLE ... PARTITION OF, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_drop_partition(self) -> bool:
+        """Check if dropping a partition is supported.
+
+        Maps to DROP TABLE on the child partition table, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_truncate_partition(self) -> bool:
+        """Check if truncating a partition is supported.
+
+        Maps to TRUNCATE TABLE on the child partition table, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_reorganize_partition(self) -> bool:
+        """Check if REORGANIZE PARTITION is supported.
+
+        PostgreSQL does not support MySQL-style REORGANIZE PARTITION operation.
+
+        Returns:
+            Always False.
+        """
+        return False
+
+    def supports_attach_partition(self) -> bool:
+        """Check if ATTACH PARTITION is supported.
+
+        PostgreSQL supports ALTER TABLE ... ATTACH PARTITION, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_detach_partition(self) -> bool:
+        """Check if DETACH PARTITION is supported.
+
+        PostgreSQL supports ALTER TABLE ... DETACH PARTITION, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
+        return self.supports_table_partitioning()
+
+    def format_partition_clause(self, expr) -> Tuple[str, tuple]:
+        """Format a PostgreSQL PARTITION BY clause from PartitionClause."""
+        if not self.supports_partitioned_table_creation():
+            raise UnsupportedFeatureError(
+                self.name,
+                "declarative table partitioning",
+                "Declarative table partitioning requires PostgreSQL 10+.",
+            )
+
+        method = expr.method.upper()
+        if method == "RANGE":
+            if not self.supports_range_table_partitioning():
+                raise UnsupportedFeatureError(self.name, "RANGE partitioning")
+        elif method == "LIST":
+            if not self.supports_list_table_partitioning():
+                raise UnsupportedFeatureError(self.name, "LIST partitioning")
+        elif method == "HASH":
+            if not self.supports_hash_table_partitioning():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "HASH partitioning",
+                    "HASH partitioning requires PostgreSQL 11+.",
+                )
+        elif method in {"KEY", "RANGE COLUMNS", "LIST COLUMNS", "LINEAR HASH", "LINEAR KEY"}:
+            raise UnsupportedFeatureError(
+                self.name,
+                f"{method} partitioning",
+                "This is not a PostgreSQL partitioning method.",
+            )
+        else:
+            raise ValueError(f"Invalid PostgreSQL partition method: {expr.method}")
+
+        key_parts: List[str] = []
+        params: List[Any] = []
+        for key in expr.keys:
+            key_sql, key_params = key.to_sql()
+            key_parts.append(key_sql)
+            params.extend(key_params)
+        return f" PARTITION BY {method} ({', '.join(key_parts)})", tuple(params)
+
     def supports_hash_partitioning(self) -> bool:
-        """HASH partitioning is native feature, PG 11+."""
+        """Check if HASH partitioning is supported.
+
+        Native feature, PostgreSQL 11+. Enables PARTITION BY HASH clause.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_default_partition(self) -> bool:
-        """DEFAULT partition is native feature, PG 11+."""
+        """Check if DEFAULT partition is supported.
+
+        Native feature, PostgreSQL 11+. Allows a DEFAULT partition to catch
+        rows that do not match any other partition.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_partition_key_update(self) -> bool:
-        """Partition key row movement is native feature, PG 11+."""
+        """Check if partition key update row movement is supported.
+
+        Native feature, PostgreSQL 11+. When a partition key is updated,
+        rows automatically move to the correct partition.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_concurrent_detach(self) -> bool:
-        """Concurrent DETACH is native feature, PG 14+."""
+        """Check if CONCURRENTLY DETACH is supported.
+
+        Native feature, PostgreSQL 14+. Enables non-blocking partition
+        detachment without exclusive locks.
+
+        Returns:
+            True if PostgreSQL version >= 14.
+        """
+        return self.version >= (14, 0, 0)
+
+    def supports_concurrent_attach(self) -> bool:
+        """Check if CONCURRENTLY ATTACH is supported.
+
+        Native feature, PostgreSQL 14+. Enables non-blocking partition
+        attachment without blocking concurrent queries.
+
+        Returns:
+            True if PostgreSQL version >= 14.
+        """
         return self.version >= (14, 0, 0)
 
     def supports_partition_bounds_expression(self) -> bool:
-        """Partition bounds expression is native feature, PG 12+."""
+        """Check if partition bounds expressions are supported.
+
+        Native feature, PostgreSQL 12+. Enables non-constant expressions
+        in partition bound specifications.
+
+        Returns:
+            True if PostgreSQL version >= 12.
+        """
         return self.version >= (12, 0, 0)
 
     def supports_partitionwise_join(self) -> bool:
-        """Partitionwise join is native feature, PG 11+."""
+        """Check if partitionwise join optimization is supported.
+
+        Native feature, PostgreSQL 11+. Enables join optimization for
+        partitioned tables.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_partitionwise_aggregate(self) -> bool:
-        """Partitionwise aggregate is native feature, PG 11+."""
+        """Check if partitionwise aggregate optimization is supported.
+
+        Native feature, PostgreSQL 11+. Enables aggregate optimization for
+        partitioned tables.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
+
+    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+        """Format a partition bound value from expression.
+
+        Public method implementing the PartitionValue expression's
+        SQL generation, following the Expression-Dialect-Protocol pattern.
+
+        Value handling:
+        - None → 'NULL'
+        - String 'MAXVALUE', 'MINVALUE', or 'DEFAULT' (case-insensitive) → as-is
+        - String/date/datetime/Decimal/numeric values → whitelist-formatted SQL literal
+        - Arbitrary objects are rejected by PartitionValue before formatting
+
+        Args:
+            expr: PartitionValue with the bound value.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+        """
+        from datetime import date, datetime
+        from decimal import Decimal
+        from math import isfinite
+
+        value = expr.value
+        if value is None:
+            return "NULL", ()
+        if isinstance(value, bool):
+            raise TypeError("partition value must not be bool")
+        if isinstance(value, str):
+            upper_val = value.upper()
+            if upper_val in {"MAXVALUE", "MINVALUE", "DEFAULT"}:
+                return upper_val, ()
+            return f"'{value.replace(chr(39), chr(39)+chr(39))}'", ()
+        if isinstance(value, int):
+            return str(value), ()
+        if isinstance(value, float):
+            if not isfinite(value):
+                raise ValueError("partition value float must be finite")
+            return repr(value), ()
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                raise ValueError("partition value Decimal must be finite")
+            return str(value), ()
+        if isinstance(value, datetime):
+            return f"'{value.isoformat(sep=' ')}'", ()
+        if isinstance(value, date):
+            return f"'{value.isoformat()}'", ()
+        raise TypeError(
+            "partition value must be str, int, float, Decimal, "
+            f"date, datetime, or None, got {type(value).__name__}"
+        )
 
     def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
@@ -101,32 +385,37 @@ class PostgresPartitionMixin:
         else:
             parts.append(f"PARTITION OF {self.format_identifier(expr.parent_table)}")
 
-        # FOR VALUES clause
-        parts.append("FOR VALUES")
-
         if partition_type == "RANGE":
             if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
+                parts.append("FOR VALUES")
                 from_val = expr.partition_values.get("from")
                 to_val = expr.partition_values.get("to")
                 if from_val is None or to_val is None:
                     raise ValueError("RANGE partition requires 'from' and 'to' values")
-                parts.append(
-                    f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})"
-                )
+                from ...expression.ddl import PartitionValue
+                from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
+                to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
+                parts.append(f"FROM ({from_sql}) TO ({to_sql})")
 
         elif partition_type == "LIST":
             if "default" in expr.partition_values and expr.partition_values["default"]:
                 parts.append("DEFAULT")
             else:
+                parts.append("FOR VALUES")
                 values = expr.partition_values.get("values", [])
                 if not values:
                     raise ValueError("LIST partition requires 'values' list")
-                vals_str = ", ".join(self._format_partition_value(v) for v in values)
+                from ...expression.ddl import PartitionValue
+                vals_str = ", ".join(
+                    PartitionValue(dialect=self, value=v).to_sql()[0]
+                    for v in values
+                )
                 parts.append(f"IN ({vals_str})")
 
         elif partition_type == "HASH":
+            parts.append("FOR VALUES")
             modulus = expr.partition_values.get("modulus")
             remainder = expr.partition_values.get("remainder")
             if modulus is None or remainder is None:
@@ -140,33 +429,6 @@ class PostgresPartitionMixin:
             parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
 
         return (" ".join(parts), ())
-
-    def _format_partition_value(self, value: Any) -> str:
-        """Format a partition bound value.
-
-        Args:
-            value: The partition bound value. Can be:
-                - None: Returns 'NULL'
-                - String 'MAXVALUE' or 'MINVALUE' (case-insensitive): Returns as-is
-                - String: Returns the string value quoted
-                - Other types: Returns str(value)
-
-        Note:
-            For string values that represent dates or other literals,
-            pass the raw value without quotes. The method will add quotes.
-            Example: Pass '2024-01-01' not "'2024-01-01'"
-
-        """
-        if value is None:
-            return "NULL"
-        elif isinstance(value, str):
-            upper_val = value.upper()
-            if upper_val == "MAXVALUE" or upper_val == "MINVALUE":
-                return upper_val
-            # Add quotes around string values, escaping internal single quotes
-            return f"'{value.replace(chr(39), chr(39)+chr(39))}'"  # escape ' to ''
-        else:
-            return str(value)
 
     def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
@@ -191,17 +453,17 @@ class PostgresPartitionMixin:
         else:
             parts.append(self.format_identifier(expr.parent_table))
 
-        if expr.concurrently:
-            if not self.supports_concurrent_detach():
-                raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
-            parts.append("DETACH CONCURRENTLY")
-        else:
-            parts.append("DETACH PARTITION")
+        if expr.concurrently and not self.supports_concurrent_detach():
+            raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
+        parts.append("DETACH PARTITION")
 
         if expr.schema:
             parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
         else:
             parts.append(self.format_identifier(expr.partition_name))
+
+        if expr.concurrently:
+            parts.append("CONCURRENTLY")
 
         if expr.finalize:
             if not expr.concurrently:
@@ -218,12 +480,17 @@ class PostgresPartitionMixin:
         - ``expr.partition_name`` — partition to attach.
         - ``expr.partition_type`` — partition method (``RANGE`` / ``LIST`` / ``HASH``).
         - ``expr.partition_values`` — bound values (see ``format_create_partition_statement``).
+        - ``expr.concurrently`` — add ``CONCURRENTLY`` for non-blocking attach (PG 14+).
 
         Args:
             expr: PostgresAttachPartitionExpression instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If partition_type is invalid or required bound values are missing.
+            ValueError: If concurrently is used on PostgreSQL < 14.
 
         """
         parts = ["ALTER TABLE"]
@@ -240,23 +507,112 @@ class PostgresPartitionMixin:
         else:
             parts.append(self.format_identifier(expr.partition_name))
 
-        # FOR VALUES clause (same as create partition)
-        parts.append("FOR VALUES")
-
         partition_type = expr.partition_type.upper()
-        if partition_type == "RANGE":
-            from_val = expr.partition_values.get("from")
-            to_val = expr.partition_values.get("to")
-            parts.append(f"FROM ({self._format_partition_value(from_val)}) TO ({self._format_partition_value(to_val)})")
+        if partition_type not in ("RANGE", "LIST", "HASH"):
+            raise ValueError(f"Invalid partition_type: {partition_type}")
 
-        elif partition_type == "LIST":
-            values = expr.partition_values.get("values", [])
-            vals_str = ", ".join(self._format_partition_value(v) for v in values)
-            parts.append(f"IN ({vals_str})")
+        # FOR VALUES / DEFAULT clause (same as create partition)
+        if "default" in expr.partition_values and expr.partition_values["default"]:
+            parts.append("DEFAULT")
+        else:
+            parts.append("FOR VALUES")
 
-        elif partition_type == "HASH":
-            modulus = expr.partition_values.get("modulus")
-            remainder = expr.partition_values.get("remainder")
-            parts.append(f"WITH (MODULUS {modulus}, REMAINDER {remainder})")
+            if partition_type == "RANGE":
+                from_val = expr.partition_values.get("from")
+                to_val = expr.partition_values.get("to")
+                if from_val is None or to_val is None:
+                    raise ValueError("RANGE partition requires 'from' and 'to' values")
+                from ...expression.ddl import PartitionValue
+                from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
+                to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
+                parts.append(f"FROM ({from_sql}) TO ({to_sql})")
+
+            elif partition_type == "LIST":
+                values = expr.partition_values.get("values", [])
+                if not values:
+                    raise ValueError("LIST partition requires 'values' list")
+                from ...expression.ddl import PartitionValue
+                vals_str = ", ".join(
+                    PartitionValue(dialect=self, value=v).to_sql()[0]
+                    for v in values
+                )
+                parts.append(f"IN ({vals_str})")
+
+            elif partition_type == "HASH":
+                modulus = expr.partition_values.get("modulus")
+                remainder = expr.partition_values.get("remainder")
+                if modulus is None or remainder is None:
+                    raise ValueError("HASH partition requires 'modulus' and 'remainder'")
+                if not self.supports_hash_partitioning():
+                    raise ValueError("HASH partitioning requires PostgreSQL 11+")
+                parts.append(f"WITH (MODULUS {modulus}, REMAINDER {remainder})")
+
+        # CONCURRENTLY (PG 14+)
+        if expr.concurrently:
+            if not self.supports_concurrent_attach():
+                raise ValueError("ATTACH CONCURRENTLY requires PostgreSQL 14+")
+            parts.append("CONCURRENTLY")
 
         return (" ".join(parts), ())
+
+    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+        """Format pg_catalog query for partition metadata introspection.
+
+        Builds a parameterised query against pg_catalog to inspect a partitioned
+        table's partition key, child partitions, and their bounds.
+
+        - ``expr.parent_table`` — name of the parent partitioned table.
+        - ``expr.schema`` — optional schema to scope the query (None = all schemas).
+        - ``expr.include_partitions`` — if True, lists child partitions with bounds;
+          if False, returns only parent metadata without partition details.
+
+        The query uses parameter binding (%s placeholders) with
+        (parent_table, schema, schema) as parameters. When schema is None,
+        the WHERE clause omits the namespace filter.
+
+        Args:
+            expr: PostgresPartitionMetadataExpression with parent table details.
+
+        Returns:
+            Tuple of (SQL string with %s placeholders, params tuple).
+
+        Raises:
+            UnsupportedFeatureError: If PostgreSQL version < 10.
+        """
+        from typing import List
+
+        if not self.supports_partition_metadata_introspection():
+            raise UnsupportedFeatureError(
+                self.name,
+                "partition metadata introspection",
+                "Partition metadata introspection requires PostgreSQL 10+.",
+            )
+
+        params: List[Any] = [expr.parent_table]
+        schema_filter = ""
+        if expr.schema is not None:
+            schema_filter = " AND parent_ns.nspname = %s"
+            params.append(expr.schema)
+
+        if expr.include_partitions:
+            sql = f"""
+                SELECT pg_get_partkeydef(parent.oid) AS partition_key,
+                       child.relname AS name,
+                       pg_get_expr(child.relpartbound, child.oid) AS bound
+                FROM pg_class parent
+                JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
+                LEFT JOIN pg_inherits i ON i.inhparent = parent.oid
+                LEFT JOIN pg_class child ON child.oid = i.inhrelid
+                WHERE parent.relname = %s{schema_filter}
+                ORDER BY child.relname
+            """
+        else:
+            sql = f"""
+                SELECT pg_get_partkeydef(parent.oid) AS partition_key,
+                       NULL::text AS name,
+                       NULL::text AS bound
+                FROM pg_class parent
+                JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
+                WHERE parent.relname = %s{schema_filter}
+            """
+        return sql, tuple(params)

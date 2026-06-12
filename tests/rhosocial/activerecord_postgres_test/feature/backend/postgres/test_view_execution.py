@@ -6,19 +6,19 @@ These tests verify that generated SQL statements execute correctly
 against an actual PostgreSQL database.
 """
 import pytest
-from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
-from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend  # noqa: F401
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect  # noqa: F401
 from rhosocial.activerecord.backend.expression import (
-    Column, Literal, FunctionCall, TableExpression, QueryExpression,
+    Column, Literal, FunctionCall, TableExpression, QueryExpression,  # noqa: F401
     CreateViewExpression, DropViewExpression,
     CreateMaterializedViewExpression, DropMaterializedViewExpression,
-    RefreshMaterializedViewExpression, CreateTableExpression, DropTableExpression,
-    InsertExpression, ColumnDefinition, ColumnConstraint, ColumnConstraintType,
-    TableConstraint, TableConstraintType, ForeignKeyConstraint, ValuesSource
+    RefreshMaterializedViewExpression, CreateTableExpression, DropTableExpression,  # noqa: F401
+    InsertExpression, ColumnDefinition, ColumnConstraint, ColumnConstraintType,  # noqa: F401
+    TableConstraint, TableConstraintType, ForeignKeyConstraint, ValuesSource  # noqa: F401
 )
-from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate, RawSQLExpression
-from rhosocial.activerecord.backend.expression.query_parts import GroupByHavingClause, WhereClause
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate, RawSQLExpression  # noqa: F401
+from rhosocial.activerecord.backend.expression.query_parts import GroupByHavingClause, WhereClause  # noqa: F401
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError  # noqa: F401
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 def postgres_view_backend(postgres_backend):
     """Provides a PostgresBackend instance with test data for view tests."""
     backend = postgres_backend
-    dialect = backend.dialect
+    dialect = backend.dialect  # noqa: F841
 
     # Drop existing objects if they exist
     backend.execute("DROP MATERIALIZED VIEW IF EXISTS user_order_mv", (),

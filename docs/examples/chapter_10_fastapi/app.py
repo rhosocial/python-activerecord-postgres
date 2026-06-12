@@ -55,13 +55,13 @@ if _src not in sys.path:
     sys.path.insert(0, _src)
 
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import List, Optional  # noqa: F401
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder  # noqa: F401
 from pydantic import BaseModel, EmailStr
 
-from config_loader import load_config
+from config_loader import load_config  # noqa: F401
 from database import get_request_db, init_database, init_pool, close_pool
 from models import AsyncUser, AsyncPost, AsyncComment
 
@@ -138,7 +138,7 @@ app = FastAPI(
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/users", response_model=List[UserResponse])
-async def list_users(db=Depends(get_request_db)):
+async def list_users(db=Depends(get_request_db)):  # noqa: B008
     """List all users."""
     users = await AsyncUser.query().all()
     return [UserResponse(
@@ -150,7 +150,7 @@ async def list_users(db=Depends(get_request_db)):
 
 
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate, db=Depends(get_request_db)):
+async def create_user(user_data: UserCreate, db=Depends(get_request_db)):  # noqa: B008
     """Create a new user."""
     user = AsyncUser(
         username=user_data.username,
@@ -168,7 +168,7 @@ async def create_user(user_data: UserCreate, db=Depends(get_request_db)):
 
 
 @app.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, db=Depends(get_request_db)):
+async def get_user(user_id: int, db=Depends(get_request_db)):  # noqa: B008
     """Get a single user by ID."""
     user = await AsyncUser.find_one(user_id)
     if not user:
@@ -187,7 +187,7 @@ async def get_user(user_id: int, db=Depends(get_request_db)):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.post("/posts", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
-async def create_post(post_data: PostCreate, db=Depends(get_request_db)):
+async def create_post(post_data: PostCreate, db=Depends(get_request_db)):  # noqa: B008
     """Create a new post."""
     # Validate user exists
     user = await AsyncUser.find_one(post_data.user_id)
@@ -213,7 +213,7 @@ async def create_post(post_data: PostCreate, db=Depends(get_request_db)):
 
 
 @app.get("/posts", response_model=List[PostResponse])
-async def list_posts(db=Depends(get_request_db)):
+async def list_posts(db=Depends(get_request_db)):  # noqa: B008
     """List all posts."""
     posts = await AsyncPost.query().all()
     return [PostResponse(
@@ -227,7 +227,7 @@ async def list_posts(db=Depends(get_request_db)):
 
 
 @app.get("/posts/{post_id}", response_model=PostResponse)
-async def get_post(post_id: int, db=Depends(get_request_db)):
+async def get_post(post_id: int, db=Depends(get_request_db)):  # noqa: B008
     """Get a single post by ID."""
     post = await AsyncPost.find_one(post_id)
     if not post:
@@ -244,7 +244,7 @@ async def get_post(post_id: int, db=Depends(get_request_db)):
 
 
 @app.get("/users/{user_id}/posts", response_model=List[PostResponse])
-async def get_user_posts(user_id: int, db=Depends(get_request_db)):
+async def get_user_posts(user_id: int, db=Depends(get_request_db)):  # noqa: B008
     """Get all posts by a user."""
     user = await AsyncUser.find_one(user_id)
     if not user:
@@ -268,7 +268,7 @@ async def get_user_posts(user_id: int, db=Depends(get_request_db)):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.post("/posts/{post_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
-async def create_comment(post_id: int, comment_data: CommentCreate, db=Depends(get_request_db)):
+async def create_comment(post_id: int, comment_data: CommentCreate, db=Depends(get_request_db)):  # noqa: B008
     """Add a comment to a post."""
     # Validate post exists
     post = await AsyncPost.find_one(post_id)
@@ -298,7 +298,7 @@ async def create_comment(post_id: int, comment_data: CommentCreate, db=Depends(g
 
 
 @app.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
-async def get_post_comments(post_id: int, db=Depends(get_request_db)):
+async def get_post_comments(post_id: int, db=Depends(get_request_db)):  # noqa: B008
     """Get all comments for a post."""
     post = await AsyncPost.find_one(post_id)
     if not post:

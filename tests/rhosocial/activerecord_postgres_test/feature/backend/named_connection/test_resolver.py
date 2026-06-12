@@ -8,7 +8,7 @@ This test module covers:
 - Integration tests using example_connections module
 """
 import types
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch  # noqa: F401
 import pytest
 
 from rhosocial.activerecord.backend.named_connection.resolver import (
@@ -17,12 +17,12 @@ from rhosocial.activerecord.backend.named_connection.resolver import (
     list_named_connections_in_module,
 )
 from rhosocial.activerecord.backend.named_connection.exceptions import (
-    NamedConnectionNotFoundError,
-    NamedConnectionModuleNotFoundError,
+    NamedConnectionNotFoundError,  # noqa: F401
+    NamedConnectionModuleNotFoundError,  # noqa: F401
     NamedConnectionInvalidReturnTypeError,
-    NamedConnectionNotCallableError,
+    NamedConnectionNotCallableError,  # noqa: F401
     NamedConnectionMissingParameterError,
-    NamedConnectionInvalidParameterError,
+    NamedConnectionInvalidParameterError,  # noqa: F401
 )
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
