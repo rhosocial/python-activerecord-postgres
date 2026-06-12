@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
+        PostgresPartitionMetadataExpression,
     )
 
 
@@ -26,55 +27,133 @@ class PostgresPartitionMixin:
     """
 
     def supports_table_partitioning(self) -> bool:
-        """Declarative table partitioning is native feature, PG 10+."""
+        """Check if declarative table partitioning is supported.
+
+        PostgreSQL 10+ supports declarative partitioning natively.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.version >= (10, 0, 0)
 
     def supports_partitioned_table_creation(self) -> bool:
-        """CREATE TABLE can create partitioned parent tables in PG 10+."""
+        """Check if CREATE TABLE can create partitioned parent tables.
+
+        Alias for supports_table_partitioning(), PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_range_table_partitioning(self) -> bool:
-        """RANGE table partitioning is native feature, PG 10+."""
+        """Check if RANGE table partitioning is supported.
+
+        Native feature, PostgreSQL 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_list_table_partitioning(self) -> bool:
-        """LIST table partitioning is native feature, PG 10+."""
+        """Check if LIST table partitioning is supported.
+
+        Native feature, PostgreSQL 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_hash_table_partitioning(self) -> bool:
-        """HASH table partitioning is native feature, PG 11+."""
+        """Check if HASH table partitioning is supported.
+
+        Native feature, PostgreSQL 11+.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.supports_hash_partitioning()
 
     def supports_subpartitioning(self) -> bool:
-        """Nested partitioned partitions are not exposed by this API yet."""
+        """Check if nested (sub)partitioning is exposed through this API.
+
+        PostgreSQL supports sub-partitioning but this API does not expose it yet.
+
+        Returns:
+            Always False.
+        """
         return False
 
     def supports_partition_metadata_introspection(self) -> bool:
-        """Partition metadata introspection is available through pg_catalog in PG 10+."""
+        """Check if partition metadata introspection is available.
+
+        Uses pg_catalog views to introspect partition structure, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_add_partition(self) -> bool:
-        """Adding a partition maps to CREATE TABLE ... PARTITION OF in PG 10+."""
+        """Check if adding a partition is supported.
+
+        Maps to CREATE TABLE ... PARTITION OF, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_drop_partition(self) -> bool:
-        """Dropping a partition maps to dropping the child partition table."""
+        """Check if dropping a partition is supported.
+
+        Maps to DROP TABLE on the child partition table, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_truncate_partition(self) -> bool:
-        """Truncating a partition maps to TRUNCATE TABLE on the child table."""
+        """Check if truncating a partition is supported.
+
+        Maps to TRUNCATE TABLE on the child partition table, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_reorganize_partition(self) -> bool:
-        """PostgreSQL has no MySQL-style REORGANIZE PARTITION operation."""
+        """Check if REORGANIZE PARTITION is supported.
+
+        PostgreSQL does not support MySQL-style REORGANIZE PARTITION operation.
+
+        Returns:
+            Always False.
+        """
         return False
 
     def supports_attach_partition(self) -> bool:
-        """PostgreSQL supports ALTER TABLE ... ATTACH PARTITION."""
+        """Check if ATTACH PARTITION is supported.
+
+        PostgreSQL supports ALTER TABLE ... ATTACH PARTITION, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def supports_detach_partition(self) -> bool:
-        """PostgreSQL supports ALTER TABLE ... DETACH PARTITION."""
+        """Check if DETACH PARTITION is supported.
+
+        PostgreSQL supports ALTER TABLE ... DETACH PARTITION, PG 10+.
+
+        Returns:
+            True if PostgreSQL version >= 10.
+        """
         return self.supports_table_partitioning()
 
     def format_partition_clause(self, expr) -> Tuple[str, tuple]:
@@ -118,31 +197,90 @@ class PostgresPartitionMixin:
         return f" PARTITION BY {method} ({', '.join(key_parts)})", tuple(params)
 
     def supports_hash_partitioning(self) -> bool:
-        """HASH partitioning is native feature, PG 11+."""
+        """Check if HASH partitioning is supported.
+
+        Native feature, PostgreSQL 11+. Enables PARTITION BY HASH clause.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_default_partition(self) -> bool:
-        """DEFAULT partition is native feature, PG 11+."""
+        """Check if DEFAULT partition is supported.
+
+        Native feature, PostgreSQL 11+. Allows a DEFAULT partition to catch
+        rows that do not match any other partition.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_partition_key_update(self) -> bool:
-        """Partition key row movement is native feature, PG 11+."""
+        """Check if partition key update row movement is supported.
+
+        Native feature, PostgreSQL 11+. When a partition key is updated,
+        rows automatically move to the correct partition.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_concurrent_detach(self) -> bool:
-        """Concurrent DETACH is native feature, PG 14+."""
+        """Check if CONCURRENTLY DETACH is supported.
+
+        Native feature, PostgreSQL 14+. Enables non-blocking partition
+        detachment without exclusive locks.
+
+        Returns:
+            True if PostgreSQL version >= 14.
+        """
+        return self.version >= (14, 0, 0)
+
+    def supports_concurrent_attach(self) -> bool:
+        """Check if CONCURRENTLY ATTACH is supported.
+
+        Native feature, PostgreSQL 14+. Enables non-blocking partition
+        attachment without blocking concurrent queries.
+
+        Returns:
+            True if PostgreSQL version >= 14.
+        """
         return self.version >= (14, 0, 0)
 
     def supports_partition_bounds_expression(self) -> bool:
-        """Partition bounds expression is native feature, PG 12+."""
+        """Check if partition bounds expressions are supported.
+
+        Native feature, PostgreSQL 12+. Enables non-constant expressions
+        in partition bound specifications.
+
+        Returns:
+            True if PostgreSQL version >= 12.
+        """
         return self.version >= (12, 0, 0)
 
     def supports_partitionwise_join(self) -> bool:
-        """Partitionwise join is native feature, PG 11+."""
+        """Check if partitionwise join optimization is supported.
+
+        Native feature, PostgreSQL 11+. Enables join optimization for
+        partitioned tables.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def supports_partitionwise_aggregate(self) -> bool:
-        """Partitionwise aggregate is native feature, PG 11+."""
+        """Check if partitionwise aggregate optimization is supported.
+
+        Native feature, PostgreSQL 11+. Enables aggregate optimization for
+        partitioned tables.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
         return self.version >= (11, 0, 0)
 
     def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
@@ -342,12 +480,17 @@ class PostgresPartitionMixin:
         - ``expr.partition_name`` — partition to attach.
         - ``expr.partition_type`` — partition method (``RANGE`` / ``LIST`` / ``HASH``).
         - ``expr.partition_values`` — bound values (see ``format_create_partition_statement``).
+        - ``expr.concurrently`` — add ``CONCURRENTLY`` for non-blocking attach (PG 14+).
 
         Args:
             expr: PostgresAttachPartitionExpression instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
+
+        Raises:
+            ValueError: If partition_type is invalid or required bound values are missing.
+            ValueError: If concurrently is used on PostgreSQL < 14.
 
         """
         parts = ["ALTER TABLE"]
@@ -364,47 +507,80 @@ class PostgresPartitionMixin:
         else:
             parts.append(self.format_identifier(expr.partition_name))
 
-        # FOR VALUES clause (same as create partition)
-        parts.append("FOR VALUES")
-
         partition_type = expr.partition_type.upper()
         if partition_type not in ("RANGE", "LIST", "HASH"):
             raise ValueError(f"Invalid partition_type: {partition_type}")
 
-        if partition_type == "RANGE":
-            from_val = expr.partition_values.get("from")
-            to_val = expr.partition_values.get("to")
-            if from_val is None or to_val is None:
-                raise ValueError("RANGE partition requires 'from' and 'to' values")
-            from ...expression.ddl import PartitionValue
-            from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
-            to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
-            parts.append(f"FROM ({from_sql}) TO ({to_sql})")
+        # FOR VALUES / DEFAULT clause (same as create partition)
+        if "default" in expr.partition_values and expr.partition_values["default"]:
+            parts.append("DEFAULT")
+        else:
+            parts.append("FOR VALUES")
 
-        elif partition_type == "LIST":
-            values = expr.partition_values.get("values", [])
-            if not values:
-                raise ValueError("LIST partition requires 'values' list")
-            from ...expression.ddl import PartitionValue
-            vals_str = ", ".join(
-                PartitionValue(dialect=self, value=v).to_sql()[0]
-                for v in values
-            )
-            parts.append(f"IN ({vals_str})")
+            if partition_type == "RANGE":
+                from_val = expr.partition_values.get("from")
+                to_val = expr.partition_values.get("to")
+                if from_val is None or to_val is None:
+                    raise ValueError("RANGE partition requires 'from' and 'to' values")
+                from ...expression.ddl import PartitionValue
+                from_sql, _ = PartitionValue(dialect=self, value=from_val).to_sql()
+                to_sql, _ = PartitionValue(dialect=self, value=to_val).to_sql()
+                parts.append(f"FROM ({from_sql}) TO ({to_sql})")
 
-        elif partition_type == "HASH":
-            modulus = expr.partition_values.get("modulus")
-            remainder = expr.partition_values.get("remainder")
-            if modulus is None or remainder is None:
-                raise ValueError("HASH partition requires 'modulus' and 'remainder'")
-            if not self.supports_hash_partitioning():
-                raise ValueError("HASH partitioning requires PostgreSQL 11+")
-            parts.append(f"WITH (MODULUS {modulus}, REMAINDER {remainder})")
+            elif partition_type == "LIST":
+                values = expr.partition_values.get("values", [])
+                if not values:
+                    raise ValueError("LIST partition requires 'values' list")
+                from ...expression.ddl import PartitionValue
+                vals_str = ", ".join(
+                    PartitionValue(dialect=self, value=v).to_sql()[0]
+                    for v in values
+                )
+                parts.append(f"IN ({vals_str})")
+
+            elif partition_type == "HASH":
+                modulus = expr.partition_values.get("modulus")
+                remainder = expr.partition_values.get("remainder")
+                if modulus is None or remainder is None:
+                    raise ValueError("HASH partition requires 'modulus' and 'remainder'")
+                if not self.supports_hash_partitioning():
+                    raise ValueError("HASH partitioning requires PostgreSQL 11+")
+                parts.append(f"WITH (MODULUS {modulus}, REMAINDER {remainder})")
+
+        # CONCURRENTLY (PG 14+)
+        if expr.concurrently:
+            if not self.supports_concurrent_attach():
+                raise ValueError("ATTACH CONCURRENTLY requires PostgreSQL 14+")
+            parts.append("CONCURRENTLY")
 
         return (" ".join(parts), ())
 
     def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
-        """Format pg_catalog query for partition metadata introspection."""
+        """Format pg_catalog query for partition metadata introspection.
+
+        Builds a parameterised query against pg_catalog to inspect a partitioned
+        table's partition key, child partitions, and their bounds.
+
+        - ``expr.parent_table`` — name of the parent partitioned table.
+        - ``expr.schema`` — optional schema to scope the query (None = all schemas).
+        - ``expr.include_partitions`` — if True, lists child partitions with bounds;
+          if False, returns only parent metadata without partition details.
+
+        The query uses parameter binding (%s placeholders) with
+        (parent_table, schema, schema) as parameters. When schema is None,
+        the WHERE clause omits the namespace filter.
+
+        Args:
+            expr: PostgresPartitionMetadataExpression with parent table details.
+
+        Returns:
+            Tuple of (SQL string with %s placeholders, params tuple).
+
+        Raises:
+            UnsupportedFeatureError: If PostgreSQL version < 10.
+        """
+        from typing import List
+
         if not self.supports_partition_metadata_introspection():
             raise UnsupportedFeatureError(
                 self.name,
@@ -412,8 +588,14 @@ class PostgresPartitionMixin:
                 "Partition metadata introspection requires PostgreSQL 10+.",
             )
 
+        params: List[Any] = [expr.parent_table]
+        schema_filter = ""
+        if expr.schema is not None:
+            schema_filter = " AND parent_ns.nspname = %s"
+            params.append(expr.schema)
+
         if expr.include_partitions:
-            sql = """
+            sql = f"""
                 SELECT pg_get_partkeydef(parent.oid) AS partition_key,
                        child.relname AS name,
                        pg_get_expr(child.relpartbound, child.oid) AS bound
@@ -421,18 +603,16 @@ class PostgresPartitionMixin:
                 JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
                 LEFT JOIN pg_inherits i ON i.inhparent = parent.oid
                 LEFT JOIN pg_class child ON child.oid = i.inhrelid
-                WHERE parent.relname = %s
-                  AND (%s::text IS NULL OR parent_ns.nspname = %s)
+                WHERE parent.relname = %s{schema_filter}
                 ORDER BY child.relname
             """
         else:
-            sql = """
+            sql = f"""
                 SELECT pg_get_partkeydef(parent.oid) AS partition_key,
                        NULL::text AS name,
                        NULL::text AS bound
                 FROM pg_class parent
                 JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
-                WHERE parent.relname = %s
-                  AND (%s::text IS NULL OR parent_ns.nspname = %s)
+                WHERE parent.relname = %s{schema_filter}
             """
-        return sql, (expr.parent_table, expr.schema, expr.schema)
+        return sql, tuple(params)

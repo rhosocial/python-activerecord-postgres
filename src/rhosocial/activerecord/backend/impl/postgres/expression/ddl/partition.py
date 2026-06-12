@@ -230,6 +230,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
+    Supports CONCURRENTLY mode on PostgreSQL 14+.
 
     Attributes:
         partition_name: Name of the table to attach.
@@ -237,6 +238,10 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_type: Partition type: 'RANGE', 'LIST', or 'HASH'.
         partition_values: Partition bounds values.
         schema: Schema name for the partition.
+        concurrently: Use non-blocking ATTACH mode (PG 14+).
+
+    Raises:
+        ValueError: If concurrent_attach is used on PostgreSQL < 14.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
@@ -250,7 +255,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         ... )
         >>> sql, params = attach.to_sql()
         >>> sql
-        "ALTER TABLE orders ATTACH PARTITION orders_2024_q1 RANGE ('2024-01-01', '2024-04-01')"
+        "ALTER TABLE orders ATTACH PARTITION orders_2024_q1 FOR VALUES FROM ('2024-01-01') TO ('2024-04-01')"
 
     """
 
@@ -262,6 +267,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_type: str,
         partition_values: Dict[str, Any],
         schema: Optional[str] = None,
+        concurrently: bool = False,
         *,
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
@@ -271,6 +277,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         self.partition_type = partition_type
         self.partition_values = partition_values
         self.schema = schema
+        self.concurrently = concurrently
         self.dialect_options = dialect_options or {}
 
     def to_sql(self) -> Tuple[str, tuple]:
@@ -278,6 +285,9 @@ class PostgresAttachPartitionExpression(BaseExpression):
 
         Returns:
             Tuple of (SQL string, empty params tuple).
+
+        Raises:
+            ValueError: If concurrently is used on PostgreSQL < 14.
 
         """
         return self.dialect.format_attach_partition_statement(self)

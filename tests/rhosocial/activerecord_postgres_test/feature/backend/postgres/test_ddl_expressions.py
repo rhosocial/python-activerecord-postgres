@@ -338,6 +338,28 @@ class TestPostgresPartitionedTableCreation:
                 keys=[Column(dialect, "id")],
             )
 
+    def test_multi_column_range_partitioned_parent_table(self, dialect):
+        """Test creating a RANGE-partitioned parent table with multiple partition keys."""
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="tenanted_events",
+            columns=[
+                ColumnDefinition("tenant_id", "BIGINT NOT NULL"),
+                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
+                ColumnDefinition("payload", "TEXT"),
+            ],
+            partition=PartitionClause(
+                dialect=dialect,
+                method=PartitionStrategy.RANGE,
+                keys=[Column(dialect, "tenant_id"), Column(dialect, "created_at")],
+            ),
+        )
+        sql, params = expr.to_sql()
+
+        assert sql.startswith('CREATE TABLE "tenanted_events"')
+        assert 'PARTITION BY RANGE ("tenant_id", "created_at")' in sql
+        assert params == ()
+
 
 class TestPostgresPartitionValue:
     """Test safe PostgreSQL partition bound value formatting."""
@@ -498,6 +520,34 @@ class TestPostgresCreatePartitionExpression:
         assert "TABLESPACE" in sql
         assert "faststorage" in sql
 
+    @pytest.mark.parametrize(
+        "partition_type,partition_values,expected_clause",
+        [
+            ("RANGE", {"from": date(2024, 1, 1), "to": date(2025, 1, 1)},
+             "FROM ('2024-01-01') TO ('2025-01-01')"),
+            ("RANGE", {"from": datetime(2024, 1, 1, 12, 30), "to": datetime(2025, 1, 1, 0, 0)},
+             "FROM ('2024-01-01 12:30:00') TO ('2025-01-01 00:00:00')"),
+            ("RANGE", {"from": Decimal("1.5"), "to": Decimal("10.5")},
+             "FROM (1.5) TO (10.5)"),
+            ("LIST", {"values": ["active", "pending"]},
+             "IN ('active', 'pending')"),
+            ("HASH", {"modulus": 6, "remainder": 3},
+             "WITH (MODULUS 6, REMAINDER 3)"),
+        ],
+    )
+    def test_create_partition_value_types(self, dialect, partition_type, partition_values, expected_clause):
+        """Test PARTITION OF with various value types and expressions (PG 12+)."""
+        expr = PostgresCreatePartitionExpression(
+            dialect=dialect,
+            partition_name="test_partition",
+            parent_table="test_parent",
+            partition_type=partition_type,
+            partition_values=partition_values,
+        )
+        sql, params = expr.to_sql()
+        assert expected_clause in sql
+        assert params == ()
+
 
 class TestPostgresDetachPartitionExpression:
     """Test PostgresDetachPartitionExpression."""
@@ -553,6 +603,21 @@ class TestPostgresDetachPartitionExpression:
         )
         with pytest.raises(ValueError, match="FINALIZE only valid with CONCURRENTLY"):
             expr.to_sql()
+
+    def test_detach_concurrently_finalize_pg14(self, dialect):
+        """Test DETACH CONCURRENTLY FINALIZE on PG 14+."""
+        expr = PostgresDetachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_2023",
+            parent_table="orders",
+            concurrently=True,
+            finalize=True,
+        )
+        sql, params = expr.to_sql()
+        assert "DETACH PARTITION" in sql
+        assert "CONCURRENTLY" in sql
+        assert "FINALIZE" in sql
+        assert sql.index("CONCURRENTLY") < sql.index("FINALIZE")
 
     def test_detach_with_schema(self, dialect):
         """Test partition detach with schema."""
@@ -653,6 +718,63 @@ class TestPostgresAttachPartitionExpression:
         with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
+    def test_attach_concurrently_pg13(self):
+        """ATTACH CONCURRENTLY requires PG 14+."""
+        dialect_pg13 = PostgresDialect(version=(13, 0, 0))
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect_pg13,
+            partition_name="orders_2024_q1",
+            parent_table="orders",
+            partition_type="RANGE",
+            partition_values={"from": "2024-01-01", "to": "2024-04-01"},
+            concurrently=True,
+        )
+        with pytest.raises(ValueError, match="ATTACH CONCURRENTLY requires PostgreSQL 14"):
+            expr.to_sql()
+
+    def test_attach_concurrently_pg14(self, dialect):
+        """ATTACH CONCURRENTLY with PG 14+ includes CONCURRENTLY keyword."""
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_2024_q1",
+            parent_table="orders",
+            partition_type="RANGE",
+            partition_values={"from": "2024-01-01", "to": "2024-04-01"},
+            concurrently=True,
+        )
+        sql, params = expr.to_sql()
+        assert "CONCURRENTLY" in sql
+        assert "FOR VALUES" in sql
+        assert params == ()
+
+    def test_attach_default_range_partition(self, dialect):
+        """ATTACH DEFAULT partition for RANGE should emit DEFAULT keyword."""
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_default",
+            parent_table="orders",
+            partition_type="RANGE",
+            partition_values={"default": True},
+        )
+        sql, params = expr.to_sql()
+        assert "DEFAULT" in sql
+        assert "FOR VALUES" not in sql
+        assert params == ()
+
+    def test_attach_default_list_partition(self, dialect):
+        """ATTACH DEFAULT partition for LIST should emit DEFAULT keyword."""
+        expr = PostgresAttachPartitionExpression(
+            dialect=dialect,
+            partition_name="orders_default",
+            parent_table="orders",
+            partition_type="LIST",
+            partition_values={"default": True},
+        )
+        sql, params = expr.to_sql()
+        assert "DEFAULT" in sql
+        assert "FOR VALUES" not in sql
+        assert params == ()
+
 
 class TestPostgresPartitionMetadataExpression:
     """Test PostgreSQL partition metadata query expression."""
@@ -667,7 +789,33 @@ class TestPostgresPartitionMetadataExpression:
         sql, params = expr.to_sql()
         assert "pg_get_partkeydef" in sql
         assert "pg_inherits" in sql
-        assert params == ("orders", None, None)
+        assert params == ("orders",)
+
+    def test_metadata_query_with_schema(self):
+        """Metadata query includes schema filter when schema is specified."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        expr = PostgresPartitionMetadataExpression(
+            dialect=dialect,
+            parent_table="orders",
+            schema="public",
+        )
+        sql, params = expr.to_sql()
+        assert "pg_get_partkeydef" in sql
+        assert "parent_ns.nspname = %s" in sql
+        assert params == ("orders", "public")
+
+    def test_metadata_query_without_partitions(self):
+        """Metadata query omits partition details when include_partitions=False."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        expr = PostgresPartitionMetadataExpression(
+            dialect=dialect,
+            parent_table="orders",
+            include_partitions=False,
+        )
+        sql, params = expr.to_sql()
+        assert "pg_inherits" not in sql
+        assert "NULL::text AS name" in sql
+        assert params == ("orders",)
 
     def test_metadata_query_requires_pg10(self):
         """Metadata introspection follows PostgreSQL declarative partition support."""
@@ -701,7 +849,41 @@ class TestPostgresPgPartmanExpressions:
         sql, params = expr.to_sql()
         assert '"partman"."create_parent"' in sql
         assert "p_parent_table" in sql
+        assert "p_premake" in sql
         assert params == ("public.events", "created_at", "1 month", "range", 2)
+
+    def test_create_parent_with_optional_params(self, dialect):
+        """pg_partman create_parent with all optional parameters."""
+        expr = PostgresPgPartmanCreateParentExpression(
+            dialect=dialect,
+            parent_table="public.events",
+            control="created_at",
+            interval="1 month",
+            partition_type="native",
+            premake=6,
+            start_partition="2026-01-01",
+            primary_key="id",
+            default_table=True,
+            constraint_cols=["tenant_id"],
+            template_table="public.events_template",
+            epoch="seconds",
+            jobmon=False,
+            schema="partman",
+        )
+        sql, params = expr.to_sql()
+        assert "p_premake" in sql
+        assert "p_start_partition" in sql
+        assert "p_primary_key" in sql
+        assert "p_default_table" in sql
+        assert "p_constraint_cols" in sql
+        assert "p_template_table" in sql
+        assert "p_epoch" in sql
+        assert "p_jobmon" in sql
+        assert params == (
+            "public.events", "created_at", "1 month", "native", 6,
+            "2026-01-01", "id", True, ["tenant_id"], "public.events_template",
+            "seconds", False,
+        )
 
     def test_update_config_expression(self, dialect):
         """pg_partman update_config updates only requested options."""

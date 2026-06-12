@@ -116,6 +116,16 @@ class TestPostgresPartitionSupportFeatureDetection:
         dialect = PostgresDialect(version=(14, 0, 0))
         assert dialect.supports_concurrent_detach() is True
 
+    def test_supports_concurrent_attach_pg13(self):
+        """CONCURRENTLY ATTACH requires PG 14+."""
+        dialect = PostgresDialect(version=(13, 0, 0))
+        assert dialect.supports_concurrent_attach() is False
+
+    def test_supports_concurrent_attach_pg14(self):
+        """PostgreSQL 14 supports CONCURRENTLY ATTACH."""
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.supports_concurrent_attach() is True
+
     def test_supports_partition_bounds_expression_pg11(self):
         """Partition bounds expression requires PG 12+."""
         dialect = PostgresDialect(version=(11, 0, 0))
@@ -210,6 +220,11 @@ class TestPostgresPartitionMixinDirect:
         assert mixin.supports_attach_partition() is True
         assert mixin.supports_detach_partition() is True
         assert mixin.supports_reorganize_partition() is False
+
+    def test_supports_concurrent_attach_direct(self):
+        """CONCURRENTLY ATTACH follows PG version."""
+        assert self._PartitionMixin().supports_concurrent_attach() is True
+        assert self._PartitionMixinPg10().supports_concurrent_attach() is False
 
 
 class TestPostgresIndexSupportFeatureDetection:

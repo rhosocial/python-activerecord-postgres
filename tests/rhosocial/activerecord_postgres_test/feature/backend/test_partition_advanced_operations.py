@@ -304,17 +304,65 @@ class TestPostgreSQLAdvancedPartitionOperations:
         finally:
             _drop_advanced_tables(postgres_backend)
 
-    def test_default_attach_boundary_is_explicitly_rejected(self, postgres_backend):
-        """Current attach expression does not model ATTACH DEFAULT partitions."""
-        expr = PostgresAttachPartitionExpression(
-            dialect=postgres_backend.dialect,
-            partition_name="events_default",
-            parent_table="events",
-            partition_type="RANGE",
-            partition_values={"default": True},
+    def test_default_attach_and_detach_workflow(self, postgres_backend, postgres_range_partition_environment):
+        """DEFAULT ATTACH should create a catch-all partition, then DETACH should remove it."""
+        dialect = postgres_backend.dialect
+        if not dialect.supports_default_partition():
+            pytest.skip("DEFAULT partition requires PostgreSQL 11+")
+
+        default_partition_name = "ar_partition_adv_default"
+
+        # Create a table with matching structure for DEFAULT attachment
+        from rhosocial.activerecord.backend.expression.statements import DropTableExpression, TableConstraint
+        create_default = CreateTableExpression(
+            dialect=dialect,
+            table=default_partition_name,
+            columns=[
+                ColumnDefinition("id", "BIGINT NOT NULL"),
+                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
+                ColumnDefinition("payload", "TEXT NOT NULL"),
+            ],
         )
-        with pytest.raises(ValueError, match="RANGE partition requires"):
-            expr.to_sql()
+        postgres_backend.execute(*create_default.to_sql())
+
+        try:
+            # Attach as DEFAULT partition
+            attach = PostgresAttachPartitionExpression(
+                dialect=dialect,
+                partition_name=default_partition_name,
+                parent_table=RANGE_PARENT,
+                partition_type="RANGE",
+                partition_values={"default": True},
+            )
+            sql, params = attach.to_sql()
+            assert "DEFAULT" in sql
+            assert "FOR VALUES" not in sql
+            postgres_backend.execute(sql, params)
+
+            # Verify in metadata
+            metadata = postgres_backend.fetch_all(
+                *_metadata_sql(dialect, RANGE_PARENT)
+            )
+            names = {row["name"] for row in metadata}
+            assert default_partition_name in names
+
+            # Detach it back
+            detach = PostgresDetachPartitionExpression(
+                dialect=dialect,
+                partition_name=default_partition_name,
+                parent_table=RANGE_PARENT,
+            )
+            postgres_backend.execute(*detach.to_sql())
+
+            metadata_after = postgres_backend.fetch_all(
+                *_metadata_sql(dialect, RANGE_PARENT)
+            )
+            names_after = {row["name"] for row in metadata_after}
+            assert default_partition_name not in names_after
+        finally:
+            postgres_backend.execute(
+                f'DROP TABLE IF EXISTS "{default_partition_name}" CASCADE'
+            )
 
     def test_metadata_include_partitions_false_and_schema_filter(self, postgres_backend):
         """Metadata should distinguish schemas and parent-only queries."""
