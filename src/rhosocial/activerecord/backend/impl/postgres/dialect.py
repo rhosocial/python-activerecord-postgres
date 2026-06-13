@@ -108,9 +108,30 @@ from .mixins import (
     PostgresVacuumMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
-    PostgresSQLSyntaxMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
+    # Per-feature mixins
+    PostgresCTEMixin,
+    PostgresWindowMixin,
+    PostgresFilterMixin,
+    PostgresReturningMixin,
+    PostgresGroupingMixin,
+    PostgresExplainMixin,
+    PostgresMergeMixin,
+    PostgresUpsertMixin,
+    PostgresLateralJoinMixin,
+    PostgresSetOperationMixin,
+    PostgresILIKEMixin,
+    PostgresJoinMixin,
+    PostgresTruncateMixin,
+    PostgresSchemaMixin,
+    PostgresSequenceMixin,
+    PostgresTransactionMixin,
+    PostgresViewMixin,
+    PostgresXMLMixin,
+    PostgresCollationMixin,
+    PostgresOrderedSetAggMixin,
+    PostgresFeaturesMixin,
     # Extension feature mixins
     PostgresLtreeMixin,
     PostgresIntarrayMixin,
@@ -176,8 +197,29 @@ from .protocols import (
     PostgresVacuumSupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
-    PostgresSQLSyntaxSupport,
     PostgresLogicalReplicationSupport,
+    # Per-feature protocols
+    PostgresCTESupport,
+    PostgresWindowSupport,
+    PostgresFilterSupport,
+    PostgresReturningSupport,
+    PostgresGroupingSupport,
+    PostgresExplainSupport,
+    PostgresMergeSupport,
+    PostgresUpsertSupport,
+    PostgresLateralJoinSupport,
+    PostgresSetOperationSupport,
+    PostgresILIKESupport,
+    PostgresJoinSupport,
+    PostgresTruncateSupport,
+    PostgresSchemaSupport,
+    PostgresSequenceSupport,
+    PostgresTransactionSupport,
+    PostgresViewSupport,
+    PostgresXMLSupport,
+    PostgresCollationSupport,
+    PostgresOrderedSetAggSupport,
+    PostgresFeaturesSupport,
     # Extension feature protocols
     PostgresLtreeSupport,
     PostgresIntarraySupport,
@@ -246,9 +288,30 @@ if TYPE_CHECKING:
         SetTransactionExpression,
     )
 
-
 class PostgresDialect(
     SQLDialectBase,
+    # Per-feature mixins
+    PostgresCTEMixin,
+    PostgresWindowMixin,
+    PostgresFilterMixin,
+    PostgresReturningMixin,
+    PostgresGroupingMixin,
+    PostgresExplainMixin,
+    PostgresMergeMixin,
+    PostgresUpsertMixin,
+    PostgresLateralJoinMixin,
+    PostgresSetOperationMixin,
+    PostgresILIKEMixin,
+    PostgresJoinMixin,
+    PostgresTruncateMixin,
+    PostgresSchemaMixin,
+    PostgresSequenceMixin,
+    PostgresTransactionMixin,
+    PostgresViewMixin,
+    PostgresXMLMixin,
+    PostgresCollationMixin,
+    PostgresOrderedSetAggMixin,
+    PostgresFeaturesMixin,
     SQLXMLMixin,
     CollationMixin,
     SetOperationMixin,
@@ -299,7 +362,6 @@ class PostgresDialect(
     PostgresVacuumMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
-    PostgresSQLSyntaxMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
     # Extension feature mixins
@@ -403,8 +465,29 @@ class PostgresDialect(
     PostgresVacuumSupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
-    PostgresSQLSyntaxSupport,
     PostgresLogicalReplicationSupport,
+    # Per-feature protocols
+    PostgresCTESupport,
+    PostgresWindowSupport,
+    PostgresFilterSupport,
+    PostgresReturningSupport,
+    PostgresGroupingSupport,
+    PostgresExplainSupport,
+    PostgresMergeSupport,
+    PostgresUpsertSupport,
+    PostgresLateralJoinSupport,
+    PostgresSetOperationSupport,
+    PostgresILIKESupport,
+    PostgresJoinSupport,
+    PostgresTruncateSupport,
+    PostgresSchemaSupport,
+    PostgresSequenceSupport,
+    PostgresTransactionSupport,
+    PostgresViewSupport,
+    PostgresXMLSupport,
+    PostgresCollationSupport,
+    PostgresOrderedSetAggSupport,
+    PostgresFeaturesSupport,
     # Extension feature protocols
     PostgresLtreeSupport,
     PostgresIntarraySupport,
@@ -544,62 +627,6 @@ class PostgresDialect(
             params = end_params + start_params
         return self._apply_value_expression_modifiers(sql, params, expr)
 
-    def supports_xmlparse(self) -> bool:
-        """XMLPARSE is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlserialize(self) -> bool:
-        """XMLSERIALIZE is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlelement(self) -> bool:
-        """XMLELEMENT is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlattributes(self) -> bool:
-        """XMLATTRIBUTES is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlforest(self) -> bool:
-        """XMLFOREST is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlconcat(self) -> bool:
-        """XMLCONCAT is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlcomment(self) -> bool:
-        """XMLCOMMENT is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlpi(self) -> bool:
-        """XMLPI is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlroot(self) -> bool:
-        """XMLROOT is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlagg(self) -> bool:
-        """XMLAGG is supported since PostgreSQL 8.3."""
-        return self.version >= (8, 3, 0)
-
-    def supports_xmlquery(self) -> bool:
-        """PostgreSQL does not implement standard SQL/XML XMLQUERY."""
-        return False
-
-    def supports_xmlexists(self) -> bool:
-        """XMLEXISTS is supported since PostgreSQL 8.4."""
-        return self.version >= (8, 4, 0)
-
-    def supports_xmltable(self) -> bool:
-        """XMLTABLE is supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
-
-    def supports_collate_expression(self) -> bool:
-        """PostgreSQL supports expression-level COLLATE."""
-        return True
-
     def validate_collation_name(self, expr: "CollateExpression") -> str:
         """Validate PostgreSQL collation names and return their SQL representation."""
         schema = expr.collation_options.get("schema")
@@ -611,70 +638,6 @@ class PostgresDialect(
         if schema is not None:
             return f"{self.format_identifier(str(schema))}.{self.format_identifier(expr.collation_name)}"
         return self.format_identifier(expr.collation_name)
-
-    # region Protocol Support Checks based on version
-    def supports_basic_cte(self) -> bool:
-        """Basic CTEs are supported since PostgreSQL 8.4."""
-        return True  # Supported in all modern versions
-
-    def supports_recursive_cte(self) -> bool:
-        """Recursive CTEs are supported since PostgreSQL 8.4."""
-        return True  # Supported in all modern versions
-
-    def supports_materialized_cte(self) -> bool:
-        """MATERIALIZED hint is supported since PostgreSQL 12."""
-        return self.version >= (12, 0, 0)
-
-    def supports_returning_insert(self) -> bool:
-        """RETURNING clause is supported for INSERT since PostgreSQL 8.2."""
-        return self.version >= (8, 2, 0)
-
-    def supports_returning_update(self) -> bool:
-        """RETURNING clause is supported for UPDATE since PostgreSQL 8.2."""
-        return self.version >= (8, 2, 0)
-
-    def supports_returning_delete(self) -> bool:
-        """RETURNING clause is supported for DELETE since PostgreSQL 8.2."""
-        return self.version >= (8, 2, 0)
-
-    def supports_window_functions(self) -> bool:
-        """Window functions are supported since PostgreSQL 8.4."""
-        return True  # Supported in all modern versions
-
-    def supports_window_frame_clause(self) -> bool:
-        """Whether window frame clauses (ROWS/RANGE) are supported, since PostgreSQL 8.4."""
-        return True  # Supported in all modern versions
-
-    def supports_filter_clause(self) -> bool:
-        """FILTER clause for aggregate functions is supported since PostgreSQL 9.4."""
-        return self.version >= (9, 4, 0)
-
-    def get_json_access_operator(self) -> str:
-        """PostgreSQL uses '->' for JSON access."""
-        return "->"
-
-    def supports_rollup(self) -> bool:
-        """ROLLUP is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
-
-    def supports_cube(self) -> bool:
-        """CUBE is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
-
-    def supports_grouping_sets(self) -> bool:
-        """GROUPING SETS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
-
-    def supports_explain_analyze(self) -> bool:
-        """Whether EXPLAIN ANALYZE is supported."""
-        return True  # Supported in all modern versions
-
-    def supports_explain_format(self, format_type: str) -> bool:
-        """Check if specific EXPLAIN format is supported."""
-        format_type_upper = format_type.upper()
-        # PostgreSQL supports TEXT, XML, JSON, and YAML formats
-        supported_formats = ["TEXT", "XML", "JSON", "YAML"]
-        return format_type_upper in supported_formats
 
     def format_explain_statement(self, explain_expr: "ExplainExpression") -> tuple:
         """Build the PostgreSQL EXPLAIN SQL string and return (sql, params).
@@ -755,82 +718,7 @@ class PostgresDialect(
             return self.version >= (9, 3, 0)
         return False
 
-    def supports_merge_statement(self) -> bool:
-        """Whether MERGE statement is supported."""
-        return self.version >= (15, 0, 0)  # MERGE added in PostgreSQL 15
-
-    def supports_temporal_tables(self) -> bool:
-        """Whether temporal tables are supported."""
-        # PostgreSQL doesn't have built-in temporal tables
-        return False
-
-    def supports_qualify_clause(self) -> bool:
-        """Whether QUALIFY clause is supported."""
-        # PostgreSQL doesn't have QUALIFY clause (though can be simulated with subqueries)
-        return False
-
-    def supports_upsert(self) -> bool:
-        """Whether UPSERT (ON CONFLICT) is supported."""
-        return self.version >= (9, 5, 0)  # ON CONFLICT added in 9.5
-
-    def get_upsert_syntax_type(self) -> str:
-        """
-        Get UPSERT syntax type.
-
-        Returns:
-            'ON CONFLICT' (PostgreSQL) or 'ON DUPLICATE KEY' (MySQL)
-
-        """
-        return "ON CONFLICT"
-
-    def supports_lateral_join(self) -> bool:
-        """Whether LATERAL joins are supported."""
-        return self.version >= (9, 3, 0)  # LATERAL joins added in 9.3
-
-    def supports_ordered_set_aggregation(self) -> bool:
-        """Whether ordered-set aggregate functions are supported."""
-        return self.version >= (9, 4, 0)  # Supported since 9.4
-
-    def supports_multirange(self) -> bool:
-        """Whether multirange types are supported (PostgreSQL 14+)."""
-        return self.version >= (14, 0, 0)
-
-    def supports_multirange_constructor(self) -> bool:
-        """Whether multirange constructor functions are supported (PostgreSQL 14+)."""
-        return self.version >= (14, 0, 0)
-
-    def supports_inner_join(self) -> bool:
-        """INNER JOIN is supported."""
-        return True
-
-    def supports_left_join(self) -> bool:
-        """LEFT JOIN is supported."""
-        return True
-
-    def supports_right_join(self) -> bool:
-        """RIGHT JOIN is supported."""
-        return True
-
-    def supports_full_join(self) -> bool:
-        """FULL JOIN is supported."""
-        return True
-
-    def supports_cross_join(self) -> bool:
-        """CROSS JOIN is supported."""
-        return True
-
-    def supports_natural_join(self) -> bool:
-        """NATURAL JOIN is supported."""
-        return True
-
-    def supports_wildcard(self) -> bool:
-        """Wildcard (*) is supported."""
-        return True
-
     # region ILIKE Support
-    def supports_ilike(self) -> bool:
-        """ILIKE is supported."""
-        return True
 
     def format_ilike_expression(self, column: Any, pattern: str, negate: bool = False) -> Tuple[str, Tuple]:
         """Format ILIKE expression for PostgreSQL.
@@ -858,53 +746,7 @@ class PostgresDialect(
 
     # endregion
 
-    # region Set Operation Support
-    def supports_union(self) -> bool:
-        """UNION is supported."""
-        return True
-
-    def supports_union_all(self) -> bool:
-        """UNION ALL is supported."""
-        return True
-
-    def supports_intersect(self) -> bool:
-        """INTERSECT is supported."""
-        return True
-
-    def supports_except(self) -> bool:
-        """EXCEPT is supported."""
-        return True
-
-    def supports_set_operation_order_by(self) -> bool:
-        """ORDER BY is supported for set operations."""
-        return True
-
-    def supports_set_operation_limit_offset(self) -> bool:
-        """LIMIT/OFFSET is supported for set operations."""
-        return True
-
-    def supports_set_operation_for_update(self) -> bool:
-        """FOR UPDATE is supported for set operations."""
-        return True
-
-    # endregion
-
     # region Truncate Support
-    def supports_truncate(self) -> bool:
-        """TRUNCATE is supported."""
-        return True
-
-    def supports_truncate_table_keyword(self) -> bool:
-        """TABLE keyword is supported in TRUNCATE."""
-        return True
-
-    def supports_truncate_restart_identity(self) -> bool:
-        """RESTART IDENTITY is supported since PostgreSQL 8.4."""
-        return self.version >= (8, 4, 0)
-
-    def supports_truncate_cascade(self) -> bool:
-        """CASCADE is supported in TRUNCATE."""
-        return True
 
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
@@ -1054,45 +896,6 @@ class PostgresDialect(
         return " ".join(parts), tuple(all_params)
 
     # region View Support
-    def supports_or_replace_view(self) -> bool:
-        """Whether CREATE OR REPLACE VIEW is supported."""
-        return True  # PostgreSQL supports OR REPLACE
-
-    def supports_temporary_view(self) -> bool:
-        """Whether TEMPORARY views are supported."""
-        return True  # PostgreSQL supports TEMPORARY views
-
-    def supports_materialized_view(self) -> bool:
-        """Whether materialized views are supported."""
-        return True  # PostgreSQL supports materialized views since 9.3
-
-    def supports_refresh_materialized_view(self) -> bool:
-        """Whether REFRESH MATERIALIZED VIEW is supported."""
-        return True  # PostgreSQL supports REFRESH MATERIALIZED VIEW
-
-    def supports_materialized_view_concurrent_refresh(self) -> bool:
-        """Whether concurrent refresh for materialized views is supported."""
-        return self.version >= (9, 4, 0)  # CONCURRENTLY added in 9.4
-
-    def supports_materialized_view_tablespace(self) -> bool:
-        """Whether tablespace specification for materialized views is supported."""
-        return True
-
-    def supports_materialized_view_storage_options(self) -> bool:
-        """Whether storage options for materialized views are supported."""
-        return True
-
-    def supports_if_exists_view(self) -> bool:
-        """Whether DROP VIEW IF EXISTS is supported."""
-        return True  # PostgreSQL supports IF EXISTS
-
-    def supports_view_check_option(self) -> bool:
-        """Whether WITH CHECK OPTION is supported."""
-        return True  # PostgreSQL supports WITH CHECK OPTION
-
-    def supports_cascade_view(self) -> bool:
-        """Whether DROP VIEW CASCADE is supported."""
-        return True  # PostgreSQL supports CASCADE
 
     def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
@@ -1248,49 +1051,7 @@ class PostgresDialect(
 
     # endregion
 
-    # region Schema Support
-    def supports_create_schema(self) -> bool:
-        """Whether CREATE SCHEMA is supported."""
-        return True
-
-    def supports_drop_schema(self) -> bool:
-        """Whether DROP SCHEMA is supported."""
-        return True
-
-    def supports_schema_if_not_exists(self) -> bool:
-        """Whether CREATE SCHEMA IF NOT EXISTS is supported."""
-        return True  # PostgreSQL 9.3+ supports IF NOT EXISTS
-
-    def supports_schema_if_exists(self) -> bool:
-        """Whether DROP SCHEMA IF EXISTS is supported."""
-        return True
-
-    def supports_schema_cascade(self) -> bool:
-        """Whether DROP SCHEMA CASCADE is supported."""
-        return True
-
-    # endregion
-
     # region Index Support
-    def supports_create_index(self) -> bool:
-        """Whether CREATE INDEX is supported."""
-        return True
-
-    def supports_drop_index(self) -> bool:
-        """Whether DROP INDEX is supported."""
-        return True
-
-    def supports_unique_index(self) -> bool:
-        """Whether UNIQUE indexes are supported."""
-        return True
-
-    def supports_index_if_not_exists(self) -> bool:
-        """Whether CREATE INDEX IF NOT EXISTS is supported."""
-        return self.version >= (9, 5, 0)  # PostgreSQL 9.5+ supports IF NOT EXISTS
-
-    def supports_index_if_exists(self) -> bool:
-        """Whether DROP INDEX IF EXISTS is supported."""
-        return True
 
     def format_add_index_action(self, action: "AddIndex") -> Tuple[str, tuple]:
         """PostgreSQL does not support ALTER TABLE ADD INDEX.
@@ -1324,47 +1085,9 @@ class PostgresDialect(
 
     # endregion
 
-    # region Sequence Support
-    def supports_create_sequence(self) -> bool:
-        """Whether CREATE SEQUENCE is supported."""
-        return True
-
-    def supports_drop_sequence(self) -> bool:
-        """Whether DROP SEQUENCE is supported."""
-        return True
-
-    # endregion
-
     # region Table Support
-    def supports_if_not_exists_table(self) -> bool:
-        """Whether CREATE TABLE IF NOT EXISTS is supported."""
-        return self.version >= (9, 5, 0)
-
-    def supports_if_exists_table(self) -> bool:
-        """Whether DROP TABLE IF EXISTS is supported."""
-        return True
-
-    def supports_temporary_table(self) -> bool:
-        """Whether TEMPORARY tables are supported."""
-        return True
-
-    def supports_table_inheritance(self) -> bool:
-        """Whether table inheritance is supported."""
-        return True  # PostgreSQL supports INHERITS
-
-    def supports_table_tablespace(self) -> bool:
-        """Whether tablespace specification is supported."""
-        return True
 
     # Constraint capability overrides
-
-    def supports_constraint_enforced(self) -> bool:
-        """PostgreSQL does not support ENFORCED/NOT ENFORCED (SQL:2016).
-
-        PostgreSQL uses NOT VALID as a proprietary alternative for
-        skipping validation of existing data when adding constraints.
-        """
-        return False
 
     def format_create_table_statement(self, expr: "CreateTableExpression") -> Tuple[str, tuple]:
         """
@@ -1747,18 +1470,6 @@ class PostgresDialect(
 
     # endregion
 
-    # region Trigger Support (PostgreSQL-specific)
-    def supports_trigger(self) -> bool:
-        return True
-
-    def supports_create_trigger(self) -> bool:
-        return True
-
-    def supports_drop_trigger(self) -> bool:
-        return True
-
-    # endregion
-
     # region Transaction Control Support
 
     # PostgreSQL function version support: function_name -> (min_version, max_version)
@@ -1924,26 +1635,6 @@ class PostgresDialect(
                 return False
             return self._compare_versions(installed, requirement.min_ext_version) >= 0
 
-        return True
-
-    def supports_transaction_mode(self) -> bool:
-        """PostgreSQL supports READ ONLY and READ WRITE transaction modes."""
-        return True
-
-    def supports_isolation_level_in_begin(self) -> bool:
-        """PostgreSQL supports isolation level specification in BEGIN statement."""
-        return True
-
-    def supports_read_only_transaction(self) -> bool:
-        """PostgreSQL supports READ ONLY transactions."""
-        return True
-
-    def supports_deferrable_transaction(self) -> bool:
-        """PostgreSQL supports DEFERRABLE transactions (for SERIALIZABLE isolation)."""
-        return True
-
-    def supports_savepoint(self) -> bool:
-        """PostgreSQL supports savepoints."""
         return True
 
     def format_begin_transaction(

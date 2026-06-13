@@ -1,0 +1,23 @@
+# src/rhosocial/activerecord/backend/impl/postgres/protocols/set_operation.py
+"""PostgreSQL set operation feature support protocol."""
+
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class PostgresSetOperationSupport(Protocol):
+    """PostgreSQL set operation feature support protocol."""
+
+    def supports_union(self)-> bool: ...
+
+    def supports_union_all(self)-> bool: ...
+
+    def supports_intersect(self)-> bool: ...
+
+    def supports_except(self)-> bool: ...
+
+    def supports_set_operation_order_by(self)-> bool: ...
+
+    def supports_set_operation_limit_offset(self)-> bool: ...
+
+    def supports_set_operation_for_update(self)-> bool: ...
