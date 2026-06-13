@@ -78,9 +78,13 @@ class TestSyncLsnIntegration:
             f"SELECT lsn_value::text AS lsn_value FROM {lsn_test_table}"
         )
 
-        # Normalize LSN zero-padding (PG19beta1 uses 8-digit hex parts)
-        parts = result["lsn_value"].split("/")
-        assert int(parts[0], 16) == 0x16 and int(parts[1], 16) == 0x1
+        # PG19+ standardizes LSN output to %X/%08X format (zero-padded)
+        # PG18 and earlier omit leading zeros (e.g. "16/1")
+        version = postgres_backend.get_server_version()
+        if version >= (19, 0, 0):
+            assert result["lsn_value"] == "16/00000001"
+        else:
+            assert result["lsn_value"] == "16/1"
 
     def test_lsn_null_round_trip(self, postgres_backend, lsn_test_table):
         """Insert a NULL pg_lsn value and verify the fetched value is None."""
