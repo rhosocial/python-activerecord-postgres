@@ -521,4 +521,4 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 2 --dist=loadgroup
+          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup
