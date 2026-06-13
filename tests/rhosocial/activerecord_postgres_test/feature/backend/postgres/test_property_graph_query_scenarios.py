@@ -361,10 +361,10 @@ class TestAsyncSocialGraph:
                        references_source=("people", ["id"]),
                        references_destination=("people", ["id"]),
                        labels=["follows"])
-        create_expr = CreatePropertyGraphExpression(dialect, "async_graph", [vt], [et])
+        create_expr = CreatePropertyGraphExpression(dialect, GRAPH_NAME, [vt], [et])
         await backend.execute(*create_expr.to_sql())
-        yield "async_graph"
-        await backend.execute(*DropPropertyGraphExpression(dialect, "async_graph", if_exists=True).to_sql())
+        yield GRAPH_NAME
+        await backend.execute(*DropPropertyGraphExpression(dialect, GRAPH_NAME, if_exists=True).to_sql())
         for t in ("follows", "people"):
             await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
