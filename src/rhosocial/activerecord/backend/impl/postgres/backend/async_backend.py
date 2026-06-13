@@ -355,10 +355,10 @@ class AsyncPostgresBackend(
             # Extract version from string like "PostgreSQL 13.2..."
             import re
 
-            match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
+            match = re.search(r"PostgreSQL (\d+)(?:\.(\d+))?(?:[^\d]*(\d+))?", version_str)
             if match:
                 major = int(match.group(1))
-                minor = int(match.group(2))
+                minor = int(match.group(2)) if match.group(2) else 0
                 patch = int(match.group(3)) if match.group(3) else 0
                 return (major, minor, patch)
             else:

@@ -76,6 +76,7 @@ from .data_type import PostgresDataTypeMixin
 from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 from .parallel_query import PostgresParallelQueryMixin
+from .property_graph_query import PostgresPropertyGraphQueryMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
@@ -142,6 +143,7 @@ __all__ = [
     "PostgresSQLSyntaxMixin",
     "PostgresLogicalReplicationMixin",
     "PostgresParallelQueryMixin",
+    "PostgresPropertyGraphQueryMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]
