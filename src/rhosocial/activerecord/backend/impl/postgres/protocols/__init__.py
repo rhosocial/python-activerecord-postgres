@@ -71,9 +71,31 @@ from .extensions.address_standardizer import PostgresAddressStandardizerSupport
 
 # Additional protocols from original file
 from .query_optimization import PostgresQueryOptimizationSupport
-from .sql_syntax import PostgresSQLSyntaxSupport
 from .logical_replication import PostgresLogicalReplicationSupport
 from .parallel_query import PostgresParallelQuerySupport
+
+# Per-feature protocol imports
+from .cte import PostgresCTESupport
+from .window import PostgresWindowSupport
+from .filter_clause import PostgresFilterSupport
+from .returning import PostgresReturningSupport
+from .grouping import PostgresGroupingSupport
+from .explain import PostgresExplainSupport
+from .merge import PostgresMergeSupport
+from .upsert import PostgresUpsertSupport
+from .lateral_join import PostgresLateralJoinSupport
+from .set_operation import PostgresSetOperationSupport
+from .ilike import PostgresILIKESupport
+from .join import PostgresJoinSupport
+from .truncate import PostgresTruncateSupport
+from .schema import PostgresSchemaSupport
+from .sequence import PostgresSequenceSupport
+from .transaction import PostgresTransactionSupport
+from .view import PostgresViewSupport
+from .xml import PostgresXMLSupport
+from .collation import PostgresCollationSupport
+from .ordered_set_aggregation import PostgresOrderedSetAggSupport
+from .features import PostgresFeaturesSupport
 
 __all__ = [
     # Base
@@ -135,7 +157,28 @@ __all__ = [
     "PostgresAddressStandardizerSupport",
     # Additional protocols
     "PostgresQueryOptimizationSupport",
-    "PostgresSQLSyntaxSupport",
     "PostgresLogicalReplicationSupport",
     "PostgresParallelQuerySupport",
+    # Per-feature protocols
+    "PostgresCTESupport",
+    "PostgresWindowSupport",
+    "PostgresFilterSupport",
+    "PostgresReturningSupport",
+    "PostgresGroupingSupport",
+    "PostgresExplainSupport",
+    "PostgresMergeSupport",
+    "PostgresUpsertSupport",
+    "PostgresLateralJoinSupport",
+    "PostgresSetOperationSupport",
+    "PostgresILIKESupport",
+    "PostgresJoinSupport",
+    "PostgresTruncateSupport",
+    "PostgresSchemaSupport",
+    "PostgresSequenceSupport",
+    "PostgresTransactionSupport",
+    "PostgresViewSupport",
+    "PostgresXMLSupport",
+    "PostgresCollationSupport",
+    "PostgresOrderedSetAggSupport",
+    "PostgresFeaturesSupport",
 ]

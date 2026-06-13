@@ -73,10 +73,32 @@ from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
-from .sql_syntax import PostgresSQLSyntaxMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 from .parallel_query import PostgresParallelQueryMixin
 from .property_graph_query import PostgresPropertyGraphQueryMixin
+
+# Per-feature mixin imports
+from .cte import PostgresCTEMixin
+from .window import PostgresWindowMixin
+from .filter_clause import PostgresFilterMixin
+from .returning import PostgresReturningMixin
+from .grouping import PostgresGroupingMixin
+from .explain import PostgresExplainMixin
+from .merge import PostgresMergeMixin
+from .upsert import PostgresUpsertMixin
+from .lateral_join import PostgresLateralJoinMixin
+from .set_operation import PostgresSetOperationMixin
+from .ilike import PostgresILIKEMixin
+from .join import PostgresJoinMixin
+from .truncate import PostgresTruncateMixin
+from .schema import PostgresSchemaMixin
+from .sequence import PostgresSequenceMixin
+from .transaction import PostgresTransactionMixin
+from .view import PostgresViewMixin
+from .xml import PostgresXMLMixin
+from .collation import PostgresCollationMixin
+from .ordered_set_aggregation import PostgresOrderedSetAggMixin
+from .features import PostgresFeaturesMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
@@ -140,10 +162,31 @@ __all__ = [
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",
-    "PostgresSQLSyntaxMixin",
     "PostgresLogicalReplicationMixin",
     "PostgresParallelQueryMixin",
     "PostgresPropertyGraphQueryMixin",
+    # Per-feature mixins
+    "PostgresCTEMixin",
+    "PostgresWindowMixin",
+    "PostgresFilterMixin",
+    "PostgresReturningMixin",
+    "PostgresGroupingMixin",
+    "PostgresExplainMixin",
+    "PostgresMergeMixin",
+    "PostgresUpsertMixin",
+    "PostgresLateralJoinMixin",
+    "PostgresSetOperationMixin",
+    "PostgresILIKEMixin",
+    "PostgresJoinMixin",
+    "PostgresTruncateMixin",
+    "PostgresSchemaMixin",
+    "PostgresSequenceMixin",
+    "PostgresTransactionMixin",
+    "PostgresViewMixin",
+    "PostgresXMLMixin",
+    "PostgresCollationMixin",
+    "PostgresOrderedSetAggMixin",
+    "PostgresFeaturesMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]
