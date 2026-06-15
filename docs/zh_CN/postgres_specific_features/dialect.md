@@ -285,3 +285,111 @@ Product.query().where("attributes ? 'brand'", ())
 ```
 
 💡 *AI 提示词：* "PostgreSQL 的 ILIKE 和标准 LIKE 在性能上有什么区别？"
+
+## 表达式级 COLLATE 支持
+
+PostgreSQL 支持为表达式指定排序规则：
+
+```python
+from rhosocial.activerecord.backend.expression.collation import collate
+from rhosocial.activerecord.backend.impl.postgres.collation import PostgresCollation
+
+# 为列指定排序规则
+expr = collate(Column(dialect, "name"), PostgresCollation.C)
+# 生成: "name" COLLATE "C"
+
+# 使用 schema 限定的排序规则
+expr = collate(Column(dialect, "name"), "C", schema="pg_catalog")
+# 生成: "name" COLLATE "pg_catalog"."C"
+
+# 检查支持
+if dialect.supports_collate_expression():
+    pass
+```
+
+## 日期时间间隔表达式
+
+```python
+from rhosocial.activerecord.backend.expression.datetime import (
+    ExtractExpression, DateTimeField, IntervalExpression, IntervalUnit,
+    DateTimeAddExpression, DateTimeSubtractExpression, DateTimeDiffExpression,
+)
+
+# EXTRACT
+expr = ExtractExpression(dialect, DateTimeField.YEAR, Column(dialect, "created_at"))
+# 生成: EXTRACT(YEAR FROM "created_at")
+
+# DATE_TRUNC
+expr = DateTruncExpression(dialect, "month", Column(dialect, "created_at"))
+# 生成: DATE_TRUNC('month', "created_at")
+
+# 间隔值
+interval = IntervalExpression(dialect, 7, IntervalUnit.DAY)
+# 生成: INTERVAL '7' DAY
+
+# 日期 + 间隔
+expr = DateTimeAddExpression(dialect, Column(dialect, "created_at"),
+                             IntervalExpression(dialect, 30, IntervalUnit.DAY))
+# 生成: "created_at" + INTERVAL '30' DAY
+
+# 日期差
+expr = DateTimeDiffExpression(dialect, DateTimeField.DAY,
+                              Column(dialect, "start"), Column(dialect, "end"))
+# 生成: EXTRACT(EPOCH FROM "end" - "start") / 86400
+```
+
+## SQL/XML 标准表达式
+
+PostgreSQL 支持 SQL/XML 标准表达式（PG 8.3+）：
+
+```python
+from rhosocial.activerecord.backend.expression.functions.xml import (
+    xmlelement, xmlforest, xmlconcat, xmlagg, xmlcomment, xmlpi,
+    xmlparse, xmlserialize, xmlattributes, xmlexists, xmltable,
+)
+
+# XMLELEMENT
+elem = xmlelement(dialect, "name", Column(dialect, "user_name"))
+# 生成: XMLELEMENT(NAME "name", "user_name")
+
+# XMLFOREST
+forest = xmlforest(dialect,
+    (Column(dialect, "first_name"), "first"),
+    (Column(dialect, "last_name"), "last"))
+
+# XMLAGG
+agg = xmlagg(dialect, Column(dialect, "xml_col"), alias="combined")
+
+# XMLEXISTS（PG 8.4+）
+exists = xmlexists(dialect, "/root/element",
+    passing=Column(dialect, "xml_data"))
+
+# XMLTABLE（PG 10+）
+table = xmltable(dialect,
+    xquery="/root/row",
+    passing=Column(dialect, "xml_data"),
+    columns=[("id", "INTEGER", "id"), ("name", "VARCHAR(100)", "name")])
+```
+
+## 属性图查询 (PG 19+)
+
+PostgreSQL 19+ 支持 SQL/PGQ 属性图查询。详见 [属性图查询](property_graph_query.md)。
+
+```python
+from rhosocial.activerecord.backend.expression.graph import (
+    GraphVertex, GraphEdge, GraphEdgeDirection, MatchClause,
+)
+
+person = GraphVertex(dialect, variable="p", table="persons")
+product = GraphVertex(dialect, variable="pr", table="products")
+purchased = GraphEdge(dialect, variable="pu", table="purchases",
+                      direction=GraphEdgeDirection.RIGHT)
+
+match = MatchClause(dialect, person, purchased, product)
+# sql: 'MATCH (p) - [pu] -> (pr)'
+
+# 检查支持
+if dialect.supports_graph_match():
+    # PG 19+
+    pass
+```

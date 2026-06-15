@@ -13,8 +13,58 @@ PostgreSQL 后端支持与核心库相同的类型安全 DDL 表达式，并具�
 | `DropIndexExpression` | ✅ 完整 | |
 | `CreateViewExpression` | ✅ 完整 | 物化视图支持 |
 | `DropViewExpression` | ✅ 完整 | |
+| `CreatePartitionExpression` | ✅ 完整 | RANGE, LIST, HASH 分区（PG 10+） |
+| `AttachPartitionExpression` | ✅ 完整 | 含 CONCURRENTLY（PG 14+） |
+| `DetachPartitionExpression` | ✅ 完整 | 含 CONCURRENTLY（PG 14+） |
+| `AlterIndexExpression` | ✅ 完整 | RENAME TO, SET TABLESPACE, SET/RESET 存储参数 |
+| `ReindexExpression` | ✅ 完整 | 索引/表/模式/数据库级重建，含 CONCURRENTLY |
 
 ## PostgreSQL 特性
+
+### 分区支持
+
+PostgreSQL 10+ 支持声明式分区，详见 [分区文档](../postgres_specific_features/partition.md)。
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+    PostgresCreatePartitionExpression, PostgresAttachPartitionExpression,
+)
+
+# 创建子分区
+partition = PostgresCreatePartitionExpression(
+    dialect, parent_table="orders", partition_name="orders_2024_q1",
+    partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
+)
+```
+
+### pg_partman 扩展
+
+pg_partman 扩展支持自动分区管理，详见 [分区文档](../postgres_specific_features/partition.md)。
+
+### 索引操作增强
+
+PG 后端支持高级索引操作：
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
+    PostgresAlterIndexExpression, PostgresAlterIndexActionType,
+    PostgresReindexExpression,
+)
+
+# ALTER INDEX ... RENAME TO
+alter = PostgresAlterIndexExpression(
+    dialect, index_name="idx_old",
+    action=PostgresAlterIndexActionType.RENAME_TO("idx_new"),
+)
+# sql: 'ALTER INDEX "idx_old" RENAME TO "idx_new"'
+
+# REINDEX
+reindex = PostgresReindexExpression(
+    dialect, target_type="INDEX", target_name="idx_corrupted",
+    concurrently=True,
+)
+# sql: 'REINDEX INDEX CONCURRENTLY "idx_corrupted"'
+```
 
 ### 索引类型
 
