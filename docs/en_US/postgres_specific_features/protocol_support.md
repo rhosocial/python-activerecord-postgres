@@ -24,7 +24,7 @@ The PostgreSQL dialect implements numerous protocols from the `rhosocial.activer
 | **ArraySupport** | ✅ Full | All versions | Native array types and operations |
 | **JSONSupport** | ✅ Full | ≥ 9.2 | JSON type; JSONB ≥ 9.4; JSON_TABLE ≥ 12 |
 | **ExplainSupport** | ✅ Full | All versions | EXPLAIN and EXPLAIN ANALYZE with multiple formats |
-| **GraphSupport** | ❌ None | N/A | No native graph query MATCH clause |
+| **GraphSupport** | ✅ Full | PG 19+ | SQL/PGQ property graph query MATCH and GRAPH_TABLE |
 | **LockingSupport** | ✅ Partial | ≥ 9.5 | FOR UPDATE; SKIP LOCKED ≥ 9.5 |
 | **MergeSupport** | ✅ Full | ≥ 15.0 | MERGE statement |
 | **OrderedSetAggregationSupport** | ✅ Full | ≥ 9.4 | Ordered-set aggregate functions |
@@ -209,7 +209,11 @@ In addition to standard protocols, PostgreSQL provides database-specific protoco
 
 | Protocol | Description | Min Version | Documentation |
 |----------|-------------|-------------|---------------|
-| **PostgresPartitionSupport** | Advanced partitioning features | PG 11+ | [Partitioning Docs](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
+| **PostgresPartitionSupport** | Advanced partitioning features | PG 10+ | [Partitioning Docs](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
+| **PostgresPropertyGraphQueryMixin** | SQL/PGQ property graph | PG 19+ | [Property Graph Query](property_graph_query.md) |
+| **PostgresPgPartmanSupport** | pg_partman auto-partitioning | PG 10+ | [Partitioning](partition.md) |
+| **PostgresXMLMixin** | SQL/XML standard expressions | PG 8.3+ | [Dialect](dialect.md) |
+| **PostgresCollationMixin** | Expression-level COLLATE | All | [Dialect](dialect.md) |
 | **PostgresIndexSupport** | Index enhancements | PG 10+ | [Index Docs](https://www.postgresql.org/docs/current/indexes.html) |
 | **PostgresVacuumSupport** | VACUUM improvements | PG 13+ | [VACUUM Docs](https://www.postgresql.org/docs/current/sql-vacuum.html) |
 | **PostgresQueryOptimizationSupport** | Query optimization features | PG 11+ | [Query Docs](https://www.postgresql.org/docs/current/runtime-config-query.html) |

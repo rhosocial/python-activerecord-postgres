@@ -13,8 +13,49 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 | `DropIndexExpression` | ✅ Full | |
 | `CreateViewExpression` | ✅ Full | Materialized views support |
 | `DropViewExpression` | ✅ Full | |
+| `CreatePartitionExpression` | ✅ Full | RANGE, LIST, HASH partitioning (PG 10+) |
+| `AttachPartitionExpression` | ✅ Full | Includes CONCURRENTLY (PG 14+) |
+| `DetachPartitionExpression` | ✅ Full | Includes CONCURRENTLY (PG 14+) |
+| `AlterIndexExpression` | ✅ Full | RENAME TO, SET TABLESPACE, SET/RESET storage params |
+| `ReindexExpression` | ✅ Full | INDEX/TABLE/SCHEMA/DATABASE level, with CONCURRENTLY |
 
 ## PostgreSQL-Specific Features
+
+### Partition Support
+
+PostgreSQL 10+ supports declarative partitioning. See [Partition Documentation](../postgres_specific_features/partition.md).
+
+```python
+partition = PostgresCreatePartitionExpression(
+    dialect, parent_table="orders", partition_name="orders_2024_q1",
+    partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
+)
+```
+
+### pg_partman Extension
+
+See [Partition Documentation](../postgres_specific_features/partition.md) for pg_partman support.
+
+### Index Operation Enhancements
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
+    PostgresAlterIndexExpression, PostgresAlterIndexActionType,
+    PostgresReindexExpression,
+)
+
+# ALTER INDEX ... RENAME TO
+alter = PostgresAlterIndexExpression(
+    dialect, index_name="idx_old",
+    action=PostgresAlterIndexActionType.RENAME_TO("idx_new"),
+)
+
+# REINDEX CONCURRENTLY
+reindex = PostgresReindexExpression(
+    dialect, target_type="INDEX", target_name="idx_corrupted",
+    concurrently=True,
+)
+```
 
 ### Index Types
 

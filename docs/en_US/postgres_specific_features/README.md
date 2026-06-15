@@ -11,6 +11,8 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 - **[Protocol Support Matrix](./protocol_support.md)**: Comprehensive protocol support and version compatibility
 - **[Database Introspection](./introspection.md)**: Query metadata using pg_catalog
 - **[EXPLAIN Support](./explain.md)**: Query execution plan analysis and performance diagnostics
+- **[Table Partitioning](partition.md)**: RANGE / LIST / HASH partitioning and pg_partman management
+- **[Property Graph Query](property_graph_query.md)**: SQL/PGQ property graph query (PG 19+)
 
 ## Feature Highlights
 
