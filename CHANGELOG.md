@@ -1,3 +1,20 @@
+## [v1.0.0.dev15] - 2026-06-15
+
+### Added
+
+- Added PostgreSQL expression-level `COLLATE` support with schema-qualified collation validation. ([#40](https://github.com/rhosocial/python-activerecord-postgres/issues/40))
+- Added PostgreSQL support for core SQL/XML standard expressions, including XML construction, serialization, aggregation, and query/table expression capability declarations. ([#41](https://github.com/rhosocial/python-activerecord-postgres/issues/41))
+- Added PostgreSQL dialect support for datetime interval expressions (`EXTRACT`, `DATE_PART`, `DATE_TRUNC`, `INTERVAL` add/subtract, date diff) with EXPLAIN-backed index usage verification tests. ([#42](https://github.com/rhosocial/python-activerecord-postgres/issues/42))
+- Added comprehensive PostgreSQL partitioning support including ATTACH CONCURRENTLY/DEFAULT partition, partition auto-management via named expressions (monthly/quarterly), pg_partman create_parent parameter completion, enhanced partition metadata queries, and full test coverage ([#43](https://github.com/rhosocial/python-activerecord-postgres/issues/43))
+- Add SQL/PGQ property graph query support and PostgreSQL 19 compatibility enhancements ([#44](https://github.com/rhosocial/python-activerecord-postgres/issues/44))
+
+
+
+### Fixed
+
+- Fill all PostgreSQL index, trigger, table, and extension protocol feature coverage gaps ([#39](https://github.com/rhosocial/python-activerecord-postgres/issues/39))
+
+
 ## [v1.0.0.dev14] - 2026-05-30
 
 ### Changed
