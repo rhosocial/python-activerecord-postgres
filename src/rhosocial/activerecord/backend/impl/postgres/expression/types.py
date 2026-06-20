@@ -17,7 +17,7 @@ DDL definition expressions (``ColumnDefinition.data_type``).
 
 from __future__ import annotations
 
-from typing import ClassVar, Optional, Set, Tuple
+from typing import Optional
 
 from rhosocial.activerecord.backend.expression.types import (
     BlobType,
@@ -25,14 +25,28 @@ from rhosocial.activerecord.backend.expression.types import (
     IntegerType,
     SmallIntType,
     BigIntType,
+    VarCharType,
 )
+
+
+# ---------------------------------------------------------------------------
+# Character varying alias
+# ---------------------------------------------------------------------------
+
+class PostgresCharacterVaryingType(VarCharType, backend="postgres"):
+    """PostgreSQL ``CHARACTER VARYING(n)`` — alias for ``VARCHAR(n)``."""
+
+    def _default_sql(self) -> str:
+        if self.length is not None:
+            return f"CHARACTER VARYING({self.length})"
+        return "CHARACTER VARYING"
 
 
 # ---------------------------------------------------------------------------
 # Binary data: BYTEA
 # ---------------------------------------------------------------------------
 
-class PostgresByteaType(BlobType):
+class PostgresByteaType(BlobType, backend="postgres"):
     """PostgreSQL ``BYTEA`` — variable-length binary string."""
 
     def _default_sql(self) -> str:
@@ -43,44 +57,32 @@ class PostgresByteaType(BlobType):
 # Serial (auto-increment) types
 # ---------------------------------------------------------------------------
 
-class PostgresSmallSerialType(DataType):
+class PostgresSmallSerialType(DataType, backend="postgres"):
     """PostgreSQL ``SMALLSERIAL`` — auto-incrementing SMALLINT (2 bytes)."""
 
     def _default_sql(self) -> str:
         return "SMALLSERIAL"
 
-    @classmethod
-    def synonyms(cls) -> Set[str]:
-        return {'SmallSerialType'}
 
-
-class PostgresSerialType(DataType):
+class PostgresSerialType(DataType, backend="postgres"):
     """PostgreSQL ``SERIAL`` — auto-incrementing INTEGER (4 bytes)."""
 
     def _default_sql(self) -> str:
         return "SERIAL"
 
-    @classmethod
-    def synonyms(cls) -> Set[str]:
-        return {'SerialType', 'IntegerType'}
 
-
-class PostgresBigSerialType(DataType):
+class PostgresBigSerialType(DataType, backend="postgres"):
     """PostgreSQL ``BIGSERIAL`` — auto-incrementing BIGINT (8 bytes)."""
 
     def _default_sql(self) -> str:
         return "BIGSERIAL"
-
-    @classmethod
-    def synonyms(cls) -> Set[str]:
-        return {'BigSerialType'}
 
 
 # ---------------------------------------------------------------------------
 # UUID
 # ---------------------------------------------------------------------------
 
-class PostgresUUIDType(DataType):
+class PostgresUUIDType(DataType, backend="postgres"):
     """PostgreSQL ``UUID`` — universally unique identifier."""
 
     def _default_sql(self) -> str:
@@ -91,7 +93,7 @@ class PostgresUUIDType(DataType):
 # XML
 # ---------------------------------------------------------------------------
 
-class PostgresXMLType(DataType):
+class PostgresXMLType(DataType, backend="postgres"):
     """PostgreSQL ``XML`` — XML data type."""
 
     def _default_sql(self) -> str:
@@ -102,14 +104,14 @@ class PostgresXMLType(DataType):
 # Text search
 # ---------------------------------------------------------------------------
 
-class PostgresTSVectorType(DataType):
+class PostgresTSVectorType(DataType, backend="postgres"):
     """PostgreSQL ``TSVECTOR`` — text search document."""
 
     def _default_sql(self) -> str:
         return "TSVECTOR"
 
 
-class PostgresTSQueryType(DataType):
+class PostgresTSQueryType(DataType, backend="postgres"):
     """PostgreSQL ``TSQUERY`` — text search query."""
 
     def _default_sql(self) -> str:
@@ -120,7 +122,7 @@ class PostgresTSQueryType(DataType):
 # JSON path
 # ---------------------------------------------------------------------------
 
-class PostgresJsonPathType(DataType):
+class PostgresJsonPathType(DataType, backend="postgres"):
     """PostgreSQL ``JSONPATH`` — SQL/JSON path expression (PG 12+)."""
 
     def _default_sql(self) -> str:
@@ -131,7 +133,7 @@ class PostgresJsonPathType(DataType):
 # Bit string types
 # ---------------------------------------------------------------------------
 
-class PostgresBitType(DataType):
+class PostgresBitType(DataType, backend="postgres"):
     """PostgreSQL ``BIT(n)`` — fixed-length bit string."""
 
     n: Optional[int] = None
@@ -140,8 +142,13 @@ class PostgresBitType(DataType):
         super().__init__()
         self.n = n
 
-    def _type_params(self) -> Tuple:
-        return (self.n,)
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.n == other.n
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.n))
 
     def _default_sql(self) -> str:
         if self.n is not None:
@@ -149,7 +156,7 @@ class PostgresBitType(DataType):
         return "BIT"
 
 
-class PostgresVarBitType(DataType):
+class PostgresVarBitType(DataType, backend="postgres"):
     """PostgreSQL ``VARBIT(n)`` — variable-length bit string."""
 
     n: Optional[int] = None
@@ -158,8 +165,13 @@ class PostgresVarBitType(DataType):
         super().__init__()
         self.n = n
 
-    def _type_params(self) -> Tuple:
-        return (self.n,)
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.n == other.n
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.n))
 
     def _default_sql(self) -> str:
         if self.n is not None:
@@ -171,28 +183,28 @@ class PostgresVarBitType(DataType):
 # Network address types
 # ---------------------------------------------------------------------------
 
-class PostgresInetType(DataType):
+class PostgresInetType(DataType, backend="postgres"):
     """PostgreSQL ``INET`` — IPv4 or IPv6 address."""
 
     def _default_sql(self) -> str:
         return "INET"
 
 
-class PostgresCidrType(DataType):
+class PostgresCidrType(DataType, backend="postgres"):
     """PostgreSQL ``CIDR`` — IPv4 or IPv6 network."""
 
     def _default_sql(self) -> str:
         return "CIDR"
 
 
-class PostgresMacAddrType(DataType):
+class PostgresMacAddrType(DataType, backend="postgres"):
     """PostgreSQL ``MACADDR`` — MAC address (EUI-48)."""
 
     def _default_sql(self) -> str:
         return "MACADDR"
 
 
-class PostgresMacAddr8Type(DataType):
+class PostgresMacAddr8Type(DataType, backend="postgres"):
     """PostgreSQL ``MACADDR8`` — MAC address (EUI-64, PG 10+)."""
 
     def _default_sql(self) -> str:
@@ -203,49 +215,49 @@ class PostgresMacAddr8Type(DataType):
 # Geometric types
 # ---------------------------------------------------------------------------
 
-class PostgresPointType(DataType):
+class PostgresPointType(DataType, backend="postgres"):
     """PostgreSQL ``POINT`` — geometric point (x, y)."""
 
     def _default_sql(self) -> str:
         return "POINT"
 
 
-class PostgresLineType(DataType):
+class PostgresLineType(DataType, backend="postgres"):
     """PostgreSQL ``LINE`` — infinite line."""
 
     def _default_sql(self) -> str:
         return "LINE"
 
 
-class PostgresLineSegmentType(DataType):
+class PostgresLineSegmentType(DataType, backend="postgres"):
     """PostgreSQL ``LSEG`` — line segment."""
 
     def _default_sql(self) -> str:
         return "LSEG"
 
 
-class PostgresBoxType(DataType):
+class PostgresBoxType(DataType, backend="postgres"):
     """PostgreSQL ``BOX`` — rectangular box."""
 
     def _default_sql(self) -> str:
         return "BOX"
 
 
-class PostgresPathType(DataType):
+class PostgresPathType(DataType, backend="postgres"):
     """PostgreSQL ``PATH`` — open or closed geometric path."""
 
     def _default_sql(self) -> str:
         return "PATH"
 
 
-class PostgresPolygonType(DataType):
+class PostgresPolygonType(DataType, backend="postgres"):
     """PostgreSQL ``POLYGON`` — closed geometric polygon."""
 
     def _default_sql(self) -> str:
         return "POLYGON"
 
 
-class PostgresCircleType(DataType):
+class PostgresCircleType(DataType, backend="postgres"):
     """PostgreSQL ``CIRCLE`` — circle (center + radius)."""
 
     def _default_sql(self) -> str:
@@ -256,7 +268,7 @@ class PostgresCircleType(DataType):
 # Monetary type
 # ---------------------------------------------------------------------------
 
-class PostgresMoneyType(DataType):
+class PostgresMoneyType(DataType, backend="postgres"):
     """PostgreSQL ``MONEY`` — currency amount."""
 
     def _default_sql(self) -> str:
@@ -267,42 +279,42 @@ class PostgresMoneyType(DataType):
 # Range types
 # ---------------------------------------------------------------------------
 
-class PostgresInt4RangeType(DataType):
+class PostgresInt4RangeType(DataType, backend="postgres"):
     """PostgreSQL ``INT4RANGE`` — range of integer."""
 
     def _default_sql(self) -> str:
         return "INT4RANGE"
 
 
-class PostgresInt8RangeType(DataType):
+class PostgresInt8RangeType(DataType, backend="postgres"):
     """PostgreSQL ``INT8RANGE`` — range of bigint."""
 
     def _default_sql(self) -> str:
         return "INT8RANGE"
 
 
-class PostgresNumRangeType(DataType):
+class PostgresNumRangeType(DataType, backend="postgres"):
     """PostgreSQL ``NUMRANGE`` — range of numeric."""
 
     def _default_sql(self) -> str:
         return "NUMRANGE"
 
 
-class PostgresTsRangeType(DataType):
+class PostgresTsRangeType(DataType, backend="postgres"):
     """PostgreSQL ``TSRANGE`` — range of timestamp without time zone."""
 
     def _default_sql(self) -> str:
         return "TSRANGE"
 
 
-class PostgresTsTzRangeType(DataType):
+class PostgresTsTzRangeType(DataType, backend="postgres"):
     """PostgreSQL ``TSTZRANGE`` — range of timestamp with time zone."""
 
     def _default_sql(self) -> str:
         return "TSTZRANGE"
 
 
-class PostgresDateRangeType(DataType):
+class PostgresDateRangeType(DataType, backend="postgres"):
     """PostgreSQL ``DATERANGE`` — range of date."""
 
     def _default_sql(self) -> str:
@@ -313,42 +325,42 @@ class PostgresDateRangeType(DataType):
 # Multirange types (PG 14+)
 # ---------------------------------------------------------------------------
 
-class PostgresInt4MultirangeType(DataType):
+class PostgresInt4MultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``INT4MULTIRANGE`` — multirange of integer (PG 14+)."""
 
     def _default_sql(self) -> str:
         return "INT4MULTIRANGE"
 
 
-class PostgresInt8MultirangeType(DataType):
+class PostgresInt8MultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``INT8MULTIRANGE`` — multirange of bigint (PG 14+)."""
 
     def _default_sql(self) -> str:
         return "INT8MULTIRANGE"
 
 
-class PostgresNumMultirangeType(DataType):
+class PostgresNumMultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``NUMMULTIRANGE`` — multirange of numeric (PG 14+)."""
 
     def _default_sql(self) -> str:
         return "NUMMULTIRANGE"
 
 
-class PostgresTsMultirangeType(DataType):
+class PostgresTsMultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``TSMULTIRANGE`` — multirange of timestamp (PG 14+)."""
 
     def _default_sql(self) -> str:
         return "TSMULTIRANGE"
 
 
-class PostgresTsTzMultirangeType(DataType):
+class PostgresTsTzMultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``TSTZMULTIRANGE`` — multirange of timestamptz (PG 14+)."""
 
     def _default_sql(self) -> str:
         return "TSTZMULTIRANGE"
 
 
-class PostgresDateMultirangeType(DataType):
+class PostgresDateMultirangeType(DataType, backend="postgres"):
     """PostgreSQL ``DATEMULTIRANGE`` — multirange of date (PG 14+)."""
 
     def _default_sql(self) -> str:
@@ -359,49 +371,49 @@ class PostgresDateMultirangeType(DataType):
 # Object identifier types
 # ---------------------------------------------------------------------------
 
-class PostgresOIDType(DataType):
+class PostgresOIDType(DataType, backend="postgres"):
     """PostgreSQL ``OID`` — object identifier."""
 
     def _default_sql(self) -> str:
         return "OID"
 
 
-class PostgresRegClassType(DataType):
+class PostgresRegClassType(DataType, backend="postgres"):
     """PostgreSQL ``REGCLASS`` — relation name (OID alias)."""
 
     def _default_sql(self) -> str:
         return "REGCLASS"
 
 
-class PostgresRegTypeType(DataType):
+class PostgresRegTypeType(DataType, backend="postgres"):
     """PostgreSQL ``REGTYPE`` — type name (OID alias)."""
 
     def _default_sql(self) -> str:
         return "REGTYPE"
 
 
-class PostgresXIDType(DataType):
+class PostgresXIDType(DataType, backend="postgres"):
     """PostgreSQL ``XID`` — transaction ID."""
 
     def _default_sql(self) -> str:
         return "XID"
 
 
-class PostgresXID8Type(DataType):
+class PostgresXID8Type(DataType, backend="postgres"):
     """PostgreSQL ``XID8`` — 64-bit transaction ID (PG 13+)."""
 
     def _default_sql(self) -> str:
         return "XID8"
 
 
-class PostgresCIDType(DataType):
+class PostgresCIDType(DataType, backend="postgres"):
     """PostgreSQL ``CID`` — command ID."""
 
     def _default_sql(self) -> str:
         return "CID"
 
 
-class PostgresTIDType(DataType):
+class PostgresTIDType(DataType, backend="postgres"):
     """PostgreSQL ``TID`` — tuple ID (page, tuple)."""
 
     def _default_sql(self) -> str:
@@ -412,7 +424,7 @@ class PostgresTIDType(DataType):
 # pg_lsn type
 # ---------------------------------------------------------------------------
 
-class PostgresPgLSNType(DataType):
+class PostgresPgLSNType(DataType, backend="postgres"):
     """PostgreSQL ``PG_LSN`` — WAL log sequence number."""
 
     def _default_sql(self) -> str:
@@ -423,14 +435,14 @@ class PostgresPgLSNType(DataType):
 # Extension-provided types (minimal DataType wrappers)
 # ---------------------------------------------------------------------------
 
-class PostgresHstoreType(DataType):
+class PostgresHstoreType(DataType, backend="postgres"):
     """PostgreSQL ``HSTORE`` — key-value store (hstore extension)."""
 
     def _default_sql(self) -> str:
         return "HSTORE"
 
 
-class PostgresGeometryType(DataType):
+class PostgresGeometryType(DataType, backend="postgres"):
     """PostGIS ``GEOMETRY`` — generic spatial geometry (PostGIS extension).
 
     For production use, subclass with SRID support as needed.
@@ -440,14 +452,14 @@ class PostgresGeometryType(DataType):
         return "GEOMETRY"
 
 
-class PostgresGeographyType(DataType):
+class PostgresGeographyType(DataType, backend="postgres"):
     """PostGIS ``GEOGRAPHY`` — geodetic spatial type (PostGIS extension)."""
 
     def _default_sql(self) -> str:
         return "GEOGRAPHY"
 
 
-class PostgresVectorType(DataType):
+class PostgresVectorType(DataType, backend="postgres"):
     """pgvector ``VECTOR(n)`` — vector embedding (pgvector extension).
 
     Args:
@@ -460,8 +472,13 @@ class PostgresVectorType(DataType):
         super().__init__()
         self.dim = dim
 
-    def _type_params(self) -> Tuple:
-        return (self.dim,)
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.dim == other.dim
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.dim))
 
     def _default_sql(self) -> str:
         return f"VECTOR({self.dim})"

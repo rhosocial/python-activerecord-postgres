@@ -86,6 +86,7 @@ if TYPE_CHECKING:
         PostgresXIDType,
         PostgresXMLType,
         PostgresCidrType,
+        PostgresCharacterVaryingType,
     )
 
 
@@ -121,6 +122,8 @@ class PostgresTypeFormatSupportMixin(TypeFormattingSupport, TypeParsingSupport):
             # UUID / XML
             (PostgresUUIDType, "uuid"),
             (PostgresXMLType, "xml"),
+            # Character Varying alias
+            (PostgresCharacterVaryingType, "character_varying"),
             # Text search
             (PostgresTSVectorType, "ts_vector"),
             (PostgresTSQueryType, "ts_query"),
@@ -223,6 +226,9 @@ class PostgresTypeFormatSupportMixin(TypeFormattingSupport, TypeParsingSupport):
         return data_type._default_sql()
 
     def format_data_type_xml(self, data_type) -> str:
+        return data_type._default_sql()
+
+    def format_data_type_character_varying(self, data_type) -> str:
         return data_type._default_sql()
 
     def format_data_type_ts_vector(self, data_type) -> str:
