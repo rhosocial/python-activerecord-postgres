@@ -50,6 +50,7 @@ from rhosocial.activerecord.backend.introspection.types import (
     TriggerInfo,
     ViewInfo,
 )
+from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
     SyncPostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
@@ -137,6 +138,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             data_type = row.get("data_type", "")
             # Extract base type (remove array brackets, size specifiers)
             base_type = data_type.split("[")[0].split("(")[0].strip()
+            parsed = DataType.parse_data_type_str(self._backend.dialect, data_type)
             columns.append(
                 ColumnInfo(
                     name=row["column_name"],
@@ -145,6 +147,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     ordinal_position=row["ordinal_position"],
                     data_type=base_type,
                     data_type_full=data_type,
+                    parsed_data_type=parsed,
                     nullable=ColumnNullable.NULLABLE if row.get("is_nullable") else ColumnNullable.NOT_NULL,
                     default_value=row.get("default_value"),
                     is_primary_key=row.get("is_primary_key", False),
