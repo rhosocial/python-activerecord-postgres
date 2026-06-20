@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, List, Tuple, Type
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
@@ -34,58 +34,59 @@ from rhosocial.activerecord.backend.expression.types import (
     TinyIntType,
     VarCharType,
 )
+from ..expression.types import (
+    PostgresBigSerialType,
+    PostgresBitType,
+    PostgresBoxType,
+    PostgresByteaType,
+    PostgresCIDType,
+    PostgresCircleType,
+    PostgresDateMultirangeType,
+    PostgresDateRangeType,
+    PostgresGeographyType,
+    PostgresGeometryType,
+    PostgresHstoreType,
+    PostgresInetType,
+    PostgresInt4MultirangeType,
+    PostgresInt4RangeType,
+    PostgresInt8MultirangeType,
+    PostgresInt8RangeType,
+    PostgresJsonPathType,
+    PostgresLineSegmentType,
+    PostgresLineType,
+    PostgresMacAddr8Type,
+    PostgresMacAddrType,
+    PostgresMoneyType,
+    PostgresNumMultirangeType,
+    PostgresNumRangeType,
+    PostgresOIDType,
+    PostgresPathType,
+    PostgresPgLSNType,
+    PostgresPointType,
+    PostgresPolygonType,
+    PostgresRegClassType,
+    PostgresRegTypeType,
+    PostgresSerialType,
+    PostgresSmallSerialType,
+    PostgresTIDType,
+    PostgresTSQueryType,
+    PostgresTSVectorType,
+    PostgresTsMultirangeType,
+    PostgresTsRangeType,
+    PostgresTsTzMultirangeType,
+    PostgresTsTzRangeType,
+    PostgresUUIDType,
+    PostgresVarBitType,
+    PostgresVectorType,
+    PostgresXID8Type,
+    PostgresXIDType,
+    PostgresXMLType,
+    PostgresCidrType,
+    PostgresCharacterVaryingType,
+)
 
 if TYPE_CHECKING:
-    from ..expression.types import (
-        PostgresBigSerialType,
-        PostgresBitType,
-        PostgresBoxType,
-        PostgresByteaType,
-        PostgresCIDType,
-        PostgresCircleType,
-        PostgresDateMultirangeType,
-        PostgresDateRangeType,
-        PostgresGeographyType,
-        PostgresGeometryType,
-        PostgresHstoreType,
-        PostgresInetType,
-        PostgresInt4MultirangeType,
-        PostgresInt4RangeType,
-        PostgresInt8MultirangeType,
-        PostgresInt8RangeType,
-        PostgresJsonPathType,
-        PostgresLineSegmentType,
-        PostgresLineType,
-        PostgresMacAddr8Type,
-        PostgresMacAddrType,
-        PostgresMoneyType,
-        PostgresNumMultirangeType,
-        PostgresNumRangeType,
-        PostgresOIDType,
-        PostgresPathType,
-        PostgresPgLSNType,
-        PostgresPointType,
-        PostgresPolygonType,
-        PostgresRegClassType,
-        PostgresRegTypeType,
-        PostgresSerialType,
-        PostgresSmallSerialType,
-        PostgresTIDType,
-        PostgresTSQueryType,
-        PostgresTSVectorType,
-        PostgresTsMultirangeType,
-        PostgresTsRangeType,
-        PostgresTsTzMultirangeType,
-        PostgresTsTzRangeType,
-        PostgresUUIDType,
-        PostgresVarBitType,
-        PostgresVectorType,
-        PostgresXID8Type,
-        PostgresXIDType,
-        PostgresXMLType,
-        PostgresCidrType,
-        PostgresCharacterVaryingType,
-    )
+    pass
 
 
 class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
@@ -100,327 +101,291 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     # DDLTypeSupport — formatting
     # ------------------------------------------------------------------
 
-    def format_data_type(self, data_type: DataType) -> str:
-        """Primary entry point — tries legacy dispatch, falls back to core."""
-        for type_class, suffix in self.supports_data_types():
-            if isinstance(data_type, type_class):
-                formatter = getattr(self, f"format_data_type_{suffix}", None)
-                if formatter is not None:
-                    return formatter(data_type)
-        return super().format_data_type(data_type)
-
-    def supports_data_types(self) -> List[Tuple[Type[DataType], str]]:
-        return [
-            # PostgreSQL-specific types
-            # Binary
-            (PostgresByteaType, "bytea"),
-            # Serial family
-            (PostgresSmallSerialType, "small_serial"),
-            (PostgresSerialType, "serial"),
-            (PostgresBigSerialType, "big_serial"),
-            # UUID / XML
-            (PostgresUUIDType, "uuid"),
-            (PostgresXMLType, "xml"),
-            # Character Varying alias
-            (PostgresCharacterVaryingType, "character_varying"),
-            # Text search
-            (PostgresTSVectorType, "ts_vector"),
-            (PostgresTSQueryType, "ts_query"),
-            # JSON path
-            (PostgresJsonPathType, "json_path"),
-            # Bit string
-            (PostgresBitType, "bit"),
-            (PostgresVarBitType, "var_bit"),
-            # Network address
-            (PostgresInetType, "inet"),
-            (PostgresCidrType, "cidr"),
-            (PostgresMacAddrType, "mac_addr"),
-            (PostgresMacAddr8Type, "mac_addr8"),
-            # Geometric
-            (PostgresPointType, "point"),
-            (PostgresLineType, "line"),
-            (PostgresLineSegmentType, "line_segment"),
-            (PostgresBoxType, "box"),
-            (PostgresPathType, "path"),
-            (PostgresPolygonType, "polygon"),
-            (PostgresCircleType, "circle"),
-            # Monetary
-            (PostgresMoneyType, "money"),
-            # Range
-            (PostgresInt4RangeType, "int4_range"),
-            (PostgresInt8RangeType, "int8_range"),
-            (PostgresNumRangeType, "num_range"),
-            (PostgresTsRangeType, "ts_range"),
-            (PostgresTsTzRangeType, "ts_tz_range"),
-            (PostgresDateRangeType, "date_range"),
-            # Multirange
-            (PostgresInt4MultirangeType, "int4_multirange"),
-            (PostgresInt8MultirangeType, "int8_multirange"),
-            (PostgresNumMultirangeType, "num_multirange"),
-            (PostgresTsMultirangeType, "ts_multirange"),
-            (PostgresTsTzMultirangeType, "ts_tz_multirange"),
-            (PostgresDateMultirangeType, "date_multirange"),
-            # Object identifier
-            (PostgresOIDType, "oid"),
-            (PostgresRegClassType, "reg_class"),
-            (PostgresRegTypeType, "reg_type"),
-            (PostgresXIDType, "xid"),
-            (PostgresXID8Type, "xid8"),
-            (PostgresCIDType, "cid"),
-            (PostgresTIDType, "tid"),
-            # pg_lsn
-            (PostgresPgLSNType, "pg_lsn"),
-            # Extension types
-            (PostgresHstoreType, "hstore"),
-            (PostgresGeometryType, "geometry"),
-            (PostgresGeographyType, "geography"),
-            (PostgresVectorType, "vector"),
-            # Core Integer family
-            (TinyIntType, "tiny_int"),
-            (SmallIntType, "small_int"),
-            (IntType, "int"),
-            (IntegerType, "integer"),
-            (BigIntType, "big_int"),
-            # Core Numeric family
-            (FloatType, "float"),
-            (RealType, "real"),
-            (DoubleType, "double"),
-            (DecimalType, "decimal"),
-            # Core String family
-            (CharType, "char"),
-            (VarCharType, "var_char"),
-            (TextType, "text"),
-            # Boolean
-            (BooleanType, "boolean"),
-            # Binary
-            (BlobType, "blob"),
-            # Date/time
-            (DateType, "date"),
-            (TimeType, "time"),
-            (TimeTzType, "time_tz"),
-            (DateTimeType, "date_time"),
-            (TimestampType, "timestamp"),
-            (TimestampTzType, "timestamp_tz"),
-            (IntervalType, "interval"),
-            # JSON
-            (JsonType, "json"),
-            (JsonBType, "json_b"),
-        ]
-
     # --- PostgreSQL-specific formatters ---
 
+    @DDLTypeMixin.handles(PostgresByteaType)
     def format_data_type_bytea(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresSmallSerialType)
     def format_data_type_small_serial(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresSerialType)
     def format_data_type_serial(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresBigSerialType)
     def format_data_type_big_serial(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresUUIDType)
     def format_data_type_uuid(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresXMLType)
     def format_data_type_xml(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresCharacterVaryingType)
     def format_data_type_character_varying(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTSVectorType)
     def format_data_type_ts_vector(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTSQueryType)
     def format_data_type_ts_query(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresJsonPathType)
     def format_data_type_json_path(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresBitType)
     def format_data_type_bit(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresVarBitType)
     def format_data_type_var_bit(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresInetType)
     def format_data_type_inet(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresCidrType)
     def format_data_type_cidr(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresMacAddrType)
     def format_data_type_mac_addr(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresMacAddr8Type)
     def format_data_type_mac_addr8(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresPointType)
     def format_data_type_point(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresLineType)
     def format_data_type_line(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresLineSegmentType)
     def format_data_type_line_segment(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresBoxType)
     def format_data_type_box(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresPathType)
     def format_data_type_path(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresPolygonType)
     def format_data_type_polygon(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresCircleType)
     def format_data_type_circle(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresMoneyType)
     def format_data_type_money(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresInt4RangeType)
     def format_data_type_int4_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresInt8RangeType)
     def format_data_type_int8_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresNumRangeType)
     def format_data_type_num_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTsRangeType)
     def format_data_type_ts_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTsTzRangeType)
     def format_data_type_ts_tz_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresDateRangeType)
     def format_data_type_date_range(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresInt4MultirangeType)
     def format_data_type_int4_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresInt8MultirangeType)
     def format_data_type_int8_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresNumMultirangeType)
     def format_data_type_num_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTsMultirangeType)
     def format_data_type_ts_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTsTzMultirangeType)
     def format_data_type_ts_tz_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresDateMultirangeType)
     def format_data_type_date_multirange(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresOIDType)
     def format_data_type_oid(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresRegClassType)
     def format_data_type_reg_class(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresRegTypeType)
     def format_data_type_reg_type(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresXIDType)
     def format_data_type_xid(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresXID8Type)
     def format_data_type_xid8(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresCIDType)
     def format_data_type_cid(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresTIDType)
     def format_data_type_tid(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresPgLSNType)
     def format_data_type_pg_lsn(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresHstoreType)
     def format_data_type_hstore(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresGeometryType)
     def format_data_type_geometry(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresGeographyType)
     def format_data_type_geography(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresVectorType)
     def format_data_type_vector(self, data_type) -> str:
         return data_type._default_sql()
 
     # --- Core formatters (PostgreSQL specialized) ---
 
+    @DDLTypeMixin.handles(TinyIntType)
     def format_data_type_tiny_int(self, data_type: TinyIntType) -> str:
         return "SMALLINT"
 
+    @DDLTypeMixin.handles(SmallIntType)
     def format_data_type_small_int(self, data_type: SmallIntType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(IntType)
     def format_data_type_int(self, data_type: IntType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(IntegerType)
     def format_data_type_integer(self, data_type: IntegerType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(BigIntType)
     def format_data_type_big_int(self, data_type: BigIntType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(FloatType)
     def format_data_type_float(self, data_type: FloatType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(RealType)
     def format_data_type_real(self, data_type: RealType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(DoubleType)
     def format_data_type_double(self, data_type: DoubleType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(DecimalType)
     def format_data_type_decimal(self, data_type: DecimalType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(CharType)
     def format_data_type_char(self, data_type: CharType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(VarCharType)
     def format_data_type_var_char(self, data_type: VarCharType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(TextType)
     def format_data_type_text(self, data_type: TextType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(BooleanType)
     def format_data_type_boolean(self, data_type: BooleanType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(BlobType)
     def format_data_type_blob(self, data_type: BlobType) -> str:
         return "BYTEA"
 
+    @DDLTypeMixin.handles(DateType)
     def format_data_type_date(self, data_type: DateType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(TimeType)
     def format_data_type_time(self, data_type: TimeType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(TimeTzType)
     def format_data_type_time_tz(self, data_type: TimeTzType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(DateTimeType)
     def format_data_type_date_time(self, data_type: DateTimeType) -> str:
         return "TIMESTAMP"
 
+    @DDLTypeMixin.handles(TimestampType)
     def format_data_type_timestamp(self, data_type: TimestampType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(TimestampTzType)
     def format_data_type_timestamp_tz(self, data_type: TimestampTzType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(IntervalType)
     def format_data_type_interval(self, data_type: IntervalType) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(JsonType)
     def format_data_type_json(self, data_type: JsonType) -> str:
         return "JSON"
 
+    @DDLTypeMixin.handles(JsonBType)
     def format_data_type_json_b(self, data_type: JsonBType) -> str:
         return "JSONB"
 
