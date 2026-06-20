@@ -53,6 +53,10 @@ class PostgresCharacterVaryingType(VarCharType, backend="postgres"):
 class PostgresByteaType(BlobType, backend="postgres"):
     """PostgreSQL ``BYTEA`` — variable-length binary string."""
 
+    @classmethod
+    def synonyms(cls) -> Set[str]:
+        return {'BlobType'}
+
     def _default_sql(self) -> str:
         return "BYTEA"
 
