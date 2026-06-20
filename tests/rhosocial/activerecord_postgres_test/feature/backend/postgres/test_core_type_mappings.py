@@ -97,86 +97,61 @@ class TestArrayType:
     """PostgreSQL array type (T[]) rendering and parsing."""
 
     def test_array_1d_rendering(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType())
+        from rhosocial.activerecord.backend.expression.types import ArrayType, IntegerType
+        arr = ArrayType(IntegerType())
         assert arr.to_sql(dialect) == ("INTEGER[]", ())
 
     def test_array_2d_rendering(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType(), dimensions=2)
+        from rhosocial.activerecord.backend.expression.types import ArrayType, IntegerType
+        arr = ArrayType(IntegerType(), dimensions=2)
         assert arr.to_sql(dialect) == ("INTEGER[][]", ())
 
     def test_array_varchar_rendering(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import VarCharType
-        arr = PostgresArrayType(VarCharType(255))
+        from rhosocial.activerecord.backend.expression.types import ArrayType, VarCharType
+        arr = ArrayType(VarCharType(255))
         assert arr.to_sql(dialect) == ("VARCHAR(255)[]", ())
 
     def test_array_boolean_rendering(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import BooleanType
-        arr = PostgresArrayType(BooleanType())
+        from rhosocial.activerecord.backend.expression.types import ArrayType, BooleanType
+        arr = ArrayType(BooleanType())
         assert arr.to_sql(dialect) == ("BOOLEAN[]", ())
 
     def test_array_equality(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
+        from rhosocial.activerecord.backend.expression.types import (
+            ArrayType, IntegerType, VarCharType,
         )
-        from rhosocial.activerecord.backend.expression.types import IntegerType, VarCharType
-        a1 = PostgresArrayType(IntegerType(), 2)
-        a2 = PostgresArrayType(IntegerType(), 2)
-        a3 = PostgresArrayType(VarCharType(255), 2)
+        a1 = ArrayType(IntegerType(), 2)
+        a2 = ArrayType(IntegerType(), 2)
+        a3 = ArrayType(VarCharType(255), 2)
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)
 
     def test_parse_array_bracket_suffix(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import IntegerType
+        from rhosocial.activerecord.backend.expression.types import ArrayType, IntegerType
         result = dialect.parse_type("INTEGER[]")
-        assert isinstance(result, PostgresArrayType)
+        assert isinstance(result, ArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, IntegerType)
 
     def test_parse_array_2d_bracket_suffix(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import IntegerType
+        from rhosocial.activerecord.backend.expression.types import ArrayType, IntegerType
         result = dialect.parse_type("INTEGER[][]")
-        assert isinstance(result, PostgresArrayType)
+        assert isinstance(result, ArrayType)
         assert result.dimensions == 2
         assert isinstance(result.element_type, IntegerType)
 
     def test_parse_array_keyword(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import IntegerType
+        from rhosocial.activerecord.backend.expression.types import ArrayType, IntegerType
         result = dialect.parse_type("INTEGER ARRAY")
-        assert isinstance(result, PostgresArrayType)
+        assert isinstance(result, ArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, IntegerType)
 
     def test_parse_array_varchar(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-            PostgresArrayType,
-        )
-        from rhosocial.activerecord.backend.expression.types import VarCharType
+        from rhosocial.activerecord.backend.expression.types import ArrayType, VarCharType
         result = dialect.parse_type("VARCHAR(255)[]")
-        assert isinstance(result, PostgresArrayType)
+        assert isinstance(result, ArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, VarCharType)
         assert result.element_type.length == 255
@@ -185,3 +160,19 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import IntegerType
         result = dialect.parse_type("INTEGER")
         assert isinstance(result, IntegerType)
+
+    def test_is_element_type_equivalent(self, dialect):
+        from rhosocial.activerecord.backend.expression.types import (
+            ArrayType, IntegerType, SmallIntType,
+        )
+        a1 = ArrayType(IntegerType(), 2)
+        a2 = ArrayType(IntegerType(), 1)   # different dimension
+        a3 = ArrayType(SmallIntType())      # different element type
+        # Same element, different dimension → equivalent
+        assert a1.is_element_type_equivalent(a2)
+        # Different element → not equivalent
+        assert not a1.is_element_type_equivalent(a3)
+        # Plain IntegerType (not array) as other → matches element
+        assert a1.is_element_type_equivalent(IntegerType())
+        # Plain SmallIntType as other → doesn't match Integer element
+        assert not a1.is_element_type_equivalent(SmallIntType())

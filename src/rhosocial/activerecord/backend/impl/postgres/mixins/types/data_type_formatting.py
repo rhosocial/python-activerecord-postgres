@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
+    ArrayType,
     BigIntType,
     BlobType,
     BooleanType,
@@ -35,7 +36,6 @@ from rhosocial.activerecord.backend.expression.types import (
     VarCharType,
 )
 from ...expression.types import (
-    PostgresArrayType,
     PostgresBigSerialType,
     PostgresBitType,
     PostgresBoxType,
@@ -296,8 +296,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_vector(self, data_type) -> str:
         return data_type._default_sql()
 
-    @DDLTypeMixin.handles(PostgresArrayType)
-    def format_data_type_array(self, data_type: PostgresArrayType) -> str:
+    @DDLTypeMixin.handles(ArrayType)
+    def format_data_type_array(self, data_type: ArrayType) -> str:
         element_sql = self.format_data_type(data_type.element_type)
         return element_sql + "[]" * data_type.dimensions
 
@@ -502,7 +502,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         if kw_match:
             base_raw = stripped[:kw_match.start()]
             element_type = self.parse_type(base_raw)
-            return PostgresArrayType(element_type, dimensions=1)
+            return ArrayType(element_type, dimensions=1)
 
         # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
         # Count dimensions from trailing [] pairs
@@ -521,7 +521,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         if dims > 0:
             element_type = self.parse_type(remaining)
-            return PostgresArrayType(element_type, dimensions=dims)
+            return ArrayType(element_type, dimensions=dims)
 
         # ---- Standard type dispatch ----
 
