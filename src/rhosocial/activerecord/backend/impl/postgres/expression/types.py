@@ -509,5 +509,17 @@ class PostgresVectorType(DataType, backend="postgres"):
 # Array container
 # ---------------------------------------------------------------------------
 
-# Backward-compatible alias — core ``ArrayType`` provides the implementation.
-PostgresArrayType = ArrayType
+class PostgresArrayType(ArrayType):
+    """PostgreSQL array type.
+
+    PostgreSQL normalises all multi-dimensional array declarations to a
+    single-dimensional internal representation at the storage level.
+    Therefore ``integer[][]`` and ``integer[]`` are considered equivalent
+    during schema comparison: ``is_equivalent`` intentionally ignores
+    ``dimensions``.
+    """
+
+    def is_equivalent(self, other: "DataType") -> bool:
+        if not isinstance(other, ArrayType):
+            return False
+        return self.element_type.is_equivalent(other.element_type)

@@ -36,6 +36,7 @@ from rhosocial.activerecord.backend.expression.types import (
     VarCharType,
 )
 from ...expression.types import (
+    PostgresArrayType,
     PostgresBigSerialType,
     PostgresBitType,
     PostgresBoxType,
@@ -298,7 +299,15 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     @DDLTypeMixin.handles(ArrayType)
     def format_data_type_array(self, data_type: ArrayType) -> str:
-        element_sql = self.format_data_type(data_type.element_type)
+        elem = data_type.element_type
+        elem_cls = type(elem)
+        if elem_cls not in self._type_formatters:
+            raise TypeError(
+                f"ArrayType element type {elem_cls.__name__!r} is not supported "
+                f"by {type(self).__name__}. Use a PostgreSQL-specific DataType "
+                f"as the element type (e.g. PostgresIntegerType)."
+            )
+        element_sql = self.format_data_type(elem)
         return element_sql + "[]" * data_type.dimensions
 
     # --- Core formatters (PostgreSQL specialized) ---
@@ -502,26 +511,24 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         if kw_match:
             base_raw = stripped[:kw_match.start()]
             element_type = self.parse_type(base_raw)
-            return ArrayType(element_type, dimensions=1)
+            # PG normalises all array declarations to 1-D internally
+            return PostgresArrayType(element_type, dimensions=1)
 
         # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
-        # Count dimensions from trailing [] pairs
         remaining = stripped
-        dims = 0
         while remaining.endswith("[]"):
-            dims += 1
             remaining = remaining[:-2]
         while remaining.endswith("]"):
             m = self._PG_ARRAY_SUFFIX.search(remaining)
             if m:
-                dims += 1
                 remaining = remaining[:m.start()]
             else:
                 break
 
-        if dims > 0:
+        if remaining != stripped:
             element_type = self.parse_type(remaining)
-            return ArrayType(element_type, dimensions=dims)
+            # PG normalises all array declarations to 1-D internally
+            return PostgresArrayType(element_type, dimensions=1)
 
         # ---- Standard type dispatch ----
 
