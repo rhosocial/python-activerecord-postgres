@@ -90,8 +90,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     IntrospectionSupport,
     TransactionControlSupport,
     SQLFunctionSupport,
-    TypeFormattingSupport,
-    TypeParsingSupport,
+    DDLTypeSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -527,9 +526,8 @@ class PostgresDialect(
     PostgresRangeTypeSupport,
     PostgresJSONBEnhancedSupport,
     PostgresArrayEnhancedSupport,
-    # DataType Support Protocols
-    TypeFormattingSupport,
-    TypeParsingSupport,
+    # DataType Support Protocol
+    DDLTypeSupport,
     # New feature protocols
     PostgresParallelQuerySupport,
     PostgresStoredProcedureSupport,

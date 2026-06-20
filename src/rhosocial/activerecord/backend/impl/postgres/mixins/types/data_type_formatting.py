@@ -7,10 +7,7 @@ import re
 from typing import TYPE_CHECKING, List, Tuple, Type
 
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
-from rhosocial.activerecord.backend.dialect.protocols import (
-    TypeFormattingSupport,
-    TypeParsingSupport,
-)
+from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
     BlobType,
@@ -91,16 +88,16 @@ if TYPE_CHECKING:
     )
 
 
-class PostgresTypeFormatSupportMixin(DDLTypeMixin, TypeFormattingSupport, TypeParsingSupport):
+class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     """PostgreSQL DataType formatting and parsing.
 
-    Implements both ``TypeFormattingSupport`` and ``TypeParsingSupport`` so
-    the dialect can render ``DataType`` expressions to SQL strings and parse
-    raw SQL type strings back into ``DataType`` instances.
+    Implements ``DDLTypeSupport`` so the dialect can render ``DataType``
+    expressions to SQL strings and parse raw SQL type strings back into
+    ``DataType`` instances.
     """
 
     # ------------------------------------------------------------------
-    # TypeFormattingSupport / DDLTypeMixin
+    # DDLTypeSupport — formatting
     # ------------------------------------------------------------------
 
     def format_data_type(self, data_type: DataType) -> str:
@@ -111,10 +108,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, TypeFormattingSupport, TypePa
                 if formatter is not None:
                     return formatter(data_type)
         return super().format_data_type(data_type)
-
-    def render_type(self, data_type: DataType) -> str:
-        """Legacy protocol method — delegates to format_data_type."""
-        return self.format_data_type(data_type)
 
     def supports_data_types(self) -> List[Tuple[Type[DataType], str]]:
         return [
@@ -432,7 +425,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, TypeFormattingSupport, TypePa
         return "JSONB"
 
     # ------------------------------------------------------------------
-    # TypeParsingSupport
+    # DDLTypeSupport — parsing
     # ------------------------------------------------------------------
 
     _PG_INTEGER_TYPES = re.compile(
