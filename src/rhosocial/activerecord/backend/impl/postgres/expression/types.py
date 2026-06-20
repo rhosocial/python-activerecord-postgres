@@ -17,7 +17,7 @@ DDL definition expressions (``ColumnDefinition.data_type``).
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Set
 
 from rhosocial.activerecord.backend.expression.types import (
     BlobType,
@@ -35,6 +35,10 @@ from rhosocial.activerecord.backend.expression.types import (
 
 class PostgresCharacterVaryingType(VarCharType, backend="postgres"):
     """PostgreSQL ``CHARACTER VARYING(n)`` — alias for ``VARCHAR(n)``."""
+
+    @classmethod
+    def synonyms(cls) -> Set[str]:
+        return {'VarCharType'}
 
     def _default_sql(self) -> str:
         if self.length is not None:
@@ -60,6 +64,10 @@ class PostgresByteaType(BlobType, backend="postgres"):
 class PostgresSmallSerialType(DataType, backend="postgres"):
     """PostgreSQL ``SMALLSERIAL`` — auto-incrementing SMALLINT (2 bytes)."""
 
+    @classmethod
+    def synonyms(cls) -> Set[str]:
+        return {'SmallSerialType', 'SmallIntType'}
+
     def _default_sql(self) -> str:
         return "SMALLSERIAL"
 
@@ -67,12 +75,20 @@ class PostgresSmallSerialType(DataType, backend="postgres"):
 class PostgresSerialType(DataType, backend="postgres"):
     """PostgreSQL ``SERIAL`` — auto-incrementing INTEGER (4 bytes)."""
 
+    @classmethod
+    def synonyms(cls) -> Set[str]:
+        return {'SerialType', 'IntegerType'}
+
     def _default_sql(self) -> str:
         return "SERIAL"
 
 
 class PostgresBigSerialType(DataType, backend="postgres"):
     """PostgreSQL ``BIGSERIAL`` — auto-incrementing BIGINT (8 bytes)."""
+
+    @classmethod
+    def synonyms(cls) -> Set[str]:
+        return {'BigSerialType', 'BigIntType'}
 
     def _default_sql(self) -> str:
         return "BIGSERIAL"
