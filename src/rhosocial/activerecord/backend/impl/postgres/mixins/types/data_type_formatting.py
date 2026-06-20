@@ -35,6 +35,7 @@ from rhosocial.activerecord.backend.expression.types import (
     VarCharType,
 )
 from ...expression.types import (
+    PostgresArrayType,
     PostgresBigSerialType,
     PostgresBitType,
     PostgresBoxType,
@@ -295,6 +296,11 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_vector(self, data_type) -> str:
         return data_type._default_sql()
 
+    @DDLTypeMixin.handles(PostgresArrayType)
+    def format_data_type_array(self, data_type: PostgresArrayType) -> str:
+        element_sql = self.format_data_type(data_type.element_type)
+        return element_sql + "[]" * data_type.dimensions
+
     # --- Core formatters (PostgreSQL specialized) ---
 
     @DDLTypeMixin.handles(TinyIntType)
@@ -482,10 +488,42 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         r"^(?:MONEY|XML|PG_LSN|HSTORE|GEOMETRY|GEOGRAPHY)\b",
         re.IGNORECASE,
     )
+    _PG_ARRAY_SUFFIX = re.compile(r"(\[(\d*)\])+\s*$")
+    _PG_ARRAY_KEYWORD = re.compile(r"\s+ARRAY(?:\s*\[\s*(\d+)\s*\])?\s*$", re.IGNORECASE)
 
     def parse_type(self, raw: str) -> DataType:
         stripped = raw.strip()
         upper = stripped.upper()
+
+        # ---- Array detection (must run before any type-specific match) ----
+
+        # Check for ARRAY keyword: e.g. "INTEGER ARRAY" or "INTEGER ARRAY[3]"
+        kw_match = self._PG_ARRAY_KEYWORD.search(upper)
+        if kw_match:
+            base_raw = stripped[:kw_match.start()]
+            element_type = self.parse_type(base_raw)
+            return PostgresArrayType(element_type, dimensions=1)
+
+        # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
+        # Count dimensions from trailing [] pairs
+        remaining = stripped
+        dims = 0
+        while remaining.endswith("[]"):
+            dims += 1
+            remaining = remaining[:-2]
+        while remaining.endswith("]"):
+            m = self._PG_ARRAY_SUFFIX.search(remaining)
+            if m:
+                dims += 1
+                remaining = remaining[:m.start()]
+            else:
+                break
+
+        if dims > 0:
+            element_type = self.parse_type(remaining)
+            return PostgresArrayType(element_type, dimensions=dims)
+
+        # ---- Standard type dispatch ----
 
         # Serial family
         if self._PG_SERIAL_TYPES.match(upper):
