@@ -34,7 +34,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TinyIntType,
     VarCharType,
 )
-from ..expression.types import (
+from ...expression.types import (
     PostgresBigSerialType,
     PostgresBitType,
     PostgresBoxType,
@@ -303,51 +303,61 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     @DDLTypeMixin.handles(SmallIntType)
     def format_data_type_small_int(self, data_type: SmallIntType) -> str:
-        return data_type._default_sql()
+        return "SMALLINT"
 
     @DDLTypeMixin.handles(IntType)
     def format_data_type_int(self, data_type: IntType) -> str:
-        return data_type._default_sql()
+        return "INTEGER"
 
     @DDLTypeMixin.handles(IntegerType)
     def format_data_type_integer(self, data_type: IntegerType) -> str:
-        return data_type._default_sql()
+        return "INTEGER"
 
     @DDLTypeMixin.handles(BigIntType)
     def format_data_type_big_int(self, data_type: BigIntType) -> str:
-        return data_type._default_sql()
+        return "BIGINT"
 
     @DDLTypeMixin.handles(FloatType)
     def format_data_type_float(self, data_type: FloatType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None:
+            return f"FLOAT({data_type.precision})"
+        return "REAL"
 
     @DDLTypeMixin.handles(RealType)
     def format_data_type_real(self, data_type: RealType) -> str:
-        return data_type._default_sql()
+        return "REAL"
 
     @DDLTypeMixin.handles(DoubleType)
     def format_data_type_double(self, data_type: DoubleType) -> str:
-        return data_type._default_sql()
+        return "DOUBLE PRECISION"
 
     @DDLTypeMixin.handles(DecimalType)
     def format_data_type_decimal(self, data_type: DecimalType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None and data_type.scale is not None:
+            return f"DECIMAL({data_type.precision},{data_type.scale})"
+        if data_type.precision is not None:
+            return f"DECIMAL({data_type.precision})"
+        return "DECIMAL"
 
     @DDLTypeMixin.handles(CharType)
     def format_data_type_char(self, data_type: CharType) -> str:
-        return data_type._default_sql()
+        if data_type.length is not None:
+            return f"CHAR({data_type.length})"
+        return "CHAR"
 
     @DDLTypeMixin.handles(VarCharType)
     def format_data_type_var_char(self, data_type: VarCharType) -> str:
-        return data_type._default_sql()
+        if data_type.length is not None:
+            return f"VARCHAR({data_type.length})"
+        return "VARCHAR"
 
     @DDLTypeMixin.handles(TextType)
     def format_data_type_text(self, data_type: TextType) -> str:
-        return data_type._default_sql()
+        return "TEXT"
 
     @DDLTypeMixin.handles(BooleanType)
     def format_data_type_boolean(self, data_type: BooleanType) -> str:
-        return data_type._default_sql()
+        return "BOOLEAN"
 
     @DDLTypeMixin.handles(BlobType)
     def format_data_type_blob(self, data_type: BlobType) -> str:
@@ -355,15 +365,19 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     @DDLTypeMixin.handles(DateType)
     def format_data_type_date(self, data_type: DateType) -> str:
-        return data_type._default_sql()
+        return "DATE"
 
     @DDLTypeMixin.handles(TimeType)
     def format_data_type_time(self, data_type: TimeType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None:
+            return f"TIME({data_type.precision})"
+        return "TIME"
 
     @DDLTypeMixin.handles(TimeTzType)
     def format_data_type_time_tz(self, data_type: TimeTzType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None:
+            return f"TIME({data_type.precision}) WITH TIME ZONE"
+        return "TIME WITH TIME ZONE"
 
     @DDLTypeMixin.handles(DateTimeType)
     def format_data_type_date_time(self, data_type: DateTimeType) -> str:
@@ -371,15 +385,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     @DDLTypeMixin.handles(TimestampType)
     def format_data_type_timestamp(self, data_type: TimestampType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None:
+            return f"TIMESTAMP({data_type.precision})"
+        return "TIMESTAMP"
 
     @DDLTypeMixin.handles(TimestampTzType)
     def format_data_type_timestamp_tz(self, data_type: TimestampTzType) -> str:
-        return data_type._default_sql()
+        if data_type.precision is not None:
+            return f"TIMESTAMP({data_type.precision}) WITH TIME ZONE"
+        return "TIMESTAMP WITH TIME ZONE"
 
     @DDLTypeMixin.handles(IntervalType)
     def format_data_type_interval(self, data_type: IntervalType) -> str:
-        return data_type._default_sql()
+        if data_type.fields is not None:
+            return f"INTERVAL {data_type.fields}"
+        return "INTERVAL"
 
     @DDLTypeMixin.handles(JsonType)
     def format_data_type_json(self, data_type: JsonType) -> str:

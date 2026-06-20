@@ -402,6 +402,7 @@ class PostgresDialect(
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
     PostgresArrayEnhancedMixin,
+    PostgresTypeFormatSupportMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
