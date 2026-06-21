@@ -40,13 +40,20 @@ class PostgresTableMixin:
     def format_column_definition(self, col_def) -> Tuple[str, tuple]:
         from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
         all_params: List[Any] = []
-        data_type = col_def.data_type
-        if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", data_type):
+        type_sql, _ = col_def.data_type.to_sql(self)
+        if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", type_sql):
             raise ValueError(
-                f"Invalid data type '{data_type}': "
+                f"Invalid data type '{type_sql}': "
                 "must contain only alphanumeric characters, spaces, parentheses, commas, and brackets."
             )
-        col_sql = f"{self.format_identifier(col_def.name)} {data_type}"
+        col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
+        dialect_opts = col_def.dialect_options or {}
+        identity = dialect_opts.get("identity")
+        if identity:
+            if identity.upper() in ("ALWAYS", "BY DEFAULT"):
+                col_sql += f" GENERATED {identity.upper()} AS IDENTITY"
+            else:
+                raise ValueError(f"Invalid identity option '{identity}': must be 'ALWAYS' or 'BY DEFAULT'")
         for constraint in col_def.constraints:
             suffix, params = self.format_column_constraint(constraint)
             col_sql += suffix
