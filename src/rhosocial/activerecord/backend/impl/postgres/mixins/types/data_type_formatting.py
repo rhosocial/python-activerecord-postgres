@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import Tuple, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
@@ -106,205 +106,205 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     # --- PostgreSQL-specific formatters ---
 
     @DDLTypeMixin.handles(PostgresByteaType)
-    def format_data_type_bytea(self, data_type):
+    def format_data_type_bytea(self, data_type) -> Tuple[str, tuple]:
         return "BYTEA", ()
 
     @DDLTypeMixin.handles(PostgresSmallSerialType)
-    def format_data_type_small_serial(self, data_type):
+    def format_data_type_small_serial(self, data_type) -> Tuple[str, tuple]:
         return "SMALLSERIAL", ()
 
     @DDLTypeMixin.handles(PostgresSerialType)
-    def format_data_type_serial(self, data_type):
+    def format_data_type_serial(self, data_type) -> Tuple[str, tuple]:
         return "SERIAL", ()
 
     @DDLTypeMixin.handles(PostgresBigSerialType)
-    def format_data_type_big_serial(self, data_type):
+    def format_data_type_big_serial(self, data_type) -> Tuple[str, tuple]:
         return "BIGSERIAL", ()
 
     @DDLTypeMixin.handles(PostgresUUIDType)
-    def format_data_type_uuid(self, data_type):
+    def format_data_type_uuid(self, data_type) -> Tuple[str, tuple]:
         return "UUID", ()
 
     @DDLTypeMixin.handles(PostgresXMLType)
-    def format_data_type_xml(self, data_type):
+    def format_data_type_xml(self, data_type) -> Tuple[str, tuple]:
         return "XML", ()
 
     @DDLTypeMixin.handles(PostgresCharacterVaryingType)
-    def format_data_type_character_varying(self, data_type):
+    def format_data_type_character_varying(self, data_type: PostgresCharacterVaryingType) -> Tuple[str, tuple]:
         if data_type.length is not None:
             return f"CHARACTER VARYING({data_type.length})", ()
         return "CHARACTER VARYING", ()
 
     @DDLTypeMixin.handles(PostgresTSVectorType)
-    def format_data_type_ts_vector(self, data_type):
+    def format_data_type_ts_vector(self, data_type) -> Tuple[str, tuple]:
         return "TSVECTOR", ()
 
     @DDLTypeMixin.handles(PostgresTSQueryType)
-    def format_data_type_ts_query(self, data_type):
+    def format_data_type_ts_query(self, data_type) -> Tuple[str, tuple]:
         return "TSQUERY", ()
 
     @DDLTypeMixin.handles(PostgresJsonPathType)
-    def format_data_type_json_path(self, data_type):
+    def format_data_type_json_path(self, data_type) -> Tuple[str, tuple]:
         return "JSONPATH", ()
 
     @DDLTypeMixin.handles(PostgresBitType)
-    def format_data_type_bit(self, data_type):
+    def format_data_type_bit(self, data_type) -> Tuple[str, tuple]:
         if data_type.n is not None:
             return f"BIT({data_type.n})", ()
         return "BIT", ()
 
     @DDLTypeMixin.handles(PostgresVarBitType)
-    def format_data_type_var_bit(self, data_type):
+    def format_data_type_var_bit(self, data_type) -> Tuple[str, tuple]:
         if data_type.n is not None:
             return f"VARBIT({data_type.n})", ()
         return "VARBIT", ()
 
     @DDLTypeMixin.handles(PostgresInetType)
-    def format_data_type_inet(self, data_type):
+    def format_data_type_inet(self, data_type) -> Tuple[str, tuple]:
         return "INET", ()
 
     @DDLTypeMixin.handles(PostgresCidrType)
-    def format_data_type_cidr(self, data_type):
+    def format_data_type_cidr(self, data_type) -> Tuple[str, tuple]:
         return "CIDR", ()
 
     @DDLTypeMixin.handles(PostgresMacAddrType)
-    def format_data_type_mac_addr(self, data_type):
+    def format_data_type_mac_addr(self, data_type) -> Tuple[str, tuple]:
         return "MACADDR", ()
 
     @DDLTypeMixin.handles(PostgresMacAddr8Type)
-    def format_data_type_mac_addr8(self, data_type):
+    def format_data_type_mac_addr8(self, data_type) -> Tuple[str, tuple]:
         return "MACADDR8", ()
 
     @DDLTypeMixin.handles(PostgresPointType)
-    def format_data_type_point(self, data_type):
+    def format_data_type_point(self, data_type) -> Tuple[str, tuple]:
         return "POINT", ()
 
     @DDLTypeMixin.handles(PostgresLineType)
-    def format_data_type_line(self, data_type):
+    def format_data_type_line(self, data_type) -> Tuple[str, tuple]:
         return "LINE", ()
 
     @DDLTypeMixin.handles(PostgresLineSegmentType)
-    def format_data_type_line_segment(self, data_type):
+    def format_data_type_line_segment(self, data_type) -> Tuple[str, tuple]:
         return "LSEG", ()
 
     @DDLTypeMixin.handles(PostgresBoxType)
-    def format_data_type_box(self, data_type):
+    def format_data_type_box(self, data_type) -> Tuple[str, tuple]:
         return "BOX", ()
 
     @DDLTypeMixin.handles(PostgresPathType)
-    def format_data_type_path(self, data_type):
+    def format_data_type_path(self, data_type) -> Tuple[str, tuple]:
         return "PATH", ()
 
     @DDLTypeMixin.handles(PostgresPolygonType)
-    def format_data_type_polygon(self, data_type):
+    def format_data_type_polygon(self, data_type) -> Tuple[str, tuple]:
         return "POLYGON", ()
 
     @DDLTypeMixin.handles(PostgresCircleType)
-    def format_data_type_circle(self, data_type):
+    def format_data_type_circle(self, data_type) -> Tuple[str, tuple]:
         return "CIRCLE", ()
 
     @DDLTypeMixin.handles(PostgresMoneyType)
-    def format_data_type_money(self, data_type):
+    def format_data_type_money(self, data_type) -> Tuple[str, tuple]:
         return "MONEY", ()
 
     @DDLTypeMixin.handles(PostgresInt4RangeType)
-    def format_data_type_int4_range(self, data_type):
+    def format_data_type_int4_range(self, data_type) -> Tuple[str, tuple]:
         return "INT4RANGE", ()
 
     @DDLTypeMixin.handles(PostgresInt8RangeType)
-    def format_data_type_int8_range(self, data_type):
+    def format_data_type_int8_range(self, data_type) -> Tuple[str, tuple]:
         return "INT8RANGE", ()
 
     @DDLTypeMixin.handles(PostgresNumRangeType)
-    def format_data_type_num_range(self, data_type):
+    def format_data_type_num_range(self, data_type) -> Tuple[str, tuple]:
         return "NUMRANGE", ()
 
     @DDLTypeMixin.handles(PostgresTsRangeType)
-    def format_data_type_ts_range(self, data_type):
+    def format_data_type_ts_range(self, data_type) -> Tuple[str, tuple]:
         return "TSRANGE", ()
 
     @DDLTypeMixin.handles(PostgresTsTzRangeType)
-    def format_data_type_ts_tz_range(self, data_type):
+    def format_data_type_ts_tz_range(self, data_type) -> Tuple[str, tuple]:
         return "TSTZRANGE", ()
 
     @DDLTypeMixin.handles(PostgresDateRangeType)
-    def format_data_type_date_range(self, data_type):
+    def format_data_type_date_range(self, data_type) -> Tuple[str, tuple]:
         return "DATERANGE", ()
 
     @DDLTypeMixin.handles(PostgresInt4MultirangeType)
-    def format_data_type_int4_multirange(self, data_type):
+    def format_data_type_int4_multirange(self, data_type) -> Tuple[str, tuple]:
         return "INT4MULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresInt8MultirangeType)
-    def format_data_type_int8_multirange(self, data_type):
+    def format_data_type_int8_multirange(self, data_type) -> Tuple[str, tuple]:
         return "INT8MULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresNumMultirangeType)
-    def format_data_type_num_multirange(self, data_type):
+    def format_data_type_num_multirange(self, data_type) -> Tuple[str, tuple]:
         return "NUMMULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresTsMultirangeType)
-    def format_data_type_ts_multirange(self, data_type):
+    def format_data_type_ts_multirange(self, data_type) -> Tuple[str, tuple]:
         return "TSMULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresTsTzMultirangeType)
-    def format_data_type_ts_tz_multirange(self, data_type):
+    def format_data_type_ts_tz_multirange(self, data_type) -> Tuple[str, tuple]:
         return "TSTZMULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresDateMultirangeType)
-    def format_data_type_date_multirange(self, data_type):
+    def format_data_type_date_multirange(self, data_type) -> Tuple[str, tuple]:
         return "DATEMULTIRANGE", ()
 
     @DDLTypeMixin.handles(PostgresOIDType)
-    def format_data_type_oid(self, data_type):
+    def format_data_type_oid(self, data_type) -> Tuple[str, tuple]:
         return "OID", ()
 
     @DDLTypeMixin.handles(PostgresRegClassType)
-    def format_data_type_reg_class(self, data_type):
+    def format_data_type_reg_class(self, data_type) -> Tuple[str, tuple]:
         return "REGCLASS", ()
 
     @DDLTypeMixin.handles(PostgresRegTypeType)
-    def format_data_type_reg_type(self, data_type):
+    def format_data_type_reg_type(self, data_type) -> Tuple[str, tuple]:
         return "REGTYPE", ()
 
     @DDLTypeMixin.handles(PostgresXIDType)
-    def format_data_type_xid(self, data_type):
+    def format_data_type_xid(self, data_type) -> Tuple[str, tuple]:
         return "XID", ()
 
     @DDLTypeMixin.handles(PostgresXID8Type)
-    def format_data_type_xid8(self, data_type):
+    def format_data_type_xid8(self, data_type) -> Tuple[str, tuple]:
         return "XID8", ()
 
     @DDLTypeMixin.handles(PostgresCIDType)
-    def format_data_type_cid(self, data_type):
+    def format_data_type_cid(self, data_type) -> Tuple[str, tuple]:
         return "CID", ()
 
     @DDLTypeMixin.handles(PostgresTIDType)
-    def format_data_type_tid(self, data_type):
+    def format_data_type_tid(self, data_type) -> Tuple[str, tuple]:
         return "TID", ()
 
     @DDLTypeMixin.handles(PostgresPgLSNType)
-    def format_data_type_pg_lsn(self, data_type):
+    def format_data_type_pg_lsn(self, data_type) -> Tuple[str, tuple]:
         return "PG_LSN", ()
 
     @DDLTypeMixin.handles(PostgresHstoreType)
-    def format_data_type_hstore(self, data_type):
+    def format_data_type_hstore(self, data_type) -> Tuple[str, tuple]:
         return "HSTORE", ()
 
     @DDLTypeMixin.handles(PostgresGeometryType)
-    def format_data_type_geometry(self, data_type):
+    def format_data_type_geometry(self, data_type) -> Tuple[str, tuple]:
         return "GEOMETRY", ()
 
     @DDLTypeMixin.handles(PostgresGeographyType)
-    def format_data_type_geography(self, data_type):
+    def format_data_type_geography(self, data_type) -> Tuple[str, tuple]:
         return "GEOGRAPHY", ()
 
     @DDLTypeMixin.handles(PostgresVectorType)
-    def format_data_type_vector(self, data_type):
+    def format_data_type_vector(self, data_type) -> Tuple[str, tuple]:
         return f"VECTOR({data_type.dim})", ()
 
     @DDLTypeMixin.handles(ArrayType)
-    def format_data_type_array(self, data_type: ArrayType):
+    def format_data_type_array(self, data_type: ArrayType) -> Tuple[str, tuple]:
         elem = data_type.element_type
         elem_cls = type(elem)
         if elem_cls not in self._type_formatters:
@@ -319,41 +319,41 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     # --- Core formatters (PostgreSQL specialized) ---
 
     @DDLTypeMixin.handles(TinyIntType)
-    def format_data_type_tiny_int(self, data_type: TinyIntType):
+    def format_data_type_tiny_int(self, data_type: TinyIntType) -> Tuple[str, tuple]:
         return "SMALLINT", ()
 
     @DDLTypeMixin.handles(SmallIntType)
-    def format_data_type_small_int(self, data_type: SmallIntType):
+    def format_data_type_small_int(self, data_type: SmallIntType) -> Tuple[str, tuple]:
         return "SMALLINT", ()
 
     @DDLTypeMixin.handles(IntType)
-    def format_data_type_int(self, data_type: IntType):
+    def format_data_type_int(self, data_type: IntType) -> Tuple[str, tuple]:
         return "INTEGER", ()
 
     @DDLTypeMixin.handles(IntegerType)
-    def format_data_type_integer(self, data_type: IntegerType):
+    def format_data_type_integer(self, data_type: IntegerType) -> Tuple[str, tuple]:
         return "INTEGER", ()
 
     @DDLTypeMixin.handles(BigIntType)
-    def format_data_type_big_int(self, data_type: BigIntType):
+    def format_data_type_big_int(self, data_type: BigIntType) -> Tuple[str, tuple]:
         return "BIGINT", ()
 
     @DDLTypeMixin.handles(FloatType)
-    def format_data_type_float(self, data_type: FloatType):
+    def format_data_type_float(self, data_type: FloatType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
             return f"FLOAT({data_type.precision})", ()
         return "REAL", ()
 
     @DDLTypeMixin.handles(RealType)
-    def format_data_type_real(self, data_type: RealType):
+    def format_data_type_real(self, data_type: RealType) -> Tuple[str, tuple]:
         return "REAL", ()
 
     @DDLTypeMixin.handles(DoubleType)
-    def format_data_type_double(self, data_type: DoubleType):
+    def format_data_type_double(self, data_type: DoubleType) -> Tuple[str, tuple]:
         return "DOUBLE PRECISION", ()
 
     @DDLTypeMixin.handles(DecimalType)
-    def format_data_type_decimal(self, data_type: DecimalType):
+    def format_data_type_decimal(self, data_type: DecimalType) -> Tuple[str, tuple]:
         if data_type.precision is not None and data_type.scale is not None:
             return f"DECIMAL({data_type.precision},{data_type.scale})", ()
         if data_type.precision is not None:
@@ -361,73 +361,73 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return "DECIMAL", ()
 
     @DDLTypeMixin.handles(CharType)
-    def format_data_type_char(self, data_type: CharType):
+    def format_data_type_char(self, data_type: CharType) -> Tuple[str, tuple]:
         if data_type.length is not None:
             return f"CHAR({data_type.length})", ()
         return "CHAR", ()
 
     @DDLTypeMixin.handles(VarCharType)
-    def format_data_type_var_char(self, data_type: VarCharType):
+    def format_data_type_var_char(self, data_type: VarCharType) -> Tuple[str, tuple]:
         if data_type.length is not None:
             return f"VARCHAR({data_type.length})", ()
         return "VARCHAR", ()
 
     @DDLTypeMixin.handles(TextType)
-    def format_data_type_text(self, data_type: TextType):
+    def format_data_type_text(self, data_type: TextType) -> Tuple[str, tuple]:
         return "TEXT", ()
 
     @DDLTypeMixin.handles(BooleanType)
-    def format_data_type_boolean(self, data_type: BooleanType):
+    def format_data_type_boolean(self, data_type: BooleanType) -> Tuple[str, tuple]:
         return "BOOLEAN", ()
 
     @DDLTypeMixin.handles(BlobType)
-    def format_data_type_blob(self, data_type: BlobType):
+    def format_data_type_blob(self, data_type: BlobType) -> Tuple[str, tuple]:
         return "BYTEA", ()
 
     @DDLTypeMixin.handles(DateType)
-    def format_data_type_date(self, data_type: DateType):
+    def format_data_type_date(self, data_type: DateType) -> Tuple[str, tuple]:
         return "DATE", ()
 
     @DDLTypeMixin.handles(TimeType)
-    def format_data_type_time(self, data_type: TimeType):
+    def format_data_type_time(self, data_type: TimeType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
             return f"TIME({data_type.precision})", ()
         return "TIME", ()
 
     @DDLTypeMixin.handles(TimeTzType)
-    def format_data_type_time_tz(self, data_type: TimeTzType):
+    def format_data_type_time_tz(self, data_type: TimeTzType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
             return f"TIME({data_type.precision}) WITH TIME ZONE", ()
         return "TIME WITH TIME ZONE", ()
 
     @DDLTypeMixin.handles(DateTimeType)
-    def format_data_type_date_time(self, data_type: DateTimeType):
+    def format_data_type_date_time(self, data_type: DateTimeType) -> Tuple[str, tuple]:
         return "TIMESTAMP", ()
 
     @DDLTypeMixin.handles(TimestampType)
-    def format_data_type_timestamp(self, data_type: TimestampType):
+    def format_data_type_timestamp(self, data_type: TimestampType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
             return f"TIMESTAMP({data_type.precision})", ()
         return "TIMESTAMP", ()
 
     @DDLTypeMixin.handles(TimestampTzType)
-    def format_data_type_timestamp_tz(self, data_type: TimestampTzType):
+    def format_data_type_timestamp_tz(self, data_type: TimestampTzType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
             return f"TIMESTAMP({data_type.precision}) WITH TIME ZONE", ()
         return "TIMESTAMP WITH TIME ZONE", ()
 
     @DDLTypeMixin.handles(IntervalType)
-    def format_data_type_interval(self, data_type: IntervalType):
+    def format_data_type_interval(self, data_type: IntervalType) -> Tuple[str, tuple]:
         if data_type.fields is not None:
             return f"INTERVAL {data_type.fields}", ()
         return "INTERVAL", ()
 
     @DDLTypeMixin.handles(JsonType)
-    def format_data_type_json(self, data_type: JsonType):
+    def format_data_type_json(self, data_type: JsonType) -> Tuple[str, tuple]:
         return "JSON", ()
 
     @DDLTypeMixin.handles(JsonBType)
-    def format_data_type_json_b(self, data_type: JsonBType):
+    def format_data_type_json_b(self, data_type: JsonBType) -> Tuple[str, tuple]:
         return "JSONB", ()
 
     # ------------------------------------------------------------------
