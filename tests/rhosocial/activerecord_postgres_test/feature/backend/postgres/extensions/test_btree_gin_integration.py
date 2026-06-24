@@ -39,6 +39,15 @@ from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
+from rhosocial.activerecord.backend.expression.types import (
+    IntegerType,
+    TextType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresArrayType,
+)
+
 
 @pytest.fixture
 def btree_gin_env(postgres_backend_single):
@@ -51,14 +60,14 @@ def btree_gin_env(postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="value", data_type="INTEGER"),
-        ColumnDefinition(name="tags", data_type="TEXT[]"),
+        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(name="value", data_type=IntegerType()),
+        ColumnDefinition(name="tags", data_type=PostgresArrayType(TextType())),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -206,14 +215,14 @@ async def async_btree_gin_env(async_postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="value", data_type="INTEGER"),
-        ColumnDefinition(name="tags", data_type="TEXT[]"),
+        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(name="value", data_type=IntegerType()),
+        ColumnDefinition(name="tags", data_type=PostgresArrayType(TextType())),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

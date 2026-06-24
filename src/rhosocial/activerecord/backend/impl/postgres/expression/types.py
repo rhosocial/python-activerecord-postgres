@@ -333,6 +333,22 @@ class PostgresGeographyType(DataType, backend="postgres"):
     """PostGIS ``GEOGRAPHY`` — geodetic spatial type (PostGIS extension)."""
 
 
+class PostgresCitextType(DataType, backend="postgres"):
+    """PostgreSQL ``CITEXT`` — case-insensitive text (citext extension)."""
+
+
+class PostgresCubeType(DataType, backend="postgres"):
+    """PostgreSQL ``CUBE`` — multi-dimensional cube (cube extension)."""
+
+
+class PostgresLtreeType(DataType, backend="postgres"):
+    """PostgreSQL ``LTREE`` — label tree (ltree extension)."""
+
+
+class PostgresRasterType(DataType, backend="postgres"):
+    """PostgreSQL ``RASTER`` — raster (PostGIS raster extension)."""
+
+
 class PostgresVectorType(DataType, backend="postgres"):
     """pgvector ``VECTOR(n)`` — vector embedding (pgvector extension).
 

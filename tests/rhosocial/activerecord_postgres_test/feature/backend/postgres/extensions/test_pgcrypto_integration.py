@@ -36,6 +36,13 @@ from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import (
+    TextType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresByteaType,
+)
 
 
 # Table names for sync tests
@@ -52,13 +59,13 @@ def _setup_users_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type="TEXT"),
-        ColumnDefinition(name="password_hash", data_type="TEXT"),
+        ColumnDefinition(name="username", data_type=TextType()),
+        ColumnDefinition(name="password_hash", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -93,12 +100,12 @@ def _setup_encrypt_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="secret_data", data_type="BYTEA"),
+        ColumnDefinition(name="secret_data", data_type=PostgresByteaType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -144,13 +151,13 @@ async def _async_setup_users_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type="TEXT"),
-        ColumnDefinition(name="password_hash", data_type="TEXT"),
+        ColumnDefinition(name="username", data_type=TextType()),
+        ColumnDefinition(name="password_hash", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -185,12 +192,12 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="secret_data", data_type="BYTEA"),
+        ColumnDefinition(name="secret_data", data_type=PostgresByteaType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
