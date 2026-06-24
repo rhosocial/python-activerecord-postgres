@@ -83,8 +83,11 @@ from ...expression.types import (
     PostgresXID8Type,
     PostgresXIDType,
     PostgresXMLType,
-    PostgresCidrType,
     PostgresCharacterVaryingType,
+    PostgresCitextType,
+    PostgresCubeType,
+    PostgresLtreeType,
+    PostgresRasterType,
 )
 
 if TYPE_CHECKING:
@@ -302,6 +305,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     @DDLTypeMixin.handles(PostgresVectorType)
     def format_data_type_vector(self, data_type) -> Tuple[str, tuple]:
         return f"VECTOR({data_type.dim})", ()
+
+    @DDLTypeMixin.handles(PostgresCitextType)
+    def format_data_type_citext(self, data_type) -> Tuple[str, tuple]:
+        return "CITEXT", ()
+
+    @DDLTypeMixin.handles(PostgresCubeType)
+    def format_data_type_cube(self, data_type) -> Tuple[str, tuple]:
+        return "CUBE", ()
+
+    @DDLTypeMixin.handles(PostgresLtreeType)
+    def format_data_type_ltree(self, data_type) -> Tuple[str, tuple]:
+        return "LTREE", ()
+
+    @DDLTypeMixin.handles(PostgresRasterType)
+    def format_data_type_raster(self, data_type) -> Tuple[str, tuple]:
+        return "RASTER", ()
 
     @DDLTypeMixin.handles(ArrayType)
     def format_data_type_array(self, data_type: ArrayType) -> Tuple[str, tuple]:
