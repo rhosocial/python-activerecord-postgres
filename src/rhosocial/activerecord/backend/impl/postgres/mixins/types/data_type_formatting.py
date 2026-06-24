@@ -83,6 +83,7 @@ from ...expression.types import (
     PostgresXID8Type,
     PostgresXIDType,
     PostgresXMLType,
+    PostgresCidrType,
     PostgresCharacterVaryingType,
     PostgresCitextType,
     PostgresCubeType,
