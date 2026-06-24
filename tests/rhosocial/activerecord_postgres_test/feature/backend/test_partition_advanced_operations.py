@@ -32,6 +32,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresDetachPartitionExpression,
     PostgresPartitionMetadataExpression,
 )
+from rhosocial.activerecord.backend.expression.types import (
+    BigIntType, TextType, TimestampType,
+)
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnConstraint, ColumnConstraintType,
+)
 
 
 LIST_PARENT = "ar_partition_adv_list_events"
@@ -59,9 +65,9 @@ def _create_list_parent_expression(dialect):
         dialect=dialect,
         table=LIST_PARENT,
         columns=[
-            ColumnDefinition("id", "BIGINT NOT NULL"),
-            ColumnDefinition("status", "TEXT NOT NULL"),
-            ColumnDefinition("payload", "TEXT NOT NULL"),
+            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("status", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -87,9 +93,9 @@ def _create_hash_parent_expression(dialect):
         dialect=dialect,
         table=HASH_PARENT,
         columns=[
-            ColumnDefinition("id", "BIGINT NOT NULL"),
-            ColumnDefinition("bucket", "BIGINT NOT NULL"),
-            ColumnDefinition("payload", "TEXT NOT NULL"),
+            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("bucket", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -115,9 +121,9 @@ def _create_range_parent_expression(dialect):
         dialect=dialect,
         table=RANGE_PARENT,
         columns=[
-            ColumnDefinition("id", "BIGINT NOT NULL"),
-            ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
-            ColumnDefinition("payload", "TEXT NOT NULL"),
+            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -318,9 +324,9 @@ class TestPostgreSQLAdvancedPartitionOperations:
             dialect=dialect,
             table=default_partition_name,
             columns=[
-                ColumnDefinition("id", "BIGINT NOT NULL"),
-                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
-                ColumnDefinition("payload", "TEXT NOT NULL"),
+                ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
             ],
         )
         postgres_backend.execute(*create_default.to_sql())
@@ -378,8 +384,8 @@ class TestPostgreSQLAdvancedPartitionOperations:
                     dialect=dialect,
                     table=TableExpression(dialect, SCHEMA_PARENT, schema_name=schema),
                     columns=[
-                        ColumnDefinition("id", "BIGINT NOT NULL"),
-                        ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
+                        ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                        ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
                     ],
                     partition=PartitionClause(
                         dialect=dialect,

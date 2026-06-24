@@ -51,6 +51,12 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
     async_ensure_extension_installed,
 )
+from rhosocial.activerecord.backend.expression.types import (
+    BigIntType, TextType, TimestampType,
+)
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnConstraint, ColumnConstraintType,
+)
 
 
 PARTITION_TABLES = (
@@ -76,9 +82,9 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
         dialect=dialect,
         table=table_name,
         columns=[
-            ColumnDefinition("id", "BIGINT NOT NULL"),
-            ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
-            ColumnDefinition("payload", "TEXT"),
+            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("payload", TextType()),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -200,10 +206,10 @@ def _create_production_parent_sql(dialect):
         dialect=dialect,
         table=PRODUCTION_PARTITION_TABLE,
         columns=[
-            ColumnDefinition("id", "BIGINT NOT NULL"),
-            ColumnDefinition("created_at", "TIMESTAMP(6) NOT NULL"),
-            ColumnDefinition("tenant_id", "BIGINT NOT NULL"),
-            ColumnDefinition("payload", "TEXT NOT NULL"),
+            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("created_at", TimestampType(6), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("tenant_id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
         ],
         table_constraints=[
             TableConstraint(

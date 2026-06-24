@@ -38,6 +38,10 @@ from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresHstoreType,
+)
 
 
 # --- Helper functions ---
@@ -48,12 +52,12 @@ def _make_hstore_columns():
     return [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="data", data_type="HSTORE"),
+        ColumnDefinition(name="data", data_type=PostgresHstoreType()),
     ]
 
 

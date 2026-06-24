@@ -38,6 +38,11 @@ from rhosocial.activerecord.backend.expression.predicates import ComparisonPredi
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresCubeType,
+    PostgresSerialType,
+)
+
 
 # --- Sync fixture and tests ---
 
@@ -62,12 +67,12 @@ def cube_env(postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )
@@ -97,12 +102,12 @@ def cube_env(postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )
@@ -132,12 +137,12 @@ def cube_env(postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )
@@ -348,12 +353,12 @@ async def async_cube_env(async_postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )
@@ -383,12 +388,12 @@ async def async_cube_env(async_postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )
@@ -418,12 +423,12 @@ async def async_cube_env(async_postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="SERIAL",
+                data_type=PostgresSerialType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type="CUBE"),
+            ColumnDefinition(name="c", data_type=PostgresCubeType()),
         ],
         if_not_exists=True,
     )

@@ -36,6 +36,12 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.types import (
+    TextType, IntegerType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+)
 from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
     normal_rand,
     crosstab,
@@ -56,14 +62,14 @@ def tablefunc_env(postgres_backend_single):
     sales_columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="month", data_type="TEXT"),
-        ColumnDefinition(name="category", data_type="TEXT"),
-        ColumnDefinition(name="amount", data_type="INT"),
+        ColumnDefinition(name="month", data_type=TextType()),
+        ColumnDefinition(name="category", data_type=TextType()),
+        ColumnDefinition(name="amount", data_type=IntegerType()),
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
@@ -96,13 +102,13 @@ def tablefunc_env(postgres_backend_single):
     tree_columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="node_name", data_type="TEXT"),
-        ColumnDefinition(name="parent_id", data_type="INT"),
+        ColumnDefinition(name="node_name", data_type=TextType()),
+        ColumnDefinition(name="parent_id", data_type=IntegerType()),
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
@@ -334,14 +340,14 @@ async def async_tablefunc_env(async_postgres_backend_single):
     sales_columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="month", data_type="TEXT"),
-        ColumnDefinition(name="category", data_type="TEXT"),
-        ColumnDefinition(name="amount", data_type="INT"),
+        ColumnDefinition(name="month", data_type=TextType()),
+        ColumnDefinition(name="category", data_type=TextType()),
+        ColumnDefinition(name="amount", data_type=IntegerType()),
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
@@ -374,13 +380,13 @@ async def async_tablefunc_env(async_postgres_backend_single):
     tree_columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="node_name", data_type="TEXT"),
-        ColumnDefinition(name="parent_id", data_type="INT"),
+        ColumnDefinition(name="node_name", data_type=TextType()),
+        ColumnDefinition(name="parent_id", data_type=IntegerType()),
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,

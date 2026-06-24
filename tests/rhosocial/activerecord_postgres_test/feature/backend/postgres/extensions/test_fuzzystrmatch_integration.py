@@ -36,6 +36,12 @@ from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import (
+    TextType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+)
 
 
 TABLE_NAME = "test_fuzzy_lev"
@@ -49,12 +55,12 @@ def _setup_lev_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="word", data_type="TEXT"),
+        ColumnDefinition(name="word", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -86,12 +92,12 @@ def _setup_diff_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -133,12 +139,12 @@ async def _async_setup_lev_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="word", data_type="TEXT"),
+        ColumnDefinition(name="word", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -170,12 +176,12 @@ async def _async_setup_diff_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

@@ -29,6 +29,11 @@ from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresPointType,
+    PostgresSerialType,
+)
+
 
 TABLE_NAME = "test_earth"
 ASYNC_TABLE_NAME = "test_earth_async"
@@ -51,12 +56,12 @@ def earthdistance_env(postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="loc", data_type="POINT"),
+        ColumnDefinition(name="loc", data_type=PostgresPointType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -163,12 +168,12 @@ async def async_earthdistance_env(async_postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="loc", data_type="POINT"),
+        ColumnDefinition(name="loc", data_type=PostgresPointType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

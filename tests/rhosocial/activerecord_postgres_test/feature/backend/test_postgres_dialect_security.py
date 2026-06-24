@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraint,
     TableConstraintType,
 )
+from rhosocial.activerecord.backend.expression.types import VarCharType
 from typing import Tuple, Any  # noqa: F401
 
 
@@ -41,25 +42,23 @@ def test_postgres_validate_data_type(dialect):
 
 
 def test_postgres_format_column_definition_data_type_validation(dialect):
-    """Test column definition validates data_type."""
+    """Test column definition formats data_type correctly."""
     col_def = ColumnDefinition(
         name="test_col",
-        data_type="VARCHAR(255)",
+        data_type=VarCharType(255),
     )
 
     sql, params = dialect.format_column_definition(col_def)
     assert "VARCHAR(255)" in sql
 
 
-def test_postgres_format_column_definition_data_type_rejects_injection(dialect):
-    """Test that malicious data_type is rejected."""
-    col_def = ColumnDefinition(
-        name="test_col",
-        data_type="VARCHAR(255); DROP TABLE users--",
-    )
-
-    with pytest.raises(ValueError, match="Invalid data type"):
-        dialect.format_column_definition(col_def)
+def test_postgres_column_definition_rejects_string_data_type(dialect):
+    """Test that ColumnDefinition rejects string data_type at construction."""
+    with pytest.raises(TypeError, match="data_type must be a DataType instance"):
+        ColumnDefinition(
+            name="test_col",
+            data_type="VARCHAR(255); DROP TABLE users--",
+        )
 
 
 def test_postgres_format_default_constraint_string_escaping(dialect):

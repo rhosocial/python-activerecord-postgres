@@ -38,6 +38,14 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
     async_ensure_extension_installed,
 )
+from rhosocial.activerecord.backend.expression.types import (
+    TextType,
+    DateType,
+    DecimalType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+)
 
 
 TABLE_NAME = "test_orafce_dates"
@@ -55,16 +63,16 @@ def orafce_backend(postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="dt", data_type="DATE"),
-        ColumnDefinition(name="ref_dt", data_type="DATE"),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="discount", data_type="NUMERIC"),
-        ColumnDefinition(name="description", data_type="TEXT"),
+        ColumnDefinition(name="dt", data_type=DateType()),
+        ColumnDefinition(name="ref_dt", data_type=DateType()),
+        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(name="discount", data_type=DecimalType()),
+        ColumnDefinition(name="description", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -316,16 +324,16 @@ async def async_orafce_backend(async_postgres_backend_single):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="dt", data_type="DATE"),
-        ColumnDefinition(name="ref_dt", data_type="DATE"),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="discount", data_type="NUMERIC"),
-        ColumnDefinition(name="description", data_type="TEXT"),
+        ColumnDefinition(name="dt", data_type=DateType()),
+        ColumnDefinition(name="ref_dt", data_type=DateType()),
+        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(name="discount", data_type=DecimalType()),
+        ColumnDefinition(name="description", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
