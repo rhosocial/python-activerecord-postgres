@@ -37,6 +37,10 @@ from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresVectorType,
+)
 
 
 # --- Helper: common VECTOR(3) column definitions ---
@@ -45,7 +49,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 def _id_column():
     return ColumnDefinition(
         name="id",
-        data_type="SERIAL",
+        data_type=PostgresSerialType(),
         constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
         ],
@@ -53,7 +57,7 @@ def _id_column():
 
 
 def _embedding_column(dim=3):
-    return ColumnDefinition(name="embedding", data_type=f"VECTOR({dim})")
+    return ColumnDefinition(name="embedding", data_type=PostgresVectorType(dim))
 
 
 def _vector_literal(value, vector_type="vector"):

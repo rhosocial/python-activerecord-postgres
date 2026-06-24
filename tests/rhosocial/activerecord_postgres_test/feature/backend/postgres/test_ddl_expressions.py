@@ -32,6 +32,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresVacuumExpression,  # noqa: F401
     PostgresAnalyzeExpression,  # noqa: F401
 )
+from rhosocial.activerecord.backend.expression.types import (
+    BigIntType, TextType, TimestampType,
+)
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnConstraint, ColumnConstraintType,
+)
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
@@ -242,8 +248,8 @@ class TestPostgresPartitionedTableCreation:
             dialect=dialect,
             table="events",
             columns=[
-                ColumnDefinition("id", "BIGINT"),
-                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
+                ColumnDefinition("id", BigIntType()),
+                ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -263,8 +269,8 @@ class TestPostgresPartitionedTableCreation:
             dialect=dialect,
             table="events",
             columns=[
-                ColumnDefinition("id", "BIGINT"),
-                ColumnDefinition("status", "TEXT NOT NULL"),
+                ColumnDefinition("id", BigIntType()),
+                ColumnDefinition("status", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -283,7 +289,7 @@ class TestPostgresPartitionedTableCreation:
         expr = CreateTableExpression(
             dialect=dialect,
             table="events",
-            columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
+            columns=[ColumnDefinition("tenant_id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)])],
             partition=PartitionClause(
                 dialect=dialect,
                 method=PartitionStrategy.HASH,
@@ -300,7 +306,7 @@ class TestPostgresPartitionedTableCreation:
         expr = CreateTableExpression(
             dialect=dialect,
             table="events",
-            columns=[ColumnDefinition("tenant_id", "BIGINT NOT NULL")],
+            columns=[ColumnDefinition("tenant_id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)])],
             partition=PartitionClause(
                 dialect=dialect,
                 method=PartitionStrategy.HASH,
@@ -318,7 +324,7 @@ class TestPostgresPartitionedTableCreation:
         expr = CreateTableExpression(
             dialect=dialect,
             table="events",
-            columns=[ColumnDefinition("created_at", "TIMESTAMP NOT NULL")],
+            columns=[ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)])],
             partition=PartitionClause(
                 dialect=dialect,
                 method=PartitionStrategy.RANGE,
@@ -344,9 +350,9 @@ class TestPostgresPartitionedTableCreation:
             dialect=dialect,
             table="tenanted_events",
             columns=[
-                ColumnDefinition("tenant_id", "BIGINT NOT NULL"),
-                ColumnDefinition("created_at", "TIMESTAMP NOT NULL"),
-                ColumnDefinition("payload", "TEXT"),
+                ColumnDefinition("tenant_id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition("payload", TextType()),
             ],
             partition=PartitionClause(
                 dialect=dialect,

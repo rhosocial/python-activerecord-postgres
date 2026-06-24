@@ -33,6 +33,12 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.types import (
+    TextType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresUUIDType,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -71,7 +77,7 @@ def uuid_ossp_env(postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="UUID",
+                data_type=PostgresUUIDType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                     ColumnConstraint(
@@ -80,7 +86,7 @@ def uuid_ossp_env(postgres_backend_single):
                     ),
                 ],
             ),
-            ColumnDefinition(name="name", data_type="TEXT"),
+            ColumnDefinition(name="name", data_type=TextType()),
         ],
         if_not_exists=True,
     )
@@ -107,12 +113,12 @@ def uuid_ossp_env(postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="UUID",
+                data_type=PostgresUUIDType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="label", data_type="TEXT"),
+            ColumnDefinition(name="label", data_type=TextType()),
         ],
         if_not_exists=True,
     )
@@ -276,7 +282,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="UUID",
+                data_type=PostgresUUIDType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                     ColumnConstraint(
@@ -285,7 +291,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
                     ),
                 ],
             ),
-            ColumnDefinition(name="name", data_type="TEXT"),
+            ColumnDefinition(name="name", data_type=TextType()),
         ],
         if_not_exists=True,
     )
@@ -312,12 +318,12 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=[
             ColumnDefinition(
                 name="id",
-                data_type="UUID",
+                data_type=PostgresUUIDType(),
                 constraints=[
                     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="label", data_type="TEXT"),
+            ColumnDefinition(name="label", data_type=TextType()),
         ],
         if_not_exists=True,
     )

@@ -62,20 +62,16 @@ class TestPostgresDialectSecurityIntegration:
         """)  # noqa: F541
         assert result is not None
 
-    def test_malicious_data_type_rejected_at_dialect_level(self, postgres_backend):
-        """Test that malicious data type is rejected at dialect level before DB execution."""
+    def test_malicious_data_type_rejected_at_construction(self, postgres_backend):
+        """Test that malicious data type string is rejected at ColumnDefinition construction."""
         from rhosocial.activerecord.backend.expression.statements import ColumnDefinition
 
-        dialect = postgres_backend.dialect
-
-        # This should raise ValueError before reaching the database
-        col_def = ColumnDefinition(
-            name="test_col",
-            data_type="VARCHAR(255); DROP TABLE users--",
-        )
-
-        with pytest.raises(ValueError, match="Invalid data type"):
-            dialect.format_column_definition(col_def)
+        # ColumnDefinition now rejects string data_type values at construction time
+        with pytest.raises(TypeError, match="data_type must be a DataType instance"):
+            ColumnDefinition(
+                name="test_col",
+                data_type="VARCHAR(255); DROP TABLE users--",
+            )
 
 
 class TestPostgresExcludeConstraintSecurityIntegration:

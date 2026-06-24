@@ -36,6 +36,12 @@ from rhosocial.activerecord.backend.expression import RawSQLExpression
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import (
+    TextType,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+)
 
 
 # Table names for sync tests
@@ -56,12 +62,12 @@ def _setup_trgm_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -93,12 +99,12 @@ def _setup_trgm_ops_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -134,12 +140,12 @@ def _setup_trgm_idx_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -174,12 +180,12 @@ def _setup_trgm_word_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="description", data_type="TEXT"),
+        ColumnDefinition(name="description", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -219,12 +225,12 @@ async def _async_setup_trgm_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -256,12 +262,12 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -297,12 +303,12 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type="TEXT"),
+        ColumnDefinition(name="name", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -337,12 +343,12 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="description", data_type="TEXT"),
+        ColumnDefinition(name="description", data_type=TextType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

@@ -33,6 +33,11 @@ from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresGeometryType,
+    PostgresGeographyType,
+)
 
 
 # --- Helper functions ---
@@ -43,12 +48,12 @@ def _setup_geo_points_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -80,12 +85,12 @@ def _setup_geo_distance_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -117,12 +122,12 @@ def _setup_geo_contains_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POLYGON, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -160,12 +165,12 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -207,12 +212,12 @@ def _setup_geog_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geog", data_type="GEOGRAPHY(POINT, 4326)"),
+        ColumnDefinition(name="geog", data_type=PostgresGeographyType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -254,12 +259,12 @@ async def _async_setup_geo_points_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -291,12 +296,12 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -328,12 +333,12 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POLYGON, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -371,12 +376,12 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type="GEOMETRY(POINT, 4326)"),
+        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -418,12 +423,12 @@ async def _async_setup_geog_table(backend, dialect, table):
     columns = [
         ColumnDefinition(
             name="id",
-            data_type="SERIAL",
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geog", data_type="GEOGRAPHY(POINT, 4326)"),
+        ColumnDefinition(name="geog", data_type=PostgresGeographyType()),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

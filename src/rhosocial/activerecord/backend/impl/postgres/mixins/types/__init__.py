@@ -8,6 +8,7 @@ from .full_text_search import PostgresFullTextSearchMixin
 from .range_type import PostgresRangeTypeMixin
 from .jsonb_enhanced import PostgresJSONBEnhancedMixin
 from .array_enhanced import PostgresArrayEnhancedMixin
+from .data_type_formatting import PostgresTypeFormatSupportMixin
 
 __all__ = [
     "EnumTypeMixin",
@@ -17,4 +18,5 @@ __all__ = [
     "PostgresRangeTypeMixin",
     "PostgresJSONBEnhancedMixin",
     "PostgresArrayEnhancedMixin",
+    "PostgresTypeFormatSupportMixin",
 ]
