@@ -1,0 +1,63 @@
+# src/rhosocial/activerecord/backend/impl/postgres/examples/named_migrations/expressions.py
+"""
+DDL named expression functions for PostgreSQL migration examples.
+
+Each function receives a *dialect* and returns a DDL expression object.
+These are the building blocks used by NamedMigration up()/down() methods.
+"""
+
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    CreateTableExpression,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnConstraintType,
+    DropTableExpression,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresSerialType,
+    PostgresCharacterVaryingType,
+)
+
+
+def create_users_table(dialect):
+    """CREATE TABLE users (id SERIAL PRIMARY KEY, name VARCHAR(255), email VARCHAR(255))."""
+    return CreateTableExpression(
+        dialect,
+        table="users",
+        columns=[
+            ColumnDefinition(
+                "id",
+                PostgresSerialType(),
+                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            ),
+            ColumnDefinition("name", PostgresCharacterVaryingType(size=255)),
+            ColumnDefinition("email", PostgresCharacterVaryingType(size=255)),
+        ],
+    )
+
+
+def drop_users_table(dialect):
+    """DROP TABLE IF EXISTS users."""
+    return DropTableExpression(dialect, table="users", if_exists=True)
+
+
+def create_posts_table(dialect):
+    """CREATE TABLE posts (id SERIAL PRIMARY KEY, title VARCHAR(255), user_id INTEGER)."""
+    return CreateTableExpression(
+        dialect,
+        table="posts",
+        columns=[
+            ColumnDefinition(
+                "id",
+                PostgresSerialType(),
+                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            ),
+            ColumnDefinition("title", PostgresCharacterVaryingType(size=255)),
+            ColumnDefinition("user_id", PostgresCharacterVaryingType(size=255)),
+        ],
+    )
+
+
+def drop_posts_table(dialect):
+    """DROP TABLE IF EXISTS posts."""
+    return DropTableExpression(dialect, table="posts", if_exists=True)
