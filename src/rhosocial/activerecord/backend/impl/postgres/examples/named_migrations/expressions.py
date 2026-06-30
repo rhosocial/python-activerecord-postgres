@@ -61,3 +61,28 @@ def create_posts_table(dialect):
 def drop_posts_table(dialect):
     """DROP TABLE IF EXISTS posts."""
     return DropTableExpression(dialect, table="posts", if_exists=True)
+
+
+def create_custom_table(dialect, table_name: str = "custom_table"):
+    """CREATE TABLE <table_name> (id SERIAL PRIMARY KEY, value VARCHAR(255)).
+
+    This expression accepts an extra ``table_name`` parameter, allowing
+    the migration to control the target table name at runtime.
+    """
+    return CreateTableExpression(
+        dialect,
+        table=table_name,
+        columns=[
+            ColumnDefinition(
+                "id",
+                PostgresSerialType(),
+                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            ),
+            ColumnDefinition("value", PostgresCharacterVaryingType(size=255)),
+        ],
+    )
+
+
+def drop_custom_table(dialect, table_name: str = "custom_table"):
+    """DROP TABLE IF EXISTS <table_name>."""
+    return DropTableExpression(dialect, table=table_name, if_exists=True)
