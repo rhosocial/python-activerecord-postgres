@@ -30,8 +30,8 @@ def create_users_table(dialect):
                 PostgresSerialType(),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("name", PostgresCharacterVaryingType(size=255)),
-            ColumnDefinition("email", PostgresCharacterVaryingType(size=255)),
+            ColumnDefinition("name", PostgresCharacterVaryingType(255)),
+            ColumnDefinition("email", PostgresCharacterVaryingType(255)),
         ],
     )
 
@@ -52,8 +52,8 @@ def create_posts_table(dialect):
                 PostgresSerialType(),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("title", PostgresCharacterVaryingType(size=255)),
-            ColumnDefinition("user_id", PostgresCharacterVaryingType(size=255)),
+            ColumnDefinition("title", PostgresCharacterVaryingType(255)),
+            ColumnDefinition("user_id", PostgresCharacterVaryingType(255)),
         ],
     )
 
@@ -78,7 +78,7 @@ def create_custom_table(dialect, table_name: str = "custom_table"):
                 PostgresSerialType(),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("value", PostgresCharacterVaryingType(size=255)),
+            ColumnDefinition("value", PostgresCharacterVaryingType(255)),
         ],
     )
 
