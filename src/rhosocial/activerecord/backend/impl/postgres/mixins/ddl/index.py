@@ -194,51 +194,134 @@ class PostgresIndexMixin:
         return ["BTREE", "HASH", "GIST", "GIN", "SPGIST", "BRIN"]
 
     # =========================================================================
-    # Fulltext methods — PostgreSQL does NOT use MySQL-style FULLTEXT indexes
+    # Fulltext search — PostgreSQL uses tsvector/tsquery
     # =========================================================================
 
+    _FT_DEFAULT_CONFIG = 'english'
+
     def supports_fulltext_index(self) -> bool:
-        """PostgreSQL uses GIN index + tsvector/tsquery, not MySQL-style FULLTEXT."""
+        """Whether MySQL-style FULLTEXT indexes are supported.
+
+        PostgreSQL does not use CREATE FULLTEXT INDEX; instead it uses
+        CREATE INDEX ... USING GIN (to_tsvector(...)).
+        """
         return False
+
+    def supports_fulltext_search(self) -> bool:
+        """Whether full-text search is supported.
+
+        PostgreSQL supports full-text search via to_tsvector() @@ to_tsquery()
+        with GIN/GIST indexes, not via MySQL-style MATCH...AGAINST.
+        """
+        return True
 
     def supports_fulltext_parser(self) -> bool:
         """PostgreSQL does not have MySQL-style FULLTEXT parsers."""
         return False
 
     def supports_fulltext_boolean_mode(self) -> bool:
-        """PostgreSQL does not support MySQL-style FULLTEXT boolean mode."""
-        return False
+        """Whether tsquery-style boolean operators are supported.
+
+        PostgreSQL's to_tsquery() supports & (AND), | (OR), ! (NOT)
+        operators, equivalent to MySQL's BOOLEAN MODE.
+        """
+        return True
 
     def supports_fulltext_query_expansion(self) -> bool:
-        """PostgreSQL does not support MySQL-style FULLTEXT query expansion."""
+        """Whether query expansion is supported.
+
+        PostgreSQL supports this via the thesaurus dictionary or
+        phraseto_tsquery() for phrase matching.
+        """
         return False
 
-    def format_fulltext_match(self, columns, search_term, mode=None) -> Tuple[str, Tuple]:
-        """Not supported — PostgreSQL uses tsvector @@ tsquery instead."""
-        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-        raise UnsupportedFeatureError(
-            "PostgreSQL",
-            "FULLTEXT MATCH",
-            suggestion="Use tsvector @@ tsquery for full-text search.",
-        )
+    def format_fulltext_match(
+        self, columns: List[str], search_term: str, mode: Optional[str] = None
+    ) -> Tuple[str, Tuple]:
+        """Format tsvector @@ tsquery expression for PostgreSQL full-text search.
+
+        Produces: to_tsvector('config', col1 || ' ' || col2) @@ tsquery_func(search_term)
+
+        Args:
+            columns: Columns to include in the tsvector expression
+            search_term: Search term to convert to tsquery
+            mode: Search mode:
+                  - None / 'NATURAL LANGUAGE': plainto_tsquery (plain text)
+                  - 'BOOLEAN': to_tsquery (operators &, |, !)
+                  - 'PHRASE': phraseto_tsquery (phrase matching)
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        config = self._FT_DEFAULT_CONFIG
+        ph = self.get_parameter_placeholder()
+
+        if len(columns) == 1:
+            tsvector_expr = f"to_tsvector('{config}', {self.format_identifier(columns[0])})"
+        else:
+            parts = [self.format_identifier(c) for c in columns]
+            tsvector_expr = f"to_tsvector('{config}', {' || ' .join(parts)})"
+
+        if mode:
+            mode_upper = mode.upper()
+            if mode_upper == "BOOLEAN":
+                tsquery_expr = f"to_tsquery('{config}', {ph})"
+            elif mode_upper == "PHRASE":
+                tsquery_expr = f"phraseto_tsquery('{config}', {ph})"
+            else:
+                tsquery_expr = f"plainto_tsquery('{config}', {ph})"
+        else:
+            tsquery_expr = f"plainto_tsquery('{config}', {ph})"
+
+        return f"{tsvector_expr} @@ {tsquery_expr}", (search_term,)
 
     def format_create_fulltext_index_statement(self, expr) -> Tuple[str, tuple]:
-        """Not supported — use CREATE INDEX with GIN and tsvector expression."""
-        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-        raise UnsupportedFeatureError(
-            "PostgreSQL",
-            "CREATE FULLTEXT INDEX",
-            suggestion="Use CREATE INDEX ... ON ... USING GIN (to_tsvector(...))",
-        )
+        """Format CREATE INDEX ... USING GIN for PostgreSQL full-text search.
+
+        Converts a MySQL-style CREATE FULLTEXT INDEX expression into a
+        PostgreSQL GIN index on to_tsvector().
+
+        Args:
+            expr: CreateFulltextIndexExpression object
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        config = self._FT_DEFAULT_CONFIG
+        parts = ["CREATE INDEX"]
+        if expr.if_not_exists:
+            parts.append("IF NOT EXISTS")
+        parts.append(self.format_identifier(expr.index_name))
+        parts.append("ON")
+        parts.append(self.format_identifier(expr.table_name))
+        parts.append("USING GIN")
+
+        if len(expr.columns) == 1:
+            tsvector_expr = f"to_tsvector('{config}', {self.format_identifier(expr.columns[0])})"
+        else:
+            col_parts = [self.format_identifier(c) for c in expr.columns]
+            tsvector_expr = f"to_tsvector('{config}', {' || ' .join(col_parts)})"
+        parts.append(f"({tsvector_expr})")
+
+        return " ".join(parts), ()
 
     def format_drop_fulltext_index_statement(self, expr) -> Tuple[str, tuple]:
-        """Not supported — use DROP INDEX instead."""
-        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-        raise UnsupportedFeatureError(
-            "PostgreSQL",
-            "DROP FULLTEXT INDEX",
-            suggestion="Use DROP INDEX to remove a GIN index.",
-        )
+        """Format DROP INDEX statement for PostgreSQL.
+
+        PostgreSQL uses DROP INDEX (without ON table) for all index types,
+        including GIN indexes used for full-text search.
+
+        Args:
+            expr: DropFulltextIndexExpression object
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        parts = ["DROP INDEX"]
+        if expr.if_exists:
+            parts.append("IF EXISTS")
+        parts.append(self.format_identifier(expr.index_name))
+        return " ".join(parts), ()
 
     def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
