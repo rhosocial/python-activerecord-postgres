@@ -347,6 +347,8 @@ class PostgresBackend(
             cursor = self._get_cursor()
             cursor.execute("SELECT version()")
             result = cursor.fetchone()
+            # Defensively consume remaining results to prevent cursor.description pollution
+            cursor.fetchall()
             if not result or not result[0]:
                 self.log(logging.WARNING, "PostgreSQL version query returned no result")
                 return None
