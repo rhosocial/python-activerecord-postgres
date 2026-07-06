@@ -20,7 +20,9 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
 from rhosocial.activerecord.backend.expression.statements.ddl_table import IndexDefinition
 
 from rhosocial.activerecord.backend.expression.statements.ddl_index import (
+    CreateFulltextIndexExpression,
     CreateIndexExpression,
+    DropFulltextIndexExpression,
     DropIndexExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -472,8 +474,17 @@ class TestIndexSupportProtocol:
         assert types == ["BTREE", "HASH", "GIST", "GIN", "SPGIST", "BRIN"]
 
 
-class TestFulltextNotSupported:
-    """PostgreSQL does not support MySQL-style FULLTEXT indexes."""
+class TestFulltextDdlNotSupportedSearchSupported:
+    """PostgreSQL full-text search via tsvector/tsquery, not MySQL-style DDL.
+
+    PostgreSQL does NOT support ``CREATE FULLTEXT INDEX`` (MySQL-style) —
+    it uses ``CREATE INDEX ... USING GIN (to_tsvector(...))`` instead.
+    However, full-text *search querying* IS supported through
+    ``tsvector @@ tsquery`` operators, so the dialect reports
+    ``supports_fulltext_search()`` True independently of the DDL capability.
+    """
+
+    # --- DDL capability (MySQL-style CREATE FULLTEXT INDEX) ---
 
     def test_supports_fulltext_index(self):
         assert PostgresDialect().supports_fulltext_index() is False
@@ -481,23 +492,86 @@ class TestFulltextNotSupported:
     def test_supports_fulltext_parser(self):
         assert PostgresDialect().supports_fulltext_parser() is False
 
-    def test_supports_fulltext_boolean_mode(self):
-        assert PostgresDialect().supports_fulltext_boolean_mode() is False
-
     def test_supports_fulltext_query_expansion(self):
         assert PostgresDialect().supports_fulltext_query_expansion() is False
 
-    def test_format_fulltext_match_raises(self):
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresDialect().format_fulltext_match(["col"], "search")
+    # --- Query capability (tsvector @@ tsquery) ---
 
-    def test_format_create_fulltext_index_statement_raises(self):
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresDialect().format_create_fulltext_index_statement(None)
+    def test_supports_fulltext_search(self):
+        assert PostgresDialect().supports_fulltext_search() is True
 
-    def test_format_drop_fulltext_index_statement_raises(self):
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresDialect().format_drop_fulltext_index_statement(None)
+    def test_supports_fulltext_boolean_mode(self):
+        # to_tsquery() supports &, |, ! — equivalent to MySQL BOOLEAN MODE.
+        assert PostgresDialect().supports_fulltext_boolean_mode() is True
+
+    def test_format_fulltext_match_natural_language(self):
+        sql, params = PostgresDialect().format_fulltext_match(["col"], "search")
+        assert "to_tsvector" in sql
+        assert "plainto_tsquery" in sql
+        assert "@@" in sql
+        assert params == ("search",)
+
+    def test_format_fulltext_match_boolean(self):
+        sql, params = PostgresDialect().format_fulltext_match(["col"], "a & b", mode="BOOLEAN")
+        assert "to_tsvector" in sql
+        assert "to_tsquery" in sql
+        assert "plainto_tsquery" not in sql
+        assert params == ("a & b",)
+
+    def test_format_fulltext_match_multi_column(self):
+        sql, params = PostgresDialect().format_fulltext_match(["a", "b"], "search")
+        assert " || " in sql
+        assert "to_tsvector" in sql
+        assert params == ("search",)
+
+    def test_format_create_fulltext_index_statement_uses_gin(self):
+        dialect = PostgresDialect()
+        expr = CreateFulltextIndexExpression(
+            dialect,
+            index_name="idx_ft",
+            table_name="articles",
+            columns=["body"],
+        )
+        sql, params = dialect.format_create_fulltext_index_statement(expr)
+        assert sql.startswith("CREATE INDEX")
+        assert "USING GIN" in sql
+        assert "to_tsvector" in sql
+        assert "articles" in sql
+        assert params == ()
+
+    def test_format_create_fulltext_index_statement_if_not_exists(self):
+        dialect = PostgresDialect()
+        expr = CreateFulltextIndexExpression(
+            dialect,
+            index_name="idx_ft",
+            table_name="articles",
+            columns=["body"],
+            if_not_exists=True,
+        )
+        sql, _ = dialect.format_create_fulltext_index_statement(expr)
+        assert "IF NOT EXISTS" in sql
+
+    def test_format_drop_fulltext_index_statement(self):
+        dialect = PostgresDialect()
+        expr = DropFulltextIndexExpression(
+            dialect,
+            index_name="idx_ft",
+            table_name="articles",
+        )
+        sql, _ = dialect.format_drop_fulltext_index_statement(expr)
+        assert sql.startswith("DROP INDEX")
+        assert "idx_ft" in sql
+
+    def test_format_drop_fulltext_index_statement_if_exists(self):
+        dialect = PostgresDialect()
+        expr = DropFulltextIndexExpression(
+            dialect,
+            index_name="idx_ft",
+            table_name="articles",
+            if_exists=True,
+        )
+        sql, _ = dialect.format_drop_fulltext_index_statement(expr)
+        assert "IF EXISTS" in sql
 
 
 class TestCreateIndexExpression:
