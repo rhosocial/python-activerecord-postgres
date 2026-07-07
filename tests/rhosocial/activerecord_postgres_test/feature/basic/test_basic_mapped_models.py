@@ -16,3 +16,5 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import mapped_model
 
 # The `TestBasicMappedModels` class contains the actual test cases.
 from rhosocial.activerecord.testsuite.feature.basic.test_example_basic_fixtures import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.test_example_basic_fixtures_async import *  # noqa: F403
+

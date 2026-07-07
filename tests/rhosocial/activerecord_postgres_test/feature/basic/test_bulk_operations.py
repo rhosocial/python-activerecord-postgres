@@ -9,3 +9,5 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
 )
 
 from rhosocial.activerecord.testsuite.feature.basic.test_bulk_operations import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.test_bulk_operations_async import *  # noqa: F403
+
