@@ -346,8 +346,6 @@ class AsyncPostgresBackend(
             cursor = await self._get_cursor()
             await cursor.execute("SELECT version()")
             version_row = await cursor.fetchone()
-            # Defensively consume remaining results to prevent cursor.description pollution
-            remaining = await cursor.fetchall()
             if not version_row or not version_row[0]:
                 self.log(logging.WARNING, "PostgreSQL version query returned no result")
                 return None
