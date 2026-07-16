@@ -255,7 +255,25 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
 
     def setup_order_item_model(self, scenario_name: str) -> Type[ActiveRecord]:
         """Set up the composite-PK OrderItem model for the query feature tests."""
-        return self._setup_model(CompositeOrderItemBase, scenario_name, "order_items")
+        from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
+        from providers.fixtures._common import drop_table
+        from providers.fixtures.basic import TABLE_EXPRESSIONS as BASIC_EXPRS
+
+        backend_class, config = get_scenario(scenario_name)
+        CompositeOrderItemBase.configure(config, backend_class)
+        backend_instance = CompositeOrderItemBase.__backend__
+        self._track_backend(backend_instance, self._active_backends)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, "order_items").to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        except Exception:
+            pass
+        if fn := BASIC_EXPRS.get("order_items"):
+            create_expr = fn(backend_instance.dialect, "order_items")
+            sql, params = create_expr.to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        return CompositeOrderItemBase
 
     def _get_schema_sql_for_fixture_type(self, fixture_type: str) -> dict:
         schemas = {}
@@ -435,7 +453,26 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
 
     async def setup_order_item_model(self, scenario_name: str) -> Type[AsyncActiveRecord]:
         """Set up the composite-PK AsyncOrderItem model for the query feature tests."""
-        return await self._setup_async_model(AsyncCompositeOrderItemBase, scenario_name, "order_items")
+        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
+        from providers.fixtures._common import drop_table
+        from providers.fixtures.basic import TABLE_EXPRESSIONS as BASIC_EXPRS
+
+        _, config = get_scenario(scenario_name)
+        await AsyncCompositeOrderItemBase.configure(config, AsyncPostgresBackend)
+        backend_instance = AsyncCompositeOrderItemBase.__backend__
+        self._track_backend(backend_instance, self._active_async_backends)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, "order_items").to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        except Exception:
+            pass
+        if fn := BASIC_EXPRS.get("order_items"):
+            create_expr = fn(backend_instance.dialect, "order_items")
+            sql, params = create_expr.to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        return AsyncCompositeOrderItemBase
 
     async def cleanup_after_test(self, scenario_name: str):
         tables_to_drop = [
