@@ -13,6 +13,6 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
     pydantic_validated_model,  # noqa: F401
 )
 
-from rhosocial.activerecord.testsuite.feature.basic.test_pydantic_native_validation import *  # noqa: F403
-from rhosocial.activerecord.testsuite.feature.basic.test_pydantic_native_validation_async import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.validation.test_pydantic_native_validation import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.validation.test_pydantic_native_validation_async import *  # noqa: F403
 

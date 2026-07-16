@@ -28,7 +28,7 @@ async def async_comment_class(async_user_post_comment_classes):
     return comment
 
 
-@pytest_asyncio.fixture(scope="function", params=SCENARIO_PARAMS)  # noqa: F405
+@pytest_asyncio.fixture(scope="function", params=SCENARIO_PARAMS_ASYNC)  # noqa: F405
 async def async_user_post_comment_classes(request):
     from rhosocial.activerecord.testsuite.core.registry import get_provider_registry
 
@@ -44,7 +44,7 @@ async def async_user_post_comment_classes(request):
     await provider.cleanup_after_test_async(scenario)
 
 
-@pytest_asyncio.fixture(scope="function", params=SCENARIO_PARAMS)  # noqa: F405
+@pytest_asyncio.fixture(scope="function", params=SCENARIO_PARAMS_ASYNC)  # noqa: F405
 async def async_relation_boundary_context(request):
     from rhosocial.activerecord.testsuite.core.registry import get_provider_registry
 

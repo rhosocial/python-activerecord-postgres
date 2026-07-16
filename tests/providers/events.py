@@ -26,7 +26,8 @@ from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 # Import base version models (Python 3.8+)
 from rhosocial.activerecord.testsuite.feature.events.fixtures.models import (  # noqa: E402
     EventTestModel as EventTestModelBase,
-    EventTrackingModel as EventTrackingModelBase
+    EventTrackingModel as EventTrackingModelBase,
+    AsyncEventTestModel as AsyncEventTestModelBase,
 )
 
 # Conditionally import Python 3.10+ models
@@ -78,95 +79,121 @@ def _select_model_class(base_cls, py312_cls, py311_cls, py310_cls, model_name: s
 # Select models
 EventTestModel = _select_model_class(EventTestModelBase, EventTestModel312, EventTestModel311, EventTestModel310, "EventTestModel")  # noqa: E501
 EventTrackingModel = _select_model_class(EventTrackingModelBase, EventTrackingModel312, EventTrackingModel311, EventTrackingModel310, "EventTrackingModel")  # noqa: E501
+AsyncEventTestModel = AsyncEventTestModelBase
 
-from rhosocial.activerecord.testsuite.feature.events.interfaces import IEventsProvider  # noqa: E402
+from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType  # noqa: E402
+from rhosocial.activerecord.testsuite.feature.events.interfaces import IEventsSyncProvider, IEventsAsyncProvider  # noqa: E402
 # ...and the scenarios are defined specifically for this backend.
 from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
+# Expression-based DDL fixtures
+from .fixtures._common import drop_table
+from .fixtures.events import TABLE_EXPRESSIONS as EVENTS_TABLE_EXPRESSIONS
 
-class EventsProvider(IEventsProvider):
-    """
-    This is the postgres backend's implementation for the events test group.
-    It connects the generic tests in the testsuite with the actual postgres database.
-    """
 
+class EventsProviderBase:
     def __init__(self):
-        # This list will track the backend instances created during the setup phase.
         self._active_backends = []
 
     def get_test_scenarios(self) -> List[str]:
-        """Returns a list of names for all enabled scenarios for this backend."""
         return list(get_enabled_scenarios().keys())
 
-    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
-        """A generic helper method to handle the setup for any given model."""
-        # 1. Get the backend class (PostgresBackend) and connection config for the requested scenario.
-        backend_class, config = get_scenario(scenario_name)
-
-        # 2. Configure the generic model class with our specific backend and config.
-        model_class.configure(config, backend_class)
-
-        backend_instance = model_class.__backend__
-        if backend_instance not in self._active_backends:
-            self._active_backends.append(backend_instance)
-
-        # 3. Prepare the database schema.
-        try:
-            # Drop the table if it exists, with cascade to handle dependencies.
-            model_class.__backend__.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
-        except Exception as e:
-            # Ignore errors if the table didn't exist, but print for debugging.
-            print(f"Could not drop table {table_name}: {e}")
-            pass
-
-        # Execute the schema SQL to create the table.
-        schema_sql = self._load_postgres_schema(f"{table_name}.sql")
-        model_class.__backend__.execute(schema_sql)
-
-        return model_class
-
-    # --- Implementation of the IEventsProvider interface ---
-
-    def setup_event_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for event model tests."""
-
-        return self._setup_model(EventTestModel, scenario_name, "event_tests")
-
-    def setup_event_tracking_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for event tracking model tests."""
-
-        return self._setup_model(EventTrackingModel, scenario_name, "event_tracking_models")
-
     def _load_postgres_schema(self, filename: str) -> str:
-        """Helper to load a SQL schema file from this project's fixtures."""
-        # Schemas are stored in the centralized location for events feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "events", "schema")  # noqa: E501
+        schema_dir = os.path.join(
+            os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "events", "schema"
+        )
         schema_path = os.path.join(schema_dir, filename)
-
         with open(schema_path, 'r', encoding='utf-8') as f:
             return f.read()
 
+
+class EventsSyncProvider(EventsProviderBase, IEventsSyncProvider):
+
+    def __init__(self):
+        super().__init__()
+
+    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+        backend_class, config = get_scenario(scenario_name)
+        model_class.configure(config, backend_class)
+        backend_instance = model_class.__backend__
+        if backend_instance not in self._active_backends:
+            self._active_backends.append(backend_instance)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, table_name).to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        except Exception as e:
+            print(f"Could not drop table {table_name}: {e}")
+        if fn := EVENTS_TABLE_EXPRESSIONS.get(table_name):
+            create_expr = fn(backend_instance.dialect, table_name)
+            sql, params = create_expr.to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        return model_class
+
+    def setup_event_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(EventTestModel, scenario_name, "event_tests")
+
+    def setup_event_tracking_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(EventTrackingModel, scenario_name, "event_tracking_models")
+
     def cleanup_after_test(self, scenario_name: str):
-        """
-        Performs cleanup after a test. This now iterates through the backends
-        that were created during setup, drops tables, and explicitly disconnects them.
-        """
         for backend_instance in self._active_backends:
             try:
-                # Drop all tables that might have been created for events tests
                 for table_name in ['event_tests', 'event_tracking_models']:
                     try:
                         backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:
-                        # Continue with other tables if one fails
                         pass
             finally:
-                # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
                 except:  # noqa: E722
-                    # Ignore errors during disconnect
                     pass
-
-        # Clear the list of active backends for the next test
         self._active_backends.clear()
+
+
+class EventsAsyncProvider(EventsProviderBase, IEventsAsyncProvider):
+
+    def __init__(self):
+        super().__init__()
+        self._active_async_backends = []
+
+    async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        _, config = get_scenario(scenario_name)
+        await model_class.configure(config, AsyncPostgresBackend)
+        backend_instance = model_class.__backend__
+        if backend_instance not in self._active_async_backends:
+            self._active_async_backends.append(backend_instance)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, table_name).to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        except Exception as e:
+            print(f"Could not drop table {table_name}: {e}")
+        if fn := EVENTS_TABLE_EXPRESSIONS.get(table_name):
+            create_expr = fn(backend_instance.dialect, table_name)
+            sql, params = create_expr.to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        return model_class
+
+    async def setup_event_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(AsyncEventTestModel, scenario_name, "event_tests")
+
+    async def setup_event_tracking_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(EventTrackingModel, scenario_name, "event_tracking_models")
+
+    async def cleanup_after_test(self, scenario_name: str):
+        for backend_instance in self._active_async_backends:
+            try:
+                for table_name in ['event_tests', 'event_tracking_models']:
+                    try:
+                        await backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    await backend_instance.disconnect()
+                except:  # noqa: E722
+                    pass
+        self._active_async_backends.clear()

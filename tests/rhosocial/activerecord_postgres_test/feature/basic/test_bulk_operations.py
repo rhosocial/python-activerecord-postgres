@@ -8,6 +8,6 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
     async_bulk_user_class,  # noqa: F401
 )
 
-from rhosocial.activerecord.testsuite.feature.basic.test_bulk_operations import *  # noqa: F403
-from rhosocial.activerecord.testsuite.feature.basic.test_bulk_operations_async import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.bulk_crud.test_bulk_operations import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.bulk_crud.test_bulk_operations_async import *  # noqa: F403
 

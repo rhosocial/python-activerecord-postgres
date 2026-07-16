@@ -20,6 +20,6 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
 )
 
 # The test classes contain the actual test cases.
-from rhosocial.activerecord.testsuite.feature.basic.test_field_column_mapping import *  # noqa: F403
-from rhosocial.activerecord.testsuite.feature.basic.test_field_column_mapping_async import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.fields.test_field_column_mapping import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.fields.test_field_column_mapping_async import *  # noqa: F403
 
