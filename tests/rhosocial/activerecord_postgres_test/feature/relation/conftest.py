@@ -39,7 +39,6 @@ async def async_user_post_comment_classes(request):
     user = await provider.setup_user_model(scenario)
     post = await provider.setup_post_model(scenario)
     comment = await provider.setup_comment_model(scenario)
-    await provider._ensure_user_post_comment_async_schema()
     yield user, post, comment
     await provider.cleanup_after_test(scenario)
 
