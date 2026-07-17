@@ -352,6 +352,7 @@ class BasicSyncProvider(BasicProviderBase, IBasicSyncProvider, WorkerTestProtoco
         tables_to_drop = [
             'users', 'type_cases', 'type_tests', 'validated_field_users',
             'validated_users', 'pydantic_validated_models', 'type_adapter_tests',
+            'bulk_users',
             'posts', 'comments', 'column_mapping_items', 'mixed_annotation_items'
         ]
         for backend_instance in self._active_backends:
@@ -478,6 +479,7 @@ class BasicAsyncProvider(BasicProviderBase, IBasicAsyncProvider):
         tables_to_drop = [
             'users', 'type_cases', 'type_tests', 'validated_field_users',
             'validated_users', 'pydantic_validated_models', 'type_adapter_tests',
+            'bulk_users',
             'posts', 'comments', 'column_mapping_items', 'mixed_annotation_items'
         ]
         for backend_instance in self._active_async_backends:

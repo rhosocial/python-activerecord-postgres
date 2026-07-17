@@ -318,7 +318,7 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
     def cleanup_after_test(self, scenario_name: str):
         tables_to_drop = [
             'users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes',
-            'extended_orders', 'extended_order_items', 'searchable_items'
+            'extended_orders', 'extended_order_items', 'searchable_items', 'profiles'
         ]
         for backend_instance in self._active_backends:
             try:
@@ -477,7 +477,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
     async def cleanup_after_test(self, scenario_name: str):
         tables_to_drop = [
             'users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes',
-            'extended_orders', 'extended_order_items', 'searchable_items'
+            'extended_orders', 'extended_order_items', 'searchable_items', 'profiles'
         ]
         for backend_instance in self._active_async_backends:
             try:
