@@ -171,7 +171,7 @@ class MixinsSyncProvider(MixinsProviderBase, IMixinsSyncProvider):
             finally:
                 try:
                     backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_backends.clear()
 
@@ -225,6 +225,6 @@ class MixinsAsyncProvider(MixinsProviderBase, IMixinsAsyncProvider):
             finally:
                 try:
                     await backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_async_backends.clear()

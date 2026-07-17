@@ -365,7 +365,7 @@ class BasicSyncProvider(BasicProviderBase, IBasicSyncProvider, WorkerTestProtoco
             finally:
                 try:
                     backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_backends.clear()
 
@@ -492,6 +492,6 @@ class BasicAsyncProvider(BasicProviderBase, IBasicAsyncProvider):
             finally:
                 try:
                     await backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_async_backends.clear()

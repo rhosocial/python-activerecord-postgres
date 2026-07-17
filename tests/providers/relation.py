@@ -270,11 +270,24 @@ class RelationSyncProvider(RelationProviderBase, IRelationSyncProvider):
         raise ValueError(f"Unknown relation boundary dataset: {dataset_name}")
 
     def cleanup_after_test(self, scenario_name: str) -> None:
+        tables_to_drop = [
+            'employees', 'departments',
+            'authors', 'books', 'chapters', 'profiles',
+            'users', 'posts', 'comments',
+            'relation_boundary_owners', 'relation_boundary_profiles', 'relation_boundary_posts',
+        ]
         for backend in self._active_backends:
             try:
-                backend.disconnect()
-            except Exception:
-                pass
+                for table in tables_to_drop:
+                    try:
+                        backend.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE')
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    backend.disconnect()
+                except Exception:
+                    pass
         self._active_backends.clear()
         self._reset_setup_state()
 
@@ -424,10 +437,23 @@ class RelationAsyncProvider(RelationProviderBase, IRelationAsyncProvider):
         raise ValueError(f"Unknown relation boundary dataset: {dataset_name}")
 
     async def cleanup_after_test(self, scenario_name: str):
+        tables_to_drop = [
+            'employees', 'departments',
+            'authors', 'books', 'chapters', 'profiles',
+            'users', 'posts', 'comments',
+            'relation_boundary_owners', 'relation_boundary_profiles', 'relation_boundary_posts',
+        ]
         for backend in self._active_async_backends:
             try:
-                await backend.disconnect()
-            except Exception:
-                pass
+                for table in tables_to_drop:
+                    try:
+                        await backend.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE')
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    await backend.disconnect()
+                except Exception:
+                    pass
         self._active_async_backends.clear()
         self._reset_setup_state()

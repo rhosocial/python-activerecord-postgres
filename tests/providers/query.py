@@ -330,7 +330,7 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
             finally:
                 try:
                     backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_backends.clear()
 
@@ -489,6 +489,6 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
             finally:
                 try:
                     await backend_instance.disconnect()
-                except:  # noqa: E722
+                except Exception:
                     pass
         self._active_async_backends.clear()

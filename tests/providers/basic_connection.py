@@ -135,6 +135,10 @@ class BasicConnectionProvider(IBasicConnectionProvider):
         # Disconnect backends
         for backend in self._active_backends:
             try:
+                backend.execute("DROP TABLE IF EXISTS test_users CASCADE")
+            except Exception:
+                pass
+            try:
                 backend.disconnect()
             except Exception:
                 pass
@@ -146,6 +150,10 @@ class BasicConnectionProvider(IBasicConnectionProvider):
 
         # Disconnect backends
         for backend in self._active_async_backends:
+            try:
+                await backend.execute("DROP TABLE IF EXISTS test_users CASCADE")
+            except Exception:
+                pass
             try:
                 await backend.disconnect()
             except Exception:
