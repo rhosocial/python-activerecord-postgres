@@ -28,6 +28,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.types import (
+    IntegerType,
+    VarCharType,
+    DecimalType,
+)
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate
 from rhosocial.activerecord.backend.expression.query_parts import (
@@ -47,16 +52,16 @@ def social_network_data(postgres_backend):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "users", [
-        ColumnDefinition("id", "INTEGER", constraints=[
+        ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", "VARCHAR(100)"),
+        ColumnDefinition("name", VarCharType(100)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "follows", [
-        ColumnDefinition("id", "INTEGER", constraints=[
+        ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("follower_id", "INTEGER"),
-        ColumnDefinition("followed_id", "INTEGER"),
+        ColumnDefinition("follower_id", IntegerType()),
+        ColumnDefinition("followed_id", IntegerType()),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
@@ -92,18 +97,18 @@ def aml_data(postgres_backend):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "accounts", [
-        ColumnDefinition("id", "INTEGER", constraints=[
+        ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("account_holder", "VARCHAR(100)"),
-        ColumnDefinition("account_type", "VARCHAR(20)"),
+        ColumnDefinition("account_holder", VarCharType(100)),
+        ColumnDefinition("account_type", VarCharType(20)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "transactions", [
-        ColumnDefinition("id", "INTEGER", constraints=[
+        ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("source_account_id", "INTEGER"),
-        ColumnDefinition("target_account_id", "INTEGER"),
-        ColumnDefinition("amount", "NUMERIC(12,2)"),
+        ColumnDefinition("source_account_id", IntegerType()),
+        ColumnDefinition("target_account_id", IntegerType()),
+        ColumnDefinition("amount", DecimalType(12, 2)),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],
@@ -457,16 +462,16 @@ class TestAsyncRecursiveCTEGraph:
             await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "users", [
-            ColumnDefinition("id", "INTEGER", constraints=[
+            ColumnDefinition("id", IntegerType(), constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("name", "VARCHAR(100)"),
+            ColumnDefinition("name", VarCharType(100)),
         ]).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "follows", [
-            ColumnDefinition("id", "INTEGER", constraints=[
+            ColumnDefinition("id", IntegerType(), constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("follower_id", "INTEGER"),
-            ColumnDefinition("followed_id", "INTEGER"),
+            ColumnDefinition("follower_id", IntegerType()),
+            ColumnDefinition("followed_id", IntegerType()),
         ]).to_sql())
 
         await backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],

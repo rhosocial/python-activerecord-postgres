@@ -28,7 +28,6 @@ class TestPostgresCursorPollution:
         cursor = backend._get_cursor()
         cursor.execute("SELECT 1 AS marker")
         rows = cursor.fetchall()
-        cursor.close()
 
         assert len(rows) > 0
         assert cursor.description is not None
@@ -36,6 +35,7 @@ class TestPostgresCursorPollution:
         assert col_name == "marker", (
             f"cursor.description polluted! expected 'marker', got: {col_name}"
         )
+        cursor.close()
 
     def test_introspect_and_adapt_then_query(self, postgres_backend):
         """introspect_and_adapt() then a normal query."""
@@ -45,7 +45,6 @@ class TestPostgresCursorPollution:
         cursor = backend._get_cursor()
         cursor.execute("SELECT 'ok' AS status")
         rows = cursor.fetchall()
-        cursor.close()
 
         assert len(rows) > 0
         assert cursor.description is not None
@@ -53,6 +52,7 @@ class TestPostgresCursorPollution:
         assert col_name == "status", (
             f"cursor.description polluted! expected 'status', got: {col_name}"
         )
+        cursor.close()
 
     def test_high_frequency_version_query_cycle(self, postgres_backend):
         """Repeated get_server_version → query cycle to expose state leaks."""
@@ -64,7 +64,6 @@ class TestPostgresCursorPollution:
             cursor = backend._get_cursor()
             cursor.execute(f"SELECT {i} AS cycle")
             rows = cursor.fetchall()
-            cursor.close()
 
             assert len(rows) > 0
             assert cursor.description is not None
@@ -73,6 +72,7 @@ class TestPostgresCursorPollution:
                 f"Iteration {i}: cursor.description polluted! "
                 f"expected 'cycle', got: {col_name}"
             )
+            cursor.close()
 
         logger.info("PostgreSQL high-frequency version query cycle 200 iterations passed")
 
@@ -90,7 +90,6 @@ class TestAsyncPostgresCursorPollution:
         cursor = await backend._get_cursor()
         await cursor.execute("SELECT 1 AS marker")
         rows = await cursor.fetchall()
-        await cursor.close()
 
         assert len(rows) > 0
         assert cursor.description is not None
@@ -98,6 +97,7 @@ class TestAsyncPostgresCursorPollution:
         assert col_name == "marker", (
             f"Async cursor.description polluted! expected 'marker', got: {col_name}"
         )
+        await cursor.close()
 
     @pytest.mark.asyncio
     async def test_introspect_and_adapt_then_query(self, async_postgres_backend):
@@ -108,7 +108,6 @@ class TestAsyncPostgresCursorPollution:
         cursor = await backend._get_cursor()
         await cursor.execute("SELECT 'ok' AS status")
         rows = await cursor.fetchall()
-        await cursor.close()
 
         assert len(rows) > 0
         assert cursor.description is not None
@@ -117,6 +116,7 @@ class TestAsyncPostgresCursorPollution:
             f"Async cursor.description polluted after introspect! "
             f"expected 'status', got: {col_name}"
         )
+        await cursor.close()
 
     @pytest.mark.asyncio
     async def test_context_entry_workflow(self, async_postgres_backend):
@@ -127,7 +127,6 @@ class TestAsyncPostgresCursorPollution:
             cursor = await backend._get_cursor()
             await cursor.execute("SELECT 'ctx_ok' AS ctx_status")
             rows = await cursor.fetchall()
-            await cursor.close()
 
             assert len(rows) > 0
             assert cursor.description is not None
@@ -136,6 +135,7 @@ class TestAsyncPostgresCursorPollution:
                 f"Async cursor.description polluted after context()! "
                 f"expected 'ctx_status', got: {col_name}"
             )
+            await cursor.close()
 
     @pytest.mark.asyncio
     async def test_high_frequency_version_query_cycle(self, async_postgres_backend):
@@ -148,7 +148,6 @@ class TestAsyncPostgresCursorPollution:
             cursor = await backend._get_cursor()
             await cursor.execute(f"SELECT {i} AS cycle")
             rows = await cursor.fetchall()
-            await cursor.close()
 
             assert len(rows) > 0
             assert cursor.description is not None
@@ -157,5 +156,6 @@ class TestAsyncPostgresCursorPollution:
                 f"Iteration {i}: async cursor.description polluted! "
                 f"expected 'cycle', got: {col_name}"
             )
+            await cursor.close()
 
         logger.info("Async PostgreSQL high-frequency version query cycle 200 iterations passed")
