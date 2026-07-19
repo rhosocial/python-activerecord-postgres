@@ -1,6 +1,6 @@
 # tests/providers/relation.py
 import asyncio
-from typing import Dict, List, Tuple, Type
+from typing import Dict, List, Tuple, Type, Set
 
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
@@ -110,6 +110,7 @@ class RelationProviderBase:
         self._async_user_post_comment_setup = False
         self._sync_relation_boundary_setup = False
         self._async_relation_boundary_setup = False
+        self._created_tables: Set[str] = set()
 
     def get_test_scenarios(self) -> List[str]:
         return list(get_enabled_scenarios().keys())

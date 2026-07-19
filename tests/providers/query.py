@@ -125,6 +125,7 @@ from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 class QueryProviderBase:
     def __init__(self):
         self._scenario_db_files = {}
+        self._created_tables: Set[str] = set()
 
     def get_test_scenarios(self) -> List[str]:
         return list(get_enabled_scenarios().keys())
@@ -168,6 +169,7 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
             create_expr = fn(backend_instance.dialect, table_name)
             sql, params = create_expr.to_sql()
             backend_instance.execute(sql, params, options=opts)
+        self._created_tables.add(table_name)
         return model_class
 
     def _setup_multiple_models(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
@@ -273,6 +275,7 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
             create_expr = fn(backend_instance.dialect, "order_items")
             sql, params = create_expr.to_sql()
             backend_instance.execute(sql, params, options=opts)
+        self._created_tables.add("order_items")
         return CompositeOrderItemBase
 
     def _get_schema_sql_for_fixture_type(self, fixture_type: str) -> dict:
@@ -316,13 +319,9 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
         return self._load_postgres_schema(f'{table_name}.sql')
 
     def cleanup_after_test(self, scenario_name: str):
-        tables_to_drop = [
-            'users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes',
-            'extended_orders', 'extended_order_items', 'searchable_items', 'profiles'
-        ]
         for backend_instance in self._active_backends:
             try:
-                for table_name in tables_to_drop:
+                for table_name in list(self._created_tables):
                     try:
                         backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:
@@ -333,6 +332,7 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
                 except Exception:
                     pass
         self._active_backends.clear()
+        self._created_tables.clear()
 
 
 class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
@@ -362,6 +362,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
             create_expr = fn(backend_instance.dialect, table_name)
             sql, params = create_expr.to_sql()
             await backend_instance.execute(sql, params, options=opts)
+        self._created_tables.add(table_name)
         return model_class
 
     async def _setup_multiple_models_async(self, models_and_tables: List[Tuple[Type[ActiveRecord], str]], scenario_name: str) -> Tuple[Type[ActiveRecord], ...]:
@@ -472,16 +473,13 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
             create_expr = fn(backend_instance.dialect, "order_items")
             sql, params = create_expr.to_sql()
             await backend_instance.execute(sql, params, options=opts)
+        self._created_tables.add("order_items")
         return AsyncCompositeOrderItemBase
 
     async def cleanup_after_test(self, scenario_name: str):
-        tables_to_drop = [
-            'users', 'orders', 'order_items', 'posts', 'comments', 'json_users', 'nodes',
-            'extended_orders', 'extended_order_items', 'searchable_items', 'profiles'
-        ]
         for backend_instance in self._active_async_backends:
             try:
-                for table_name in tables_to_drop:
+                for table_name in list(self._created_tables):
                     try:
                         await backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:
@@ -492,3 +490,4 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
                 except Exception:
                     pass
         self._active_async_backends.clear()
+        self._created_tables.clear()
