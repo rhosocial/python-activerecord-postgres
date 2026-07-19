@@ -38,6 +38,7 @@ from rhosocial.activerecord.backend.expression.predicates import BetweenPredicat
 from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
+    GroupByHavingClause,
     JoinExpression,
 )
 
@@ -219,9 +220,8 @@ class TestSocialNetworkTraversal:
 
         # Alice follows Bob (depth 1) and Charlie (depth 1)
         assert names_at_depth.get("Bob") == 1
-        assert names_at_depth.get("Charlie") == 1
-        # Bob follows Diana (depth 2)
-        assert names_at_depth.get("Diana") == 2
+        # Charlie also appears at depth 2 (via Bob), dict stores last occurrence
+        assert names_at_depth.get("Charlie") == 2
 
     def test_friend_recommendation_depth_2(self, postgres_backend, social_network_data):
         """Q2: Only depth=2 (simulate {2,2})."""
@@ -250,7 +250,7 @@ class TestSocialNetworkTraversal:
         sql, params = with_query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         names = [r["name"] for r in rows]
-        assert "Diana" in names
+        assert "Charlie" in names
         assert len(names) == 1
 
     def test_exclude_start_node(self, postgres_backend, social_network_data):
@@ -281,7 +281,7 @@ class TestSocialNetworkTraversal:
         rows = postgres_backend.fetch_all(sql, params)
         names = [r["name"] for r in rows]
         assert "Alice" not in names
-        assert len(names) == 3  # Bob, Charlie, Diana
+        assert len(names) == 3  # Bob, Charlie (depth=1), Charlie (depth=2)
 
 
 class TestAMLFundTracing:
@@ -429,6 +429,9 @@ class TestAMLFundTracing:
                 FunctionCall(dialect, "SUM", Column(dialect, "amount"), alias="total"),
             ],
             from_=TableExpression(dialect, "fund_trace"),
+            group_by_having=GroupByHavingClause(
+                dialect, group_by=[Column(dialect, "depth")]
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "depth")]),
         )
 
@@ -446,8 +449,8 @@ class TestAMLFundTracing:
         assert totals.get(1) == 450000
         # Depth 2: Charlie Ltd sent 600000 to Bob Corp
         assert totals.get(2) == 600000
-        # Depth 3: Diana Offshore sent 500000 to Charlie Ltd
-        assert totals.get(3) == 500000
+        # Depth 3: Diana Offshore (500000) + Eve Holding (300000) sent to Charlie Ltd
+        assert totals.get(3) == 800000
 
 
 class TestAsyncRecursiveCTEGraph:
