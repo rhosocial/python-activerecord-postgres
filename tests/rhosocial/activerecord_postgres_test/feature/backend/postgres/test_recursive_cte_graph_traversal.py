@@ -167,7 +167,7 @@ class TestSocialNetworkTraversal:
             select=[
                 Column(dialect, "id", table="u"),
                 Column(dialect, "name", table="u"),
-                FunctionCall(dialect, "+", Column(dialect, "depth", table="t"), Literal(dialect, 1)).as_("depth"),
+                (Column(dialect, "depth", table="t") + Literal(dialect, 1)).as_("depth"),
             ],
             from_=recursive_join,
             where=WhereClause(dialect, condition=Column(dialect, "depth", table="t") < Literal(dialect, 4)),
@@ -332,7 +332,7 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder", table="a"),
                 Column(dialect, "account_type", table="a"),
                 Column(dialect, "amount", table="tx"),
-                FunctionCall(dialect, "+", Column(dialect, "depth", table="tr"), Literal(dialect, 1)).as_("depth"),
+                (Column(dialect, "depth", table="tr") + Literal(dialect, 1)).as_("depth"),
             ],
             from_=recursive_join,
             where=WhereClause(dialect, condition=Column(dialect, "depth", table="tr") < Literal(dialect, 5)),
