@@ -9,12 +9,10 @@ available to the tests in this directory.
 import pytest
 
 from rhosocial.activerecord.testsuite.core.registry import get_provider_registry
+from rhosocial.activerecord.testsuite.feature.basic.conftest import *  # noqa: F401,F403
 from rhosocial.activerecord.testsuite.feature.basic.conftest import (  # noqa: F401
     SCENARIO_PARAMS_SYNC,
-    type_adapter_fixtures as _original_type_adapter_fixtures,
-    async_type_adapter_fixtures as _original_async_type_adapter_fixtures,
     PROVIDER_KEY_SYNC,
-    PROVIDER_KEY_ASYNC,
 )
 
 # Override type_adapter_fixtures to pass scenario name to provider,
