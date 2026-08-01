@@ -6,11 +6,11 @@ Its purpose is to import the generic tests from the `rhosocial-activerecord-test
 package and make them discoverable by `pytest` within this project's test run.
 """
 
-# Import the fixture that provides the configured model and backend for type adapter tests.
-from rhosocial.activerecord.testsuite.feature.basic.conftest import (
-    type_adapter_fixtures,  # noqa: F401
-    async_type_adapter_fixtures,  # noqa: F401
-)
+# Note: fixtures are provided by the conftest override at
+# feature/basic/conftest.py (which passes the scenario name to the provider).
+# Do NOT re-import type_adapter_fixtures here -- pytest would register the
+# testsuite's original (scenario-ignoring) fixture with this module as the
+# most specific baseid, shadowing the conftest override.
 
 # Import all tests from the generic testsuite file.
 from rhosocial.activerecord.testsuite.feature.basic.type_adapter.test_type_adapter import *  # noqa: F403
