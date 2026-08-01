@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from typing import Tuple, Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
@@ -471,7 +471,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         re.IGNORECASE,
     )
     _PG_STRING_TYPES = re.compile(
-        r"^(?:CHAR|VARCHAR|TEXT)\b",
+        r"^(?:CHARACTER|CHAR|VARCHAR|TEXT)\b",
         re.IGNORECASE,
     )
     _PG_BINARY_TYPES = re.compile(
@@ -479,7 +479,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         re.IGNORECASE,
     )
     _PG_DATE_TYPES = re.compile(
-        r"^(?:DATE|DATETIME|TIMESTAMP|TIME|INTERVAL)\b",
+        r"^(?:DATETIME|DATE|TIMESTAMPTZ|TIMESTAMP|TIMETZ|TIME|INTERVAL)\b",
         re.IGNORECASE,
     )
     _PG_JSON_TYPES = re.compile(
@@ -560,7 +560,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Serial family
         if self._PG_SERIAL_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresBigSerialType,
                 PostgresSerialType,
                 PostgresSmallSerialType,
@@ -610,15 +610,15 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Binary
         if self._PG_BINARY_TYPES.match(upper):
-            from ..expression.types import PostgresByteaType
+            from ...expression.types import PostgresByteaType
             return PostgresByteaType()
 
         # Date/time
         if self._PG_DATE_TYPES.match(upper):
-            if upper.startswith("DATE"):
-                return DateType()
             if upper.startswith("DATETIME"):
                 return DateTimeType()
+            if upper.startswith("DATE"):
+                return DateType()
             if upper.startswith("TIMESTAMP"):
                 nums = re.findall(r"\d+", stripped)
                 precision = int(nums[0]) if nums else None
@@ -641,13 +641,13 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             if upper.startswith("JSONB"):
                 return JsonBType()
             if upper.startswith("JSONPATH"):
-                from ..expression.types import PostgresJsonPathType
+                from ...expression.types import PostgresJsonPathType
                 return PostgresJsonPathType()
             return JsonType()
 
         # UUID
         if self._PG_UUID_TYPES.match(upper):
-            from ..expression.types import PostgresUUIDType
+            from ...expression.types import PostgresUUIDType
             return PostgresUUIDType()
 
         # Boolean
@@ -659,14 +659,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             nums = re.findall(r"\d+", stripped)
             n = int(nums[0]) if nums else None
             if upper.startswith("BIT"):
-                from ..expression.types import PostgresBitType
+                from ...expression.types import PostgresBitType
                 return PostgresBitType(n)
-            from ..expression.types import PostgresVarBitType
+            from ...expression.types import PostgresVarBitType
             return PostgresVarBitType(n)
 
         # Network address
         if self._PG_NET_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresCidrType,
                 PostgresInetType,
                 PostgresMacAddr8Type,
@@ -682,7 +682,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Geometric
         if self._PG_GEOM_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresBoxType,
                 PostgresCircleType,
                 PostgresLineSegmentType,
@@ -707,7 +707,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Range types
         if self._PG_RANGE_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresDateRangeType,
                 PostgresInt4RangeType,
                 PostgresInt8RangeType,
@@ -730,7 +730,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Multirange types
         if self._PG_MULTIRANGE_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresDateMultirangeType,
                 PostgresInt4MultirangeType,
                 PostgresInt8MultirangeType,
@@ -753,7 +753,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # OID types
         if self._PG_OID_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresCIDType,
                 PostgresOIDType,
                 PostgresRegClassType,
@@ -778,7 +778,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Text search
         if self._PG_TS_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresTSQueryType,
                 PostgresTSVectorType,
             )
@@ -788,7 +788,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Miscellaneous
         if self._PG_MISC_TYPES.match(upper):
-            from ..expression.types import (
+            from ...expression.types import (
                 PostgresGeographyType,
                 PostgresGeometryType,
                 PostgresHstoreType,
@@ -813,7 +813,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         if upper.startswith("VECTOR"):
             nums = re.findall(r"\d+", stripped)
             dim = int(nums[0]) if nums else 0
-            from ..expression.types import PostgresVectorType
+            from ...expression.types import PostgresVectorType
             return PostgresVectorType(dim)
 
         # Fallback

@@ -28,8 +28,20 @@ def dialect():
 class TestPostgresOnConflictCapabilities:
     """Capability switch tests."""
 
+    def test_supports_upsert_pg94(self):
+        assert PostgresDialect((9, 4, 0)).supports_upsert() is False
+
+    def test_supports_upsert_pg95(self):
+        assert PostgresDialect((9, 5, 0)).supports_upsert() is True
+
+    def test_supports_upsert_modern(self):
+        assert PostgresDialect((16, 0, 0)).supports_upsert() is True
+
     def test_supports_on_conflict_clause(self, dialect):
         assert dialect.supports_on_conflict_clause() is True
+
+    def test_supports_on_conflict_clause_old_version(self):
+        assert PostgresDialect((9, 4, 0)).supports_on_conflict_clause() is True
 
     def test_does_not_support_multiple_on_conflict_clauses(self, dialect):
         assert dialect.supports_multiple_on_conflict_clauses() is False
