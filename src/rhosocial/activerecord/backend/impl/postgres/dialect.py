@@ -694,6 +694,10 @@ class PostgresDialect(
         """
         return True
 
+    def supports_json_arrow_operators(self) -> bool:
+        """PostgreSQL supports -> and ->> operators for JSON/JSONB access."""
+        return True
+
     def supports_lock_strength(self, strength) -> bool:
         """
         Check if a specific lock strength is supported.

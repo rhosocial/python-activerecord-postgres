@@ -15,4 +15,6 @@ The tests are dynamically parametrized with PostgreSQL-specific fixtures.
 from rhosocial.activerecord.testsuite.feature.basic.conftest import mapped_models_fixtures  # noqa: F401
 
 # The `TestBasicMappedModels` class contains the actual test cases.
-from rhosocial.activerecord.testsuite.feature.basic.test_example_basic_fixtures import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.fields.test_example_basic_fixtures import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.basic.fields.test_example_basic_fixtures_async import *  # noqa: F403
+
