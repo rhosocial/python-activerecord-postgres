@@ -262,6 +262,14 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'pgq/recursive_cte_graph_traversal.py': {
+        'title': 'Recursive CTE Graph Traversal (PGQ Quantified Path Alternative)',
+        'dialect_protocols': [],
+        'priority': 5,
+        'min_version': '9',
+        'max_version': '18',
+        'note': 'Uses recursive CTE + UNION ALL to simulate PGQ quantified path patterns; works on all PG versions',
+    },
     'transaction/basic.py': {
         'title': 'Transaction Control',
         'dialect_protocols': [],

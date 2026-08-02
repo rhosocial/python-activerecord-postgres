@@ -165,6 +165,10 @@ CREATE TABLE benchmark_users (
     def _cleanup_sync(self):
         for backend in self._active_backends:
             try:
+                backend.execute("DROP TABLE IF EXISTS benchmark_users CASCADE")
+            except Exception:
+                pass
+            try:
                 backend.disconnect()
             except Exception:
                 pass
@@ -172,6 +176,10 @@ CREATE TABLE benchmark_users (
 
     async def _cleanup_async(self):
         for backend in self._active_async_backends:
+            try:
+                await backend.execute("DROP TABLE IF EXISTS benchmark_users CASCADE")
+            except Exception:
+                pass
             try:
                 await backend.disconnect()
             except Exception:

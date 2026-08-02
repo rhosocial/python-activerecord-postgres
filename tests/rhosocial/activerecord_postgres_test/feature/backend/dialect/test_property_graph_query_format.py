@@ -52,6 +52,34 @@ class TestPGQProtocolVersionGating:
         assert isinstance(d, GraphTableSupport)
 
 
+class TestPGQLimitationGating:
+    """Tests that PG 19 correctly reports unsupported features."""
+
+    def test_quantified_path_unsupported_pg19(self):
+        d = PostgresDialect((19, 0, 0))
+        assert d.supports_quantified_path() is False
+
+    def test_quantified_path_unsupported_pg15(self):
+        d = PostgresDialect((15, 0, 0))
+        assert d.supports_quantified_path() is False
+
+    def test_comma_separated_patterns_unsupported_pg19(self):
+        d = PostgresDialect((19, 0, 0))
+        assert d.supports_comma_separated_patterns() is False
+
+    def test_comma_separated_patterns_unsupported_pg15(self):
+        d = PostgresDialect((15, 0, 0))
+        assert d.supports_comma_separated_patterns() is False
+
+    def test_quantified_path_raises_on_format(self):
+        d = PostgresDialect((19, 0, 0))
+        from rhosocial.activerecord.backend.expression import QuantifiedPath
+        edge = GraphEdge(d, "e", "knows", GraphEdgeDirection.RIGHT)
+        qp = QuantifiedPath(d, edge)
+        with pytest.raises(UnsupportedFeatureError):
+            qp.to_sql()
+
+
 @pytest.fixture
 def pg19_dialect():
     return PostgresDialect((19, 0, 0))

@@ -28,7 +28,11 @@ from rhosocial.activerecord.testsuite.feature.mixins.fixtures.models import (  #
     TimestampedPost as TimestampedPostBase,
     VersionedProduct as VersionedProductBase,
     Task as TaskBase,
-    CombinedArticle as CombinedArticleBase
+    CombinedArticle as CombinedArticleBase,
+    AsyncTimestampedPost as AsyncTimestampedPostBase,
+    AsyncVersionedProduct as AsyncVersionedProductBase,
+    AsyncTask as AsyncTaskBase,
+    AsyncCombinedArticle as AsyncCombinedArticleBase,
 )
 
 # Conditionally import Python 3.10+ models
@@ -89,113 +93,138 @@ VersionedProduct = _select_model_class(VersionedProductBase, VersionedProduct312
 Task = _select_model_class(TaskBase, Task312, Task311, Task310, "Task")
 CombinedArticle = _select_model_class(CombinedArticleBase, CombinedArticle312, CombinedArticle311, CombinedArticle310, "CombinedArticle")  # noqa: E501
 
-from rhosocial.activerecord.testsuite.feature.mixins.interfaces import IMixinsProvider  # noqa: E402
+AsyncTimestampedPost = AsyncTimestampedPostBase
+AsyncVersionedProduct = AsyncVersionedProductBase
+AsyncTask = AsyncTaskBase
+AsyncCombinedArticle = AsyncCombinedArticleBase
+
+from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType  # noqa: E402
+from rhosocial.activerecord.testsuite.feature.mixins.interfaces import IMixinsSyncProvider, IMixinsAsyncProvider  # noqa: E402
 # ...and the scenarios are defined specifically for this backend.
 from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
+# Expression-based DDL fixtures
+from .fixtures._common import drop_table
+from .fixtures.mixins import TABLE_EXPRESSIONS as MIXINS_TABLE_EXPRESSIONS
 
-class MixinsProvider(IMixinsProvider):
-    """
-    This is the postgres backend's implementation for the mixins test group.
-    It connects the generic tests in the testsuite with the actual postgres database.
-    """
 
+class MixinsProviderBase:
     def __init__(self):
-        # This list will track the backend instances created during the setup phase.
         self._active_backends = []
 
     def get_test_scenarios(self) -> List[str]:
-        """Returns a list of names for all enabled scenarios for this backend."""
         return list(get_enabled_scenarios().keys())
 
-    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
-        """A generic helper method to handle the setup for any given model."""
-        # 1. Get the backend class (PostgresBackend) and connection config for the requested scenario.
-        backend_class, config = get_scenario(scenario_name)
-
-        # 2. Configure the generic model class with our specific backend and config.
-        model_class.configure(config, backend_class)
-
-        backend_instance = model_class.__backend__
-        if backend_instance not in self._active_backends:
-            self._active_backends.append(backend_instance)
-
-        # 3. Prepare the database schema.
-        try:
-            # Drop the table if it exists, with cascade to handle dependencies.
-            model_class.__backend__.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
-        except Exception as e:
-            # Ignore errors if the table didn't exist, but print for debugging.
-            print(f"Could not drop table {table_name}: {e}")
-            pass
-
-        # Execute the schema SQL to create the table.
-        schema_sql = self._load_postgres_schema(f"{table_name}.sql")
-        model_class.__backend__.execute(schema_sql)
-
-        return model_class
-
-    # --- Implementation of the IMixinsProvider interface ---
-
-
-
-
-
-
-
-    def setup_timestamped_post_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for timestamps model tests."""
-
-        return self._setup_model(TimestampedPost, scenario_name, "timestamped_posts")
-
-    def setup_versioned_product_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for optimistic lock model tests."""
-
-        return self._setup_model(VersionedProduct, scenario_name, "versioned_products")
-
-    def setup_task_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for soft delete model tests."""
-
-        return self._setup_model(Task, scenario_name, "tasks")
-
-    def setup_combined_article_model(self, scenario_name: str) -> Type[ActiveRecord]:
-        """Sets up the database for combined article model tests."""
-
-        return self._setup_model(CombinedArticle, scenario_name, "combined_articles")
-
-
-
     def _load_postgres_schema(self, filename: str) -> str:
-        """Helper to load a SQL schema file from this project's fixtures."""
-        # Schemas are stored in the centralized location for mixins feature.
-        schema_dir = os.path.join(os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "mixins", "schema")  # noqa: E501
+        schema_dir = os.path.join(
+            os.path.dirname(__file__), "..", "rhosocial", "activerecord_postgres_test", "feature", "mixins", "schema"
+        )
         schema_path = os.path.join(schema_dir, filename)
-
         with open(schema_path, 'r', encoding='utf-8') as f:
             return f.read()
 
+
+class MixinsSyncProvider(MixinsProviderBase, IMixinsSyncProvider):
+
+    def __init__(self):
+        super().__init__()
+
+    def _setup_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+        backend_class, config = get_scenario(scenario_name)
+        model_class.configure(config, backend_class)
+        backend_instance = model_class.__backend__
+        if backend_instance not in self._active_backends:
+            self._active_backends.append(backend_instance)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, table_name).to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        except Exception as e:
+            print(f"Could not drop table {table_name}: {e}")
+        if fn := MIXINS_TABLE_EXPRESSIONS.get(table_name):
+            create_expr = fn(backend_instance.dialect, table_name)
+            sql, params = create_expr.to_sql()
+            backend_instance.execute(sql, params, options=opts)
+        return model_class
+
+    def setup_timestamped_post_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(TimestampedPost, scenario_name, "timestamped_posts")
+
+    def setup_versioned_product_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(VersionedProduct, scenario_name, "versioned_products")
+
+    def setup_task_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(Task, scenario_name, "tasks")
+
+    def setup_combined_article_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return self._setup_model(CombinedArticle, scenario_name, "combined_articles")
+
     def cleanup_after_test(self, scenario_name: str):
-        """
-        Performs cleanup after a test. This now iterates through the backends
-        that were created during setup, drops tables, and explicitly disconnects them.
-        """
         for backend_instance in self._active_backends:
             try:
-                # Drop all tables that might have been created for mixins tests
                 for table_name in ['timestamped_posts', 'versioned_products', 'tasks',
                                    'combined_articles']:
                     try:
                         backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
                     except Exception:
-                        # Continue with other tables if one fails
                         pass
             finally:
-                # Always disconnect the backend instance that was used in the test
                 try:
                     backend_instance.disconnect()
-                except:  # noqa: E722
-                    # Ignore errors during disconnect
+                except Exception:
                     pass
-
-        # Clear the list of active backends for the next test
         self._active_backends.clear()
+
+
+class MixinsAsyncProvider(MixinsProviderBase, IMixinsAsyncProvider):
+
+    def __init__(self):
+        super().__init__()
+        self._active_async_backends = []
+
+    async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
+        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        _, config = get_scenario(scenario_name)
+        await model_class.configure(config, AsyncPostgresBackend)
+        backend_instance = model_class.__backend__
+        if backend_instance not in self._active_async_backends:
+            self._active_async_backends.append(backend_instance)
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        try:
+            sql, params = drop_table(backend_instance.dialect, table_name).to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        except Exception as e:
+            print(f"Could not drop table {table_name}: {e}")
+        if fn := MIXINS_TABLE_EXPRESSIONS.get(table_name):
+            create_expr = fn(backend_instance.dialect, table_name)
+            sql, params = create_expr.to_sql()
+            await backend_instance.execute(sql, params, options=opts)
+        return model_class
+
+    async def setup_timestamped_post_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(AsyncTimestampedPost, scenario_name, "timestamped_posts")
+
+    async def setup_versioned_product_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(AsyncVersionedProduct, scenario_name, "versioned_products")
+
+    async def setup_task_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(AsyncTask, scenario_name, "tasks")
+
+    async def setup_combined_article_model(self, scenario_name: str) -> Type[ActiveRecord]:
+        return await self._setup_async_model(AsyncCombinedArticle, scenario_name, "combined_articles")
+
+    async def cleanup_after_test(self, scenario_name: str):
+        for backend_instance in self._active_async_backends:
+            try:
+                for table_name in ['timestamped_posts', 'versioned_products', 'tasks',
+                                   'combined_articles']:
+                    try:
+                        await backend_instance.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE')
+                    except Exception:
+                        pass
+            finally:
+                try:
+                    await backend_instance.disconnect()
+                except Exception:
+                    pass
+        self._active_async_backends.clear()

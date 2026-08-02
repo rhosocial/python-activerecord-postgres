@@ -6,14 +6,13 @@ This module registers the concrete implementations of the test suite provider
 interfaces for the postgres backend.
 """
 from rhosocial.activerecord.testsuite.core.registry import ProviderRegistry
-from .basic import BasicProvider
-from .events import EventsProvider
-from .mixins import MixinsProvider
-from .query import QueryProvider
-from .relation import RelationProvider
+from .basic import BasicSyncProvider, BasicAsyncProvider
+from .events import EventsSyncProvider, EventsAsyncProvider
+from .mixins import MixinsSyncProvider, MixinsAsyncProvider
+from .query import QuerySyncProvider, QueryAsyncProvider
+from .relation import RelationSyncProvider, RelationAsyncProvider
 from .basic_connection import BasicConnectionProvider
 from .query_connection import QueryConnectionProvider
-from .composite_pk import CompositePKProvider
 from .crud_benchmark import CrudBenchmarkProvider
 from .fastapi_benchmark import FastAPIBenchmarkProvider
 from .mixin_benchmark import MixinBenchmarkProvider
@@ -25,11 +24,25 @@ provider_registry = ProviderRegistry()
 
 # Register the concrete implementations as the providers for the
 # interfaces defined in the testsuite.
-provider_registry.register("feature.basic.IBasicProvider", BasicProvider)
-provider_registry.register("feature.events.IEventsProvider", EventsProvider)
-provider_registry.register("feature.mixins.IMixinsProvider", MixinsProvider)
-provider_registry.register("feature.query.IQueryProvider", QueryProvider)
-provider_registry.register("feature.relation.IRelationProvider", RelationProvider)
+provider_registry.register("feature.basic.IBasicProvider", BasicSyncProvider)
+provider_registry.register("feature.basic.IBasicSyncProvider", BasicSyncProvider)
+provider_registry.register("feature.basic.IBasicAsyncProvider", BasicAsyncProvider)
+
+provider_registry.register("feature.events.IEventsProvider", EventsSyncProvider)
+provider_registry.register("feature.events.IEventsSyncProvider", EventsSyncProvider)
+provider_registry.register("feature.events.IEventsAsyncProvider", EventsAsyncProvider)
+
+provider_registry.register("feature.mixins.IMixinsProvider", MixinsSyncProvider)
+provider_registry.register("feature.mixins.IMixinsSyncProvider", MixinsSyncProvider)
+provider_registry.register("feature.mixins.IMixinsAsyncProvider", MixinsAsyncProvider)
+
+provider_registry.register("feature.query.IQueryProvider", QuerySyncProvider)
+provider_registry.register("feature.query.IQuerySyncProvider", QuerySyncProvider)
+provider_registry.register("feature.query.IQueryAsyncProvider", QueryAsyncProvider)
+
+provider_registry.register("feature.relation.IRelationProvider", RelationSyncProvider)
+provider_registry.register("feature.relation.IRelationSyncProvider", RelationSyncProvider)
+provider_registry.register("feature.relation.IRelationAsyncProvider", RelationAsyncProvider)
 
 # Register connection pool context awareness providers
 provider_registry.register(
@@ -40,8 +53,6 @@ provider_registry.register(
     "feature.query.connection.IQueryConnectionProvider",
     QueryConnectionProvider,
 )
-
-provider_registry.register("feature.composite_pk.ICompositePKProvider", CompositePKProvider)
 
 # Register benchmark providers.
 provider_registry.register("benchmark.crud.ICrudBenchmarkProvider", CrudBenchmarkProvider)

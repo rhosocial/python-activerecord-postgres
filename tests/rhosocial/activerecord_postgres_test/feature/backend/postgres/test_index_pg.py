@@ -518,6 +518,17 @@ class TestFulltextDdlNotSupportedSearchSupported:
         assert "plainto_tsquery" not in sql
         assert params == ("a & b",)
 
+    def test_format_fulltext_match_phrase(self):
+        sql, params = PostgresDialect().format_fulltext_match(["col"], "cat dog", mode="PHRASE")
+        assert "phraseto_tsquery" in sql
+        assert "plainto_tsquery" not in sql
+        assert params == ("cat dog",)
+
+    def test_format_fulltext_match_unknown_mode_uses_plain(self):
+        sql, params = PostgresDialect().format_fulltext_match(["col"], "search", mode="CUSTOM")
+        assert "plainto_tsquery" in sql
+        assert params == ("search",)
+
     def test_format_fulltext_match_multi_column(self):
         sql, params = PostgresDialect().format_fulltext_match(["a", "b"], "search")
         assert " || " in sql
@@ -550,6 +561,19 @@ class TestFulltextDdlNotSupportedSearchSupported:
         )
         sql, _ = dialect.format_create_fulltext_index_statement(expr)
         assert "IF NOT EXISTS" in sql
+
+    def test_format_create_fulltext_index_statement_multi_column(self):
+        dialect = PostgresDialect()
+        expr = CreateFulltextIndexExpression(
+            dialect,
+            index_name="idx_ft",
+            table_name="articles",
+            columns=["title", "body"],
+        )
+        sql, _ = dialect.format_create_fulltext_index_statement(expr)
+        assert " || " in sql
+        assert "to_tsvector" in sql
+        assert "title" in sql and "body" in sql
 
     def test_format_drop_fulltext_index_statement(self):
         dialect = PostgresDialect()

@@ -9,3 +9,5 @@ from rhosocial.activerecord.testsuite.feature.query.worker.conftest import (
     async_order_fixtures_for_worker,  # noqa: F401
 )
 from rhosocial.activerecord.testsuite.feature.query.worker.test_parallel_queries import *  # noqa: F403
+from rhosocial.activerecord.testsuite.feature.query.worker.test_parallel_queries_async import *  # noqa: F403
+
