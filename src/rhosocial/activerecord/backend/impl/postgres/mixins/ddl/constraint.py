@@ -41,3 +41,11 @@ class PostgresConstraintMixin:
         Supported by all PostgreSQL versions.
         """
         return True
+
+    def supports_drop_constraint_if_exists(self) -> bool:
+        """``DROP CONSTRAINT IF EXISTS`` (vendor extension).
+
+        PostgreSQL has supported the ``IF EXISTS`` qualifier on
+        ``DROP CONSTRAINT`` since 9.6.
+        """
+        return True
