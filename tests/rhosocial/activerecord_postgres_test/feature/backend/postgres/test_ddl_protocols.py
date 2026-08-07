@@ -6,6 +6,7 @@ This module tests the protocol-based feature detection methods:
 - PostgresCommentSupport
 - PostgresIndexSupport
 - PostgresMaterializedViewSupport
+- PostgresPolicySupport
 """
 import pytest  # noqa: F401
 
@@ -393,3 +394,25 @@ class TestProtocolRuntimeCheckable:
         )
         dialect = PostgresDialect(version=(14, 0, 0))
         assert isinstance(dialect, PostgresMaterializedViewSupport)
+
+    def test_postgres_policy_support_is_runtime_checkable(self):
+        """PostgresPolicySupport should be runtime checkable."""
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresPolicySupport,
+        )
+        # Versions >= 9.5 should satisfy the Protocol
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert isinstance(dialect, PostgresPolicySupport)
+
+    def test_postgres_policy_support_rejected_on_unsupported_version(self):
+        """Pre-9.5 dialects still satisfy Protocol methods (no attributes
+        differ structurally), but capability switches report False."""
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresPolicySupport,
+        )
+        dialect = PostgresDialect(version=(9, 4, 0))
+        # Structural isinstance still passes (Protocol only checks method
+        # presence, not version gates), but capability report is False:
+        assert dialect.supports_create_policy() is False
+        # The Protocol *presence* is still satisfied (the methods exist):
+        assert isinstance(dialect, PostgresPolicySupport)

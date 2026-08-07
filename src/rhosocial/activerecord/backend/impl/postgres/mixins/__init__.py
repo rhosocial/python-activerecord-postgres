@@ -23,6 +23,7 @@ from .ddl.comment import PostgresCommentMixin
 from .ddl.type import PostgresTypeMixin
 from .ddl.constraint import PostgresConstraintMixin
 from .ddl.column import PostgresAlterColumnModifierMixin
+from .ddl.policy import PostgresPolicyMixin
 
 # DML mixins
 from .dml.vacuum import PostgresVacuumMixin
@@ -118,6 +119,7 @@ __all__ = [
     "PostgresTypeMixin",
     "PostgresConstraintMixin",
     "PostgresAlterColumnModifierMixin",
+    "PostgresPolicyMixin",
     # DML mixins
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",
