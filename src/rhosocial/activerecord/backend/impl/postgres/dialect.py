@@ -162,6 +162,7 @@ from .mixins import (
     PostgresCommentMixin,
     PostgresTypeMixin,
     PostgresConstraintMixin,
+    PostgresPolicyMixin,
     # Type mixins
     EnumTypeMixin,
     TypesDataTypeMixin,
@@ -252,6 +253,7 @@ from .protocols import (
     PostgresCommentSupport,
     PostgresTypeSupport,
     PostgresConstraintSupport,
+    PostgresPolicySupport,
     # Type feature protocols
     PostgresMultirangeSupport,
     PostgresEnumTypeSupport,
@@ -397,6 +399,7 @@ class PostgresDialect(
     PostgresCommentMixin,
     PostgresTypeMixin,
     PostgresConstraintMixin,
+    PostgresPolicyMixin,
     # Type mixins
     EnumTypeMixin,
     TypesDataTypeMixin,
@@ -522,6 +525,7 @@ class PostgresDialect(
     PostgresCommentSupport,
     PostgresTypeSupport,
     PostgresConstraintSupport,
+    PostgresPolicySupport,
     # Type feature protocols
     PostgresMultirangeSupport,
     PostgresEnumTypeSupport,

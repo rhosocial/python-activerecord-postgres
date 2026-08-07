@@ -11,6 +11,7 @@ Directory structure:
 - mv.py         - Materialized view expressions
 - type.py       - Enum/Range type expressions
 - extension.py  - Extension DDL expressions
+- policy.py     - Row-Level Security POLICY expressions (CREATE/ALTER/DROP)
 
 Missing expressions — why?
 ============================
@@ -84,6 +85,14 @@ from .pg_partman import (
     PostgresPgPartmanUpdateConfigExpression,
     PostgresPgPartmanDeleteConfigExpression,
 )
+from .policy import (
+    AlterPolicyMode,
+    PolicyCommand,
+    PolicyType,
+    PostgresCreatePolicyExpression,
+    PostgresAlterPolicyExpression,
+    PostgresDropPolicyExpression,
+)
 
 __all__ = [
     # vacuum
@@ -120,4 +129,11 @@ __all__ = [
     "PostgresPgPartmanRunMaintenanceExpression",
     "PostgresPgPartmanUpdateConfigExpression",
     "PostgresPgPartmanDeleteConfigExpression",
+    # policy
+    "PolicyType",
+    "PolicyCommand",
+    "AlterPolicyMode",
+    "PostgresCreatePolicyExpression",
+    "PostgresAlterPolicyExpression",
+    "PostgresDropPolicyExpression",
 ]
