@@ -178,6 +178,7 @@ from .mixins import (
     PostgresLockingMixin,
     # Introspection capability mixin
     PostgresIntrospectionCapabilityMixin,
+    PostgresAlterColumnModifierMixin,
 )
 
 from .collation import validate_postgres_collation_name
@@ -348,6 +349,7 @@ class PostgresDialect(
     # PostgreSQL-specific mixins
     PostgresExtensionMixin,
     PostgresMaterializedViewMixin,
+    PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_table_like_syntax
     TableMixin,
     ConstraintMixin,

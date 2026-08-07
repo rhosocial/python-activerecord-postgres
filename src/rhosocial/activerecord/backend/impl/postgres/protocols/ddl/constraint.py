@@ -55,3 +55,11 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         Requires appropriate operator class (e.g., btree_gist for gist).
         """
         ...
+
+    def supports_drop_constraint_if_exists(self) -> bool:
+        """Whether ``DROP CONSTRAINT IF EXISTS`` is supported.
+
+        Vendor extension (not in ISO/IEC 9075-2 §11.10). PostgreSQL has
+        supported it since 9.6.
+        """
+        ...

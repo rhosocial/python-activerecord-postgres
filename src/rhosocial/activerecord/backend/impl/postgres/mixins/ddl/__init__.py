@@ -7,6 +7,7 @@ from .trigger import PostgresTriggerMixin
 from .comment import PostgresCommentMixin
 from .type import PostgresTypeMixin
 from .constraint import PostgresConstraintMixin
+from .column import PostgresAlterColumnModifierMixin
 
 __all__ = [
     "PostgresPartitionMixin",
@@ -15,4 +16,5 @@ __all__ = [
     "PostgresCommentMixin",
     "PostgresTypeMixin",
     "PostgresConstraintMixin",
+    "PostgresAlterColumnModifierMixin",
 ]
