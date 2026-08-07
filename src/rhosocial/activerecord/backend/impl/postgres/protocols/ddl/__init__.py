@@ -7,6 +7,7 @@ from .trigger import PostgresTriggerSupport
 from .comment import PostgresCommentSupport
 from .type import PostgresTypeSupport
 from .constraint import PostgresConstraintSupport
+from .policy import PostgresPolicySupport
 
 __all__ = [
     "PostgresPartitionSupport",
@@ -15,4 +16,5 @@ __all__ = [
     "PostgresCommentSupport",
     "PostgresTypeSupport",
     "PostgresConstraintSupport",
+    "PostgresPolicySupport",
 ]

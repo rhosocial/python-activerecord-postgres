@@ -21,6 +21,7 @@ from .ddl.trigger import PostgresTriggerSupport
 from .ddl.comment import PostgresCommentSupport
 from .ddl.type import PostgresTypeSupport
 from .ddl.constraint import PostgresConstraintSupport
+from .ddl.policy import PostgresPolicySupport
 
 # DML protocols
 from .dml.vacuum import PostgresVacuumSupport
@@ -111,6 +112,7 @@ __all__ = [
     "PostgresCommentSupport",
     "PostgresTypeSupport",
     "PostgresConstraintSupport",
+    "PostgresPolicySupport",
     # DML protocols
     "PostgresVacuumSupport",
     "PostgresStoredProcedureSupport",

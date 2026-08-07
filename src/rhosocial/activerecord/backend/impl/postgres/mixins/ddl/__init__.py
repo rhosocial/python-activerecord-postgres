@@ -8,6 +8,7 @@ from .comment import PostgresCommentMixin
 from .type import PostgresTypeMixin
 from .constraint import PostgresConstraintMixin
 from .column import PostgresAlterColumnModifierMixin
+from .policy import PostgresPolicyMixin
 
 __all__ = [
     "PostgresPartitionMixin",
@@ -17,4 +18,5 @@ __all__ = [
     "PostgresTypeMixin",
     "PostgresConstraintMixin",
     "PostgresAlterColumnModifierMixin",
+    "PostgresPolicyMixin",
 ]
