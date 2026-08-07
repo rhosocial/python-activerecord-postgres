@@ -455,13 +455,13 @@ jobs:
           fail_ci_if_error: false
 
   test-postgres-19:
-    name: Python 3.14 / postgres 19beta1 (PGQ)
+    name: Python 3.14 / postgres 19beta2 (PGQ)
     runs-on: ubuntu-latest
     continue-on-error: true
 
     services:
       postgres:
-        image: postgres:19beta1
+        image: postgres:19beta2
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
