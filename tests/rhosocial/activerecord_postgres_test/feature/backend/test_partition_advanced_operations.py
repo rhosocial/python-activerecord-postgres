@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any, Iterable
 
 import pytest
@@ -319,7 +318,6 @@ class TestPostgreSQLAdvancedPartitionOperations:
         default_partition_name = "ar_partition_adv_default"
 
         # Create a table with matching structure for DEFAULT attachment
-        from rhosocial.activerecord.backend.expression.statements import DropTableExpression, TableConstraint
         create_default = CreateTableExpression(
             dialect=dialect,
             table=default_partition_name,

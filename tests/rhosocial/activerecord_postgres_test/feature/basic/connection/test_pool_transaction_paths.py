@@ -94,7 +94,7 @@ class TestSyncPath2ConnectionOnlyBranch:
     def test_path2_commits_visible_after_exit(self, sync_pool_and_model):
         pool, model = sync_pool_and_model
         with pool.connection():
-            with pool.transaction() as backend:
+            with pool.transaction():
                 instance = model(name="Path2User", email="p2@test.local")
                 instance.save()
         # Connection-only context exited; transaction must already be committed.

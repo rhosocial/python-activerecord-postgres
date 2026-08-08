@@ -104,8 +104,8 @@ from rhosocial.activerecord.testsuite.feature.mixins.interfaces import IMixinsSy
 from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402
 
 # Expression-based DDL fixtures
-from .fixtures._common import drop_table
-from .fixtures.mixins import TABLE_EXPRESSIONS as MIXINS_TABLE_EXPRESSIONS
+from .fixtures._common import drop_table  # noqa: E402
+from .fixtures.mixins import TABLE_EXPRESSIONS as MIXINS_TABLE_EXPRESSIONS  # noqa: E402
 
 
 class MixinsProviderBase:

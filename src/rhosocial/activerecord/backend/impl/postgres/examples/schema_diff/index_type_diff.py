@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint, ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
-    VarCharType, ArrayType, IntegerType, TextType,
+    VarCharType, ArrayType, TextType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,

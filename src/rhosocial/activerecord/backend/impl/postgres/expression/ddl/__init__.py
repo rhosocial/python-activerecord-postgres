@@ -177,6 +177,7 @@ __all__ = [
     "PolicyType",
     "PolicyCommand",
     "AlterPolicyMode",
+    "PostgresCreatePolicyExpression",
     "PostgresAlterPolicyExpression",
     "PostgresDropPolicyExpression",
     # rls_config
