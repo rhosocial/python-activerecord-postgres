@@ -1,5 +1,10 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py
-"""PostgreSQL ALTER TABLE IF [NOT] EXISTS qualifier formatting."""
+"""PostgreSQL ALTER TABLE / ALTER COLUMN formatting extensions.
+
+Covers PostgreSQL-specific qualifiers for ALTER TABLE actions as well as
+the ``ALTER COLUMN ... SET DATA TYPE ... USING`` conversion expression,
+which the core ``DDLColumnMixin`` does not emit.
+"""
 
 from typing import Tuple
 
@@ -50,3 +55,45 @@ class PostgresAlterColumnModifierMixin:
         if getattr(action, "cascade", None):
             result = f"{result} CASCADE"
         return result, ()
+
+    def format_alter_column_action(self, action) -> Tuple[str, tuple]:
+        """Format an ``ALTER COLUMN`` action, adding ``USING`` conversion.
+
+        The core ``DDLColumnMixin.format_alter_column_action`` renders the
+        standard subclauses (SET/DROP DEFAULT, SET/DROP NOT NULL, and
+        ``SET DATA TYPE``). PostgreSQL additionally supports an optional
+        ``USING (conversion_expression)`` on ``SET DATA TYPE`` — an
+        extension the core dialect does not emit. This override injects it
+        from ``action.dialect_options["using"]``.
+
+        Args:
+            action: An ``AlterColumn`` action (core ``ddl_alter`` module).
+
+        Returns:
+            Tuple of (SQL string, params tuple).
+
+        Raises:
+            ValueError: when ``using`` is supplied for any operation other
+                than ``SET DATA TYPE`` (the only one PostgreSQL allows it on).
+
+        """
+        sql, params = super().format_alter_column_action(action)
+        dialect_options = getattr(action, "dialect_options", None) or {}
+        using = dialect_options.get("using")
+        if using is None:
+            return sql, params
+
+        op = getattr(action, "operation", None)
+        op_str = op.value if hasattr(op, "value") else str(op)
+        if op_str != "SET DATA TYPE":
+            raise ValueError(
+                "USING conversion is only valid for ALTER COLUMN SET DATA TYPE"
+            )
+
+        using_sql, using_params = using.to_sql()
+        core, sep, cascade = sql.partition(" CASCADE")
+        if sep:
+            modified = f"{core} USING ({using_sql}){sep}{cascade}"
+        else:
+            modified = f"{sql} USING ({using_sql})"
+        return modified, tuple(params) + tuple(using_params)

@@ -9,6 +9,14 @@ from .type import PostgresTypeMixin
 from .constraint import PostgresConstraintMixin
 from .column import PostgresAlterColumnModifierMixin
 from .policy import PostgresPolicyMixin
+from .rls_config import PostgresRlsConfigMixin
+from .table_settings import PostgresAlterTableSettingsMixin
+from .cluster import PostgresClusterMixin
+from .domain import PostgresDomainMixin
+from .collation import PostgresCollationDDLMixin
+from .foreign_table import PostgresForeignTableMixin
+from .routine import PostgresRoutineMixin
+from .publication import PostgresPublicationMixin
 
 __all__ = [
     "PostgresPartitionMixin",
@@ -19,4 +27,12 @@ __all__ = [
     "PostgresConstraintMixin",
     "PostgresAlterColumnModifierMixin",
     "PostgresPolicyMixin",
+    "PostgresRlsConfigMixin",
+    "PostgresAlterTableSettingsMixin",
+    "PostgresClusterMixin",
+    "PostgresDomainMixin",
+    "PostgresCollationDDLMixin",
+    "PostgresForeignTableMixin",
+    "PostgresRoutineMixin",
+    "PostgresPublicationMixin",
 ]

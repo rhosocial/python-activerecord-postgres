@@ -416,3 +416,222 @@ class TestProtocolRuntimeCheckable:
         assert dialect.supports_create_policy() is False
         # The Protocol *presence* is still satisfied (the methods exist):
         assert isinstance(dialect, PostgresPolicySupport)
+
+
+class TestPostgresRlsConfigFeatureDetection:
+    """Test PostgresRlsConfigSupport feature detection methods."""
+
+    def test_rls_enable_disable_pg94(self):
+        dialect = PostgresDialect(version=(9, 4, 0))
+        assert dialect.supports_rls_enable_disable() is False
+
+    def test_rls_enable_disable_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_rls_enable_disable() is True
+        assert dialect.supports_rls_force() is True
+        assert dialect.supports_rls_enable_always() is True
+
+    def test_rls_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresRlsConfigSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresRlsConfigSupport)
+
+
+class TestPostgresAlterTableSettingsFeatureDetection:
+    """Test PostgresAlterTableSettingsSupport feature detection methods."""
+
+    def test_table_logging_switch_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_table_logging_switch() is False
+
+    def test_table_logging_switch_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_table_logging_switch() is True
+        assert dialect.supports_table_set_access_method() is False
+
+    def test_table_set_access_method_pg15(self):
+        dialect = PostgresDialect(version=(15, 0, 0))
+        assert dialect.supports_table_set_access_method() is True
+
+    def test_alter_table_settings_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresAlterTableSettingsSupport,
+        )
+        assert isinstance(
+            PostgresDialect(version=(14, 0, 0)), PostgresAlterTableSettingsSupport
+        )
+
+
+class TestPostgresClusterFeatureDetection:
+    """Test PostgresClusterSupport feature detection methods."""
+
+    def test_cluster_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_cluster() is False
+
+    def test_cluster_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_cluster() is True
+
+    def test_cluster_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresClusterSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresClusterSupport)
+
+
+class TestPostgresDomainFeatureDetection:
+    """Test PostgresDomainSupport feature detection methods."""
+
+    def test_domain_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_create_domain() is False
+
+    def test_domain_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_create_domain() is True
+
+    def test_domain_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresDomainSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresDomainSupport)
+
+
+class TestPostgresCollationDDLFeatureDetection:
+    """Test PostgresCollationDDLSupport feature detection methods."""
+
+    def test_collation_ddl_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_collation_ddl() is False
+
+    def test_collation_ddl_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_collation_ddl() is True
+
+    def test_collation_ddl_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresCollationDDLSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresCollationDDLSupport)
+
+
+class TestPostgresForeignTableDDLFeatureDetection:
+    """Test PostgresForeignTableDDLSupport feature detection methods."""
+
+    def test_foreign_table_ddl_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_foreign_table_ddl() is False
+
+    def test_foreign_table_ddl_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_foreign_table_ddl() is True
+
+    def test_foreign_table_ddl_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresForeignTableDDLSupport,
+        )
+        assert isinstance(
+            PostgresDialect(version=(14, 0, 0)), PostgresForeignTableDDLSupport
+        )
+
+
+class TestPostgresRoutineDDLFeatureDetection:
+    """Test PostgresRoutineDDLSupport feature detection methods."""
+
+    def test_routine_ddl_pg95(self):
+        dialect = PostgresDialect(version=(9, 5, 0))
+        assert dialect.supports_function_ddl() is False
+        assert dialect.supports_aggregate_ddl() is False
+
+    def test_routine_ddl_pg96(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_function_ddl() is True
+        assert dialect.supports_aggregate_ddl() is True
+
+    def test_routine_ddl_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresRoutineDDLSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresRoutineDDLSupport)
+
+
+class TestPostgresPublicationFeatureDetection:
+    """Test PostgresPublicationSupport feature detection methods."""
+
+    def test_publication_pg99(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        assert dialect.supports_publication() is False
+        assert dialect.supports_subscription() is False
+
+    def test_publication_pg100(self):
+        dialect = PostgresDialect(version=(10, 0, 0))
+        assert dialect.supports_publication() is True
+        assert dialect.supports_subscription() is True
+
+    def test_publication_support_is_runtime_checkable(self):
+        from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
+            PostgresPublicationSupport,
+        )
+        assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresPublicationSupport)
+
+
+class TestDdlVersionBaselineCoverage:
+    """Version-boundary sweep across the plan's supported baseline 9.6–19.
+
+    Plan §6.3 requires capability switches be exercised at
+    9.6 / 10 / 11 / 14 / 15 / 17 / 19 — not just the historical 9.4/9.5 set.
+    """
+
+    def test_baseline_96(self):
+        d = PostgresDialect(version=(9, 6, 0))
+        assert d.supports_rls_enable_disable() is True
+        assert d.supports_table_logging_switch() is True
+        assert d.supports_cluster() is True
+        assert d.supports_create_domain() is True
+        assert d.supports_collation_ddl() is True
+        assert d.supports_foreign_table_ddl() is True
+        assert d.supports_function_ddl() is True
+        assert d.supports_aggregate_ddl() is True
+        assert d.supports_unlogged_table() is True
+        assert d.supports_publication() is False
+        assert d.supports_subscription() is False
+
+    def test_baseline_10(self):
+        d = PostgresDialect(version=(10, 0, 0))
+        assert d.supports_publication() is True
+        assert d.supports_subscription() is True
+
+    def test_baseline_11(self):
+        d = PostgresDialect(version=(11, 0, 0))
+        assert d.supports_publication() is True
+        assert d.supports_subscription() is True
+        assert d.supports_create_domain() is True
+
+    def test_baseline_14(self):
+        d = PostgresDialect(version=(14, 0, 0))
+        assert d.supports_cluster() is True
+        assert d.supports_function_ddl() is True
+
+    def test_baseline_15(self):
+        d = PostgresDialect(version=(15, 0, 0))
+        assert d.supports_table_set_access_method() is True
+
+    def test_baseline_17(self):
+        d = PostgresDialect(version=(17, 0, 0))
+        assert d.supports_unlogged_table() is True
+        assert d.supports_rls_enable_always() is True
+        assert d.supports_table_set_access_method() is True
+
+    def test_baseline_19(self):
+        d = PostgresDialect(version=(19, 0, 0))
+        assert d.supports_table_set_access_method() is True
+        assert d.supports_subscription() is True
+        assert d.supports_create_domain() is True
+        assert d.supports_collation_ddl() is True
+        assert d.supports_publication() is True
+
+    def test_unsupported_94_rejects_unlogged(self):
+        d = PostgresDialect(version=(9, 4, 0))
+        assert d.supports_unlogged_table() is False

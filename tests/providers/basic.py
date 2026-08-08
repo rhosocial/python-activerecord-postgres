@@ -27,8 +27,8 @@ from rhosocial.activerecord.testsuite.core.protocols import WorkerTestProtocol  
 from rhosocial.activerecord.testsuite.utils import select_fixture  # noqa: E402
 
 # Expression-based DDL fixtures
-from providers.fixtures._common import drop_table
-from providers.fixtures.basic import TABLE_EXPRESSIONS as BASIC_TABLE_EXPRESSIONS
+from providers.fixtures._common import drop_table  # noqa: E402
+from providers.fixtures.basic import TABLE_EXPRESSIONS as BASIC_TABLE_EXPRESSIONS  # noqa: E402
 
 # Import base version models (Python 3.8+)
 from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (  # noqa: E402
