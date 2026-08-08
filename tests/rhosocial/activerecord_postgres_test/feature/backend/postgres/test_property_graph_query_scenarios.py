@@ -24,8 +24,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause, OrderByClause, GroupByHavingClause, LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.expression.query_parts import JoinExpression, JoinType
-from rhosocial.activerecord.backend.expression.literals import Identifier
+from rhosocial.activerecord.backend.expression.query_parts import JoinExpression
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, TextType,
 )

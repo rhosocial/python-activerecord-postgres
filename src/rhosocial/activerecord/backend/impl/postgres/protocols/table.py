@@ -37,6 +37,15 @@ class PostgresTableSupport(TableSupport, Protocol):
         """
         ...
 
+    def supports_unlogged_table(self) -> bool:
+        """Whether CREATE UNLOGGED TABLE is supported.
+
+        UNLOGGED tables skip WAL writes (9.6+), trading crash safety for
+        speed; callers opt in via ``dialect_options={"unlogged_table":
+        True}`` on ``CreateTableExpression``.
+        """
+        ...
+
     def supports_table_like_syntax(self) -> bool:
         """Whether CREATE TABLE (LIKE ...) syntax is supported.
 

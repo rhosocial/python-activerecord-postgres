@@ -17,6 +17,17 @@ class PostgresTableMixin:
         """TEMPORARY tables are supported in all versions."""
         return True
 
+    def supports_unlogged_table(self) -> bool:
+        """CREATE UNLOGGED TABLE is supported since PostgreSQL 9.5.
+
+        UNLOGGED tables write no WAL; they are faster for staging data but are
+        not crash-safe and are truncated on crash recovery. PostgreSQL 14 added
+        the ``UNLOGGED`` / ``LOGGED`` table as a distribution. The bare
+        ``UNLOGGED`` qualifier on CREATE TABLE exists since 9.5, matching the
+        §0 baseline.
+        """
+        return self.version >= (9, 5, 0)
+
     def supports_table_inheritance(self) -> bool:
         """PostgreSQL supports table inheritance."""
         return True
@@ -29,7 +40,39 @@ class PostgresTableMixin:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
 
-    def format_create_table_like(self, expr) -> tuple:
+    def format_create_table_statement(self, expr) -> Tuple[str, tuple]:
+        """Render CREATE TABLE, injecting the UNLOGGED qualifier.
+
+        The core ``TableMixin.format_create_table_statement`` does not know
+        about PostgreSQL's ``UNLOGGED`` table classes (WAL-avoiding tables).
+        Callers opt in via ``dialect_options={"unlogged": True}`` on the
+        ``CreateTableExpression``; the qualifier is version-gated at 9.5+.
+        ``UNLOGGED`` and ``TEMPORARY`` are mutually exclusive qualifiers in
+        PostgreSQL's grammar; TEMPORARY wins when both are requested.
+        """
+        sql, params = super().format_create_table_statement(expr)
+        if not (getattr(expr, "dialect_options", None) or {}).get("unlogged_table"):
+            return sql, params
+        if getattr(expr, "temporary", False):
+            return sql, params
+        if not self.supports_unlogged_table():
+            from rhosocial.activerecord.backend.dialect.exceptions import (
+                UnsupportedFeatureError,
+            )
+            raise UnsupportedFeatureError(
+                self.name,
+                "CREATE UNLOGGED TABLE",
+                suggestion="requires PostgreSQL 9.5+",
+            )
+        prefix = "CREATE TABLE "
+        if sql.startswith(prefix):
+            return sql.replace(prefix, "CREATE UNLOGGED TABLE ", 1), params
+        temp_prefix = "CREATE TEMPORARY TABLE "
+        if sql.startswith(temp_prefix):
+            return sql.replace(temp_prefix, "CREATE UNLOGGED TABLE ", 1), params
+        return sql, params
+
+    def format_create_table_like(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TABLE (LIKE ...) statement for PostgreSQL.
 
         Delegates to format_create_table_statement which already handles

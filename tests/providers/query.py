@@ -13,7 +13,7 @@ Its main responsibilities are:
 import os
 import sys
 import logging
-from typing import Type, List, Tuple
+from typing import Set, Type, List, Tuple
 
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 
@@ -115,8 +115,8 @@ from rhosocial.activerecord.testsuite.feature.basic.fixtures.models import (  # 
 )
 
 # Expression-based DDL fixtures
-from providers.fixtures._common import drop_table
-from providers.fixtures.query import TABLE_EXPRESSIONS as QUERY_TABLE_EXPRESSIONS
+from providers.fixtures._common import drop_table  # noqa: E402
+from providers.fixtures.query import TABLE_EXPRESSIONS as QUERY_TABLE_EXPRESSIONS  # noqa: E402
 
 # The scenarios are defined specifically for this backend.
 from .scenarios import get_enabled_scenarios, get_scenario  # noqa: E402

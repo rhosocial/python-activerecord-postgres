@@ -2,7 +2,6 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 
 
 @pytest.fixture
@@ -133,7 +132,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import (
-            ArrayType, IntegerType, VarCharType,
+            IntegerType, VarCharType,
         )
         a1 = PostgresArrayType(IntegerType(), 2)
         a2 = PostgresArrayType(IntegerType(), 2)

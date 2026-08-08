@@ -22,6 +22,14 @@ from .ddl.comment import PostgresCommentSupport
 from .ddl.type import PostgresTypeSupport
 from .ddl.constraint import PostgresConstraintSupport
 from .ddl.policy import PostgresPolicySupport
+from .ddl.rls_config import PostgresRlsConfigSupport
+from .ddl.table_settings import PostgresAlterTableSettingsSupport
+from .ddl.cluster import PostgresClusterSupport
+from .ddl.domain import PostgresDomainSupport
+from .ddl.collation import PostgresCollationDDLSupport
+from .ddl.foreign_table import PostgresForeignTableDDLSupport
+from .ddl.routine import PostgresRoutineDDLSupport
+from .ddl.publication import PostgresPublicationSupport
 
 # DML protocols
 from .dml.vacuum import PostgresVacuumSupport
@@ -113,6 +121,14 @@ __all__ = [
     "PostgresTypeSupport",
     "PostgresConstraintSupport",
     "PostgresPolicySupport",
+    "PostgresRlsConfigSupport",
+    "PostgresAlterTableSettingsSupport",
+    "PostgresClusterSupport",
+    "PostgresDomainSupport",
+    "PostgresCollationDDLSupport",
+    "PostgresForeignTableDDLSupport",
+    "PostgresRoutineDDLSupport",
+    "PostgresPublicationSupport",
     # DML protocols
     "PostgresVacuumSupport",
     "PostgresStoredProcedureSupport",

@@ -107,7 +107,7 @@ for name in snapshot_before.tables:
         assert col_b.data_type.__class__.__name__ == col_a.data_type.__class__.__name__, (
             f"type mismatch in {name}.{col_b.name}"
         )
-print(f"Table data roundtrip:        all columns and types match")
+print("Table data roundtrip:        all columns and types match")
 print(f"Added tables:               {diff.added_tables}")
 print(f"Removed tables:             {diff.removed_tables}")
 print(f"Modified tables:            {diff.modified_tables}")

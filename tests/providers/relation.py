@@ -1,8 +1,7 @@
 # tests/providers/relation.py
-import asyncio
 from typing import Dict, List, Tuple, Type, Set
 
-from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
+from rhosocial.activerecord.model import ActiveRecord
 from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.adapters.json import PostgresJSONBAdapter
 from rhosocial.activerecord.testsuite.feature.relation.interfaces import IRelationSyncProvider, IRelationAsyncProvider

@@ -8,6 +8,14 @@ from .comment import PostgresCommentSupport
 from .type import PostgresTypeSupport
 from .constraint import PostgresConstraintSupport
 from .policy import PostgresPolicySupport
+from .rls_config import PostgresRlsConfigSupport
+from .table_settings import PostgresAlterTableSettingsSupport
+from .cluster import PostgresClusterSupport
+from .domain import PostgresDomainSupport
+from .collation import PostgresCollationDDLSupport
+from .foreign_table import PostgresForeignTableDDLSupport
+from .routine import PostgresRoutineDDLSupport
+from .publication import PostgresPublicationSupport
 
 __all__ = [
     "PostgresPartitionSupport",
@@ -17,4 +25,12 @@ __all__ = [
     "PostgresTypeSupport",
     "PostgresConstraintSupport",
     "PostgresPolicySupport",
+    "PostgresRlsConfigSupport",
+    "PostgresAlterTableSettingsSupport",
+    "PostgresClusterSupport",
+    "PostgresDomainSupport",
+    "PostgresCollationDDLSupport",
+    "PostgresForeignTableDDLSupport",
+    "PostgresRoutineDDLSupport",
+    "PostgresPublicationSupport",
 ]

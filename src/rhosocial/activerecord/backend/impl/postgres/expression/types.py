@@ -23,9 +23,6 @@ from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
     BlobType,
     DataType,
-    IntegerType,
-    SmallIntType,
-    BigIntType,
     VarCharType,
 )
 

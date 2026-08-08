@@ -149,7 +149,7 @@ print("Column renamed successfully")
 
 # Verify table structure
 from rhosocial.activerecord.backend.expression import QueryExpression, TableExpression
-from rhosocial.activerecord.backend.expression.core import WildcardExpression, Column
+from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 verify_expr = QueryExpression(

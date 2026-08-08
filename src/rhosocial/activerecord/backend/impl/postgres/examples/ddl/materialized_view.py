@@ -156,7 +156,7 @@ create_mv = CreateMaterializedViewExpression(
     },
 )
 sql, params = create_mv.to_sql()
-print(f"Create MV with column aliases and storage options:")
+print("Create MV with column aliases and storage options:")
 print(f"  SQL: {sql}")
 backend.execute(sql, params)
 

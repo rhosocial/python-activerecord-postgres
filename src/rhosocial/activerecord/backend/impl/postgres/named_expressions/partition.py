@@ -15,13 +15,12 @@ Reference:
     - PostgreSQL Partitioning: https://www.postgresql.org/docs/current/ddl-partitioning.html
 """
 
-from datetime import date, datetime, timedelta
-from typing import Dict, Optional, Tuple
+from datetime import date
+from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
     PostgresCreatePartitionExpression,
-    PostgresPartitionMetadataExpression,
 )
 
 
