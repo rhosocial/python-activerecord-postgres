@@ -86,9 +86,6 @@ class PostgresCollationDDLMixin:
         if clauses:
             parts.append("(" + ", ".join(clauses) + ")")
         return " ".join(parts), ()
-        if clauses:
-            parts.append("(" + ", ".join(clauses) + ")")
-        return " ".join(parts), ()
 
     # ------------------------------------------------------------------ #
     # DROP COLLATION
