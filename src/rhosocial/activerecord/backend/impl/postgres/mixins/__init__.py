@@ -24,6 +24,14 @@ from .ddl.type import PostgresTypeMixin
 from .ddl.constraint import PostgresConstraintMixin
 from .ddl.column import PostgresAlterColumnModifierMixin
 from .ddl.policy import PostgresPolicyMixin
+from .ddl.rls_config import PostgresRlsConfigMixin
+from .ddl.table_settings import PostgresAlterTableSettingsMixin
+from .ddl.cluster import PostgresClusterMixin
+from .ddl.domain import PostgresDomainMixin
+from .ddl.collation import PostgresCollationDDLMixin
+from .ddl.foreign_table import PostgresForeignTableMixin
+from .ddl.routine import PostgresRoutineMixin
+from .ddl.publication import PostgresPublicationMixin
 
 # DML mixins
 from .dml.vacuum import PostgresVacuumMixin
@@ -120,6 +128,14 @@ __all__ = [
     "PostgresConstraintMixin",
     "PostgresAlterColumnModifierMixin",
     "PostgresPolicyMixin",
+    "PostgresRlsConfigMixin",
+    "PostgresAlterTableSettingsMixin",
+    "PostgresClusterMixin",
+    "PostgresDomainMixin",
+    "PostgresCollationDDLMixin",
+    "PostgresForeignTableMixin",
+    "PostgresRoutineMixin",
+    "PostgresPublicationMixin",
     # DML mixins
     "PostgresVacuumMixin",
     "PostgresStoredProcedureMixin",

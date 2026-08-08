@@ -9,14 +9,18 @@ from decimal import Decimal
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.expression.statements import (
+    AlterColumn,
     ColumnDefinition,
     CreateTableExpression,
     PartitionClause,
     PartitionStrategy,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.dialect.exceptions import (
+    UnsupportedFeatureError,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PartitionValue,
     PostgresRefreshMaterializedViewExpression,
@@ -31,6 +35,28 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresPgPartmanUpdateConfigExpression,
     PostgresVacuumExpression,  # noqa: F401
     PostgresAnalyzeExpression,  # noqa: F401
+    LoggingMode,
+    RlsConfigurationMode,
+    AlterDomainActionType,
+    PostgresAlterTableRlsExpression,
+    PostgresForceRlsExpression,
+    PostgresAlterTableSettingsExpression,
+    PostgresClusterExpression,
+    PostgresCreateDomainExpression,
+    PostgresAlterDomainExpression,
+    PostgresDropDomainExpression,
+    PostgresCreateCollationExpression,
+    PostgresDropCollationExpression,
+    PostgresCreateForeignTableExpression,
+    PostgresDropForeignTableExpression,
+    PostgresCreateFunctionExpression,
+    PostgresDropFunctionExpression,
+    PostgresCreateAggregateExpression,
+    PostgresDropAggregateExpression,
+    PostgresCreatePublicationExpression,
+    PostgresDropPublicationExpression,
+    PostgresCreateSubscriptionExpression,
+    PostgresDropSubscriptionExpression,
 )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
@@ -951,3 +977,315 @@ class TestPostgresPgPartmanExpressions:
         sql, params = expr.to_sql()
         assert sql == 'SELECT "partman"."run_maintenance"()'
         assert params == ()
+
+
+class TestPostgresRlsConfigExpression:
+    """Test RLS enable/disable/always/force DDL expressions."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_enable(self, dialect):
+        sql, _ = PostgresAlterTableRlsExpression(
+            dialect, "orders", RlsConfigurationMode.ENABLE
+        ).to_sql()
+        assert sql == 'ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY'
+
+    def test_disable(self, dialect):
+        sql, _ = PostgresAlterTableRlsExpression(
+            dialect, "orders", RlsConfigurationMode.DISABLE
+        ).to_sql()
+        assert sql == 'ALTER TABLE "orders" DISABLE ROW LEVEL SECURITY'
+
+    def test_enable_always(self, dialect):
+        sql, _ = PostgresAlterTableRlsExpression(
+            dialect, "orders", RlsConfigurationMode.ENABLE, always=True
+        ).to_sql()
+        assert sql == 'ALTER TABLE "orders" ENABLE ALWAYS ROW LEVEL SECURITY'
+
+    def test_schema_qualify(self, dialect):
+        sql, _ = PostgresAlterTableRlsExpression(
+            dialect, "orders", RlsConfigurationMode.ENABLE, schema="app"
+        ).to_sql()
+        assert sql == 'ALTER TABLE "app"."orders" ENABLE ROW LEVEL SECURITY'
+
+    def test_force(self, dialect):
+        sql, _ = PostgresForceRlsExpression(dialect, "orders").to_sql()
+        assert sql == 'ALTER TABLE "orders" FORCE ROW LEVEL SECURITY'
+
+    def test_no_force(self, dialect):
+        sql, _ = PostgresForceRlsExpression(dialect, "orders", force=False).to_sql()
+        assert sql == 'ALTER TABLE "orders" NO FORCE ROW LEVEL SECURITY'
+
+    def test_version_gate_94(self):
+        d = PostgresDialect(version=(9, 4, 0))
+        expr = PostgresAlterTableRlsExpression(d, "orders", RlsConfigurationMode.ENABLE)
+        with pytest.raises(UnsupportedFeatureError):
+            expr.to_sql()
+
+
+class TestPostgresAlterTableSettingsExpression:
+    """SET LOGGED / UNLOGGED / ACCESS METHOD DDL."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(15, 0, 0))
+
+    def test_unlogged(self, dialect):
+        sql, _ = PostgresAlterTableSettingsExpression(
+            dialect, "t", mode=LoggingMode.UNLOGGED
+        ).to_sql()
+        assert sql == 'ALTER TABLE "t" SET UNLOGGED'
+
+    def test_logged_schema(self, dialect):
+        sql, _ = PostgresAlterTableSettingsExpression(
+            dialect, "t", schema="s", mode=LoggingMode.LOGGED
+        ).to_sql()
+        assert sql == 'ALTER TABLE "s"."t" SET LOGGED'
+
+    def test_access_method(self, dialect):
+        sql, _ = PostgresAlterTableSettingsExpression(
+            dialect, "t", access_method="heap"
+        ).to_sql()
+        assert sql == 'ALTER TABLE "t" SET ACCESS METHOD "heap"'
+
+    def test_access_method_requires_15(self):
+        d = PostgresDialect(version=(14, 0, 0))
+        expr = PostgresAlterTableSettingsExpression(d, "t", access_method="heap")
+        with pytest.raises(UnsupportedFeatureError):
+            expr.to_sql()
+
+    def test_no_clause_raises(self, dialect):
+        expr = PostgresAlterTableSettingsExpression(dialect, "t")
+        with pytest.raises(ValueError):
+            expr.to_sql()
+
+
+class TestPostgresClusterExpression:
+    """CLUSTER DDL."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_full(self, dialect):
+        sql, _ = PostgresClusterExpression(
+            dialect, "orders", schema="public",
+            using_index="orders_pkey", verbose=True,
+        ).to_sql()
+        assert sql == 'CLUSTER VERBOSE "public"."orders" USING "orders_pkey"'
+
+    def test_bare(self, dialect):
+        sql, _ = PostgresClusterExpression(dialect, verbose=True).to_sql()
+        assert sql == "CLUSTER VERBOSE"
+
+    def test_version_gate_95(self):
+        d = PostgresDialect(version=(9, 5, 0))
+        with pytest.raises(UnsupportedFeatureError):
+            PostgresClusterExpression(d, "t").to_sql()
+
+
+class TestPostgresDomainExpression:
+    """CREATE / ALTER / DROP DOMAIN."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create(self, dialect):
+        sql, _ = PostgresCreateDomainExpression(
+            dialect, "posint", "NUMERIC",
+            default="0", constraints=["CHECK (VALUE > 0)"],
+        ).to_sql()
+        assert sql == "CREATE DOMAIN \"posint\" AS NUMERIC DEFAULT 0 CHECK (VALUE > 0)"
+
+    def test_alter_set_default(self, dialect):
+        sql, _ = PostgresAlterDomainExpression(
+            dialect, "posint", AlterDomainActionType.SET_DEFAULT, new_value="0"
+        ).to_sql()
+        assert sql == 'ALTER DOMAIN "posint" SET DEFAULT 0'
+
+    def test_alter_rename(self, dialect):
+        sql, _ = PostgresAlterDomainExpression(
+            dialect, "posint", AlterDomainActionType.RENAME_TO, new_name="posint2"
+        ).to_sql()
+        assert sql == 'ALTER DOMAIN "posint" RENAME TO "posint2"'
+
+    def test_drop(self, dialect):
+        sql, _ = PostgresDropDomainExpression(
+            dialect, "posint", if_exists=True, cascade=True
+        ).to_sql()
+        assert sql == 'DROP DOMAIN IF EXISTS "posint" CASCADE'
+
+
+class TestPostgresCollationDDLExpression:
+    """CREATE / DROP COLLATION DDL."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create(self, dialect):
+        sql, _ = PostgresCreateCollationExpression(
+            dialect, "enloc", locale="en_US.UTF-8", provider="libc"
+        ).to_sql()
+        assert sql == 'CREATE COLLATION "enloc" (LOCALE = en_US.UTF-8, PROVIDER = libc)'
+
+    def test_create_if_not_exists(self, dialect):
+        sql, _ = PostgresCreateCollationExpression(
+            dialect, "myloc", if_not_exists=True, lc_collate="en_US",
+        ).to_sql()
+        assert sql == 'CREATE COLLATION IF NOT EXISTS "myloc" (LC_COLLATE = en_US)'
+
+    def test_drop(self, dialect):
+        sql, _ = PostgresDropCollationExpression(
+            dialect, "enloc", if_exists=True
+        ).to_sql()
+        assert sql == 'DROP COLLATION IF EXISTS "enloc"'
+
+
+class TestPostgresForeignTableDDLExpression:
+    """CREATE / DROP FOREIGN TABLE."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create(self, dialect):
+        sql, _ = PostgresCreateForeignTableExpression(
+            dialect, "ft", "srv", columns=["a integer", "b text"],
+            options=["host 'h'"],
+        ).to_sql()
+        assert sql == (
+            'CREATE FOREIGN TABLE "ft" (a integer, b text) '
+            'SERVER "srv" OPTIONS (host \'h\')'
+        )
+
+    def test_drop(self, dialect):
+        sql, _ = PostgresDropForeignTableExpression(
+            dialect, "ft", if_exists=True, cascade=True
+        ).to_sql()
+        assert sql == 'DROP FOREIGN TABLE IF EXISTS "ft" CASCADE'
+
+
+class TestPostgresRoutineDDLExpression:
+    """CREATE / DROP FUNCTION and AGGREGATE."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create_function(self, dialect):
+        sql, _ = PostgresCreateFunctionExpression(
+            dialect, "add", "integer", "int 1;",
+            args=["a integer"], strict=True, security="DEFINER",
+        ).to_sql()
+        assert sql == (
+            'CREATE FUNCTION "add"(a integer) RETURNS integer '
+            'STRICT SECURITY DEFINER LANGUAGE plpgsql AS $$ int 1; $$'
+        )
+
+    def test_drop_function(self, dialect):
+        sql, _ = PostgresDropFunctionExpression(
+            dialect, "add", args=["integer"], cascade=True
+        ).to_sql()
+        assert sql == 'DROP FUNCTION "add" (integer) CASCADE'
+
+    def test_create_aggregate(self, dialect):
+        sql, _ = PostgresCreateAggregateExpression(
+            dialect, "mysum", "sum", "integer", initcond="0"
+        ).to_sql()
+        assert sql == 'CREATE AGGREGATE "mysum" (SFUNC=sum, STYPE=integer, INITCOND=0)'
+
+    def test_drop_aggregate(self, dialect):
+        sql, _ = PostgresDropAggregateExpression(
+            dialect, "mysum", "integer", if_exists=True
+        ).to_sql()
+        assert sql == 'DROP AGGREGATE IF EXISTS "mysum" (integer)'
+
+
+class TestPostgresPublicationExpression:
+    """CREATE / DROP PUBLICATION and SUBSCRIPTION."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_create_publication_tables(self, dialect):
+        sql, _ = PostgresCreatePublicationExpression(
+            dialect, "pub1", tables=["orders", "users"]
+        ).to_sql()
+        assert sql == 'CREATE PUBLICATION "pub1" FOR TABLE "orders", "users"'
+
+    def test_create_publication_all_tables(self, dialect):
+        sql, _ = PostgresCreatePublicationExpression(
+            dialect, "pub_all", all_tables=True,
+            options=["publish='insert'"],
+        ).to_sql()
+        assert sql == (
+            'CREATE PUBLICATION "pub_all" FOR ALL TABLES WITH (publish=\'insert\')'
+        )
+
+    def test_drop_publication(self, dialect):
+        sql, _ = PostgresDropPublicationExpression(
+            dialect, "pub1", if_exists=True
+        ).to_sql()
+        assert sql == 'DROP PUBLICATION IF EXISTS "pub1"'
+
+    def test_create_subscription(self, dialect):
+        sql, _ = PostgresCreateSubscriptionExpression(
+            dialect, "sub1", "host=db port=5432", ["pub1"]
+        ).to_sql()
+        assert sql == (
+            'CREATE SUBSCRIPTION "sub1" CONNECTION \'host=db port=5432\' '
+            'PUBLICATION "pub1"'
+        )
+
+    def test_drop_subscription(self, dialect):
+        sql, _ = PostgresDropSubscriptionExpression(dialect, "sub1", cascade=True).to_sql()
+        assert sql == 'DROP SUBSCRIPTION "sub1" CASCADE'
+
+
+class TestPostgresAlterColumnUsingExpression:
+    """ALTER COLUMN ... SET DATA TYPE ... USING."""
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(14, 0, 0))
+
+    def test_using_clause(self, dialect):
+        action = AlterColumn(
+            dialect,
+            "price",
+            "SET DATA TYPE",
+            new_value="NUMERIC(10,2)",
+            dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
+        )
+        sql, serialized = dialect.format_alter_column_action(action)
+        assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
+        assert 'USING ("price" + %s)' in sql
+        assert serialized == (1,)
+
+    def test_using_rejected_for_non_set_data_type(self, dialect):
+        """USING is only valid on SET DATA TYPE."""
+        action = AlterColumn(
+            dialect,
+            "price",
+            "SET DEFAULT",
+            new_value="0",
+            dialect_options={"using": Column(dialect, "price")},
+        )
+        with pytest.raises(ValueError, match="USING"):
+            dialect.format_alter_column_action(action)
+
+    def test_without_using_unaffected(self, dialect):
+        """No USING -> output matches the standard form."""
+        action = AlterColumn(
+            dialect,
+            "price",
+            "SET DATA TYPE",
+            new_value="NUMERIC(10,2)",
+        )
+        sql, _ = dialect.format_alter_column_action(action)
+        assert sql == 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)'

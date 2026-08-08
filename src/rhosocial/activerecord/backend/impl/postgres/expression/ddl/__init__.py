@@ -12,6 +12,14 @@ Directory structure:
 - type.py       - Enum/Range type expressions
 - extension.py  - Extension DDL expressions
 - policy.py     - Row-Level Security POLICY expressions (CREATE/ALTER/DROP)
+- rls_config.py - Row-Level Security table configuration (ENABLE/DISABLE/FORCE)
+- table_settings.py - ALTER TABLE SET LOGGED/UNLOGGED/ACCESS METHOD
+- cluster.py    - CLUSTER expressions
+- domain.py     - CREATE/ALTER/DROP DOMAIN expressions
+- collation.py  - CREATE/DROP COLLATION object expressions
+- foreign_table.py - CREATE/DROP FOREIGN TABLE expressions
+- routine.py    - CREATE/DROP FUNCTION / AGGREGATE expressions
+- publication.py - CREATE/DROP PUBLICATION / SUBSCRIPTION expressions
 
 Missing expressions — why?
 ============================
@@ -93,6 +101,42 @@ from .policy import (
     PostgresAlterPolicyExpression,
     PostgresDropPolicyExpression,
 )
+from .rls_config import (
+    RlsConfigurationMode,
+    PostgresAlterTableRlsExpression,
+    PostgresForceRlsExpression,
+)
+from .table_settings import (
+    LoggingMode,
+    PostgresAlterTableSettingsExpression,
+)
+from .cluster import PostgresClusterExpression
+from .domain import (
+    AlterDomainActionType,
+    PostgresCreateDomainExpression,
+    PostgresAlterDomainExpression,
+    PostgresDropDomainExpression,
+)
+from .collation import (
+    PostgresCreateCollationExpression,
+    PostgresDropCollationExpression,
+)
+from .foreign_table import (
+    PostgresCreateForeignTableExpression,
+    PostgresDropForeignTableExpression,
+)
+from .routine import (
+    PostgresCreateFunctionExpression,
+    PostgresDropFunctionExpression,
+    PostgresCreateAggregateExpression,
+    PostgresDropAggregateExpression,
+)
+from .publication import (
+    PostgresCreatePublicationExpression,
+    PostgresDropPublicationExpression,
+    PostgresCreateSubscriptionExpression,
+    PostgresDropSubscriptionExpression,
+)
 
 __all__ = [
     # vacuum
@@ -133,7 +177,36 @@ __all__ = [
     "PolicyType",
     "PolicyCommand",
     "AlterPolicyMode",
-    "PostgresCreatePolicyExpression",
     "PostgresAlterPolicyExpression",
     "PostgresDropPolicyExpression",
+    # rls_config
+    "RlsConfigurationMode",
+    "PostgresAlterTableRlsExpression",
+    "PostgresForceRlsExpression",
+    # table_settings
+    "LoggingMode",
+    "PostgresAlterTableSettingsExpression",
+    # cluster
+    "PostgresClusterExpression",
+    # domain
+    "AlterDomainActionType",
+    "PostgresCreateDomainExpression",
+    "PostgresAlterDomainExpression",
+    "PostgresDropDomainExpression",
+    # collation
+    "PostgresCreateCollationExpression",
+    "PostgresDropCollationExpression",
+    # foreign_table
+    "PostgresCreateForeignTableExpression",
+    "PostgresDropForeignTableExpression",
+    # routine
+    "PostgresCreateFunctionExpression",
+    "PostgresDropFunctionExpression",
+    "PostgresCreateAggregateExpression",
+    "PostgresDropAggregateExpression",
+    # publication
+    "PostgresCreatePublicationExpression",
+    "PostgresDropPublicationExpression",
+    "PostgresCreateSubscriptionExpression",
+    "PostgresDropSubscriptionExpression",
 ]
