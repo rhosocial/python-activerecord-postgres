@@ -107,3 +107,174 @@ class TestPostgresDropConstraintIfExists:
         assert 'DROP CONSTRAINT "fkey"' == sql
         assert "IF EXISTS" not in sql
         assert params == ()
+
+
+class TestPostgresAlterColumnTypeAndUsing:
+    """SET DATA TYPE with the PostgreSQL ``USING`` conversion expression.
+
+    Covered here per plan §6.3: the ALTER COLUMN subclauses added by the
+    PostgreSQL DDL coverage-completion work must render through the same
+    ALTER TABLE action pipeline as the IF [NOT] EXISTS qualifiers.
+    """
+
+    @pytest.fixture
+    def dialect(self):
+        return PostgresDialect(version=(15, 0, 0))
+
+    def test_set_data_type_plain(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            AlterColumn,
+        )
+
+        action = AlterColumn(
+            dialect, "price", "SET DATA TYPE", new_value="NUMERIC(10,2)"
+        )
+        sql, params = action.to_sql()
+        assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' == sql
+        assert params == ()
+
+    def test_set_data_type_with_using(self, dialect):
+        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            AlterColumn,
+        )
+
+        action = AlterColumn(
+            dialect,
+            "price",
+            "SET DATA TYPE",
+            new_value="NUMERIC(10,2)",
+            dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
+        )
+        sql, serialized = action.to_sql()
+        assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
+        assert 'USING ("price" + %s)' in sql
+        assert serialized == (1,)
+
+    def test_set_data_type_using_rejected_for_other_ops(self, dialect):
+        from rhosocial.activerecord.backend.expression import Column
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            AlterColumn,
+        )
+
+        action = AlterColumn(
+            dialect,
+            "price",
+            "SET DEFAULT",
+            new_value="0",
+            dialect_options={"using": Column(dialect, "price")},
+        )
+        with pytest.raises(ValueError, match="USING"):
+            action.to_sql()
+
+
+class TestPostgresRenameColumnAndTable:
+    """RENAME COLUMN / RENAME TABLE render through the core actions."""
+
+    def test_rename_column(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            RenameColumn,
+        )
+
+        sql, params = RenameColumn(
+            dialect, old_name="id", new_name="order_id"
+        ).to_sql()
+        assert 'RENAME COLUMN "id" TO "order_id"' == sql
+        assert params == ()
+
+    def test_rename_column_inside_alter_table(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            RenameColumn,
+        )
+
+        expr = AlterTableExpression(
+            dialect,
+            table_name="orders",
+            actions=[RenameColumn(dialect, old_name="id", new_name="order_id")],
+        )
+        sql, params = expr.to_sql()
+        assert 'ALTER TABLE "orders"' in sql
+        assert 'RENAME COLUMN "id" TO "order_id"' in sql
+        assert params == ()
+
+    def test_rename_table(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+            RenameTable,
+        )
+
+        sql, params = RenameTable(
+            dialect, old_name="orders", new_name="orders2"
+        ).to_sql()
+        assert 'RENAME TO "orders2"' == sql
+        assert params == ()
+
+    def test_capability_switches(self, dialect):
+        assert dialect.supports_rename_column() is True
+        assert dialect.supports_rename_table() is True
+
+
+class TestPostgresCreateUnloggedTable:
+    """CREATE UNLOGGED TABLE via dialect_options on CreateTableExpression."""
+
+    def test_unlogged_renders_qualifier(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableExpression,
+        )
+
+        expr = CreateTableExpression(
+            dialect,
+            table="audit",
+            columns=[ColumnDefinition("id", TextType())],
+            dialect_options={"unlogged_table": True},
+        )
+        sql, params = expr.to_sql()
+        assert sql.startswith('CREATE UNLOGGED TABLE "audit"')
+        assert params == ()
+
+    def test_plain_omits_qualifier(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableExpression,
+        )
+
+        expr = CreateTableExpression(
+            dialect,
+            table="audit",
+            columns=[ColumnDefinition("id", TextType())],
+        )
+        sql, params = expr.to_sql()
+        assert not sql.startswith("CREATE UNLOGGED")
+        assert params == ()
+
+    def test_temporary_wins_over_unlogged(self, dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableExpression,
+        )
+
+        expr = CreateTableExpression(
+            dialect,
+            table="audit",
+            columns=[ColumnDefinition("id", TextType())],
+            temporary=True,
+            dialect_options={"unlogged_table": True},
+        )
+        sql, params = expr.to_sql()
+        assert sql.startswith("CREATE TEMPORARY TABLE")
+        assert params == ()
+
+    def test_version_gate_94(self):
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableExpression,
+        )
+
+        low = PostgresDialect(version=(9, 4, 0))
+        expr = CreateTableExpression(
+            low,
+            table="audit",
+            columns=[ColumnDefinition("id", TextType())],
+            dialect_options={"unlogged_table": True},
+        )
+        with pytest.raises(UnsupportedFeatureError):
+            expr.to_sql()

@@ -575,3 +575,63 @@ class TestPostgresPublicationFeatureDetection:
             PostgresPublicationSupport,
         )
         assert isinstance(PostgresDialect(version=(14, 0, 0)), PostgresPublicationSupport)
+
+
+class TestDdlVersionBaselineCoverage:
+    """Version-boundary sweep across the plan's supported baseline 9.6–19.
+
+    Plan §6.3 requires capability switches be exercised at
+    9.6 / 10 / 11 / 14 / 15 / 17 / 19 — not just the historical 9.4/9.5 set.
+    """
+
+    def test_baseline_96(self):
+        d = PostgresDialect(version=(9, 6, 0))
+        assert d.supports_rls_enable_disable() is True
+        assert d.supports_table_logging_switch() is True
+        assert d.supports_cluster() is True
+        assert d.supports_create_domain() is True
+        assert d.supports_collation_ddl() is True
+        assert d.supports_foreign_table_ddl() is True
+        assert d.supports_function_ddl() is True
+        assert d.supports_aggregate_ddl() is True
+        assert d.supports_unlogged_table() is True
+        assert d.supports_publication() is False
+        assert d.supports_subscription() is False
+
+    def test_baseline_10(self):
+        d = PostgresDialect(version=(10, 0, 0))
+        assert d.supports_publication() is True
+        assert d.supports_subscription() is True
+
+    def test_baseline_11(self):
+        d = PostgresDialect(version=(11, 0, 0))
+        assert d.supports_publication() is True
+        assert d.supports_subscription() is True
+        assert d.supports_create_domain() is True
+
+    def test_baseline_14(self):
+        d = PostgresDialect(version=(14, 0, 0))
+        assert d.supports_cluster() is True
+        assert d.supports_function_ddl() is True
+
+    def test_baseline_15(self):
+        d = PostgresDialect(version=(15, 0, 0))
+        assert d.supports_table_set_access_method() is True
+
+    def test_baseline_17(self):
+        d = PostgresDialect(version=(17, 0, 0))
+        assert d.supports_unlogged_table() is True
+        assert d.supports_rls_enable_always() is True
+        assert d.supports_table_set_access_method() is True
+
+    def test_baseline_19(self):
+        d = PostgresDialect(version=(19, 0, 0))
+        assert d.supports_table_set_access_method() is True
+        assert d.supports_subscription() is True
+        assert d.supports_create_domain() is True
+        assert d.supports_collation_ddl() is True
+        assert d.supports_publication() is True
+
+    def test_unsupported_94_rejects_unlogged(self):
+        d = PostgresDialect(version=(9, 4, 0))
+        assert d.supports_unlogged_table() is False
