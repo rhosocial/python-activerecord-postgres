@@ -5,7 +5,10 @@ This module defines the protocol for PostgreSQL-specific JSON/JSONB
 enhancements beyond the core JSON support.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression import JSONExpression
 
 
 @runtime_checkable
@@ -38,7 +41,7 @@ class PostgresJSONBEnhancedSupport(Protocol):
     - Numeric infinity in JSONB: PostgreSQL 17+
     """
 
-    def format_json_expression(self, expr):
+    def format_json_expression(self, expr: "JSONExpression"):
         """Format a PostgreSQL JSON expression."""
         ...
 
