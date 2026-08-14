@@ -79,8 +79,35 @@ def _load_scenarios_from_config():
         for scenario_name, config in config_data['scenarios'].items():
             register_scenario(scenario_name, config)
 
+        _apply_scenario_filter()
+
     except Exception as e:
         raise RuntimeError(f"Failed to load or parse scenario configuration file {config_path}: {e}")  # noqa: B904
+
+
+def _apply_scenario_filter():
+    """Filter SCENARIO_MAP based on the active scenarios env var.
+
+    The env var is set either by the --scenarios pytest option in the
+    testsuite's root conftest (TESTSUITE_ACTIVE_SCENARIOS) or by a backend
+    local override (POSTGRES_ACTIVE_SCENARIOS). It contains comma-separated
+    full scenario names (e.g., "postgres_16,postgres_17").
+    """
+    filter_str = os.getenv("POSTGRES_ACTIVE_SCENARIOS") or os.getenv("TESTSUITE_ACTIVE_SCENARIOS")
+    if not filter_str:
+        return
+
+    allowed = set(s.strip() for s in filter_str.split(',') if s.strip())
+    if not allowed:
+        return
+
+    to_remove = [name for name in SCENARIO_MAP if name not in allowed]
+    for name in to_remove:
+        del SCENARIO_MAP[name]
+
+    if to_remove:
+        print(f"Filtered scenarios: kept {list(SCENARIO_MAP.keys())}, "
+              f"removed {to_remove} (--scenarios={filter_str})")
 
 
 def _register_default_scenarios():
