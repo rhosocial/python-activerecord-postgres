@@ -640,6 +640,14 @@ class PostgresDialect(
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
 
+    def create_schema_differ(self):
+        """Return the PostgreSQL schema differ for this dialect."""
+        from rhosocial.activerecord.backend.impl.postgres.schema.differ import (
+            PostgresSchemaDiffer,
+        )
+
+        return PostgresSchemaDiffer()
+
     def format_datetime_diff_expression(self, expr: "Any") -> Tuple[str, Tuple]:
         start_sql, start_params = expr.start.to_sql()
         end_sql, end_params = expr.end.to_sql()
