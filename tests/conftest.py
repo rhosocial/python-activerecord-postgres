@@ -35,6 +35,19 @@ os.environ.setdefault(
     'providers.registry:provider_registry'
 )
 
+# Early-parse --scenarios from sys.argv and set POSTGRES_ACTIVE_SCENARIOS env var.
+# This must happen before providers.scenarios is imported (it filters its
+# SCENARIO_MAP at import time).
+_argv_scenarios = None
+for _i, _arg in enumerate(sys.argv):
+    if _arg.startswith('--scenarios='):
+        _argv_scenarios = _arg.split('=', 1)[1]
+    elif _arg == '--scenarios' and _i + 1 < len(sys.argv):
+        _argv_scenarios = sys.argv[_i + 1]
+
+if _argv_scenarios:
+    os.environ['POSTGRES_ACTIVE_SCENARIOS'] = _argv_scenarios
+
 # =============================================================================
 # Scenario Parallel Scheduling Plugin
 #
@@ -92,6 +105,12 @@ def pytest_addoption(parser):
         default=False,
         help='Scenario parallel mode: distribute scenarios across workers, keep each scenario on one worker.',
     )
+    parser.addoption(
+        '--scenarios',
+        default=None,
+        help='Comma-separated list of scenario names to run (e.g., --scenarios=postgres_16,postgres_17). '
+        'Compatible with pytest -k "<scenario_name>" as a native alternative.',
+    )
 
 
 def pytest_configure(config):
@@ -99,6 +118,12 @@ def pytest_configure(config):
         "markers",
         "xdist_group(name): specify the xdist group for a test (provided by pytest-xdist).",
     )
+
+    # Propagate --scenarios to environment variable so that all conftest.py
+    # instances (which load SCENARIO_MAP independently) can filter consistently.
+    scenarios_opt = config.getoption('--scenarios', default=None)
+    if scenarios_opt:
+        os.environ['POSTGRES_ACTIVE_SCENARIOS'] = scenarios_opt
 
 
 def pytest_collection_modifyitems(config, items):
