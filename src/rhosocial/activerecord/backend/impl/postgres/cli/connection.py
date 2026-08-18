@@ -37,8 +37,15 @@ def add_connection_args(parser):
         help="Database password (env: POSTGRES_PASSWORD)",
     )
     parser.add_argument(
-        "--use-async",
+        "--ssl",
+        choices=["auto", "require", "verify-ca", "verify-full", "disabled"],
+        default="auto",
+        help="SSL mode (env: POSTGRES_SSL, default: auto)",
+    )
+    parser.add_argument(
+        "--async",
         action="store_true",
+        dest="is_async",
         help="Use asynchronous backend",
     )
     parser.add_argument(
@@ -118,12 +125,24 @@ def resolve_connection_config_from_args(args):
         return resolver.resolve({})
 
     # Fallback to explicit connection parameters
+    # SSL parameter mapping (simplified for CLI unification)
+    ssl_param = getattr(args, "ssl", None)
+    sslmode_map = {
+        "auto": "prefer",
+        "require": "require",
+        "verify-ca": "verify-ca",
+        "verify-full": "verify-full",
+        "disabled": "disable",
+    }
+    sslmode = sslmode_map.get(ssl_param, "prefer")
+
     return PostgresConnectionConfig(
         host=args.host or "localhost",
         port=args.port or 5432,
         database=args.database,
         username=args.user,
         password=args.password,
+        sslmode=sslmode,
     )
 
 
