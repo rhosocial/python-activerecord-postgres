@@ -126,9 +126,38 @@ class QueryProviderBase:
     def __init__(self):
         self._scenario_db_files = {}
         self._created_tables: Set[str] = set()
+        self._created_schemas: Set[str] = set()
+
+    def supports_schema(self) -> bool:
+        """PostgreSQL models named schema namespaces natively."""
+        return True
 
     def get_test_scenarios(self) -> List[str]:
         return list(get_enabled_scenarios().keys())
+
+    def _provision_cross_schema(self, backend_instance) -> None:
+        """Create the two cross-schema fixture namespaces, tables and seeds."""
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.schema_models import (
+            SCHEMA_A,
+            SCHEMA_B,
+        )
+
+        opts = ExecutionOptions(stmt_type=StatementType.DDL)
+        statements = []
+        for schema in (SCHEMA_A, SCHEMA_B):
+            statements.append(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+            statements.append(f'CREATE SCHEMA "{schema}"')
+        statements.append(
+            f'CREATE TABLE "{SCHEMA_A}".customers '
+            f'(id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL)'
+        )
+        statements.append(
+            f'CREATE TABLE "{SCHEMA_B}".orders '
+            f'(id SERIAL PRIMARY KEY, customer_id INTEGER NOT NULL, amount INTEGER NOT NULL)'
+        )
+        for sql in statements:
+            backend_instance.execute(sql, options=opts)
+        self._created_schemas.update((SCHEMA_A, SCHEMA_B))
 
     def _track_backend(self, backend_instance, collection):
         if backend_instance not in collection:
@@ -278,6 +307,21 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
         self._created_tables.add("order_items")
         return CompositeOrderItemBase
 
+    def setup_schema_fixtures(self, scenario_name: str):
+        """Two models in two distinct schemas (see testsuite schema_models)."""
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.schema_models import (
+            SchemaCustomer,
+            SchemaOrder,
+        )
+
+        backend_class, config = get_scenario(scenario_name)
+        SchemaCustomer.configure(config, backend_class)
+        SchemaOrder.configure(config, backend_class)
+        shared_backend = SchemaCustomer.__backend__
+        self._track_backend(shared_backend, self._active_backends)
+        self._provision_cross_schema(shared_backend)
+        return SchemaCustomer, SchemaOrder
+
     def _get_schema_sql_for_fixture_type(self, fixture_type: str) -> dict:
         schemas = {}
         if fixture_type == 'order':
@@ -336,8 +380,14 @@ class QuerySyncProvider(QueryProviderBase, IQuerySyncProvider, WorkerTestProtoco
                     backend_instance.disconnect()
                 except Exception:
                     pass
+        for schema_name in list(self._created_schemas):
+            try:
+                backend_instance.execute(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE')
+            except Exception:
+                pass
         self._active_backends.clear()
         self._created_tables.clear()
+        self._created_schemas.clear()
 
 
 class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
@@ -481,6 +531,34 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
         self._created_tables.add("order_items")
         return AsyncCompositeOrderItemBase
 
+    async def setup_schema_fixtures(self, scenario_name: str):
+        """Two async models in two distinct schemas."""
+        from rhosocial.activerecord.testsuite.feature.query.fixtures.schema_models import (
+            AsyncSchemaCustomer,
+            AsyncSchemaOrder,
+        )
+
+        from rhosocial.activerecord.backend.impl.postgres import (
+            AsyncPostgresBackend,
+            PostgresBackend,
+        )
+
+        _, config = get_scenario(scenario_name)
+
+        # Provision DDL through a short-lived synchronous connection.
+        ddl_backend = PostgresBackend(connection_config=config)
+        ddl_backend.connect()
+        try:
+            self._provision_cross_schema(ddl_backend)
+        finally:
+            ddl_backend.disconnect()
+
+        await AsyncSchemaCustomer.configure(config, AsyncPostgresBackend)
+        await AsyncSchemaOrder.configure(config, AsyncPostgresBackend)
+        shared_backend = AsyncSchemaCustomer.__backend__
+        self._track_backend(shared_backend, self._active_async_backends)
+        return AsyncSchemaCustomer, AsyncSchemaOrder
+
     async def cleanup_after_test(self, scenario_name: str):
         for backend_instance in self._active_async_backends:
             try:
@@ -494,5 +572,12 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
                     await backend_instance.disconnect()
                 except Exception:
                     pass
+        for schema_name in list(self._created_schemas):
+            try:
+                await backend_instance.execute(
+                    f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE')
+            except Exception:
+                pass
         self._active_async_backends.clear()
         self._created_tables.clear()
+        self._created_schemas.clear()
