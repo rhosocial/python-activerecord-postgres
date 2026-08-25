@@ -47,6 +47,11 @@ class PostgresConnectionMixin:
     service: Optional[str] = None
     gssencmode: Optional[str] = None
     channel_binding: Optional[str] = None
+    # Transaction behavior. The psycopg connection always runs with driver-level
+    # autocommit enabled and transactions are managed explicitly by the framework.
+    # When False (default), the backend issues an explicit COMMIT after statements
+    # executed outside a managed transaction; when True, those commits are skipped.
+    autocommit: bool = False
     # Schema namespace support
     search_path: Optional[str] = None  # Set connection's search_path (passed directly to psycopg)
     default_schema: Optional[str] = None  # Default schema when Model doesn't specify __schema_name__
