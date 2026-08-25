@@ -13,9 +13,10 @@ tests pin down the fixed behaviour:
 * R1  plain field accessors under JOIN must execute
 * R2a mixed aliased/plain accessors must execute
 * R3  pre-built predicates remain reusable across plain/join contexts
-* R4  dynamic ``__table_name__`` drift is still an accepted limitation:
-      FROM re-evaluates ``table_name()`` at execution time while qualifiers
-      are frozen into predicates at construction time (xfail sentinel)
+* R4  dynamic ``__table_name__`` / ``__schema_name__``: the supported usage —
+      change the override, then build expressions — produces fully consistent
+      DQL across FROM / WHERE / SELECT (qualifiers are captured when column
+      expressions are constructed; rebuild conditions after a change)
 * Control: fully alias-consistent accessors keep working, and the generated
   FROM carries no implicit aliases.
 """
@@ -82,6 +83,23 @@ def risk_env(postgres_backend_single):
         f"INSERT INTO \"{RISK_SCHEMA}\".authors (name) VALUES ('a1'), ('a2')",
         options=ExecutionOptions(stmt_type=StatementType.DML),
     )
+    backend.execute(
+        f"INSERT INTO \"{RISK_SCHEMA}\".authors_archive (name) VALUES ('old1')",
+        options=ExecutionOptions(stmt_type=StatementType.DML),
+    )
+
+    # A second schema for dynamic __schema_name__ switching tests.
+    backend.execute(f'DROP SCHEMA IF EXISTS "{RISK_SCHEMA}_alt" CASCADE', options=ddl)
+    backend.execute(f'CREATE SCHEMA "{RISK_SCHEMA}_alt"', options=ddl)
+    backend.execute(
+        f'CREATE TABLE "{RISK_SCHEMA}_alt".authors '
+        f'(id SERIAL PRIMARY KEY, name TEXT, active BOOLEAN DEFAULT TRUE)',
+        options=ddl,
+    )
+    backend.execute(
+        f"INSERT INTO \"{RISK_SCHEMA}_alt\".authors (name) VALUES ('alt1')",
+        options=ExecutionOptions(stmt_type=StatementType.DML),
+    )
 
     config: PostgresConnectionConfig = backend.config
     captured: list = []
@@ -99,7 +117,9 @@ def risk_env(postgres_backend_single):
     finally:
         PostgresBackend.execute = original_execute
         Author.__table_name__ = "authors"
+        Author.__schema_name__ = RISK_SCHEMA
         backend.execute(f'DROP SCHEMA IF EXISTS "{RISK_SCHEMA}" CASCADE', options=ddl)
+        backend.execute(f'DROP SCHEMA IF EXISTS "{RISK_SCHEMA}_alt" CASCADE', options=ddl)
 
 
 class TestQualifiedReferenceContext:
@@ -147,20 +167,39 @@ class TestQualifiedReferenceContext:
         )
         assert isinstance(rows, list)
 
-    @pytest.mark.xfail(
-        reason="R4 (accepted limitation): dynamic __table_name__ re-evaluates "
-               "for FROM at execution time but qualifiers are frozen into "
-               "predicates at construction time.",
-        strict=True,
-    )
-    def test_dynamic_table_name_drift(self, risk_env):
-        predicate = Author.c.active == True  # noqa: E712  built against "authors"
+    def test_dynamic_table_name_full_dql_consistency(self, risk_env):
+        """R4: dynamic __table_name__ used the supported way.
+
+        Change the override first, then build expressions — field proxies
+        pick up the new name and FROM / WHERE / SELECT all stay consistent.
+        """
         Author.__table_name__ = "authors_archive"
         try:
-            rows = Author.query().where(predicate).all()
-            assert isinstance(rows, list)
+            rows = Author.query().where(Author.c.active == True).all()  # noqa: E712
+            assert len(rows) == 1
+            select_sql = next(
+                (s for s in risk_env.captured
+                 if s.startswith("SELECT") and "authors_archive" in s),
+                "",
+            )
+            assert 'FROM "tenant_qualified_ref"."authors_archive"' in select_sql
+            assert '"authors_archive"."active"' in select_sql
         finally:
             Author.__table_name__ = "authors"
+
+    def test_dynamic_schema_switch_full_dql_consistency(self, risk_env):
+        """R4: same contract for dynamic __schema_name__ (tenant switching)."""
+        Author.__schema_name__ = f"{RISK_SCHEMA}_alt"
+        try:
+            rows = Author.query().where(Author.c.name == "alt1").all()
+            assert len(rows) == 1 and rows[0].name == "alt1"
+            select_sql = next(
+                (s for s in risk_env.captured if s.startswith("SELECT") and "alt" in s),
+                "",
+            )
+            assert f'FROM "{RISK_SCHEMA}_alt"."authors"' in select_sql
+        finally:
+            Author.__schema_name__ = RISK_SCHEMA
 
     def test_baseline_plain_query_with_predicate(self, risk_env):
         """Sanity: prebuilt predicates work in their construction context."""
