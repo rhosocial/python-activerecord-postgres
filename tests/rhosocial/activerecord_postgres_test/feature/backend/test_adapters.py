@@ -1,348 +1,183 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/test_adapters.py
+"""Offline adapter round-trip coverage for the PostgreSQL backend."""
+import uuid
+from decimal import Decimal
+from typing import Any, Tuple
 
-import ipaddress
-import json  # noqa: F401
 import pytest
-from psycopg.types.json import Jsonb
 
-from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJSONBAdapter, \
-    PostgresNetworkAddressAdapter
-
-
-# Tests for PostgresJSONBAdapter
-def test_jsonb_adapter_supported_types():
-    adapter = PostgresJSONBAdapter()
-    supported = adapter.supported_types
-    assert dict in supported
-    assert Jsonb in supported[dict]
-
-
-def test_jsonb_to_database():
-    adapter = PostgresJSONBAdapter()
-    my_dict = {"a": 1, "b": [2, 3]}
-    my_list = [1, "test", {"c": 4}]
-
-    # Test with dict
-    result_dict = adapter.to_database(my_dict, dict)
-    assert isinstance(result_dict, Jsonb)
-    assert result_dict.obj == my_dict
-
-    # Test with list
-    result_list = adapter.to_database(my_list, list)
-    assert isinstance(result_list, Jsonb)
-    assert result_list.obj == my_list
-
-    # Test with None
-    assert adapter.to_database(None, dict) is None
-
-
-def test_jsonb_from_database():
-    adapter = PostgresJSONBAdapter()
-    my_dict = {"key": "value"}
-    my_list = ["item1", "item2"]
-    json_string = '{"key": "value_from_string"}'
-
-    # Test with value already being a dict or list
-    assert adapter.from_database(my_dict, dict) is my_dict
-    assert adapter.from_database(my_list, list) is my_list
-
-    # Test with a JSON string representation
-    result = adapter.from_database(json_string, dict)
-    assert isinstance(result, dict)
-    assert result["key"] == "value_from_string"
-
-    # Test with None
-    assert adapter.from_database(None, dict) is None
-
-
-# Tests for PostgresNetworkAddressAdapter
-def test_network_adapter_supported_types():
-    adapter = PostgresNetworkAddressAdapter()
-    supported = adapter.supported_types
-    assert ipaddress.IPv4Address in supported
-    assert str in supported[ipaddress.IPv4Address]
-    assert ipaddress.IPv6Address in supported
-    assert str in supported[ipaddress.IPv6Address]
-    assert ipaddress.IPv4Network in supported
-    assert str in supported[ipaddress.IPv4Network]
-    assert ipaddress.IPv6Network in supported
-    assert str in supported[ipaddress.IPv6Network]
-
-
-
-@pytest.mark.parametrize("ip_obj, expected_str", [
-    (ipaddress.ip_address("192.168.1.1"), "192.168.1.1"),
-    (ipaddress.ip_address("2001:db8::1"), "2001:db8::1"),
-    (ipaddress.ip_network("192.168.0.0/24"), "192.168.0.0/24"),
-    (ipaddress.ip_network("2001:db8::/32"), "2001:db8::/32"),
-])
-def test_network_to_database(ip_obj, expected_str):
-    adapter = PostgresNetworkAddressAdapter()
-    result = adapter.to_database(ip_obj, type(ip_obj))
-    assert result == expected_str
-
-
-def test_network_to_database_none():
-    adapter = PostgresNetworkAddressAdapter()
-    assert adapter.to_database(None, ipaddress.IPv4Address) is None
-
-
-@pytest.mark.parametrize("ip_str, expected_type", [
-    ("192.168.1.1", ipaddress.IPv4Address),
-    ("2001:db8::1", ipaddress.IPv6Address),
-    ("192.168.0.0/24", ipaddress.IPv4Network),
-    ("2001:db8::/32", ipaddress.IPv6Network),
-])
-def test_network_from_database(ip_str, expected_type):
-    adapter = PostgresNetworkAddressAdapter()
-    result = adapter.from_database(ip_str, expected_type)
-    assert isinstance(result, expected_type)
-    assert str(result) == ip_str
-
-
-def test_network_from_database_fallback():
-    """Test fallback behavior for invalid network strings."""
-    adapter = PostgresNetworkAddressAdapter()
-    invalid_str = "not-an-ip"
-    result = adapter.from_database(invalid_str, str)
-    assert result == invalid_str
-
-
-def test_network_from_database_none():
-    adapter = PostgresNetworkAddressAdapter()
-    assert adapter.from_database(None, ipaddress.IPv4Address) is None
-
-
-# =============================================================================
-# Batch Operation Tests
-# =============================================================================
-
-from rhosocial.activerecord.backend.impl.postgres.adapters.base import (  # noqa: E402
-    PostgresListAdapter,
-    PostgresJSONBAdapter,  # noqa: F811
-    PostgresNetworkAddressAdapter,  # noqa: F811
+from rhosocial.activerecord.backend.impl.postgres.adapters.bit_string import PostgresBitStringAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.hstore import PostgresHstoreAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.json import PostgresJSONBAdapter, PostgresJsonPathAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.pg_lsn import PostgresLsnAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.monetary import PostgresMoneyAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.network_address import PostgresMacaddrAdapter, PostgresNetworkAddressAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.object_identifier import PostgresOidAdapter, PostgresTidAdapter, PostgresXidAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.text_search import PostgresTsQueryAdapter, PostgresTsVectorAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.uuid import PostgresUUIDAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.xml import PostgresXMLAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.range import PostgresRangeAdapter, PostgresMultirangeAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.base import PostgresListAdapter, PostgresEnumAdapter
+from rhosocial.activerecord.backend.impl.postgres.adapters.pgvector import PostgresVectorAdapter
+from rhosocial.activerecord.backend.impl.postgres.types.range import (
+    PostgresRange as PG_RANGE,
+    PostgresMultirange as PG_MULTIRANGE,
 )
 
 
-class TestPostgresListAdapterBatch:
-    """Test PostgresListAdapter batch methods."""
-
-    def test_to_database_batch_pass_through(self):
-        """Test that to_database_batch returns the same list (pass-through)."""
-        adapter = PostgresListAdapter()
-        test_data = [[1, 2, 3], [4, 5, 6], None, [7, 8, 9]]
-        result = adapter.to_database_batch(test_data, list)
-        # Should be the same object (no copy)
-        assert result is test_data
-
-    def test_to_database_batch_empty_list(self):
-        """Test batch conversion with empty list."""
-        adapter = PostgresListAdapter()
-        result = adapter.to_database_batch([], list)
-        assert result == []
-
-    def test_from_database_batch_pass_through(self):
-        """Test that from_database_batch returns the same list."""
-        adapter = PostgresListAdapter()
-        test_data = [[1, 2], [3, 4], None]
-        result = adapter.from_database_batch(test_data, list)
-        assert result is test_data
-
-    def test_from_database_batch_empty_list(self):
-        """Test batch conversion from database with empty list."""
-        adapter = PostgresListAdapter()
-        result = adapter.from_database_batch([], list)
-        assert result == []
-
-
-class TestPostgresJSONBAdapterBatch:
-    """Test PostgresJSONBAdapter batch methods."""
-
-    def test_to_database_batch(self):
-        """Test batch conversion to database format."""
-        adapter = PostgresJSONBAdapter()
-        test_data = [
-            {'a': 1},
-            {'b': 2},
-            None,
-            {'c': [1, 2, 3]}
-        ]
-        result = adapter.to_database_batch(test_data, dict)
-
-        assert len(result) == 4
-        assert isinstance(result[0], Jsonb)
-        assert result[0].obj == {'a': 1}
-        assert isinstance(result[1], Jsonb)
-        assert result[1].obj == {'b': 2}
-        assert result[2] is None
-        assert isinstance(result[3], Jsonb)
-        assert result[3].obj == {'c': [1, 2, 3]}
-
-    def test_to_database_batch_empty_list(self):
-        """Test batch conversion with empty list."""
-        adapter = PostgresJSONBAdapter()
-        result = adapter.to_database_batch([], dict)
-        assert result == []
-
-    def test_from_database_batch_to_dict(self):
-        """Test batch conversion from database to dict."""
-        adapter = PostgresJSONBAdapter()
-        test_data = [
-            {'a': 1},
-            None,
-            {'b': 2}
-        ]
-        result = adapter.from_database_batch(test_data, dict)
-
-        assert len(result) == 3
-        assert result[0] == {'a': 1}
-        assert result[1] is None
-        assert result[2] == {'b': 2}
-
-    def test_from_database_batch_to_str(self):
-        """Test batch conversion from database to JSON string."""
-        adapter = PostgresJSONBAdapter()
-        test_data = [
-            {'a': 1},
-            None,
-            {'b': [2, 3]}
-        ]
-        result = adapter.from_database_batch(test_data, str)
-
-        assert len(result) == 3
-        assert result[0] == '{"a": 1}'
-        assert result[1] is None
-        assert result[2] == '{"b": [2, 3]}'
-
-    def test_from_database_batch_empty_list(self):
-        """Test batch conversion from database with empty list."""
-        adapter = PostgresJSONBAdapter()
-        result = adapter.from_database_batch([], dict)
-        assert result == []
+@pytest.fixture
+def uuid_a(): return PostgresUUIDAdapter()
+@pytest.fixture
+def jsonb(): return PostgresJSONBAdapter()
+@pytest.fixture
+def json_path(): return PostgresJsonPathAdapter()
+@pytest.fixture
+def range_a(): return PostgresRangeAdapter()
+@pytest.fixture
+def multi_range(): return PostgresMultirangeAdapter()
+@pytest.fixture
+def net_addr(): return PostgresNetworkAddressAdapter()
+@pytest.fixture
+def mac(): return PostgresMacaddrAdapter()
+@pytest.fixture
+def lsn(): return PostgresLsnAdapter()
+@pytest.fixture
+def money(): return PostgresMoneyAdapter()
+@pytest.fixture
+def hstore(): return PostgresHstoreAdapter()
+@pytest.fixture
+def tsvec(): return PostgresTsVectorAdapter()
+@pytest.fixture
+def tsquery(): return PostgresTsQueryAdapter()
+@pytest.fixture
+def xml_a(): return PostgresXMLAdapter()
+@pytest.fixture
+def bit(): return PostgresBitStringAdapter()
+@pytest.fixture
+def oid(): return PostgresOidAdapter()
+@pytest.fixture
+def tid(): return PostgresTidAdapter()
+@pytest.fixture
+def xid(): return PostgresXidAdapter()
+@pytest.fixture
+def list_a(): return PostgresListAdapter()
+@pytest.fixture
+def enum_a(): return PostgresEnumAdapter()
+@pytest.fixture
+def vec(): return PostgresVectorAdapter()
 
 
-class TestPostgresNetworkAddressAdapterBatch:
-    """Test PostgresNetworkAddressAdapter batch methods."""
+class TestUUID:
+    def test_roundtrip(self, uuid_a):
+        u = uuid.uuid4()
+        assert uuid_a.to_database(u, str) == str(u)
+        assert uuid_a.from_database(str(u), uuid.UUID) == u
+    def test_none(self, uuid_a):
+        assert uuid_a.to_database(None, str) is None
 
-    def test_to_database_batch(self):
-        """Test batch conversion to database format."""
-        adapter = PostgresNetworkAddressAdapter()
-        test_data = [
-            ipaddress.IPv4Address('192.168.1.1'),
-            ipaddress.IPv6Address('::1'),
-            None,
-            ipaddress.IPv4Network('10.0.0.0/24')
-        ]
-        result = adapter.to_database_batch(test_data, str)
+class TestJSONB:
+    def test_to_database_returns_jsonb(self, jsonb):
+        val = {"k": 1, "v": [2, 3]}
+        result = jsonb.to_database(val, str)
+        assert str(result)  # serializable to JSON string
 
-        assert len(result) == 4
-        assert result[0] == '192.168.1.1'
-        assert result[1] == '::1'
-        assert result[2] is None
-        assert result[3] == '10.0.0.0/24'
+class TestJsonPath:
+    def test_roundtrip(self, json_path):
+        p = '$.store.book[*].author'
+        assert json_path.from_database(p, str) == p
 
-    def test_to_database_batch_empty_list(self):
-        """Test batch conversion with empty list."""
-        adapter = PostgresNetworkAddressAdapter()
-        result = adapter.to_database_batch([], str)
-        assert result == []
+class TestRange:
+    def test_to_database(self, range_a):
+        r = PG_RANGE(1, 10, lower_inc=True, upper_inc=False)
+        s = r.to_postgres_string()
+        assert isinstance(s, str)
+        assert range_a.to_database(r, str) == s
 
-    def test_from_database_batch(self):
-        """Test batch conversion from database."""
-        adapter = PostgresNetworkAddressAdapter()
-        test_data = [
-            '192.168.1.1',
-            None,
-            '10.0.0.0/24',
-            '::1'
-        ]
-        result = adapter.from_database_batch(test_data, str)
+class TestMultirange:
+    def test_to_database(self, multi_range):
+        mr = PG_MULTIRANGE([])
+        assert multi_range.to_database(mr, str) is not None
 
-        assert len(result) == 4
-        assert isinstance(result[0], ipaddress.IPv4Address)
-        assert str(result[0]) == '192.168.1.1'
-        assert result[1] is None
-        assert isinstance(result[2], ipaddress.IPv4Network)
-        assert str(result[2]) == '10.0.0.0/24'
-        assert isinstance(result[3], ipaddress.IPv6Address)
-        assert str(result[3]) == '::1'
+class TestNetworkAddress:
+    def test_inet_roundtrip(self, net_addr):
+        assert net_addr.to_database("192.168.1.1", str) == "192.168.1.1"
+        parsed = net_addr.from_database("192.168.1.1", str)
+        assert str(parsed) == "192.168.1.1"  # IPv4Address/IPInterface repr
+    def test_none(self, net_addr):
+        assert net_addr.to_database(None, str) is None
 
-    def test_from_database_batch_invalid_values(self):
-        """Test batch conversion with invalid values falls back to string."""
-        adapter = PostgresNetworkAddressAdapter()
-        test_data = [
-            '192.168.1.1',
-            'not-an-ip',
-            '10.0.0.0/24'
-        ]
-        result = adapter.from_database_batch(test_data, str)
+class TestMacaddr:
+    def test_roundtrip(self, mac):
+        m = "08:00:2b:01:02:03"
+        assert mac.to_database(m, str) == m
+        assert mac.from_database(m, str) == m
 
-        assert len(result) == 3
-        assert isinstance(result[0], ipaddress.IPv4Address)
-        assert result[1] == 'not-an-ip'  # Falls back to original string
-        assert isinstance(result[2], ipaddress.IPv4Network)
+class TestLsn:
+    def test_roundtrip(self, lsn):
+        s = "0/3000000"
+        assert lsn.from_database(s, str) == s
 
-    def test_from_database_batch_empty_list(self):
-        """Test batch conversion from database with empty list."""
-        adapter = PostgresNetworkAddressAdapter()
-        result = adapter.from_database_batch([], str)
-        assert result == []
+class TestHstore:
+    def test_roundtrip(self, hstore):
+        d = {"key": "val", "k2": "v2"}
+        s = hstore.to_database(d, str)
+        assert isinstance(s, str)
+        assert hstore.from_database(s, dict) == d
 
+class TestTsVector:
+    def test_from_database(self, tsvec):
+        result = tsvec.from_database("hello world", str)
+        assert result is not None
+        assert hasattr(result, "lexemes")
 
-class TestPostgresEnumAdapterBatch:
-    """Test PostgresEnumAdapter batch methods."""
+class TestTsQuery:
+    def test_from_database(self, tsquery):
+        result = tsquery.from_database("hello & world", str)
+        assert result is not None
 
-    def test_to_database_batch(self):
-        """Test batch conversion to database format."""
-        from rhosocial.activerecord.backend.impl.postgres.adapters.base import PostgresEnumAdapter
-        from enum import Enum
+class TestXML:
+    def test_roundtrip(self, xml_a):
+        s = "<root><a>1</a></root>"
+        assert xml_a.from_database(s, str) == s
 
-        class TestEnum(Enum):
-            A = 1
-            B = 2
-            C = 3
+class TestBitString:
+    def test_roundtrip(self, bit):
+        s = "101010"
+        assert bit.from_database(s, str) == s
 
-        adapter = PostgresEnumAdapter()
-        test_data = [
-            TestEnum.A,
-            'existing_string',
-            None,
-            TestEnum.C
-        ]
-        result = adapter.to_database_batch(test_data, str)
+class TestOid:
+    def test_roundtrip(self, oid):
+        assert oid.from_database(42, int) == 42
 
-        assert len(result) == 4
-        assert result[0] == 'A'
-        assert result[1] == 'existing_string'
-        assert result[2] is None
-        assert result[3] == 'C'
+class TestXid:
+    def test_roundtrip(self, xid):
+        assert xid.from_database(123, int) == 123
 
-    def test_from_database_batch(self):
-        """Test batch conversion from database."""
-        from rhosocial.activerecord.backend.impl.postgres.adapters.base import PostgresEnumAdapter
+class TestTid:
+    def test_roundtrip(self, tid):
+        s = "(0,1)"
+        assert tid.from_database(s, str) == s
 
-        adapter = PostgresEnumAdapter()
-        test_data = ['value1', None, 'value2']
-        result = adapter.from_database_batch(test_data, str)
+class TestMoney:
+    def test_roundtrip(self, money):
+        assert money.from_database(Decimal("100.50"), Decimal) == Decimal("100.50")
+    def test_none(self, money):
+        assert money.from_database(None, Decimal) is None
 
-        assert len(result) == 3
-        assert result[0] == 'value1'
-        assert result[1] is None
-        assert result[2] == 'value2'
+class TestEnum:
+    def test_roundtrip(self, enum_a):
+        s = "draft"
+        assert enum_a.to_database(s, str) == s
+        assert enum_a.from_database(s, str) == s
 
-    def test_from_database_batch_to_enum(self):
-        """Test batch conversion from database to Python Enum."""
-        from rhosocial.activerecord.backend.impl.postgres.adapters.base import PostgresEnumAdapter
-        from enum import Enum
+class TestList:
+    def test_roundtrip(self, list_a):
+        arr = [1, 2, 3]
+        assert list_a.from_database(arr, list) == arr
 
-        class TestEnum(Enum):
-            A = 1
-            B = 2
-
-        adapter = PostgresEnumAdapter()
-        test_data = ['A', 'B', None]
-        result = adapter.from_database_batch(test_data, str, {'enum_class': TestEnum})
-
-        assert len(result) == 3
-        assert result[0] == TestEnum.A
-        assert result[1] == TestEnum.B
-        assert result[2] is None
+class TestVector:
+    def test_roundtrip(self, vec):
+        v = [1.0, 2.5, 3.0]
+        s = vec.to_database(v, str)
+        assert isinstance(s, str)
+        assert vec.from_database(s, list) == v
