@@ -752,7 +752,7 @@ def hstore_to_array_operator(
         BinaryExpression for %%hstore
     """
     return BinaryExpression(
-        dialect, "%%",
+        dialect, "%",
         core.Literal(dialect, ""),
         _convert_to_expression(dialect, hstore_expr),
     )
