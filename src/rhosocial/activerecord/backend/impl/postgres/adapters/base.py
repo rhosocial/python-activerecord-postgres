@@ -18,8 +18,12 @@ class PostgresListAdapter(BaseSQLTypeAdapter):
     """
     Adapts Python list to PostgreSQL array types.
 
-    This adapter does not perform any conversion - psycopg handles
-    Python lists natively for PostgreSQL array types.
+    This adapter passes Python lists through to psycopg for native array
+    column support. On read, if the database returns a string (e.g. when
+    a list was stored in a TEXT column via psycopg array serialization),
+    it parses the value back using psycopg's own array loader — the exact
+    mirror of the ``ListDumper`` used on write — and falls back to JSON
+    for the portable ``["a","b"]`` representation.
     """
 
     def __init__(self):
@@ -27,12 +31,46 @@ class PostgresListAdapter(BaseSQLTypeAdapter):
         self._register_type(list, list)
 
     def _do_to_database(self, value: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
-        # psycopg handles list natively for PostgreSQL arrays
         return value
+
+    @staticmethod
+    def _parse_array_literal(value: str) -> list:
+        """Parse a PostgreSQL array literal using psycopg's array loader.
+
+        ``psycopg.types.array._load_text`` is the exact reverse of the
+        ``ListDumper`` that psycopg uses to serialize a Python list on
+        write, so the round-trip is symmetric and handles quoting,
+        backslash escaping, ``NULL`` elements and nested arrays correctly.
+        """
+        from psycopg.types.array import _load_text
+
+        class _TextElementLoader:
+            def load(self, data):
+                return data.decode("utf-8")
+
+        try:
+            return _load_text(value.encode("utf-8"), _TextElementLoader())
+        except Exception:
+            raise ValueError(f"Not a PostgreSQL array literal: {value!r}") from None
 
     def _do_from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> list:
         if isinstance(value, list):
             return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            # Try JSON first (more portable format)
+            if stripped.startswith("["):
+                try:
+                    return json.loads(stripped)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            # Try PostgreSQL array literal
+            if stripped.startswith("{"):
+                try:
+                    return self._parse_array_literal(stripped)
+                except (ValueError, IndexError):
+                    pass
+            raise TypeError(f"Cannot convert str to list: {value!r}")
         raise TypeError(f"Cannot convert {type(value).__name__} to list")
 
     def to_database_batch(

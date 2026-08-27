@@ -1,0 +1,1 @@
+- `PostgresListAdapter` now handles string values on read (parses JSON and PostgreSQL array literals via psycopg's own array loader), fixing cross-backend `list` field round-trip with TEXT columns.
