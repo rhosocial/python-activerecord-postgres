@@ -72,6 +72,32 @@ class TestVectorSearch:
         assert 'AS "inner_product"' in sql
         assert "<#>" in sql
 
+    def test_ip_metric_with_similarity_requested(self, postgres_dialect):
+        """ip metric has no 1-distance similarity alias, so none is added."""
+        expr = vector_search(
+            postgres_dialect, "documents", [0.1, 0.2, 0.9],
+            metric="ip", columns=["content"], include_similarity=True,
+        )
+        sql, params = expr.to_sql()
+        assert 'AS "inner_product"' in sql
+        assert "similarity" not in sql
+
+    def test_include_distance_false(self, postgres_dialect):
+        expr = vector_search(
+            postgres_dialect, "documents", [0.1, 0.2, 0.9],
+            columns=["content"], include_distance=False,
+        )
+        sql, params = expr.to_sql()
+        assert "cosine_distance" not in sql
+
+    def test_l2_similarity_alias(self, postgres_dialect):
+        expr = vector_search(
+            postgres_dialect, "documents", [0.1, 0.2, 0.9],
+            metric="l2", include_similarity=True,
+        )
+        sql, params = expr.to_sql()
+        assert 'AS "l2_similarity"' in sql
+
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
             vector_search(postgres_dialect, "documents", [1.0], metric="hamming")
@@ -128,6 +154,31 @@ class TestCreateVectorIndex:
         assert 'USING IVFFLAT ("embedding" vector_l2_ops)' in sql
         assert "WITH (lists = 4)" in sql
 
+    def test_ivfflat_without_lists(self, postgres_dialect):
+        expr = create_vector_index(
+            postgres_dialect, "documents", "embedding",
+            metric="l2", index_type="ivfflat",
+        )
+        sql, params = expr.to_sql()
+        assert 'USING IVFFLAT ("embedding" vector_l2_ops)' in sql
+        assert "WITH" not in sql
+
+    def test_custom_index_name(self, postgres_dialect):
+        expr = create_vector_index(
+            postgres_dialect, "documents", "embedding",
+            index_name="doc_emb_hnsw",
+        )
+        sql, params = expr.to_sql()
+        assert "doc_emb_hnsw" in sql
+
+    def test_auto_index_name(self, postgres_dialect):
+        expr = create_vector_index(
+            postgres_dialect, "documents", "embedding",
+            index_type="hnsw",
+        )
+        sql, params = expr.to_sql()
+        assert "idx_documents_embedding_hnsw" in sql
+
     def test_ip_opclass(self, postgres_dialect):
         expr = create_vector_index(
             postgres_dialect, "documents", "embedding",
@@ -135,6 +186,11 @@ class TestCreateVectorIndex:
         )
         sql, params = expr.to_sql()
         assert 'vector_ip_ops' in sql
+
+    def test_invalid_metric(self, postgres_dialect):
+        with pytest.raises(ValueError, match="Unsupported vector metric"):
+            create_vector_index(postgres_dialect, "documents", "embedding",
+                                metric="hamming")
 
     def test_invalid_index_type(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector index type"):

@@ -86,6 +86,8 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresTsTzRangeType,
     PostgresUUIDType,
     PostgresVarBitType,
+    PostgresHalfvecType,
+    PostgresSparsevecType,
     PostgresVectorType,
     PostgresXID8Type,
     PostgresXIDType,
@@ -152,6 +154,8 @@ FORMAT_CASES = [
     (PostgresGeometryType(), "GEOMETRY"),
     (PostgresGeographyType(), "GEOGRAPHY"),
     (PostgresVectorType(dim=384), "VECTOR(384)"),
+    (PostgresHalfvecType(dim=128), "HALFVEC(128)"),
+    (PostgresSparsevecType(dim=16), "SPARSEVEC(16)"),
     (PostgresCitextType(), "CITEXT"),
     (PostgresCubeType(), "CUBE"),
     (PostgresLtreeType(), "LTREE"),
@@ -346,6 +350,10 @@ PARSE_CASES = [
     ("GEOMETRY", PostgresGeometryType, {}),
     ("VECTOR", PostgresVectorType, {"dim": 0}),
     ("VECTOR(768)", PostgresVectorType, {"dim": 768}),
+    ("HALFVEC", PostgresHalfvecType, {"dim": 0}),
+    ("HALFVEC(128)", PostgresHalfvecType, {"dim": 128}),
+    ("SPARSEVEC", PostgresSparsevecType, {"dim": 0}),
+    ("SPARSEVEC(16)", PostgresSparsevecType, {"dim": 16}),
 ]
 
 
@@ -410,6 +418,54 @@ def test_parse_type_case_insensitive(dialect):
     result = dialect.parse_type("  varchar(25)  ")
     assert type(result) is VarCharType
     assert result.length == 25
+
+
+def test_parse_vector_requires_extension(dialect):
+    """parse_type must reject pgvector types when the extension is not installed."""
+    from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
+        PostgresExtensionInfo,
+    )
+    dialect._extensions = {
+        "vector": PostgresExtensionInfo(name="vector", installed=False, available=True)
+    }
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("VECTOR(3)")
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("HALFVEC(3)")
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("SPARSEVEC(3)")
+
+
+def test_parse_vector_allowed_when_extension_installed(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
+        PostgresExtensionInfo,
+    )
+    dialect._extensions = {
+        "vector": PostgresExtensionInfo(name="vector", installed=True)
+    }
+    assert type(dialect.parse_type("VECTOR(3)")) is PostgresVectorType
+    assert type(dialect.parse_type("HALFVEC(3)")) is PostgresHalfvecType
+    assert type(dialect.parse_type("SPARSEVEC(3)")) is PostgresSparsevecType
+
+
+def test_vector_types_equality_and_hash():
+    assert PostgresVectorType(3) == PostgresVectorType(3)
+    assert PostgresVectorType(3) != PostgresVectorType(4)
+    assert PostgresVectorType(3) != PostgresHalfvecType(3)
+    assert PostgresVectorType(3) != object()
+    assert hash(PostgresVectorType(3)) == hash(PostgresVectorType(3))
+
+    assert PostgresHalfvecType(3) == PostgresHalfvecType(3)
+    assert PostgresHalfvecType(3) != PostgresHalfvecType(4)
+    assert PostgresHalfvecType(3) != PostgresSparsevecType(3)
+    assert PostgresHalfvecType(3) != object()
+    assert hash(PostgresHalfvecType(3)) == hash(PostgresHalfvecType(3))
+
+    assert PostgresSparsevecType(5) == PostgresSparsevecType(5)
+    assert PostgresSparsevecType(5) != PostgresSparsevecType(6)
+    assert PostgresSparsevecType(5) != PostgresVectorType(5)
+    assert PostgresSparsevecType(5) != object()
+    assert hash(PostgresSparsevecType(5)) == hash(PostgresSparsevecType(5))
 
 
 # ---------------------------------------------------------------------------

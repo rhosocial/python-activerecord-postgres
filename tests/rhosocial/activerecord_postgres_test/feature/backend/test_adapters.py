@@ -171,9 +171,54 @@ class TestEnum:
         assert enum_a.from_database(s, str) == s
 
 class TestList:
+    def test_to_database(self, list_a):
+        arr = [1, 2, 3]
+        assert list_a.to_database(arr, list) == arr
+
     def test_roundtrip(self, list_a):
         arr = [1, 2, 3]
         assert list_a.from_database(arr, list) == arr
+
+    def test_from_database_json_string(self, list_a):
+        assert list_a.from_database("[1, 2, 3]", list) == [1, 2, 3]
+
+    def test_from_database_json_string_with_whitespace(self, list_a):
+        assert list_a.from_database('  ["a", "b"]  ', list) == ["a", "b"]
+
+    def test_from_database_pg_array_literal(self, list_a):
+        assert list_a.from_database("{1,2,3}", list) == ["1", "2", "3"]
+
+    def test_from_database_pg_array_literal_quoted(self, list_a):
+        assert list_a.from_database('{"a","b c"}', list) == ["a", "b c"]
+
+    def test_from_database_pg_array_literal_null(self, list_a):
+        assert list_a.from_database("{1,NULL,3}", list) == ["1", None, "3"]
+
+    def test_from_database_invalid_string_raises(self, list_a):
+        with pytest.raises(TypeError, match="Cannot convert str to list"):
+            list_a.from_database("not a list", list)
+
+    def test_from_database_invalid_json_string_fallthrough(self, list_a):
+        with pytest.raises(TypeError, match="Cannot convert str to list"):
+            list_a.from_database("[1, 2", list)
+
+    def test_from_database_invalid_array_literal_fallthrough(self, list_a):
+        with pytest.raises(TypeError, match="Cannot convert str to list"):
+            list_a.from_database("{}}", list)  # extra brace triggers DataError
+
+    def test_from_database_non_string_raises(self, list_a):
+        with pytest.raises(TypeError, match="Cannot convert int to list"):
+            list_a.from_database(123, list)
+
+    def test_parse_array_literal_invalid_raises(self):
+        with pytest.raises(ValueError, match="Not a PostgreSQL array literal"):
+            PostgresListAdapter._parse_array_literal("not-an-array")
+
+    def test_to_database_batch(self, list_a):
+        assert list_a.to_database_batch([[1], [2, 3]], list) == [[1], [2, 3]]
+
+    def test_from_database_batch(self, list_a):
+        assert list_a.from_database_batch([[1], [2, 3]], list) == [[1], [2, 3]]
 
 class TestVector:
     def test_roundtrip(self, vec):
