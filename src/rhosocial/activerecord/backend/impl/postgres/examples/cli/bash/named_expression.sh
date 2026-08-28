@@ -17,5 +17,5 @@ echo "=========================================="
 echo "PostgreSQL CLI - named-expression command examples"
 echo "=========================================="
 
-$PYTHON_CMD named-expression --list rhosocial.activerecord.backend.impl.postgres.examples.named_expressions 2>/dev/null || echo "(No named expressions found)"
+$PYTHON_CMD named-expression --list rhosocial.activerecord.backend.impl.postgres.examples.named_expressions.order_expressions 2>/dev/null || echo "(No named expressions found)"
 $PYTHON_CMD named-connection --list rhosocial.activerecord.backend.impl.postgres.examples.named_connections

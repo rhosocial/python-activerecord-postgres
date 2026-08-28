@@ -68,8 +68,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install rhosocial-activerecord==1.0.0.dev29
-          pip install rhosocial-activerecord-testsuite==1.0.0.dev16
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Create postgres scenario config
         run: |
@@ -279,8 +279,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install rhosocial-activerecord==1.0.0.dev29
-          pip install rhosocial-activerecord-testsuite==1.0.0.dev16
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Create postgres scenario config
         run: |
@@ -322,7 +322,7 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
 
   test:
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
@@ -391,8 +391,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install rhosocial-activerecord==1.0.0.dev29
-          pip install rhosocial-activerecord-testsuite==1.0.0.dev16
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Create postgres scenario config
         run: |
@@ -435,14 +435,14 @@ jobs:
         if: matrix.postgres-version != '18'
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
 
       - name: Run tests with coverage (only for postgres 18)
         if: matrix.postgres-version == '18'
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup --cov=src --cov-report=xml
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --cov=src --cov-report=xml
 
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18'
@@ -490,8 +490,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install rhosocial-activerecord==1.0.0.dev29
-          pip install rhosocial-activerecord-testsuite==1.0.0.dev16
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Create postgres scenario config
         run: |
@@ -522,4 +522,4 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short --scenario-parallel -n 2 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
