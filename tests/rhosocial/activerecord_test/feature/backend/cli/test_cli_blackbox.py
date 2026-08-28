@@ -88,12 +88,12 @@ class TestIntrospect:
     def test_introspect(self, conn_args):
         out, err, exc = run_cli(["introspect", "tables"] + conn_args + ["-o", "json"])
         assert exc is None, f"stderr: {err}\nstdout: {out}"
-        assert json.loads(out)
+        assert isinstance(json.loads(out), list)
 
     def test_introspect_async(self, conn_args):
         out, err, exc = run_cli(["introspect", "tables"] + conn_args + ["-o", "json", "--async"])
         assert exc is None, f"stderr: {err}\nstdout: {out}"
-        assert json.loads(out)
+        assert isinstance(json.loads(out), list)
 
 
 class TestInfo:
