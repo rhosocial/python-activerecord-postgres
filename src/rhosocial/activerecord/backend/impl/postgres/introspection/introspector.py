@@ -71,7 +71,22 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     """
 
     def _get_default_schema(self) -> str:
-        """Return 'public' as PostgreSQL default schema."""
+        """Return the actual schema from backend config or search_path.
+
+        Priority:
+        1. config.default_schema
+        2. First entry of config.search_path (e.g. 'broker, public' → 'broker')
+        3. Fallback to 'public'
+        """
+        config = getattr(self._backend, "config", None) if hasattr(self, "_backend") else None
+        if config is not None:
+            if hasattr(config, "default_schema") and getattr(config, "default_schema"):
+                return str(getattr(config, "default_schema"))
+            if hasattr(config, "search_path") and getattr(config, "search_path"):
+                sp = str(getattr(config, "search_path"))
+                first = sp.split(",")[0].strip().strip('"').strip("'")
+                if first:
+                    return first
         return "public"
 
     def _get_database_name(self) -> str:

@@ -41,51 +41,55 @@ backend.connect()
 dialect = backend.dialect
 
 # Drop if exists for clean setup
-drop = DropTableExpression(dialect=dialect, table_name='products', if_exists=True)
+drop = DropTableExpression(dialect=dialect, table='products', if_exists=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
+# Column data types are built with dialect.parse_type() (DataType instance).
 columns = [
     ColumnDefinition(
         name='id',
-        data_type='SERIAL',
+        data_type=dialect.parse_type('SERIAL'),
         constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
         ],
     ),
     ColumnDefinition(
         name='name',
-        data_type='VARCHAR(200)',
+        data_type=dialect.parse_type('VARCHAR(200)'),
         constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ],
     ),
     ColumnDefinition(
         name='price',
-        data_type='NUMERIC(10,2)',
+        data_type=dialect.parse_type('NUMERIC(10,2)'),
         constraints=[
             ColumnConstraint(ColumnConstraintType.NOT_NULL),
         ],
     ),
     ColumnDefinition(
         name='category',
-        data_type='VARCHAR(100)',
+        data_type=dialect.parse_type('VARCHAR(100)'),
     ),
     ColumnDefinition(
         name='is_active',
-        data_type='BOOLEAN',
+        data_type=dialect.parse_type('BOOLEAN'),
         constraints=[
             ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=True),
         ],
     ),
     ColumnDefinition(
         name='created_at',
-        data_type='TIMESTAMP',
+        data_type=dialect.parse_type('TIMESTAMP'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=current_timestamp(dialect)),
+            ColumnConstraint(
+                ColumnConstraintType.DEFAULT,
+                default_value=current_timestamp(dialect),
+            ),
         ],
     ),
 ]
@@ -99,7 +103,7 @@ indexes = [
 
 create_expr = CreateTableExpression(
     dialect=dialect,
-    table_name='products',
+    table='products',
     columns=columns,
     indexes=indexes,
     if_not_exists=True,
@@ -124,7 +128,7 @@ for col in columns_info:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table_name='products', if_exists=True)
+drop_table = DropTableExpression(dialect=dialect, table='products', if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

@@ -115,14 +115,21 @@ class TestPgWalinspectIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         try:
-            # Get current WAL position to use as LSN values
-            current_lsn = _get_current_wal_lsn(backend, dialect)
+            # Get current WAL position as the range start.
+            start_lsn = _get_current_wal_lsn(backend, dialect)
 
-            # Query WAL records info with the obtained LSN
+            # Generate a small amount of WAL so the range is non-empty.
+            backend.execute("CREATE TABLE IF NOT EXISTS _wal_probe (id int)")
+            backend.execute("DROP TABLE IF EXISTS _wal_probe")
+            end_lsn = _get_current_wal_lsn(backend, dialect)
+            if start_lsn == end_lsn:
+                pytest.skip("No WAL activity generated between LSN reads")
+
+            # Query WAL records info with the obtained LSN range
             wal_func = pg_get_wal_records_info(
                 dialect,
-                current_lsn,
-                current_lsn,
+                start_lsn,
+                end_lsn,
             )
             query = QueryExpression(
                 dialect=dialect,
@@ -136,7 +143,8 @@ class TestPgWalinspectIntegration:
             if ("permission denied" in error_msg
                 or "must be superuser" in error_msg
                 or "could not find a valid record" in error_msg
-                or "future start lsn" in error_msg):
+                or "future start lsn" in error_msg
+                or "must be less than" in error_msg):
                 pytest.skip(
                     "pg_walinspect requires superuser privileges or valid WAL range"
                 )
@@ -193,14 +201,21 @@ class TestAsyncPgWalinspectIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         try:
-            # Get current WAL position to use as LSN values
-            current_lsn = await _async_get_current_wal_lsn(backend, dialect)
+            # Get current WAL position as the range start.
+            start_lsn = await _async_get_current_wal_lsn(backend, dialect)
 
-            # Query WAL records info with the obtained LSN
+            # Generate a small amount of WAL so the range is non-empty.
+            await backend.execute("CREATE TABLE IF NOT EXISTS _wal_probe (id int)")
+            await backend.execute("DROP TABLE IF EXISTS _wal_probe")
+            end_lsn = await _async_get_current_wal_lsn(backend, dialect)
+            if start_lsn == end_lsn:
+                pytest.skip("No WAL activity generated between LSN reads")
+
+            # Query WAL records info with the obtained LSN range
             wal_func = pg_get_wal_records_info(
                 dialect,
-                current_lsn,
-                current_lsn,
+                start_lsn,
+                end_lsn,
             )
             query = QueryExpression(
                 dialect=dialect,
@@ -214,7 +229,8 @@ class TestAsyncPgWalinspectIntegration:
             if ("permission denied" in error_msg
                 or "must be superuser" in error_msg
                 or "could not find a valid record" in error_msg
-                or "future start lsn" in error_msg):
+                or "future start lsn" in error_msg
+                or "must be less than" in error_msg):
                 pytest.skip(
                     "pg_walinspect requires superuser privileges or valid WAL range"
                 )

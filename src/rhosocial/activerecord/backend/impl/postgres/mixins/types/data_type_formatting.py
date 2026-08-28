@@ -80,6 +80,8 @@ from ...expression.types import (
     PostgresUUIDType,
     PostgresVarBitType,
     PostgresVectorType,
+    PostgresHalfvecType,
+    PostgresSparsevecType,
     PostgresXID8Type,
     PostgresXIDType,
     PostgresXMLType,
@@ -306,6 +308,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     @DDLTypeMixin.handles(PostgresVectorType)
     def format_data_type_vector(self, data_type) -> Tuple[str, tuple]:
         return f"VECTOR({data_type.dim})", ()
+
+    @DDLTypeMixin.handles(PostgresHalfvecType)
+    def format_data_type_halfvec(self, data_type) -> Tuple[str, tuple]:
+        return f"HALFVEC({data_type.dim})", ()
+
+    @DDLTypeMixin.handles(PostgresSparsevecType)
+    def format_data_type_sparsevec(self, data_type) -> Tuple[str, tuple]:
+        return f"SPARSEVEC({data_type.dim})", ()
 
     @DDLTypeMixin.handles(PostgresCitextType)
     def format_data_type_citext(self, data_type) -> Tuple[str, tuple]:
@@ -809,10 +819,27 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             if upper.startswith("GEOMETRY"):
                 return PostgresGeometryType()
 
-        # Vector type (pgvector)
-        if upper.startswith("VECTOR"):
+        # Vector types (pgvector)
+        vector_match = re.match(r"^(VECTOR|HALFVEC|SPARSEVEC)\b", upper)
+        if vector_match:
+            if (
+                hasattr(self, "_extensions")
+                and "vector" in self._extensions
+                and not self._extensions["vector"].installed
+            ):
+                raise RuntimeError(
+                    "Cannot use pgvector types: the 'vector' (pgvector) extension "
+                    "is not installed. Run: CREATE EXTENSION IF NOT EXISTS vector;"
+                )
             nums = re.findall(r"\d+", stripped)
             dim = int(nums[0]) if nums else 0
+            vector_kind = vector_match.group(1)
+            if vector_kind == "HALFVEC":
+                from ...expression.types import PostgresHalfvecType
+                return PostgresHalfvecType(dim)
+            if vector_kind == "SPARSEVEC":
+                from ...expression.types import PostgresSparsevecType
+                return PostgresSparsevecType(dim)
             from ...expression.types import PostgresVectorType
             return PostgresVectorType(dim)
 

@@ -644,7 +644,7 @@ class AsyncPostgresBackend(
             # Check if we're not in an active transaction
             if not self.in_transaction:
                 # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
-                if not getattr(self.config, "autocommit", False):
+                if not self.config.autocommit:
                     await self._connection.commit()
                     self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
         except Exception as e:
@@ -658,7 +658,7 @@ class AsyncPostgresBackend(
         PostgreSQL respects the autocommit setting, but we also need to handle explicit commits.
         """
         if not self.in_transaction and self._connection:
-            if not getattr(self.config, "autocommit", False):
+            if not self.config.autocommit:
                 await self._connection.commit()
                 self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 

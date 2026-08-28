@@ -17,5 +17,5 @@ echo "=========================================="
 echo "PostgreSQL CLI - named-procedure command examples"
 echo "=========================================="
 
-$PYTHON_CMD named-procedure --list rhosocial.activerecord.backend.impl.postgres.examples.named_procedures 2>/dev/null || echo "(No named procedures found)"
+$PYTHON_CMD named-procedure --list rhosocial.activerecord.backend.impl.postgres.examples.named_procedures.order_workflow 2>/dev/null || echo "(No named procedures found)"
 $PYTHON_CMD named-connection --list rhosocial.activerecord.backend.impl.postgres.examples.named_connections

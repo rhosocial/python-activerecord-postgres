@@ -105,12 +105,18 @@ def pytest_addoption(parser):
         default=False,
         help='Scenario parallel mode: distribute scenarios across workers, keep each scenario on one worker.',
     )
-    parser.addoption(
-        '--scenarios',
-        default=None,
-        help='Comma-separated list of scenario names to run (e.g., --scenarios=postgres_16,postgres_17). '
-        'Compatible with pytest -k "<scenario_name>" as a native alternative.',
-    )
+    # The generic --scenarios option is registered by the testsuite conftest
+    # (loaded via ``addopts``); register it here only when it is not already
+    # present so the two conftests can coexist.
+    try:
+        parser.addoption(
+            '--scenarios',
+            default=None,
+            help='Comma-separated list of scenario names to run (e.g., --scenarios=postgres_16,postgres_17). '
+            'Compatible with pytest -k "<scenario_name>" as a native alternative.',
+        )
+    except ValueError:
+        pass
 
 
 def pytest_configure(config):

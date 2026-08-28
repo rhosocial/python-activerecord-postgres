@@ -8,6 +8,10 @@ class PostgresSchemaMixin:
     All features are native, using version number for detection.
     """
 
+    def supports_schema(self) -> bool:
+        """PostgreSQL models named schema namespaces natively."""
+        return True
+
     def supports_create_schema(self) -> bool:
         return True
 
@@ -21,4 +25,7 @@ class PostgresSchemaMixin:
         return True
 
     def supports_schema_cascade(self) -> bool:
+        return True
+
+    def supports_schema_authorization(self) -> bool:
         return True

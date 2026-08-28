@@ -82,7 +82,7 @@ class PostgresBackendMixin:
 
     def requires_manual_commit(self) -> bool:
         """Check if manual commit is required for this database."""
-        return not getattr(self.config, "autocommit", False)
+        return not self.config.autocommit
 
     def _register_postgres_adapters(self):
         """Register PostgreSQL-specific type adapters.

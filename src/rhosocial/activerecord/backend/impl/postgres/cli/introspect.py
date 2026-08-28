@@ -128,7 +128,7 @@ def handle(args):
 
     config = resolve_connection_config_from_args(args)
 
-    if args.use_async:
+    if args.is_async:
         backend = AsyncPostgresBackend(connection_config=config)
         asyncio.run(_handle_introspect_async(args, backend, provider))
     else:
@@ -280,7 +280,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
         introspector = backend.introspector
 
         if args.type == "tables":
-            tables = await introspector.list_tables_async(
+            tables = await introspector.list_tables(
                 schema=args.schema,
                 include_system=args.include_system
             )
@@ -288,7 +288,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             provider.display_results(data, title="Tables")
 
         elif args.type == "views":
-            views = await introspector.list_views_async(schema=args.schema)
+            views = await introspector.list_views(schema=args.schema)
             data = _serialize_for_output(views)
             provider.display_results(data, title="Views")
 
@@ -296,7 +296,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'table' introspection", file=sys.stderr)
                 sys.exit(1)
-            info = await introspector.get_table_info_async(args.name, schema=args.schema)
+            info = await introspector.get_table_info(args.name, schema=args.schema)
             if info:
                 provider.display_results(_serialize_for_output(info.columns), title=f"Columns of {args.name}")
                 if info.indexes:
@@ -314,7 +314,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'columns' introspection", file=sys.stderr)
                 sys.exit(1)
-            columns = await introspector.list_columns_async(args.name, schema=args.schema)
+            columns = await introspector.list_columns(args.name, schema=args.schema)
             data = _serialize_for_output(columns)
             provider.display_results(data, title=f"Columns of {args.name}")
 
@@ -322,7 +322,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'indexes' introspection", file=sys.stderr)
                 sys.exit(1)
-            indexes = await introspector.list_indexes_async(args.name, schema=args.schema)
+            indexes = await introspector.list_indexes(args.name, schema=args.schema)
             data = _serialize_for_output(indexes)
             provider.display_results(data, title=f"Indexes of {args.name}")
 
@@ -330,12 +330,12 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
                 sys.exit(1)
-            fks = await introspector.list_foreign_keys_async(args.name, schema=args.schema)
+            fks = await introspector.list_foreign_keys(args.name, schema=args.schema)
             data = _serialize_for_output(fks)
             provider.display_results(data, title=f"Foreign Keys of {args.name}")
 
         elif args.type == "triggers":
-            triggers = await introspector.list_triggers_async(
+            triggers = await introspector.list_triggers(
                 table_name=args.name,
                 schema=args.schema
             )
@@ -343,7 +343,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             provider.display_results(data, title="Triggers")
 
         elif args.type == "database":
-            info = await introspector.get_database_info_async()
+            info = await introspector.get_database_info()
             data = _serialize_for_output(info)
             provider.display_results([data], title="Database Info")
 

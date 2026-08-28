@@ -13,6 +13,10 @@ Distance operators:
 - <=> : Cosine distance
 - <#> : Inner product (negative)
 
+NOTE: The operator factories treat plain string arguments as literal values,
+NOT column references. Pass ``Column(dialect, name)`` (or use ``vector_distance``)
+to reference a vector column.
+
 The vector type requires the pgvector extension:
     CREATE EXTENSION IF NOT EXISTS vector;
 """
@@ -25,6 +29,13 @@ from rhosocial.activerecord.backend.impl.postgres.types.pgvector import Postgres
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+_METRIC_OPERATORS = {
+    "cosine": "<=>",
+    "l2": "<->",
+    "ip": "<#>",
+}
 
 
 def _convert_to_expression(
@@ -71,7 +82,8 @@ def vector_l2_distance(
 
     Args:
         dialect: The SQL dialect instance
-        left: Left operand (column name, vector, or expression)
+        left: Left operand (vector, string literal, or expression); plain
+            strings are literal values, use ``Column(dialect, name)`` for columns
         right: Right operand (vector literal, or expression)
 
     Returns:
@@ -96,7 +108,8 @@ def vector_cosine_distance(
 
     Args:
         dialect: The SQL dialect instance
-        left: Left operand (column name, vector, or expression)
+        left: Left operand (vector, string literal, or expression); plain
+            strings are literal values, use ``Column(dialect, name)`` for columns
         right: Right operand (vector literal, or expression)
 
     Returns:
@@ -119,7 +132,8 @@ def vector_inner_product(
 
     Args:
         dialect: The SQL dialect instance
-        left: Left operand (column name, vector, or expression)
+        left: Left operand (vector, string literal, or expression); plain
+            strings are literal values, use ``Column(dialect, name)`` for columns
         right: Right operand (vector literal, or expression)
 
     Returns:
@@ -128,6 +142,41 @@ def vector_inner_product(
     left_expr = _convert_to_expression(dialect, left)
     right_expr = _convert_to_expression(dialect, right)
     return BinaryArithmeticExpression(dialect, "<#>", left_expr, right_expr)
+
+
+def vector_distance(
+    dialect: "SQLDialectBase",
+    column: Union[str, "bases.BaseExpression"],
+    query_vector: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
+    metric: str = "cosine",
+) -> BinaryArithmeticExpression:
+    """Distance operator for a vector column, dispatching by metric.
+
+    Unlike the raw operator factories, a plain string ``column`` is wrapped in
+    ``Column`` (a column reference), so passing a column name is safe.
+
+    Args:
+        dialect: The SQL dialect instance
+        column: Vector column name (string) or column expression
+        query_vector: The query vector (``PostgresVector``, ``List[float]``,
+            str, or expression)
+        metric: Distance metric - 'cosine' | 'l2' | 'ip'
+
+    Returns:
+        BinaryArithmeticExpression for the requested distance
+    """
+    if metric not in _METRIC_OPERATORS:
+        raise ValueError(
+            f"Unsupported vector metric '{metric}'; expected one of "
+            f"{tuple(_METRIC_OPERATORS)}"
+        )
+    column_expr = (
+        core.Column(dialect, column) if isinstance(column, str) else column
+    )
+    return BinaryArithmeticExpression(
+        dialect, _METRIC_OPERATORS[metric],
+        column_expr, _convert_to_expression(dialect, query_vector),
+    )
 
 
 # === Similarity ===
@@ -187,6 +236,7 @@ __all__ = [
     "vector_l2_distance",
     "vector_cosine_distance",
     "vector_inner_product",
+    "vector_distance",
     "vector_cosine_similarity",
     "vector_literal",
 ]

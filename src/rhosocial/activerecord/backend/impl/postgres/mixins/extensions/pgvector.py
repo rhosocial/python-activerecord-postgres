@@ -43,6 +43,7 @@ class PostgresPgvectorMixin:
         ef_construction: Optional[int] = None,
         lists: Optional[int] = None,
         schema: Optional[str] = None,
+        opclass: str = "vector_cosine_ops",
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for vector column.
 
@@ -55,6 +56,9 @@ class PostgresPgvectorMixin:
             ef_construction: HNSW ef_construction parameter
             lists: IVFFlat number of lists
             schema: Optional schema name
+            opclass: pgvector operator class for the index; defaults to
+                ``vector_cosine_ops``. Use ``vector_l2_ops`` or ``vector_ip_ops``
+                for L2/inner-product distance indexes.
 
         Returns:
             Tuple of (SQL statement, parameters)
@@ -70,13 +74,13 @@ class PostgresPgvectorMixin:
             with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
             sql = (
                 f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING hnsw ({column_name} vector_cosine_ops){with_clause}"
+                f"USING hnsw ({column_name} {opclass}){with_clause}"
             )
         else:  # ivfflat
             lists_clause = f" WITH (lists = {lists})" if lists else ""
             sql = (
                 f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING ivfflat ({column_name} vector_cosine_ops){lists_clause}"
+                f"USING ivfflat ({column_name} {opclass}){lists_clause}"
             )
 
         return (sql, ())
@@ -88,6 +92,7 @@ class PostgresPgvectorMixin:
         index_name: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
+        opclass: str = "vector_cosine_ops",
     ) -> str:
         """Format CREATE INDEX statement with HNSW index for vector column.
 
@@ -97,6 +102,8 @@ class PostgresPgvectorMixin:
             index_name: Optional index name (auto-generated if not provided)
             m: HNSW M parameter (max connections per layer)
             ef_construction: HNSW ef_construction parameter
+            opclass: pgvector operator class for the index; defaults to
+                ``vector_cosine_ops``.
 
         Returns:
             SQL CREATE INDEX statement
@@ -110,5 +117,5 @@ class PostgresPgvectorMixin:
         with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
         return (
             f"CREATE INDEX {idx_name} ON {table_name} "
-            f"USING hnsw ({column_name} vector_cosine_ops){with_clause}"
+            f"USING hnsw ({column_name} {opclass}){with_clause}"
         )

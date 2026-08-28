@@ -495,3 +495,63 @@ def test_format_identifier_naive_vs_proper_malicious(dialect):
 def test_format_identifier_empty_string(dialect):
     """Empty identifier produces empty double quotes."""
     assert dialect.format_identifier("") == '""'
+
+
+# ── format_binary_operator % escaping ─────────────────────────────────
+
+
+def test_format_binary_operator_percent_escaped():
+    """format_binary_operator escapes % to %% for psycopg compatibility."""
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    d = PostgresDialect((16, 0, 0))
+
+    # % operator → %% (psycopg requires %% for literal %)
+    sql, params = d.format_binary_operator("%", "a", "b", (), ())
+    assert sql == "a %% b", f"Expected escaped %%, got: {sql}"
+    assert params == ()
+
+    # %% is pre-escaped → should NOT be double-escaped to %%%%
+    # (callers must pass raw operator, not pre-escaped)
+    sql, params = d.format_binary_operator("%%", "a", "b", (), ())
+    assert sql == "a %%%% b", f"raw %% should be escaped to %%%%, got: {sql}"
+
+    # Operator without % → unchanged
+    sql, params = d.format_binary_operator("=", "a", "b", (), ())
+    assert sql == "a = b"
+    assert params == ()
+
+    # ? operator (hstore/jsonb) → preserved as-is, not treated as placeholder
+    sql, params = d.format_binary_operator("?", "data", "%s", (), ("key",))
+    assert sql == "data ? %s", f"? operator preserved: {sql}"
+    assert params == ("key",)
+
+    # ?| and ?& operators → preserved
+    sql, params = d.format_binary_operator("?|", "data", "%s", (), ("key",))
+    assert sql == "data ?| %s", f"?| operator preserved: {sql}"
+
+    # %# (pg_trgm) → %# (unchanged, no % to escape)
+    sql, params = d.format_binary_operator("%#", "a", "b", (), ())
+    assert sql == "a %%# b", f"%# operator: {sql}"
+
+
+def test_hstore_operator_not_double_escaped():
+    """hstore_to_array_operator uses raw %, not pre-escaped %%."""
+    hstore_path = "src/rhosocial/activerecord/backend/impl/postgres/functions/hstore.py"
+    # Try to find the file relative to the repo root
+    import os
+    for candidate in [
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", hstore_path),
+        os.path.join(os.getcwd(), hstore_path),
+    ]:
+        candidate = os.path.normpath(candidate)
+        if os.path.exists(candidate):
+            hstore_path = candidate
+            break
+    with open(hstore_path) as f:
+        src = f.read()
+    assert (
+        "BinaryExpression(" in src and '"%",' in src
+    ), "hstore operator must pass raw % (not pre-escaped %%)"
+    import re
+    for m in re.finditer(r'BinaryExpression\([^)]*?["\']%%["\']', src):
+        pytest.fail(f"Found pre-escaped %% operator: {m.group()[:80]}")
