@@ -60,6 +60,7 @@ class PostgresPgvectorSupport(Protocol):
         ef_construction: Optional[int] = None,
         lists: Optional[int] = None,
         schema: Optional[str] = None,
+        opclass: str = "vector_cosine_ops",
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for vector column."""
         ...
@@ -71,6 +72,7 @@ class PostgresPgvectorSupport(Protocol):
         index_name: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
+        opclass: str = "vector_cosine_ops",
     ) -> str:
         """Format CREATE INDEX statement with HNSW index for vector column."""
         ...

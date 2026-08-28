@@ -368,6 +368,56 @@ class PostgresVectorType(DataType, backend="postgres"):
         return hash((type(self), self.dim))
 
 
+class PostgresHalfvecType(DataType, backend="postgres"):
+    """pgvector ``HALFVEC(n)`` — half-precision vector (pgvector 0.5.0+).
+
+    Stores each component as a half-precision float, halving memory compared
+    to ``VECTOR``. Requires the pgvector extension.
+
+    Args:
+        dim: Number of dimensions.
+    """
+
+    dim: int
+
+    def __init__(self, dim: int):
+        super().__init__()
+        self.dim = dim
+
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.dim == other.dim
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.dim))
+
+
+class PostgresSparsevecType(DataType, backend="postgres"):
+    """pgvector ``SPARSEVEC(n)`` — sparse vector (pgvector 0.7.0+).
+
+    Stores only non-zero components as ``{idx:value,...}/dim``, suitable for
+    high-dimensional sparse embeddings. Requires the pgvector extension.
+
+    Args:
+        dim: Number of dimensions.
+    """
+
+    dim: int
+
+    def __init__(self, dim: int):
+        super().__init__()
+        self.dim = dim
+
+    def __eq__(self, other: object) -> bool:
+        if type(self) is not type(other):
+            return False
+        return self.dim == other.dim
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.dim))
+
+
 # ---------------------------------------------------------------------------
 # Array container
 # ---------------------------------------------------------------------------

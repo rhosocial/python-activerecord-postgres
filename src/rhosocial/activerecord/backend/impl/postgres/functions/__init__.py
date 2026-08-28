@@ -287,8 +287,15 @@ from .pgvector import (
     vector_l2_distance,
     vector_cosine_distance,
     vector_inner_product,
+    vector_distance,
     vector_cosine_similarity,
     vector_literal,
+)
+
+# pgvector similarity-search helpers
+from .vector_search import (
+    vector_search,
+    create_vector_index,
 )
 
 # PostGIS functions
@@ -714,8 +721,12 @@ __all__ = [
     "vector_l2_distance",
     "vector_cosine_distance",
     "vector_inner_product",
+    "vector_distance",
     "vector_cosine_similarity",
     "vector_literal",
+    # pgvector similarity-search helpers
+    "vector_search",
+    "create_vector_index",
     # PostGIS functions - Construction
     "st_make_point",
     "st_geom_from_text",
