@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import re
-from typing import Tuple, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
+from rhosocial.activerecord.backend.dialect.mixins.ddl_type import (
+    DDLTypeMixin,
+    DDLTypeSuggestionMixin,
+)
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -846,3 +849,51 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         # Fallback
         from rhosocial.activerecord.backend.expression.types import CustomType
         return CustomType(stripped)
+
+class PostgresTypeSuggestionMixin(DDLTypeSuggestionMixin):
+    """PostgreSQL-native ``suggest_column_type()``.
+
+    Provides PostgreSQL-specific default ``DataType`` suggestions for DDL
+    generation, exploiting native types where available:
+
+    - ``uuid.UUID`` → ``PostgresUUIDType`` (native UUID; the default value
+      adapter already round-trips UUID via the driver's str representation).
+    - ``dict`` / ``list`` → ``JsonBType`` (native JSONB; stored as binary).
+    - ``bytes`` → ``PostgresByteaType`` (BYTEA).
+    - ``str`` → ``TextType`` (TEXT; renders as native PostgreSQL TEXT).
+
+    PostgreSQL's common types are stable across supported server versions, so
+    *version* is accepted for signature compatibility but does not gate any
+    suggestion here (unlike MySQL's 5.7 JSON threshold).
+    """
+
+    def suggest_column_type(
+        self, python_type: type, version: "Optional[Tuple[int, int, int]]" = None
+    ) -> "Optional[DataType]":
+        import datetime as _dt
+        import decimal as _dec
+        import enum as _enum
+        import uuid as _uuid
+
+        mapping = {
+            str: TextType,
+            int: IntegerType,
+            bool: BooleanType,
+            float: DoubleType,
+            bytes: PostgresByteaType,
+            _dt.datetime: DateTimeType,
+            _dt.date: DateType,
+            _dt.time: TimeType,
+            _dec.Decimal: DecimalType,
+            _uuid.UUID: PostgresUUIDType,
+            dict: JsonBType,
+            list: JsonBType,
+            _enum.Enum: TextType,
+        }
+        factory = mapping.get(python_type)
+        if factory is not None:
+            if python_type is _enum.Enum:
+                return TextType()
+            return factory()
+
+        return super().suggest_column_type(python_type, version)

@@ -180,6 +180,7 @@ from .mixins import (
     PostgresJSONBEnhancedMixin,
     PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
+    PostgresTypeSuggestionMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
@@ -432,6 +433,7 @@ class PostgresDialect(
     PostgresRangeTypeMixin,
     PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
+    PostgresTypeSuggestionMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,

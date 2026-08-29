@@ -48,7 +48,10 @@ from .types.full_text_search import PostgresFullTextSearchMixin
 from .types.range_type import PostgresRangeTypeMixin
 from .types.jsonb_enhanced import PostgresJSONBEnhancedMixin
 from .types.array_enhanced import PostgresArrayEnhancedMixin
-from .types.data_type_formatting import PostgresTypeFormatSupportMixin
+from .types.data_type_formatting import (
+    PostgresTypeFormatSupportMixin,
+    PostgresTypeSuggestionMixin,
+)
 
 # Extension mixins
 from .extensions.pgvector import PostgresPgvectorMixin
@@ -151,6 +154,7 @@ __all__ = [
     "PostgresJSONBEnhancedMixin",
     "PostgresArrayEnhancedMixin",
     "PostgresTypeFormatSupportMixin",
+    "PostgresTypeSuggestionMixin",
     # Extension mixins
     "PostgresPgvectorMixin",
     "PostgresPostGISMixin",
