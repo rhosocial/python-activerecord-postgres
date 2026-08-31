@@ -89,16 +89,16 @@ class TestPostgresVectorTypeEquality:
 
 class TestPostgresArrayType:
     def test_is_equivalent_matching_element(self):
-        arr1 = PostgresArrayType(IntegerType(), dimensions=1)
-        arr2 = PostgresArrayType(IntegerType(), dimensions=3)
+        arr1 = PostgresArrayType(element_type=IntegerType(), dimensions=1)
+        arr2 = PostgresArrayType(element_type=IntegerType(), dimensions=3)
         assert arr1.is_equivalent(arr2)
 
     def test_is_equivalent_non_array(self):
-        arr = PostgresArrayType(IntegerType(), dimensions=1)
+        arr = PostgresArrayType(element_type=IntegerType(), dimensions=1)
         assert arr.is_equivalent(IntegerType()) is False
         assert arr.is_equivalent(None) is False
 
     def test_is_equivalent_different_element(self):
-        arr1 = PostgresArrayType(IntegerType(), dimensions=1)
-        arr2 = PostgresArrayType(VarCharType(), dimensions=1)
+        arr1 = PostgresArrayType(element_type=IntegerType(), dimensions=1)
+        arr2 = PostgresArrayType(element_type=VarCharType(), dimensions=1)
         assert arr1.is_equivalent(arr2) is False

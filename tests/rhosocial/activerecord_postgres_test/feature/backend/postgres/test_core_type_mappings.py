@@ -100,7 +100,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType())
+        arr = PostgresArrayType(element_type=IntegerType())
         assert arr.to_sql(dialect) == ("INTEGER[]", ())
 
     def test_array_2d_rendering(self, dialect):
@@ -108,7 +108,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType(), dimensions=2)
+        arr = PostgresArrayType(element_type=IntegerType(), dimensions=2)
         assert arr.to_sql(dialect) == ("INTEGER[][]", ())
 
     def test_array_varchar_rendering(self, dialect):
@@ -116,7 +116,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        arr = PostgresArrayType(VarCharType(length=255))
+        arr = PostgresArrayType(element_type=VarCharType(length=255))
         assert arr.to_sql(dialect) == ("VARCHAR(255)[]", ())
 
     def test_array_boolean_rendering(self, dialect):
@@ -124,7 +124,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import BooleanType
-        arr = PostgresArrayType(BooleanType())
+        arr = PostgresArrayType(element_type=BooleanType())
         assert arr.to_sql(dialect) == ("BOOLEAN[]", ())
 
     def test_array_equality(self, dialect):
@@ -134,14 +134,14 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, VarCharType,
         )
-        a1 = PostgresArrayType(IntegerType(), 2)
-        a2 = PostgresArrayType(IntegerType(), 2)
-        a3 = PostgresArrayType(VarCharType(length=255), 2)
+        a1 = PostgresArrayType(element_type=IntegerType(), dimensions=2)
+        a2 = PostgresArrayType(element_type=IntegerType(), dimensions=2)
+        a3 = PostgresArrayType(element_type=VarCharType(length=255), dimensions=2)
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)
         # PostgresArrayType.is_equivalent ignores dimensions
-        a4 = PostgresArrayType(IntegerType(), 1)
+        a4 = PostgresArrayType(element_type=IntegerType(), dimensions=1)
         assert a1.is_equivalent(a4)
 
     def test_parse_array_bracket_suffix(self, dialect):
@@ -198,9 +198,9 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, SmallIntType,
         )
-        a1 = PostgresArrayType(IntegerType(), 2)
-        a2 = PostgresArrayType(IntegerType(), 1)   # different dimension
-        a3 = PostgresArrayType(SmallIntType())      # different element type
+        a1 = PostgresArrayType(element_type=IntegerType(), dimensions=2)
+        a2 = PostgresArrayType(element_type=IntegerType(), dimensions=1)   # different dimension
+        a3 = PostgresArrayType(element_type=SmallIntType())      # different element type
         # Same element, different dimension → equivalent
         assert a1.is_element_type_equivalent(a2)
         # Different element → not equivalent
