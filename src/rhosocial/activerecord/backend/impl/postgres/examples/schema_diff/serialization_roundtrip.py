@@ -48,8 +48,8 @@ users_table = CreateTableExpression(
     dialect=dialect, table="users", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100)),
-        ColumnDefinition("email", VarCharType(200)),
+        ColumnDefinition("name", VarCharType(length=100)),
+        ColumnDefinition("email", VarCharType(length=200)),
     ]
 )
 sql, params = users_table.to_sql()
@@ -75,7 +75,7 @@ snapshot_loaded = SchemaSnapshot.from_dict(json.loads(snapshot_json))
 
 # Modify the database
 add_phone = AlterTableExpression(dialect, "users", [
-    AddColumn(dialect, ColumnDefinition("phone", VarCharType(20)))
+    AddColumn(dialect, ColumnDefinition("phone", VarCharType(length=20)))
 ])
 sql, params = add_phone.to_sql()
 backend.execute(sql, params)

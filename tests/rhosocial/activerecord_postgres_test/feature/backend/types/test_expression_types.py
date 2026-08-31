@@ -41,50 +41,50 @@ class TestPostgresTypeSynonyms:
 
 class TestPostgresBitTypeEquality:
     def test_equal(self):
-        assert PostgresBitType(8) == PostgresBitType(8)
+        assert PostgresBitType(n=8) == PostgresBitType(n=8)
 
     def test_not_equal_values(self):
-        assert PostgresBitType(8) != PostgresBitType(16)
+        assert PostgresBitType(n=8) != PostgresBitType(n=16)
 
     def test_not_equal_types(self):
-        assert PostgresBitType(8) != PostgresVarBitType(8)
-        assert PostgresBitType(8) != "not a type"
+        assert PostgresBitType(n=8) != PostgresVarBitType(n=8)
+        assert PostgresBitType(n=8) != "not a type"
 
     def test_none_vs_value(self):
-        assert PostgresBitType(None) != PostgresBitType(8)
+        assert PostgresBitType(None) != PostgresBitType(n=8)
 
     def test_hash(self):
-        assert hash(PostgresBitType(8)) == hash((type(PostgresBitType(8)), 8))
+        assert hash(PostgresBitType(n=8)) == hash((type(PostgresBitType(n=8)), 8))
 
 
 class TestPostgresVarBitTypeEquality:
     def test_equal(self):
-        assert PostgresVarBitType(16) == PostgresVarBitType(16)
+        assert PostgresVarBitType(n=16) == PostgresVarBitType(n=16)
 
     def test_not_equal_values(self):
-        assert PostgresVarBitType(16) != PostgresVarBitType(32)
+        assert PostgresVarBitType(n=16) != PostgresVarBitType(n=32)
 
     def test_not_equal_types(self):
-        assert PostgresVarBitType(16) != PostgresBitType(16)
-        assert PostgresVarBitType(16) != object()
+        assert PostgresVarBitType(n=16) != PostgresBitType(n=16)
+        assert PostgresVarBitType(n=16) != object()
 
     def test_hash(self):
-        assert hash(PostgresVarBitType(16)) == hash((type(PostgresVarBitType(16)), 16))
+        assert hash(PostgresVarBitType(n=16)) == hash((type(PostgresVarBitType(n=16)), 16))
 
 
 class TestPostgresVectorTypeEquality:
     def test_equal(self):
-        assert PostgresVectorType(384) == PostgresVectorType(384)
+        assert PostgresVectorType(dim=384) == PostgresVectorType(dim=384)
 
     def test_not_equal_values(self):
-        assert PostgresVectorType(384) != PostgresVectorType(768)
+        assert PostgresVectorType(dim=384) != PostgresVectorType(dim=768)
 
     def test_not_equal_types(self):
-        assert PostgresVectorType(384) != PostgresBitType(8)
-        assert PostgresVectorType(384) != "vector"
+        assert PostgresVectorType(dim=384) != PostgresBitType(n=8)
+        assert PostgresVectorType(dim=384) != "vector"
 
     def test_hash(self):
-        assert hash(PostgresVectorType(384)) == hash((type(PostgresVectorType(384)), 384))
+        assert hash(PostgresVectorType(dim=384)) == hash((type(PostgresVectorType(dim=384)), 384))
 
 
 class TestPostgresArrayType:

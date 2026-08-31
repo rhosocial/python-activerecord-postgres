@@ -551,7 +551,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             base_raw = stripped[:kw_match.start()]
             element_type = self.parse_type(base_raw)
             # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type, dimensions=1)
+            return PostgresArrayType(dialect=self, element_type=element_type, dimensions=1)
 
         # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
         remaining = stripped
@@ -567,7 +567,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         if remaining != stripped:
             element_type = self.parse_type(remaining)
             # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type, dimensions=1)
+            return PostgresArrayType(dialect=self, element_type=element_type, dimensions=1)
 
         # ---- Standard type dispatch ----
 
@@ -579,93 +579,93 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresSmallSerialType,
             )
             if upper.startswith("BIGSERIAL") or upper.startswith("SERIAL8"):
-                return PostgresBigSerialType()
+                return PostgresBigSerialType(dialect=self)
             if upper.startswith("SMALLSERIAL") or upper.startswith("SERIAL2"):
-                return PostgresSmallSerialType()
-            return PostgresSerialType()
+                return PostgresSmallSerialType(dialect=self)
+            return PostgresSerialType(dialect=self)
 
         # Integer family
         if self._PG_INTEGER_TYPES.match(upper):
             if upper.startswith("SMALLINT") or upper.startswith("INT2"):
-                return SmallIntType()
+                return SmallIntType(dialect=self)
             if upper.startswith("BIGINT") or upper.startswith("INT8"):
-                return BigIntType()
-            return IntegerType()
+                return BigIntType(dialect=self)
+            return IntegerType(dialect=self)
 
         # Float family
         if self._PG_FLOAT_TYPES.match(upper):
             if upper.startswith("DOUBLE"):
-                return DoubleType()
+                return DoubleType(dialect=self)
             if upper.startswith("REAL") or upper.startswith("FLOAT4"):
-                return RealType()
+                return RealType(dialect=self)
             nums = re.findall(r"\d+", stripped)
             precision = int(nums[0]) if nums else None
-            return FloatType(precision)
+            return FloatType(dialect=self, precision=precision)
 
         # Decimal family
         if self._PG_DECIMAL_TYPES.match(upper):
             nums = re.findall(r"\d+", stripped)
             if len(nums) >= 2:
-                return DecimalType(int(nums[0]), int(nums[1]))
+                return DecimalType(dialect=self, precision=int(nums[0]), scale=int(nums[1]))
             if len(nums) == 1:
-                return DecimalType(int(nums[0]))
-            return DecimalType()
+                return DecimalType(dialect=self, precision=int(nums[0]))
+            return DecimalType(dialect=self)
 
         # String family
         if self._PG_STRING_TYPES.match(upper):
             length_match = re.search(r"\((\d+)\)", stripped)
             length = int(length_match.group(1)) if length_match else None
             if upper.startswith("VARCHAR") or upper.startswith("CHARACTER VARYING"):
-                return VarCharType(length)
+                return VarCharType(dialect=self, length=length)
             if upper.startswith("CHAR") or upper.startswith("CHARACTER"):
-                return CharType(length)
-            return TextType()
+                return CharType(dialect=self, length=length)
+            return TextType(dialect=self)
 
         # Binary
         if self._PG_BINARY_TYPES.match(upper):
             from ...expression.types import PostgresByteaType
-            return PostgresByteaType()
+            return PostgresByteaType(dialect=self)
 
         # Date/time
         if self._PG_DATE_TYPES.match(upper):
             if upper.startswith("DATETIME"):
-                return DateTimeType()
+                return DateTimeType(dialect=self)
             if upper.startswith("DATE"):
-                return DateType()
+                return DateType(dialect=self)
             if upper.startswith("TIMESTAMP"):
                 nums = re.findall(r"\d+", stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMESTAMPTZ"):
-                    return TimestampTzType(precision)
-                return TimestampType(precision)
+                    return TimestampTzType(dialect=self, precision=precision)
+                return TimestampType(dialect=self, precision=precision)
             if upper.startswith("TIME"):
                 nums = re.findall(r"\d+", stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMETZ"):
-                    return TimeTzType(precision)
-                return TimeType(precision)
+                    return TimeTzType(dialect=self, precision=precision)
+                return TimeType(dialect=self, precision=precision)
             if upper.startswith("INTERVAL"):
                 fields_match = re.search(r"INTERVAL\s+(.*)", upper)
                 fields = fields_match.group(1).strip() if fields_match else None
-                return IntervalType(fields)
+                return IntervalType(dialect=self, fields=fields)
 
         # JSON
         if self._PG_JSON_TYPES.match(upper):
             if upper.startswith("JSONB"):
-                return JsonBType()
+                return JsonBType(dialect=self)
             if upper.startswith("JSONPATH"):
                 from ...expression.types import PostgresJsonPathType
-                return PostgresJsonPathType()
-            return JsonType()
+                return PostgresJsonPathType(dialect=self)
+            return JsonType(dialect=self)
 
         # UUID
         if self._PG_UUID_TYPES.match(upper):
             from ...expression.types import PostgresUUIDType
-            return PostgresUUIDType()
+            return PostgresUUIDType(dialect=self)
 
         # Boolean
         if upper.startswith("BOOLEAN") or upper.startswith("BOOL"):
-            return BooleanType()
+            return BooleanType(dialect=self)
 
         # Bit string
         if self._PG_BIT_TYPES.match(upper):
@@ -673,9 +673,9 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             n = int(nums[0]) if nums else None
             if upper.startswith("BIT"):
                 from ...expression.types import PostgresBitType
-                return PostgresBitType(n)
+                return PostgresBitType(dialect=self, n=n)
             from ...expression.types import PostgresVarBitType
-            return PostgresVarBitType(n)
+            return PostgresVarBitType(dialect=self, n=n)
 
         # Network address
         if self._PG_NET_TYPES.match(upper):
@@ -686,12 +686,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresMacAddrType,
             )
             if upper.startswith("CIDR"):
-                return PostgresCidrType()
+                return PostgresCidrType(dialect=self)
             if upper.startswith("MACADDR8"):
-                return PostgresMacAddr8Type()
+                return PostgresMacAddr8Type(dialect=self)
             if upper.startswith("MACADDR"):
-                return PostgresMacAddrType()
-            return PostgresInetType()
+                return PostgresMacAddrType(dialect=self)
+            return PostgresInetType(dialect=self)
 
         # Geometric
         if self._PG_GEOM_TYPES.match(upper):
@@ -715,8 +715,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             }
             for name, cls in geom_map.items():
                 if upper.startswith(name):
-                    return cls()
-            return PostgresPointType()
+                    return cls(dialect=self)
+            return PostgresPointType(dialect=self)
 
         # Range types
         if self._PG_RANGE_TYPES.match(upper):
@@ -738,8 +738,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             }
             for name, cls in range_map.items():
                 if upper.startswith(name):
-                    return cls()
-            return PostgresInt4RangeType()
+                    return cls(dialect=self)
+            return PostgresInt4RangeType(dialect=self)
 
         # Multirange types
         if self._PG_MULTIRANGE_TYPES.match(upper):
@@ -761,8 +761,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             }
             for name, cls in mr_map.items():
                 if upper.startswith(name):
-                    return cls()
-            return PostgresInt4MultirangeType()
+                    return cls(dialect=self)
+            return PostgresInt4MultirangeType(dialect=self)
 
         # OID types
         if self._PG_OID_TYPES.match(upper):
@@ -786,8 +786,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             }
             for name, cls in oid_map.items():
                 if upper.startswith(name):
-                    return cls()
-            return PostgresOIDType()
+                    return cls(dialect=self)
+            return PostgresOIDType(dialect=self)
 
         # Text search
         if self._PG_TS_TYPES.match(upper):
@@ -796,8 +796,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresTSVectorType,
             )
             if upper.startswith("TSVECTOR"):
-                return PostgresTSVectorType()
-            return PostgresTSQueryType()
+                return PostgresTSVectorType(dialect=self)
+            return PostgresTSQueryType(dialect=self)
 
         # Miscellaneous
         if self._PG_MISC_TYPES.match(upper):
@@ -810,17 +810,17 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresXMLType,
             )
             if upper.startswith("MONEY"):
-                return PostgresMoneyType()
+                return PostgresMoneyType(dialect=self)
             if upper.startswith("XML"):
-                return PostgresXMLType()
+                return PostgresXMLType(dialect=self)
             if upper.startswith("PG_LSN"):
-                return PostgresPgLSNType()
+                return PostgresPgLSNType(dialect=self)
             if upper.startswith("HSTORE"):
-                return PostgresHstoreType()
+                return PostgresHstoreType(dialect=self)
             if upper.startswith("GEOGRAPHY"):
-                return PostgresGeographyType()
+                return PostgresGeographyType(dialect=self)
             if upper.startswith("GEOMETRY"):
-                return PostgresGeometryType()
+                return PostgresGeometryType(dialect=self)
 
         # Vector types (pgvector)
         vector_match = re.match(r"^(VECTOR|HALFVEC|SPARSEVEC)\b", upper)
@@ -839,16 +839,16 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             vector_kind = vector_match.group(1)
             if vector_kind == "HALFVEC":
                 from ...expression.types import PostgresHalfvecType
-                return PostgresHalfvecType(dim)
+                return PostgresHalfvecType(dialect=self, dim=dim)
             if vector_kind == "SPARSEVEC":
                 from ...expression.types import PostgresSparsevecType
-                return PostgresSparsevecType(dim)
+                return PostgresSparsevecType(dialect=self, dim=dim)
             from ...expression.types import PostgresVectorType
-            return PostgresVectorType(dim)
+            return PostgresVectorType(dialect=self, dim=dim)
 
         # Fallback
         from rhosocial.activerecord.backend.expression.types import CustomType
-        return CustomType(stripped)
+        return CustomType(dialect=self, raw=stripped)
 
 class PostgresTypeSuggestionMixin(DDLTypeSuggestionMixin):
     """PostgreSQL-native ``suggest_column_type()``.
@@ -893,7 +893,7 @@ class PostgresTypeSuggestionMixin(DDLTypeSuggestionMixin):
         factory = mapping.get(python_type)
         if factory is not None:
             if python_type is _enum.Enum:
-                return TextType()
+                return TextType(dialect=self)
             return factory()
 
         return super().suggest_column_type(python_type, version)

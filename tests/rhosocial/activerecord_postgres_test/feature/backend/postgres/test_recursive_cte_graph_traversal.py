@@ -55,7 +55,7 @@ def social_network_data(postgres_backend):
     backend.execute(*CreateTableExpression(dialect, "users", [
         ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100)),
+        ColumnDefinition("name", VarCharType(length=100)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "follows", [
@@ -100,8 +100,8 @@ def aml_data(postgres_backend):
     backend.execute(*CreateTableExpression(dialect, "accounts", [
         ColumnDefinition("id", IntegerType(), constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("account_holder", VarCharType(100)),
-        ColumnDefinition("account_type", VarCharType(20)),
+        ColumnDefinition("account_holder", VarCharType(length=100)),
+        ColumnDefinition("account_type", VarCharType(length=20)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "transactions", [
@@ -109,7 +109,7 @@ def aml_data(postgres_backend):
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition("source_account_id", IntegerType()),
         ColumnDefinition("target_account_id", IntegerType()),
-        ColumnDefinition("amount", DecimalType(12, 2)),
+        ColumnDefinition("amount", DecimalType(precision=12, scale=2)),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],
@@ -467,7 +467,7 @@ class TestAsyncRecursiveCTEGraph:
         await backend.execute(*CreateTableExpression(dialect, "users", [
             ColumnDefinition("id", IntegerType(), constraints=[
                 ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("name", VarCharType(100)),
+            ColumnDefinition("name", VarCharType(length=100)),
         ]).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "follows", [

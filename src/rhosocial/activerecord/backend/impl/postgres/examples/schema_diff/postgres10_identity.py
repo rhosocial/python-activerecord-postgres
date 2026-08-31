@@ -54,7 +54,7 @@ pg9_table = CreateTableExpression(
     dialect=dialect, table="pg9_style", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100)),
+        ColumnDefinition("name", VarCharType(length=100)),
     ]
 )
 sql, params = pg9_table.to_sql()
@@ -69,7 +69,7 @@ try:
             ColumnDefinition("id", IntegerType(),
                 constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],
                 dialect_options={"identity": "ALWAYS"}),
-            ColumnDefinition("name", VarCharType(100)),
+            ColumnDefinition("name", VarCharType(length=100)),
         ]
     )
     sql, params = pg10_table.to_sql()

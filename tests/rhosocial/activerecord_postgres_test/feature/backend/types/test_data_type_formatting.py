@@ -221,31 +221,31 @@ def test_format_core_types(dialect, data_type, expected):
 
 
 def test_format_array_type(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(IntegerType(), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=1))
     assert sql == "INTEGER[]"
 
-    sql, _ = dialect.format_data_type(ArrayType(VarCharType(10), dimensions=3))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=VarCharType(length=10), dimensions=3))
     assert sql == "VARCHAR(10)[][][]"
 
 
 def test_format_array_type_multidimensional(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(IntegerType(), dimensions=2))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=2))
     assert sql == "INTEGER[][]"
 
 
 def test_format_array_type_with_postgres_element(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(PostgresUUIDType(), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=PostgresUUIDType(), dimensions=1))
     assert sql == "UUID[]"
 
 
 def test_format_array_type_unsupported_element_raises(dialect):
     with pytest.raises(TypeError, match="is not supported"):
-        dialect.format_data_type(ArrayType(CustomType("X"), dimensions=1))
+        dialect.format_data_type(ArrayType(element_type=CustomType(raw="X"), dimensions=1))
 
 
 def test_format_unregistered_type_raises(dialect):
     with pytest.raises(TypeError, match="does not support"):
-        dialect.format_data_type(CustomType("X"))
+        dialect.format_data_type(CustomType(raw="X"))
 
 
 # ---------------------------------------------------------------------------
@@ -449,23 +449,23 @@ def test_parse_vector_allowed_when_extension_installed(dialect):
 
 
 def test_vector_types_equality_and_hash():
-    assert PostgresVectorType(3) == PostgresVectorType(3)
-    assert PostgresVectorType(3) != PostgresVectorType(4)
-    assert PostgresVectorType(3) != PostgresHalfvecType(3)
-    assert PostgresVectorType(3) != object()
-    assert hash(PostgresVectorType(3)) == hash(PostgresVectorType(3))
+    assert PostgresVectorType(dim=3) == PostgresVectorType(dim=3)
+    assert PostgresVectorType(dim=3) != PostgresVectorType(dim=4)
+    assert PostgresVectorType(dim=3) != PostgresHalfvecType(dim=3)
+    assert PostgresVectorType(dim=3) != object()
+    assert hash(PostgresVectorType(dim=3)) == hash(PostgresVectorType(dim=3))
 
-    assert PostgresHalfvecType(3) == PostgresHalfvecType(3)
-    assert PostgresHalfvecType(3) != PostgresHalfvecType(4)
-    assert PostgresHalfvecType(3) != PostgresSparsevecType(3)
-    assert PostgresHalfvecType(3) != object()
-    assert hash(PostgresHalfvecType(3)) == hash(PostgresHalfvecType(3))
+    assert PostgresHalfvecType(dim=3) == PostgresHalfvecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != PostgresHalfvecType(dim=4)
+    assert PostgresHalfvecType(dim=3) != PostgresSparsevecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != object()
+    assert hash(PostgresHalfvecType(dim=3)) == hash(PostgresHalfvecType(dim=3))
 
-    assert PostgresSparsevecType(5) == PostgresSparsevecType(5)
-    assert PostgresSparsevecType(5) != PostgresSparsevecType(6)
-    assert PostgresSparsevecType(5) != PostgresVectorType(5)
-    assert PostgresSparsevecType(5) != object()
-    assert hash(PostgresSparsevecType(5)) == hash(PostgresSparsevecType(5))
+    assert PostgresSparsevecType(dim=5) == PostgresSparsevecType(dim=5)
+    assert PostgresSparsevecType(dim=5) != PostgresSparsevecType(dim=6)
+    assert PostgresSparsevecType(dim=5) != PostgresVectorType(dim=5)
+    assert PostgresSparsevecType(dim=5) != object()
+    assert hash(PostgresSparsevecType(dim=5)) == hash(PostgresSparsevecType(dim=5))
 
 
 # ---------------------------------------------------------------------------

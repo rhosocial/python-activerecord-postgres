@@ -60,7 +60,7 @@ users_table = CreateTableExpression(
     dialect=dialect, table="users", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100),
+        ColumnDefinition("name", VarCharType(length=100),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.NOT_NULL)]),
     ]
 )
@@ -72,7 +72,7 @@ orders_table = CreateTableExpression(
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition("user_id", IntegerType()),
-        ColumnDefinition("amount", DecimalType(10, 2)),
+        ColumnDefinition("amount", DecimalType(precision=10, scale=2)),
     ],
     table_constraints=[
         TableConstraint(
