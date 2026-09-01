@@ -88,13 +88,13 @@ class PostgresPolicyMixin:
     # ------------------------------------------------------------------ #
     # Shared helpers
     # ------------------------------------------------------------------ #
-    def _format_table_ref(self, schema: Optional[str], table_name: str) -> str:
+    def format_table_ref(self, schema: Optional[str], table_name: str) -> str:
         """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
         if schema:
             return f"{self.format_identifier(schema)}.{self.format_identifier(table_name)}"
         return self.format_identifier(table_name)
 
-    def _format_role_list(self, roles: List[str]) -> Tuple[str, tuple]:
+    def format_role_list(self, roles: List[str]) -> Tuple[str, tuple]:
         """Format the ``TO role [, ...]`` clause.
 
         Returns ``(formatted_role_list, params)`` — params are always empty
@@ -118,7 +118,7 @@ class PostgresPolicyMixin:
                 parts.append(self.format_identifier(r))
         return ", ".join(parts), ()
 
-    def _format_predicate(
+    def format_predicate(
         self, expr: SQLPredicate, clause_keyword: str
     ) -> Tuple[str, tuple]:
         """Format ````USING``/``WITH CHECK`` ( predicate )`` clause."""
@@ -185,18 +185,18 @@ class PostgresPolicyMixin:
         # TO role list
         to_clause = ""
         if expr.roles is not None:
-            role_list, _ = self._format_role_list(list(expr.roles))
+            role_list, _ = self.format_role_list(list(expr.roles))
             to_clause = f"TO {role_list}"
 
         # USING / WITH CHECK
         all_params: List[object] = []
         using_clause = ""
         if expr.using is not None:
-            using_clause, params = self._format_predicate(expr.using, "USING")
+            using_clause, params = self.format_predicate(expr.using, "USING")
             all_params.extend(params)
         with_check_clause = ""
         if expr.with_check is not None:
-            with_check_clause, params = self._format_predicate(
+            with_check_clause, params = self.format_predicate(
                 expr.with_check, "WITH CHECK"
             )
             all_params.extend(params)
@@ -204,7 +204,7 @@ class PostgresPolicyMixin:
         parts: List[str] = ["CREATE POLICY"]
         parts.append(self.format_identifier(expr.name))
         parts.append("ON")
-        parts.append(self._format_table_ref(expr.schema, expr.table_name))
+        parts.append(self.format_table_ref(expr.schema, expr.table_name))
         if as_clause:
             parts.append(as_clause)
         if command_clause:
@@ -273,7 +273,7 @@ class PostgresPolicyMixin:
                 "ALTER POLICY",
                 self.format_identifier(expr.name),
                 "ON",
-                self._format_table_ref(expr.schema, expr.table_name),
+                self.format_table_ref(expr.schema, expr.table_name),
                 "RENAME TO",
                 self.format_identifier(expr.new_name),
             ]
@@ -298,17 +298,17 @@ class PostgresPolicyMixin:
             "ALTER POLICY",
             self.format_identifier(expr.name),
             "ON",
-            self._format_table_ref(expr.schema, expr.table_name),
+            self.format_table_ref(expr.schema, expr.table_name),
         ]
         if expr.roles is not None:
-            role_list, _ = self._format_role_list(list(expr.roles))
+            role_list, _ = self.format_role_list(list(expr.roles))
             parts.append(f"TO {role_list}")
         if expr.using is not None:
-            using_clause, params = self._format_predicate(expr.using, "USING")
+            using_clause, params = self.format_predicate(expr.using, "USING")
             parts.append(using_clause)
             all_params.extend(params)
         if expr.with_check is not None:
-            wc_clause, params = self._format_predicate(
+            wc_clause, params = self.format_predicate(
                 expr.with_check, "WITH CHECK"
             )
             parts.append(wc_clause)
@@ -357,7 +357,7 @@ class PostgresPolicyMixin:
             parts.append("IF EXISTS")
         parts.append(self.format_identifier(expr.name))
         parts.append("ON")
-        parts.append(self._format_table_ref(expr.schema, expr.table_name))
+        parts.append(self.format_table_ref(expr.schema, expr.table_name))
         if expr.cascade:
             parts.append("CASCADE")
         elif expr.restrict:

@@ -34,7 +34,7 @@ class PostgresCollationDDLMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_collation_ref(self, schema: Optional[str], name: str) -> str:
+    def format_collation_ref(self, schema: Optional[str], name: str) -> str:
         """Format ``name`` (optionally schema-qualified) as identifier(s)."""
         if schema:
             return (
@@ -71,7 +71,7 @@ class PostgresCollationDDLMixin:
         parts: List[str] = ["CREATE COLLATION"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self._format_collation_ref(expr.schema, expr.name))
+        parts.append(self.format_collation_ref(expr.schema, expr.name))
         params_list = [
             ("LOCALE", expr.locale),
             ("LC_COLLATE", expr.lc_collate),
@@ -119,7 +119,7 @@ class PostgresCollationDDLMixin:
         parts: List[str] = ["DROP COLLATION"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_collation_ref(expr.schema, expr.name))
+        parts.append(self.format_collation_ref(expr.schema, expr.name))
         if expr.cascade:
             parts.append("CASCADE")
         elif expr.restrict:

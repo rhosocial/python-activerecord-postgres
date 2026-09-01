@@ -33,7 +33,7 @@ class PostgresDomainMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_domain_ref(self, schema: Optional[str], name: str) -> str:
+    def format_domain_ref(self, schema: Optional[str], name: str) -> str:
         """Format ``name`` (optionally schema-qualified) as identifier(s)."""
         if schema:
             return f"{self.format_identifier(schema)}.{self.format_identifier(name)}"
@@ -66,7 +66,7 @@ class PostgresDomainMixin:
 
         parts: List[str] = [
             "CREATE DOMAIN",
-            self._format_domain_ref(expr.schema, expr.name),
+            self.format_domain_ref(expr.schema, expr.name),
             "AS",
             expr.data_type,
         ]
@@ -103,7 +103,7 @@ class PostgresDomainMixin:
                 suggestion="requires PostgreSQL 9.6+",
             )
 
-        base = f"ALTER DOMAIN {self._format_domain_ref(expr.schema, expr.name)}"
+        base = f"ALTER DOMAIN {self.format_domain_ref(expr.schema, expr.name)}"
         action = expr.action
         if action is AlterDomainActionType.SET_DEFAULT:
             return f"{base} SET DEFAULT {expr.new_value}", ()
@@ -148,7 +148,7 @@ class PostgresDomainMixin:
         parts: List[str] = ["DROP DOMAIN"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_domain_ref(expr.schema, expr.name))
+        parts.append(self.format_domain_ref(expr.schema, expr.name))
         if expr.cascade:
             parts.append("CASCADE")
         elif expr.restrict:

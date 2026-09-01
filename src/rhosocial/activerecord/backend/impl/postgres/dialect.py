@@ -1420,7 +1420,7 @@ class PostgresDialect(
         # Handle EXCLUDE constraint (PG-specific, not in base class)
         if action.constraint.constraint_type == TableConstraintType.EXCLUDE:
             parts = []
-            exclude_sql, params = self._format_exclude_constraint(action.constraint)
+            exclude_sql, params = self.format_exclude_constraint(action.constraint)
             parts.append(exclude_sql)
 
             # NOT VALID suffix
@@ -1442,7 +1442,7 @@ class PostgresDialect(
 
         return sql, params
 
-    def _format_exclude_constraint(
+    def format_exclude_constraint(
         self, constraint: "TableConstraint",
     ) -> Tuple[str, tuple]:
         """Format EXCLUDE constraint (PostgreSQL-specific).

@@ -37,7 +37,7 @@ class PostgresAlterTableSettingsMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_settings_table_ref(
+    def format_settings_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
         """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
@@ -82,7 +82,7 @@ class PostgresAlterTableSettingsMixin:
                 "exclusive"
             )
 
-        table_ref = self._format_settings_table_ref(expr.schema, expr.table_name)
+        table_ref = self.format_settings_table_ref(expr.schema, expr.table_name)
 
         if has_logging:
             if not self.supports_table_logging_switch():

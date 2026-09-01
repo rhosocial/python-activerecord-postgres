@@ -31,7 +31,7 @@ class PostgresForeignTableMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_foreign_table_ref(
+    def format_foreign_table_ref(
         self, schema: Optional[str], name: str
     ) -> str:
         """Format ``name`` (optionally schema-qualified) as identifier(s)."""
@@ -70,7 +70,7 @@ class PostgresForeignTableMixin:
         parts: List[str] = ["CREATE FOREIGN TABLE"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self._format_foreign_table_ref(expr.schema, expr.name))
+        parts.append(self.format_foreign_table_ref(expr.schema, expr.name))
         if expr.columns:
             parts.append("(" + ", ".join(expr.columns) + ")")
         parts.append("SERVER")
@@ -112,7 +112,7 @@ class PostgresForeignTableMixin:
         parts: List[str] = ["DROP FOREIGN TABLE"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_foreign_table_ref(expr.schema, expr.name))
+        parts.append(self.format_foreign_table_ref(expr.schema, expr.name))
         if expr.cascade:
             parts.append("CASCADE")
         elif expr.restrict:

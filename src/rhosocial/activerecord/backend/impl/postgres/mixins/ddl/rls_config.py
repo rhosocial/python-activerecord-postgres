@@ -42,7 +42,7 @@ class PostgresRlsConfigMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_rls_table_ref(
+    def format_rls_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
         """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
@@ -86,7 +86,7 @@ class PostgresRlsConfigMixin:
         mode = "ENABLE ALWAYS" if expr.always else expr.mode.value
         parts = [
             "ALTER TABLE",
-            self._format_rls_table_ref(expr.schema, expr.table_name),
+            self.format_rls_table_ref(expr.schema, expr.table_name),
             f"{mode} ROW LEVEL SECURITY",
         ]
         return " ".join(parts), ()
@@ -119,7 +119,7 @@ class PostgresRlsConfigMixin:
             "NO FORCE ROW LEVEL SECURITY"
         parts = [
             "ALTER TABLE",
-            self._format_rls_table_ref(expr.schema, expr.table_name),
+            self.format_rls_table_ref(expr.schema, expr.table_name),
             mode,
         ]
         return " ".join(parts), ()

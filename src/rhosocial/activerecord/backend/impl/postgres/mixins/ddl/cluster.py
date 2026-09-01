@@ -28,7 +28,7 @@ class PostgresClusterMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_cluster_table_ref(
+    def format_cluster_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
         """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
@@ -69,7 +69,7 @@ class PostgresClusterMixin:
             parts.append("VERBOSE")
         if expr.table_name:
             parts.append(
-                self._format_cluster_table_ref(expr.schema, expr.table_name)
+                self.format_cluster_table_ref(expr.schema, expr.table_name)
             )
             if expr.using_index:
                 parts.append("USING")

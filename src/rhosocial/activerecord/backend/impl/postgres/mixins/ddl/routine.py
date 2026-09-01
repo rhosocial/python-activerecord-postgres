@@ -40,7 +40,7 @@ class PostgresRoutineMixin:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_routine_ref(self, schema: Optional[str], name: str) -> str:
+    def format_routine_ref(self, schema: Optional[str], name: str) -> str:
         """Format ``name`` (optionally schema-qualified) as identifier(s)."""
         if schema:
             return (
@@ -77,7 +77,7 @@ class PostgresRoutineMixin:
         replace = "OR REPLACE " if expr.or_replace else ""
         base = (
             f"CREATE {replace}FUNCTION "
-            f"{self._format_routine_ref(expr.schema, expr.name)}"
+            f"{self.format_routine_ref(expr.schema, expr.name)}"
         )
         args = ", ".join(expr.args) if expr.args else ""
         parts: List[str] = [f"{base}({args})"]
@@ -129,7 +129,7 @@ class PostgresRoutineMixin:
         parts: List[str] = ["DROP FUNCTION"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_routine_ref(expr.schema, expr.name))
+        parts.append(self.format_routine_ref(expr.schema, expr.name))
         if expr.args:
             parts.append("(" + ", ".join(expr.args) + ")")
         if expr.cascade:
@@ -164,7 +164,7 @@ class PostgresRoutineMixin:
             )
         base = (
             f"CREATE AGGREGATE "
-            f"{self._format_routine_ref(expr.schema, expr.name)}"
+            f"{self.format_routine_ref(expr.schema, expr.name)}"
         )
         options = [f"SFUNC={expr.sfunc}", f"STYPE={expr.stype}"]
         if expr.finalfunc:
@@ -205,7 +205,7 @@ class PostgresRoutineMixin:
         parts: List[str] = ["DROP AGGREGATE"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_routine_ref(expr.schema, expr.name))
+        parts.append(self.format_routine_ref(expr.schema, expr.name))
         parts.append(f"({expr.arg_type})")
         if expr.cascade:
             parts.append("CASCADE")
