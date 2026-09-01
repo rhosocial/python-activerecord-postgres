@@ -98,7 +98,7 @@ def test_exclude_constraint_valid_using_methods(dialect):
         },
     )
 
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_exclude_constraint(constraint)
     assert "EXCLUDE USING gist" in sql
 
 
@@ -120,7 +120,7 @@ def test_exclude_constraint_valid_operators(dialect):
             },
         )
 
-        sql, params = dialect._format_exclude_constraint(constraint)
+        sql, params = dialect.format_exclude_constraint(constraint)
         assert f"WITH {op}" in sql
 
 
@@ -136,7 +136,7 @@ def test_exclude_constraint_rejects_invalid_using(dialect):
     )
 
     with pytest.raises(ValueError, match="Invalid index access method"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_exclude_constraint(constraint)
 
 
 def test_exclude_constraint_rejects_invalid_operator(dialect):
@@ -150,7 +150,7 @@ def test_exclude_constraint_rejects_invalid_operator(dialect):
     )
 
     with pytest.raises(ValueError, match="Invalid exclude operator"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_exclude_constraint(constraint)
 
 
 def test_exclude_constraint_sql_injection_prevention(dialect):
@@ -164,7 +164,7 @@ def test_exclude_constraint_sql_injection_prevention(dialect):
         },
     )
 
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_exclude_constraint(constraint)
 
     assert "; DROP" not in sql
     assert "--" not in sql
