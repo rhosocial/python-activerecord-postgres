@@ -16,7 +16,7 @@ def register_commands(subparsers):
     from .query import create_parser as query_parser
     from .introspect import create_parser as introspect_parser
     from .status import create_parser as status_parser
-    from .named_expression import create_parser as nq_parser
+    from .named_expression import create_parser as ne_parser
     from .named_procedure import create_parser as np_parser
     from .named_procedure_graph import create_parser as npg_parser
     from .named_migration import create_parser as nm_parser
@@ -25,7 +25,7 @@ def register_commands(subparsers):
     query_parser(subparsers)
     introspect_parser(subparsers)
     status_parser(subparsers)
-    nq_parser(subparsers)
+    ne_parser(subparsers)
     np_parser(subparsers)
     npg_parser(subparsers)
     nm_parser(subparsers)
