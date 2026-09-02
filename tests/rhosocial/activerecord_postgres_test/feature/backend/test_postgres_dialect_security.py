@@ -245,8 +245,8 @@ class TestPostgresPartialIndexWhereClauseSecurity:
     def test_create_index_with_string_where_clause(self, dialect):
         """Test CREATE INDEX with string WHERE clause (backward compatible)."""
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             where_clause="active = true",
         )
@@ -267,8 +267,8 @@ class TestPostgresPartialIndexWhereClauseSecurity:
                 return self._sql, self._params
 
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_active",
-            table_name="users",
+            index="idx_active",
+            table="users",
             columns=["email"],
             where_clause=MockWhereExpr(),
         )
@@ -289,8 +289,8 @@ class TestPostgresPartialIndexWhereClauseSecurity:
                 return self._sql, self._params
 
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["status"],
             where_clause=MockWhereExpr(),
         )
@@ -312,8 +312,8 @@ class TestPostgresTriggerFunctionNameSecurity:
 
         expr = CreateTriggerExpression(
             dialect=dialect,
-            trigger_name="my_trigger",
-            table_name="users",
+            trigger="my_trigger",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
             function_name="my_function",
@@ -333,8 +333,8 @@ class TestPostgresTriggerFunctionNameSecurity:
 
         expr = CreateTriggerExpression(
             dialect=dialect,
-            trigger_name="trigger",
-            table_name="users",
+            trigger="trigger",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
             function_name="Function With Spaces",
@@ -357,7 +357,7 @@ class TestPostgresExtendedStatisticsNameSecurity:
         expr = PostgresCreateStatisticsExpression(
             dialect=dialect,
             name="my_stats",
-            table_name="users",
+            table="users",
             columns=["email"],
             statistics_type="ndistinct",
         )

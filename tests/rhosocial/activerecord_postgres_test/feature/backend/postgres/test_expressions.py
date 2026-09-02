@@ -35,14 +35,14 @@ class TestPostgresVacuumExpression:
 
     def test_vacuum_with_table(self, dialect):
         """Test VACUUM with table name."""
-        expr = PostgresVacuumExpression(dialect, table_name="users")
+        expr = PostgresVacuumExpression(dialect, table="users")
         sql, params = expr.to_sql()
         assert '"users"' in sql
         assert params == ()
 
     def test_vacuum_with_schema(self, dialect):
         """Test VACUUM with schema.table."""
-        expr = PostgresVacuumExpression(dialect, table_name="users", schema="public")
+        expr = PostgresVacuumExpression(dialect, table="users", schema="public")
         sql, params = expr.to_sql()
         assert '"public"."users"' in sql
 
@@ -50,7 +50,7 @@ class TestPostgresVacuumExpression:
         """Test VACUUM with multiple options."""
         expr = PostgresVacuumExpression(
             dialect,
-            table_name="users",
+            table="users",
             verbose=True,
             analyze=True,
             full=True
@@ -112,7 +112,7 @@ class TestPostgresAnalyzeExpression:
         """Test ANALYZE with specific columns."""
         expr = PostgresAnalyzeExpression(
             dialect,
-            table_name="users",
+            table="users",
             columns=["id", "name", "email"]
         )
         sql, params = expr.to_sql()

@@ -116,8 +116,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            index="idx_btree_gin_value",
+            table="test_btree_gin",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -147,8 +147,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on TEXT column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_name",
-            table_name="test_btree_gin",
+            index="idx_btree_gin_name",
+            table="test_btree_gin",
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -178,8 +178,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            index="idx_btree_gin_value",
+            table="test_btree_gin",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -272,8 +272,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            index="idx_btree_gin_value_async",
+            table="test_btree_gin_async",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -304,8 +304,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on TEXT column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_name_async",
-            table_name="test_btree_gin_async",
+            index="idx_btree_gin_name_async",
+            table="test_btree_gin_async",
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -336,8 +336,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            index="idx_btree_gin_value_async",
+            table="test_btree_gin_async",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,

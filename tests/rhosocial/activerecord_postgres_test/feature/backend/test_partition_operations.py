@@ -171,7 +171,7 @@ def _drop_table_sql(dialect, table_name: str):
 def _truncate_table_sql(dialect, table_name: str):
     expr = TruncateExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=table_name,
     )
     return expr.to_sql()
 

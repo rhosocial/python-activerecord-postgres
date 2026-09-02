@@ -256,8 +256,8 @@ class TestFormatCreateIndexPgStatement:
         """Test basic CREATE INDEX."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_users_email",
-            table_name="users",
+            index="idx_users_email",
+            table="users",
             columns=["email"]
         )
         assert 'CREATE INDEX "idx_users_email"' in sql
@@ -267,8 +267,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE UNIQUE INDEX."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_users_email",
-            table_name="users",
+            index="idx_users_email",
+            table="users",
             columns=["email"],
             unique=True
         )
@@ -278,8 +278,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with specific type."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_users_email",
-            table_name="users",
+            index="idx_users_email",
+            table="users",
             columns=["email"],
             index_type="hash"
         )
@@ -290,8 +290,8 @@ class TestFormatCreateIndexPgStatement:
         dialect = PostgresDialect((14, 0, 0))
         with pytest.raises(ValueError, match="Invalid index_type"):
             dialect.format_create_index_pg_statement(
-                index_name="idx_test",
-                table_name="users",
+                index="idx_test",
+                table="users",
                 columns=["email"],
                 index_type="invalid"
             )
@@ -301,8 +301,8 @@ class TestFormatCreateIndexPgStatement:
         dialect = PostgresDialect((10, 0, 0))
         with pytest.raises(ValueError, match="requires PostgreSQL 11"):
             dialect.format_create_index_pg_statement(
-                index_name="idx_test",
-                table_name="users",
+                index="idx_test",
+                table="users",
                 columns=["email"],
                 concurrently=True
             )
@@ -311,8 +311,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX CONCURRENTLY on PostgreSQL 11."""
         dialect = PostgresDialect((11, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             concurrently=True
         )
@@ -322,8 +322,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX IF NOT EXISTS."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             if_not_exists=True
         )
@@ -333,8 +333,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with INCLUDE clause."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             include_columns=["name", "created_at"]
         )
@@ -345,8 +345,8 @@ class TestFormatCreateIndexPgStatement:
         dialect = PostgresDialect((11, 0, 0))
         with pytest.raises(ValueError, match="INCLUDE for GiST indexes requires PostgreSQL 12"):
             dialect.format_create_index_pg_statement(
-                index_name="idx_test",
-                table_name="users",
+                index="idx_test",
+                table="users",
                 columns=["location"],
                 index_type="gist",
                 include_columns=["name"]
@@ -357,8 +357,8 @@ class TestFormatCreateIndexPgStatement:
         dialect = PostgresDialect((13, 0, 0))
         with pytest.raises(ValueError, match="INCLUDE for SP-GiST indexes requires PostgreSQL 14"):
             dialect.format_create_index_pg_statement(
-                index_name="idx_test",
-                table_name="users",
+                index="idx_test",
+                table="users",
                 columns=["location"],
                 index_type="spgist",
                 include_columns=["name"]
@@ -368,8 +368,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with WITH options."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             with_options={"fillfactor": "80", "deduplicate_items": "on"}
         )
@@ -379,8 +379,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with TABLESPACE."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             tablespace="pg_fast"
         )
@@ -390,8 +390,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with WHERE clause (partial index)."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_active_users",
-            table_name="users",
+            index="idx_active_users",
+            table="users",
             columns=["email"],
             where_clause="active = true"
         )
@@ -401,8 +401,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with schema."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email"],
             schema="public"
         )
@@ -413,8 +413,8 @@ class TestFormatCreateIndexPgStatement:
         """Test CREATE INDEX with multiple columns."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_create_index_pg_statement(
-            index_name="idx_test",
-            table_name="users",
+            index="idx_test",
+            table="users",
             columns=["email", "name"]
         )
         assert '("email", "name")' in sql
@@ -539,8 +539,8 @@ class TestFulltextDdlNotSupportedSearchSupported:
         dialect = PostgresDialect()
         expr = CreateFulltextIndexExpression(
             dialect,
-            index_name="idx_ft",
-            table_name="articles",
+            index="idx_ft",
+            table="articles",
             columns=["body"],
         )
         sql, params = dialect.format_create_fulltext_index_statement(expr)
@@ -554,8 +554,8 @@ class TestFulltextDdlNotSupportedSearchSupported:
         dialect = PostgresDialect()
         expr = CreateFulltextIndexExpression(
             dialect,
-            index_name="idx_ft",
-            table_name="articles",
+            index="idx_ft",
+            table="articles",
             columns=["body"],
             if_not_exists=True,
         )
@@ -566,8 +566,8 @@ class TestFulltextDdlNotSupportedSearchSupported:
         dialect = PostgresDialect()
         expr = CreateFulltextIndexExpression(
             dialect,
-            index_name="idx_ft",
-            table_name="articles",
+            index="idx_ft",
+            table="articles",
             columns=["title", "body"],
         )
         sql, _ = dialect.format_create_fulltext_index_statement(expr)
@@ -579,8 +579,8 @@ class TestFulltextDdlNotSupportedSearchSupported:
         dialect = PostgresDialect()
         expr = DropFulltextIndexExpression(
             dialect,
-            index_name="idx_ft",
-            table_name="articles",
+            index="idx_ft",
+            table="articles",
         )
         sql, _ = dialect.format_drop_fulltext_index_statement(expr)
         assert sql.startswith("DROP INDEX")
@@ -590,8 +590,8 @@ class TestFulltextDdlNotSupportedSearchSupported:
         dialect = PostgresDialect()
         expr = DropFulltextIndexExpression(
             dialect,
-            index_name="idx_ft",
-            table_name="articles",
+            index="idx_ft",
+            table="articles",
             if_exists=True,
         )
         sql, _ = dialect.format_drop_fulltext_index_statement(expr)
@@ -795,7 +795,7 @@ class TestFormatAddDropIndexAction:
 
     def test_format_drop_index_action_raises(self):
         d = PostgresDialect()
-        drop = DropIndexAction(d, index_name="idx_test")
+        drop = DropIndexAction(d, index="idx_test")
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE DROP INDEX"):
             d.format_drop_index_action(drop)
 
@@ -902,8 +902,8 @@ class TestFormatCreateIndexPgStatementWhereExpression:
         d = PostgresDialect()
         from rhosocial.activerecord.backend.expression import Column, Literal
         sql, params = d.format_create_index_pg_statement(
-            index_name="idx_active",
-            table_name="users",
+            index="idx_active",
+            table="users",
             columns=["email"],
             where_clause=Column(d, "status") == Literal(d, 1),
         )

@@ -295,7 +295,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _truncate_partition_sql(self, dialect, partition_name: str):
-        expr = TruncateExpression(dialect=dialect, table_name=partition_name)
+        expr = TruncateExpression(dialect=dialect, table=partition_name)
         return expr.to_sql()
 
     def _drop_partition_sql(self, dialect, table_name: str):

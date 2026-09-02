@@ -81,8 +81,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="update_timestamp",
-            table_name="users",
+            trigger="update_timestamp",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             function_name="update_updated_at_column"
@@ -98,8 +98,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="log_insert",
-            table_name="users",
+            trigger="log_insert",
+            table="users",
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
             function_name="log_user_insert"
@@ -112,8 +112,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="audit_trigger",
-            table_name="users",
+            trigger="audit_trigger",
+            table="users",
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT, TriggerEvent.UPDATE, TriggerEvent.DELETE],
             function_name="audit_function"
@@ -126,8 +126,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="check_status",
-            table_name="orders",
+            trigger="check_status",
+            table="orders",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             update_columns=["status", "updated_at"],
@@ -141,8 +141,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger="test_trigger",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             function_name="test_func",
@@ -156,8 +156,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger="test_trigger",
+            table="users",
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
             function_name="test_func",
@@ -171,8 +171,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger="test_trigger",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             function_name="test_func",
@@ -186,8 +186,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((10, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger="test_trigger",
+            table="users",
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.UPDATE],
             function_name="test_func",
@@ -202,8 +202,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="simple_trigger",
-            table_name="users",
+            trigger="simple_trigger",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
             function_name="simple_func",
@@ -219,8 +219,8 @@ class TestFormatCreateTriggerStatement:
         condition = Column(dialect, "status") == Literal(dialect, "ACTIVE")
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="check_status",
-            table_name="users",
+            trigger="check_status",
+            table="users",
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             function_name="validate_status",
@@ -236,8 +236,8 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="view_trigger",
-            table_name="user_view",
+            trigger="view_trigger",
+            table="user_view",
             timing=TriggerTiming.INSTEAD_OF,
             events=[TriggerEvent.INSERT],
             function_name="handle_view_insert"
@@ -254,7 +254,7 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger"
+            trigger="test_trigger"
         )
         sql, params = dialect.format_drop_trigger_statement(expr)
         assert 'DROP TRIGGER "test_trigger"' in sql
@@ -264,8 +264,8 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users"
+            trigger="test_trigger",
+            table="users"
         )
         sql, params = dialect.format_drop_trigger_statement(expr)
         assert 'ON "users"' in sql
@@ -275,7 +275,7 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
+            trigger="test_trigger",
             if_exists=True
         )
         sql, params = dialect.format_drop_trigger_statement(expr)

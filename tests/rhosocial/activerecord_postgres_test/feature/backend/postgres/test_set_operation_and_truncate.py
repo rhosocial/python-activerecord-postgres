@@ -93,7 +93,7 @@ class TestTruncateSupport:
         from rhosocial.activerecord.backend.expression.statements import TruncateExpression
 
         dialect = PostgresDialect()
-        expr = TruncateExpression(dialect, table_name="users")
+        expr = TruncateExpression(dialect, table="users")
         sql, params = dialect.format_truncate_statement(expr)
 
         assert sql == 'TRUNCATE TABLE "users"'
@@ -104,7 +104,7 @@ class TestTruncateSupport:
         from rhosocial.activerecord.backend.expression.statements import TruncateExpression
 
         dialect = PostgresDialect(version=(9, 0, 0))
-        expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
+        expr = TruncateExpression(dialect, table="users", restart_identity=True)
         sql, params = dialect.format_truncate_statement(expr)
 
         assert sql == 'TRUNCATE TABLE "users" RESTART IDENTITY'
@@ -115,7 +115,7 @@ class TestTruncateSupport:
         from rhosocial.activerecord.backend.expression.statements import TruncateExpression
 
         dialect = PostgresDialect()
-        expr = TruncateExpression(dialect, table_name="orders", cascade=True)
+        expr = TruncateExpression(dialect, table="orders", cascade=True)
         sql, params = dialect.format_truncate_statement(expr)
 
         assert sql == 'TRUNCATE TABLE "orders" CASCADE'
@@ -128,7 +128,7 @@ class TestTruncateSupport:
         dialect = PostgresDialect(version=(9, 0, 0))
         expr = TruncateExpression(
             dialect,
-            table_name="orders",
+            table="orders",
             restart_identity=True,
             cascade=True
         )
@@ -143,7 +143,7 @@ class TestTruncateSupport:
 
         # PostgreSQL 8.3 does not support RESTART IDENTITY
         dialect = PostgresDialect(version=(8, 3, 0))
-        expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
+        expr = TruncateExpression(dialect, table="users", restart_identity=True)
         sql, params = dialect.format_truncate_statement(expr)
 
         # RESTART IDENTITY should be ignored on unsupported version

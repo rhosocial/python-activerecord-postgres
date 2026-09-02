@@ -69,7 +69,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table"
+            table="test_table"
         )
         with pytest.raises(ValueError, match="requires PostgreSQL 10"):
             dialect.format_create_statistics_statement(expr)
@@ -81,7 +81,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table"
+            table="test_table"
         )
         sql, params = dialect.format_create_statistics_statement(expr)
         assert 'CREATE STATISTICS "test_stats"' in sql
@@ -96,7 +96,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             schema="public"
         )
         sql, params = dialect.format_create_statistics_statement(expr)
@@ -110,7 +110,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             if_not_exists=True
         )
         sql, params = dialect.format_create_statistics_statement(expr)
@@ -123,7 +123,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             statistics_type="ndistinct"
         )
         sql, params = dialect.format_create_statistics_statement(expr)
@@ -136,7 +136,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             statistics_type="dependencies"
         )
         sql, params = dialect.format_create_statistics_statement(expr)
@@ -149,7 +149,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             statistics_type="mcv"
         )
         sql, params = dialect.format_create_statistics_statement(expr)
@@ -162,7 +162,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             statistics_type="mcv"
         )
         with pytest.raises(ValueError, match="MCV statistics require PostgreSQL 12"):
@@ -175,7 +175,7 @@ class TestFormatCreateStatisticsStatement:
             dialect,
             name="test_stats",
             columns=["col1", "col2"],
-            table_name="test_table",
+            table="test_table",
             statistics_type="invalid"
         )
         with pytest.raises(ValueError, match="Invalid statistics type"):

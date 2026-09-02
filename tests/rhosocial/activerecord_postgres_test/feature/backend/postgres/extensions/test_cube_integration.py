@@ -165,8 +165,8 @@ def cube_env(postgres_backend_single):
     # Create GiST index on test_cube_idx
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_test_cube",
-        table_name="test_cube_idx",
+        index="idx_test_cube",
+        table="test_cube_idx",
         columns=["c"],
         index_type="GIST",
         if_not_exists=True,
@@ -451,8 +451,8 @@ async def async_cube_env(async_postgres_backend_single):
     # Create GiST index on test_cube_idx_async
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_test_cube_async",
-        table_name="test_cube_idx_async",
+        index="idx_test_cube_async",
+        table="test_cube_idx_async",
         columns=["c"],
         index_type="GIST",
         if_not_exists=True,

@@ -166,7 +166,7 @@ class TestCreateVectorIndex:
     def test_custom_index_name(self, postgres_dialect):
         expr = create_vector_index(
             postgres_dialect, "documents", "embedding",
-            index_name="doc_emb_hnsw",
+            index="doc_emb_hnsw",
         )
         sql, params = expr.to_sql()
         assert "doc_emb_hnsw" in sql

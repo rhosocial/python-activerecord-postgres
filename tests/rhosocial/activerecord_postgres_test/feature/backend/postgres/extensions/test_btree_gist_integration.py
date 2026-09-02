@@ -119,8 +119,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            index="idx_btree_gist_created_at",
+            table="test_btree_gist",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -150,8 +150,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_value",
-            table_name="test_btree_gist",
+            index="idx_btree_gist_value",
+            table="test_btree_gist",
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -181,8 +181,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            index="idx_btree_gist_created_at",
+            table="test_btree_gist",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -284,8 +284,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            index="idx_btree_gist_created_at_async",
+            table="test_btree_gist_async",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -316,8 +316,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on INTEGER column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_value_async",
-            table_name="test_btree_gist_async",
+            index="idx_btree_gist_value_async",
+            table="test_btree_gist_async",
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -348,8 +348,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = CreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            index="idx_btree_gist_created_at_async",
+            table="test_btree_gist_async",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,

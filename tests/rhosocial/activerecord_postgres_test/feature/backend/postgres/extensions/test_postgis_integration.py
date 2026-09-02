@@ -197,8 +197,8 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
 
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name=index_name,
-        table_name=table,
+        index=index_name,
+        table=table,
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -408,8 +408,8 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
 
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name=index_name,
-        table_name=table,
+        index=index_name,
+        table=table,
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
