@@ -50,7 +50,7 @@ dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     if_exists=True,
     cascade=True,
 )
@@ -59,7 +59,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     columns=[
         ColumnDefinition(
             'id',
@@ -180,7 +180,7 @@ except Exception as e:
 # SECTION: Lock Modes
 # ============================================================
 # FOR UPDATE - exclusive lock (write lock)
-# FOR UPDATE OF table_name - lock specific table
+# FOR UPDATE OF table - lock specific table
 # FOR SHARE - shared lock (read lock)
 # FOR KEY SHARE - for foreign key detection
 
@@ -207,7 +207,7 @@ with backend.transaction():
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     if_exists=True,
     cascade=True,
 )

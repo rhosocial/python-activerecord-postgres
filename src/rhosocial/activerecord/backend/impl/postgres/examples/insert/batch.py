@@ -33,7 +33,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='logs',
+    table='logs',
     if_exists=True,
     cascade=True,
 )
@@ -42,7 +42,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='logs',
+    table='logs',
     columns=[
         ColumnDefinition(
             'id',

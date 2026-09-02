@@ -291,9 +291,9 @@ class PostgresIndexMixin:
         parts = ["CREATE INDEX"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(self.format_identifier(expr.index))
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(self.format_identifier(expr.table))
         parts.append("USING GIN")
 
         if len(expr.columns) == 1:
@@ -320,7 +320,7 @@ class PostgresIndexMixin:
         parts = ["DROP INDEX"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(self.format_identifier(expr.index))
         return " ".join(parts), ()
 
     def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
@@ -348,9 +348,9 @@ class PostgresIndexMixin:
 
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(self.format_identifier(expr.index))
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(self.format_identifier(expr.table))
 
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")
@@ -427,9 +427,9 @@ class PostgresIndexMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(self.format_identifier(expr.index))
 
-        # table_name is ignored for PostgreSQL (unlike MySQL)
+        # table is ignored for PostgreSQL (unlike MySQL)
         return " ".join(parts), ()
 
     def format_alter_index_statement(
@@ -482,7 +482,7 @@ class PostgresIndexMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(self.format_identifier(expr.index))
 
         if action == PostgresAlterIndexActionType.RENAME_TO:
             if not expr.new_name:
@@ -577,8 +577,8 @@ class PostgresIndexMixin:
 
     def format_create_index_pg_statement(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         schema: Optional[str] = None,
         unique: bool = False,
@@ -621,16 +621,16 @@ class PostgresIndexMixin:
 
         # Index name with optional schema
         if schema:
-            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(index_name)}")
+            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(index)}")
         else:
-            parts.append(self.format_identifier(index_name))
+            parts.append(self.format_identifier(index))
 
         # ON table
         parts.append("ON")
         if schema:
-            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(table_name)}")
+            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(table)}")
         else:
-            parts.append(self.format_identifier(table_name))
+            parts.append(self.format_identifier(table))
 
         # Index type
         index_type = index_type.lower()

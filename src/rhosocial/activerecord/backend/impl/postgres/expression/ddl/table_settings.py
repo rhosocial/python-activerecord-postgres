@@ -41,7 +41,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... SET`` table-level settings.
 
     Attributes:
-        table_name: Name of the target table.
+        table: Name of the target table.
         schema: Optional schema for the table.
         logging_mode: Optional ``LOGGED`` / ``UNLOGGED`` switch
             (PostgreSQL 9.6+, exists since 9.5).
@@ -53,7 +53,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresAlterTableSettingsExpression(
-        ...     dialect, table_name="orders", mode=LoggingMode.UNLOGGED
+        ...     dialect, table="orders", mode=LoggingMode.UNLOGGED
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP
 
@@ -66,7 +66,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: str,
+        table: str,
         schema: Optional[str] = None,
         mode: Optional[LoggingMode] = None,
         access_method: Optional[str] = None,
@@ -74,7 +74,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.mode = mode
         self.access_method = access_method

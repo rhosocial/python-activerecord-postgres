@@ -21,22 +21,22 @@ class PostgresBtreeGinMixin:
 
     def format_gin_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
     ) -> str:
         """Format a GIN index using btree_gin.
 
         Args:
-            index_name: Name of the index
-            table_name: Name of the table
+            index: Name of the index
+            table: Name of the table
             columns: List of columns
 
         Returns:
             SQL CREATE INDEX statement
         """
         col_str = ", ".join(columns)
-        return f"CREATE INDEX {index_name} ON {table_name} USING gin ({col_str})"
+        return f"CREATE INDEX {index} ON {table} USING gin ({col_str})"
 
     def format_btree_gin_operator_class(self, data_type: str) -> str:
         """Format btree_gin operator class name.

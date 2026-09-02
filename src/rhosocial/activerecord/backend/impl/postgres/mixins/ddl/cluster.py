@@ -29,15 +29,15 @@ class PostgresClusterMixin:
     # Helpers
     # ------------------------------------------------------------------ #
     def format_cluster_table_ref(
-        self, schema: Optional[str], table_name: str
+        self, schema: Optional[str], table: str
     ) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
+        """Format ``table`` (optionally schema-qualified) as identifier(s)."""
         if schema:
             return (
                 f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(table_name)}"
+                f"{self.format_identifier(table)}"
             )
-        return self.format_identifier(table_name)
+        return self.format_identifier(table)
 
     # ------------------------------------------------------------------ #
     # Statement
@@ -67,9 +67,9 @@ class PostgresClusterMixin:
         parts: List[str] = ["CLUSTER"]
         if expr.verbose:
             parts.append("VERBOSE")
-        if expr.table_name:
+        if expr.table:
             parts.append(
-                self.format_cluster_table_ref(expr.schema, expr.table_name)
+                self.format_cluster_table_ref(expr.schema, expr.table)
             )
             if expr.using_index:
                 parts.append("USING")

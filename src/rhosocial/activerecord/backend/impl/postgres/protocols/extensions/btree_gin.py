@@ -31,8 +31,8 @@ class PostgresBtreeGinSupport(Protocol):
 
     def format_gin_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
     ) -> str:
         """Format a GIN index using btree_gin."""

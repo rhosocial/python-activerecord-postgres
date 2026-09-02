@@ -31,8 +31,8 @@ class PostgresBtreeGistSupport(Protocol):
 
     def format_gist_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         include: Optional[List[str]] = None,
     ) -> str:

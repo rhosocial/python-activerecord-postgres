@@ -35,8 +35,8 @@ dialect = backend.dialect
 # Clean up using DropTableExpression
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+for table in ["monthly_sales", "org_tree"]:
+    drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
@@ -102,7 +102,7 @@ if installed:
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="monthly_sales",
+        table="monthly_sales",
         columns=columns,
         if_not_exists=True,
     )
@@ -146,7 +146,7 @@ if installed:
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="org_tree",
+        table="org_tree",
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -230,7 +230,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 6: connectby - Traverse hierarchical tree structure
-    # connectby(table_name, key_column, parent_column, start_value, max_depth)
+    # connectby(table, key_column, parent_column, start_value, max_depth)
     # traverses the tree starting from the specified root, following
     # parent-child relationships up to the given depth.
     connectby_func = connectby(
@@ -280,8 +280,8 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+for table in ["monthly_sales", "org_tree"]:
+    drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 backend.disconnect()

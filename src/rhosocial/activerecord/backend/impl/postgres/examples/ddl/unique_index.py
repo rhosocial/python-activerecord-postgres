@@ -42,7 +42,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )
@@ -51,7 +51,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -76,8 +76,8 @@ backend.execute(sql, params)
 # 1. CREATE UNIQUE INDEX on a single column
 create_email_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_email',
-    table_name='users',
+    index='idx_users_email',
+    table='users',
     columns=['email'],
     unique=True,
     if_not_exists=True,
@@ -89,8 +89,8 @@ print(f"Params: {params}")
 # 2. CREATE UNIQUE INDEX on multiple columns (composite unique)
 create_composite_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_username_email',
-    table_name='users',
+    index='idx_users_username_email',
+    table='users',
     columns=['username', 'email'],
     unique=True,
     if_not_exists=True,
@@ -156,7 +156,7 @@ print(f"Rows in users table: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )

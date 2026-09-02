@@ -50,7 +50,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
     for the related ``FORCE`` forms).
 
     Attributes:
-        table_name: Name of the target table.
+        table: Name of the target table.
         schema: Optional schema for the table.
         mode: ``ENABLE`` or ``DISABLE``.
         always: If True (and ``mode`` is ENABLE), emit ``ENABLE ALWAYS``.
@@ -60,7 +60,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresAlterTableRlsExpression(
-        ...     dialect, table_name="orders", mode=RlsConfigurationMode.ENABLE
+        ...     dialect, table="orders", mode=RlsConfigurationMode.ENABLE
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP
 
@@ -72,13 +72,13 @@ class PostgresAlterTableRlsExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: str,
+        table: str,
         mode: RlsConfigurationMode,
         schema: Optional[str] = None,
         always: bool = False,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.mode = mode
         self.always = always
@@ -102,7 +102,7 @@ class PostgresForceRlsExpression(BaseExpression):
     PostgreSQL 9.5+.
 
     Attributes:
-        table_name: Name of the target table.
+        table: Name of the target table.
         schema: Optional schema for the table.
         force: When True emit ``FORCE``; when False emit ``NO FORCE``.
 
@@ -111,12 +111,12 @@ class PostgresForceRlsExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: str,
+        table: str,
         force: bool = True,
         schema: Optional[str] = None,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.force = force
 

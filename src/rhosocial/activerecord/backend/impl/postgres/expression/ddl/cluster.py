@@ -29,7 +29,7 @@ class PostgresClusterExpression(BaseExpression):
     bulk load.
 
     Attributes:
-        table_name: Name of the table to cluster. If None, clusters all
+        table: Name of the table to cluster. If None, clusters all
             tables that have previously been clustered (``CLUSTER`` alone).
         schema: Optional schema for the table.
         using_index: Optional index name for ``CLUSTER table USING index``.
@@ -39,7 +39,7 @@ class PostgresClusterExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresClusterExpression(
-        ...     dialect, table_name="orders", using_index="orders_pkey"
+        ...     dialect, table="orders", using_index="orders_pkey"
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP
 
@@ -48,13 +48,13 @@ class PostgresClusterExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: Optional[str] = None,
+        table: Optional[str] = None,
         schema: Optional[str] = None,
         using_index: Optional[str] = None,
         verbose: bool = False,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.using_index = using_index
         self.verbose = verbose

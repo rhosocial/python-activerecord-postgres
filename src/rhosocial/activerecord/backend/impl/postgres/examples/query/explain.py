@@ -46,7 +46,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )
@@ -55,7 +55,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -73,8 +73,8 @@ backend.execute(sql, params)
 
 create_index = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_email',
-    table_name='users',
+    index='idx_users_email',
+    table='users',
     columns=['email'],
     if_not_exists=True,
 )
@@ -173,7 +173,7 @@ for row in result.data:
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )

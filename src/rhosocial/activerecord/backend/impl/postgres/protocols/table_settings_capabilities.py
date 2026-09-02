@@ -14,5 +14,5 @@ from typing import Protocol
 class PostgresAlterTableSettingsSupport(Protocol):
     """Auto-generated capability protocol (P7)."""
 
-    def format_settings_table_ref(self, schema: Optional[str], table_name: str) -> str:
+    def format_settings_table_ref(self, schema: Optional[str], table: str) -> str:
         ...  # pragma: no cover

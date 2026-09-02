@@ -61,7 +61,7 @@ class PostgresMultirangeSupport(Protocol):
         ...
 
     def format_multirange_agg_function(
-        self, range_column: str, table_name: str, where_clause: Optional[str] = None, schema: Optional[str] = None
+        self, range_column: str, table: str, where_clause: Optional[str] = None, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format multirange_agg aggregate function call.
 
@@ -69,7 +69,7 @@ class PostgresMultirangeSupport(Protocol):
 
         Args:
             range_column: The range column to aggregate
-            table_name: Table name
+            table: Table name
             where_clause: Optional WHERE clause
             schema: Optional schema name
 

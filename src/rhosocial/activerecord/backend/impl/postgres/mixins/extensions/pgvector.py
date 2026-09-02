@@ -35,8 +35,8 @@ class PostgresPgvectorMixin:
 
     def format_create_vector_index_statement(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         column_name: str,
         index_type: str = "hnsw",
         m: Optional[int] = None,
@@ -48,8 +48,8 @@ class PostgresPgvectorMixin:
         """Format CREATE INDEX statement for vector column.
 
         Args:
-            index_name: Name of the index
-            table_name: Table name
+            index: Name of the index
+            table: Table name
             column_name: Vector column name
             index_type: Index type - 'hnsw' or 'ivfflat'
             m: HNSW M parameter (max connections per layer)
@@ -63,7 +63,7 @@ class PostgresPgvectorMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
+        full_table = f"{schema}.{table}" if schema else table
 
         if index_type.lower() == "hnsw":
             with_clauses = []
@@ -73,13 +73,13 @@ class PostgresPgvectorMixin:
                 with_clauses.append(f"ef_construction = {ef_construction}")
             with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
             sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
+                f"CREATE INDEX {index} ON {full_table} "
                 f"USING hnsw ({column_name} {opclass}){with_clause}"
             )
         else:  # ivfflat
             lists_clause = f" WITH (lists = {lists})" if lists else ""
             sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
+                f"CREATE INDEX {index} ON {full_table} "
                 f"USING ivfflat ({column_name} {opclass}){lists_clause}"
             )
 
@@ -87,9 +87,9 @@ class PostgresPgvectorMixin:
 
     def format_create_hnsw_index_statement(
         self,
-        table_name: str,
+        table: str,
         column_name: str,
-        index_name: Optional[str] = None,
+        index: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
         opclass: str = "vector_cosine_ops",
@@ -97,9 +97,9 @@ class PostgresPgvectorMixin:
         """Format CREATE INDEX statement with HNSW index for vector column.
 
         Args:
-            table_name: Table name
+            table: Table name
             column_name: Vector column name
-            index_name: Optional index name (auto-generated if not provided)
+            index: Optional index name (auto-generated if not provided)
             m: HNSW M parameter (max connections per layer)
             ef_construction: HNSW ef_construction parameter
             opclass: pgvector operator class for the index; defaults to
@@ -108,7 +108,7 @@ class PostgresPgvectorMixin:
         Returns:
             SQL CREATE INDEX statement
         """
-        idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
+        idx_name = index or f"idx_{table}_{column_name}_hnsw"
         with_clauses = []
         if m is not None:
             with_clauses.append(f"m = {m}")
@@ -116,6 +116,6 @@ class PostgresPgvectorMixin:
             with_clauses.append(f"ef_construction = {ef_construction}")
         with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
         return (
-            f"CREATE INDEX {idx_name} ON {table_name} "
+            f"CREATE INDEX {idx_name} ON {table} "
             f"USING hnsw ({column_name} {opclass}){with_clause}"
         )

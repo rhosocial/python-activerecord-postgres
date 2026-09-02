@@ -118,7 +118,7 @@ def crosstab(
 
 def connectby(
     dialect: "SQLDialectBase",
-    table_name: Union[str, "bases.BaseExpression"],
+    table: Union[str, "bases.BaseExpression"],
     key_column: Union[str, "bases.BaseExpression"],
     parent_column: Union[str, "bases.BaseExpression"],
     start_value: Union[str, "bases.BaseExpression"],
@@ -133,7 +133,7 @@ def connectby(
 
     Args:
         dialect: The SQL dialect instance
-        table_name: Name of the table containing the hierarchical data
+        table: Name of the table containing the hierarchical data
         key_column: Name of the column that uniquely identifies each row
         parent_column: Name of the column that references the parent row's
                        key column
@@ -146,7 +146,7 @@ def connectby(
                       additional branch column is included in the output
 
     Returns:
-        FunctionCall for connectby(table_name, key_column, parent_column, start_value[, max_depth[, branch_delim]])
+        FunctionCall for connectby(table, key_column, parent_column, start_value[, max_depth[, branch_delim]])
 
     Example:
         >>> connectby(dialect, 'employees', 'emp_id', 'manager_id', '1')
@@ -154,7 +154,7 @@ def connectby(
         >>> connectby(dialect, 'employees', 'emp_id', 'manager_id', '1', max_depth=3, branch_delim='~')
     """
     args = [
-        _convert_to_expression(dialect, table_name),
+        _convert_to_expression(dialect, table),
         _convert_to_expression(dialect, key_column),
         _convert_to_expression(dialect, parent_column),
         _convert_to_expression(dialect, start_value),

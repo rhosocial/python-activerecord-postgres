@@ -112,7 +112,7 @@ class PostgresAlterIndexExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        index_name: str,
+        index: str,
         action_type: PostgresAlterIndexActionType,
         *,
         if_exists: bool = False,
@@ -127,7 +127,7 @@ class PostgresAlterIndexExpression(BaseExpression):
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
-        self.index_name = index_name
+        self.index = index
         self.action_type = action_type
         self.if_exists = if_exists
         self.new_name = new_name

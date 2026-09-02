@@ -38,7 +38,7 @@ class PostgresPgTrgmSupport(Protocol):
         ...
 
     def format_trgm_index_statement(
-        self, index_name: str, table_name: str, column_name: str, index_type: str = "gin", schema: Optional[str] = None
+        self, index: str, table: str, column_name: str, index_type: str = "gin", schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for trigram index."""
         ...

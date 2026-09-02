@@ -47,7 +47,7 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )
@@ -56,7 +56,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     columns=[
         ColumnDefinition(
             'id',
@@ -192,7 +192,7 @@ print(f"DO UPDATE result: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     if_exists=True,
     cascade=True,
 )

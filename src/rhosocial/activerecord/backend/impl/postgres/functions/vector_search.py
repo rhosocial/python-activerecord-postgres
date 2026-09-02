@@ -152,12 +152,12 @@ def vector_search(
 
 def create_vector_index(
     dialect: "SQLDialectBase",
-    table_name: str,
+    table: str,
     column_name: str = "embedding",
     metric: str = "cosine",
     index_type: str = "hnsw",
     *,
-    index_name: Optional[str] = None,
+    index: Optional[str] = None,
     m: Optional[int] = None,
     ef_construction: Optional[int] = None,
     lists: Optional[int] = None,
@@ -167,11 +167,11 @@ def create_vector_index(
 
     Args:
         dialect: The SQL dialect instance
-        table_name: Table name
+        table: Table name
         column_name: Vector column name (default 'embedding')
         metric: Distance metric - 'cosine' | 'l2' | 'ip' (maps to opclass)
         index_type: Index type - 'hnsw' | 'ivfflat'
-        index_name: Optional index name (auto-generated if not provided)
+        index: Optional index name (auto-generated if not provided)
         m: HNSW max connections per layer
         ef_construction: HNSW ef_construction
         lists: IVFFlat number of lists
@@ -191,7 +191,7 @@ def create_vector_index(
         raise ValueError(f"Unsupported vector index type '{index_type}'; "
                          "expected 'hnsw' or 'ivfflat'")
 
-    idx_name = index_name or f"idx_{table_name}_{column_name}_{index_type_l}"
+    idx_name = index or f"idx_{table}_{column_name}_{index_type_l}"
     with_options: Dict[str, int] = {}
     if index_type_l == "hnsw":
         if m is not None:
@@ -204,8 +204,8 @@ def create_vector_index(
 
     return CreateIndexExpression(
         dialect=dialect,
-        index_name=idx_name,
-        table_name=table_name,
+        index=idx_name,
+        table=table,
         columns=[column_name],
         index_type=index_type_l.upper(),
         if_not_exists=if_not_exists,

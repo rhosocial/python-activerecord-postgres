@@ -45,7 +45,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table='articles',
     if_exists=True,
     cascade=True,
 )
@@ -54,7 +54,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table='articles',
     columns=[
         ColumnDefinition(
             'id',

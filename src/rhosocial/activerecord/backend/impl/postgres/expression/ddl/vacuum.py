@@ -32,7 +32,7 @@ class PostgresVacuumExpression(BaseExpression):
     This expression encapsulates all VACUUM options with version-specific feature support.
 
     Attributes:
-        table_name: Optional table name to vacuum (vacuum all tables if None).
+        table: Optional table name to vacuum (vacuum all tables if None).
         schema: Schema name for the table.
         analyze: Also run ANALYZE after vacuuming.
         verbose: Print progress messages.
@@ -50,7 +50,7 @@ class PostgresVacuumExpression(BaseExpression):
         >>> dialect = PostgresDialect()
         >>> vacuum = PostgresVacuumExpression(
         ...     dialect=dialect,
-        ...     table_name="users",
+        ...     table="users",
         ...     analyze=True,
         ...     verbose=True,
         ... )
@@ -61,7 +61,7 @@ class PostgresVacuumExpression(BaseExpression):
         >>> # Full vacuum with parallel workers (PG 13+)
         >>> vacuum = PostgresVacuumExpression(
         ...     dialect=dialect,
-        ...     table_name="orders",
+        ...     table="orders",
         ...     full=True,
         ...     parallel=4,
         ... )
@@ -71,7 +71,7 @@ class PostgresVacuumExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: Optional[str] = None,
+        table: Optional[str] = None,
         schema: Optional[str] = None,
         analyze: bool = False,
         verbose: bool = False,
@@ -87,7 +87,7 @@ class PostgresVacuumExpression(BaseExpression):
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.analyze = analyze
         self.verbose = verbose
@@ -118,7 +118,7 @@ class PostgresAnalyzeExpression(BaseExpression):
     Statistics are used by the query planner to determine the most efficient execution plans.
 
     Attributes:
-        table_name: Optional table name to analyze (analyze all tables if None).
+        table: Optional table name to analyze (analyze all tables if None).
         schema: Schema name for the table.
         verbose: Print progress messages.
         skip_locked: Skip tables with conflicting locks.
@@ -129,7 +129,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         >>> dialect = PostgresDialect()
         >>> analyze = PostgresAnalyzeExpression(
         ...     dialect=dialect,
-        ...     table_name="users",
+        ...     table="users",
         ...     verbose=True,
         ... )
         >>> sql, params = analyze.to_sql()
@@ -139,7 +139,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         >>> # Analyze specific columns (PG 16+)
         >>> analyze = PostgresAnalyzeExpression(
         ...     dialect=dialect,
-        ...     table_name="orders",
+        ...     table="orders",
         ...     columns=["status", "created_at"],
         ... )
 
@@ -148,7 +148,7 @@ class PostgresAnalyzeExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        table_name: Optional[str] = None,
+        table: Optional[str] = None,
         schema: Optional[str] = None,
         verbose: bool = False,
         skip_locked: bool = False,
@@ -157,7 +157,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.verbose = verbose
         self.skip_locked = skip_locked

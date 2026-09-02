@@ -43,7 +43,7 @@ class PostgresVacuumMixin:
         - ``expr.process_toast`` — ``PROCESS_TOAST {TRUE|FALSE}`` (PG 14+).
         - ``expr.skip_locked`` — ``SKIP_LOCKED``.
         - ``expr.truncate`` — ``TRUNCATE`` (mutually exclusive with FULL).
-        - ``expr.table_name`` — optional table name.
+        - ``expr.table`` — optional table name.
         - ``expr.schema`` — optional schema qualifier.
         - ``expr.columns`` — optional column list (for ANALYZE).
 
@@ -105,11 +105,11 @@ class PostgresVacuumMixin:
             parts.append("(" + ", ".join(options) + ")")
 
         # Add table name if specified
-        if expr.table_name:
+        if expr.table:
             if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
+                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table)}")
             else:
-                parts.append(self.format_identifier(expr.table_name))
+                parts.append(self.format_identifier(expr.table))
 
             # Add columns for ANALYZE
             if expr.columns:
@@ -122,7 +122,7 @@ class PostgresVacuumMixin:
 
         - ``expr.verbose`` — ``VERBOSE``.
         - ``expr.skip_locked`` — ``SKIP_LOCKED``.
-        - ``expr.table_name`` — optional table name.
+        - ``expr.table`` — optional table name.
         - ``expr.schema`` — optional schema qualifier.
         - ``expr.columns`` — optional column list.
 
@@ -142,11 +142,11 @@ class PostgresVacuumMixin:
             parts.append("SKIP_LOCKED")
 
         # Add table name if specified
-        if expr.table_name:
+        if expr.table:
             if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
+                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table)}")
             else:
-                parts.append(self.format_identifier(expr.table_name))
+                parts.append(self.format_identifier(expr.table))
 
             # Add columns
             if expr.columns:

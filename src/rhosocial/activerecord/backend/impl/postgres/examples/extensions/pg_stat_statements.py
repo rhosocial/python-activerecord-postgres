@@ -140,7 +140,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="stats_demo",
+        table="stats_demo",
         columns=columns,
         if_not_exists=True,
     )
@@ -195,7 +195,7 @@ if installed:
         print(f"Could not check statistics: {e}")
 
     # Cleanup demo table
-    drop_expr = DropTableExpression(dialect=dialect, table_name="stats_demo", if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table="stats_demo", if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 

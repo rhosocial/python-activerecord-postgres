@@ -37,7 +37,7 @@ dialect = backend.dialect
 for table in ['employees', 'departments']:
     drop_table = DropTableExpression(
         dialect=dialect,
-        table_name=table,
+        table=table,
         if_exists=True,
         cascade=True,
     )
@@ -46,7 +46,7 @@ for table in ['employees', 'departments']:
 
 create_departments = CreateTableExpression(
     dialect=dialect,
-    table_name='departments',
+    table='departments',
     columns=[
         ColumnDefinition(
             'id',
@@ -64,7 +64,7 @@ backend.execute(*create_departments.to_sql())
 
 create_employees = CreateTableExpression(
     dialect=dialect,
-    table_name='employees',
+    table='employees',
     columns=[
         ColumnDefinition(
             'id',

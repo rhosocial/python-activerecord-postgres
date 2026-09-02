@@ -49,11 +49,11 @@ class PostgresTriggerMixin:
         Supported expression attributes:
 
         - ``expr.if_not_exists`` — add ``IF NOT EXISTS`` (PG 9.5+).
-        - ``expr.trigger_name`` — trigger name (identifier).
+        - ``expr.trigger`` — trigger name (identifier).
         - ``expr.timing`` — ``BEFORE``, ``AFTER``, or ``INSTEAD OF``.
         - ``expr.events`` — list of event types (``INSERT``, ``UPDATE``, ``DELETE``, ``TRUNCATE``).
         - ``expr.update_columns`` — column list for ``UPDATE OF``.
-        - ``expr.table_name`` — target table (identifier).
+        - ``expr.table`` — target table (identifier).
         - ``expr.referencing`` — ``REFERENCING`` clause string (PG 10+).
         - ``expr.level`` — ``FOR EACH ROW`` or ``FOR EACH STATEMENT``.
         - ``expr.condition`` — ``WHEN`` predicate expression.
@@ -71,7 +71,7 @@ class PostgresTriggerMixin:
         if expr.if_not_exists and self.supports_trigger_if_not_exists():
             parts.append("IF NOT EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(self.format_identifier(expr.trigger))
 
         parts.append(expr.timing.value)
 
@@ -83,7 +83,7 @@ class PostgresTriggerMixin:
         parts.append(events_str)
 
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(self.format_identifier(expr.table))
 
         if expr.referencing and self.supports_trigger_referencing():
             parts.append(expr.referencing)
@@ -106,8 +106,8 @@ class PostgresTriggerMixin:
         """Format DROP TRIGGER statement (PostgreSQL syntax).
 
         - ``expr.if_exists`` — add ``IF EXISTS``.
-        - ``expr.trigger_name`` — trigger name (identifier).
-        - ``expr.table_name`` — optional ``ON table_name`` clause.
+        - ``expr.trigger`` — trigger name (identifier).
+        - ``expr.table`` — optional ``ON table`` clause.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -121,10 +121,10 @@ class PostgresTriggerMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(self.format_identifier(expr.trigger))
 
-        if expr.table_name:
+        if expr.table:
             parts.append("ON")
-            parts.append(self.format_identifier(expr.table_name))
+            parts.append(self.format_identifier(expr.table))
 
         return " ".join(parts), ()

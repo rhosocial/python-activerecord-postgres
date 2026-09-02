@@ -27,14 +27,14 @@ class PostgresIntarrayMixin:
         return self.check_extension_feature("intarray", "index")
 
     def format_intarray_index_statement(
-        self, table_name: str, column_name: str, index_name: Optional[str] = None
+        self, table: str, column_name: str, index: Optional[str] = None
     ) -> str:
         """Format CREATE INDEX statement with GIN intarray ops.
 
         Args:
-            table_name: Table name
+            table: Table name
             column_name: Integer array column name
-            index_name: Optional index name (auto-generated if None)
+            index: Optional index name (auto-generated if None)
 
         Returns:
             SQL CREATE INDEX statement
@@ -45,6 +45,6 @@ class PostgresIntarrayMixin:
             >>> format_intarray_index_statement('documents', 'tags')
             "CREATE INDEX idx_documents_tags ON documents USING gin (tags gin__int_ops)"
         """
-        if index_name is None:
-            index_name = f"idx_{table_name}_{column_name}"
-        return f"CREATE INDEX {index_name} ON {table_name} USING gin ({column_name} gin__int_ops)"
+        if index is None:
+            index = f"idx_{table}_{column_name}"
+        return f"CREATE INDEX {index} ON {table} USING gin ({column_name} gin__int_ops)"

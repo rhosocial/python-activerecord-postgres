@@ -32,7 +32,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
     Attributes:
         name: Name of the statistics object.
         columns: List of columns to include in statistics.
-        table_name: Name of the table containing the columns.
+        table: Name of the table containing the columns.
         schema: Schema name for the statistics.
         statistics_type: Type of statistics: 'ndistinct', 'dependencies', or 'mcv'.
                     Multiple types can be combined (e.g., 'ndistinct, mcv').
@@ -46,7 +46,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         ...     dialect=dialect,
         ...     name="users_status_expr",
         ...     columns=["status", "category"],
-        ...     table_name="users",
+        ...     table="users",
         ...     statistics_type="ndistinct",
         ... )
         >>> sql, params = stats.to_sql()
@@ -58,7 +58,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         ...     dialect=dialect,
         ...     name="order_stats",
         ...     columns=["customer_id", "status", "region"],
-        ...     table_name="orders",
+        ...     table="orders",
         ...     statistics_type="ndistinct, mcv",
         ... )
 
@@ -69,7 +69,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         dialect: "SQLDialectBase",
         name: str,
         columns: List[str],
-        table_name: str,
+        table: str,
         schema: Optional[str] = None,
         statistics_type: Optional[str] = None,
         if_not_exists: bool = False,
@@ -79,7 +79,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         super().__init__(dialect)
         self.name = name
         self.columns = columns
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.statistics_type = statistics_type
         self.if_not_exists = if_not_exists

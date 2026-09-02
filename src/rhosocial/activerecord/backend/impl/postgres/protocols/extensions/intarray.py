@@ -58,7 +58,7 @@ class PostgresIntarraySupport(Protocol):
         ...
 
     def format_intarray_index_statement(
-        self, table_name: str, column_name: str, index_name: Optional[str] = None
+        self, table: str, column_name: str, index: Optional[str] = None
     ) -> str:
         """Format CREATE INDEX statement with GIN intarray ops."""
         ...

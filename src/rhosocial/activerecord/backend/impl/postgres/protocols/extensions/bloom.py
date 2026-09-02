@@ -31,8 +31,8 @@ class PostgresBloomSupport(Protocol):
 
     def format_bloom_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         fill_factor: Optional[int] = None,
     ) -> str:

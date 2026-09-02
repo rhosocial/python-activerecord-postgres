@@ -56,7 +56,7 @@ class PostgresTablefuncMixin:
 
     def format_connectby_full(
         self,
-        table_name: str,
+        table: str,
         key_column: str,
         parent_column: str,
         start_value: str,
@@ -70,7 +70,7 @@ class PostgresTablefuncMixin:
         to return properly typed results.
 
         Args:
-            table_name: Table name
+            table: Table name
             key_column: Primary key column
             parent_column: Parent reference column
             start_value: Starting value
@@ -86,7 +86,7 @@ class PostgresTablefuncMixin:
              "AS t(keyid text, parent_keyid text, level int, branch text, sort_column text)")
         """
         return (
-            f"SELECT * FROM connectby('{table_name}', '{key_column}', "
+            f"SELECT * FROM connectby('{table}', '{key_column}', "
             f"'{parent_column}', '{start_value}', {max_depth}, '{branch_delim}') "
             f"AS t(keyid text, parent_keyid text, level int, branch text)"
         )

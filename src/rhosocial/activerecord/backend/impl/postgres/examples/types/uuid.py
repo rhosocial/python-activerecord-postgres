@@ -54,7 +54,7 @@ print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
 # Clean up
 for table in ['events_v13', 'events_legacy']:
-    drop = DropTableExpression(dialect=dialect, table_name=table, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
@@ -68,7 +68,7 @@ for table in ['events_v13', 'events_legacy']:
 #   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='events',
+    table='events',
     columns=[
         ColumnDefinition('id', 'UUID', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -137,7 +137,7 @@ print(f"Events: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='events',
+    table='events',
     if_exists=True,
     cascade=True,
 )

@@ -39,7 +39,7 @@ class PostgresExtendedStatisticsMixin:
 
         - ``expr.schema`` — optional schema qualifier.
         - ``expr.name`` — statistics object name.
-        - ``expr.table_name`` — source table name.
+        - ``expr.table`` — source table name.
         - ``expr.if_not_exists`` — add ``IF NOT EXISTS``.
         - ``expr.statistics_type`` — optional type (``ndistinct``, ``dependencies``, ``mcv``; MCV requires PG 12+).
         - ``expr.columns`` — list of column names.
@@ -59,10 +59,10 @@ class PostgresExtendedStatisticsMixin:
 
         if expr.schema:
             full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
-            table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}"
+            table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table)}"
         else:
             full_name = self.format_identifier(expr.name)
-            table_full = self.format_identifier(expr.table_name)
+            table_full = self.format_identifier(expr.table)
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 

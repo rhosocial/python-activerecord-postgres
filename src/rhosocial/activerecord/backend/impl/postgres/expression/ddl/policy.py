@@ -74,7 +74,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
 
     Attributes:
         name: Name of the policy (distinct per table).
-        table_name: Name of the table the policy applies to.
+        table: Name of the table the policy applies to.
         schema: Optional schema for the table.
         policy_type: Optional ``AS PERMISSIVE``/``AS RESTRICTIVE`` clause.
             RESTRICTIVE requires PostgreSQL 10+; PERMISSIVE keyword is only
@@ -96,7 +96,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
         >>> expr = PostgresCreatePolicyExpression(
         ...     dialect=dialect,
         ...     name="user_select_own",
-        ...     table_name="orders",
+        ...     table="orders",
         ...     command=PolicyCommand.SELECT,
         ...     using=Column(dialect, "user_id") == 1,
         ... )
@@ -108,7 +108,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
         self,
         dialect: "SQLDialectBase",
         name: str,
-        table_name: str,
+        table: str,
         schema: Optional[str] = None,
         policy_type: Optional[PolicyType] = None,
         command: Optional[PolicyCommand] = None,
@@ -118,7 +118,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
     ):
         super().__init__(dialect)
         self.name = name
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.policy_type = policy_type
         self.command = command
@@ -149,7 +149,7 @@ class PostgresAlterPolicyExpression(BaseExpression):
 
     Attributes:
         name: Name of the existing policy to alter.
-        table_name: Name of the table the policy is on.
+        table: Name of the table the policy is on.
         schema: Optional schema for the table.
         new_name: If given, switches the expression to form 1 (RENAME TO).
             Mutually exclusive with roles/using/with_check.
@@ -169,7 +169,7 @@ class PostgresAlterPolicyExpression(BaseExpression):
         self,
         dialect: "SQLDialectBase",
         name: str,
-        table_name: str,
+        table: str,
         schema: Optional[str] = None,
         new_name: Optional[str] = None,
         roles: Optional[List[str]] = None,
@@ -178,7 +178,7 @@ class PostgresAlterPolicyExpression(BaseExpression):
     ):
         super().__init__(dialect)
         self.name = name
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.new_name = new_name
         self.roles = roles
@@ -209,7 +209,7 @@ class PostgresDropPolicyExpression(BaseExpression):
 
     Attributes:
         name: Name of the policy to drop.
-        table_name: Name of the table the policy is on.
+        table: Name of the table the policy is on.
         schema: Optional schema for the table.
         if_exists: When True, add ``IF EXISTS`` (PostgreSQL 9.5+, always
             supported). A notice — not an error — is issued if missing.
@@ -225,7 +225,7 @@ class PostgresDropPolicyExpression(BaseExpression):
         self,
         dialect: "SQLDialectBase",
         name: str,
-        table_name: str,
+        table: str,
         schema: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,
@@ -233,7 +233,7 @@ class PostgresDropPolicyExpression(BaseExpression):
     ):
         super().__init__(dialect)
         self.name = name
-        self.table_name = table_name
+        self.table = table
         self.schema = schema
         self.if_exists = if_exists
         self.cascade = cascade

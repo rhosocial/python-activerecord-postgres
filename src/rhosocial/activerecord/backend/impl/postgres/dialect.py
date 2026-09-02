@@ -808,7 +808,7 @@ class PostgresDialect(
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
-        - ``expr.table_name`` — target table.
+        - ``expr.table`` — target table.
         - ``expr.restart_identity`` — add ``RESTART IDENTITY`` (PG 8.4+).
         - ``expr.cascade`` — add ``CASCADE``.
 
@@ -820,7 +820,7 @@ class PostgresDialect(
 
         """
         parts = ["TRUNCATE TABLE"]
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(self.format_identifier(expr.table))
 
         if expr.restart_identity and self.supports_truncate_restart_identity():
             parts.append("RESTART IDENTITY")
@@ -1200,7 +1200,7 @@ class PostgresDialect(
             # Basic LIKE syntax
             CreateTableExpression(
                 dialect=postgres_dialect,
-                table_name="users_copy",
+                table="users_copy",
                 columns=[],  # Ignored when like_table is present
                 dialect_options={'like_table': 'users'}
             )
@@ -1209,7 +1209,7 @@ class PostgresDialect(
             # LIKE with INCLUDING options (dictionary format - recommended)
             CreateTableExpression(
                 dialect=postgres_dialect,
-                table_name="users_copy",
+                table="users_copy",
                 columns=[...],  # Will be ignored
                 dialect_options={
                     'like_table': 'users',
@@ -1225,7 +1225,7 @@ class PostgresDialect(
             # LIKE with schema-qualified source table
             CreateTableExpression(
                 dialect=postgres_dialect,
-                table_name="users_copy",
+                table="users_copy",
                 columns=[],
                 dialect_options={'like_table': ('public', 'users')}
             )
@@ -1234,7 +1234,7 @@ class PostgresDialect(
             # LIKE with TEMPORARY and IF NOT EXISTS
             CreateTableExpression(
                 dialect=postgres_dialect,
-                table_name="temp_users",
+                table="temp_users",
                 columns=[],
                 temporary=True,
                 if_not_exists=True,
@@ -1245,7 +1245,7 @@ class PostgresDialect(
             # LIKE with INCLUDING ALL
             CreateTableExpression(
                 dialect=postgres_dialect,
-                table_name="users_copy",
+                table="users_copy",
                 columns=[],
                 dialect_options={
                     'like_table': 'users',
@@ -1294,7 +1294,7 @@ class PostgresDialect(
             if expr.if_not_exists:
                 parts.append("IF NOT EXISTS")
 
-            parts.append(self.format_identifier(expr.table_name))
+            parts.append(self.format_identifier(expr.table))
 
             # Build LIKE clause with options
             like_parts = []

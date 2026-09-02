@@ -66,8 +66,8 @@ from rhosocial.activerecord.backend.expression import CreateIndexExpression
 
 create_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_category_price',
-    table_name='products',
+    index='idx_category_price',
+    table='products',
     columns=['category', 'price'],
     if_not_exists=True,
 )

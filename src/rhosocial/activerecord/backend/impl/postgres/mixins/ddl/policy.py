@@ -88,11 +88,11 @@ class PostgresPolicyMixin:
     # ------------------------------------------------------------------ #
     # Shared helpers
     # ------------------------------------------------------------------ #
-    def format_table_ref(self, schema: Optional[str], table_name: str) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
+    def format_table_ref(self, schema: Optional[str], table: str) -> str:
+        """Format ``table`` (optionally schema-qualified) as identifier(s)."""
         if schema:
-            return f"{self.format_identifier(schema)}.{self.format_identifier(table_name)}"
-        return self.format_identifier(table_name)
+            return f"{self.format_identifier(schema)}.{self.format_identifier(table)}"
+        return self.format_identifier(table)
 
     def format_role_list(self, roles: List[str]) -> Tuple[str, tuple]:
         """Format the ``TO role [, ...]`` clause.
@@ -204,7 +204,7 @@ class PostgresPolicyMixin:
         parts: List[str] = ["CREATE POLICY"]
         parts.append(self.format_identifier(expr.name))
         parts.append("ON")
-        parts.append(self.format_table_ref(expr.schema, expr.table_name))
+        parts.append(self.format_table_ref(expr.schema, expr.table))
         if as_clause:
             parts.append(as_clause)
         if command_clause:
@@ -273,7 +273,7 @@ class PostgresPolicyMixin:
                 "ALTER POLICY",
                 self.format_identifier(expr.name),
                 "ON",
-                self.format_table_ref(expr.schema, expr.table_name),
+                self.format_table_ref(expr.schema, expr.table),
                 "RENAME TO",
                 self.format_identifier(expr.new_name),
             ]
@@ -298,7 +298,7 @@ class PostgresPolicyMixin:
             "ALTER POLICY",
             self.format_identifier(expr.name),
             "ON",
-            self.format_table_ref(expr.schema, expr.table_name),
+            self.format_table_ref(expr.schema, expr.table),
         ]
         if expr.roles is not None:
             role_list, _ = self.format_role_list(list(expr.roles))
@@ -357,7 +357,7 @@ class PostgresPolicyMixin:
             parts.append("IF EXISTS")
         parts.append(self.format_identifier(expr.name))
         parts.append("ON")
-        parts.append(self.format_table_ref(expr.schema, expr.table_name))
+        parts.append(self.format_table_ref(expr.schema, expr.table))
         if expr.cascade:
             parts.append("CASCADE")
         elif expr.restrict:

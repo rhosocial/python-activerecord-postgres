@@ -21,16 +21,16 @@ class PostgresBloomMixin:
 
     def format_bloom_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         fill_factor: Optional[int] = None,
     ) -> str:
         """Format a bloom index creation.
 
         Args:
-            index_name: Name of the index
-            table_name: Name of the table
+            index: Name of the index
+            table: Name of the table
             columns: List of columns to index
             fill_factor: Optional fill factor (0-100)
 
@@ -39,7 +39,7 @@ class PostgresBloomMixin:
         """
         col_str = ", ".join(columns)
         fill = f" WITH (fillfactor={fill_factor})" if fill_factor else ""
-        return f"CREATE INDEX {index_name} ON {table_name} USING bloom ({col_str}){fill}"
+        return f"CREATE INDEX {index} ON {table} USING bloom ({col_str}){fill}"
 
     def format_bloom_access_method(self) -> str:
         """Format bloom as access method.

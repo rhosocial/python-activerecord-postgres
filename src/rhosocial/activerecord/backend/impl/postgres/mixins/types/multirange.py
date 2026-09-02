@@ -66,7 +66,7 @@ class MultirangeMixin:
         return (sql, ())
 
     def format_multirange_agg_function(
-        self, range_column: str, table_name: str, where_clause: Optional[str] = None, schema: Optional[str] = None
+        self, range_column: str, table: str, where_clause: Optional[str] = None, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format multirange_agg aggregate function call.
 
@@ -74,7 +74,7 @@ class MultirangeMixin:
 
         Args:
             range_column: The range column to aggregate
-            table_name: Table name
+            table: Table name
             where_clause: Optional WHERE clause
             schema: Optional schema name
 
@@ -85,7 +85,7 @@ class MultirangeMixin:
             >>> format_multirange_agg_function('period', 'events')
             ('SELECT multirange_agg(period) FROM events', ())
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
+        full_table = f"{schema}.{table}" if schema else table
         sql = f"SELECT multirange_agg({range_column}) FROM {full_table}"
         if where_clause:
             sql += f" WHERE {where_clause}"

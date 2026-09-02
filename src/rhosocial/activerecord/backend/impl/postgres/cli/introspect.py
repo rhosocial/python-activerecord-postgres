@@ -228,7 +228,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
 
         elif args.type == "triggers":
             triggers = introspector.list_triggers(
-                table_name=args.name,
+                table=args.name,
                 schema=args.schema
             )
             data = _serialize_for_output(triggers)
@@ -336,7 +336,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
 
         elif args.type == "triggers":
             triggers = await introspector.list_triggers(
-                table_name=args.name,
+                table=args.name,
                 schema=args.schema
             )
             data = _serialize_for_output(triggers)

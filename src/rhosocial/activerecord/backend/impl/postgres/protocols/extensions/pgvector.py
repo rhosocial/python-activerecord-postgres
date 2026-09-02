@@ -52,8 +52,8 @@ class PostgresPgvectorSupport(Protocol):
 
     def format_create_vector_index_statement(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         column_name: str,
         index_type: str = "hnsw",
         m: Optional[int] = None,
@@ -67,9 +67,9 @@ class PostgresPgvectorSupport(Protocol):
 
     def format_create_hnsw_index_statement(
         self,
-        table_name: str,
+        table: str,
         column_name: str,
-        index_name: Optional[str] = None,
+        index: Optional[str] = None,
         m: Optional[int] = None,
         ef_construction: Optional[int] = None,
         opclass: str = "vector_cosine_ops",

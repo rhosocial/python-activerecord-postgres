@@ -40,11 +40,11 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop partitions first, then parent table
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table_name=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=partition, if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table_name='orders', if_exists=True, cascade=True)
+drop_parent = DropTableExpression(dialect=dialect, table='orders', if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 
@@ -125,11 +125,11 @@ print(f"Q1 orders: {result.data}")
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table_name=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=partition, if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table_name='orders', if_exists=True, cascade=True)
+drop_parent = DropTableExpression(dialect=dialect, table='orders', if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

@@ -136,7 +136,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         }
         return [
             TableInfo(
-                name=row["table_name"],
+                name=row["table"],
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
                 comment=row.get("comment"),
@@ -147,7 +147,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ColumnInfo]:
+    def _parse_columns(self, rows: List[Dict[str, Any]], table: str, schema: str) -> List[ColumnInfo]:
         columns = []
         for row in rows:
             data_type = row.get("data_type", "")
@@ -157,7 +157,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             columns.append(
                 ColumnInfo(
                     name=row["column_name"],
-                    table_name=table_name,
+                    table_name=table,
                     schema=schema,
                     ordinal_position=row["ordinal_position"],
                     data_type=base_type,
@@ -171,7 +171,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return columns
 
-    def _parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
+    def _parse_indexes(self, rows: List[Dict[str, Any]], table: str, schema: str) -> List[IndexInfo]:
         index_type_map = {
             "btree": IndexType.BTREE,
             "hash": IndexType.HASH,
@@ -182,12 +182,12 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         }
         index_map: Dict[str, IndexInfo] = {}
         for row in rows:
-            idx_name = row["index_name"]
+            idx_name = row["index"]
             if idx_name not in index_map:
                 idx_type_str = (row.get("index_type") or "btree").lower()
                 index_map[idx_name] = IndexInfo(
                     name=idx_name,
-                    table_name=table_name,
+                    table_name=table,
                     schema=schema,
                     is_unique=bool(row.get("is_unique")),
                     is_primary=bool(row.get("is_primary")),
@@ -203,7 +203,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return list(index_map.values())
 
-    def _parse_foreign_keys(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ForeignKeyInfo]:
+    def _parse_foreign_keys(self, rows: List[Dict[str, Any]], table: str, schema: str) -> List[ForeignKeyInfo]:
         # PostgreSQL uses single-char codes for referential actions
         action_map = {
             "a": ReferentialAction.NO_ACTION,
@@ -218,7 +218,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             if fk_name not in fk_map:
                 fk_map[fk_name] = ForeignKeyInfo(
                     name=fk_name,
-                    table_name=table_name,
+                    table_name=table,
                     schema=schema,
                     referenced_table=row.get("referenced_table", ""),
                     referenced_schema=row.get("referenced_schema"),
@@ -269,8 +269,8 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
 
             triggers.append(
                 TriggerInfo(
-                    name=row["trigger_name"],
-                    table_name=row["table_name"],
+                    name=row["trigger"],
+                    table_name=row["table"],
                     schema=schema,
                     timing=timing,
                     events=events,

@@ -67,7 +67,7 @@ class PostgresTablefuncSupport(Protocol):
 
     def format_connectby_full(
         self,
-        table_name: str,
+        table: str,
         key_column: str,
         parent_column: str,
         start_value: str,

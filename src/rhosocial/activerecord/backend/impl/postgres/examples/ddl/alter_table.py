@@ -96,7 +96,7 @@ add_email_action = AddColumn(
 
 add_email_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     actions=[add_email_action],
 )
 
@@ -121,7 +121,7 @@ add_age_action = AddColumn(
 
 add_age_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     actions=[add_age_action],
 )
 
@@ -138,7 +138,7 @@ rename_action = RenameColumn(
 
 rename_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table='users',
     actions=[rename_action],
 )
 
@@ -160,7 +160,7 @@ verify_expr = QueryExpression(
         Column(dialect, 'is_nullable'),
     ],
     from_=TableExpression(dialect, 'columns', schema_name='information_schema'),
-    where=Column(dialect, 'table_name') == Literal(dialect, 'users'),
+    where=Column(dialect, 'table') == Literal(dialect, 'users'),
     order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)

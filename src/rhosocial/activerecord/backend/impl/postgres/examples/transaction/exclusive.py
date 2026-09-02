@@ -51,7 +51,7 @@ dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     if_exists=True,
     cascade=True,
 )
@@ -60,7 +60,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     columns=[
         ColumnDefinition(
             'id',
@@ -246,7 +246,7 @@ with backend.transaction():
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table='accounts',
     if_exists=True,
     cascade=True,
 )

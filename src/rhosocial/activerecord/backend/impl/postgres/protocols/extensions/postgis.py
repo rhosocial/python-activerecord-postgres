@@ -50,7 +50,7 @@ class PostgresPostGISSupport(Protocol):
         ...
 
     def format_spatial_index_statement(
-        self, index_name: str, table_name: str, column_name: str, schema: Optional[str] = None
+        self, index: str, table: str, column_name: str, schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for spatial column."""
         ...

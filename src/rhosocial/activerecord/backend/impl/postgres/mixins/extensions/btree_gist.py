@@ -21,16 +21,16 @@ class PostgresBtreeGistMixin:
 
     def format_gist_index(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         include: Optional[List[str]] = None,
     ) -> str:
         """Format a GiST index using btree_gist.
 
         Args:
-            index_name: Name of the index
-            table_name: Name of the table
+            index: Name of the index
+            table: Name of the table
             columns: List of columns
             include: Optional included columns
 
@@ -39,7 +39,7 @@ class PostgresBtreeGistMixin:
         """
         col_str = ", ".join(columns)
         inc_str = f" INCLUDE ({', '.join(include)})" if include else ""
-        return f"CREATE INDEX {index_name} ON {table_name} USING gist ({col_str}){inc_str}"
+        return f"CREATE INDEX {index} ON {table} USING gist ({col_str}){inc_str}"
 
     def format_btree_gist_operator_class(self, data_type: str) -> str:
         """Format btree_gist operator class name.

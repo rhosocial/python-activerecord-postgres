@@ -182,7 +182,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             relkind_filter = "('r', 'f', 'p')"
 
         sql = f"""
-            SELECT c.relname as table_name,
+            SELECT c.relname as table,
                    CASE c.relkind
                        WHEN 'r' THEN 'BASE TABLE'
                        WHEN 'v' THEN 'VIEW'
@@ -228,11 +228,11 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table = params.get("table", "")
         schema = params.get("schema") or self._get_default_schema()
 
         sql = """
-            SELECT c.relname as table_name,
+            SELECT c.relname as table,
                    CASE c.relkind
                        WHEN 'r' THEN 'BASE TABLE'
                        WHEN 'v' THEN 'VIEW'
@@ -248,7 +248,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             WHERE n.nspname = %s AND c.relname = %s
         """
 
-        return (sql, (schema, table_name))
+        return (sql, (schema, table))
 
     def format_column_info_query(self, expr: "ColumnInfoExpression") -> Tuple[str, tuple]:
         """Format column information query using pg_attribute.
@@ -264,7 +264,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table = params.get("table", "")
         include_hidden = params.get("include_hidden", False)
         schema = params.get("schema") or self._get_default_schema()
 
@@ -298,7 +298,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         sql += " ORDER BY a.attnum"
 
-        return (sql, (schema, table_name))
+        return (sql, (schema, table))
 
     def format_index_info_query(self, expr: "IndexInfoExpression") -> Tuple[str, tuple]:
         """Format index information query using pg_index.
@@ -314,11 +314,11 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table = params.get("table", "")
         schema = params.get("schema") or self._get_default_schema()
 
         sql = """
-            SELECT i.relname as index_name,
+            SELECT i.relname as index,
                    a.attname as column_name,
                    array_position(ix.indkey, a.attnum) as column_position,
                    ix.indisunique as is_unique,
@@ -335,7 +335,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ORDER BY i.relname, column_position
         """
 
-        return (sql, (schema, table_name))
+        return (sql, (schema, table))
 
     def format_foreign_key_query(self, expr: "ForeignKeyExpression") -> Tuple[str, tuple]:
         """Format foreign key information query using pg_constraint.
@@ -357,7 +357,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table = params.get("table", "")
         schema = params.get("schema") or self._get_default_schema()
 
         sql = """
@@ -384,7 +384,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ORDER BY con.conname, column_position
         """
 
-        return (sql, (schema, table_name))
+        return (sql, (schema, table))
 
     def format_view_list_query(self, expr: "ViewListExpression") -> Tuple[str, tuple]:
         """Format view list query using pg_class.
@@ -467,13 +467,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        table_name = params.get("table_name")
+        table = params.get("table")
         schema = params.get("schema") or self._get_default_schema()
 
         sql = """
             SELECT
-                t.tgname as trigger_name,
-                c.relname as table_name,
+                t.tgname as trigger,
+                c.relname as table,
                 CASE
                     WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
                     WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
@@ -493,9 +493,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params_list = [schema]
 
-        if table_name:
+        if table:
             sql += " AND c.relname = %s"
-            params_list.append(table_name)
+            params_list.append(table)
 
         sql += " ORDER BY t.tgname"
 
@@ -513,14 +513,14 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Tuple of (SQL string, parameters tuple).
         """
         params = expr.get_params()
-        trigger_name = params.get("trigger_name", "")
-        table_name = params.get("table_name")
+        trigger = params.get("trigger", "")
+        table = params.get("table")
         schema = params.get("schema") or self._get_default_schema()
 
         sql = """
             SELECT
-                t.tgname as trigger_name,
-                c.relname as table_name,
+                t.tgname as trigger,
+                c.relname as table,
                 CASE
                     WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
                     WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
@@ -539,11 +539,11 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 AND NOT t.tgisinternal
         """
 
-        params_list = [schema, trigger_name]
+        params_list = [schema, trigger]
 
-        if table_name:
+        if table:
             sql += " AND c.relname = %s"
-            params_list.append(table_name)
+            params_list.append(table)
 
         return (sql, tuple(params_list))
 

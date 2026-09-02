@@ -64,7 +64,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 # Clean up for demo
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table="articles",
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()
@@ -112,7 +112,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="articles",
+        table="articles",
         columns=columns,
         if_not_exists=True,
     )
@@ -228,8 +228,8 @@ if installed:
     # GIN index with gin_trgm_ops accelerates %, similarity, LIKE queries
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_articles_title_trgm",
-        table_name="articles",
+        index="idx_articles_title_trgm",
+        table="articles",
         columns=["title"],
         index_type="GIN",
         if_not_exists=True,
@@ -251,7 +251,7 @@ else:
 # ============================================================
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table="articles",
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()

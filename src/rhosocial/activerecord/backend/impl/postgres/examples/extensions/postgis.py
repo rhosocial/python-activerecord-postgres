@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table="locations", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -117,7 +117,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="locations",
+        table="locations",
         columns=columns,
         if_not_exists=True,
     )
@@ -263,8 +263,8 @@ if installed:
     # Example 5: Create GIST spatial index
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_locations_geom",
-        table_name="locations",
+        index="idx_locations_geom",
+        table="locations",
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -282,7 +282,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table="locations", if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

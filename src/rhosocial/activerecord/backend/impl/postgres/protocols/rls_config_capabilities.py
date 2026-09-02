@@ -14,5 +14,5 @@ from typing import Protocol
 class PostgresRlsConfigSupport(Protocol):
     """Auto-generated capability protocol (P7)."""
 
-    def format_rls_table_ref(self, schema: Optional[str], table_name: str) -> str:
+    def format_rls_table_ref(self, schema: Optional[str], table: str) -> str:
         ...  # pragma: no cover

@@ -29,13 +29,13 @@ class PostgresLtreeMixin:
         return self.check_extension_feature("ltree", "index")
 
     def format_ltree_index_statement(
-        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
+        self, index: str, table: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
     ) -> Tuple[str, tuple]:
         """Format CREATE INDEX statement for ltree column.
 
         Args:
-            index_name: Name of the index
-            table_name: Table name
+            index: Name of the index
+            table: Table name
             column_name: ltree column name
             index_type: Index type - 'gist' (default) or 'btree'
             schema: Optional schema name
@@ -43,6 +43,6 @@ class PostgresLtreeMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
-        sql = f"CREATE INDEX {index_name} ON {full_table} USING {index_type} ({column_name})"
+        full_table = f"{schema}.{table}" if schema else table
+        sql = f"CREATE INDEX {index} ON {full_table} USING {index_type} ({column_name})"
         return (sql, ())

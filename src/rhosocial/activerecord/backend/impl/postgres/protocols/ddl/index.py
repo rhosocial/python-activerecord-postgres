@@ -195,8 +195,8 @@ class PostgresIndexSupport(IndexSupport, Protocol):
 
     def format_create_index_pg_statement(
         self,
-        index_name: str,
-        table_name: str,
+        index: str,
+        table: str,
         columns: List[str],
         schema: Optional[str] = None,
         unique: bool = False,
@@ -214,8 +214,8 @@ class PostgresIndexSupport(IndexSupport, Protocol):
         PostgreSQL-specific options without using expression objects.
 
         Args:
-            index_name: Index name
-            table_name: Table name
+            index: Index name
+            table: Table name
             columns: Column names for index key
             schema: Schema name
             unique: Create UNIQUE index
