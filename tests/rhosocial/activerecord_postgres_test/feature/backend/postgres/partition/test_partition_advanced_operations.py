@@ -1,3 +1,4 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/partition/test_partition_advanced_operations.py
 """Advanced real PostgreSQL partition capability tests."""
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_drop_table_cascade.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/ddl/test_drop_table_cascade.py
 """Tests for DROP TABLE ... CASCADE/RESTRICT rendering on PostgreSQL.
 
 PostgreSQL declares full SQL-standard CASCADE/RESTRICT support; the generic

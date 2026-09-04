@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_alter_table_if_exists.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/ddl/test_alter_table_if_exists.py
 """Tests for ALTER TABLE IF [NOT] EXISTS qualifier rendering on PostgreSQL.
 
 PostgreSQL supports the vendor extensions since 9.6:

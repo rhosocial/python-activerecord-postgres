@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/ddl/test_partition_operations.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/partition/test_partition_operations.py
 """Real PostgreSQL partition operation tests.
 
 These tests execute against the configured PostgreSQL scenarios. They cover

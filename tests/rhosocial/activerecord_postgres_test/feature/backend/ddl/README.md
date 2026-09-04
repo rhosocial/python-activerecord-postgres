@@ -1,10 +1,9 @@
 # ddl tests
 
-PostgreSQL DDL execution coverage: auto-increment / defaults DDL regressions, partition advanced operations, EXPLAIN on partitioned tables, and partition operations including pg_partman and production-style time partitioning.
+PostgreSQL DDL execution coverage: auto-increment / defaults DDL regressions, plus cross-backend DDL qualifiers (ALTER TABLE IF [NOT] EXISTS, DROP TABLE CASCADE/RESTRICT). Partition tests live in `postgres/partition/`.
 
 ## Key files
 
 - `test_auto_increment_ddl.py` — auto-increment / boolean default / timestamp regressions
-- `test_partition_advanced_operations.py` — advanced partition capabilities
-- `test_partition_explain.py` — EXPLAIN on partitioned tables
-- `test_partition_operations.py` — partition operations incl. pg_partman
+- `test_alter_table_if_exists.py` — IF [NOT] EXISTS qualifiers, USING, UNLOGGED
+- `test_drop_table_cascade.py` — CASCADE / RESTRICT rendering

@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_test/feature/backend/cli/test_cli_blackbox.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/cli/test_cli_blackbox.py
 """Black-box CLI tests for the PostgreSQL backend (live scenario server)."""
 
 import io

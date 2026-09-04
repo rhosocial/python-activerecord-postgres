@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_insert_on_conflict_clauses.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/dml/test_insert_on_conflict_clauses.py
 """Tests for PostgreSQL ON CONFLICT clause capability and rendering.
 
 Covers:

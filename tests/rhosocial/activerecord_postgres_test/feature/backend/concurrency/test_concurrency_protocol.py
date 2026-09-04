@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/backend/test_concurrency_protocol.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/concurrency/test_concurrency_protocol.py
 """
 Test for ConcurrencyAware protocol implementation in PostgreSQL backend.
 

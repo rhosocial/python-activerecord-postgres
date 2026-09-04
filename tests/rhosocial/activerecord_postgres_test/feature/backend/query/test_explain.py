@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/backend/test_backend_explain.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/query/test_explain.py
 """
 Integration tests for PostgresBackend.explain() and AsyncPostgresBackend.explain().
 

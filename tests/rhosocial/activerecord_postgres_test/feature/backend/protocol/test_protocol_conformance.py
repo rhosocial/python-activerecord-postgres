@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/dialect/test_postgres_protocol_conformance.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/protocol/test_protocol_conformance.py
 """
 Tests to verify PostgresDialect protocol conformance and protocol non-overlap.
 

@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/ddl/test_partition_explain.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/partition/test_partition_explain.py
 """PostgreSQL EXPLAIN tests for partitioned tables."""
 
 from __future__ import annotations

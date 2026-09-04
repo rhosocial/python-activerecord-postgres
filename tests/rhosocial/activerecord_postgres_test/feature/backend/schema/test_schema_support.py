@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_schema_support.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/schema/test_schema_support.py
 """Tests for the SchemaSupport capability declared on the PostgreSQL dialect.
 
 PostgreSQL models named schema namespaces natively (database -> schema -> table),
