@@ -244,7 +244,7 @@ def test_format_array_type_unsupported_element_raises(dialect):
 
 
 def test_format_unregistered_type_raises(dialect):
-    with pytest.raises(TypeError, match="does not support"):
+    with pytest.raises(TypeError, match="no formatter"):
         dialect.format_data_type(CustomType(raw="X"))
 
 
