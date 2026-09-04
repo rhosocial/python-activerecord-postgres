@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_test/feature/backend/postgres/test_expressions_transaction.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/expression/test_expressions_transaction.py
 """Tests for PostgreSQL transaction expression classes."""
 import pytest
 from rhosocial.activerecord.backend.expression.transaction import (

@@ -1142,6 +1142,46 @@ class PostgresDialect(
 
     # endregion
 
+    # CreateTableExpressionDiffSupport implementation
+    # (the mixin is composed via SQLDialectBase; the hooks below adapt the
+    # generic diff to PostgreSQL's ALTER TABLE vocabulary)
+
+    def _supports_alter_column_properties(self) -> bool:
+        """PostgreSQL supports all four ``ALTER COLUMN`` property operations
+        in place: ``SET DEFAULT`` / ``DROP DEFAULT`` (since 8.0) and
+        ``SET NOT NULL`` / ``DROP NOT NULL``. The generic mixin default
+        (True) is kept, so property changes stay on the AlterColumn path.
+        """
+        return True
+
+    def _supports_alter_column_type(self) -> bool:
+        """Whether in-place column type changes are emitted by the diff.
+
+        PostgreSQL itself can change a column type in place
+        (``ALTER COLUMN ... [SET DATA] TYPE``, optionally with ``USING``),
+        but the core expression layer provides no corresponding
+        ``AlterTableAction`` class for type changes in v1 — only
+        SET/DROP DEFAULT and SET/DROP NOT NULL exist on ``ColumnAlterOperation``.
+        Overriding this to True without implementing
+        ``alter_column_type_action()`` would raise NotImplementedError, so
+        type changes deliberately keep the generic default and route to a
+        rebuild plan. Revisit when the core gains a type-change action.
+        """
+        return False
+
+    def _supports_alter_table_index_actions(self) -> bool:
+        """PostgreSQL has no ``ALTER TABLE ADD/DROP INDEX`` statement.
+
+        ``format_add_index_action`` / ``format_drop_index_action`` (above)
+        raise ``UnsupportedFeatureError`` because PostgreSQL manages indexes
+        with independent ``CREATE INDEX`` / ``DROP INDEX`` statements. The
+        generic diff default (True) would therefore emit actions whose SQL
+        cannot be executed, so index changes route to a rebuild plan (the
+        recreated table carries the new index set). A dedicated
+        CreateIndex/DropIndex expression pass is future work.
+        """
+        return False
+
     # region Table Support
 
     # Constraint capability overrides
