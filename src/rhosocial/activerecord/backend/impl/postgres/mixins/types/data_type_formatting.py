@@ -336,7 +336,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_raster(self, data_type) -> Tuple[str, tuple]:
         return "RASTER", ()
 
-    @DDLTypeMixin.handles(ArrayType)
+    @DDLTypeMixin.handles(ArrayType, PostgresArrayType)
     def format_data_type_array(self, data_type: ArrayType) -> Tuple[str, tuple]:
         elem = data_type.element_type
         elem_cls = type(elem)
