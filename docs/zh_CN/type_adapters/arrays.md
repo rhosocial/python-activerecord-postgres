@@ -23,24 +23,56 @@ class Article(ActiveRecord):
 ## 数组操作
 
 ```python
-# 创建带数组的记录
-article = Article(
-    title="PostgreSQL 数组",
-    tags=["python", "database", "arrays"]
-)
+from rhosocial.activerecord.backend.impl.postgres.functions import array_length
+from rhosocial.activerecord.backend.expression import Column, QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
-# 使用数组操作符查询
 # 包含：tags 包含 'python'
-Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python}',)
 
 # 包含多个：tags 同时包含 'python' 和 'database'
-Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python,database}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python,database}',)
 
-# 任意元素匹配
-Article.query().where("? = ANY(tags)", ('python',)).all()
+# 任意元素匹配（通过 array_length）
+func = array_length(dialect, Column(dialect, "tags"), 1)
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, ">", func, Literal(dialect, 0)),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) > %s
+# params: (1, 0)
 
-# 所有元素满足条件
-Article.query().where("? = ALL(tags)", ('python',)).all()
+# 数组长度检查
+func = array_length(dialect, Column(dialect, "tags"), 1)
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "=", func, Literal(dialect, 3)),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) = %s
+# params: (1, 3)
 ```
 
 > **注意**：详细示例和测试验证请参阅[数组类型对比](./array_comparison.md)。

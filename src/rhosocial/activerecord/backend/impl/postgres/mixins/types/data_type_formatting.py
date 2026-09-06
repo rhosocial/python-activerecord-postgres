@@ -14,20 +14,24 @@ from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
     BigIntType,
+    BinaryType,
     BlobType,
     BooleanType,
     CharType,
+    CidrType,
     DataType,
     DateType,
     DateTimeType,
     DecimalType,
     DoubleType,
     FloatType,
+    InetType,
     IntegerType,
     IntType,
     IntervalType,
     JsonBType,
     JsonType,
+    MacAddrType,
     RealType,
     SmallIntType,
     TextType,
@@ -36,6 +40,8 @@ from rhosocial.activerecord.backend.expression.types import (
     TimestampType,
     TimestampTzType,
     TinyIntType,
+    UUIDType,
+    VarBinaryType,
     VarCharType,
 )
 from ...expression.types import (
@@ -183,6 +189,32 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     @DDLTypeMixin.handles(PostgresMacAddr8Type)
     def format_data_type_mac_addr8(self, data_type) -> Tuple[str, tuple]:
         return "MACADDR8", ()
+
+    # --- Core semantic type handlers (native PostgreSQL forms) ---
+
+    @DDLTypeMixin.handles(UUIDType)
+    def format_data_type_core_uuid(self, data_type) -> Tuple[str, tuple]:
+        return "UUID", ()
+
+    @DDLTypeMixin.handles(InetType)
+    def format_data_type_core_inet(self, data_type) -> Tuple[str, tuple]:
+        return "INET", ()
+
+    @DDLTypeMixin.handles(CidrType)
+    def format_data_type_core_cidr(self, data_type) -> Tuple[str, tuple]:
+        return "CIDR", ()
+
+    @DDLTypeMixin.handles(MacAddrType)
+    def format_data_type_core_mac_addr(self, data_type) -> Tuple[str, tuple]:
+        return "MACADDR", ()
+
+    @DDLTypeMixin.handles(BinaryType)
+    def format_data_type_core_binary(self, data_type) -> Tuple[str, tuple]:
+        return "BYTEA", ()
+
+    @DDLTypeMixin.handles(VarBinaryType)
+    def format_data_type_core_varbinary(self, data_type) -> Tuple[str, tuple]:
+        return "BYTEA", ()
 
     @DDLTypeMixin.handles(PostgresPointType)
     def format_data_type_point(self, data_type) -> Tuple[str, tuple]:
@@ -873,6 +905,7 @@ class PostgresTypeSuggestionMixin(DDLTypeSuggestionMixin):
         import datetime as _dt
         import decimal as _dec
         import enum as _enum
+        import ipaddress as _ip
         import uuid as _uuid
 
         mapping = {
@@ -885,10 +918,17 @@ class PostgresTypeSuggestionMixin(DDLTypeSuggestionMixin):
             _dt.date: DateType,
             _dt.time: TimeType,
             _dec.Decimal: DecimalType,
-            _uuid.UUID: PostgresUUIDType,
+            _uuid.UUID: UUIDType,
             dict: JsonBType,
             list: JsonBType,
+            set: JsonBType,
+            frozenset: JsonBType,
+            tuple: JsonBType,
             _enum.Enum: TextType,
+            _ip.IPv4Address: InetType,
+            _ip.IPv6Address: InetType,
+            _ip.IPv4Network: CidrType,
+            _ip.IPv6Network: CidrType,
         }
         factory = mapping.get(python_type)
         if factory is not None:

@@ -95,23 +95,48 @@ class Article(ActiveRecord):
 PostgreSQL provides powerful array-specific operators that are not available in databases without native array support:
 
 ```python
-# Contains: tags contains 'python'
-Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+from rhosocial.activerecord.backend.expression import (
+    QueryExpression, TableExpression, Column,
+)
+from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
-# Contains multiple: tags contains both 'python' AND 'database'
-Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
+# Contains: tags contains 'python'
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python}',)
 
 # Overlaps: tags contains any of these
-Article.query().where("tags && ARRAY[?, ?]", ('python', 'database')).all()
-
-# Any element equals
-Article.query().where("? = ANY(tags)", ('python',)).all()
-
-# All elements satisfy condition
-Article.query().where("? = ALL(tags)", ('python',)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "&&", Column(dialect, "tags"), Literal(dialect, "{python,database}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" && %s
+# params: ('{python,database}',)
 
 # Array length
-Article.query().where("array_length(tags, 1) > ?", (3,)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(
+        dialect, ">",
+        FunctionCall(dialect, "array_length", Column(dialect, "tags"), Literal(dialect, 1)),
+        Literal(dialect, 3),
+    ),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) > %s
+# params: (1, 3)
 ```
 
 **Equivalent in Databases Without Arrays (Limited):**
@@ -154,10 +179,20 @@ Detect array support at runtime:
 
 ```python
 from rhosocial.activerecord.backend.interface import SupportsArrayQueries
+from rhosocial.activerecord.backend.expression import (
+    QueryExpression, TableExpression, Column,
+)
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if isinstance(model.__backend__, SupportsArrayQueries):
     # Use native array operators
-    results = model.query().where("tags @> ARRAY[?]", ('python',)).all()
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "*")],
+        from_=TableExpression(dialect, "articles"),
+        where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+    )
 else:
     # Fall back to string matching
     results = model.query().where("tags LIKE ?", ('%python%')).all()

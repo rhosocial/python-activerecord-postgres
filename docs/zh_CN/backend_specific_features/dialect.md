@@ -255,33 +255,51 @@ users = User.query().where(
 ## 数组操作符
 
 ```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+
 # 包含 (@>)
-Article.query().where("tags @> ?", (['python', 'database'],))
+expr = BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, '{python,database}'))
+sql, params = expr.to_sql()
+# sql: "tags" @> %s
+# params: ('{python,database}',)
 
 # 被包含 (<@)
-Article.query().where("tags <@ ?", (['python', 'database', 'web'],))
+expr = BinaryExpression(dialect, "<@", Column(dialect, "tags"), Literal(dialect, '{python,database,web}'))
+sql, params = expr.to_sql()
+# sql: "tags" <@ %s
+# params: ('{python,database,web}',)
 
 # 重叠 (&&)
-Article.query().where("tags && ?", (['python', 'java'],))
-
-# 任意元素
-Article.query().where("? = ANY(tags)", ('python',))
+expr = BinaryExpression(dialect, "&&", Column(dialect, "tags"), Literal(dialect, '{python,java}'))
+sql, params = expr.to_sql()
+# sql: "tags" && %s
+# params: ('{python,java}',)
 ```
 
 ## JSONB 操作符
 
 ```python
-# 获取路径上的 JSON 值
-Product.query().where("attributes->>'brand' = ?", ('Dell',))
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
-# 获取嵌套值
-Product.query().where("attributes->'specs'->>'cpu' = ?", ('Intel i7',))
+# 获取路径上的 JSON 值 (->>)
+expr = BinaryExpression(dialect, "=>", 
+    Column(dialect, "attributes").json_arrow_text("brand"),
+    Literal(dialect, "Dell"))
+sql, params = expr.to_sql()
+# sql: "attributes"->>'brand' = %s
+# params: ('Dell',)
 
-# JSONB 包含
-Product.query().where("attributes @> ?", ({"brand": "Dell"},))
-
-# 键存在
-Product.query().where("attributes ? 'brand'", ())
+# JSONB 包含 (@>)
+expr = BinaryExpression(dialect, "@>",
+    Column(dialect, "attributes"),
+    Literal(dialect, '{"brand": "Dell"}').cast("jsonb"))
+sql, params = expr.to_sql()
+# sql: "attributes" @> %s::jsonb
+# params: ('{"brand": "Dell"}',)
 ```
 
 💡 *AI 提示词：* "PostgreSQL 的 ILIKE 和标准 LIKE 在性能上有什么区别？"

@@ -23,18 +23,25 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 
 ### Partition Support
 
-PostgreSQL 10+ supports declarative partitioning. See [Partition Documentation](../postgres_specific_features/partition.md).
+PostgreSQL 10+ supports declarative partitioning. See [Partition Documentation](../backend_specific_features/partition.md).
 
 ```python
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+    PostgresCreatePartitionExpression,
+)
+
 partition = PostgresCreatePartitionExpression(
     dialect, parent_table="orders", partition_name="orders_2024_q1",
     partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
 )
+sql, params = partition.to_sql()
+# sql: CREATE TABLE "orders_2024_q1" PARTITION OF "orders" FOR VALUES FROM (%s) TO (%s)
+# params: ('2024-01-01', '2024-04-01')
 ```
 
 ### pg_partman Extension
 
-See [Partition Documentation](../postgres_specific_features/partition.md) for pg_partman support.
+See [Partition Documentation](../backend_specific_features/partition.md) for pg_partman support.
 
 ### Index Operation Enhancements
 
@@ -49,12 +56,18 @@ alter = PostgresAlterIndexExpression(
     dialect, index_name="idx_old",
     action=PostgresAlterIndexActionType.RENAME_TO("idx_new"),
 )
+sql, params = alter.to_sql()
+# sql: ALTER INDEX "idx_old" RENAME TO "idx_new"
+# params: ()
 
 # REINDEX CONCURRENTLY
 reindex = PostgresReindexExpression(
     dialect, target_type="INDEX", target_name="idx_corrupted",
     concurrently=True,
 )
+sql, params = reindex.to_sql()
+# sql: REINDEX INDEX CONCURRENTLY "idx_corrupted"
+# params: ()
 ```
 
 ### Index Types
@@ -62,6 +75,8 @@ reindex = PostgresReindexExpression(
 PostgreSQL supports various index types:
 
 ```python
+from rhosocial.activerecord.backend.expression import CreateIndexExpression
+
 create_idx = CreateIndexExpression(
     dialect,
     index_name="idx_users_name",
@@ -69,6 +84,9 @@ create_idx = CreateIndexExpression(
     columns=["name"],
     index_type="GIN"  # GIN, GiST, BRIN, BTREE, HASH
 )
+sql, params = create_idx.to_sql()
+# sql: CREATE INDEX "idx_users_name" ON "users" USING GIN ("name")
+# params: ()
 ```
 
 ### Partial Indexes
@@ -76,7 +94,8 @@ create_idx = CreateIndexExpression(
 PostgreSQL supports partial indexes with WHERE clause:
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import CreateIndexExpression, Column
+from rhosocial.activerecord.backend.expression.core import Literal
 
 create_idx = CreateIndexExpression(
     dialect,
@@ -85,6 +104,9 @@ create_idx = CreateIndexExpression(
     columns=["email"],
     where=Column(dialect, "status") == Literal(dialect, "active")
 )
+sql, params = create_idx.to_sql()
+# sql: CREATE INDEX "idx_active_users" ON "users" ("email") WHERE "status" = %s
+# params: ('active',)
 ```
 
 ### Schema Support
@@ -92,11 +114,16 @@ create_idx = CreateIndexExpression(
 PostgreSQL supports schemas:
 
 ```python
+from rhosocial.activerecord.backend.expression import CreateTableExpression
+
 create_table = CreateTableExpression(
     dialect,
     table_name="schema_name.users",
     columns=columns
 )
+sql, params = create_table.to_sql()
+# sql: CREATE TABLE "schema_name"."users" (...)
+# params: (...)
 ```
 
 ## Running the Example

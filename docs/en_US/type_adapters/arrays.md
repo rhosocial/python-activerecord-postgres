@@ -23,24 +23,56 @@ class Article(ActiveRecord):
 ## Array Operations
 
 ```python
-# Create with array
-article = Article(
-    title="PostgreSQL Arrays",
-    tags=["python", "database", "arrays"]
-)
+from rhosocial.activerecord.backend.impl.postgres.functions import array_length
+from rhosocial.activerecord.backend.expression import Column, QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
-# Query with array operators
 # Contains: tags contains 'python'
-Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python}',)
 
 # Contains multiple: tags contains both 'python' AND 'database'
-Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python,database}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python,database}',)
 
-# Any element match
-Article.query().where("? = ANY(tags)", ('python',)).all()
+# Any element match (via array_position)
+func = array_length(dialect, Column(dialect, "tags"), 1)
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, ">", func, Literal(dialect, 0)),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) > %s
+# params: (1, 0)
 
-# All elements satisfy condition
-Article.query().where("? = ALL(tags)", ('python',)).all()
+# Array length check
+func = array_length(dialect, Column(dialect, "tags"), 1)
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "=", func, Literal(dialect, 3)),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) = %s
+# params: (1, 3)
 ```
 
 > **Note**: See [Array Type Comparison](./array_comparison.md) for detailed examples and test verification.

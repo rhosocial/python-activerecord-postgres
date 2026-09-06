@@ -20,11 +20,17 @@
     *   **[连接管理](installation_and_configuration/pool.md)**: 随用随连模式
     *   **[客户端编码](installation_and_configuration/encoding.md)**: 字符编码设置
 
-3. **[PostgreSQL 特性 (PostgreSQL Specific Features)](postgres_specific_features/README.md)**
-    *   **[PostgreSQL 特定字段类型](postgres_specific_features/field_types.md)**: ARRAY, JSONB, UUID, Range 类型
-    *   **[PostgreSQL Dialect 表达式](postgres_specific_features/dialect.md)**: PostgreSQL 特定的 SQL 方言
-    *   **[高级索引](postgres_specific_features/indexing.md)**: GIN, GiST, BRIN 索引类型
-    *   **[RETURNING 子句](postgres_specific_features/returning.md)**: INSERT/UPDATE/DELETE RETURNING 支持
+3. **[PostgreSQL 特性 (PostgreSQL Specific Features)](backend_specific_features/README.md)**
+    *   **[PostgreSQL 扩展](backend_specific_features/extensions.md)**: PostGIS、pgvector、pg_trgm 等 25+ 个扩展
+    *   **[PostgreSQL 特定字段类型](backend_specific_features/field_types.md)**: ARRAY, JSONB, UUID, Range 类型
+    *   **[PostgreSQL Dialect 表达式](backend_specific_features/dialect.md)**: PostgreSQL 特定的 SQL 方言
+    *   **[高级索引](backend_specific_features/indexing.md)**: GIN, GiST, BRIN 索引类型
+    *   **[RETURNING 子句](backend_specific_features/returning.md)**: INSERT/UPDATE/DELETE RETURNING 支持
+    *   **[协议支持矩阵](backend_specific_features/protocol_support.md)**: 协议支持和版本兼容性
+    *   **[数据库内省](backend_specific_features/introspection.md)**: 使用 pg_catalog 查询元数据
+    *   **[EXPLAIN 支持](backend_specific_features/explain.md)**: 查询执行计划分析
+    *   **[表分区](backend_specific_features/partition.md)**: RANGE / LIST / HASH 分区
+    *   **[属性图查询](backend_specific_features/property_graph_query.md)**: SQL/PGQ 属性图查询
 
 4. **[DDL 操作 (DDL Operations)](ddl/README.md)**
     *   **[PostgreSQL DDL 概览](ddl/README.md)**: CREATE TABLE, ALTER TABLE, DROP TABLE
@@ -53,7 +59,12 @@
 9. **[场景实战 (Scenarios)](scenarios/README.md)**
     *   **[并行 Worker 处理](scenarios/parallel_workers.md)**: 多进程/异步并发场景的正确用法
 
-10. **[Worker 隔离实验](examples/chapter_05_worker_isolation/README.md)**
-    *   **[Worker 连接隔离实验](examples/chapter_05_worker_isolation/README.md)**: Worker 进程隔离实验
+10. **[自定义 (Customization)](customization/README.md)**
+    *   **[自定义表达式](customization/custom_expressions.md)**: 为数据库特定 SQL 创建新的表达式类
+    *   **[自定义数据类型](customization/custom_types.md)**: 为自定义列类型定义新的 DataType 子类
+    *   **[自定义类型适配器](customization/custom_adapters.md)**: 注册 Python 与数据库值之间的自定义转换器
+
+11. **[命令行界面 (CLI)](cli/README.md)**
+    *   **[CLI 概述](cli/README.md)**: 查询、内省和管理 PostgreSQL 的命令
 
 > 📖 **核心库文档**：要了解 ActiveRecord 框架的完整功能，请参考 [rhosocial-activerecord 文档](https://github.com/Rhosocial/python-activerecord/tree/main/docs/zh_CN)。

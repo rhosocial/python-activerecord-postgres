@@ -23,7 +23,7 @@ PostgreSQL 后端支持与核心库相同的类型安全 DDL 表达式，并具�
 
 ### 分区支持
 
-PostgreSQL 10+ 支持声明式分区，详见 [分区文档](../postgres_specific_features/partition.md)。
+PostgreSQL 10+ 支持声明式分区，详见 [分区文档](../backend_specific_features/partition.md)。
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
@@ -39,7 +39,7 @@ partition = PostgresCreatePartitionExpression(
 
 ### pg_partman 扩展
 
-pg_partman 扩展支持自动分区管理，详见 [分区文档](../postgres_specific_features/partition.md)。
+pg_partman 扩展支持自动分区管理，详见 [分区文档](../backend_specific_features/partition.md)。
 
 ### 索引操作增强
 

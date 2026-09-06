@@ -66,7 +66,7 @@ users = User.query().select(User.c.id, User.c.name).all()
 
 ```python
 # 使用预加载避免 N+1
-users = User.query().eager_load('posts').all()
+users = User.query().with_('posts').all()
 ```
 
 ### 4. VACUUM 和 ANALYZE

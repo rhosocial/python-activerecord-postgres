@@ -20,11 +20,17 @@
     *   **[Connection Management](installation_and_configuration/pool.md)**: connect-on-use pattern
     *   **[Client Encoding](installation_and_configuration/encoding.md)**: character encoding settings
 
-3. **[PostgreSQL Specific Features](postgres_specific_features/README.md)**
-    *   **[PostgreSQL-Specific Field Types](postgres_specific_features/field_types.md)**: ARRAY, JSONB, UUID, Range types
-    *   **[PostgreSQL Dialect Expressions](postgres_specific_features/dialect.md)**: PostgreSQL-specific SQL dialect
-    *   **[Advanced Indexing](postgres_specific_features/indexing.md)**: GIN, GiST, BRIN index types
-    *   **[RETURNING Clause](postgres_specific_features/returning.md)**: INSERT/UPDATE/DELETE RETURNING support
+3. **[PostgreSQL Specific Features](backend_specific_features/README.md)**
+    *   **[PostgreSQL Extensions](backend_specific_features/extensions.md)**: PostGIS, pgvector, pg_trgm, and 25+ other extensions
+    *   **[PostgreSQL-Specific Field Types](backend_specific_features/field_types.md)**: ARRAY, JSONB, UUID, Range types
+    *   **[PostgreSQL Dialect Expressions](backend_specific_features/dialect.md)**: PostgreSQL-specific SQL dialect
+    *   **[Advanced Indexing](backend_specific_features/indexing.md)**: GIN, GiST, BRIN index types
+    *   **[RETURNING Clause](backend_specific_features/returning.md)**: INSERT/UPDATE/DELETE RETURNING support
+    *   **[Protocol Support Matrix](backend_specific_features/protocol_support.md)**: Protocol support and version compatibility
+    *   **[Database Introspection](backend_specific_features/introspection.md)**: Query metadata using pg_catalog
+    *   **[EXPLAIN Support](backend_specific_features/explain.md)**: Query execution plan analysis
+    *   **[Table Partitioning](backend_specific_features/partition.md)**: RANGE / LIST / HASH partitioning
+    *   **[Property Graph Query](backend_specific_features/property_graph_query.md)**: SQL/PGQ property graph query
 
 4. **[DDL Operations](ddl/README.md)**
     *   **[PostgreSQL DDL Overview](ddl/README.md)**: CREATE TABLE, ALTER TABLE, DROP TABLE
@@ -55,7 +61,12 @@
 9. **[Scenarios](scenarios/README.md)**
     *   **[Parallel Worker Processing](scenarios/parallel_workers.md)**: correct usage in multi-process/async concurrent scenarios
 
-10. **[Worker Isolation Experiment](examples/chapter_05_worker_isolation/README.md)**
-    *   **[Worker Connection Isolation](examples/chapter_05_worker_isolation/README.md)**: worker process isolation experiment
+10. **[Customization](customization/README.md)**
+    *   **[Custom Expressions](customization/custom_expressions.md)**: Creating new expression classes for database-specific SQL
+    *   **[Custom Data Types](customization/custom_types.md)**: Defining new DataType subclasses for custom column types
+    *   **[Custom Type Adapters](customization/custom_adapters.md)**: Registering custom converters between Python and database values
+
+11. **[Command-Line Interface](cli/README.md)**
+    *   **[CLI Overview](cli/README.md)**: Commands for querying, introspecting, and managing PostgreSQL
 
 > 📖 **Core Library Documentation**: To learn about the complete functionality of the ActiveRecord framework, please refer to [rhosocial-activerecord documentation](https://github.com/rhosocial/python-activerecord/tree/main/docs/en_US).

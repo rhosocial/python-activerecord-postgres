@@ -76,10 +76,10 @@ from typing import ClassVar
 from pydantic import Field
 from rhosocial.activerecord.model import ActiveRecord
 from rhosocial.activerecord.base import FieldProxy
-from rhosocial.activerecord.field import UUIDMixin, TimestampMixin
+from rhosocial.activerecord.field import UUIDMixin, DefaultTimestampMixin
 
 
-class User(UUIDMixin, TimestampMixin, ActiveRecord):
+class User(UUIDMixin, DefaultTimestampMixin, ActiveRecord):
     username: str = Field(..., max_length=50)
     email: str
 
@@ -119,7 +119,7 @@ user = User(username='tom', email='tom@example.com')
 user.save()
 
 # 查询记录
-user = User.query().where(User.c.username == 'tom').first()
+user = User.query().where(User.c.username == 'tom').one()
 
 # 更新记录
 user.email = 'tom.new@example.com'

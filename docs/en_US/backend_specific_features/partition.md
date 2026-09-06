@@ -17,10 +17,25 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition impor
     PostgresCreatePartitionExpression,
 )
 
+# RANGE partition
 partition = PostgresCreatePartitionExpression(
     dialect, parent_table="orders", partition_name="orders_2024_q1",
-    partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
+    partition_type="RANGE",
+    partition_values={"from": "2024-01-01", "to": "2024-04-01"},
 )
+sql, params = partition.to_sql()
+# sql: CREATE TABLE orders_2024_q1 PARTITION OF orders RANGE ('2024-01-01', '2024-04-01')
+# params: ()
+
+# LIST partition
+partition = PostgresCreatePartitionExpression(
+    dialect, parent_table="orders", partition_name="orders_active",
+    partition_type="LIST",
+    partition_values={"values": ["active", "pending"]},
+)
+sql, params = partition.to_sql()
+# sql: CREATE TABLE orders_active PARTITION OF orders LIST ('active', 'pending')
+# params: ()
 ```
 
 ## Partition Management
@@ -33,14 +48,21 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition impor
 # ATTACH PARTITION
 attach = PostgresAttachPartitionExpression(
     dialect, parent_table="orders", partition_name="orders_new",
-    partition_type="RANGE", bounds="FROM ('2024-07-01') TO ('2024-10-01')",
+    partition_type="RANGE",
+    partition_values={"from": "2024-07-01", "to": "2024-10-01"},
 )
+sql, params = attach.to_sql()
+# sql: ALTER TABLE orders ATTACH PARTITION orders_new RANGE ('2024-07-01', '2024-10-01')
+# params: ()
 
 # DETACH PARTITION CONCURRENTLY (PG 14+)
 detach = PostgresDetachPartitionExpression(
     dialect, parent_table="orders", partition_name="orders_old",
     concurrently=True,
 )
+sql, params = detach.to_sql()
+# sql: ALTER TABLE orders DETACH PARTITION orders_old CONCURRENTLY
+# params: ()
 ```
 
 ## pg_partman Extension
@@ -54,9 +76,15 @@ expr = create_parent(
     control="created_at", interval="1 month",
     partition_type="range", premake=3,
 )
+sql, params = expr.to_sql()
+# sql: CREATE_PARENT(%s, %s, %s, %s, %s)
+# params: ('public.orders', 'created_at', '1 month', 'range', 3)
 
 # Run maintenance
 expr = run_maintenance(dialect, parent_table="public.orders")
+sql, params = expr.to_sql()
+# sql: RUN_MAINTENANCE(%s)
+# params: ('public.orders',)
 ```
 
 ## Dialect Feature Detection

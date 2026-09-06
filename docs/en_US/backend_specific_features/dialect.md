@@ -255,33 +255,41 @@ users = User.query().where(
 ## Array Operators
 
 ```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+
 # Contains (@>)
-Article.query().where("tags @> ?", (['python', 'database'],))
+expr = BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, '{python,database}'))
+sql, params = expr.to_sql()
+# sql: "tags" @> %s
+# params: ('{python,database}',)
 
 # Is contained by (<@)
-Article.query().where("tags <@ ?", (['python', 'database', 'web'],))
+expr = BinaryExpression(dialect, "<@", Column(dialect, "tags"), Literal(dialect, '{python,database,web}'))
+sql, params = expr.to_sql()
+# sql: "tags" <@ %s
+# params: ('{python,database,web}',)
 
 # Overlaps (&&)
-Article.query().where("tags && ?", (['python', 'java'],))
-
-# Any element
-Article.query().where("? = ANY(tags)", ('python',))
+expr = BinaryExpression(dialect, "&&", Column(dialect, "tags"), Literal(dialect, '{python,java}'))
+sql, params = expr.to_sql()
+# sql: "tags" && %s
+# params: ('{python,java}',)
 ```
 
 ## JSONB Operators
 
 ```python
-# Get JSON value at path
-Product.query().where("attributes->>'brand' = ?", ('Dell',))
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 
-# Get nested value
-Product.query().where("attributes->'specs'->>'cpu' = ?", ('Intel i7',))
+# Get JSON value at path (->>)
+func = FunctionCall(dialect, "->>", Column(dialect, "attributes"), Literal(dialect, "brand"))
+# Note: For JSONB operators, use RawSQLExpression or the expression system
 
-# JSONB contains
-Product.query().where("attributes @> ?", ({"brand": "Dell"},))
-
-# Key exists
-Product.query().where("attributes ? 'brand'", ())
+# JSONB contains (@>)
+# Use BinaryExpression for @> operator
 ```
 
 💡 *AI Prompt:* "How do PostgreSQL's ILIKE and standard LIKE differ in performance?"

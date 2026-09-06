@@ -95,23 +95,48 @@ class Article(ActiveRecord):
 PostgreSQL 提供强大的数组专用操作符，这些在不支持原生数组的数据库中不可用：
 
 ```python
-# 包含：tags 包含 'python'
-Article.query().where("tags @> ARRAY[?]", ('python',)).all()
+from rhosocial.activerecord.backend.expression import (
+    QueryExpression, TableExpression, Column,
+)
+from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
-# 包含多个：tags 同时包含 'python' 和 'database'
-Article.query().where("tags @> ARRAY[?, ?]", ('python', 'database')).all()
+# 包含：tags 包含 'python'
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" @> %s
+# params: ('{python}',)
 
 # 重叠：tags 包含以下任意一个
-Article.query().where("tags && ARRAY[?, ?]", ('python', 'database')).all()
-
-# 任意元素等于
-Article.query().where("? = ANY(tags)", ('python',)).all()
-
-# 所有元素满足条件
-Article.query().where("? = ALL(tags)", ('python',)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(dialect, "&&", Column(dialect, "tags"), Literal(dialect, "{python,database}")),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE "tags" && %s
+# params: ('{python,database}',)
 
 # 数组长度
-Article.query().where("array_length(tags, 1) > ?", (3,)).all()
+query = QueryExpression(
+    dialect=dialect,
+    select=[Column(dialect, "*")],
+    from_=TableExpression(dialect, "articles"),
+    where=BinaryExpression(
+        dialect, ">",
+        FunctionCall(dialect, "array_length", Column(dialect, "tags"), Literal(dialect, 1)),
+        Literal(dialect, 3),
+    ),
+)
+sql, params = query.to_sql()
+# sql: SELECT "*" FROM "articles" WHERE ARRAY_LENGTH("tags", %s) > %s
+# params: (1, 3)
 ```
 
 **不支持数组的数据库等效写法（功能受限）：**
@@ -154,10 +179,20 @@ class Article(ActiveRecord):
 
 ```python
 from rhosocial.activerecord.backend.interface import SupportsArrayQueries
+from rhosocial.activerecord.backend.expression import (
+    QueryExpression, TableExpression, Column,
+)
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if isinstance(model.__backend__, SupportsArrayQueries):
     # 使用原生数组操作符
-    results = model.query().where("tags @> ARRAY[?]", ('python',)).all()
+    query = QueryExpression(
+        dialect=dialect,
+        select=[Column(dialect, "*")],
+        from_=TableExpression(dialect, "articles"),
+        where=BinaryExpression(dialect, "@>", Column(dialect, "tags"), Literal(dialect, "{python}")),
+    )
 else:
     # 降级为字符串匹配
     results = model.query().where("tags LIKE ?", ('%python%')).all()

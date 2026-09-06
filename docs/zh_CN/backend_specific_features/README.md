@@ -4,6 +4,7 @@ PostgreSQL 提供了许多超越标准 SQL 的高级功能。本节介绍 Postgr
 
 ## 主题
 
+- **[PostgreSQL 扩展](./extensions.md)**: PostGIS、pgvector、pg_trgm 等 25+ 个扩展
 - **[PostgreSQL 特定字段类型](./field_types.md)**: ARRAY, JSONB, UUID, Range 类型
 - **[PostgreSQL Dialect 表达式](./dialect.md)**: PostgreSQL 特定的 SQL 语法
 - **[高级索引](./indexing.md)**: GIN, GiST, BRIN 索引
@@ -11,6 +12,8 @@ PostgreSQL 提供了许多超越标准 SQL 的高级功能。本节介绍 Postgr
 - **[协议支持矩阵](./protocol_support.md)**: 完整的协议支持和版本兼容性
 - **[数据库内省](./introspection.md)**: 使用 pg_catalog 查询元数据
 - **[EXPLAIN 支持](./explain.md)**: 查询执行计划分析与性能诊断
+- **[表分区](./partition.md)**: RANGE / LIST / HASH 分区和 pg_partman 管理
+- **[属性图查询](./property_graph_query.md)**: SQL/PGQ 属性图查询（PG 19+）
 
 ## 功能亮点
 
@@ -25,7 +28,7 @@ class Article(ActiveRecord):
     id: UUID  # PostgreSQL UUID
 ```
 
-💡 *AI 提示词：* "PostgreSQL 的 JSONB 相比普通 JSON 存储有什么优势？"
+💡 *AI 提示：* "PostgreSQL 的 JSONB 相比普通 JSON 存储有什么优势？"
 
 ## 相关主题
 

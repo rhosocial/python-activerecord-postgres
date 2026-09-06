@@ -114,12 +114,42 @@ WITH (lists = 100);
 
 ## Similarity Search
 
-```sql
--- Cosine similarity search (find top 5 most similar)
-SELECT content, embedding <=> '[0.1, 0.2, ...]'::vector AS distance
-FROM embeddings
-ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
-LIMIT 5;
+```python
+from rhosocial.activerecord.backend.impl.postgres.functions import vector_search
+
+# Cosine similarity search (find top 5 most similar)
+query = vector_search(
+    dialect,
+    "documents",
+    [0.1, 0.2, 0.3],  # query vector
+    metric="cosine",
+    top_k=5,
+    columns=["content"],
+    include_similarity=True,
+)
+sql, params = query.to_sql()
+# sql: SELECT content, embedding <=> %s AS cosine_similarity
+#      FROM documents
+#      ORDER BY embedding <=> %s
+#      LIMIT %s
+# params: ('[0.1,0.2,0.3]', '[0.1,0.2,0.3]', 5)
+
+# L2 distance search
+query = vector_search(
+    dialect,
+    "documents",
+    [0.1, 0.2, 0.3],
+    metric="l2",
+    top_k=5,
+    columns=["content"],
+    include_distance=True,
+)
+sql, params = query.to_sql()
+# sql: SELECT content, embedding <-> %s AS l2_distance
+#      FROM documents
+#      ORDER BY embedding <-> %s
+#      LIMIT %s
+# params: ('[0.1,0.2,0.3]', '[0.1,0.2,0.3]', 5)
 ```
 
 ## Notes

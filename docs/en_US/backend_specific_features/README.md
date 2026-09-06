@@ -4,6 +4,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 
 ## Topics
 
+- **[PostgreSQL Extensions](./extensions.md)**: PostGIS, pgvector, pg_trgm, and 25+ other extensions
 - **[PostgreSQL-Specific Field Types](./field_types.md)**: ARRAY, JSONB, UUID, Range types
 - **[PostgreSQL Dialect Expressions](./dialect.md)**: PostgreSQL-specific SQL syntax
 - **[Advanced Indexing](./indexing.md)**: GIN, GiST, BRIN indexes

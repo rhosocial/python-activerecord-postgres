@@ -65,8 +65,8 @@ users = User.query().select(User.c.id, User.c.name).all()
 ### 3. N+1 Query Problem
 
 ```python
-# Use eager loading to avoid N+1
-users = User.query().eager_load('posts').all()
+# Use with_() for eager loading to avoid N+1
+users = User.query().with_('posts').all()
 ```
 
 ### 4. VACUUM and ANALYZE

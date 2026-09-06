@@ -7,47 +7,88 @@ This section covers testing for the PostgreSQL backend.
 - [Test Configuration](configuration.md): test environment setup
 - [Local PostgreSQL Testing](local.md): local database testing
 
+## Testing Principles
+
+### Sync/Async Parity
+
+All backends with IO operations must prepare **paired sync and async tests** for equivalent scenarios:
+
+```python
+# Sync test
+def test_create_user():
+    user = User(name="Alice").create()
+    assert user.id is not None
+
+# Async test — same logic, async API
+async def test_async_create_user():
+    user = await AsyncUser(name="Alice").create()
+    assert user.id is not None
+```
+
+If a backend only supports sync or only async, prepare the corresponding tests only.
+
+### Expression Classes — No IO
+
+Expression tests involve no database IO — they only build SQL and validate the generated SQL:
+
+```python
+def test_expression_sql():
+    expr = Eq(User.name, "Alice")
+    assert expr.to_sql(dialect) == "`name` = %s"
+    assert expr.params == ["Alice"]
+```
+
+No async counterpart is needed for expression tests.
+
+### ActiveRecord Tests — Use Testsuite
+
+ActiveRecord feature tests (model CRUD, relationships, queries) use the **testsuite**:
+
+```
+python-activerecord-testsuite/
+└── src/rhosocial/activerecord/testsuite/feature/
+    ├── basic/      # Level 1 — must pass first
+    ├── relation/   # Level 1 — must pass first
+    ├── query/      # Level 1 — must pass first
+    ├── events/     # Level 2 — extended behaviors
+    ├── mixins/     # Level 2
+    ├── interface/  # Level 2
+    └── examples/   # Level 2
+```
+
+Each backend provides **provider implementations** that wire the tests to its specific database. The test logic is shared; only the provider layer changes per backend.
+
+**Running testsuite tests:**
+
+```bash
+cd python-activerecord-postgres
+PYTHONPATH=tests .venv3.14-ubuntu26.04/bin/pytest \
+    ../python-activerecord-testsuite/src/rhosocial/activerecord/testsuite/feature/relation/
+```
+
+**Provider responsibilities:** See the [Core Testsuite Provider Guide](provider_guide.md).
+
+### Test Categories Summary
+
+| What to Test | Approach | IO? | Async? |
+|-------------|----------|-----|--------|
+| Expression classes (dialect SQL generation) | Unit tests, no DB | No | No |
+| Type adapters (type conversion) | Unit tests, no DB | No | No |
+| Named features (connection, expression, procedure, migration) | Backend CLI scripts | Yes | If supported |
+| ActiveRecord features (CRUD, relations, queries) | Testsuite + provider | Yes | Yes |
+| Backend-specific features (unique types, syntax) | Project-specific tests | Yes | Yes |
+
 ## Provider Responsibilities
 
-As a backend implementation, the PostgreSQL backend must implement the Provider interface to handle test environment setup and cleanup. This is critical for test isolation and correctness.
+For provider implementation guidelines, see the [Core Testsuite Provider Guide](https://github.com/Rhosocial/python-activerecord/tree/main/docs/en_US/testing/provider_guide.md).
 
-### Key Principles
+### PostgreSQL-Specific Notes
 
-1. **Environment Preparation**: The provider must:
-   - Create database schemas (tables, indexes, types)
-   - Establish database connections
-   - Configure test models with PostgreSQL-specific implementations
-
-2. **Environment Cleanup**: The provider must:
-   - Drop all test tables after each test
-   - Drop custom types if any
-   - Close all cursors properly
-   - Disconnect from the database
-
-### Critical: Cleanup Order
-
-The cleanup must follow this order to avoid issues:
-
-```
-Correct Order:
-1. DROP TABLE statements (cleanup data)
-2. Drop custom types
-3. Close cursors
-4. Disconnect
-
-Incorrect Order:
-1. Disconnect first ❌
-2. Then cleanup ❌ (connection already closed!)
-```
-
-### Common Issues
-
-- **Table Conflicts**: Not dropping tables can cause "table already exists" errors
-- **Type Conflicts**: PostgreSQL custom types (e.g., ENUM, ARRAY) need to be dropped
-- **Data Contamination**: Not cleaning up can cause context-dependent tests to fail
-- **Connection Issues**: Improper cleanup can lead to resource exhaustion
+- **Custom types**: PostgreSQL custom types (e.g., ENUM, ARRAY) must be dropped before tables
+- **Cleanup order**: DROP TABLE → Drop custom types → Close cursors → Disconnect
 
 ### Implementation Reference
 
 See the test suite documentation for detailed implementation guidelines:
 - `python-activerecord-testsuite/docs/en_US/README.md`
+- [Core Backend Testing Guide](https://github.com/Rhosocial/python-activerecord/tree/main/docs/en_US/testing/backend_testing.md)

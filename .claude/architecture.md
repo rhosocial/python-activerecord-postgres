@@ -51,7 +51,7 @@ The model layer provides the implementation of the Active Record pattern.
 #### Main Components
 - `ActiveRecord`: Base class for the Active Record pattern
 - `FieldProxy`: Field proxy that bridges the gap between Python objects and SQL queries
-- Mixins: `UUIDMixin`, `TimestampMixin`, etc.
+- Mixins: `UUIDMixin`, `DefaultTimestampMixin`, etc.
 
 ### 4. Query Interface
 
@@ -375,12 +375,12 @@ class SQLTypeAdapter(Protocol):
 **Purpose**: Composable functionality
 
 ```python
-class TimestampMixin:
+class DefaultTimestampMixin:
     """Add timestamp tracking."""
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: Optional[datetime] = None
 
-class SoftDeleteMixin:
+class DefaultSoftDeleteMixin:
     """Add soft delete capability."""
     deleted_at: Optional[datetime] = None
 
@@ -389,7 +389,7 @@ class SoftDeleteMixin:
         return self.save()
 
 # Composition
-class Article(TimestampMixin, SoftDeleteMixin, ActiveRecord):
+class Article(DefaultTimestampMixin, DefaultSoftDeleteMixin, ActiveRecord):
     __table_name__ = "articles"
     title: str
     content: str

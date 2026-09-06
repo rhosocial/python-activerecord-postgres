@@ -38,12 +38,27 @@ User.configure(
 The PostgreSQL dialect extends the core SQL generation with PostgreSQL-specific syntax:
 
 ```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+
 # Core query (backend-agnostic)
 User.query().where(User.c.age > 18)
 
-# PostgreSQL-specific features
-User.query().where("metadata->>'role' = ?", ('admin',))  # JSONB
-User.query().where("tags @> ?", (['python'],))  # Array contains
+# PostgreSQL-specific features using expressions
+# JSONB access
+expr = BinaryExpression(dialect, "=", 
+    Column(dialect, "metadata").json_arrow_text("role"),
+    Literal(dialect, "admin"))
+# sql: "metadata"->>'role' = %s
+# params: ('admin',)
+
+# Array contains
+expr = BinaryExpression(dialect, "@>",
+    Column(dialect, "tags"),
+    Literal(dialect, "{python}"))
+# sql: "tags" @> %s
+# params: ('{python}',)
 ```
 
 ### 3. Type Adapter Integration
@@ -61,5 +76,5 @@ PostgreSQL-specific type adapters handle conversions between Python and PostgreS
 
 ## See Also
 
-- [PostgreSQL Dialect Expressions](../postgres_specific_features/dialect.md)
+- [PostgreSQL Dialect Expressions](../backend_specific_features/dialect.md)
 - [Type Adapters](../type_adapters/README.md)

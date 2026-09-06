@@ -75,18 +75,35 @@ VALUES ('John', '"age"=>"30", "city"=>"New York", "role"=>"admin"');
 
 ## Common Operations
 
-```sql
--- Get value
-SELECT attributes -> 'age' FROM users;
+```python
+from rhosocial.activerecord.backend.impl.postgres.functions.hstore import (
+    hstore_get_value, hstore_exists, hstore_contains, hstore_akeys,
+)
+from rhosocial.activerecord.backend.expression import Column
 
--- Contains key
-SELECT * FROM users WHERE attributes ? 'city';
+# Get value
+expr = hstore_get_value(dialect, Column(dialect, "attributes"), "age")
+sql, params = expr.to_sql()
+# sql: attributes -> %s
+# params: ('age',)
 
--- Contains key-value pair
-SELECT * FROM users WHERE attributes @> '"city"=>"New York"';
+# Contains key
+expr = hstore_exists(dialect, Column(dialect, "attributes"), "city")
+sql, params = expr.to_sql()
+# sql: exist(attributes, %s)
+# params: ('city',)
 
--- Get all keys
-SELECT akeys(attributes) FROM users;
+# Contains key-value pair
+expr = hstore_contains(dialect, Column(dialect, "attributes"), {"city": "New York"})
+sql, params = expr.to_sql()
+# sql: attributes @> %s::hstore
+# params: ('"city"=>"New York"',)
+
+# Get all keys
+expr = hstore_akeys(dialect, Column(dialect, "attributes"))
+sql, params = expr.to_sql()
+# sql: akeys(attributes)
+# params: ()
 ```
 
 ## Index Support

@@ -1,6 +1,8 @@
-# Correct Usage in Parallel Worker Scenarios (PostgreSQL)
+# Parallel Workers: PostgreSQL Specific Notes
 
-In scenarios such as data processing, task queues, and batch imports, developers often want to use multiple workers to process tasks in parallel to improve throughput. This chapter focuses on parallel worker usage patterns for PostgreSQL databases, explains the fundamental differences between PostgreSQL, MySQL, and SQLite in concurrent processing, and provides verified safe solutions.
+In scenarios such as data processing, task queues, and batch imports, developers often want to use multiple workers to process tasks in parallel to improve throughput. This chapter covers PostgreSQL-specific details for parallel worker scenarios.
+
+For general patterns (multi-process lifecycle, async behavior, deadlock prevention principles, application separation), see [Core Parallel Worker Patterns](https://github.com/Rhosocial/python-activerecord/tree/main/docs/en_US/scenarios/parallel_workers.md).
 
 > **Design Principle Throughout This Chapter**: The synchronous class `BaseActiveRecord` and asynchronous class `AsyncBaseActiveRecord` in `rhosocial-activerecord` have **identical method names** - `configure()` / `backend()` / `transaction()` / `save()` etc. are all the same, the async version just needs `await` or `async with`. All examples in this chapter provide both versions.
 
