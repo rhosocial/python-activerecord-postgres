@@ -40,6 +40,9 @@ dependencies = [
     "rhosocial-activerecord>=1.0.0.dev0,<2.0.0"
 ]
 
+[project.scripts]
+rhosocial-activerecord-postgres = "rhosocial.activerecord.backend.impl.postgres.__main__:main"
+
 [project.optional-dependencies]
 # Additional features
 pooling = [
