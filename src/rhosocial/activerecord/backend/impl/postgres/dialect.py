@@ -775,6 +775,15 @@ class PostgresDialect(
             return self.version >= (9, 3, 0)
         return False
 
+    def supports_qualify_clause(self) -> bool:
+        """Whether QUALIFY clause is supported.
+
+        PostgreSQL does not support the QUALIFY clause (it is only a proposed
+        extension). Filtering on window function results must be done through a
+        subquery or CTE instead.
+        """
+        return False
+
     # region ILIKE Support
 
     def format_ilike_expression(self, column: Any, pattern: str, negate: bool = False) -> Tuple[str, Tuple]:
