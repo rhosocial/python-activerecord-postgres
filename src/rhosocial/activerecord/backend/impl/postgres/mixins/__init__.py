@@ -15,6 +15,9 @@ from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
 from .table import PostgresTableMixin
 
+# DDL spec claiming
+from .ddl_spec import PostgresDDLSpecMixin
+
 # DDL mixins
 from .ddl.partition import PostgresPartitionMixin
 from .ddl.index import PostgresIndexMixin
@@ -124,6 +127,7 @@ __all__ = [
     "PostgresTableMixin",
     # DDL mixins
     "PostgresPartitionMixin",
+    "PostgresDDLSpecMixin",
     "PostgresIndexMixin",
     "PostgresTriggerMixin",
     "PostgresCommentMixin",

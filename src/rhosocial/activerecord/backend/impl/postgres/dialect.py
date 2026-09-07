@@ -96,6 +96,7 @@ from .mixins import (
     PostgresExtensionMixin,
     PostgresMaterializedViewMixin,
     PostgresTableMixin,
+    PostgresDDLSpecMixin,
     PostgresPgvectorMixin,
     PostgresPostGISMixin,
     PostgresPostgisRasterMixin,
@@ -374,6 +375,7 @@ class PostgresDialect(
     ConstraintMixin,
     PostgresPartitionMixin,
     PartitionMixin,
+    PostgresDDLSpecMixin,  # DDL feature-spec claiming (partition / sequence)
     PostgresIntrospectionCapabilityMixin,
     PostgresPgvectorMixin,
     PostgresPostGISMixin,
