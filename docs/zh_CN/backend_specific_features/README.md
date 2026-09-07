@@ -13,6 +13,7 @@ PostgreSQL 提供了许多超越标准 SQL 的高级功能。本节介绍 Postgr
 - **[数据库内省](./introspection.md)**: 使用 pg_catalog 查询元数据
 - **[EXPLAIN 支持](./explain.md)**: 查询执行计划分析与性能诊断
 - **[表分区](./partition.md)**: RANGE / LIST / HASH 分区和 pg_partman 管理
+- **[DDL 特征 Spec](./ddl_spec.md)**: PostgreSQL 方言认领的声明式 DDL Spec
 - **[属性图查询](./property_graph_query.md)**: SQL/PGQ 属性图查询（PG 19+）
 
 ## 功能亮点
