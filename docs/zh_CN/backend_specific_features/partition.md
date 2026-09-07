@@ -12,6 +12,26 @@ PostgreSQL 自 10 版本起支持声明式分区，11+ 版本功能显著增强�
 
 ## 创建分区表
 
+### 声明式分区 Spec（模型级）
+
+PostgreSQL 声明式分区可在模型上通过后端定义的 Spec 声明；PostgreSQL 方言在
+`generate_create_table(dialect)` 时认领，其他后端自动忽略：
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.ddl_spec import (
+    PostgresRangePartition,  # 还有：PostgresListPartition、PostgresHashPartition
+)
+
+class Orders(ActiveRecord):
+    __table_partition__ = [
+        PostgresRangePartition(column="created_at"),
+    ]
+
+expr = Orders.generate_create_table(dialect)  # 自动附带 PARTITION BY RANGE
+```
+
+下方表达式层路径仍完全支持，作为逃生舱保留。
+
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
     PostgresCreatePartitionExpression, PartitionValue,

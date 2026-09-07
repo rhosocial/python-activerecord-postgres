@@ -12,6 +12,27 @@ PostgreSQL supports declarative partitioning from version 10 onward, with signif
 
 ## Creating Partitions
 
+### Declarative Partition Specs (model level)
+
+PostgreSQL declarative partitioning can be declared on the model via
+backend-defined Specs; the PostgreSQL dialect claims them at
+`generate_create_table(dialect)` time and other backends silently ignore them:
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.ddl_spec import (
+    PostgresRangePartition,  # also: PostgresListPartition, PostgresHashPartition
+)
+
+class Orders(ActiveRecord):
+    __table_partition__ = [
+        PostgresRangePartition(column="created_at"),
+    ]
+
+expr = Orders.generate_create_table(dialect)  # PARTITION BY RANGE attached
+```
+
+The expression-level path below remains fully supported as the escape hatch.
+
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
     PostgresCreatePartitionExpression,
