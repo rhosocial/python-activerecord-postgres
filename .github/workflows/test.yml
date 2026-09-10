@@ -231,8 +231,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { python-version: '3.15.0-rc.1', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15.0-rc.1', postgres-version: '18', freethreaded: true }
+          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: false }
+          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: true }
 
     services:
       postgres:
