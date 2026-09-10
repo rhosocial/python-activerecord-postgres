@@ -83,14 +83,10 @@ class PostgresAlterTableRlsExpression(BaseExpression):
         self.mode = mode
         self.always = always
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the ALTER TABLE ... ROW LEVEL SECURITY statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_alter_table_rls_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_table_rls_statement"
 
 
 class PostgresForceRlsExpression(BaseExpression):
@@ -120,11 +116,7 @@ class PostgresForceRlsExpression(BaseExpression):
         self.schema = schema
         self.force = force
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the FORCE/NO FORCE ROW LEVEL SECURITY statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_force_rls_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_force_rls_statement"

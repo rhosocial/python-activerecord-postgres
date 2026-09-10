@@ -59,11 +59,7 @@ class PostgresClusterExpression(BaseExpression):
         self.using_index = using_index
         self.verbose = verbose
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CLUSTER statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_cluster_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_cluster_statement"

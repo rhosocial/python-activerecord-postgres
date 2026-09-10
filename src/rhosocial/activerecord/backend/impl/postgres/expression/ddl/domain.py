@@ -73,14 +73,10 @@ class PostgresCreateDomainExpression(BaseExpression):
         self.constraints = constraints or []
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate CREATE DOMAIN SQL statement.
-
-        Returns:
-            Tuple of (SQL string, params tuple).
-
-        """
-        return self.dialect.format_create_domain_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_domain_statement"
 
 
 class PostgresAlterDomainExpression(BaseExpression):
@@ -119,14 +115,10 @@ class PostgresAlterDomainExpression(BaseExpression):
         self.new_name = new_name
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the ALTER DOMAIN SQL statement.
-
-        Returns:
-            Tuple of (SQL string, params tuple).
-
-        """
-        return self.dialect.format_postgres_alter_domain_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_postgres_alter_domain_statement"
 
 
 class PostgresDropDomainExpression(BaseExpression):
@@ -158,11 +150,7 @@ class PostgresDropDomainExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the DROP DOMAIN SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_domain_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_domain_statement"

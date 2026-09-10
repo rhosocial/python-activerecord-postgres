@@ -32,7 +32,7 @@ def _register_postgres_specials():
         from rhosocial.activerecord.backend.impl.postgres.expression.locking import (
             PostgresForUpdateExpression,
         )
-        return PostgresForUpdateExpression(d, columns=[Column(d, "id")])
+        return PostgresForUpdateExpression(d, columns=[Column(dialect, d, "id")])
 
     def advisory(d):
         from rhosocial.activerecord.backend.impl.postgres.expression.advisory.lock import (

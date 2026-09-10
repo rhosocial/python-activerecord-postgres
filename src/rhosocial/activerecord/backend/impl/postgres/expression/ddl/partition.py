@@ -83,15 +83,10 @@ class PartitionValue(BaseExpression):
             )
         self.value = value
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL for a partition bound value.
-
-        Delegates to the dialect's format_partition_value() method.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-        """
-        return self.dialect.format_partition_value(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_partition_value"
 
 
 class PostgresCreatePartitionExpression(BaseExpression):
@@ -159,14 +154,10 @@ class PostgresCreatePartitionExpression(BaseExpression):
         self.if_not_exists = if_not_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate CREATE TABLE PARTITION SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_partition_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_partition_statement"
 
 
 class PostgresDetachPartitionExpression(BaseExpression):
@@ -216,14 +207,10 @@ class PostgresDetachPartitionExpression(BaseExpression):
         self.finalize = finalize
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate DETACH PARTITION SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_detach_partition_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_detach_partition_statement"
 
 
 class PostgresAttachPartitionExpression(BaseExpression):
@@ -280,17 +267,10 @@ class PostgresAttachPartitionExpression(BaseExpression):
         self.concurrently = concurrently
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate ATTACH PARTITION SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        Raises:
-            ValueError: If concurrently is used on PostgreSQL < 14.
-
-        """
-        return self.dialect.format_attach_partition_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_attach_partition_statement"
 
 
 class PostgresPartitionMetadataExpression(BaseExpression):
@@ -319,6 +299,7 @@ class PostgresPartitionMetadataExpression(BaseExpression):
         self.include_partitions = include_partitions
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate PostgreSQL partition metadata query SQL."""
-        return self.dialect.format_partition_metadata_query(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_partition_metadata_query"

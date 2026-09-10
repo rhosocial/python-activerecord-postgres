@@ -789,7 +789,7 @@ class TestFormatAddDropIndexAction:
 
     def test_format_add_index_action_raises(self):
         d = PostgresDialect()
-        add = AddIndex(d, index=IndexDefinition(name="idx_test", columns=["a"]))
+        add = AddIndex(d, index=IndexDefinition(d, name="idx_test", columns=["a"]))
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE ADD INDEX"):
             d.format_add_index_action(add)
 
@@ -1013,9 +1013,8 @@ class TestPostgresIndexMixinDirect:
 
     def test_format_create_index_expression_column(self):
         from rhosocial.activerecord.backend.expression import Column, Literal  # noqa: F401
-        expr = CreateIndexExpression(
-            PostgresDialect((15, 0, 0)), "idx_e", "t", [Column(PostgresDialect((15, 0, 0)), "a")],
-        )
+        d = PostgresDialect((15, 0, 0))
+        expr = CreateIndexExpression(d, "idx_e", "t", [Column(d, "a")])
         sql, _ = expr.to_sql()
         assert '"a"' in sql
 

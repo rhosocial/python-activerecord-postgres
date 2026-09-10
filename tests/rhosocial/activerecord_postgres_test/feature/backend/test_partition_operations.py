@@ -82,9 +82,9 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
         dialect=dialect,
         table=table_name,
         columns=[
-            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition("payload", TextType()),
+            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -206,14 +206,14 @@ def _create_production_parent_sql(dialect):
         dialect=dialect,
         table=PRODUCTION_PARTITION_TABLE,
         columns=[
-            ColumnDefinition("id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition("created_at", TimestampType(6), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition("tenant_id", BigIntType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition("payload", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "created_at", TimestampType(6, dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
         ],
         table_constraints=[
             TableConstraint(
-                TableConstraintType.PRIMARY_KEY,
+                dialect, TableConstraintType.PRIMARY_KEY,
                 columns=["id", "created_at"],
             ),
         ],

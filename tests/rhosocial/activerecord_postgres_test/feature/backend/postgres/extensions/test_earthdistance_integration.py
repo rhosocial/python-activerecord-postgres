@@ -55,13 +55,13 @@ def earthdistance_env(postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="loc", data_type=PostgresPointType()),
+        ColumnDefinition(dialect, name="loc", data_type=PostgresPointType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -167,13 +167,13 @@ async def async_earthdistance_env(async_postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="loc", data_type=PostgresPointType()),
+        ColumnDefinition(dialect, name="loc", data_type=PostgresPointType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

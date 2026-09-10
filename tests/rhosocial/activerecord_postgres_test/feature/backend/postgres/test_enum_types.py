@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumT
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateEnumTypeExpression,
     PostgresDropEnumTypeExpression,
+    PostgresAlterEnumAddValueExpression,
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
 )
@@ -451,17 +452,27 @@ class TestEnumTypeMixin:
     def test_format_create_enum_type(self):
         """Test format_create_enum_type method."""
         dialect = PostgresDialect()
-        sql = dialect.format_create_enum_type('status', ['pending', 'ready'])
+        expr = PostgresCreateEnumTypeExpression(
+            dialect=dialect, name='status', values=['pending', 'ready']
+        )
+        sql, params = dialect.format_create_enum_type(expr)
         assert sql == "CREATE TYPE status AS ENUM ('pending', 'ready')"
+        assert params == ()
 
     def test_format_drop_enum_type(self):
         """Test format_drop_enum_type method."""
         dialect = PostgresDialect()
-        sql = dialect.format_drop_enum_type('status')
+        expr = PostgresDropEnumTypeExpression(dialect=dialect, name='status')
+        sql, params = dialect.format_drop_enum_type(expr)
         assert sql == "DROP TYPE status"
+        assert params == ()
 
     def test_format_alter_enum_add_value(self):
         """Test format_alter_enum_add_value method."""
         dialect = PostgresDialect()
-        sql = dialect.format_alter_enum_add_value('status', 'failed')
+        expr = PostgresAlterEnumAddValueExpression(
+            dialect=dialect, type_name='status', new_value='failed'
+        )
+        sql, params = dialect.format_alter_enum_add_value(expr)
         assert sql == "ALTER TYPE status ADD VALUE 'failed'"
+        assert params == ()

@@ -676,7 +676,7 @@ class PostgresDialect(
                 f"EXTRACT(YEAR FROM {start_sql}))"
             )
             params = end_params + start_params
-        return self._apply_value_expression_modifiers(sql, params, expr)
+        return self.apply_alias(sql, params, expr)
 
     def validate_collation_name(self, expr: "CollateExpression") -> str:
         """Validate PostgreSQL collation names and return their SQL representation."""
@@ -846,9 +846,7 @@ class PostgresDialect(
         escaped = identifier.replace('"', '""')
         return f'"{escaped}"'
 
-    def format_column(self, name: str, table: Optional[str] = None,
-                      alias: Optional[str] = None,
-                      schema_name: Optional[str] = None) -> Tuple[str, Tuple]:
+    def format_column(self, expr) -> Tuple[str, Tuple]:
         """Format column reference for PostgreSQL.
 
         PostgreSQL rules for column references:
@@ -860,6 +858,10 @@ class PostgresDialect(
           full three-segment form: ``"schema"."table"."column"``.
         - Otherwise use the standard two-segment or single-segment form.
         """
+        name = expr.name
+        table = expr.table
+        alias = expr.alias
+        schema_name = expr.schema_name
         if table:
             # In PostgreSQL, when a table has an alias, column references
             # must use the alias — schema_name is irrelevant in this context.
@@ -1343,56 +1345,52 @@ class PostgresDialect(
     # endregion
 
     # region Type Casting Support (PostgreSQL-specific)
-    def format_cast_expression(
-        self, expr_sql: str, target_type: str, expr_params: tuple, alias: Optional[str] = None
-    ) -> Tuple[str, Tuple]:
+    def format_cast_expression(self, expr) -> Tuple[str, Tuple]:
         """Format type cast expression using PostgreSQL :: syntax.
 
         PostgreSQL supports both standard CAST(expr AS type) syntax and the
         PostgreSQL-specific expr::type syntax. This method uses the more
         concise :: syntax which is idiomatic in PostgreSQL.
 
+        ``expr.expression`` renders through its own ``to_sql()``; the cast
+        target is the node's ``target_type`` construction parameter.
+
         Args:
-            expr_sql: SQL expression string to be cast
-            target_type: Target PostgreSQL type name (e.g., 'integer', 'varchar(100)')
-            expr_params: Parameters tuple for the expression
-            alias: Optional alias for the result
+            expr: :class:`~...expression.core.CastExpression` instance.
 
         Returns:
             Tuple of (SQL string, parameters)
 
         Example:
-            >>> dialect.format_cast_expression('price', 'numeric', ())
-            # Returns: ('price::numeric', ())
-            >>> dialect.format_cast_expression('amount', 'money', ())
-            # Returns: ('amount::money', ())
-            >>> dialect.format_cast_expression('value', 'integer', (), 'int_val')
-            # Returns: ('value::integer AS "int_val"', ())
+            >>> Column(dialect, 'price').cast('numeric').to_sql()
+            # Returns: ('"price"::numeric', ())
 
         Note:
             For chained type conversions, each ::type is appended:
             >>> col.cast('money').cast('numeric').cast('float8')
-            # Generates: col::money::numeric::float8
+            # Generates: "col"::money::numeric::float8
 
         """
-        sql = f"{expr_sql}::{target_type}"
-        if alias:
-            sql = f"{sql} AS {self.format_identifier(alias)}"
-        return sql, expr_params
+        expr_sql, params = expr.expression.to_sql()
+        sql = f"{expr_sql}::{expr.target_type}"
+        if expr.alias:
+            sql = f"{sql} AS {self.format_identifier(expr.alias)}"
+        return sql, params
 
     # endregion
 
     # region Operator Formatting (PostgreSQL-specific)
 
-    def format_binary_operator(
-        self, op: str, left_sql: str, right_sql: str, left_params: tuple, right_params: tuple
-    ) -> Tuple[str, Tuple]:
+    def format_binary_operator(self, expr) -> Tuple[str, Tuple]:
         """Format binary operator with psycopg placeholder escaping.
 
         psycopg uses %s as parameter placeholder. When the SQL operator itself
         contains % (e.g., pg_trgm similarity operator), it must be escaped as %%
         to prevent psycopg from interpreting it as a placeholder prefix.
         """
+        left_sql, left_params = expr.left.to_sql()
+        right_sql, right_params = expr.right.to_sql()
+        op = expr.op
         # Escape % in operators for psycopg compatibility
         escaped_op = op.replace('%', '%%') if '%' in op else op
         sql = f"{left_sql} {escaped_op} {right_sql}"

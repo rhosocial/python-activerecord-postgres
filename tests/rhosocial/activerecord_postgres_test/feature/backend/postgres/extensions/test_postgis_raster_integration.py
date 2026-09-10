@@ -89,14 +89,14 @@ def raster_env(postgres_backend_single):
     # Setup: create test_raster_data table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="rast", data_type=PostgresRasterType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="rast", data_type=PostgresRasterType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -208,14 +208,14 @@ async def async_raster_env(async_postgres_backend_single):
     # Setup: create test_raster_data_async table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="rast", data_type=PostgresRasterType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="rast", data_type=PostgresRasterType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

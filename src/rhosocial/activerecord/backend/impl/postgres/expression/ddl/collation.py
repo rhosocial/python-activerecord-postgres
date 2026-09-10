@@ -64,14 +64,10 @@ class PostgresCreateCollationExpression(BaseExpression):
         self.if_not_exists = if_not_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CREATE COLLATION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_collation_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_collation_ddl_statement"
 
 
 class PostgresDropCollationExpression(BaseExpression):
@@ -103,11 +99,7 @@ class PostgresDropCollationExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP COLLATION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_collation_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_collation_ddl_statement"

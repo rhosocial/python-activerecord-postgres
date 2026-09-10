@@ -55,13 +55,13 @@ def _setup_intarray_table(backend, dialect, table):
     """Create and populate the basic intarray test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -93,13 +93,13 @@ def _setup_intarray_overlap_table(backend, dialect, table):
     """Create and populate the intarray overlap test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -131,13 +131,13 @@ def _setup_intarray_contained_table(backend, dialect, table):
     """Create and populate the intarray contained-by test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -169,13 +169,13 @@ def _setup_intarray_idx_table(backend, dialect, table):
     """Create and populate the intarray idx() test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -207,13 +207,13 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
     """
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -259,13 +259,13 @@ async def _async_setup_intarray_table(backend, dialect, table):
     """Async: create and populate the basic intarray test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -297,13 +297,13 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
     """Async: create and populate the intarray overlap test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -335,13 +335,13 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
     """Async: create and populate the intarray contained-by test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -373,13 +373,13 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
     """Async: create and populate the intarray idx() test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -411,13 +411,13 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
     """
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(IntegerType())),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

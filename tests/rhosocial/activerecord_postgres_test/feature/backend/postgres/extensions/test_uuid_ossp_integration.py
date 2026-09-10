@@ -76,17 +76,17 @@ def uuid_ossp_env(postgres_backend_single):
         table="test_uuid_ossp",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresUUIDType(),
+                dialect, name="id",
+                data_type=PostgresUUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                     ColumnConstraint(
-                        ColumnConstraintType.DEFAULT,
+                        dialect, ColumnConstraintType.DEFAULT,
                         default_value=FunctionCall(dialect, "uuid_generate_v4"),
                     ),
                 ],
             ),
-            ColumnDefinition(name="name", data_type=TextType()),
+            ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -112,13 +112,13 @@ def uuid_ossp_env(postgres_backend_single):
         table="test_uuid_explicit",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresUUIDType(),
+                dialect, name="id",
+                data_type=PostgresUUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="label", data_type=TextType()),
+            ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -281,17 +281,17 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         table="test_uuid_ossp_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresUUIDType(),
+                dialect, name="id",
+                data_type=PostgresUUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                     ColumnConstraint(
-                        ColumnConstraintType.DEFAULT,
+                        dialect, ColumnConstraintType.DEFAULT,
                         default_value=FunctionCall(dialect, "uuid_generate_v4"),
                     ),
                 ],
             ),
-            ColumnDefinition(name="name", data_type=TextType()),
+            ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -317,13 +317,13 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         table="test_uuid_explicit_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresUUIDType(),
+                dialect, name="id",
+                data_type=PostgresUUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="label", data_type=TextType()),
+            ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )

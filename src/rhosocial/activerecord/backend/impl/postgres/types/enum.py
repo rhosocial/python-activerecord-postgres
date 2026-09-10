@@ -113,23 +113,10 @@ class PostgresEnumType(BaseExpression):
         """Schema name, if any."""
         return self._schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL type reference for use in column definitions.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple)
-
-        Examples:
-            >>> status_enum.to_sql()
-            ('video_status', ())
-
-            >>> # With schema
-            >>> status_enum.to_sql()
-            ('app.video_status', ())
-        """
-        if self._schema:
-            return (f"{self._schema}.{self._name}", ())
-        return (self._name, ())
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_enum_type_expression"
 
     def validate_value(self, value: str) -> bool:
         """Check if a value is valid for this enum.
@@ -167,7 +154,9 @@ class PostgresEnumType(BaseExpression):
         return cls(dialect=dialect, name=type_name, values=values, schema=schema)
 
     def __str__(self) -> str:
-        return self.to_sql()[0]
+        if self._schema:
+            return f"{self._schema}.{self._name}"
+        return self._name
 
     def __repr__(self) -> str:
         return (

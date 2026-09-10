@@ -82,14 +82,10 @@ class PostgresCreateFunctionExpression(BaseExpression):
         self.strict = strict
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CREATE FUNCTION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_function_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_function_ddl_statement"
 
 
 class PostgresDropFunctionExpression(BaseExpression):
@@ -125,14 +121,10 @@ class PostgresDropFunctionExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP FUNCTION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_function_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_function_ddl_statement"
 
 
 class PostgresCreateAggregateExpression(BaseExpression):
@@ -169,14 +161,10 @@ class PostgresCreateAggregateExpression(BaseExpression):
         self.initcond = initcond
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the CREATE AGGREGATE statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_aggregate_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_aggregate_ddl_statement"
 
 
 class PostgresDropAggregateExpression(BaseExpression):
@@ -212,11 +200,7 @@ class PostgresDropAggregateExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP AGGREGATE statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_aggregate_ddl_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_aggregate_ddl_statement"

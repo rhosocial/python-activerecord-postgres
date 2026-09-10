@@ -18,6 +18,11 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import VarCharType
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQLExpression,
+)
+from rhosocial.activerecord.backend.expression.core import CastExpression
 from typing import Tuple, Any  # noqa: F401
 
 
@@ -44,8 +49,9 @@ def test_postgres_validate_data_type(dialect):
 def test_postgres_format_column_definition_data_type_validation(dialect):
     """Test column definition formats data_type correctly."""
     col_def = ColumnDefinition(
+        dialect,
         name="test_col",
-        data_type=VarCharType(255),
+        data_type=VarCharType(255, dialect=dialect),
     )
 
     sql, params = dialect.format_column_definition(col_def)
@@ -56,6 +62,7 @@ def test_postgres_column_definition_rejects_string_data_type(dialect):
     """Test that ColumnDefinition rejects string data_type at construction."""
     with pytest.raises(TypeError, match="data_type must be a DataType instance"):
         ColumnDefinition(
+            dialect,
             name="test_col",
             data_type="VARCHAR(255); DROP TABLE users--",
         )
@@ -64,6 +71,7 @@ def test_postgres_column_definition_rejects_string_data_type(dialect):
 def test_postgres_format_default_constraint_string_escaping(dialect):
     """Test DEFAULT constraint string is escaped."""
     constraint = ColumnConstraint(
+        dialect,
         constraint_type=ColumnConstraintType.DEFAULT,
         default_value="test's value",
     )
@@ -82,14 +90,16 @@ def test_postgres_format_storage_options_string_escaping(dialect):
 
 
 def test_postgres_format_cast_expression_valid(dialect):
-    """Test that CAST expression validates target_type."""
-    sql, params = dialect.format_cast_expression("column", "INTEGER", (), None)
+    """Test that CAST expression renders the target type (:: syntax)."""
+    expr = CastExpression(dialect, RawSQLExpression(dialect, "column"), "INTEGER")
+    sql, params = expr.to_sql()
     assert "INTEGER" in sql
 
 
 def test_exclude_constraint_valid_using_methods(dialect):
     """Test valid index access methods are accepted."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -111,12 +121,13 @@ def test_exclude_constraint_valid_operators(dialect):
         ("box", "~="),
     ]
 
-    for expr, op in valid_ops:
+    for elem, op in valid_ops:
         constraint = TableConstraint(
+            dialect,
             constraint_type=TableConstraintType.EXCLUDE,
             name="test_exclude",
             dialect_options={
-                "exclude_elements": [(expr, op)],
+                "exclude_elements": [(elem, op)],
             },
         )
 
@@ -127,6 +138,7 @@ def test_exclude_constraint_valid_operators(dialect):
 def test_exclude_constraint_rejects_invalid_using(dialect):
     """Test that invalid index access method is rejected."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -142,6 +154,7 @@ def test_exclude_constraint_rejects_invalid_using(dialect):
 def test_exclude_constraint_rejects_invalid_operator(dialect):
     """Test that invalid exclude operator is rejected."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -156,6 +169,7 @@ def test_exclude_constraint_rejects_invalid_operator(dialect):
 def test_exclude_constraint_sql_injection_prevention(dialect):
     """Test that SQL injection attempts are blocked."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -503,34 +517,43 @@ def test_format_identifier_empty_string(dialect):
 def test_format_binary_operator_percent_escaped():
     """format_binary_operator escapes % to %% for psycopg compatibility."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    from rhosocial.activerecord.backend.expression.core import Literal
     d = PostgresDialect((16, 0, 0))
 
+    def binop(op, left_sql, right_sql, right_params=()):
+        left = RawSQLExpression(d, left_sql)
+        if right_params:
+            right = Literal(d, right_params[0])
+        else:
+            right = RawSQLExpression(d, right_sql)
+        return BinaryExpression(d, op, left, right).to_sql()
+
     # % operator → %% (psycopg requires %% for literal %)
-    sql, params = d.format_binary_operator("%", "a", "b", (), ())
+    sql, params = binop("%", "a", "b")
     assert sql == "a %% b", f"Expected escaped %%, got: {sql}"
     assert params == ()
 
     # %% is pre-escaped → should NOT be double-escaped to %%%%
     # (callers must pass raw operator, not pre-escaped)
-    sql, params = d.format_binary_operator("%%", "a", "b", (), ())
+    sql, params = binop("%%", "a", "b")
     assert sql == "a %%%% b", f"raw %% should be escaped to %%%%, got: {sql}"
 
     # Operator without % → unchanged
-    sql, params = d.format_binary_operator("=", "a", "b", (), ())
+    sql, params = binop("=", "a", "b")
     assert sql == "a = b"
     assert params == ()
 
     # ? operator (hstore/jsonb) → preserved as-is, not treated as placeholder
-    sql, params = d.format_binary_operator("?", "data", "%s", (), ("key",))
+    sql, params = binop("?", "data", "%s", ("key",))
     assert sql == "data ? %s", f"? operator preserved: {sql}"
     assert params == ("key",)
 
     # ?| and ?& operators → preserved
-    sql, params = d.format_binary_operator("?|", "data", "%s", (), ("key",))
+    sql, params = binop("?|", "data", "%s", ("key",))
     assert sql == "data ?| %s", f"?| operator preserved: {sql}"
 
     # %# (pg_trgm) → %# (unchanged, no % to escape)
-    sql, params = d.format_binary_operator("%#", "a", "b", (), ())
+    sql, params = binop("%#", "a", "b")
     assert sql == "a %%# b", f"%# operator: {sql}"
 
 

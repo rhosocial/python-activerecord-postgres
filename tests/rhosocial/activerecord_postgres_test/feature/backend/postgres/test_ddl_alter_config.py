@@ -263,8 +263,9 @@ class TestPostgresAlterColumnModifierMixin:
 
     def test_add_column(self, dialect):
         column = ColumnDefinition(
-            "email", TextType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+            dialect,
+            "email", TextType(dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
         )
         sql, params = dialect.format_add_column_action(
             AddColumn(dialect, column)
@@ -273,7 +274,7 @@ class TestPostgresAlterColumnModifierMixin:
         assert params == ()
 
     def test_add_column_if_not_exists(self, dialect):
-        column = ColumnDefinition("email", TextType())
+        column = ColumnDefinition(dialect, "email", TextType(dialect))
         sql, _ = dialect.format_add_column_action(
             AddColumn(dialect, column, if_not_exists=True)
         )

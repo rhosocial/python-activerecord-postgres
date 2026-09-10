@@ -61,13 +61,13 @@ def _setup_trgm_table(backend, dialect, table):
     """Create and populate the test_trgm table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -98,13 +98,13 @@ def _setup_trgm_ops_table(backend, dialect, table):
     """Create and populate the test_trgm_ops table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -139,13 +139,13 @@ def _setup_trgm_idx_table(backend, dialect, table):
     """
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -179,13 +179,13 @@ def _setup_trgm_word_table(backend, dialect, table):
     """Create and populate the test_trgm_word table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="description", data_type=TextType()),
+        ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -224,13 +224,13 @@ async def _async_setup_trgm_table(backend, dialect, table):
     """Async: create and populate the test_trgm table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -261,13 +261,13 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     """Async: create and populate the test_trgm_ops table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -302,13 +302,13 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     """
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -342,13 +342,13 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     """Async: create and populate the test_trgm_word table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="description", data_type=TextType()),
+        ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

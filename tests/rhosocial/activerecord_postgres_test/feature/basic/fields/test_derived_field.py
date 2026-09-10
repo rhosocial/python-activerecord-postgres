@@ -137,7 +137,7 @@ class TestDerivedFieldDictForm:
     def test_derived_dict_with_lambda(self, product_class):
         self._insert(product_class, "D1", 100.0, 4)
         results = product_class.find_all(
-            derived={"my_discount": lambda d: Column(d, "price") * Literal(d, 0.8)}
+            derived={"my_discount": lambda d: Column(dialect, d, "price") * Literal(d, 0.8)}
         )
         assert results[0].__dict__["my_discount"] == pytest.approx(80.0)
 
@@ -185,7 +185,7 @@ class TestExtraDerived:
     def test_extra_derived_basic(self, product_class):
         self._insert(product_class, "F", 100.0, 10)
         results = product_class.find_all(
-            extra_derived={"triple_price": lambda d: Column(d, "price") * Literal(d, 3)}
+            extra_derived={"triple_price": lambda d: Column(dialect, d, "price") * Literal(d, 3)}
         )
         assert len(results) == 1
         assert results[0].__dict__["triple_price"] == pytest.approx(300.0)
@@ -194,14 +194,14 @@ class TestExtraDerived:
         self._insert(product_class, "G", 50.0, 2)
         with pytest.raises(ValueError, match="conflicts with a declared derived field"):
             product_class.find_all(
-                extra_derived={"discounted_price": lambda d: Column(d, "price") * Literal(d, 0.5)}
+                extra_derived={"discounted_price": lambda d: Column(dialect, d, "price") * Literal(d, 0.5)}
             )
 
     def test_derived_and_extra_derived_together(self, product_class):
         self._insert(product_class, "H", 40.0, 5)
         results = product_class.find_all(
             derived=True,
-            extra_derived={"double_qty": lambda d: Column(d, "quantity") * Literal(d, 2)}
+            extra_derived={"double_qty": lambda d: Column(dialect, d, "quantity") * Literal(d, 2)}
         )
         assert results[0].discounted_price == pytest.approx(36.0)
         assert results[0].total_value == pytest.approx(200.0)
@@ -315,7 +315,7 @@ class TestDerivedFieldColumnConflict:
                 id: Optional[int] = None
                 discount_rate: Annotated[float, UseColumn("disc")]
                 discounted: ClassVar[Annotated[float, DerivedField(
-                    lambda d: Column(d, "price") * Literal(d, 0.9),
+                    lambda d: Column(dialect, d, "price") * Literal(d, 0.9),
                 ), UseColumn("disc")]]
 
     def test_use_column_no_conflict_different_names(self):
@@ -325,7 +325,7 @@ class TestDerivedFieldColumnConflict:
             id: Optional[int] = None
             discount_rate: Annotated[float, UseColumn("rate")]
             discounted: ClassVar[Annotated[float, DerivedField(
-                lambda d: Column(d, "price") * Literal(d, 0.9),
+                lambda d: Column(dialect, d, "price") * Literal(d, 0.9),
             ), UseColumn("disc")]]
 
         assert NoConflict.__derived_fields__["discounted"].column_name == "disc"

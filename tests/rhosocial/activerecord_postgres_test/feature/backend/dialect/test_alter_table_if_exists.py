@@ -40,7 +40,7 @@ class TestPostgresAddColumnIfNotExists:
     def test_if_not_exists_renders_qualifier(self, dialect):
         action = AddColumn(
             dialect,
-            ColumnDefinition("content", TextType()),
+            ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
         sql, params = action.to_sql()
@@ -48,7 +48,7 @@ class TestPostgresAddColumnIfNotExists:
         assert params == ()
 
     def test_none_renders_plain_form(self, dialect):
-        action = AddColumn(dialect, ColumnDefinition("content", TextType()))
+        action = AddColumn(dialect, ColumnDefinition(dialect, "content", TextType(dialect=dialect)))
         sql, params = action.to_sql()
         assert 'ADD COLUMN "content" TEXT' == sql
         assert "IF NOT EXISTS" not in sql
@@ -57,7 +57,7 @@ class TestPostgresAddColumnIfNotExists:
     def test_inside_alter_table(self, dialect):
         action = AddColumn(
             dialect,
-            ColumnDefinition("content", TextType()),
+            ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
         expr = AlterTableExpression(
@@ -224,7 +224,7 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             dialect,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             dialect_options={"unlogged_table": True},
         )
         sql, params = expr.to_sql()
@@ -239,7 +239,7 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             dialect,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
         )
         sql, params = expr.to_sql()
         assert not sql.startswith("CREATE UNLOGGED")
@@ -253,7 +253,7 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             dialect,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             temporary=True,
             dialect_options={"unlogged_table": True},
         )
@@ -273,7 +273,7 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             low,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
+            columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
             dialect_options={"unlogged_table": True},
         )
         with pytest.raises(UnsupportedFeatureError):

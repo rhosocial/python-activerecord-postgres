@@ -83,7 +83,7 @@ class PostgresTableMixin:
     def format_column_definition(self, col_def) -> Tuple[str, tuple]:
         from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
         all_params: List[Any] = []
-        type_sql, _ = col_def.data_type.to_sql(self)
+        type_sql, _ = col_def.data_type.to_sql()
         if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", type_sql):
             raise ValueError(
                 f"Invalid data type '{type_sql}': "

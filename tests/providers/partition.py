@@ -252,11 +252,11 @@ class PartitionProvider(IPartitionProvider):
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
-                ColumnDefinition("id", BigIntType(), dialect_options={"identity": "BY DEFAULT"}),
-                ColumnDefinition("created_at", TimestampType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition("tenant_id", IntegerType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition("payload", TextType()),
-                ColumnDefinition("amount", DecimalType(12, 2)),
+                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), dialect_options={"identity": "BY DEFAULT"}),
+                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
+                ColumnDefinition(dialect, "amount", DecimalType(12, 2, dialect=dialect)),
             ],
             partition=PartitionClause(
                 dialect=dialect,

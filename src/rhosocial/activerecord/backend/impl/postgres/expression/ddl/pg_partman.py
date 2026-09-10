@@ -82,13 +82,10 @@ class PostgresPgPartmanCreateParentExpression(BaseExpression):
         self.jobmon = jobmon
         self.schema = schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL for pg_partman create_parent().
-
-        Returns:
-            Tuple of (SELECT function_call SQL, params tuple).
-        """
-        return self.dialect.format_pg_partman_create_parent(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_pg_partman_create_parent"
 
 
 class PostgresPgPartmanRunMaintenanceExpression(BaseExpression):
@@ -115,13 +112,10 @@ class PostgresPgPartmanRunMaintenanceExpression(BaseExpression):
         self.parent_table = parent_table
         self.schema = schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL for pg_partman run_maintenance().
-
-        Returns:
-            Tuple of (SELECT function_call SQL, params tuple).
-        """
-        return self.dialect.format_pg_partman_run_maintenance(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_pg_partman_run_maintenance"
 
 
 class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
@@ -167,16 +161,10 @@ class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
         self.retention_keep_index = retention_keep_index
         self.schema = schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL for updating pg_partman part_config.
-
-        Returns:
-            Tuple of (UPDATE SQL, params tuple).
-
-        Raises:
-            ValueError: If no config options are specified.
-        """
-        return self.dialect.format_pg_partman_update_config(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_pg_partman_update_config"
 
 
 class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
@@ -202,10 +190,7 @@ class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
         self.parent_table = parent_table
         self.schema = schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate SQL for deleting a pg_partman part_config row.
-
-        Returns:
-            Tuple of (DELETE SQL, params tuple).
-        """
-        return self.dialect.format_pg_partman_delete_config(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_pg_partman_delete_config"

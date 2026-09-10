@@ -121,17 +121,17 @@ class User(ActiveRecord):
 
     # DerivedField: display name (coalesce email to name)
     display_name: ClassVar[Annotated[str, DerivedField(
-        lambda d: coalesce(d, Column(d, "email"), Column(d, "name")),
+        lambda d: coalesce(d, Column(dialect, d, "email"), Column(dialect, d, "name")),
     )]]
 
     # DerivedField (JSON): extract language preference
     language: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "settings"), "$.language"),
+        lambda d: json_extract_text(d, Column(dialect, d, "settings"), "$.language"),
     )]]
 
     # DerivedField (JSON): extract theme preference
     theme: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "settings"), "$.theme"),
+        lambda d: json_extract_text(d, Column(dialect, d, "settings"), "$.theme"),
     )]]
 
     # Relation
@@ -159,17 +159,17 @@ class Post(ActiveRecord):
 
     # DerivedField: hotness score
     hotness: ClassVar[Annotated[int, DerivedField(
-        lambda d: Column(d, "view_count") + Literal(d, 1),
+        lambda d: Column(dialect, d, "view_count") + Literal(d, 1),
     )]]
 
     # DerivedField (JSON): first tag from metadata
     first_tag: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "metadata"), "$.tags[0]"),
+        lambda d: json_extract_text(d, Column(dialect, d, "metadata"), "$.tags[0]"),
     )]]
 
     # DerivedField (JSON): source from metadata
     source: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "metadata"), "$.source"),
+        lambda d: json_extract_text(d, Column(dialect, d, "metadata"), "$.source"),
     )]]
 
     # Relations
@@ -199,7 +199,7 @@ class Comment(ActiveRecord):
 
     # DerivedField (JSON): platform from meta
     platform: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "meta"), "$.platform"),
+        lambda d: json_extract_text(d, Column(dialect, d, "meta"), "$.platform"),
     )]]
 
     # Relation
@@ -221,15 +221,15 @@ class AsyncUser(AsyncActiveRecord):
     settings: Optional[str] = None
 
     display_name: ClassVar[Annotated[str, DerivedField(
-        lambda d: coalesce(d, Column(d, "email"), Column(d, "name")),
+        lambda d: coalesce(d, Column(dialect, d, "email"), Column(dialect, d, "name")),
     )]]
 
     language: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "settings"), "$.language"),
+        lambda d: json_extract_text(d, Column(dialect, d, "settings"), "$.language"),
     )]]
 
     theme: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "settings"), "$.theme"),
+        lambda d: json_extract_text(d, Column(dialect, d, "settings"), "$.theme"),
     )]]
 
     posts: ClassVar[AsyncHasMany["AsyncPost"]] = AsyncHasMany(
@@ -254,15 +254,15 @@ class AsyncPost(AsyncActiveRecord):
     )]]
 
     hotness: ClassVar[Annotated[int, DerivedField(
-        lambda d: Column(d, "view_count") + Literal(d, 1),
+        lambda d: Column(dialect, d, "view_count") + Literal(d, 1),
     )]]
 
     first_tag: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "metadata"), "$.tags[0]"),
+        lambda d: json_extract_text(d, Column(dialect, d, "metadata"), "$.tags[0]"),
     )]]
 
     source: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "metadata"), "$.source"),
+        lambda d: json_extract_text(d, Column(dialect, d, "metadata"), "$.source"),
     )]]
 
     user: ClassVar[AsyncBelongsTo["AsyncUser"]] = AsyncBelongsTo(
@@ -289,7 +289,7 @@ class AsyncComment(AsyncActiveRecord):
     )]]
 
     platform: ClassVar[Annotated[str, DerivedField(
-        lambda d: json_extract_text(d, Column(d, "meta"), "$.platform"),
+        lambda d: json_extract_text(d, Column(dialect, d, "meta"), "$.platform"),
     )]]
 
     post: ClassVar[AsyncBelongsTo["AsyncPost"]] = AsyncBelongsTo(

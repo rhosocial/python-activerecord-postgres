@@ -27,69 +27,69 @@ class TestCoreTypeMappings:
     # The five critical mappings
     def test_boolean_to_boolean(self, dialect):
         from rhosocial.activerecord.backend.expression.types import BooleanType
-        assert BooleanType().to_sql(dialect) == ("BOOLEAN", ())
+        assert BooleanType(dialect=dialect).to_sql() == ("BOOLEAN", ())
 
     def test_tinyint_to_smallint(self, dialect):
         from rhosocial.activerecord.backend.expression.types import TinyIntType
-        assert TinyIntType().to_sql(dialect) == ("SMALLINT", ())
+        assert TinyIntType(dialect=dialect).to_sql() == ("SMALLINT", ())
 
     def test_blob_to_bytea(self, dialect):
         from rhosocial.activerecord.backend.expression.types import BlobType
-        assert BlobType().to_sql(dialect) == ("BYTEA", ())
+        assert BlobType(dialect=dialect).to_sql() == ("BYTEA", ())
 
     def test_datetime_to_timestamp(self, dialect):
         from rhosocial.activerecord.backend.expression.types import DateTimeType
-        assert DateTimeType().to_sql(dialect) == ("TIMESTAMP", ())
+        assert DateTimeType(dialect=dialect).to_sql() == ("TIMESTAMP", ())
 
     def test_int_to_integer(self, dialect):
         from rhosocial.activerecord.backend.expression.types import IntType
-        assert IntType().to_sql(dialect) == ("INTEGER", ())
+        assert IntType(dialect=dialect).to_sql() == ("INTEGER", ())
 
     # Standard integer family
     def test_smallint(self, dialect):
         from rhosocial.activerecord.backend.expression.types import SmallIntType
-        assert SmallIntType().to_sql(dialect) == ("SMALLINT", ())
+        assert SmallIntType(dialect=dialect).to_sql() == ("SMALLINT", ())
 
     def test_integer(self, dialect):
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        assert IntegerType().to_sql(dialect) == ("INTEGER", ())
+        assert IntegerType(dialect=dialect).to_sql() == ("INTEGER", ())
 
     def test_bigint(self, dialect):
         from rhosocial.activerecord.backend.expression.types import BigIntType
-        assert BigIntType().to_sql(dialect) == ("BIGINT", ())
+        assert BigIntType(dialect=dialect).to_sql() == ("BIGINT", ())
 
     # Numeric family
     def test_real(self, dialect):
         from rhosocial.activerecord.backend.expression.types import RealType
-        assert RealType().to_sql(dialect) == ("REAL", ())
+        assert RealType(dialect=dialect).to_sql() == ("REAL", ())
 
     def test_double(self, dialect):
         from rhosocial.activerecord.backend.expression.types import DoubleType
-        assert DoubleType().to_sql(dialect) == ("DOUBLE PRECISION", ())
+        assert DoubleType(dialect=dialect).to_sql() == ("DOUBLE PRECISION", ())
 
     def test_numeric(self, dialect):
         from rhosocial.activerecord.backend.expression.types import DecimalType
-        assert DecimalType(10, 2).to_sql(dialect) == ("DECIMAL(10,2)", ())
-        assert DecimalType().to_sql(dialect) == ("DECIMAL", ())
+        assert DecimalType(10, 2, dialect=dialect).to_sql() == ("DECIMAL(10,2)", ())
+        assert DecimalType(dialect=dialect).to_sql() == ("DECIMAL", ())
 
     # String family
     def test_varchar(self, dialect):
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        assert VarCharType(255).to_sql(dialect) == ("VARCHAR(255)", ())
-        assert VarCharType().to_sql(dialect) == ("VARCHAR", ())
+        assert VarCharType(255, dialect=dialect).to_sql() == ("VARCHAR(255)", ())
+        assert VarCharType(dialect=dialect).to_sql() == ("VARCHAR", ())
 
     def test_text(self, dialect):
         from rhosocial.activerecord.backend.expression.types import TextType
-        assert TextType().to_sql(dialect) == ("TEXT", ())
+        assert TextType(dialect=dialect).to_sql() == ("TEXT", ())
 
     # JSON family
     def test_json(self, dialect):
         from rhosocial.activerecord.backend.expression.types import JsonType
-        assert JsonType().to_sql(dialect) == ("JSON", ())
+        assert JsonType(dialect=dialect).to_sql() == ("JSON", ())
 
     def test_jsonb(self, dialect):
         from rhosocial.activerecord.backend.expression.types import JsonBType
-        assert JsonBType().to_sql(dialect) == ("JSONB", ())
+        assert JsonBType(dialect=dialect).to_sql() == ("JSONB", ())
 
 
 class TestArrayType:
@@ -100,32 +100,32 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType())
-        assert arr.to_sql(dialect) == ("INTEGER[]", ())
+        arr = PostgresArrayType(IntegerType(dialect=dialect), dialect=dialect)
+        assert arr.to_sql() == ("INTEGER[]", ())
 
     def test_array_2d_rendering(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        arr = PostgresArrayType(IntegerType(), dimensions=2)
-        assert arr.to_sql(dialect) == ("INTEGER[][]", ())
+        arr = PostgresArrayType(IntegerType(dialect=dialect), dimensions=2, dialect=dialect)
+        assert arr.to_sql() == ("INTEGER[][]", ())
 
     def test_array_varchar_rendering(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        arr = PostgresArrayType(VarCharType(255))
-        assert arr.to_sql(dialect) == ("VARCHAR(255)[]", ())
+        arr = PostgresArrayType(VarCharType(255, dialect=dialect), dialect=dialect)
+        assert arr.to_sql() == ("VARCHAR(255)[]", ())
 
     def test_array_boolean_rendering(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import BooleanType
-        arr = PostgresArrayType(BooleanType())
-        assert arr.to_sql(dialect) == ("BOOLEAN[]", ())
+        arr = PostgresArrayType(BooleanType(dialect=dialect), dialect=dialect)
+        assert arr.to_sql() == ("BOOLEAN[]", ())
 
     def test_array_equality(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (
@@ -134,14 +134,14 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, VarCharType,
         )
-        a1 = PostgresArrayType(IntegerType(), 2)
-        a2 = PostgresArrayType(IntegerType(), 2)
-        a3 = PostgresArrayType(VarCharType(255), 2)
+        a1 = PostgresArrayType(IntegerType(dialect=dialect), 2, dialect=dialect)
+        a2 = PostgresArrayType(IntegerType(dialect=dialect), 2, dialect=dialect)
+        a3 = PostgresArrayType(VarCharType(255, dialect=dialect), 2, dialect=dialect)
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)
         # PostgresArrayType.is_equivalent ignores dimensions
-        a4 = PostgresArrayType(IntegerType(), 1)
+        a4 = PostgresArrayType(IntegerType(dialect=dialect), 1, dialect=dialect)
         assert a1.is_equivalent(a4)
 
     def test_parse_array_bracket_suffix(self, dialect):
@@ -198,14 +198,14 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, SmallIntType,
         )
-        a1 = PostgresArrayType(IntegerType(), 2)
-        a2 = PostgresArrayType(IntegerType(), 1)   # different dimension
-        a3 = PostgresArrayType(SmallIntType())      # different element type
+        a1 = PostgresArrayType(IntegerType(dialect=dialect), 2, dialect=dialect)
+        a2 = PostgresArrayType(IntegerType(dialect=dialect), 1, dialect=dialect)   # different dimension
+        a3 = PostgresArrayType(SmallIntType(dialect=dialect), dialect=dialect)      # different element type
         # Same element, different dimension → equivalent
         assert a1.is_element_type_equivalent(a2)
         # Different element → not equivalent
         assert not a1.is_element_type_equivalent(a3)
         # Plain IntegerType (not array) as other → matches element
-        assert a1.is_element_type_equivalent(IntegerType())
+        assert a1.is_element_type_equivalent(IntegerType(dialect=dialect))
         # Plain SmallIntType as other → doesn't match Integer element
-        assert not a1.is_element_type_equivalent(SmallIntType())
+        assert not a1.is_element_type_equivalent(SmallIntType(dialect=dialect))

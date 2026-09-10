@@ -34,10 +34,6 @@ class PostgresJSONBEnhancedMixin:
             sql = value_sql
         params = col_params + (expr.path,)
 
-        if expr.cast_types:
-            for target_type in expr.cast_types:
-                sql, params = self.format_cast_expression(sql, target_type, params, None)
-
         if expr.alias:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
 

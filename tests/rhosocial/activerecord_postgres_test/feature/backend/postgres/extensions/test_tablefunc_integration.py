@@ -61,15 +61,15 @@ def tablefunc_env(postgres_backend_single):
     # Setup: create test_tf_sales table using expression
     sales_columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="month", data_type=TextType()),
-        ColumnDefinition(name="category", data_type=TextType()),
-        ColumnDefinition(name="amount", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="month", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
@@ -101,14 +101,14 @@ def tablefunc_env(postgres_backend_single):
     # Setup: create test_tf_tree table using expression
     tree_columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="node_name", data_type=TextType()),
-        ColumnDefinition(name="parent_id", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="node_name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="parent_id", data_type=IntegerType(dialect=dialect)),
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
@@ -339,15 +339,15 @@ async def async_tablefunc_env(async_postgres_backend_single):
     # Setup: create test_tf_sales_async table using expression
     sales_columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="month", data_type=TextType()),
-        ColumnDefinition(name="category", data_type=TextType()),
-        ColumnDefinition(name="amount", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="month", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
@@ -379,14 +379,14 @@ async def async_tablefunc_env(async_postgres_backend_single):
     # Setup: create test_tf_tree_async table using expression
     tree_columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="node_name", data_type=TextType()),
-        ColumnDefinition(name="parent_id", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="node_name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="parent_id", data_type=IntegerType(dialect=dialect)),
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,

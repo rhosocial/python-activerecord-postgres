@@ -10,7 +10,7 @@ Tests for:
 import pytest  # noqa: F401
 import warnings
 
-from rhosocial.activerecord.backend.expression.core import Column, Literal
+from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types.constants import (
     MONEY, NUMERIC, FLOAT8, INTEGER, VARCHAR, TEXT,
@@ -123,34 +123,32 @@ class TestPostgresDialectFormatCast:
 
     def test_format_cast_basic(self):
         """Test basic type cast formatting."""
-        sql, params = self.dialect.format_cast_expression(
-            "col", INTEGER, ()
-        )
-        assert sql == "col::integer"
+        expr = CastExpression(self.dialect, Column(self.dialect, "col"), INTEGER)
+        sql, params = expr.to_sql()
+        assert sql == '"col"::integer'
         assert params == ()
 
     def test_format_cast_with_type_modifier(self):
         """Test type cast with type modifiers."""
-        sql, params = self.dialect.format_cast_expression(
-            "name", "VARCHAR(100)", ()
-        )
-        assert sql == "name::VARCHAR(100)"
+        expr = CastExpression(self.dialect, Column(self.dialect, "name"), "VARCHAR(100)")
+        sql, params = expr.to_sql()
+        assert sql == '"name"::VARCHAR(100)'
         assert params == ()
 
     def test_format_cast_with_alias(self):
         """Test type cast with alias."""
-        sql, params = self.dialect.format_cast_expression(
-            "value", INTEGER, (), "int_val"
+        expr = CastExpression(
+            self.dialect, Column(self.dialect, "value"), INTEGER, alias="int_val"
         )
-        assert sql == 'value::integer AS "int_val"'
+        sql, params = expr.to_sql()
+        assert sql == '"value"::integer AS "int_val"'
         assert params == ()
 
     def test_format_cast_preserves_params(self):
         """Test that parameters are preserved."""
         params_in = ("test_value",)
-        sql, params = self.dialect.format_cast_expression(
-            "%s", TEXT, params_in
-        )
+        expr = Literal(self.dialect, "test_value").cast(TEXT)
+        sql, params = expr.to_sql()
         assert sql == "%s::text"
         assert params == params_in
 

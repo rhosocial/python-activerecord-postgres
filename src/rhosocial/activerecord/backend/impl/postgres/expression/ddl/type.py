@@ -91,14 +91,10 @@ class PostgresCreateEnumTypeExpression(BaseExpression):
         self.if_not_exists = if_not_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate CREATE TYPE AS ENUM SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_enum_type(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_enum_type"
 
 
 class PostgresDropEnumTypeExpression(BaseExpression):
@@ -151,14 +147,10 @@ class PostgresDropEnumTypeExpression(BaseExpression):
         self.cascade = cascade
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate DROP TYPE SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_enum_type(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_enum_type"
 
 
 class PostgresAlterEnumAddValueExpression(BaseExpression):
@@ -215,14 +207,10 @@ class PostgresAlterEnumAddValueExpression(BaseExpression):
         self.after = after
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate ALTER TYPE ADD VALUE SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_alter_enum_add_value(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_enum_add_value"
 
 
 class PostgresAlterEnumTypeAddValueExpression(BaseExpression):
@@ -265,14 +253,10 @@ class PostgresAlterEnumTypeAddValueExpression(BaseExpression):
         self.before = before
         self.after = after
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate ALTER TYPE ADD VALUE SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_alter_enum_type_add_value(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_enum_type_add_value"
 
 
 class PostgresAlterEnumTypeRenameValueExpression(BaseExpression):
@@ -312,14 +296,10 @@ class PostgresAlterEnumTypeRenameValueExpression(BaseExpression):
         self.new_value = new_value
         self.schema = schema
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate ALTER TYPE RENAME VALUE SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_alter_enum_type_rename_value(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_enum_type_rename_value"
 
 
 class PostgresCreateRangeTypeExpression(BaseExpression):
@@ -390,11 +370,7 @@ class PostgresCreateRangeTypeExpression(BaseExpression):
         self.subtype_diff = subtype_diff
         self.if_not_exists = if_not_exists
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate CREATE TYPE AS RANGE SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_range_type(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_range_type"

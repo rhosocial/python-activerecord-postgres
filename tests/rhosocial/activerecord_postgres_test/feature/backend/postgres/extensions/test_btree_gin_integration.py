@@ -59,15 +59,15 @@ def btree_gin_env(postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="value", data_type=IntegerType()),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(TextType())),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(TextType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -214,15 +214,15 @@ async def async_btree_gin_env(async_postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="value", data_type=IntegerType()),
-        ColumnDefinition(name="tags", data_type=PostgresArrayType(TextType())),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(TextType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

@@ -126,14 +126,10 @@ class PostgresCreatePolicyExpression(BaseExpression):
         self.using = using
         self.with_check = with_check
 
-    def to_sql(self) -> "SQLQueryAndParams":
-        """Generate CREATE POLICY SQL statement.
-
-        Returns:
-            Tuple of (SQL string, params tuple).
-
-        """
-        return self.dialect.format_create_policy_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_policy_statement"
 
 
 class PostgresAlterPolicyExpression(BaseExpression):
@@ -192,14 +188,10 @@ class PostgresAlterPolicyExpression(BaseExpression):
             return AlterPolicyMode.RENAME
         return AlterPolicyMode.REPLACE
 
-    def to_sql(self) -> "SQLQueryAndParams":
-        """Generate ALTER POLICY SQL statement.
-
-        Returns:
-            Tuple of (SQL string, params tuple).
-
-        """
-        return self.dialect.format_alter_policy_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_policy_statement"
 
 
 class PostgresDropPolicyExpression(BaseExpression):
@@ -239,11 +231,7 @@ class PostgresDropPolicyExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "SQLQueryAndParams":
-        """Generate DROP POLICY SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_policy_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_policy_statement"

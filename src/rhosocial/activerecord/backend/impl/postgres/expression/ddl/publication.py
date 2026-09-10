@@ -61,14 +61,10 @@ class PostgresCreatePublicationExpression(BaseExpression):
         self.options = options or []
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CREATE PUBLICATION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_publication_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_publication_statement"
 
 
 class PostgresDropPublicationExpression(BaseExpression):
@@ -94,14 +90,10 @@ class PostgresDropPublicationExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP PUBLICATION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_publication_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_publication_statement"
 
 
 class PostgresCreateSubscriptionExpression(BaseExpression):
@@ -132,14 +124,10 @@ class PostgresCreateSubscriptionExpression(BaseExpression):
         self.options = options or []
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CREATE SUBSCRIPTION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_subscription_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_subscription_statement"
 
 
 class PostgresDropSubscriptionExpression(BaseExpression):
@@ -164,11 +152,7 @@ class PostgresDropSubscriptionExpression(BaseExpression):
         self.if_exists = if_exists
         self.cascade = cascade
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP SUBSCRIPTION statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_subscription_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_subscription_statement"

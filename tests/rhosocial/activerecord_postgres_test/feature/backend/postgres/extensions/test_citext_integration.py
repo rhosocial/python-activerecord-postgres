@@ -54,13 +54,13 @@ def _setup_citext_table(backend, dialect, table):
     """Create and populate the basic citext test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -88,17 +88,17 @@ def _setup_citext_unique_table(backend, dialect, table):
     """Create and populate the citext unique constraint test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
         ColumnDefinition(
-            name="email",
-            data_type=PostgresCitextType(),
+            dialect, name="email",
+            data_type=PostgresCitextType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.UNIQUE),
+                ColumnConstraint(dialect, ColumnConstraintType.UNIQUE),
             ],
         ),
     ]
@@ -128,13 +128,13 @@ def _setup_citext_like_table(backend, dialect, table):
     """Create and populate the citext LIKE test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -165,13 +165,13 @@ def _setup_citext_users_table(backend, dialect, table):
     """Create and populate the citext users test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -199,14 +199,14 @@ def _setup_citext_roles_table(backend, dialect, table):
     """Create and populate the citext roles test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=PostgresCitextType()),
-        ColumnDefinition(name="role", data_type=TextType()),
+        ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="role", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -245,13 +245,13 @@ async def _async_setup_citext_table(backend, dialect, table):
     """Async: create and populate the basic citext test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -279,17 +279,17 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
     """Async: create and populate the citext unique constraint test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
         ColumnDefinition(
-            name="email",
-            data_type=PostgresCitextType(),
+            dialect, name="email",
+            data_type=PostgresCitextType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.UNIQUE),
+                ColumnConstraint(dialect, ColumnConstraintType.UNIQUE),
             ],
         ),
     ]
@@ -319,13 +319,13 @@ async def _async_setup_citext_like_table(backend, dialect, table):
     """Async: create and populate the citext LIKE test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -356,13 +356,13 @@ async def _async_setup_citext_users_table(backend, dialect, table):
     """Async: create and populate the citext users test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=PostgresCitextType()),
+        ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -390,14 +390,14 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
     """Async: create and populate the citext roles test table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=PostgresCitextType()),
-        ColumnDefinition(name="role", data_type=TextType()),
+        ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="role", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

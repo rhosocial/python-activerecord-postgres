@@ -69,6 +69,7 @@ class TestPostgresDialectSecurityIntegration:
         # ColumnDefinition now rejects string data_type values at construction time
         with pytest.raises(TypeError, match="data_type must be a DataType instance"):
             ColumnDefinition(
+                postgres_backend.dialect,
                 name="test_col",
                 data_type="VARCHAR(255); DROP TABLE users--",
             )
