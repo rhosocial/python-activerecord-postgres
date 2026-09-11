@@ -477,7 +477,7 @@ class TestProtocolMethodSignatureConformance:
         # ArraySupport: Mixin uses expr-based signatures
         ('ArraySupport', 'format_array_expression'),
         # AdvancedGroupingSupport: Mixin uses expr instead of named params
-        ('AdvancedGroupingSupport', 'format_grouping_expression'),
+        ('AdvancedGroupingSupport', 'format_grouping_clause'),
         # GraphSupport: Mixin uses expr instead of clause
         ('GraphSupport', 'format_match_clause'),
         # OrderedSetAggregationSupport: Mixin uses expr instead of aggregation

@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
     GroupByHavingClause,
-    JoinExpression,
+    JoinClause,
 )
 
 
@@ -152,7 +152,7 @@ class TestSocialNetworkTraversal:
             where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
         )
 
-        recursive_join = JoinExpression(
+        recursive_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "traversal", alias="t"),
             right_table=TableExpression(dialect, "follows", alias="f"),
@@ -289,7 +289,7 @@ class TestAMLFundTracing:
 
     def _build_aml_cte(self, dialect):
         """Build recursive CTE expression for fund tracing."""
-        base_join = JoinExpression(
+        base_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "transactions", alias="tx"),
             right_table=TableExpression(dialect, "accounts", alias="a"),
@@ -314,7 +314,7 @@ class TestAMLFundTracing:
             ),
         )
 
-        recursive_join = JoinExpression(
+        recursive_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "fund_trace", alias="tr"),
             right_table=TableExpression(dialect, "transactions", alias="tx"),

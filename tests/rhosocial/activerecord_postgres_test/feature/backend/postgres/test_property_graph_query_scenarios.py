@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause, OrderByClause, GroupByHavingClause, LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.expression.query_parts import JoinExpression
+from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, TextType,
 )
@@ -275,7 +275,7 @@ class TestCommerceGraph:
                              GraphColumn("f", "since", "since"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        join = JoinExpression(dialect,
+        join = JoinClause(dialect,
             left_table=gt,
             right_table=TableExpression(dialect, "people", alias="p"),
             join_type="INNER JOIN",
