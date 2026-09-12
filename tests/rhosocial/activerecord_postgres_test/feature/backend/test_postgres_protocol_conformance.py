@@ -120,6 +120,8 @@ def get_postgres_protocols():
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.TriggerSupport,
+        dialect_protocols.AutoIncrementSupport,
+        dialect_protocols.GeneratedColumnSupport,
     ]
 
     postgres_mro = postgres_dialect.PostgresDialect.__mro__
@@ -164,13 +166,6 @@ POSTGRES_NOT_IMPLEMENTED = [
     # Postgres exposes routine DDL through its own PostgresRoutineSupport
     # protocol rather than the generic SQL/PSM FunctionSupport.
     dialect_protocols.FunctionSupport,
-    # --- Known gaps (feature exists, generic protocol not yet declared) ---
-    # TODO: Postgres supports SERIAL / GENERATED ... AS IDENTITY; compose
-    # AutoIncrementMixin and move this to POSTGRES_PROTOCOLS.
-    dialect_protocols.AutoIncrementSupport,
-    # TODO: Postgres supports STORED generated columns since 12; implement
-    # GeneratedColumnMixin overrides and move to POSTGRES_PROTOCOLS.
-    dialect_protocols.GeneratedColumnSupport,
 ]
 
 
@@ -327,6 +322,9 @@ class TestProtocolNonOverlap:
             ('PostgresConstraintSupport', 'AlterTableModifierSupport'),
             ('ILIKESupport', 'PostgresILIKESupport'),
             ('PostgresILIKESupport', 'ILIKESupport'),
+            # Generic generated-column capability also declared by PG features protocol
+            ('GeneratedColumnSupport', 'PostgresFeaturesSupport'),
+            ('PostgresFeaturesSupport', 'GeneratedColumnSupport'),
         }
 
         violations = []

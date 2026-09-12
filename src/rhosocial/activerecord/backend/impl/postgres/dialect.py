@@ -744,6 +744,34 @@ class PostgresDialect(
         """PostgreSQL supports -> and ->> operators for JSON/JSONB access."""
         return True
 
+    def supports_auto_increment(self) -> bool:
+        """Whether AUTO_INCREMENT/IDENTITY column attributes are supported.
+
+        PostgreSQL supports SERIAL and GENERATED ... AS IDENTITY.
+        """
+        return True
+
+    def supports_generated_columns(self) -> bool:
+        """Whether generated (computed) columns are supported.
+
+        PostgreSQL supports STORED generated columns since version 12.
+        """
+        return self.version >= (12, 0, 0)
+
+    def supports_stored_generated_columns(self) -> bool:
+        """Whether STORED generated columns are supported.
+
+        PostgreSQL generated columns are always STORED.
+        """
+        return self.supports_generated_columns()
+
+    def supports_virtual_generated_columns(self) -> bool:
+        """Whether VIRTUAL generated columns are supported.
+
+        PostgreSQL has no VIRTUAL generated columns.
+        """
+        return False
+
     def supports_lock_strength(self, strength) -> bool:
         """
         Check if a specific lock strength is supported.
