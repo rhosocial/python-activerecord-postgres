@@ -111,6 +111,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     # --- PostgreSQL-specific formatters ---
 
+    def format_data_type_postgres_enum(self, data_type) -> Tuple[str, tuple]:
+        """Render a PostgresEnumType reference for DDL column definitions.
+
+        PostgreSQL ENUM types are referenced by name in column definitions;
+        the CREATE TYPE ... AS ENUM is a separate DDL operation.
+        """
+        return data_type.name, ()
+
     def format_data_type_postgres_bytea(self, data_type) -> Tuple[str, tuple]:
         return "BYTEA", ()
 
@@ -302,6 +310,11 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def format_data_type_float(self, data_type: FloatType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
+            if not (1 <= data_type.precision <= 53):
+                raise ValueError(
+                    f"FLOAT precision must be between 1 and 53 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
             return f"FLOAT({data_type.precision})", ()
         return "REAL", ()
 
@@ -312,6 +325,18 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return "DOUBLE PRECISION", ()
 
     def format_data_type_decimal(self, data_type: DecimalType) -> Tuple[str, tuple]:
+        if data_type.precision is not None:
+            if not (1 <= data_type.precision <= 1000):
+                raise ValueError(
+                    f"DECIMAL precision must be between 1 and 1000 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
+        if data_type.scale is not None:
+            if not (0 <= data_type.scale <= data_type.precision if data_type.precision else True):
+                raise ValueError(
+                    f"DECIMAL scale must be between 0 and precision "
+                    f"({data_type.precision}), got {data_type.scale}"
+                )
         if data_type.precision is not None and data_type.scale is not None:
             return f"DECIMAL({data_type.precision},{data_type.scale})", ()
         if data_type.precision is not None:
@@ -342,11 +367,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def format_data_type_time(self, data_type: TimeType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
+            if not (0 <= data_type.precision <= 6):
+                raise ValueError(
+                    f"TIME precision must be between 0 and 6 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
             return f"TIME({data_type.precision})", ()
         return "TIME", ()
 
     def format_data_type_timetz(self, data_type: TimeTzType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
+            if not (0 <= data_type.precision <= 6):
+                raise ValueError(
+                    f"TIME precision must be between 0 and 6 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
             return f"TIME({data_type.precision}) WITH TIME ZONE", ()
         return "TIME WITH TIME ZONE", ()
 
@@ -355,11 +390,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def format_data_type_timestamp(self, data_type: TimestampType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
+            if not (0 <= data_type.precision <= 6):
+                raise ValueError(
+                    f"TIMESTAMP precision must be between 0 and 6 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
             return f"TIMESTAMP({data_type.precision})", ()
         return "TIMESTAMP", ()
 
     def format_data_type_timestamptz(self, data_type: TimestampTzType) -> Tuple[str, tuple]:
         if data_type.precision is not None:
+            if not (0 <= data_type.precision <= 6):
+                raise ValueError(
+                    f"TIMESTAMP precision must be between 0 and 6 "
+                    f"(PostgreSQL limit), got {data_type.precision}"
+                )
             return f"TIMESTAMP({data_type.precision}) WITH TIME ZONE", ()
         return "TIMESTAMP WITH TIME ZONE", ()
 
@@ -375,6 +420,258 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return "JSONB", ()
 
     # ------------------------------------------------------------------
+    # supports_data_type_<name> — per-type capability queries
+    # ------------------------------------------------------------------
+
+    def supports_data_type_postgres_enum(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_bytea(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_smallserial(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_serial(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_bigserial(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_uuid(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_xml(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_character_varying(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tsvector(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tsquery(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_jsonpath(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_bit(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_varbit(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_inet(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_cidr(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_macaddr(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_macaddr8(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_point(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_line(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_line_segment(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_box(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_path(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_polygon(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_circle(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_money(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_int4range(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_int8range(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_numrange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tsrange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tstzrange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_daterange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_int4multirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_int8multirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_nummultirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tsmultirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tstzmultirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_datemultirange(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_oid(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_regclass(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_regtype(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_xid(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_xid8(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_cid(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_tid(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_pg_lsn(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_hstore(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_geometry(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_geography(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_vector(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_halfvec(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_sparsevec(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_citext(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_cube(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_ltree(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_raster(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_array(self) -> bool:
+        return True
+
+    # --- Core type support ---
+
+    def supports_data_type_tinyint(self) -> bool:
+        return True
+
+    def supports_data_type_smallint(self) -> bool:
+        return True
+
+    def supports_data_type_int(self) -> bool:
+        return True
+
+    def supports_data_type_integer(self) -> bool:
+        return True
+
+    def supports_data_type_bigint(self) -> bool:
+        return True
+
+    def supports_data_type_float(self) -> bool:
+        return True
+
+    def supports_data_type_real(self) -> bool:
+        return True
+
+    def supports_data_type_double(self) -> bool:
+        return True
+
+    def supports_data_type_decimal(self) -> bool:
+        return True
+
+    def supports_data_type_char(self) -> bool:
+        return True
+
+    def supports_data_type_varchar(self) -> bool:
+        return True
+
+    def supports_data_type_text(self) -> bool:
+        return True
+
+    def supports_data_type_boolean(self) -> bool:
+        return True
+
+    def supports_data_type_blob(self) -> bool:
+        return True
+
+    def supports_data_type_date(self) -> bool:
+        return True
+
+    def supports_data_type_time(self) -> bool:
+        return True
+
+    def supports_data_type_timetz(self) -> bool:
+        return True
+
+    def supports_data_type_datetime(self) -> bool:
+        return True
+
+    def supports_data_type_timestamp(self) -> bool:
+        return True
+
+    def supports_data_type_timestamptz(self) -> bool:
+        return True
+
+    def supports_data_type_interval(self) -> bool:
+        return True
+
+    def supports_data_type_json(self) -> bool:
+        return True
+
+    def supports_data_type_jsonb(self) -> bool:
+        return True
+
+    def supports_data_type_uuid(self) -> bool:
+        return True
+
+    def supports_data_type_custom(self) -> bool:
+        return True
+
+    def supports_data_type_array(self) -> bool:
+        return True
+
+    # ------------------------------------------------------------------
     # Supported types advertisement
     # ------------------------------------------------------------------
 
@@ -384,7 +681,8 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         The formatters a dialect defines **are** the set of types it
         supports (naming-convention dispatch has no registry), so this
-        derives the mapping from the ``format_data_type_<name>`` methods.
+        derives the mapping from the ``format_data_type_<name>`` methods
+        and checks ``supports_data_type_<name>()`` for each.
         """
         result = {}
         for member_name in dir(type(self)):
@@ -392,10 +690,26 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             if not match:
                 continue
             name = match.group(1)
-            cls = self._type_class_for(name)
-            if cls is not None:
-                result[name] = cls
+            supports = getattr(self, f"supports_data_type_{name}", None)
+            if supports is not None and supports():
+                cls = self._type_class_for(name)
+                if cls is not None:
+                    result[name] = cls
         return result
+
+    def suggested_data_types(self) -> dict:
+        """Cross-backend type-consistency suggestion map.
+
+        PostgreSQL has native BYTEA for binary data (mapped via ``blob``),
+        and all core types it supports are rendered through their own
+        ``format_data_type_<name>`` formatters.  There are no core types
+        that PostgreSQL cannot handle natively and honestly suggest an
+        alternative for.
+
+        Returns an empty dict — PostgreSQL covers every core type it
+        renders; suggestions are not needed.
+        """
+        return {}
 
     def format_data_type_uuid(self, data_type) -> Tuple[str, tuple]:
         return "UUID", ()
@@ -495,7 +809,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             base_raw = stripped[:kw_match.start()]
             element_type = self.parse_type(base_raw)
             # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type, dimensions=1, dialect=self)
+            return PostgresArrayType(element_type=element_type, dimensions=1, dialect=self)
 
         # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
         remaining = stripped
@@ -511,7 +825,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         if remaining != stripped:
             element_type = self.parse_type(remaining)
             # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type, dimensions=1, dialect=self)
+            return PostgresArrayType(element_type=element_type, dimensions=1, dialect=self)
 
         # ---- Standard type dispatch ----
 
@@ -539,31 +853,31 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         # Float family
         if self._PG_FLOAT_TYPES.match(upper):
             if upper.startswith("DOUBLE"):
-                return DoubleType(self)
+                return DoubleType(dialect=self)
             if upper.startswith("REAL") or upper.startswith("FLOAT4"):
-                return RealType(self)
+                return RealType(dialect=self)
             nums = re.findall(r"\d+", stripped)
             precision = int(nums[0]) if nums else None
-            return FloatType(precision, self)
+            return FloatType(dialect=self, precision=precision)
 
         # Decimal family
         if self._PG_DECIMAL_TYPES.match(upper):
             nums = re.findall(r"\d+", stripped)
             if len(nums) >= 2:
-                return DecimalType(int(nums[0]), int(nums[1]), self)
+                return DecimalType(dialect=self, precision=int(nums[0]), scale=int(nums[1]))
             if len(nums) == 1:
-                return DecimalType(int(nums[0]), self)
-            return DecimalType(self)
+                return DecimalType(dialect=self, precision=int(nums[0]))
+            return DecimalType(dialect=self)
 
         # String family
         if self._PG_STRING_TYPES.match(upper):
             length_match = re.search(r"\((\d+)\)", stripped)
             length = int(length_match.group(1)) if length_match else None
             if upper.startswith("VARCHAR") or upper.startswith("CHARACTER VARYING"):
-                return VarCharType(length, self)
+                return VarCharType(dialect=self, length=length)
             if upper.startswith("CHAR") or upper.startswith("CHARACTER"):
-                return CharType(length, self)
-            return TextType(self)
+                return CharType(dialect=self, length=length)
+            return TextType(dialect=self)
 
         # Binary
         if self._PG_BINARY_TYPES.match(upper):
@@ -573,43 +887,43 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         # Date/time
         if self._PG_DATE_TYPES.match(upper):
             if upper.startswith("DATETIME"):
-                return DateTimeType(self)
+                return DateTimeType(dialect=self)
             if upper.startswith("DATE"):
-                return DateType(self)
+                return DateType(dialect=self)
             if upper.startswith("TIMESTAMP"):
                 nums = re.findall(r"\d+", stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMESTAMPTZ"):
-                    return TimestampTzType(precision, self)
-                return TimestampType(precision, self)
+                    return TimestampTzType(dialect=self, precision=precision)
+                return TimestampType(dialect=self, precision=precision)
             if upper.startswith("TIME"):
                 nums = re.findall(r"\d+", stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMETZ"):
-                    return TimeTzType(precision, self)
-                return TimeType(precision, self)
+                    return TimeTzType(dialect=self, precision=precision)
+                return TimeType(dialect=self, precision=precision)
             if upper.startswith("INTERVAL"):
                 fields_match = re.search(r"INTERVAL\s+(.*)", upper)
                 fields = fields_match.group(1).strip() if fields_match else None
-                return IntervalType(fields, self)
+                return IntervalType(dialect=self, fields=fields)
 
         # JSON
         if self._PG_JSON_TYPES.match(upper):
             if upper.startswith("JSONB"):
-                return JsonBType(self)
+                return JsonBType(dialect=self)
             if upper.startswith("JSONPATH"):
                 from ...expression.types import PostgresJsonPathType
-                return PostgresJsonPathType(self)
-            return JsonType(self)
+                return PostgresJsonPathType(dialect=self)
+            return JsonType(dialect=self)
 
         # UUID
         if self._PG_UUID_TYPES.match(upper):
             from ...expression.types import PostgresUUIDType
-            return PostgresUUIDType(self)
+            return PostgresUUIDType(dialect=self)
 
         # Boolean
         if upper.startswith("BOOLEAN") or upper.startswith("BOOL"):
-            return BooleanType(self)
+            return BooleanType(dialect=self)
 
         # Bit string
         if self._PG_BIT_TYPES.match(upper):
@@ -617,9 +931,9 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             n = int(nums[0]) if nums else None
             if upper.startswith("BIT"):
                 from ...expression.types import PostgresBitType
-                return PostgresBitType(n, self)
+                return PostgresBitType(n=n, dialect=self)
             from ...expression.types import PostgresVarBitType
-            return PostgresVarBitType(n, self)
+            return PostgresVarBitType(n=n, dialect=self)
 
         # Network address
         if self._PG_NET_TYPES.match(upper):
@@ -783,13 +1097,13 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             vector_kind = vector_match.group(1)
             if vector_kind == "HALFVEC":
                 from ...expression.types import PostgresHalfvecType
-                return PostgresHalfvecType(dim, self)
+                return PostgresHalfvecType(dim=dim, dialect=self)
             if vector_kind == "SPARSEVEC":
                 from ...expression.types import PostgresSparsevecType
-                return PostgresSparsevecType(dim, self)
+                return PostgresSparsevecType(dim=dim, dialect=self)
             from ...expression.types import PostgresVectorType
-            return PostgresVectorType(dim, self)
+            return PostgresVectorType(dim=dim, dialect=self)
 
         # Fallback
         from rhosocial.activerecord.backend.expression.types import CustomType
-        return CustomType(stripped, self)
+        return CustomType(dialect=self, raw=stripped)

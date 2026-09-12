@@ -221,30 +221,30 @@ def test_format_core_types(dialect, data_type, expected):
 
 
 def test_format_array_type(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(IntegerType(), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=1))
     assert sql == "INTEGER[]"
 
-    sql, _ = dialect.format_data_type(ArrayType(VarCharType(10), dimensions=3))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=VarCharType(length=10), dimensions=3))
     assert sql == "VARCHAR(10)[][][]"
 
 
 def test_format_array_type_multidimensional(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(IntegerType(), dimensions=2))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=2))
     assert sql == "INTEGER[][]"
 
 
 def test_format_array_type_with_postgres_element(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(PostgresUUIDType(), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=PostgresUUIDType(), dimensions=1))
     assert sql == "UUID[]"
 
 
 def test_format_array_type_with_custom_element(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(CustomType("X"), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=CustomType(raw="X"), dimensions=1))
     assert sql == "X[]"
 
 
 def test_format_custom_type_passthrough(dialect):
-    sql, _ = dialect.format_data_type(CustomType("X"))
+    sql, _ = dialect.format_data_type(CustomType(raw="X"))
     assert sql == "X"
 
 

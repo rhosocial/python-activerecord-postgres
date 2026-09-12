@@ -17,7 +17,7 @@ DDL definition expressions (``ColumnDefinition.data_type``).
 
 from __future__ import annotations
 
-from typing import Optional, Set, TYPE_CHECKING
+from typing import Any, Dict, Optional, Set, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -133,17 +133,13 @@ class PostgresBitType(DataType):
     name = "postgres_bit"
     n: Optional[int] = None
 
-    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None):
-        super().__init__(dialect)
+    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None,
+                 dialect_options: Optional[Dict[str, Any]] = None):
+        super().__init__(dialect, dialect_options=dialect_options)
         self.n = n
 
-    def __eq__(self, other: object) -> bool:
-        if type(self) is not type(other):
-            return False
-        return self.n == other.n
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.n))
+    def _type_params(self) -> tuple:
+        return (self.n,)
 
 
 class PostgresVarBitType(DataType):
@@ -152,17 +148,13 @@ class PostgresVarBitType(DataType):
     name = "postgres_varbit"
     n: Optional[int] = None
 
-    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None):
-        super().__init__(dialect)
+    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None,
+                 dialect_options: Optional[Dict[str, Any]] = None):
+        super().__init__(dialect, dialect_options=dialect_options)
         self.n = n
 
-    def __eq__(self, other: object) -> bool:
-        if type(self) is not type(other):
-            return False
-        return self.n == other.n
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.n))
+    def _type_params(self) -> tuple:
+        return (self.n,)
 
 
 # ---------------------------------------------------------------------------
@@ -366,17 +358,13 @@ class PostgresVectorType(DataType):
     name = "postgres_vector"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
-        super().__init__(dialect)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
+                 dialect_options: Optional[Dict[str, Any]] = None):
+        super().__init__(dialect, dialect_options=dialect_options)
         self.dim = dim
 
-    def __eq__(self, other: object) -> bool:
-        if type(self) is not type(other):
-            return False
-        return self.dim == other.dim
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.dim))
+    def _type_params(self) -> tuple:
+        return (self.dim,)
 
 
 class PostgresHalfvecType(DataType):
@@ -392,17 +380,13 @@ class PostgresHalfvecType(DataType):
     name = "postgres_halfvec"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
-        super().__init__(dialect)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
+                 dialect_options: Optional[Dict[str, Any]] = None):
+        super().__init__(dialect, dialect_options=dialect_options)
         self.dim = dim
 
-    def __eq__(self, other: object) -> bool:
-        if type(self) is not type(other):
-            return False
-        return self.dim == other.dim
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.dim))
+    def _type_params(self) -> tuple:
+        return (self.dim,)
 
 
 class PostgresSparsevecType(DataType):
@@ -418,17 +402,13 @@ class PostgresSparsevecType(DataType):
     name = "postgres_sparsevec"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
-        super().__init__(dialect)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
+                 dialect_options: Optional[Dict[str, Any]] = None):
+        super().__init__(dialect, dialect_options=dialect_options)
         self.dim = dim
 
-    def __eq__(self, other: object) -> bool:
-        if type(self) is not type(other):
-            return False
-        return self.dim == other.dim
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.dim))
+    def _type_params(self) -> tuple:
+        return (self.dim,)
 
 
 # ---------------------------------------------------------------------------
