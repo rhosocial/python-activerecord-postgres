@@ -26,12 +26,13 @@ def create_users_table(dialect):
         table="users",
         columns=[
             ColumnDefinition(
+                dialect,
                 "id",
-                PostgresSerialType(),
+                PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("name", PostgresCharacterVaryingType(255)),
-            ColumnDefinition("email", PostgresCharacterVaryingType(255)),
+            ColumnDefinition(dialect, "name", PostgresCharacterVaryingType(dialect, length=255)),
+            ColumnDefinition(dialect, "email", PostgresCharacterVaryingType(dialect, length=255)),
         ],
     )
 
@@ -48,12 +49,13 @@ def create_posts_table(dialect):
         table="posts",
         columns=[
             ColumnDefinition(
+                dialect,
                 "id",
-                PostgresSerialType(),
+                PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("title", PostgresCharacterVaryingType(255)),
-            ColumnDefinition("user_id", PostgresCharacterVaryingType(255)),
+            ColumnDefinition(dialect, "title", PostgresCharacterVaryingType(dialect, length=255)),
+            ColumnDefinition(dialect, "user_id", PostgresCharacterVaryingType(dialect, length=255)),
         ],
     )
 
@@ -74,11 +76,12 @@ def create_custom_table(dialect, table_name: str = "custom_table"):
         table=table_name,
         columns=[
             ColumnDefinition(
+                dialect,
                 "id",
-                PostgresSerialType(),
+                PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition("value", PostgresCharacterVaryingType(255)),
+            ColumnDefinition(dialect, "value", PostgresCharacterVaryingType(dialect, length=255)),
         ],
     )
 

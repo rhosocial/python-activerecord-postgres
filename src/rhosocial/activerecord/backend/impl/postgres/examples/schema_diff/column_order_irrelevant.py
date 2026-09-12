@@ -46,10 +46,10 @@ backend.execute(sql, params)
 
 demo_table = CreateTableExpression(
     dialect=dialect, table="demo", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(length=100)),
-        ColumnDefinition("email", VarCharType(length=200)),
+        ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
+        ColumnDefinition(dialect, "email", VarCharType(dialect, length=200)),
     ]
 )
 sql, params = demo_table.to_sql()
@@ -71,7 +71,7 @@ snapshot_before = builder.build(schema="public")
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
 add_age = AlterTableExpression(dialect, "demo", [
-    AddColumn(dialect, ColumnDefinition("age", IntegerType()))
+    AddColumn(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
 ])
 sql, params = add_age.to_sql()
 backend.execute(sql, params)

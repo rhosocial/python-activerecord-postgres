@@ -58,9 +58,9 @@ snapshot_before = builder.build(schema="public")
 
 users_table = CreateTableExpression(
     dialect=dialect, table="users", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(length=100),
+        ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.NOT_NULL)]),
     ]
 )
@@ -69,10 +69,10 @@ backend.execute(sql, params)
 
 orders_table = CreateTableExpression(
     dialect=dialect, table="orders", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("user_id", IntegerType()),
-        ColumnDefinition("amount", DecimalType(10, 2)),
+        ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
+        ColumnDefinition(dialect, "amount", DecimalType(dialect, precision=10, scale=2)),
     ],
     table_constraints=[
         TableConstraint(

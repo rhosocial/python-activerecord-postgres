@@ -46,10 +46,10 @@ backend.execute(sql, params)
 
 demo_table = CreateTableExpression(
     dialect=dialect, table="demo", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(length=200)),
-        ColumnDefinition("tags", ArrayType(element_type=TextType(), dimensions=1)),
+        ColumnDefinition(dialect, "name", VarCharType(dialect, length=200)),
+        ColumnDefinition(dialect, "tags", ArrayType(dialect, element_type=TextType(dialect), dimensions=1)),
     ]
 )
 sql, params = demo_table.to_sql()

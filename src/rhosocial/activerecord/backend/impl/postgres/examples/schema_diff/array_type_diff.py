@@ -47,9 +47,9 @@ backend.execute(sql, params)
 # One-dimensional array column
 scores_v1_table = CreateTableExpression(
     dialect=dialect, table="scores_v1", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("values", ArrayType(element_type=IntegerType(), dimensions=1)),
+        ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=1)),
     ]
 )
 sql, params = scores_v1_table.to_sql()
@@ -58,9 +58,9 @@ backend.execute(sql, params)
 # Two-dimensional array column
 scores_v2_table = CreateTableExpression(
     dialect=dialect, table="scores_v2", columns=[
-        ColumnDefinition("id", PostgresSerialType(),
+        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("values", ArrayType(element_type=IntegerType(), dimensions=2)),
+        ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=2)),
     ]
 )
 sql, params = scores_v2_table.to_sql()
