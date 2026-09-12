@@ -207,7 +207,7 @@ def _create_production_parent_sql(dialect):
         table=PRODUCTION_PARTITION_TABLE,
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(fsp=6, dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
         ],

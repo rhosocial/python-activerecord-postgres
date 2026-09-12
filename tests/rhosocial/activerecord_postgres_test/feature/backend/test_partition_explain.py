@@ -70,7 +70,7 @@ def _create_parent_table_expression(dialect):
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect),
                              constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(fsp=6, dialect=dialect),
+            ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect),
                              constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect),
                              constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
