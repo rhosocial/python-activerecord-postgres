@@ -134,14 +134,14 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, VarCharType,
         )
-        a1 = PostgresArrayType(element_type=IntegerType(dialect=dialect), 2, dialect=dialect)
-        a2 = PostgresArrayType(element_type=IntegerType(dialect=dialect), 2, dialect=dialect)
-        a3 = PostgresArrayType(element_type=VarCharType(length=255, dialect=dialect), 2, dialect=dialect)
+        a1 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=2, dialect=dialect)
+        a2 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=2, dialect=dialect)
+        a3 = PostgresArrayType(element_type=VarCharType(length=255, dialect=dialect), dimensions=2, dialect=dialect)
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)
         # PostgresArrayType.is_equivalent ignores dimensions
-        a4 = PostgresArrayType(element_type=IntegerType(dialect=dialect), 1, dialect=dialect)
+        a4 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=1, dialect=dialect)
         assert a1.is_equivalent(a4)
 
     def test_parse_array_bracket_suffix(self, dialect):
@@ -198,8 +198,8 @@ class TestArrayType:
         from rhosocial.activerecord.backend.expression.types import (
             IntegerType, SmallIntType,
         )
-        a1 = PostgresArrayType(element_type=IntegerType(dialect=dialect), 2, dialect=dialect)
-        a2 = PostgresArrayType(element_type=IntegerType(dialect=dialect), 1, dialect=dialect)   # different dimension
+        a1 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=2, dialect=dialect)
+        a2 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=1, dialect=dialect)   # different dimension
         a3 = PostgresArrayType(element_type=SmallIntType(dialect=dialect), dialect=dialect)      # different element type
         # Same element, different dimension → equivalent
         assert a1.is_element_type_equivalent(a2)
