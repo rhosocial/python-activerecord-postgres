@@ -49,7 +49,7 @@ demo_table = CreateTableExpression(
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition("name", VarCharType(length=200)),
-        ColumnDefinition("tags", ArrayType(TextType(), dimensions=1)),
+        ColumnDefinition("tags", ArrayType(element_type=TextType(), dimensions=1)),
     ]
 )
 sql, params = demo_table.to_sql()

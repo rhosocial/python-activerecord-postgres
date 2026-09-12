@@ -54,7 +54,7 @@ class TestPostgresBitTypeEquality:
         assert PostgresBitType(None) != PostgresBitType(8)
 
     def test_hash(self):
-        assert hash(PostgresBitType(8)) == hash((type(PostgresBitType(8)), 8))
+        assert hash(PostgresBitType(8)) == hash(PostgresBitType(8)._type_params())
 
 
 class TestPostgresVarBitTypeEquality:
@@ -69,7 +69,7 @@ class TestPostgresVarBitTypeEquality:
         assert PostgresVarBitType(16) != object()
 
     def test_hash(self):
-        assert hash(PostgresVarBitType(16)) == hash((type(PostgresVarBitType(16)), 16))
+        assert hash(PostgresVarBitType(16)) == hash(PostgresVarBitType(16)._type_params())
 
 
 class TestPostgresVectorTypeEquality:
@@ -84,21 +84,21 @@ class TestPostgresVectorTypeEquality:
         assert PostgresVectorType(384) != "vector"
 
     def test_hash(self):
-        assert hash(PostgresVectorType(384)) == hash((type(PostgresVectorType(384)), 384))
+        assert hash(PostgresVectorType(384)) == hash(PostgresVectorType(384)._type_params())
 
 
 class TestPostgresArrayType:
     def test_is_equivalent_matching_element(self):
-        arr1 = PostgresArrayType(IntegerType(), dimensions=1)
-        arr2 = PostgresArrayType(IntegerType(), dimensions=3)
+        arr1 = PostgresArrayType(element_type=IntegerType(), dimensions=1)
+        arr2 = PostgresArrayType(element_type=IntegerType(), dimensions=3)
         assert arr1.is_equivalent(arr2)
 
     def test_is_equivalent_non_array(self):
-        arr = PostgresArrayType(IntegerType(), dimensions=1)
+        arr = PostgresArrayType(element_type=IntegerType(), dimensions=1)
         assert arr.is_equivalent(IntegerType()) is False
         assert arr.is_equivalent(None) is False
 
     def test_is_equivalent_different_element(self):
-        arr1 = PostgresArrayType(IntegerType(), dimensions=1)
-        arr2 = PostgresArrayType(VarCharType(), dimensions=1)
+        arr1 = PostgresArrayType(element_type=IntegerType(), dimensions=1)
+        arr2 = PostgresArrayType(element_type=VarCharType(), dimensions=1)
         assert arr1.is_equivalent(arr2) is False

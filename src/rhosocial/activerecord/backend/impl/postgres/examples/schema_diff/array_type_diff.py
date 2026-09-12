@@ -49,7 +49,7 @@ scores_v1_table = CreateTableExpression(
     dialect=dialect, table="scores_v1", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("values", ArrayType(IntegerType(), dimensions=1)),
+        ColumnDefinition("values", ArrayType(element_type=IntegerType(), dimensions=1)),
     ]
 )
 sql, params = scores_v1_table.to_sql()
@@ -60,7 +60,7 @@ scores_v2_table = CreateTableExpression(
     dialect=dialect, table="scores_v2", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("values", ArrayType(IntegerType(), dimensions=2)),
+        ColumnDefinition("values", ArrayType(element_type=IntegerType(), dimensions=2)),
     ]
 )
 sql, params = scores_v2_table.to_sql()
@@ -102,7 +102,7 @@ db_info = DatabaseInfo(name="test", version="16", version_tuple=(16, 0, 0), vend
 # V1: 1-d array
 col1d = ColumnInfo(
     name="values", table_name="t", ordinal_position=1,
-    data_type="INTEGER[]", parsed_data_type=ArrayType(IntegerType(), dimensions=1),
+    data_type="INTEGER[]", parsed_data_type=ArrayType(element_type=IntegerType(), dimensions=1),
     nullable=ColumnNullable.NULLABLE,
 )
 snap1d = snapshot.__class__(
@@ -115,7 +115,7 @@ snap1d = snapshot.__class__(
 # V2: 2-d array
 col2d = ColumnInfo(
     name="values", table_name="t", ordinal_position=1,
-    data_type="INTEGER[][]", parsed_data_type=ArrayType(IntegerType(), dimensions=2),
+    data_type="INTEGER[][]", parsed_data_type=ArrayType(element_type=IntegerType(), dimensions=2),
     nullable=ColumnNullable.NULLABLE,
 )
 snap2d = snapshot.__class__(

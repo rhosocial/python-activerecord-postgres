@@ -109,7 +109,7 @@ def aml_data(postgres_backend):
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "source_account_id", IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, "target_account_id", IntegerType(dialect=dialect)),
-        ColumnDefinition(dialect, "amount", DecimalType(12, 2, dialect=dialect)),
+        ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],

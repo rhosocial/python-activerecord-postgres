@@ -67,7 +67,7 @@ def btree_gin_env(postgres_backend_single):
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
-        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(TextType(dialect=dialect), dialect=dialect)),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(element_type=TextType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -222,7 +222,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
-        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(TextType(dialect=dialect), dialect=dialect)),
+        ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(element_type=TextType(dialect=dialect), dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

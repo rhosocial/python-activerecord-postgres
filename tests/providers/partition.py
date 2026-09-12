@@ -256,7 +256,7 @@ class PartitionProvider(IPartitionProvider):
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
-                ColumnDefinition(dialect, "amount", DecimalType(12, 2, dialect=dialect)),
+                ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
             ],
             partition=PartitionClause(
                 dialect=dialect,
