@@ -114,6 +114,12 @@ def get_postgres_protocols():
         dialect_protocols.IntrospectionSupport,
         dialect_protocols.TransactionControlSupport,
         dialect_protocols.SQLFunctionSupport,
+        # Generic protocols Postgres also satisfies (previously omitted).
+        dialect_protocols.AlterTableModifierSupport,
+        dialect_protocols.DDLTypeSupport,
+        dialect_protocols.GraphTableSupport,
+        dialect_protocols.ILIKESupport,
+        dialect_protocols.TriggerSupport,
     ]
 
     postgres_mro = postgres_dialect.PostgresDialect.__mro__
@@ -145,6 +151,69 @@ class TestPostgresDialectProtocolConformance:
         assert isinstance(dialect, protocol), (
             f"PostgresDialect does not implement protocol {protocol.__name__}, "
             f"missing methods: {get_all_protocol_methods(protocol) - set(dir(dialect))}"
+        )
+
+
+# Generic protocols PostgresDialect intentionally does NOT implement.
+#
+# Listing them makes the omission a deliberate, tested contract: if Postgres
+# ever satisfies one by accident, the negative test fails and forces a
+# conscious decision (move to POSTGRES_PROTOCOLS or revert).
+POSTGRES_NOT_IMPLEMENTED = [
+    # --- Intentional non-support ---
+    # Postgres exposes routine DDL through its own PostgresRoutineSupport
+    # protocol rather than the generic SQL/PSM FunctionSupport.
+    dialect_protocols.FunctionSupport,
+    # --- Known gaps (feature exists, generic protocol not yet declared) ---
+    # TODO: Postgres supports SERIAL / GENERATED ... AS IDENTITY; compose
+    # AutoIncrementMixin and move this to POSTGRES_PROTOCOLS.
+    dialect_protocols.AutoIncrementSupport,
+    # TODO: Postgres supports STORED generated columns since 12; implement
+    # GeneratedColumnMixin overrides and move to POSTGRES_PROTOCOLS.
+    dialect_protocols.GeneratedColumnSupport,
+]
+
+
+def get_all_generic_protocols() -> dict:
+    """Discover every generic dialect protocol defined in protocols.py."""
+    from typing import Protocol
+
+    discovered = {}
+    for name, obj in inspect.getmembers(dialect_protocols, inspect.isclass):
+        if Protocol in getattr(obj, "__mro__", []) and name.endswith("Support"):
+            discovered[name] = obj
+    return discovered
+
+
+class TestPostgresDialectNegativeProtocolConformance:
+    """Assert PostgresDialect does not implement intentionally-unsupported protocols."""
+
+    @pytest.fixture
+    def dialect(self):
+        return postgres_dialect.PostgresDialect()
+
+    @pytest.mark.parametrize("protocol", POSTGRES_NOT_IMPLEMENTED)
+    def test_does_not_implement_protocol(self, dialect, protocol):
+        """PostgresDialect must NOT implement any protocol in POSTGRES_NOT_IMPLEMENTED."""
+        assert not isinstance(dialect, protocol), (
+            f"PostgresDialect unexpectedly implements {protocol.__name__}. "
+            f"If intentional, move it from POSTGRES_NOT_IMPLEMENTED to "
+            f"POSTGRES_PROTOCOLS (and implement the behaviour fully)."
+        )
+
+    def test_positive_and_negative_lists_partition_all_protocols(self):
+        """Every generic protocol must be classified for Postgres."""
+        all_protos = set(get_all_generic_protocols())
+        positive = {p.__name__ for p in POSTGRES_PROTOCOLS if p.__module__ == dialect_protocols.__name__}
+        negative = {p.__name__ for p in POSTGRES_NOT_IMPLEMENTED}
+
+        overlap = positive & negative
+        assert not overlap, f"Protocols in BOTH lists: {sorted(overlap)}"
+
+        unclassified = all_protos - positive - negative
+        assert not unclassified, (
+            f"Generic protocols not classified for Postgres: {sorted(unclassified)}. "
+            f"Add each to POSTGRES_PROTOCOLS or POSTGRES_NOT_IMPLEMENTED."
         )
 
 
@@ -253,6 +322,11 @@ class TestProtocolNonOverlap:
             # PostgresFeaturesSupport shares some stored procedure methods
             ('PostgresFeaturesSupport', 'PostgresStoredProcedureSupport'),
             ('PostgresStoredProcedureSupport', 'PostgresFeaturesSupport'),
+            # Generic capabilities restated by PG-specific protocols
+            ('AlterTableModifierSupport', 'PostgresConstraintSupport'),
+            ('PostgresConstraintSupport', 'AlterTableModifierSupport'),
+            ('ILIKESupport', 'PostgresILIKESupport'),
+            ('PostgresILIKESupport', 'ILIKESupport'),
         }
 
         violations = []
