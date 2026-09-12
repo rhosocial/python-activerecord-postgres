@@ -55,7 +55,7 @@ def social_network_data(postgres_backend):
     backend.execute(*CreateTableExpression(dialect, "users", [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition(dialect, "name", VarCharType(100, dialect=dialect)),
+        ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "follows", [
@@ -100,8 +100,8 @@ def aml_data(postgres_backend):
     backend.execute(*CreateTableExpression(dialect, "accounts", [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition(dialect, "account_holder", VarCharType(100, dialect=dialect)),
-        ColumnDefinition(dialect, "account_type", VarCharType(20, dialect=dialect)),
+        ColumnDefinition(dialect, "account_holder", VarCharType(length=100, dialect=dialect)),
+        ColumnDefinition(dialect, "account_type", VarCharType(length=20, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "transactions", [
@@ -467,7 +467,7 @@ class TestAsyncRecursiveCTEGraph:
         await backend.execute(*CreateTableExpression(dialect, "users", [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition(dialect, "name", VarCharType(100, dialect=dialect)),
+            ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
         ]).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "follows", [

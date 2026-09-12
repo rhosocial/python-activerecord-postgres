@@ -48,8 +48,8 @@ demo_table = CreateTableExpression(
     dialect=dialect, table="demo", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100)),
-        ColumnDefinition("email", VarCharType(200)),
+        ColumnDefinition("name", VarCharType(length=100)),
+        ColumnDefinition("email", VarCharType(length=200)),
     ]
 )
 sql, params = demo_table.to_sql()

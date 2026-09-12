@@ -210,7 +210,7 @@ class TestPostgreSQLCreateTableLike:
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)
             ]),
-            ColumnDefinition(dialect, "name", VarCharType(255, dialect=dialect))
+            ColumnDefinition(dialect, "name", VarCharType(length=255, dialect=dialect))
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
@@ -264,7 +264,7 @@ class TestPostgreSQLCreateTableLike:
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)
             ]),
-            ColumnDefinition(dialect, "name", VarCharType(255, dialect=dialect), constraints=[
+            ColumnDefinition(dialect, "name", VarCharType(length=255, dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
             ])
         ]

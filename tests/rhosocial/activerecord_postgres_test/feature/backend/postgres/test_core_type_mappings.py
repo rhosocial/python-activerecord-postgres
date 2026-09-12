@@ -75,7 +75,7 @@ class TestCoreTypeMappings:
     # String family
     def test_varchar(self, dialect):
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        assert VarCharType(255, dialect=dialect).to_sql() == ("VARCHAR(255)", ())
+        assert VarCharType(length=255, dialect=dialect).to_sql() == ("VARCHAR(255)", ())
         assert VarCharType(dialect=dialect).to_sql() == ("VARCHAR", ())
 
     def test_text(self, dialect):
@@ -116,7 +116,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        arr = PostgresArrayType(VarCharType(255, dialect=dialect), dialect=dialect)
+        arr = PostgresArrayType(VarCharType(length=255, dialect=dialect), dialect=dialect)
         assert arr.to_sql() == ("VARCHAR(255)[]", ())
 
     def test_array_boolean_rendering(self, dialect):
@@ -136,7 +136,7 @@ class TestArrayType:
         )
         a1 = PostgresArrayType(IntegerType(dialect=dialect), 2, dialect=dialect)
         a2 = PostgresArrayType(IntegerType(dialect=dialect), 2, dialect=dialect)
-        a3 = PostgresArrayType(VarCharType(255, dialect=dialect), 2, dialect=dialect)
+        a3 = PostgresArrayType(VarCharType(length=255, dialect=dialect), 2, dialect=dialect)
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)

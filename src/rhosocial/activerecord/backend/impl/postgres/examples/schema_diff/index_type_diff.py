@@ -48,7 +48,7 @@ demo_table = CreateTableExpression(
     dialect=dialect, table="demo", columns=[
         ColumnDefinition("id", PostgresSerialType(),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(200)),
+        ColumnDefinition("name", VarCharType(length=200)),
         ColumnDefinition("tags", ArrayType(TextType(), dimensions=1)),
     ]
 )

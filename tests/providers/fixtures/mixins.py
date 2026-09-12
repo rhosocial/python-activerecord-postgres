@@ -39,10 +39,10 @@ def create_combined_articles_table(dialect, table_name: str = "combined_articles
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition(dialect, "title", VarCharType(255, dialect=dialect),
+            ColumnDefinition(dialect, "title", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
-            ColumnDefinition(dialect, "status", VarCharType(50, dialect=dialect),
+            ColumnDefinition(dialect, "status", VarCharType(length=50, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
                              ColumnConstraint(dialect, ColumnConstraintType.DEFAULT, default_value="draft")]),
             ColumnDefinition(dialect, "created_at", TimestampTzType(dialect=dialect)),
@@ -68,7 +68,7 @@ def create_tasks_table(dialect, table_name: str = "tasks") -> CreateTableExpress
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition(dialect, "title", VarCharType(255, dialect=dialect),
+            ColumnDefinition(dialect, "title", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "is_completed", BooleanType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
@@ -91,7 +91,7 @@ def create_timestamped_posts_table(dialect, table_name: str = "timestamped_posts
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition(dialect, "title", VarCharType(255, dialect=dialect),
+            ColumnDefinition(dialect, "title", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             ColumnDefinition(dialect, "created_at", TimestampTzType(dialect=dialect)),
@@ -112,7 +112,7 @@ def create_versioned_products_table(dialect, table_name: str = "versioned_produc
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition(dialect, "name", VarCharType(255, dialect=dialect),
+            ColumnDefinition(dialect, "name", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "price", DecimalType(precision=10, scale=2, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),

@@ -51,7 +51,7 @@ def test_postgres_format_column_definition_data_type_validation(dialect):
     col_def = ColumnDefinition(
         dialect,
         name="test_col",
-        data_type=VarCharType(255, dialect=dialect),
+        data_type=VarCharType(length=255, dialect=dialect),
     )
 
     sql, params = dialect.format_column_definition(col_def)
