@@ -505,32 +505,57 @@ class TestFulltextDdlNotSupportedSearchSupported:
         assert PostgresDialect().supports_fulltext_boolean_mode() is True
 
     def test_format_fulltext_match_natural_language(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "search")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "search")
+        sql, params = dialect.format_fulltext_match(expr)
         assert "to_tsvector" in sql
         assert "plainto_tsquery" in sql
         assert "@@" in sql
         assert params == ("search",)
 
     def test_format_fulltext_match_boolean(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "a & b", mode="BOOLEAN")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "a & b", mode="BOOLEAN")
+        sql, params = dialect.format_fulltext_match(expr)
         assert "to_tsvector" in sql
         assert "to_tsquery" in sql
         assert "plainto_tsquery" not in sql
         assert params == ("a & b",)
 
     def test_format_fulltext_match_phrase(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "cat dog", mode="PHRASE")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "cat dog", mode="PHRASE")
+        sql, params = dialect.format_fulltext_match(expr)
         assert "phraseto_tsquery" in sql
         assert "plainto_tsquery" not in sql
         assert params == ("cat dog",)
 
     def test_format_fulltext_match_unknown_mode_uses_plain(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "search", mode="CUSTOM")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "search", mode="CUSTOM")
+        sql, params = dialect.format_fulltext_match(expr)
         assert "plainto_tsquery" in sql
         assert params == ("search",)
 
     def test_format_fulltext_match_multi_column(self):
-        sql, params = PostgresDialect().format_fulltext_match(["a", "b"], "search")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["a", "b"], "search")
+        sql, params = dialect.format_fulltext_match(expr)
         assert " || " in sql
         assert "to_tsvector" in sql
         assert params == ("search",)
