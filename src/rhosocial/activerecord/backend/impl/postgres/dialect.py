@@ -191,6 +191,7 @@ from .mixins import (
 )
 
 from .collation import validate_postgres_collation_name
+from .reserved_words import POSTGRESQL_RESERVED_WORDS
 
 # PostgreSQL-specific imports
 from .protocols import (
@@ -368,7 +369,7 @@ class PostgresDialect(
     PostgresExtensionMixin,
     PostgresMaterializedViewMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
-    PostgresTableMixin,  # Before TableMixin to override supports_table_like_syntax
+    PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
     TableMixin,
     ConstraintMixin,
     PostgresPartitionMixin,
@@ -615,6 +616,7 @@ class PostgresDialect(
 
         """
         super().__init__()
+        self._reserved_words = POSTGRESQL_RESERVED_WORDS
         if version is not None:
             self.version = version
 
@@ -859,7 +861,7 @@ class PostgresDialect(
     # endregion
 
     # region Custom Implementations for PostgreSQL-specific behavior
-    def format_identifier(self, identifier: str) -> str:
+    def format_identifier(self, identifier: str, need_quote: bool = True) -> str:
         """
         Format identifier using PostgreSQL's double quote quoting mechanism.
 
@@ -870,6 +872,17 @@ class PostgresDialect(
             Quoted identifier with escaped internal quotes
 
         """
+        if not need_quote:
+            if self.is_reserved_word(identifier):
+                import warnings
+                from rhosocial.activerecord.backend.warnings import IdentifierQuotingWarning
+                warnings.warn(
+                    f"Identifier '{identifier}' is a reserved word in {self.name} "
+                    f"and may cause SQL errors without quoting.",
+                    IdentifierQuotingWarning,
+                    stacklevel=2,
+                )
+            return identifier
         # Escape any internal double quotes by doubling them
         escaped = identifier.replace('"', '""')
         return f'"{escaped}"'

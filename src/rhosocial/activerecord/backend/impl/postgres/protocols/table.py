@@ -46,7 +46,7 @@ class PostgresTableSupport(TableSupport, Protocol):
         """
         ...
 
-    def supports_table_like_syntax(self) -> bool:
+    def supports_create_table_like(self) -> bool:
         """Whether CREATE TABLE (LIKE ...) syntax is supported.
 
         PostgreSQL supports CREATE TABLE (LIKE other_table) with

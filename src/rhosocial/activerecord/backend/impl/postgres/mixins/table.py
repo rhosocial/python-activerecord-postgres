@@ -36,7 +36,7 @@ class PostgresTableMixin:
         """TABLESPACE specification is supported in all versions."""
         return True
 
-    def supports_table_like_syntax(self) -> bool:
+    def supports_create_table_like(self) -> bool:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
 
