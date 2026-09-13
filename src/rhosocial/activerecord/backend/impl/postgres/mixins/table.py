@@ -41,16 +41,82 @@ class PostgresTableMixin:
         return True
 
     def format_create_table_statement(self, expr) -> Tuple[str, tuple]:
-        """Render CREATE TABLE, injecting the UNLOGGED qualifier.
+        """Render CREATE TABLE for PostgreSQL.
 
-        The core ``TableMixin.format_create_table_statement`` does not know
-        about PostgreSQL's ``UNLOGGED`` table classes (WAL-avoiding tables).
-        Callers opt in via ``dialect_options={"unlogged": True}`` on the
-        ``CreateTableExpression``; the qualifier is version-gated at 9.5+.
-        ``UNLOGGED`` and ``TEMPORARY`` are mutually exclusive qualifiers in
-        PostgreSQL's grammar; TEMPORARY wins when both are requested.
+        Handles PostgreSQL-specific CREATE TABLE behavior:
+        * PostgreSQL LIKE syntax with INCLUDING/EXCLUDING options.
+        * Declarative partitioning validation for ``partition`` expressions.
+        * UNLOGGED table qualifier.
+
+        The LIKE syntax is controlled by ``dialect_options['like_table']``.
+        When present, all other parameters (columns, indexes, constraints)
+        are ignored. The ``like_options`` key controls INCLUDING/EXCLUDING
+        behavior (dict or list format).
+
+        Partition validation follows PostgreSQL declarative partitioning rules:
+        - RANGE and LIST require PostgreSQL 10+.
+        - HASH requires PostgreSQL 11+.
+        - MySQL-specific methods (KEY, RANGE COLUMNS) are rejected.
         """
+        # Check for LIKE syntax in dialect_options (highest priority)
+        if "like_table" in expr.dialect_options:
+            like_table = expr.dialect_options["like_table"]
+            like_options = expr.dialect_options.get("like_options", [])
+
+            parts = ["CREATE"]
+
+            if expr.temporary:
+                parts.append("TEMPORARY")
+
+            parts.append("TABLE")
+
+            if expr.if_not_exists:
+                parts.append("IF NOT EXISTS")
+
+            parts.append(self.format_identifier(expr.table_name))
+
+            # Build LIKE clause with options
+            like_parts = []
+
+            # Handle schema-qualified table name: ('schema', 'table')
+            if isinstance(like_table, tuple):
+                schema, table = like_table
+                like_table_str = f"{self.format_identifier(schema)}.{self.format_identifier(table)}"
+            else:
+                like_table_str = self.format_identifier(like_table)
+
+            like_parts.append(f"LIKE {like_table_str}")
+
+            # Add INCLUDING/EXCLUDING options
+            if isinstance(like_options, dict):
+                including = like_options.get("including", [])
+                excluding = like_options.get("excluding", [])
+
+                for option in including:
+                    like_parts.append(f"INCLUDING {option.upper()}")
+
+                for option in excluding:
+                    like_parts.append(f"EXCLUDING {option.upper()}")
+            elif isinstance(like_options, list):
+                for option in like_options:
+                    if isinstance(option, tuple):
+                        action, feature = option
+                        like_parts.append(f"{action.upper()} {feature.upper()}")
+                    else:
+                        like_parts.append(f"INCLUDING {option.upper()}")
+
+            parts.append(f"({', '.join(like_parts)})")
+
+            return " ".join(parts), ()
+
+        if getattr(expr, "partition", None) is not None:
+            # Validate through the PartitionClause -> format_partition_clause chain.
+            expr.partition.to_sql()
+
+        # Delegate to base implementation (TableMixin)
         sql, params = super().format_create_table_statement(expr)
+
+        # Apply UNLOGGED qualifier if requested
         if not (getattr(expr, "dialect_options", None) or {}).get("unlogged_table"):
             return sql, params
         if getattr(expr, "temporary", False):

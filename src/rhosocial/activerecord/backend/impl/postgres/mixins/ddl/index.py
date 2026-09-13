@@ -670,3 +670,33 @@ class PostgresIndexMixin:
                 parts.append(f"WHERE {where_clause}")
 
         return (" ".join(parts), tuple(all_params))
+
+    def format_add_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE ADD INDEX.
+
+        Raises UnsupportedFeatureError — use CREATE INDEX instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE ADD INDEX",
+            suggestion="Use CREATE INDEX to create an index on the table.",
+        )
+
+    def format_drop_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE DROP INDEX.
+
+        Raises UnsupportedFeatureError — use DROP INDEX statement instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE DROP INDEX",
+            suggestion="Use DROP INDEX statement to remove an index.",
+        )

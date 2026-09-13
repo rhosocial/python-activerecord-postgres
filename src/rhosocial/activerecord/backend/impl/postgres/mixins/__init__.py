@@ -14,6 +14,12 @@ This package organizes PostgreSQL-specific mixins by category:
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
 from .table import PostgresTableMixin
+from .datetime import PostgresDateTimeMixin
+from .dql import PostgresDQLMixin
+from .json import PostgresJSONMixin
+from .generated_column import PostgresGeneratedColumnMixin
+from .expression import PostgresExpressionMixin
+from .function import PostgresFunctionMixin
 
 # DDL mixins
 from .ddl.partition import PostgresPartitionMixin
@@ -119,6 +125,12 @@ __all__ = [
     "PostgresExtensionMixin",
     "PostgresMaterializedViewMixin",
     "PostgresTableMixin",
+    "PostgresDateTimeMixin",
+    "PostgresDQLMixin",
+    "PostgresJSONMixin",
+    "PostgresGeneratedColumnMixin",
+    "PostgresExpressionMixin",
+    "PostgresFunctionMixin",
     # DDL mixins
     "PostgresPartitionMixin",
     "PostgresIndexMixin",
