@@ -46,7 +46,6 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ConstraintMixin,
     PartitionMixin,
     # New Mixins
-    IdentifierMixin,
     PredicateMixin,
     ExpressionMixin,
     DateTimeMixin,
@@ -438,7 +437,6 @@ class PostgresDialect(
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
     # New Mixins
-    IdentifierMixin,
     PredicateMixin,
     ExpressionMixin,
     DateTimeMixin,
@@ -908,17 +906,17 @@ class PostgresDialect(
             # must use the alias — schema_name is irrelevant in this context.
             if schema_name and not alias:
                 col_sql = (
-                    f"{self.format_identifier(schema_name)}."
-                    f"{self.format_identifier(table)}."
-                    f"{self.format_identifier(name)}"
+                    f"{self.format_identifier(schema_name, expr.schema_need_quote)}."
+                    f"{self.format_identifier(table, expr.table_need_quote)}."
+                    f"{self.format_identifier(name, expr.name_need_quote)}"
                 )
             else:
-                col_sql = f"{self.format_identifier(table)}.{self.format_identifier(name)}"
+                col_sql = f"{self.format_identifier(table, expr.table_need_quote)}.{self.format_identifier(name, expr.name_need_quote)}"
         else:
-            col_sql = self.format_identifier(name)
+            col_sql = self.format_identifier(name, expr.name_need_quote)
 
         if alias:
-            col_sql = f"{col_sql} AS {self.format_identifier(alias)}"
+            col_sql = f"{col_sql} AS {self.format_identifier(alias, expr.alias_need_quote)}"
 
         return col_sql, ()
 
