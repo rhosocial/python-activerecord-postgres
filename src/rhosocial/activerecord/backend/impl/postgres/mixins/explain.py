@@ -1,6 +1,11 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/explain.py
 """PostgreSQL explain feature support implementation."""
 
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...expression.statements.explain import ExplainExpression
+
 
 class PostgresExplainMixin:
     """PostgreSQL explain override implementation.
@@ -16,7 +21,7 @@ class PostgresExplainMixin:
         supported_formats = ["TEXT", "XML", "JSON", "YAML"]
         return format_type_upper in supported_formats
 
-    def format_explain_statement(self, explain_expr) -> tuple:
+    def format_explain_statement(self, expr: "ExplainExpression") -> Tuple[str, tuple]:
         """Build the PostgreSQL EXPLAIN SQL string and return (sql, params).
 
         PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``
@@ -28,8 +33,8 @@ class PostgresExplainMixin:
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
 
-        statement_sql, statement_params = explain_expr.statement.to_sql()
-        options = explain_expr.options
+        statement_sql, statement_params = expr.statement.to_sql()
+        options = expr.options
         if options is None:
             return f"EXPLAIN {statement_sql}", statement_params
 

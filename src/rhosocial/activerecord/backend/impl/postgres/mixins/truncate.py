@@ -1,7 +1,10 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/truncate.py
 """PostgreSQL truncate feature support implementation."""
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...expression.statements.ddl_truncate import TruncateExpression
 
 
 class PostgresTruncateMixin:
@@ -16,7 +19,7 @@ class PostgresTruncateMixin:
     def supports_truncate_cascade(self) -> bool:
         return True
 
-    def format_truncate_statement(self, expr) -> Tuple[str, tuple]:
+    def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
         - ``expr.table_name`` — target table.

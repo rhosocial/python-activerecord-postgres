@@ -1,7 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/protocols/truncate.py
 """PostgreSQL truncate feature support protocol."""
 
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable, Tuple
 
 
 @runtime_checkable
@@ -12,4 +12,4 @@ class PostgresTruncateSupport(Protocol):
 
     def supports_truncate_cascade(self)-> bool: ...
 
-    def format_truncate_statement(self, expr) -> tuple: ...
+    def format_truncate_statement(self, expr: Any) -> Tuple[str, tuple]: ...

@@ -26,7 +26,7 @@ class EnumTypeMixin:
     This mixin implements the EnumTypeSupport protocol.
     """
 
-    def format_enum_type_name(self, name: str, schema: Optional[str] = None) -> str:
+    def format_enum_type_name(self, name: str, schema: Optional[str] = None) -> Tuple[str, tuple]:
         """Format enum type name with optional schema.
 
         Args:
@@ -34,12 +34,12 @@ class EnumTypeMixin:
             schema: Optional schema name
 
         Returns:
-            Formatted type name (e.g., 'schema.name' or 'name')
+            Tuple of (formatted type name, empty params tuple)
 
         """
         if schema:
-            return f"{schema}.{name}"
-        return name
+            return (f"{schema}.{name}", ())
+        return (name, ())
 
     def format_enum_type_name_expression(self, expr: "EnumTypeNameExpression") -> Tuple[str, tuple]:
         """Format enum type name from expression object.
@@ -51,19 +51,19 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple).
 
         """
-        return (self.format_enum_type_name(expr.name, expr.schema), ())
+        return self.format_enum_type_name(expr.name, expr.schema)
 
-    def format_enum_values(self, values: List[str]) -> str:
+    def format_enum_values(self, values: List[str]) -> Tuple[str, tuple]:
         """Format enum values list for SQL.
 
         Args:
             values: List of enum values
 
         Returns:
-            SQL-formatted values string
+            Tuple of (SQL-formatted values string, empty params tuple)
 
         """
-        return ", ".join(f"'{v}'" for v in values)
+        return (", ".join(f"'{v}'" for v in values), ())
 
     def format_enum_values_expression(self, expr: "EnumValuesExpression") -> Tuple[str, tuple]:
         """Format enum values list from expression object.
@@ -75,11 +75,11 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple).
 
         """
-        return (self.format_enum_values(expr.values), ())
+        return self.format_enum_values(expr.values)
 
     def format_create_enum_type_raw(
         self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format CREATE TYPE statement for enum.
 
         Args:
@@ -89,13 +89,13 @@ class EnumTypeMixin:
             if_not_exists: Add IF NOT EXISTS
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
 
         """
-        full_name = self.format_enum_type_name(name, schema)
-        values_str = self.format_enum_values(values)
+        full_name, _ = self.format_enum_type_name(name, schema)
+        values_str, _ = self.format_enum_values(values)
         exists_clause = "IF NOT EXISTS " if if_not_exists else ""
-        return f"CREATE TYPE {exists_clause}{full_name} AS ENUM ({values_str})"
+        return (f"CREATE TYPE {exists_clause}{full_name} AS ENUM ({values_str})", ())
 
     def format_create_enum_type_raw_expression(self, expr: "CreateEnumTypeExpression") -> Tuple[str, tuple]:
         """Format CREATE TYPE ... AS ENUM from expression object.
@@ -107,17 +107,16 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple).
 
         """
-        sql = self.format_create_enum_type_raw(
+        return self.format_create_enum_type_raw(
             expr.name,
             expr.values,
             expr.schema,
             expr.if_not_exists,
         )
-        return (sql, ())
 
     def format_drop_enum_type_raw(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format DROP TYPE statement.
 
         Args:
@@ -127,13 +126,13 @@ class EnumTypeMixin:
             cascade: Add CASCADE
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
 
         """
-        full_name = self.format_enum_type_name(name, schema)
+        full_name, _ = self.format_enum_type_name(name, schema)
         exists_clause = "IF EXISTS " if if_exists else ""
         cascade_clause = " CASCADE" if cascade else ""
-        return f"DROP TYPE {exists_clause}{full_name}{cascade_clause}"
+        return (f"DROP TYPE {exists_clause}{full_name}{cascade_clause}", ())
 
     def format_drop_enum_type_raw_expression(self, expr: "DropEnumTypeExpression") -> Tuple[str, tuple]:
         """Format DROP TYPE from expression object.
@@ -145,18 +144,17 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple).
 
         """
-        sql = self.format_drop_enum_type_raw(
+        return self.format_drop_enum_type_raw(
             expr.name,
             expr.schema,
             expr.if_exists,
             expr.cascade,
         )
-        return (sql, ())
 
     def format_alter_enum_add_value_raw(
             self, type_name: str, new_value: str, schema: Optional[str] = None,
             before: Optional[str] = None, after: Optional[str] = None
-        ) -> str:
+        ) -> Tuple[str, tuple]:
         """Format ALTER TYPE ADD VALUE statement.
 
         Args:
@@ -167,16 +165,16 @@ class EnumTypeMixin:
             after: Add after this value
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
 
         """
-        full_name = self.format_enum_type_name(type_name, schema)
+        full_name, _ = self.format_enum_type_name(type_name, schema)
         sql = f"ALTER TYPE {full_name} ADD VALUE '{new_value}'"
         if before:
             sql += f" BEFORE '{before}'"
         elif after:
             sql += f" AFTER '{after}'"
-        return sql
+        return (sql, ())
 
     def format_alter_enum_add_value_raw_expression(self, expr: "AlterEnumAddValueExpression") -> Tuple[str, tuple]:
         """Format ALTER TYPE ADD VALUE from expression object.
@@ -188,14 +186,13 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple).
 
         """
-        sql = self.format_alter_enum_add_value_raw(
+        return self.format_alter_enum_add_value_raw(
             expr.type_name,
             expr.new_value,
             expr.schema,
             expr.before,
             expr.after,
         )
-        return (sql, ())
 
     # =========================================================================
     # Convenience methods for EnumTypeSupport protocol
@@ -218,7 +215,8 @@ class EnumTypeMixin:
             SQL statement string
 
         """
-        return self.format_create_enum_type_raw(name, values, schema, if_not_exists)
+        sql, _ = self.format_create_enum_type_raw(name, values, schema, if_not_exists)
+        return sql
 
     def drop_enum_type(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
@@ -237,7 +235,8 @@ class EnumTypeMixin:
             SQL statement string
 
         """
-        return self.format_drop_enum_type_raw(name, schema, if_exists, cascade)
+        sql, _ = self.format_drop_enum_type_raw(name, schema, if_exists, cascade)
+        return sql
 
     def alter_enum_add_value(
         self,
@@ -264,7 +263,8 @@ class EnumTypeMixin:
             SQL statement string
 
         """
-        return self.format_alter_enum_add_value_raw(type_name, new_value, schema, before, after)
+        sql, _ = self.format_alter_enum_add_value_raw(type_name, new_value, schema, before, after)
+        return sql
 
     # =========================================================================
     # Expression-based methods (for expression-dialect architecture)
@@ -283,13 +283,12 @@ class EnumTypeMixin:
             Tuple of (SQL string, params tuple).
 
         """
-        sql = self.format_create_enum_type_raw(
+        return self.format_create_enum_type_raw(
             expr.name,
             expr.values,
             expr.schema,
             expr.if_not_exists,
         )
-        return (sql, ())
 
     def format_drop_enum_type(
         self,
@@ -304,13 +303,12 @@ class EnumTypeMixin:
             Tuple of (SQL string, params tuple).
 
         """
-        sql = self.format_drop_enum_type_raw(
+        return self.format_drop_enum_type_raw(
             expr.name,
             expr.schema,
             expr.if_exists,
             expr.cascade,
         )
-        return (sql, ())
 
     def format_alter_enum_add_value(
         self,
@@ -325,14 +323,13 @@ class EnumTypeMixin:
             Tuple of (SQL string, params tuple).
 
         """
-        sql = self.format_alter_enum_add_value_raw(
+        return self.format_alter_enum_add_value_raw(
             expr.type_name,
             expr.new_value,
             expr.schema,
             expr.before,
             expr.after,
         )
-        return (sql, ())
 
     def format_enum_type_expression(self, expr) -> Tuple[str, tuple]:
         """Format a :class:`PostgresEnumType` type reference expression.
@@ -361,14 +358,13 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple)
 
         """
-        sql = self.format_alter_enum_add_value_raw(
+        return self.format_alter_enum_add_value_raw(
             expr.type_name,
             expr.new_value,
             expr.schema,
             expr.before,
             expr.after,
         )
-        return (sql, ())
 
     def format_alter_enum_type_rename_value(self, expr) -> Tuple[str, tuple]:
         """Format ALTER TYPE RENAME VALUE statement from expression object.
@@ -380,6 +376,6 @@ class EnumTypeMixin:
             Tuple of (SQL string, empty params tuple)
 
         """
-        full_name = self.format_enum_type_name(expr.type_name, expr.schema)
+        full_name, _ = self.format_enum_type_name(expr.type_name, expr.schema)
         sql = f"ALTER TYPE {full_name} RENAME VALUE '{expr.old_value}' TO '{expr.new_value}'"
         return (sql, ())

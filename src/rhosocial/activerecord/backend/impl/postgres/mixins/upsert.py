@@ -1,6 +1,11 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/upsert.py
 """PostgreSQL upsert feature support implementation."""
 
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...expression.statements.dml import OnConflictClause
+
 
 class PostgresUpsertMixin:
     """PostgreSQL upsert override implementation.
@@ -18,7 +23,7 @@ class PostgresUpsertMixin:
         """PostgreSQL grammar allows only a single ON CONFLICT clause per INSERT."""
         return False
 
-    def format_on_conflict_clause(self, expr) -> tuple:
+    def format_on_conflict_clause(self, expr: "OnConflictClause") -> Tuple[str, tuple]:
         """Format ON CONFLICT clause for PostgreSQL.
 
         Overrides the base implementation to handle EXCLUDED pseudo-table
@@ -38,18 +43,14 @@ class PostgresUpsertMixin:
 
         """
         from rhosocial.activerecord.backend.expression import bases
-        from rhosocial.activerecord.backend.expression.core import Column
 
         all_params = []
         parts = ["ON CONFLICT"]
 
-        # Add conflict target if specified
         if expr.conflict_target:
             target_parts = []
             for target in expr.conflict_target:
-                if isinstance(target, str):
-                    target_parts.append(self.format_identifier(target))
-                elif hasattr(target, 'to_sql'):
+                if hasattr(target, 'to_sql'):
                     target_sql, target_params = target.to_sql()
                     target_parts.append(target_sql)
                     all_params.extend(target_params)
@@ -58,15 +59,12 @@ class PostgresUpsertMixin:
             if target_parts:
                 parts.append(f"({', '.join(target_parts)})")
 
-        # Add DO NOTHING or DO UPDATE
         if expr.do_nothing:
             parts.append("DO NOTHING")
         elif expr.update_assignments:
             update_parts = []
             for col, expr_val in expr.update_assignments.items():
-                if isinstance(expr_val, Column) and getattr(expr_val, 'table', None) == 'EXCLUDED':
-                    # EXCLUDED is a special pseudo-table in PostgreSQL ON CONFLICT.
-                    # It must NOT be double-quoted, only the column name should be quoted.
+                if getattr(expr_val, 'table', None) == 'EXCLUDED':
                     val_sql = f'EXCLUDED.{self.format_identifier(expr_val.name)}'
                     update_parts.append(f"{self.format_identifier(col)} = {val_sql}")
                 elif isinstance(expr_val, bases.BaseExpression):
@@ -79,7 +77,6 @@ class PostgresUpsertMixin:
 
             parts.append(f"DO UPDATE SET {', '.join(update_parts)}")
 
-            # Add WHERE clause if specified
             if expr.update_where:
                 where_sql, where_params = expr.update_where.to_sql()
                 parts.append(f"WHERE {where_sql}")

@@ -3,6 +3,7 @@ from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresRefreshMaterializedViewExpression
+    from ...expression.statements.ddl_view import CreateMaterializedViewExpression
 
 
 class PostgresMaterializedViewMixin:
@@ -12,7 +13,7 @@ class PostgresMaterializedViewMixin:
         """CONCURRENTLY is supported since PostgreSQL 9.4."""
         return self.version >= (9, 4, 0)
 
-    def format_create_materialized_view_statement(self, expr) -> tuple:
+    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewExpression") -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 
         - ``expr.view_name`` — view name (identifier).

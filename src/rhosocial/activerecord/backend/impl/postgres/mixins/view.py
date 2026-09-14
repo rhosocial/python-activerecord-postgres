@@ -1,6 +1,11 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/view.py
 """PostgreSQL view feature support implementation."""
 
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...expression.statements.ddl_view import CreateViewExpression
+
 
 class PostgresViewMixin:
     """PostgreSQL view feature support implementation."""
@@ -32,7 +37,7 @@ class PostgresViewMixin:
     def supports_materialized_view_storage_options(self) -> bool:
         return True
 
-    def format_create_view_statement(self, expr) -> tuple:
+    def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
 
         - ``expr.temporary`` — add ``TEMPORARY``.

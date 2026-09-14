@@ -1,11 +1,16 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/datetime.py
 """PostgreSQL datetime formatting mixin."""
 
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.datetime import DateTimeDiffExpression
+
 
 class PostgresDateTimeMixin:
     """PostgreSQL datetime diff expression formatting."""
 
-    def format_datetime_diff_expression(self, expr: "Any") -> tuple:
+    def format_datetime_diff_expression(self, expr: "DateTimeDiffExpression") -> Tuple[str, tuple]:
         start_sql, start_params = expr.start.to_sql()
         end_sql, end_params = expr.end.to_sql()
         seconds_sql = f"EXTRACT(EPOCH FROM ({end_sql} - {start_sql}))"
