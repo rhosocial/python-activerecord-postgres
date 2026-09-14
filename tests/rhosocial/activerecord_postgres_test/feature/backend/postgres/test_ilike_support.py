@@ -1,17 +1,11 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_ilike_support.py
 """Tests for ILIKE protocol support in PostgreSQL dialect."""
-import pytest  # noqa: F401
+from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
     ILIKEExpression,
 )
 from rhosocial.activerecord.backend.dialect.protocols import ILIKESupport
-
-
-def format_ilike(dialect, column, pattern, negate=False):
-    """Dispatch an ILIKE expression through the dialect formatter."""
-    expr = ILIKEExpression(dialect, column=column, pattern=pattern, negate=negate)
-    return dialect.format_ilike_expression(expr)
 
 
 class TestILIKESupport:
@@ -30,7 +24,10 @@ class TestILIKESupport:
     def test_format_ilike_expression_basic(self):
         """Test basic ILIKE expression formatting."""
         dialect = PostgresDialect()
-        sql, params = format_ilike(dialect, "username", "%smith%")
+        expr = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="%smith%"
+        )
+        sql, params = expr.to_sql()
 
         assert sql == '"username" ILIKE %s'
         assert params == ('%smith%',)
@@ -38,7 +35,13 @@ class TestILIKESupport:
     def test_format_ilike_expression_with_negate(self):
         """Test NOT ILIKE expression formatting."""
         dialect = PostgresDialect()
-        sql, params = format_ilike(dialect, "username", "%smith%", negate=True)
+        expr = ILIKEExpression(
+            dialect,
+            column=Column(dialect, "username"),
+            pattern="%smith%",
+            negate=True,
+        )
+        sql, params = expr.to_sql()
 
         assert sql == '"username" NOT ILIKE %s'
         assert params == ('%smith%',)
@@ -48,12 +51,16 @@ class TestILIKESupport:
         dialect = PostgresDialect()
 
         # ILIKE should handle case differences automatically
-        sql, params = format_ilike(dialect, "username", "%SMITH%")
+        sql, params = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="%SMITH%"
+        ).to_sql()
         assert sql == '"username" ILIKE %s'
         assert params == ('%SMITH%',)
 
         # Pattern is passed as-is to ILIKE, which handles case-insensitivity
-        sql, params = format_ilike(dialect, "username", "%Smith%")
+        _, params = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="%Smith%"
+        ).to_sql()
         assert params == ('%Smith%',)
 
     def test_format_ilike_expression_with_wildcards(self):
@@ -61,17 +68,23 @@ class TestILIKESupport:
         dialect = PostgresDialect()
 
         # Test with % wildcard
-        sql, params = format_ilike(dialect, "email", "%@example.com")
+        sql, params = ILIKEExpression(
+            dialect, column=Column(dialect, "email"), pattern="%@example.com"
+        ).to_sql()
         assert sql == '"email" ILIKE %s'
         assert params == ('%@example.com',)
 
         # Test with _ wildcard
-        sql, params = format_ilike(dialect, "username", "user_")
+        sql, params = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="user_"
+        ).to_sql()
         assert sql == '"username" ILIKE %s'
         assert params == ('user_',)
 
         # Test with mixed wildcards
-        sql, params = format_ilike(dialect, "username", "%user_%")
+        sql, params = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="%user_%"
+        ).to_sql()
         assert sql == '"username" ILIKE %s'
         assert params == ('%user_%',)
 
@@ -80,13 +93,19 @@ class TestILIKESupport:
         dialect = PostgresDialect()
 
         # Test with hyphen
-        sql, params = format_ilike(dialect, "username", "user-name%")
+        _, params = ILIKEExpression(
+            dialect, column=Column(dialect, "username"), pattern="user-name%"
+        ).to_sql()
         assert params == ('user-name%',)
 
         # Test with dot
-        sql, params = format_ilike(dialect, "email", "%.com")
+        _, params = ILIKEExpression(
+            dialect, column=Column(dialect, "email"), pattern="%.com"
+        ).to_sql()
         assert params == ('%.com',)
 
         # Test with spaces
-        sql, params = format_ilike(dialect, "name", "%John Doe%")
+        _, params = ILIKEExpression(
+            dialect, column=Column(dialect, "name"), pattern="%John Doe%"
+        ).to_sql()
         assert params == ('%John Doe%',)
