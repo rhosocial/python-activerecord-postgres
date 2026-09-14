@@ -77,3 +77,11 @@ class PostgresMultirangeSupport(Protocol):
             Tuple of (SQL statement, parameters)
         """
         ...
+
+    def format_create_multirange_type_statement_expression(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TYPE for multirange from expression object."""
+        ...
+
+    def format_multirange_agg_function_expression(self, expr) -> Tuple[str, tuple]:
+        """Format multirange_agg from expression object."""
+        ...

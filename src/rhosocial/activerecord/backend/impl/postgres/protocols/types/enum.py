@@ -230,3 +230,23 @@ class PostgresEnumTypeSupport(Protocol):
             Tuple of (SQL string, empty params tuple)
         """
         ...
+
+    def format_enum_type_name_expression(self, expr) -> Tuple[str, tuple]:
+        """Format enum type name from expression object."""
+        ...
+
+    def format_enum_values_expression(self, expr) -> Tuple[str, tuple]:
+        """Format enum values from expression object."""
+        ...
+
+    def format_create_enum_type_raw_expression(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TYPE from expression object."""
+        ...
+
+    def format_drop_enum_type_raw_expression(self, expr) -> Tuple[str, tuple]:
+        """Format DROP TYPE from expression object."""
+        ...
+
+    def format_alter_enum_add_value_raw_expression(self, expr) -> Tuple[str, tuple]:
+        """Format ALTER TYPE ADD VALUE from expression object."""
+        ...
