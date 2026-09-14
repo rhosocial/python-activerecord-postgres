@@ -12,6 +12,11 @@ if TYPE_CHECKING:
         PostgresCreateEnumTypeExpression,
         PostgresDropEnumTypeExpression,
         PostgresAlterEnumAddValueExpression,
+        EnumTypeNameExpression,
+        EnumValuesExpression,
+        CreateEnumTypeExpression,
+        DropEnumTypeExpression,
+        AlterEnumAddValueExpression,
     )
 
 
@@ -36,6 +41,18 @@ class EnumTypeMixin:
             return f"{schema}.{name}"
         return name
 
+    def format_enum_type_name_expression(self, expr: "EnumTypeNameExpression") -> Tuple[str, tuple]:
+        """Format enum type name from expression object.
+
+        Args:
+            expr: :class:`EnumTypeNameExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        return (self.format_enum_type_name(expr.name, expr.schema), ())
+
     def format_enum_values(self, values: List[str]) -> str:
         """Format enum values list for SQL.
 
@@ -47,6 +64,18 @@ class EnumTypeMixin:
 
         """
         return ", ".join(f"'{v}'" for v in values)
+
+    def format_enum_values_expression(self, expr: "EnumValuesExpression") -> Tuple[str, tuple]:
+        """Format enum values list from expression object.
+
+        Args:
+            expr: :class:`EnumValuesExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        return (self.format_enum_values(expr.values), ())
 
     def format_create_enum_type_raw(
         self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
@@ -68,6 +97,24 @@ class EnumTypeMixin:
         exists_clause = "IF NOT EXISTS " if if_not_exists else ""
         return f"CREATE TYPE {exists_clause}{full_name} AS ENUM ({values_str})"
 
+    def format_create_enum_type_raw_expression(self, expr: "CreateEnumTypeExpression") -> Tuple[str, tuple]:
+        """Format CREATE TYPE ... AS ENUM from expression object.
+
+        Args:
+            expr: :class:`CreateEnumTypeExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        sql = self.format_create_enum_type_raw(
+            expr.name,
+            expr.values,
+            expr.schema,
+            expr.if_not_exists,
+        )
+        return (sql, ())
+
     def format_drop_enum_type_raw(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
     ) -> str:
@@ -87,6 +134,24 @@ class EnumTypeMixin:
         exists_clause = "IF EXISTS " if if_exists else ""
         cascade_clause = " CASCADE" if cascade else ""
         return f"DROP TYPE {exists_clause}{full_name}{cascade_clause}"
+
+    def format_drop_enum_type_raw_expression(self, expr: "DropEnumTypeExpression") -> Tuple[str, tuple]:
+        """Format DROP TYPE from expression object.
+
+        Args:
+            expr: :class:`DropEnumTypeExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        sql = self.format_drop_enum_type_raw(
+            expr.name,
+            expr.schema,
+            expr.if_exists,
+            expr.cascade,
+        )
+        return (sql, ())
 
     def format_alter_enum_add_value_raw(
             self, type_name: str, new_value: str, schema: Optional[str] = None,
@@ -112,6 +177,25 @@ class EnumTypeMixin:
         elif after:
             sql += f" AFTER '{after}'"
         return sql
+
+    def format_alter_enum_add_value_raw_expression(self, expr: "AlterEnumAddValueExpression") -> Tuple[str, tuple]:
+        """Format ALTER TYPE ADD VALUE from expression object.
+
+        Args:
+            expr: :class:`AlterEnumAddValueExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        sql = self.format_alter_enum_add_value_raw(
+            expr.type_name,
+            expr.new_value,
+            expr.schema,
+            expr.before,
+            expr.after,
+        )
+        return (sql, ())
 
     # =========================================================================
     # Convenience methods for EnumTypeSupport protocol

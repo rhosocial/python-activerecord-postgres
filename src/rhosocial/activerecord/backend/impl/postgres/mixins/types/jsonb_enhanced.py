@@ -5,7 +5,7 @@ PostgreSQL JSONB enhanced mixin.
 Implements the PostgresJSONBEnhancedSupport protocol.
 """
 
-from typing import TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression import JSONExpression
@@ -18,7 +18,7 @@ class PostgresJSONBEnhancedMixin:
     JSON and JSONB features beyond the standard JSONSupport protocol.
     """
 
-    def format_json_expression(self, expr: "JSONExpression"):
+    def format_json_expression(self, expr: "JSONExpression") -> Tuple[str, tuple]:
         from rhosocial.activerecord.backend.expression import bases
 
         if isinstance(expr.column, bases.BaseExpression):

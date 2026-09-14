@@ -32,6 +32,12 @@ __all__ = [
     "PostgresAlterEnumTypeRenameValueExpression",
     # Range type
     "PostgresCreateRangeTypeExpression",
+    # Format-signature-compliant enum expressions
+    "EnumTypeNameExpression",
+    "EnumValuesExpression",
+    "CreateEnumTypeExpression",
+    "DropEnumTypeExpression",
+    "AlterEnumAddValueExpression",
 ]
 
 
@@ -374,3 +380,200 @@ class PostgresCreateRangeTypeExpression(BaseExpression):
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
         return "format_create_range_type"
+
+
+# =============================================================================
+# Format-signature-compliant enum expressions
+# =============================================================================
+
+
+class EnumTypeNameExpression(BaseExpression):
+    """Expression for formatting an enum type name with optional schema.
+
+    Attributes:
+        name: Enum type name.
+        schema: Optional schema name.
+
+    Example:
+        >>> expr = EnumTypeNameExpression(dialect, name="status", schema="app")
+        >>> sql, params = expr.to_sql()
+        >>> sql
+        'app.status'
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        schema: Optional[str] = None,
+        *,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.dialect_options = dialect_options or {}
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_enum_type_name"
+
+
+class EnumValuesExpression(BaseExpression):
+    """Expression for formatting a list of enum values for SQL.
+
+    Attributes:
+        values: List of enum value strings.
+
+    Example:
+        >>> expr = EnumValuesExpression(dialect, values=["a", "b", "c"])
+        >>> sql, params = expr.to_sql()
+        >>> sql
+        "'a', 'b', 'c'"
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        values: List[str],
+        *,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        self.values = values
+        self.dialect_options = dialect_options or {}
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_enum_values"
+
+
+class CreateEnumTypeExpression(BaseExpression):
+    """Expression for CREATE TYPE ... AS ENUM statement.
+
+    Attributes:
+        name: Enum type name.
+        values: List of allowed values.
+        schema: Optional schema name.
+        if_not_exists: Add IF NOT EXISTS clause.
+
+    Example:
+        >>> expr = CreateEnumTypeExpression(
+        ...     dialect, name="status", values=["active", "inactive"],
+        ... )
+        >>> sql, params = expr.to_sql()
+        >>> sql
+        "CREATE TYPE status AS ENUM ('active', 'inactive')"
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        values: List[str],
+        schema: Optional[str] = None,
+        if_not_exists: bool = False,
+        *,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.values = values
+        self.schema = schema
+        self.if_not_exists = if_not_exists
+        self.dialect_options = dialect_options or {}
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_enum_type_raw"
+
+
+class DropEnumTypeExpression(BaseExpression):
+    """Expression for DROP TYPE statement.
+
+    Attributes:
+        name: Enum type name.
+        schema: Optional schema name.
+        if_exists: Add IF EXISTS clause.
+        cascade: Add CASCADE clause.
+
+    Example:
+        >>> expr = DropEnumTypeExpression(dialect, name="status")
+        >>> sql, params = expr.to_sql()
+        >>> sql
+        "DROP TYPE status"
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        schema: Optional[str] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
+        *,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.dialect_options = dialect_options or {}
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_enum_type_raw"
+
+
+class AlterEnumAddValueExpression(BaseExpression):
+    """Expression for ALTER TYPE ... ADD VALUE statement.
+
+    Attributes:
+        type_name: Enum type name.
+        new_value: New value to add.
+        schema: Optional schema name.
+        before: Add before this existing value.
+        after: Add after this existing value.
+
+    Example:
+        >>> expr = AlterEnumAddValueExpression(
+        ...     dialect, type_name="status", new_value="archived",
+        ... )
+        >>> sql, params = expr.to_sql()
+        >>> sql
+        "ALTER TYPE status ADD VALUE 'archived'"
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        type_name: str,
+        new_value: str,
+        schema: Optional[str] = None,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        *,
+        dialect_options: Optional[Dict[str, Any]] = None,
+    ):
+        super().__init__(dialect)
+        self.type_name = type_name
+        self.new_value = new_value
+        self.schema = schema
+        self.before = before
+        self.after = after
+        self.dialect_options = dialect_options or {}
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_enum_add_value_raw"

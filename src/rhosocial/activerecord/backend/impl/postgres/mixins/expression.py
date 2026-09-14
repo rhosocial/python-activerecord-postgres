@@ -1,11 +1,13 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/expression.py
 """PostgreSQL expression formatting mixin."""
 
+from typing import Tuple
+
 
 class PostgresExpressionMixin:
     """PostgreSQL-specific expression formatting."""
 
-    def format_cast_expression(self, expr) -> tuple:
+    def format_cast_expression(self, expr) -> Tuple[str, tuple]:
         """Format type cast expression using PostgreSQL :: syntax.
 
         PostgreSQL supports both standard CAST(expr AS type) syntax and the
@@ -37,7 +39,7 @@ class PostgresExpressionMixin:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, params
 
-    def format_binary_operator(self, expr) -> tuple:
+    def format_binary_operator(self, expr) -> Tuple[str, tuple]:
         """Format binary operator with psycopg placeholder escaping.
 
         psycopg uses %s as parameter placeholder. When the SQL operator itself
