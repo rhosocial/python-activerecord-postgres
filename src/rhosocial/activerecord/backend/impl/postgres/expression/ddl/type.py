@@ -418,7 +418,7 @@ class EnumTypeNameExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_enum_type_name"
+        return "format_enum_type_name_expression"
 
 
 class EnumValuesExpression(BaseExpression):
@@ -449,7 +449,7 @@ class EnumValuesExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_enum_values"
+        return "format_enum_values_expression"
 
 
 class CreateEnumTypeExpression(BaseExpression):
