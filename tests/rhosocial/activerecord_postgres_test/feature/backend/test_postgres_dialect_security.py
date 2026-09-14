@@ -23,6 +23,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.core import CastExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
 from typing import Tuple, Any  # noqa: F401
 
 
@@ -54,7 +55,7 @@ def test_postgres_format_column_definition_data_type_validation(dialect):
         data_type=VarCharType(length=255, dialect=dialect),
     )
 
-    sql, params = dialect.format_column_definition(col_def)
+    sql, params = col_def.to_sql()
     assert "VARCHAR(255)" in sql
 
 
@@ -333,7 +334,7 @@ class TestPostgresTriggerFunctionNameSecurity:
             function_name="my_function",
         )
 
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_function"' in sql
 
@@ -354,7 +355,7 @@ class TestPostgresTriggerFunctionNameSecurity:
             function_name="Function With Spaces",
         )
 
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"Function With Spaces"' in sql
 
@@ -376,7 +377,7 @@ class TestPostgresExtendedStatisticsNameSecurity:
             statistics_type="ndistinct",
         )
 
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_stats"' in sql
 
@@ -391,7 +392,7 @@ class TestPostgresExtendedStatisticsNameSecurity:
             name="my_stats",
         )
 
-        sql, params = dialect.format_drop_statistics_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_stats"' in sql
 
@@ -400,57 +401,58 @@ class TestPostgresExtendedStatisticsNameSecurity:
 # format_partition_value — single-quote escaping
 # ============================================================
 
-def _format_partition_value(dialect, value):
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
-
-    sql, params = dialect.format_partition_value(PartitionValue(dialect=dialect, value=value))
-    assert params == ()
-    return sql
-
-
 def test_partition_value_none(dialect):
     """None partition value returns NULL."""
-    result = _format_partition_value(dialect, None)
-    assert result == "NULL"
+    sql, params = PartitionValue(dialect=dialect, value=None).to_sql()
+    assert params == ()
+    assert sql == "NULL"
 
 
 def test_partition_value_maxvalue(dialect):
     """MAXVALUE is returned as-is (case-insensitive)."""
-    result = _format_partition_value(dialect, "MAXVALUE")
-    assert result == "MAXVALUE"
+    sql, params = PartitionValue(dialect=dialect, value="MAXVALUE").to_sql()
+    assert params == ()
+    assert sql == "MAXVALUE"
 
 
 def test_partition_value_minvalue(dialect):
     """MINVALUE is returned as-is (case-insensitive)."""
-    result = _format_partition_value(dialect, "minvalue")
-    assert result == "MINVALUE"
+    sql, params = PartitionValue(dialect=dialect, value="minvalue").to_sql()
+    assert params == ()
+    assert sql == "MINVALUE"
 
 
 def test_partition_value_normal_string(dialect):
     """Normal string value is single-quoted."""
-    result = _format_partition_value(dialect, "2024-01-01")
-    assert result == "'2024-01-01'"
+    sql, params = PartitionValue(dialect=dialect, value="2024-01-01").to_sql()
+    assert params == ()
+    assert sql == "'2024-01-01'"
 
 
 def test_partition_value_escaped_single_quote(dialect):
     """String value with single quote is properly escaped."""
-    result = _format_partition_value(dialect, "it's")
-    assert result == "'it''s'"
-    assert "'; DROP" not in result
+    sql, params = PartitionValue(dialect=dialect, value="it's").to_sql()
+    assert params == ()
+    assert sql == "'it''s'"
+    assert "'; DROP" not in sql
 
 
 def test_partition_value_injection_blocked(dialect):
     """SQL injection in partition value is safely escaped (inside quotes)."""
-    result = _format_partition_value(dialect, "x'; DROP TABLE users--")
-    assert result.count("'") % 2 == 0
-    assert result.startswith("'")
-    assert result.endswith("'")
+    sql, params = PartitionValue(
+        dialect=dialect, value="x'; DROP TABLE users--"
+    ).to_sql()
+    assert params == ()
+    assert sql.count("'") % 2 == 0
+    assert sql.startswith("'")
+    assert sql.endswith("'")
 
 
 def test_partition_value_integer(dialect):
     """Integer partition value is returned as str()."""
-    result = _format_partition_value(dialect, 42)
-    assert result == "42"
+    sql, params = PartitionValue(dialect=dialect, value=42).to_sql()
+    assert params == ()
+    assert sql == "42"
 
 
 # ============================================================

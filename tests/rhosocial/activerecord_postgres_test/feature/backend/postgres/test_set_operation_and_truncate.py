@@ -94,7 +94,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect()
         expr = TruncateExpression(dialect, table_name="users")
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users"'
         assert params == ()
@@ -105,7 +105,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect(version=(9, 0, 0))
         expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users" RESTART IDENTITY'
         assert params == ()
@@ -116,7 +116,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect()
         expr = TruncateExpression(dialect, table_name="orders", cascade=True)
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "orders" CASCADE'
         assert params == ()
@@ -132,7 +132,7 @@ class TestTruncateSupport:
             restart_identity=True,
             cascade=True
         )
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "orders" RESTART IDENTITY CASCADE'
         assert params == ()
@@ -144,7 +144,7 @@ class TestTruncateSupport:
         # PostgreSQL 8.3 does not support RESTART IDENTITY
         dialect = PostgresDialect(version=(8, 3, 0))
         expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         # RESTART IDENTITY should be ignored on unsupported version
         assert sql == 'TRUNCATE TABLE "users"'
