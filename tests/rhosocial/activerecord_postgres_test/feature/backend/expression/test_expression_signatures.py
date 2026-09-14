@@ -4,8 +4,7 @@
 These tests build expressions with a bare ``PostgresDialect`` (no DB
 connection) and assert on the generated SQL, so they run without a server.
 """
-import pytest
-
+from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
     ILIKEExpression,
 )
@@ -26,27 +25,44 @@ class TestILIKEExpression:
     """Tests for ILIKEExpression."""
 
     def test_basic_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(postgres_dialect, column="name", pattern="%foo%")
+        expr = ILIKEExpression(
+            postgres_dialect,
+            column=Column(postgres_dialect, "name"),
+            pattern="%foo%",
+        )
         sql, params = expr.to_sql()
         assert sql == '"name" ILIKE %s'
         assert params == ('%foo%',)
 
     def test_negated_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(postgres_dialect, column="name", pattern="%bar%", negate=True)
+        expr = ILIKEExpression(
+            postgres_dialect,
+            column=Column(postgres_dialect, "name"),
+            pattern="%bar%",
+            negate=True,
+        )
         sql, params = expr.to_sql()
         assert sql == '"name" NOT ILIKE %s'
         assert params == ('%bar%',)
 
     def test_ilike_dispatches_to_postgres_format(self, postgres_dialect):
         """Verify ILIKEExpression.to_sql() dispatches to format_ilike_expression."""
-        expr = ILIKEExpression(postgres_dialect, column="col", pattern="pat")
+        expr = ILIKEExpression(
+            postgres_dialect,
+            column=Column(postgres_dialect, "col"),
+            pattern="pat",
+        )
         sql, params = expr.to_sql()
         assert "ILIKE" in sql
         assert params == ("pat",)
 
     def test_ilike_generates_native_ilike_not_lower(self, postgres_dialect):
         """Verify generated SQL uses native ILIKE, not LOWER() LIKE LOWER()."""
-        expr = ILIKEExpression(postgres_dialect, column="c", pattern="%x%")
+        expr = ILIKEExpression(
+            postgres_dialect,
+            column=Column(postgres_dialect, "c"),
+            pattern="%x%",
+        )
         sql, _ = expr.to_sql()
         assert "LOWER" not in sql.upper()
         assert "ILIKE" in sql
