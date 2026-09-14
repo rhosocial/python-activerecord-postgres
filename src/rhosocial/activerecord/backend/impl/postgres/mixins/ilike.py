@@ -31,11 +31,7 @@ class PostgresILIKEMixin:
             Tuple of (SQL string, (pattern,) params tuple)
 
         """
-        column = expr.column
-        if isinstance(column, str):
-            col_sql = self.format_identifier(column)
-        else:
-            col_sql, _ = column.to_sql()
+        col_sql, _ = expr.column.to_sql()
 
         if expr.negate:
             sql = f"{col_sql} NOT ILIKE %s"
