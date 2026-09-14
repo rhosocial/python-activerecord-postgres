@@ -591,7 +591,7 @@ class PostgresPartitionMixin:
         params: List[Any] = [expr.parent_table]
         schema_filter = ""
         if expr.schema is not None:
-            schema_filter = " AND parent_ns.nspname = %s"
+            schema_filter = f" AND parent_ns.nspname = {self.p()}"
             params.append(expr.schema)
 
         if expr.include_partitions:
@@ -603,7 +603,7 @@ class PostgresPartitionMixin:
                 JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
                 LEFT JOIN pg_inherits i ON i.inhparent = parent.oid
                 LEFT JOIN pg_class child ON child.oid = i.inhrelid
-                WHERE parent.relname = %s{schema_filter}
+                WHERE parent.relname = {self.p()}{schema_filter}
                 ORDER BY child.relname
             """
         else:
@@ -613,6 +613,6 @@ class PostgresPartitionMixin:
                        NULL::text AS bound
                 FROM pg_class parent
                 JOIN pg_namespace parent_ns ON parent_ns.oid = parent.relnamespace
-                WHERE parent.relname = %s{schema_filter}
+                WHERE parent.relname = {self.p()}{schema_filter}
             """
         return sql, tuple(params)

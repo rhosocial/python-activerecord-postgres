@@ -301,11 +301,11 @@ class EnumTypeManager:
         Returns:
             True if type exists
         """
-        where_clause = "typname = %s"
+        where_clause = f"typname = {self._backend.dialect.p()}"
         params = [name]
 
         if schema:
-            where_clause += " AND n.nspname = %s"
+            where_clause += f" AND n.nspname = {self._backend.dialect.p()}"
             params.append(schema)
 
         sql = f"""
@@ -329,11 +329,11 @@ class EnumTypeManager:
         Returns:
             List of enum values, or None if type doesn't exist
         """
-        where_clause = "t.typname = %s"
+        where_clause = f"t.typname = {self._backend.dialect.p()}"
         params = [name]
 
         if schema:
-            where_clause += " AND n.nspname = %s"
+            where_clause += f" AND n.nspname = {self._backend.dialect.p()}"
             params.append(schema)
 
         sql = f"""

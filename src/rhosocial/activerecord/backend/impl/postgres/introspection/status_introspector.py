@@ -379,7 +379,7 @@ class SyncPostgreSQLStatusIntrospector(
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
         # Get database size
-        sql = "SELECT pg_database_size(%s) as size_bytes"
+        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
         rows = self._exec_query(sql, (db_name,))
         size_bytes = rows[0].get('size_bytes') if rows else None
 
@@ -974,7 +974,7 @@ class AsyncPostgreSQLStatusIntrospector(
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
         # Get database size
-        sql = "SELECT pg_database_size(%s) as size_bytes"
+        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
         rows = await self._exec_query_async(sql, (db_name,))
         size_bytes = rows[0].get('size_bytes') if rows else None
 

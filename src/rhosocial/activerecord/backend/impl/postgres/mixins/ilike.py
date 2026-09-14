@@ -33,9 +33,10 @@ class PostgresILIKEMixin:
         """
         col_sql, _ = expr.column.to_sql()
 
+        placeholder = self.p()
         if expr.negate:
-            sql = f"{col_sql} NOT ILIKE %s"
+            sql = f"{col_sql} NOT ILIKE {placeholder}"
         else:
-            sql = f"{col_sql} ILIKE %s"
+            sql = f"{col_sql} ILIKE {placeholder}"
 
         return sql, (expr.pattern,)

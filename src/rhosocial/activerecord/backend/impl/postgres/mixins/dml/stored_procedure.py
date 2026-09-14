@@ -161,7 +161,7 @@ class PostgresStoredProcedureMixin:
         full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)  # noqa: E501
 
         if arguments:
-            placeholders = ", ".join(["%s"] * len(arguments))
+            placeholders = ", ".join([self.p()] * len(arguments))
             sql = f"CALL {full_name}({placeholders})"
             return sql, tuple(arguments)
         else:
