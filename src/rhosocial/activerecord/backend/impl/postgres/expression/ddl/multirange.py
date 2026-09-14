@@ -55,7 +55,7 @@ class CreateMultirangeTypeExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_create_multirange_type_statement"
+        return "format_create_multirange_type_statement_expression"
 
 
 class MultirangeAggFunctionExpression(BaseExpression):
@@ -101,4 +101,4 @@ class MultirangeAggFunctionExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_multirange_agg_function"
+        return "format_multirange_agg_function_expression"
