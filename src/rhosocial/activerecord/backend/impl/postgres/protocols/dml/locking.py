@@ -58,3 +58,20 @@ class PostgresLockingSupport(LockingSupport, Protocol):
             Tuple of (SQL string, parameters tuple)
         """
         ...
+
+    def supports_lock_strength(self, strength: Any) -> bool:
+        """Whether a specific lock strength is supported.
+
+        PostgreSQL lock strength support by version:
+        - FOR UPDATE: all versions
+        - FOR NO KEY UPDATE: PostgreSQL 9.0+
+        - FOR SHARE: PostgreSQL 9.0+
+        - FOR KEY SHARE: PostgreSQL 9.3+
+
+        Args:
+            strength: The LockStrength enum value to check.
+
+        Returns:
+            True if the lock strength is supported, False otherwise.
+        """
+        ...

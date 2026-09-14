@@ -51,3 +51,17 @@ class PostgresMaterializedViewSupport(Protocol):
             Tuple of (SQL statement, parameters tuple)
         """
         ...
+
+    def format_create_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
+
+        Supports column aliases, TABLESPACE, WITH (storage_options),
+        and WITH DATA / WITH NO DATA.
+
+        Args:
+            expr: CreateMaterializedViewExpression instance
+
+        Returns:
+            Tuple of (SQL statement, parameters tuple)
+        """
+        ...

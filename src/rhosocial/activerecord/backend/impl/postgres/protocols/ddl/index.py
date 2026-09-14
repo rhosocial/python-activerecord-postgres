@@ -193,6 +193,36 @@ class PostgresIndexSupport(IndexSupport, Protocol):
         """
         ...  # pragma: no cover
 
+    def format_add_index_action(self, action: Any) -> Tuple[str, tuple]:
+        """Format ALTER TABLE ADD INDEX action.
+
+        PostgreSQL does not support ADD INDEX inside ALTER TABLE; this
+        raises ``UnsupportedFeatureError`` and directs callers to
+        ``CREATE INDEX``.
+
+        Args:
+            action: Index action to format.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...  # pragma: no cover
+
+    def format_drop_index_action(self, action: Any) -> Tuple[str, tuple]:
+        """Format ALTER TABLE DROP INDEX action.
+
+        PostgreSQL does not support DROP INDEX inside ALTER TABLE; this
+        raises ``UnsupportedFeatureError`` and directs callers to
+        ``DROP INDEX``.
+
+        Args:
+            action: Index action to format.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...  # pragma: no cover
+
     def format_create_index_pg_statement(
         self,
         index_name: str,

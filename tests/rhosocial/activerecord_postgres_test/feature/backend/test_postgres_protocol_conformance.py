@@ -294,6 +294,9 @@ class TestProtocolNonOverlap:
             ('PostgresSetOperationSupport', 'SetOperationSupport'),
             ('ViewSupport', 'PostgresViewSupport'),
             ('PostgresViewSupport', 'ViewSupport'),
+            # PG materialized-view protocol restates the generic view formatter
+            ('ViewSupport', 'PostgresMaterializedViewSupport'),
+            ('PostgresMaterializedViewSupport', 'ViewSupport'),
             ('SchemaSupport', 'PostgresSchemaSupport'),
             ('PostgresSchemaSupport', 'SchemaSupport'),
             ('SequenceSupport', 'PostgresSequenceSupport'),

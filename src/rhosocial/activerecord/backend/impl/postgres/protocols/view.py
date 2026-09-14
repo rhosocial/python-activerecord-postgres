@@ -1,7 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/protocols/view.py
 """PostgreSQL view feature support protocol."""
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, Tuple
 
 
 @runtime_checkable
@@ -17,3 +17,17 @@ class PostgresViewSupport(Protocol):
     def supports_refresh_materialized_view(self) -> bool: ...
     def supports_materialized_view_tablespace(self) -> bool: ...
     def supports_materialized_view_storage_options(self) -> bool: ...
+
+    def format_create_view_statement(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE VIEW statement for PostgreSQL.
+
+        Supports TEMPORARY, OR REPLACE, column aliases, and
+        WITH {LOCAL|CASCADED} CHECK OPTION.
+
+        Args:
+            expr: CreateViewExpression instance
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
+        """
+        ...
