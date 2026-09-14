@@ -84,7 +84,8 @@ def test_postgres_format_default_constraint_string_escaping(dialect):
 
 def test_postgres_format_storage_options_string_escaping(dialect):
     """Test storage options string values are escaped."""
-    storage_opts = {"key": "value's"}
+    from rhosocial.activerecord.backend.expression.statements import StorageOptionsExpression
+    storage_opts = StorageOptionsExpression(dialect, {"key": "value's"})
     sql, params = dialect.format_storage_options(storage_opts)
     assert "value''s" in sql
     assert "'; DROP" not in sql
