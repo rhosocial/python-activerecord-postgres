@@ -163,6 +163,8 @@ class TestPostgresDialectProtocolConformance:
 # conscious decision (move to POSTGRES_PROTOCOLS or revert).
 POSTGRES_NOT_IMPLEMENTED = [
     # --- Intentional non-support ---
+    # The generic DatabaseSupport protocol is not composed by PostgresDialect.
+    dialect_protocols.DatabaseSupport,
     # Postgres exposes routine DDL through its own PostgresRoutineSupport
     # protocol rather than the generic SQL/PSM FunctionSupport.
     dialect_protocols.FunctionSupport,
