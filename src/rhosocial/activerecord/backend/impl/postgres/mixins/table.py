@@ -143,8 +143,11 @@ class PostgresTableMixin:
                 "must contain only alphanumeric characters, spaces, parentheses, commas, and brackets."
             )
         col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
-        dialect_opts = col_def.dialect_options or {}
-        identity = dialect_opts.get("identity")
+
+        identity = getattr(col_def, 'identity', None)
+        if not identity:
+            dialect_opts = col_def.dialect_options or {}
+            identity = dialect_opts.get("identity")
         if identity:
             if identity.upper() in ("ALWAYS", "BY DEFAULT"):
                 col_sql += f" GENERATED {identity.upper()} AS IDENTITY"
