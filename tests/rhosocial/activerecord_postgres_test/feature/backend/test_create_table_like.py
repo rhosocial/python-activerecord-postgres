@@ -4,13 +4,12 @@ PostgreSQL CREATE TABLE ... LIKE syntax tests.
 
 This module tests the PostgreSQL-specific LIKE syntax for CREATE TABLE statements,
 including INCLUDING/EXCLUDING options.
+
+The LIKE form is modelled by :class:`CreateTableLikeExpression` and rendered by
+the dialect's ``format_create_table_like_statement`` into PostgreSQL's clause
+form ``CREATE TABLE t (LIKE src [INCLUDING ...])``.
 """
-import pytest  # noqa: F401
-from rhosocial.activerecord.backend.expression import CreateTableExpression, ColumnDefinition
-from rhosocial.activerecord.backend.expression.statements import ColumnConstraint, ColumnConstraintType
-from rhosocial.activerecord.backend.expression.types import (
-    IntegerType, VarCharType,
-)
+from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 
@@ -20,13 +19,8 @@ class TestPostgreSQLCreateTableLike:
     def test_basic_like_syntax(self):
         """Test basic CREATE TABLE ... LIKE syntax."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
-            table="users_copy",
-            columns=[],
-            dialect_options={'like_table': 'users'}
-        )
-        sql, params = create_expr.to_sql()
+        expr = CreateTableLikeExpression(dialect, table="users_copy", like_table="users")
+        sql, params = expr.to_sql()
 
         assert sql == 'CREATE TABLE "users_copy" (LIKE "users")'
         assert params == ()
@@ -34,142 +28,147 @@ class TestPostgreSQLCreateTableLike:
     def test_like_with_including_defaults(self):
         """Test LIKE with INCLUDING DEFAULTS option."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {'including': ['DEFAULTS']}
-            }
+            like_table="users",
+            like_options={'including': ['defaults']},
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users" INCLUDING DEFAULTS)'
         assert params == ()
 
     def test_like_with_including_constraints(self):
         """Test LIKE with INCLUDING CONSTRAINTS option."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {'including': ['CONSTRAINTS']}
-            }
+            like_table="users",
+            like_options={'including': ['constraints']},
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING CONSTRAINTS)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users" INCLUDING CONSTRAINTS)'
         assert params == ()
 
     def test_like_with_including_indexes(self):
         """Test LIKE with INCLUDING INDEXES option."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {'including': ['INDEXES']}
-            }
+            like_table="users",
+            like_options={'including': ['indexes']},
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING INDEXES)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users" INCLUDING INDEXES)'
         assert params == ()
 
     def test_like_with_multiple_including_options(self):
         """Test LIKE with multiple INCLUDING options (dictionary format)."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {
-                    'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES']
-                }
-            }
+            like_table="users",
+            like_options={'including': ['defaults', 'constraints', 'indexes']},
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, INCLUDING INDEXES)'  # noqa: E501
+        assert sql == (
+            'CREATE TABLE "users_copy" (LIKE "users" '
+            'INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)'
+        )
         assert params == ()
 
     def test_like_with_including_and_excluding_options(self):
         """Test LIKE with both INCLUDING and EXCLUDING options."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {
-                    'including': ['DEFAULTS', 'CONSTRAINTS'],
-                    'excluding': ['INDEXES', 'COMMENTS']
-                }
-            }
+            like_table="users",
+            like_options={
+                'including': ['defaults', 'constraints'],
+                'excluding': ['indexes', 'comments'],
+            },
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS, EXCLUDING INDEXES, EXCLUDING COMMENTS)'  # noqa: E501
+        assert sql == (
+            'CREATE TABLE "users_copy" (LIKE "users" '
+            'INCLUDING DEFAULTS INCLUDING CONSTRAINTS '
+            'EXCLUDING INDEXES EXCLUDING COMMENTS)'
+        )
         assert params == ()
 
     def test_like_with_list_format_options(self):
-        """Test LIKE with options in list format (backwards compatibility)."""
+        """Test LIKE with options in list format (plain strings => INCLUDING)."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': ['DEFAULTS', 'CONSTRAINTS']
-            }
+            like_table="users",
+            like_options=['defaults', 'constraints'],
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        # Should default to INCLUDING when just feature name is provided
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, INCLUDING CONSTRAINTS)'
+        assert sql == (
+            'CREATE TABLE "users_copy" (LIKE "users" '
+            'INCLUDING DEFAULTS INCLUDING CONSTRAINTS)'
+        )
         assert params == ()
 
     def test_like_with_tuple_format_options(self):
-        """Test LIKE with options in tuple format (backwards compatibility)."""
+        """Test LIKE with options in (action, feature) tuple format."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': [
-                    ('INCLUDING', 'DEFAULTS'),
-                    ('EXCLUDING', 'INDEXES')
-                ]
-            }
+            like_table="users",
+            like_options=[
+                ('INCLUDING', 'DEFAULTS'),
+                ('EXCLUDING', 'INDEXES'),
+            ],
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, EXCLUDING INDEXES)'
+        assert sql == (
+            'CREATE TABLE "users_copy" (LIKE "users" '
+            'INCLUDING DEFAULTS EXCLUDING INDEXES)'
+        )
+        assert params == ()
+
+    def test_like_with_lowercase_option_names(self):
+        """Option feature names are upper-cased in the rendered clause."""
+        dialect = PostgresDialect()
+        expr = CreateTableLikeExpression(
+            dialect,
+            table="users_copy",
+            like_table="users",
+            like_options={'including': ['comments', 'defaults']},
+        )
+        sql, params = expr.to_sql()
+
+        assert sql == (
+            'CREATE TABLE "users_copy" (LIKE "users" '
+            'INCLUDING COMMENTS INCLUDING DEFAULTS)'
+        )
         assert params == ()
 
     def test_like_with_if_not_exists(self):
         """Test CREATE TABLE ... LIKE with IF NOT EXISTS."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
+            like_table="users",
             if_not_exists=True,
-            dialect_options={'like_table': 'users'}
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
         assert sql == 'CREATE TABLE IF NOT EXISTS "users_copy" (LIKE "users")'
         assert params == ()
@@ -177,14 +176,13 @@ class TestPostgreSQLCreateTableLike:
     def test_like_with_temporary(self):
         """Test CREATE TEMPORARY TABLE ... LIKE."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="temp_users",
-            columns=[],
+            like_table="users",
             temporary=True,
-            dialect_options={'like_table': 'users'}
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
         assert sql == 'CREATE TEMPORARY TABLE "temp_users" (LIKE "users")'
         assert params == ()
@@ -192,93 +190,49 @@ class TestPostgreSQLCreateTableLike:
     def test_like_with_schema_qualified_table(self):
         """Test CREATE TABLE ... LIKE with schema-qualified source table."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={'like_table': ('public', 'users')}
+            like_table=('public', 'users'),
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
         assert sql == 'CREATE TABLE "users_copy" (LIKE "public"."users")'
-        assert params == ()
-
-    def test_like_ignores_columns(self):
-        """Test that LIKE syntax ignores columns parameter."""
-        dialect = PostgresDialect()
-        columns = [
-            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)
-            ]),
-            ColumnDefinition(dialect, "name", VarCharType(length=255, dialect=dialect))
-        ]
-        create_expr = CreateTableExpression(
-            dialect=dialect,
-            table="users_copy",
-            columns=columns,
-            dialect_options={'like_table': 'users'}
-        )
-        sql, params = create_expr.to_sql()
-
-        # LIKE syntax should take precedence, columns should be ignored
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users")'
         assert params == ()
 
     def test_like_with_temporary_and_if_not_exists(self):
         """Test CREATE TEMPORARY TABLE ... LIKE with IF NOT EXISTS."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="temp_users_copy",
-            columns=[],
+            like_table=('public', 'users'),
             temporary=True,
             if_not_exists=True,
-            dialect_options={'like_table': ('public', 'users')}
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users_copy" (LIKE "public"."users")'
+        assert sql == (
+            'CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users_copy" '
+            '(LIKE "public"."users")'
+        )
         assert params == ()
 
     def test_like_with_all_option(self):
         """Test LIKE with INCLUDING ALL option."""
         dialect = PostgresDialect()
-        create_expr = CreateTableExpression(
-            dialect=dialect,
+        expr = CreateTableLikeExpression(
+            dialect,
             table="users_copy",
-            columns=[],
-            dialect_options={
-                'like_table': 'users',
-                'like_options': {'including': ['ALL']}
-            }
+            like_table="users",
+            like_options={'including': ['all']},
         )
-        sql, params = create_expr.to_sql()
+        sql, params = expr.to_sql()
 
-        assert sql == 'CREATE TABLE "users_copy" (LIKE "users", INCLUDING ALL)'
+        assert sql == 'CREATE TABLE "users_copy" (LIKE "users" INCLUDING ALL)'
         assert params == ()
 
-    def test_fallback_to_base_when_no_like(self):
-        """Test that base implementation is used when LIKE is not specified."""
+    def test_supports_create_table_like(self):
+        """PostgreSQL advertises CREATE TABLE ... (LIKE ...) support."""
         dialect = PostgresDialect()
-        columns = [
-            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)
-            ]),
-            ColumnDefinition(dialect, "name", VarCharType(length=255, dialect=dialect), constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
-            ])
-        ]
-        create_expr = CreateTableExpression(
-            dialect=dialect,
-            table="users",
-            columns=columns
-        )
-        sql, params = create_expr.to_sql()
-
-        # Should use base implementation
-        assert "CREATE TABLE" in sql
-        assert '"users"' in sql
-        assert '"id"' in sql
-        assert '"name"' in sql
-        assert "PRIMARY KEY" in sql
-        assert "NOT NULL" in sql
+        assert dialect.supports_create_table_like() is True

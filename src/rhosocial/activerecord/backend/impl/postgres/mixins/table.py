@@ -44,71 +44,14 @@ class PostgresTableMixin:
         """Render CREATE TABLE for PostgreSQL.
 
         Handles PostgreSQL-specific CREATE TABLE behavior:
-        * PostgreSQL LIKE syntax with INCLUDING/EXCLUDING options.
         * Declarative partitioning validation for ``partition`` expressions.
         * UNLOGGED table qualifier.
-
-        The LIKE syntax is controlled by ``dialect_options['like_table']``.
-        When present, all other parameters (columns, indexes, constraints)
-        are ignored. The ``like_options`` key controls INCLUDING/EXCLUDING
-        behavior (dict or list format).
 
         Partition validation follows PostgreSQL declarative partitioning rules:
         - RANGE and LIST require PostgreSQL 10+.
         - HASH requires PostgreSQL 11+.
         - MySQL-specific methods (KEY, RANGE COLUMNS) are rejected.
         """
-        # Check for LIKE syntax in dialect_options (highest priority)
-        if "like_table" in expr.dialect_options:
-            like_table = expr.dialect_options["like_table"]
-            like_options = expr.dialect_options.get("like_options", [])
-
-            parts = ["CREATE"]
-
-            if expr.temporary:
-                parts.append("TEMPORARY")
-
-            parts.append("TABLE")
-
-            if expr.if_not_exists:
-                parts.append("IF NOT EXISTS")
-
-            parts.append(self.format_identifier(expr.table_name))
-
-            # Build LIKE clause with options
-            like_parts = []
-
-            # Handle schema-qualified table name: ('schema', 'table')
-            if isinstance(like_table, tuple):
-                schema, table = like_table
-                like_table_str = f"{self.format_identifier(schema)}.{self.format_identifier(table)}"
-            else:
-                like_table_str = self.format_identifier(like_table)
-
-            like_parts.append(f"LIKE {like_table_str}")
-
-            # Add INCLUDING/EXCLUDING options
-            if isinstance(like_options, dict):
-                including = like_options.get("including", [])
-                excluding = like_options.get("excluding", [])
-
-                for option in including:
-                    like_parts.append(f"INCLUDING {option.upper()}")
-
-                for option in excluding:
-                    like_parts.append(f"EXCLUDING {option.upper()}")
-            elif isinstance(like_options, list):
-                for option in like_options:
-                    if isinstance(option, tuple):
-                        action, feature = option
-                        like_parts.append(f"{action.upper()} {feature.upper()}")
-                    else:
-                        like_parts.append(f"INCLUDING {option.upper()}")
-
-            parts.append(f"({', '.join(like_parts)})")
-
-            return " ".join(parts), ()
-
         if getattr(expr, "partition", None) is not None:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
@@ -138,13 +81,61 @@ class PostgresTableMixin:
             return sql.replace(temp_prefix, "CREATE UNLOGGED TABLE ", 1), params
         return sql, params
 
-    def format_create_table_like(self, expr) -> Tuple[str, tuple]:
-        """Format CREATE TABLE (LIKE ...) statement for PostgreSQL.
+    def format_create_table_like_statement(self, expr) -> Tuple[str, tuple]:
+        """Format CREATE TABLE (LIKE ...) for PostgreSQL.
 
-        Delegates to format_create_table_statement which already handles
-        the 'like_table' key in dialect_options.
+        PostgreSQL uses a column-list clause rather than the generic
+        ``LIKE <source>`` form::
+
+            CREATE [TEMPORARY] TABLE [IF NOT EXISTS] <target>
+                (LIKE <source> [INCLUDING <feature>]... [EXCLUDING <feature>]...)
+
+        ``expr.like_options`` accepts:
+
+        * ``dict`` with ``"including"`` / ``"excluding"`` lists;
+        * ``list`` of feature strings (treated as ``INCLUDING``);
+        * ``list`` of ``(action, feature)`` tuples (``ACTION FEATURE``).
         """
-        return self.format_create_table_statement(expr)
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        if not self.supports_create_table_like():
+            raise UnsupportedFeatureError(self.name, "CREATE TABLE ... (LIKE ...)")
+
+        parts = ["CREATE"]
+        if expr.temporary:
+            parts.append("TEMPORARY")
+        parts.append("TABLE")
+        if expr.if_not_exists:
+            parts.append("IF NOT EXISTS")
+
+        table_sql, table_params = expr.table.to_sql()
+        parts.append(table_sql)
+
+        source_sql, source_params = expr.like_table.to_sql()
+
+        like_parts = [f"LIKE {source_sql}"]
+
+        like_options = expr.like_options or []
+        if isinstance(like_options, dict):
+            including = like_options.get("including", [])
+            excluding = like_options.get("excluding", [])
+            for option in including:
+                like_parts.append(f"INCLUDING {option.upper()}")
+            for option in excluding:
+                like_parts.append(f"EXCLUDING {option.upper()}")
+        elif isinstance(like_options, list):
+            for option in like_options:
+                if isinstance(option, tuple):
+                    action, feature = option
+                    like_parts.append(f"{action.upper()} {feature.upper()}")
+                else:
+                    like_parts.append(f"INCLUDING {option.upper()}")
+
+        parts.append(f"({' '.join(like_parts)})")
+
+        return " ".join(parts), tuple(table_params) + tuple(source_params)
 
     def format_column_definition(self, col_def) -> Tuple[str, tuple]:
         from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
