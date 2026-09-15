@@ -52,7 +52,7 @@ class PostgresLockingSupport(LockingSupport, Protocol):
         """Format PostgreSQL-specific FOR UPDATE clause.
 
         Args:
-            clause: PostgresForUpdateClause instance
+            clause: ForUpdateClause instance
 
         Returns:
             Tuple of (SQL string, parameters tuple)

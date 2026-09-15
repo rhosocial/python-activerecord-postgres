@@ -18,7 +18,6 @@ from .advisory import (
     PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
-from .locking import LockStrength
 from .ilike import ILIKEExpression
 from .ddl import (
     PostgresVacuumExpression,
@@ -110,7 +109,6 @@ __all__ = [
     "PostgresTryAdvisoryLockExpression",
     "AdvisoryLockType",
     # locking
-    "LockStrength",
     # ilike
     "ILIKEExpression",
     # ddl

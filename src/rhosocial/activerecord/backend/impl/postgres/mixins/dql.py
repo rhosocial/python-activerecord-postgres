@@ -14,3 +14,7 @@ class PostgresDQLMixin:
         FOR UPDATE SKIP LOCKED (since 9.5).
         """
         return True
+
+    def supports_nulls_first_last(self) -> bool:
+        """PostgreSQL supports explicit NULLS FIRST / NULLS LAST ordering."""
+        return True
