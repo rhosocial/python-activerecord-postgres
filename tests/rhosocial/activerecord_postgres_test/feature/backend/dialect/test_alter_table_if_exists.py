@@ -173,10 +173,10 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameColumn,
+            RenameObject,
         )
 
-        sql, params = RenameColumn(
+        sql, params = RenameObject(
             dialect, old_name="id", new_name="order_id"
         ).to_sql()
         assert 'RENAME COLUMN "id" TO "order_id"' == sql
@@ -184,13 +184,13 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column_inside_alter_table(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameColumn,
+            RenameObject,
         )
 
         expr = AlterTableExpression(
             dialect,
             table_name="orders",
-            actions=[RenameColumn(dialect, old_name="id", new_name="order_id")],
+            actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "orders"' in sql

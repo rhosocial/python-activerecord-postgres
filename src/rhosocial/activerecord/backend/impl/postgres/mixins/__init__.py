@@ -13,7 +13,7 @@ This package organizes PostgreSQL-specific mixins by category:
 
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
-from .table import PostgresTableMixin
+from .ddl_table import PostgresTableMixin
 from .datetime import PostgresDateTimeMixin
 from .dql import PostgresDQLMixin
 from .json import PostgresJSONMixin
