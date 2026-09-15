@@ -3,6 +3,8 @@
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
 if TYPE_CHECKING:
     from ...expression.statements.ddl_truncate import TruncateExpression
 
@@ -29,7 +31,14 @@ class PostgresTruncateMixin:
         parts = ["TRUNCATE TABLE"]
         parts.append(self.format_identifier(expr.table_name))
 
-        if expr.restart_identity and self.supports_truncate_restart_identity():
+        if expr.restart_identity:
+            if not self.supports_truncate_restart_identity():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "RESTART IDENTITY",
+                    f"{self.name} does not support TRUNCATE ... RESTART IDENTITY "
+                    f"for versions < 8.4."
+                )
             parts.append("RESTART IDENTITY")
 
         if expr.cascade:
