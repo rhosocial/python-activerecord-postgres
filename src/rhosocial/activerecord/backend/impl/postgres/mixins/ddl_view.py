@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/mixins/view.py
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_view.py
 """PostgreSQL view feature support implementation."""
 
 from typing import Tuple, TYPE_CHECKING
@@ -12,6 +12,13 @@ class PostgresViewMixin:
 
     def supports_or_replace_view(self) -> bool:
         return True
+
+    def supports_create_or_replace_view(self) -> bool:
+        return True
+
+    def supports_if_not_exists_view(self) -> bool:
+        """PostgreSQL does not support IF NOT EXISTS for views."""
+        return False
 
     def supports_temporary_view(self) -> bool:
         return True
@@ -59,7 +66,7 @@ class PostgresViewMixin:
         if expr.temporary:
             parts.append("TEMPORARY")
 
-        if expr.replace:
+        if expr.replace and self.supports_create_or_replace_view():
             parts.append("OR REPLACE")
 
         parts.append("VIEW")

@@ -111,7 +111,7 @@ from .truncate import PostgresTruncateMixin
 from .schema import PostgresSchemaMixin
 from .sequence import PostgresSequenceMixin
 from .transaction import PostgresTransactionMixin
-from .view import PostgresViewMixin
+from .ddl_view import PostgresViewMixin
 from .xml import PostgresXMLMixin
 from .collation import PostgresCollationMixin
 from .ordered_set_aggregation import PostgresOrderedSetAggMixin
