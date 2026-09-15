@@ -46,8 +46,8 @@ class PostgresTableSupport(TableSupport, Protocol):
         """Whether CREATE UNLOGGED TABLE is supported.
 
         UNLOGGED tables skip WAL writes (9.6+), trading crash safety for
-        speed; callers opt in via ``dialect_options={"unlogged_table":
-        True}`` on ``CreateTableExpression``.
+        speed; callers opt in via ``CreateTableOptions(unlogged=True)`` on
+        ``CreateTableExpression``.
         """
         ...
 

@@ -214,7 +214,14 @@ class TestPostgresRenameColumnAndTable:
 
 
 class TestPostgresCreateUnloggedTable:
-    """CREATE UNLOGGED TABLE via dialect_options on CreateTableExpression."""
+    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableExpression."""
+
+    @staticmethod
+    def _options(dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableOptions,
+        )
+        return CreateTableOptions(dialect, unlogged=True)
 
     def test_unlogged_renders_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
@@ -225,7 +232,7 @@ class TestPostgresCreateUnloggedTable:
             dialect,
             table="audit",
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
-            dialect_options={"unlogged_table": True},
+            table_options=self._options(dialect),
         )
         sql, params = expr.to_sql()
         assert sql.startswith('CREATE UNLOGGED TABLE "audit"')
@@ -245,7 +252,10 @@ class TestPostgresCreateUnloggedTable:
         assert not sql.startswith("CREATE UNLOGGED")
         assert params == ()
 
-    def test_temporary_wins_over_unlogged(self, dialect):
+    def test_unlogged_with_temporary_rejected(self, dialect):
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
             CreateTableExpression,
         )
@@ -255,11 +265,10 @@ class TestPostgresCreateUnloggedTable:
             table="audit",
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             temporary=True,
-            dialect_options={"unlogged_table": True},
+            table_options=self._options(dialect),
         )
-        sql, params = expr.to_sql()
-        assert sql.startswith("CREATE TEMPORARY TABLE")
-        assert params == ()
+        with pytest.raises(UnsupportedFeatureError):
+            expr.to_sql()
 
     def test_version_gate_94(self):
         from rhosocial.activerecord.backend.dialect.exceptions import (
@@ -267,6 +276,7 @@ class TestPostgresCreateUnloggedTable:
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
             CreateTableExpression,
+            CreateTableOptions,
         )
 
         low = PostgresDialect(version=(9, 4, 0))
@@ -274,7 +284,7 @@ class TestPostgresCreateUnloggedTable:
             low,
             table="audit",
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
-            dialect_options={"unlogged_table": True},
+            table_options=CreateTableOptions(low, unlogged=True),
         )
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()

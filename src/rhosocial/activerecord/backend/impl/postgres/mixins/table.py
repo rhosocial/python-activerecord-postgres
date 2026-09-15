@@ -45,7 +45,10 @@ class PostgresTableMixin:
 
         Handles PostgreSQL-specific CREATE TABLE behavior:
         * Declarative partitioning validation for ``partition`` expressions.
-        * UNLOGGED table qualifier.
+
+        ``UNLOGGED`` is carried by :class:`CreateTableOptions` (``unlogged=True``)
+        and rendered by the generic core renderer, gated on
+        :meth:`supports_unlogged_table`.
 
         Partition validation follows PostgreSQL declarative partitioning rules:
         - RANGE and LIST require PostgreSQL 10+.
@@ -56,30 +59,23 @@ class PostgresTableMixin:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
-        # Delegate to base implementation (TableMixin)
-        sql, params = super().format_create_table_statement(expr)
-
-        # Apply UNLOGGED qualifier if requested
-        if not (getattr(expr, "dialect_options", None) or {}).get("unlogged_table"):
-            return sql, params
-        if getattr(expr, "temporary", False):
-            return sql, params
-        if not self.supports_unlogged_table():
+        table_options = getattr(expr, "table_options", None)
+        if (
+            table_options is not None
+            and table_options.unlogged
+            and getattr(expr, "temporary", False)
+        ):
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,
             )
             raise UnsupportedFeatureError(
                 self.name,
-                "CREATE UNLOGGED TABLE",
-                suggestion="requires PostgreSQL 9.5+",
+                "CREATE UNLOGGED TEMPORARY TABLE",
+                suggestion="UNLOGGED and TEMPORARY are mutually exclusive in PostgreSQL",
             )
-        prefix = "CREATE TABLE "
-        if sql.startswith(prefix):
-            return sql.replace(prefix, "CREATE UNLOGGED TABLE ", 1), params
-        temp_prefix = "CREATE TEMPORARY TABLE "
-        if sql.startswith(temp_prefix):
-            return sql.replace(temp_prefix, "CREATE UNLOGGED TABLE ", 1), params
-        return sql, params
+
+        # Delegate to base implementation (TableMixin)
+        return super().format_create_table_statement(expr)
 
     def format_create_table_like_statement(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TABLE (LIKE ...) for PostgreSQL.
