@@ -164,4 +164,8 @@ class PostgresTableMixin:
         if col_def.comment:
             escaped_comment = SQLDialectBase._escape_sql_string(col_def.comment)
             col_sql += f" COMMENT '{escaped_comment}'"
+        if col_def.generated_expression is not None:
+            gen_sql, gen_params = col_def.generated_expression.to_sql()
+            col_sql += gen_sql
+            all_params.extend(gen_params)
         return col_sql, tuple(all_params)
