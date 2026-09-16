@@ -17,18 +17,17 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     SQLXMLMixin,
     CollationMixin,
     CTEMixin,
-    FilterClauseMixin,
+
     WindowFunctionMixin,
     JSONMixin,
-    AdvancedGroupingMixin,
+
     ArrayMixin,
     ExplainMixin,
     GraphMixin,
     GraphTableMixin,
-    LockingMixin,
+
     MergeMixin,
-    OrderedSetAggregationMixin,
-    QualifyClauseMixin,
+
     TemporalTableMixin,
     UpsertMixin,
     LateralJoinMixin,
@@ -327,21 +326,20 @@ class PostgresDialect(
     TruncateMixin,
     ILIKEMixin,
     CTEMixin,
-    FilterClauseMixin,
+
     WindowFunctionMixin,
     PostgresJSONBEnhancedMixin,
     JSONMixin,
-    AdvancedGroupingMixin,
+
     ArrayMixin,
     ExplainMixin,
     PostgresPropertyGraphQueryMixin,
     GraphMixin,
     GraphTableMixin,
     PostgresLockingMixin,
-    LockingMixin,
+
     MergeMixin,
-    OrderedSetAggregationMixin,
-    QualifyClauseMixin,
+
     TemporalTableMixin,
     UpsertMixin,
     LateralJoinMixin,
