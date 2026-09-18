@@ -69,13 +69,13 @@ def ltree_env(postgres_backend_single):
         table="test_ltree",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -107,14 +107,14 @@ def ltree_env(postgres_backend_single):
         table="test_ltree_tree",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
-            ColumnDefinition(name="label", data_type=TextType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
+            ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -146,13 +146,13 @@ def ltree_env(postgres_backend_single):
         table="test_ltree_func",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -178,13 +178,13 @@ def ltree_env(postgres_backend_single):
         table="test_ltree_idx",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -226,13 +226,13 @@ def ltree_env(postgres_backend_single):
         table="test_ltree_txtq",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -575,13 +575,13 @@ async def async_ltree_env(async_postgres_backend_single):
         table="test_ltree_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -613,14 +613,14 @@ async def async_ltree_env(async_postgres_backend_single):
         table="test_ltree_tree_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
-            ColumnDefinition(name="label", data_type=TextType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
+            ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -652,13 +652,13 @@ async def async_ltree_env(async_postgres_backend_single):
         table="test_ltree_func_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -684,13 +684,13 @@ async def async_ltree_env(async_postgres_backend_single):
         table="test_ltree_idx_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -732,13 +732,13 @@ async def async_ltree_env(async_postgres_backend_single):
         table="test_ltree_txtq_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="path", data_type=PostgresLtreeType()),
+            ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )

@@ -48,16 +48,16 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
 
 def _id_column():
     return ColumnDefinition(
-        name="id",
-        data_type=PostgresSerialType(),
+        dialect, name="id",
+        data_type=PostgresSerialType(dialect=dialect),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
         ],
     )
 
 
 def _embedding_column(dim=3):
-    return ColumnDefinition(name="embedding", data_type=PostgresVectorType(dim))
+    return ColumnDefinition(dialect, name="embedding", data_type=PostgresVectorType(dim, dialect=dialect))
 
 
 def _vector_literal(value, vector_type="vector"):

@@ -14,7 +14,13 @@ Methods retained in this mixin:
 - format_multirange_agg_function: Complete SELECT query template
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
+        CreateMultirangeTypeExpression,
+        MultirangeAggFunctionExpression,
+    )
 
 
 class MultirangeMixin:
@@ -90,3 +96,39 @@ class MultirangeMixin:
         if where_clause:
             sql += f" WHERE {where_clause}"
         return (sql, ())
+
+    # =========================================================================
+    # Expression-based format methods
+    # =========================================================================
+
+    def format_create_multirange_type_statement_expression(
+        self, expr: "CreateMultirangeTypeExpression"
+    ) -> Tuple[str, tuple]:
+        """Format CREATE TYPE ... AS MULTIRANGE from expression object.
+
+        Args:
+            expr: :class:`CreateMultirangeTypeExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        return self.format_create_multirange_type_statement(
+            expr.name, expr.range_type, expr.schema
+        )
+
+    def format_multirange_agg_function_expression(
+        self, expr: "MultirangeAggFunctionExpression"
+    ) -> Tuple[str, tuple]:
+        """Format multirange_agg aggregate function call from expression object.
+
+        Args:
+            expr: :class:`MultirangeAggFunctionExpression` instance.
+
+        Returns:
+            Tuple of (SQL string, empty params tuple).
+
+        """
+        return self.format_multirange_agg_function(
+            expr.range_column, expr.table_name, expr.where_clause, expr.schema
+        )

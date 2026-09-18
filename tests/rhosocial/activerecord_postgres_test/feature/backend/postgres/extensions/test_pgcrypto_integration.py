@@ -58,14 +58,14 @@ def _setup_users_table(backend, dialect, table):
     """Create and populate the test_pgcrypto_users table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=TextType()),
-        ColumnDefinition(name="password_hash", data_type=TextType()),
+        ColumnDefinition(dialect, name="username", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="password_hash", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -99,13 +99,13 @@ def _setup_encrypt_table(backend, dialect, table):
     """Create and populate the test_pgcrypto_encrypt table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="secret_data", data_type=PostgresByteaType()),
+        ColumnDefinition(dialect, name="secret_data", data_type=PostgresByteaType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -150,14 +150,14 @@ async def _async_setup_users_table(backend, dialect, table):
     """Async: create and populate the test_pgcrypto_users table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="username", data_type=TextType()),
-        ColumnDefinition(name="password_hash", data_type=TextType()),
+        ColumnDefinition(dialect, name="username", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="password_hash", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -191,13 +191,13 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     """Async: create and populate the test_pgcrypto_encrypt table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="secret_data", data_type=PostgresByteaType()),
+        ColumnDefinition(dialect, name="secret_data", data_type=PostgresByteaType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

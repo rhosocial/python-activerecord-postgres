@@ -47,17 +47,17 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
 # --- Helper functions ---
 
 
-def _make_hstore_columns():
+def _make_hstore_columns(dialect):
     """Return standard column definitions for an hstore test table."""
     return [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="data", data_type=PostgresHstoreType()),
+        ColumnDefinition(dialect, name="data", data_type=PostgresHstoreType(dialect=dialect)),
     ]
 
 
@@ -66,7 +66,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
     create_expr = CreateTableExpression(
         dialect=dialect,
         table=table,
-        columns=_make_hstore_columns(),
+        columns=_make_hstore_columns(dialect),
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()
@@ -101,7 +101,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
     create_expr = CreateTableExpression(
         dialect=dialect,
         table=table,
-        columns=_make_hstore_columns(),
+        columns=_make_hstore_columns(dialect),
         if_not_exists=True,
     )
     sql, params = create_expr.to_sql()

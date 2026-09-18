@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause, OrderByClause, GroupByHavingClause, LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.expression.query_parts import JoinExpression
+from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, TextType,
 )
@@ -44,48 +44,48 @@ def social_data(postgres_backend):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
     people_cols = [
-        ColumnDefinition("id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", TextType()),
-        ColumnDefinition("email", TextType()),
-        ColumnDefinition("city", TextType()),
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "name", TextType(dialect=dialect)),
+        ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
+        ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
     ]
     backend.execute(*CreateTableExpression(dialect, "people", people_cols).to_sql())
 
     follows_cols = [
-        ColumnDefinition("id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("follower_id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                           foreign_key_reference=("people", ["id"]))]),
-        ColumnDefinition("followed_id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+        ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                           foreign_key_reference=("people", ["id"]))]),
-        ColumnDefinition("since", TextType()),
+        ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
     ]
     backend.execute(*CreateTableExpression(dialect, "follows", follows_cols).to_sql())
 
     posts_cols = [
-        ColumnDefinition("id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("author_id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "author_id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                           foreign_key_reference=("people", ["id"]))]),
-        ColumnDefinition("content", TextType()),
-        ColumnDefinition("created_at", TextType()),
+        ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
+        ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
     backend.execute(*CreateTableExpression(dialect, "posts", posts_cols).to_sql())
 
     likes_cols = [
-        ColumnDefinition("id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("user_id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "user_id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                           foreign_key_reference=("people", ["id"]))]),
-        ColumnDefinition("post_id", IntegerType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+        ColumnDefinition(dialect, "post_id", IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                           foreign_key_reference=("posts", ["id"]))]),
-        ColumnDefinition("created_at", TextType()),
+        ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
     backend.execute(*CreateTableExpression(dialect, "likes", likes_cols).to_sql())
 
@@ -275,7 +275,7 @@ class TestCommerceGraph:
                              GraphColumn("f", "since", "since"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        join = JoinExpression(dialect,
+        join = JoinClause(dialect,
             left_table=gt,
             right_table=TableExpression(dialect, "people", alias="p"),
             join_type="INNER JOIN",
@@ -326,24 +326,24 @@ class TestAsyncSocialGraph:
             await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
         people_cols = [
-            ColumnDefinition("id", IntegerType(),
-                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("name", TextType()),
-            ColumnDefinition("email", TextType()),
-            ColumnDefinition("city", TextType()),
+            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnDefinition(dialect, "name", TextType(dialect=dialect)),
+            ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
+            ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
         ]
         await backend.execute(*CreateTableExpression(dialect, "people", people_cols).to_sql())
 
         follows_cols = [
-            ColumnDefinition("id", IntegerType(),
-                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("follower_id", IntegerType(),
-                constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                               foreign_key_reference=("people", ["id"]))]),
-            ColumnDefinition("followed_id", IntegerType(),
-                constraints=[ColumnConstraint(ColumnConstraintType.FOREIGN_KEY,
+            ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, ColumnConstraintType.FOREIGN_KEY,
                                               foreign_key_reference=("people", ["id"]))]),
-            ColumnDefinition("since", TextType()),
+            ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
         ]
         await backend.execute(*CreateTableExpression(dialect, "follows", follows_cols).to_sql())
 

@@ -85,15 +85,10 @@ class PostgresAdvisoryLockExpression(BaseExpression):
         self.shared = shared
         self.session = session
 
-    def to_sql(self) -> SQLQueryAndParams:
-        """
-        Generate SQL for acquiring advisory lock.
-
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-
-        """
-        return self.dialect.format_advisory_lock(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_advisory_lock"
 
 
 class PostgresAdvisoryUnlockExpression(BaseExpression):
@@ -133,15 +128,10 @@ class PostgresAdvisoryUnlockExpression(BaseExpression):
         self.key = key
         self.shared = shared
 
-    def to_sql(self) -> SQLQueryAndParams:
-        """
-        Generate SQL for releasing advisory lock.
-
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-
-        """
-        return self.dialect.format_advisory_unlock(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_advisory_unlock"
 
 
 class PostgresAdvisoryUnlockAllExpression(BaseExpression):
@@ -157,15 +147,10 @@ class PostgresAdvisoryUnlockAllExpression(BaseExpression):
         """Initialize advisory unlock all expression."""
         super().__init__(dialect)
 
-    def to_sql(self) -> SQLQueryAndParams:
-        """
-        Generate SQL for releasing all advisory locks.
-
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-
-        """
-        return self.dialect.format_advisory_unlock_all(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_advisory_unlock_all"
 
 
 class PostgresTryAdvisoryLockExpression(BaseExpression):
@@ -211,12 +196,7 @@ class PostgresTryAdvisoryLockExpression(BaseExpression):
         self.shared = shared
         self.session = session
 
-    def to_sql(self) -> SQLQueryAndParams:
-        """
-        Generate SQL for non-blocking advisory lock acquisition.
-
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-
-        """
-        return self.dialect.format_try_advisory_lock(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_try_advisory_lock"

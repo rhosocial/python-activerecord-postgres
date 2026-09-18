@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
     GroupByHavingClause,
-    JoinExpression,
+    JoinClause,
 )
 
 
@@ -53,16 +53,16 @@ def social_network_data(postgres_backend):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "users", [
-        ColumnDefinition("id", IntegerType(), constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("name", VarCharType(100)),
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "follows", [
-        ColumnDefinition("id", IntegerType(), constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("follower_id", IntegerType()),
-        ColumnDefinition("followed_id", IntegerType()),
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
@@ -98,18 +98,18 @@ def aml_data(postgres_backend):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "accounts", [
-        ColumnDefinition("id", IntegerType(), constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("account_holder", VarCharType(100)),
-        ColumnDefinition("account_type", VarCharType(20)),
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "account_holder", VarCharType(length=100, dialect=dialect)),
+        ColumnDefinition(dialect, "account_type", VarCharType(length=20, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, "transactions", [
-        ColumnDefinition("id", IntegerType(), constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-        ColumnDefinition("source_account_id", IntegerType()),
-        ColumnDefinition("target_account_id", IntegerType()),
-        ColumnDefinition("amount", DecimalType(12, 2)),
+        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnDefinition(dialect, "source_account_id", IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, "target_account_id", IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],
@@ -152,7 +152,7 @@ class TestSocialNetworkTraversal:
             where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
         )
 
-        recursive_join = JoinExpression(
+        recursive_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "traversal", alias="t"),
             right_table=TableExpression(dialect, "follows", alias="f"),
@@ -289,7 +289,7 @@ class TestAMLFundTracing:
 
     def _build_aml_cte(self, dialect):
         """Build recursive CTE expression for fund tracing."""
-        base_join = JoinExpression(
+        base_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "transactions", alias="tx"),
             right_table=TableExpression(dialect, "accounts", alias="a"),
@@ -314,7 +314,7 @@ class TestAMLFundTracing:
             ),
         )
 
-        recursive_join = JoinExpression(
+        recursive_join = JoinClause(
             dialect=dialect,
             left_table=TableExpression(dialect, "fund_trace", alias="tr"),
             right_table=TableExpression(dialect, "transactions", alias="tx"),
@@ -465,16 +465,16 @@ class TestAsyncRecursiveCTEGraph:
             await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "users", [
-            ColumnDefinition("id", IntegerType(), constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("name", VarCharType(100)),
+            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
         ]).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, "follows", [
-            ColumnDefinition("id", IntegerType(), constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
-            ColumnDefinition("follower_id", IntegerType()),
-            ColumnDefinition("followed_id", IntegerType()),
+            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
+            ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
         ]).to_sql())
 
         await backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],

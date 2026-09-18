@@ -85,8 +85,17 @@ from .type import (
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
     PostgresCreateRangeTypeExpression,
+    EnumTypeNameExpression,
+    EnumValuesExpression,
+    CreateEnumTypeExpression,
+    DropEnumTypeExpression,
+    AlterEnumAddValueExpression,
 )
 from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
+from .multirange import (
+    CreateMultirangeTypeExpression,
+    MultirangeAggFunctionExpression,
+)
 from .pg_partman import (
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanRunMaintenanceExpression,
@@ -166,6 +175,14 @@ __all__ = [
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
+    "EnumTypeNameExpression",
+    "EnumValuesExpression",
+    "CreateEnumTypeExpression",
+    "DropEnumTypeExpression",
+    "AlterEnumAddValueExpression",
+    # multirange
+    "CreateMultirangeTypeExpression",
+    "MultirangeAggFunctionExpression",
     # extension
     "PostgresCreateExtensionExpression",
     "PostgresDropExtensionExpression",

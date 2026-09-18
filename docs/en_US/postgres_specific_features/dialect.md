@@ -139,66 +139,60 @@ sql, params = expr.to_sql()
 
 PostgreSQL supports copying table structure using the `LIKE` clause with fine-grained control over what gets copied via INCLUDING/EXCLUDING options.
 
+PostgreSQL renders the clause form `CREATE TABLE t (LIKE src [INCLUDING ...])`,
+modelled by `CreateTableLikeExpression`.
+
 ```python
-from rhosocial.activerecord.backend.expression import CreateTableExpression
+from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # Basic usage - copy table structure
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={'like_table': 'users'}
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
 )
 # Generates: CREATE TABLE "users_copy" (LIKE "users")
 
 # With INCLUDING options (dictionary format - recommended)
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={
-        'like_table': 'users',
-        'like_options': {
-            'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
-            'excluding': ['COMMENTS']
-        }
-    }
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
+    like_options={
+        'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
+        'excluding': ['COMMENTS'],
+    },
 )
-# Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS, 
-#            INCLUDING CONSTRAINTS, INCLUDING INDEXES, EXCLUDING COMMENTS)
+# Generates: CREATE TABLE "users_copy" (LIKE "users" INCLUDING DEFAULTS
+#            INCLUDING CONSTRAINTS INCLUDING INDEXES EXCLUDING COMMENTS)
 
 # With schema-qualified source table
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={'like_table': ('public', 'users')}
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table=('public', 'users'),
 )
 # Generates: CREATE TABLE "users_copy" (LIKE "public"."users")
 
 # With TEMPORARY and IF NOT EXISTS
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="temp_users",
-    columns=[],
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="temp_users",
+    like_table="users",
     temporary=True,
     if_not_exists=True,
-    dialect_options={'like_table': 'users'}
 )
 # Generates: CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users" (LIKE "users")
 
 # Including everything
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={
-        'like_table': 'users',
-        'like_options': {'including': ['ALL']}
-    }
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
+    like_options={'including': ['ALL']},
 )
-# Generates: CREATE TABLE "users_copy" (LIKE "users", INCLUDING ALL)
+# Generates: CREATE TABLE "users_copy" (LIKE "users" INCLUDING ALL)
 ```
 
 **Available INCLUDING/EXCLUDING Options:**
@@ -213,10 +207,10 @@ create_expr = CreateTableExpression(
 - `ALL` - Copy everything
 
 **Important Notes:**
-- When `like_table` is specified in `dialect_options`, it takes highest priority
-- All other parameters (columns, indexes, constraints, etc.) are IGNORED
+- `CreateTableLikeExpression` carries only the target table and source `like_table`
+- `like_options` accepts a dict (`including`/`excluding`), a list of feature
+  strings (treated as `INCLUDING`), or a list of `(action, feature)` tuples
 - Only `temporary` and `if_not_exists` flags are considered
-- The `like_options` key supports both dictionary and list formats
 
 ## RETURNING Clause
 

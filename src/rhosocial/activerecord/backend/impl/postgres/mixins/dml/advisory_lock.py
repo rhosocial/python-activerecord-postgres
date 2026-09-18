@@ -84,9 +84,9 @@ class PostgresAdvisoryLockMixin:
         # Handle key format
         if isinstance(expr.key, tuple):
             key1, key2 = expr.key
-            return f"SELECT {func_name}(%s, %s)", (key1, key2)
+            return f"SELECT {func_name}({self.p()}, {self.p()})", (key1, key2)
         else:
-            return f"SELECT {func_name}(%s)", (expr.key,)
+            return f"SELECT {func_name}({self.p()})", (expr.key,)
 
     def format_advisory_unlock(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
         """
@@ -109,9 +109,9 @@ class PostgresAdvisoryLockMixin:
         # Handle key format
         if isinstance(expr.key, tuple):
             key1, key2 = expr.key
-            return f"SELECT {func_name}(%s, %s)", (key1, key2)
+            return f"SELECT {func_name}({self.p()}, {self.p()})", (key1, key2)
         else:
-            return f"SELECT {func_name}(%s)", (expr.key,)
+            return f"SELECT {func_name}({self.p()})", (expr.key,)
 
     def format_advisory_unlock_all(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
         """
@@ -161,6 +161,6 @@ class PostgresAdvisoryLockMixin:
         # Handle key format
         if isinstance(expr.key, tuple):
             key1, key2 = expr.key
-            return f"SELECT {func_name}(%s, %s)", (key1, key2)
+            return f"SELECT {func_name}({self.p()}, {self.p()})", (key1, key2)
         else:
-            return f"SELECT {func_name}(%s)", (expr.key,)
+            return f"SELECT {func_name}({self.p()})", (expr.key,)

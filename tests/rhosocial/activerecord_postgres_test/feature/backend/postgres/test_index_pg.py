@@ -129,7 +129,7 @@ class TestFormatReindexStatement:
             target_type="INDEX",
             name="idx_users_email"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX INDEX "idx_users_email"' in sql
         assert params == ()
 
@@ -141,7 +141,7 @@ class TestFormatReindexStatement:
             target_type="TABLE",
             name="users"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX TABLE "users"' in sql
 
     def test_reindex_schema(self):
@@ -152,7 +152,7 @@ class TestFormatReindexStatement:
             target_type="SCHEMA",
             name="public"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX SCHEMA "public"' in sql
 
     def test_reindex_database(self):
@@ -163,7 +163,7 @@ class TestFormatReindexStatement:
             target_type="DATABASE",
             name="mydb"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX DATABASE "mydb"' in sql
 
     def test_reindex_system(self):
@@ -174,7 +174,7 @@ class TestFormatReindexStatement:
             target_type="SYSTEM",
             name="mydb"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX SYSTEM "mydb"' in sql
 
     def test_reindex_invalid_target_type(self):
@@ -186,7 +186,7 @@ class TestFormatReindexStatement:
             name="test"
         )
         with pytest.raises(ValueError, match="Invalid target_type"):
-            dialect.format_reindex_statement(expr)
+            expr.to_sql()
 
     def test_reindex_concurrently_pg11_raises_error(self):
         """REINDEX CONCURRENTLY should raise error on PostgreSQL 11."""
@@ -198,7 +198,7 @@ class TestFormatReindexStatement:
             concurrently=True
         )
         with pytest.raises(ValueError, match="requires PostgreSQL 12"):
-            dialect.format_reindex_statement(expr)
+            expr.to_sql()
 
     def test_reindex_concurrently_pg12(self):
         """Test REINDEX CONCURRENTLY on PostgreSQL 12."""
@@ -209,7 +209,7 @@ class TestFormatReindexStatement:
             name="idx_test",
             concurrently=True
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'REINDEX CONCURRENTLY INDEX "idx_test"' in sql
 
     def test_reindex_with_tablespace(self):
@@ -221,7 +221,7 @@ class TestFormatReindexStatement:
             name="idx_test",
             tablespace="pg_fast"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert 'TABLESPACE "pg_fast"' in sql
 
     def test_reindex_verbose(self):
@@ -233,7 +233,7 @@ class TestFormatReindexStatement:
             name="idx_test",
             verbose=True
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert "VERBOSE" in sql
 
     def test_reindex_with_schema(self):
@@ -245,7 +245,7 @@ class TestFormatReindexStatement:
             name="idx_test",
             schema="public"
         )
-        sql, params = dialect.format_reindex_statement(expr)
+        sql, params = expr.to_sql()
         assert '"public"' in sql
 
 
@@ -505,32 +505,57 @@ class TestFulltextDdlNotSupportedSearchSupported:
         assert PostgresDialect().supports_fulltext_boolean_mode() is True
 
     def test_format_fulltext_match_natural_language(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "search")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "search")
+        sql, params = expr.to_sql()
         assert "to_tsvector" in sql
         assert "plainto_tsquery" in sql
         assert "@@" in sql
         assert params == ("search",)
 
     def test_format_fulltext_match_boolean(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "a & b", mode="BOOLEAN")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "a & b", mode="BOOLEAN")
+        sql, params = expr.to_sql()
         assert "to_tsvector" in sql
         assert "to_tsquery" in sql
         assert "plainto_tsquery" not in sql
         assert params == ("a & b",)
 
     def test_format_fulltext_match_phrase(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "cat dog", mode="PHRASE")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "cat dog", mode="PHRASE")
+        sql, params = expr.to_sql()
         assert "phraseto_tsquery" in sql
         assert "plainto_tsquery" not in sql
         assert params == ("cat dog",)
 
     def test_format_fulltext_match_unknown_mode_uses_plain(self):
-        sql, params = PostgresDialect().format_fulltext_match(["col"], "search", mode="CUSTOM")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["col"], "search", mode="CUSTOM")
+        sql, params = expr.to_sql()
         assert "plainto_tsquery" in sql
         assert params == ("search",)
 
     def test_format_fulltext_match_multi_column(self):
-        sql, params = PostgresDialect().format_fulltext_match(["a", "b"], "search")
+        from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+            FulltextMatchExpression,
+        )
+        dialect = PostgresDialect()
+        expr = FulltextMatchExpression(dialect, ["a", "b"], "search")
+        sql, params = expr.to_sql()
         assert " || " in sql
         assert "to_tsvector" in sql
         assert params == ("search",)
@@ -543,7 +568,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
             table_name="articles",
             columns=["body"],
         )
-        sql, params = dialect.format_create_fulltext_index_statement(expr)
+        sql, params = expr.to_sql()
         assert sql.startswith("CREATE INDEX")
         assert "USING GIN" in sql
         assert "to_tsvector" in sql
@@ -559,7 +584,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
             columns=["body"],
             if_not_exists=True,
         )
-        sql, _ = dialect.format_create_fulltext_index_statement(expr)
+        sql, _ = expr.to_sql()
         assert "IF NOT EXISTS" in sql
 
     def test_format_create_fulltext_index_statement_multi_column(self):
@@ -570,7 +595,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
             table_name="articles",
             columns=["title", "body"],
         )
-        sql, _ = dialect.format_create_fulltext_index_statement(expr)
+        sql, _ = expr.to_sql()
         assert " || " in sql
         assert "to_tsvector" in sql
         assert "title" in sql and "body" in sql
@@ -582,7 +607,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
             index_name="idx_ft",
             table_name="articles",
         )
-        sql, _ = dialect.format_drop_fulltext_index_statement(expr)
+        sql, _ = expr.to_sql()
         assert sql.startswith("DROP INDEX")
         assert "idx_ft" in sql
 
@@ -594,7 +619,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
             table_name="articles",
             if_exists=True,
         )
-        sql, _ = dialect.format_drop_fulltext_index_statement(expr)
+        sql, _ = expr.to_sql()
         assert "IF EXISTS" in sql
 
 
@@ -789,15 +814,15 @@ class TestFormatAddDropIndexAction:
 
     def test_format_add_index_action_raises(self):
         d = PostgresDialect()
-        add = AddIndex(d, index=IndexDefinition(name="idx_test", columns=["a"]))
+        add = AddIndex(d, index=IndexDefinition(d, name="idx_test", columns=["a"]))
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE ADD INDEX"):
-            d.format_add_index_action(add)
+            add.to_sql()
 
     def test_format_drop_index_action_raises(self):
         d = PostgresDialect()
         drop = DropIndexAction(d, index_name="idx_test")
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE DROP INDEX"):
-            d.format_drop_index_action(drop)
+            drop.to_sql()
 
 
 class TestDialectIndexSupport:
@@ -1013,9 +1038,8 @@ class TestPostgresIndexMixinDirect:
 
     def test_format_create_index_expression_column(self):
         from rhosocial.activerecord.backend.expression import Column, Literal  # noqa: F401
-        expr = CreateIndexExpression(
-            PostgresDialect((15, 0, 0)), "idx_e", "t", [Column(PostgresDialect((15, 0, 0)), "a")],
-        )
+        d = PostgresDialect((15, 0, 0))
+        expr = CreateIndexExpression(d, "idx_e", "t", [Column(d, "a")])
         sql, _ = expr.to_sql()
         assert '"a"' in sql
 

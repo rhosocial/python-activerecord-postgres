@@ -97,3 +97,38 @@ class PostgresAlterColumnModifierMixin:
         else:
             modified = f"{sql} USING ({using_sql})"
         return modified, tuple(params) + tuple(using_params)
+
+    def format_column(self, expr) -> Tuple[str, tuple]:
+        """Format column reference for PostgreSQL.
+
+        PostgreSQL rules for column references:
+        - When the table has an alias (used in FROM/JOIN), column references
+          must use the alias, not the schema-qualified name. For example,
+          when FROM clause has ``public.users AS "users"``, the column
+          reference must be ``"users"."id"``, not ``"public"."users"."id"``.
+        - When no alias is present but schema is specified, use the
+          full three-segment form: ``"schema"."table"."column"``.
+        - Otherwise use the standard two-segment or single-segment form.
+        """
+        name = expr.name
+        table = expr.table
+        alias = expr.alias
+        schema_name = expr.schema_name
+        if table:
+            # In PostgreSQL, when a table has an alias, column references
+            # must use the alias — schema_name is irrelevant in this context.
+            if schema_name and not alias:
+                col_sql = (
+                    f"{self.format_identifier(schema_name, expr.schema_need_quote)}."
+                    f"{self.format_identifier(table, expr.table_need_quote)}."
+                    f"{self.format_identifier(name, expr.name_need_quote)}"
+                )
+            else:
+                col_sql = f"{self.format_identifier(table, expr.table_need_quote)}.{self.format_identifier(name, expr.name_need_quote)}"
+        else:
+            col_sql = self.format_identifier(name, expr.name_need_quote)
+
+        if alias:
+            col_sql = f"{col_sql} AS {self.format_identifier(alias, expr.alias_need_quote)}"
+
+        return col_sql, ()

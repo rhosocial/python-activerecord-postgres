@@ -40,7 +40,7 @@ class TestPostgresAddColumnIfNotExists:
     def test_if_not_exists_renders_qualifier(self, dialect):
         action = AddColumn(
             dialect,
-            ColumnDefinition("content", TextType()),
+            ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
         sql, params = action.to_sql()
@@ -48,7 +48,7 @@ class TestPostgresAddColumnIfNotExists:
         assert params == ()
 
     def test_none_renders_plain_form(self, dialect):
-        action = AddColumn(dialect, ColumnDefinition("content", TextType()))
+        action = AddColumn(dialect, ColumnDefinition(dialect, "content", TextType(dialect=dialect)))
         sql, params = action.to_sql()
         assert 'ADD COLUMN "content" TEXT' == sql
         assert "IF NOT EXISTS" not in sql
@@ -57,7 +57,7 @@ class TestPostgresAddColumnIfNotExists:
     def test_inside_alter_table(self, dialect):
         action = AddColumn(
             dialect,
-            ColumnDefinition("content", TextType()),
+            ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
         expr = AlterTableExpression(
@@ -173,10 +173,10 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameColumn,
+            RenameObject,
         )
 
-        sql, params = RenameColumn(
+        sql, params = RenameObject(
             dialect, old_name="id", new_name="order_id"
         ).to_sql()
         assert 'RENAME COLUMN "id" TO "order_id"' == sql
@@ -184,13 +184,13 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column_inside_alter_table(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameColumn,
+            RenameObject,
         )
 
         expr = AlterTableExpression(
             dialect,
             table_name="orders",
-            actions=[RenameColumn(dialect, old_name="id", new_name="order_id")],
+            actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "orders"' in sql
@@ -214,7 +214,14 @@ class TestPostgresRenameColumnAndTable:
 
 
 class TestPostgresCreateUnloggedTable:
-    """CREATE UNLOGGED TABLE via dialect_options on CreateTableExpression."""
+    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableExpression."""
+
+    @staticmethod
+    def _options(dialect):
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableOptions,
+        )
+        return CreateTableOptions(dialect, unlogged=True)
 
     def test_unlogged_renders_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
@@ -224,8 +231,8 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             dialect,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
-            dialect_options={"unlogged_table": True},
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
+            table_options=self._options(dialect),
         )
         sql, params = expr.to_sql()
         assert sql.startswith('CREATE UNLOGGED TABLE "audit"')
@@ -239,29 +246,13 @@ class TestPostgresCreateUnloggedTable:
         expr = CreateTableExpression(
             dialect,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
         )
         sql, params = expr.to_sql()
         assert not sql.startswith("CREATE UNLOGGED")
         assert params == ()
 
-    def test_temporary_wins_over_unlogged(self, dialect):
-        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
-        )
-
-        expr = CreateTableExpression(
-            dialect,
-            table="audit",
-            columns=[ColumnDefinition("id", TextType())],
-            temporary=True,
-            dialect_options={"unlogged_table": True},
-        )
-        sql, params = expr.to_sql()
-        assert sql.startswith("CREATE TEMPORARY TABLE")
-        assert params == ()
-
-    def test_version_gate_94(self):
+    def test_unlogged_with_temporary_rejected(self, dialect):
         from rhosocial.activerecord.backend.dialect.exceptions import (
             UnsupportedFeatureError,
         )
@@ -269,12 +260,31 @@ class TestPostgresCreateUnloggedTable:
             CreateTableExpression,
         )
 
+        expr = CreateTableExpression(
+            dialect,
+            table="audit",
+            columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
+            temporary=True,
+            table_options=self._options(dialect),
+        )
+        with pytest.raises(UnsupportedFeatureError):
+            expr.to_sql()
+
+    def test_version_gate_94(self):
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+            CreateTableExpression,
+            CreateTableOptions,
+        )
+
         low = PostgresDialect(version=(9, 4, 0))
         expr = CreateTableExpression(
             low,
             table="audit",
-            columns=[ColumnDefinition("id", TextType())],
-            dialect_options={"unlogged_table": True},
+            columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
+            table_options=CreateTableOptions(low, unlogged=True),
         )
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()

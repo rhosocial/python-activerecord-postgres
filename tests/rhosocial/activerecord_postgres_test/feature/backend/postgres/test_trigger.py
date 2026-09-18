@@ -87,7 +87,7 @@ class TestFormatCreateTriggerStatement:
             events=[TriggerEvent.UPDATE],
             function_name="update_updated_at_column"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert 'CREATE TRIGGER "update_timestamp"' in sql
         assert "BEFORE UPDATE" in sql
         assert 'ON "users"' in sql
@@ -104,7 +104,7 @@ class TestFormatCreateTriggerStatement:
             events=[TriggerEvent.INSERT],
             function_name="log_user_insert"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "AFTER INSERT" in sql
 
     def test_create_trigger_multiple_events(self):
@@ -118,7 +118,7 @@ class TestFormatCreateTriggerStatement:
             events=[TriggerEvent.INSERT, TriggerEvent.UPDATE, TriggerEvent.DELETE],
             function_name="audit_function"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "INSERT OR UPDATE OR DELETE" in sql
 
     def test_create_trigger_update_of(self):
@@ -133,7 +133,7 @@ class TestFormatCreateTriggerStatement:
             update_columns=["status", "updated_at"],
             function_name="validate_status_change"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert 'UPDATE OF "status", "updated_at"' in sql
 
     def test_create_trigger_with_level_row(self):
@@ -148,7 +148,7 @@ class TestFormatCreateTriggerStatement:
             function_name="test_func",
             level=TriggerLevel.ROW
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "FOR EACH ROW" in sql
 
     def test_create_trigger_with_level_statement(self):
@@ -163,7 +163,7 @@ class TestFormatCreateTriggerStatement:
             function_name="test_func",
             level=TriggerLevel.STATEMENT
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "FOR EACH STATEMENT" in sql
 
     def test_create_trigger_if_not_exists(self):
@@ -178,7 +178,7 @@ class TestFormatCreateTriggerStatement:
             function_name="test_func",
             if_not_exists=True
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert 'CREATE TRIGGER IF NOT EXISTS "test_trigger"' in sql
 
     def test_create_trigger_with_referencing_pg10(self):
@@ -193,7 +193,7 @@ class TestFormatCreateTriggerStatement:
             function_name="test_func",
             referencing="OLD TABLE AS old NEW TABLE AS new"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "OLD TABLE AS old NEW TABLE AS new" in sql
 
     def test_create_trigger_no_level(self):
@@ -209,7 +209,7 @@ class TestFormatCreateTriggerStatement:
             function_name="simple_func",
             level=None,
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "FOR EACH" not in sql
 
     def test_create_trigger_with_condition(self):
@@ -226,7 +226,7 @@ class TestFormatCreateTriggerStatement:
             function_name="validate_status",
             condition=condition,
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "WHEN" in sql
         assert "%s" in sql
         assert params == ("ACTIVE",)
@@ -242,7 +242,7 @@ class TestFormatCreateTriggerStatement:
             events=[TriggerEvent.INSERT],
             function_name="handle_view_insert"
         )
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "INSTEAD OF INSERT" in sql
 
 
@@ -256,7 +256,7 @@ class TestFormatDropTriggerStatement:
             dialect,
             trigger_name="test_trigger"
         )
-        sql, params = dialect.format_drop_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert 'DROP TRIGGER "test_trigger"' in sql
 
     def test_drop_trigger_with_table(self):
@@ -267,7 +267,7 @@ class TestFormatDropTriggerStatement:
             trigger_name="test_trigger",
             table_name="users"
         )
-        sql, params = dialect.format_drop_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert 'ON "users"' in sql
 
     def test_drop_trigger_if_exists(self):
@@ -278,7 +278,7 @@ class TestFormatDropTriggerStatement:
             trigger_name="test_trigger",
             if_exists=True
         )
-        sql, params = dialect.format_drop_trigger_statement(expr)
+        sql, params = expr.to_sql()
         assert "DROP TRIGGER IF EXISTS" in sql
 
 

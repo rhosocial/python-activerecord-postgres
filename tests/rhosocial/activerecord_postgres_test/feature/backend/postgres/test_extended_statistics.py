@@ -72,7 +72,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table"
         )
         with pytest.raises(ValueError, match="requires PostgreSQL 10"):
-            dialect.format_create_statistics_statement(expr)
+            expr.to_sql()
 
     def test_create_statistics_basic(self):
         """Test basic CREATE STATISTICS statement."""
@@ -83,7 +83,7 @@ class TestFormatCreateStatisticsStatement:
             columns=["col1", "col2"],
             table_name="test_table"
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert 'CREATE STATISTICS "test_stats"' in sql
         assert "ON col1, col2" in sql
         assert 'FROM "test_table"' in sql
@@ -99,7 +99,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table",
             schema="public"
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert '"public"."test_stats"' in sql
         assert 'FROM "public"."test_table"' in sql
 
@@ -113,7 +113,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table",
             if_not_exists=True
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert 'CREATE STATISTICS IF NOT EXISTS "test_stats"' in sql
 
     def test_create_statistics_with_ndistinct(self):
@@ -126,7 +126,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table",
             statistics_type="ndistinct"
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert '"test_stats"(ndistinct)' in sql
 
     def test_create_statistics_with_dependencies(self):
@@ -139,7 +139,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table",
             statistics_type="dependencies"
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert '"test_stats"(dependencies)' in sql
 
     def test_create_statistics_with_mcv_pg12(self):
@@ -152,7 +152,7 @@ class TestFormatCreateStatisticsStatement:
             table_name="test_table",
             statistics_type="mcv"
         )
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert '"test_stats"(mcv)' in sql
 
     def test_create_statistics_with_mcv_pg11_raises_error(self):
@@ -166,7 +166,7 @@ class TestFormatCreateStatisticsStatement:
             statistics_type="mcv"
         )
         with pytest.raises(ValueError, match="MCV statistics require PostgreSQL 12"):
-            dialect.format_create_statistics_statement(expr)
+            expr.to_sql()
 
     def test_create_statistics_invalid_type_raises_error(self):
         """Test CREATE STATISTICS with invalid type raises error."""
@@ -179,7 +179,7 @@ class TestFormatCreateStatisticsStatement:
             statistics_type="invalid"
         )
         with pytest.raises(ValueError, match="Invalid statistics type"):
-            dialect.format_create_statistics_statement(expr)
+            expr.to_sql()
 
 
 class TestFormatDropStatisticsStatement:
@@ -192,7 +192,7 @@ class TestFormatDropStatisticsStatement:
             dialect,
             name="test_stats"
         )
-        sql, params = dialect.format_drop_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert sql == 'DROP STATISTICS "test_stats"'
         assert params == ()
 
@@ -204,7 +204,7 @@ class TestFormatDropStatisticsStatement:
             name="test_stats",
             schema="public"
         )
-        sql, params = dialect.format_drop_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert 'DROP STATISTICS "public"."test_stats"' in sql
 
     def test_drop_statistics_if_exists(self):
@@ -215,5 +215,5 @@ class TestFormatDropStatisticsStatement:
             name="test_stats",
             if_exists=True
         )
-        sql, params = dialect.format_drop_statistics_statement(expr)
+        sql, params = expr.to_sql()
         assert 'DROP STATISTICS IF EXISTS "test_stats"' in sql

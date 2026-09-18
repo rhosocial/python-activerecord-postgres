@@ -137,68 +137,60 @@ sql, params = expr.to_sql()
 
 ### CREATE TABLE ... LIKE
 
-PostgreSQL 支持使用 `LIKE` 子句复制表结构，并通过 INCLUDING/EXCLUDING 选项精细控制要复制的内容。
+PostgreSQL 渲染为子句形式 `CREATE TABLE t (LIKE src [INCLUDING ...])`，
+由 `CreateTableLikeExpression` 建模。
 
 ```python
-from rhosocial.activerecord.backend.expression import CreateTableExpression
+from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # 基本用法 - 复制表结构
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={'like_table': 'users'}
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
 )
 # 生成: CREATE TABLE "users_copy" (LIKE "users")
 
 # 带 INCLUDING 选项（字典格式 - 推荐）
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={
-        'like_table': 'users',
-        'like_options': {
-            'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
-            'excluding': ['COMMENTS']
-        }
-    }
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
+    like_options={
+        'including': ['DEFAULTS', 'CONSTRAINTS', 'INDEXES'],
+        'excluding': ['COMMENTS'],
+    },
 )
-# 生成: CREATE TABLE "users_copy" (LIKE "users", INCLUDING DEFAULTS,
-#        INCLUDING CONSTRAINTS, INCLUDING INDEXES, EXCLUDING COMMENTS)
+# 生成: CREATE TABLE "users_copy" (LIKE "users" INCLUDING DEFAULTS
+#        INCLUDING CONSTRAINTS INCLUDING INDEXES EXCLUDING COMMENTS)
 
 # 带模式限定的源表
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={'like_table': ('public', 'users')}
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table=('public', 'users'),
 )
 # 生成: CREATE TABLE "users_copy" (LIKE "public"."users")
 
 # 带临时表和 IF NOT EXISTS
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="temp_users",
-    columns=[],
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="temp_users",
+    like_table="users",
     temporary=True,
     if_not_exists=True,
-    dialect_options={'like_table': 'users'}
 )
 # 生成: CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users" (LIKE "users")
 
 # 包含所有内容
-create_expr = CreateTableExpression(
-    dialect=PostgresDialect(),
-    table_name="users_copy",
-    columns=[],
-    dialect_options={
-        'like_table': 'users',
-        'like_options': {'including': ['ALL']}
-    }
+expr = CreateTableLikeExpression(
+    PostgresDialect(),
+    table="users_copy",
+    like_table="users",
+    like_options={'including': ['ALL']},
 )
-# 生成: CREATE TABLE "users_copy" (LIKE "users", INCLUDING ALL)
+# 生成: CREATE TABLE "users_copy" (LIKE "users" INCLUDING ALL)
 ```
 
 **可用的 INCLUDING/EXCLUDING 选项：**
@@ -213,10 +205,10 @@ create_expr = CreateTableExpression(
 - `ALL` - 复制所有内容
 
 **重要说明：**
-- 当 `dialect_options` 中指定 `like_table` 时，具有最高优先级
-- 所有其他参数（columns、indexes、constraints 等）都会被忽略
+- `CreateTableLikeExpression` 只携带目标表和源 `like_table`
+- `like_options` 支持字典（`including`/`excluding`）、字符串列表（视为
+  `INCLUDING`）以及 `(action, feature)` 元组列表
 - 只有 `temporary` 和 `if_not_exists` 标志会被考虑
-- `like_options` 键支持字典和列表两种格式
 
 ## RETURNING 子句
 

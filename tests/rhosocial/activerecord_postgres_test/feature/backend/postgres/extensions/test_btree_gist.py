@@ -7,6 +7,7 @@ Tests for PostgresBtreeGistMixin format methods:
 - format_btree_gist_operator_class
 """
 
+from rhosocial.activerecord.backend.expression import CreateIndexExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 
@@ -18,19 +19,33 @@ class TestPostgresBtreeGistMixin:
         self.dialect = PostgresDialect(version=(14, 0, 0))
 
     def test_format_gist_index(self):
-        """format_gist_index should return SQL containing gist."""
-        result = self.dialect.format_gist_index("idx_name", "table_name", ["column"])
-        assert "gist" in result
-        assert "idx_name" in result
-        assert "table_name" in result
+        """CreateIndexExpression with index_type gist should render a gist index."""
+        expr = CreateIndexExpression(
+            self.dialect,
+            index_name="idx_name",
+            table_name="table_name",
+            columns=["column"],
+            index_type="gist",
+        )
+        sql, params = expr.to_sql()
+        assert "gist" in sql
+        assert "idx_name" in sql
+        assert "table_name" in sql
+        assert params == ()
 
     def test_format_gist_index_with_include(self):
-        """format_gist_index with include should include additional columns."""
-        result = self.dialect.format_gist_index(
-            "idx_name", "table_name", ["column"], include=["extra_col"]
+        """CreateIndexExpression with include should include additional columns."""
+        expr = CreateIndexExpression(
+            self.dialect,
+            index_name="idx_name",
+            table_name="table_name",
+            columns=["column"],
+            index_type="gist",
+            include=["extra_col"],
         )
-        assert "gist" in result
-        assert "INCLUDE" in result
+        sql, _ = expr.to_sql()
+        assert "gist" in sql
+        assert "INCLUDE" in sql
 
     def test_format_btree_gist_operator_class(self):
         """format_btree_gist_operator_class should return operator class name."""

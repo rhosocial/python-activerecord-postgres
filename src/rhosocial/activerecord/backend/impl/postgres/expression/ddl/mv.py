@@ -96,11 +96,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         """Alias for concurrent (backward compatibility)."""
         return self.concurrent
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate REFRESH MATERIALIZED VIEW SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_refresh_materialized_view_pg_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_refresh_materialized_view_pg_statement"

@@ -1,5 +1,5 @@
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.mixins.table import PostgresTableMixin
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl_table import PostgresTableMixin
 
 
 class TestTableSupport:

@@ -58,14 +58,10 @@ class PostgresCreateForeignTableExpression(BaseExpression):
         self.if_not_exists = if_not_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the CREATE FOREIGN TABLE statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_foreign_table_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_foreign_table_statement"
 
 
 class PostgresDropForeignTableExpression(BaseExpression):
@@ -97,11 +93,7 @@ class PostgresDropForeignTableExpression(BaseExpression):
         self.cascade = cascade
         self.restrict = restrict
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Return the DROP FOREIGN TABLE statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_foreign_table_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_foreign_table_statement"

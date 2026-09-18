@@ -16,3 +16,7 @@ class PostgresReturningMixin:
 
     def supports_returning_delete(self) -> bool:
         return self.version >= (8, 2, 0)
+
+    def supports_returning_old_new(self) -> bool:
+        """PostgreSQL 17+ allows ``OLD.<col>`` / ``NEW.<col>`` in RETURNING."""
+        return self.version >= (17, 0, 0)
