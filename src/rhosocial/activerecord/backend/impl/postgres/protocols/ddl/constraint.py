@@ -13,9 +13,12 @@ PostgreSQL-proprietary features:
 - EXCLUDE constraints
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import ConstraintSupport
+
+if TYPE_CHECKING:  # pragma: no cover
+    from rhosocial.activerecord.backend.expression.statements import AddTableConstraint
 
 
 @runtime_checkable
@@ -61,5 +64,21 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
 
         Vendor extension (not in ISO/IEC 9075-2 §11.10). PostgreSQL has
         supported it since 9.6.
+        """
+        ...
+
+    def format_add_table_constraint_action(
+        self, action: "AddTableConstraint"
+    ) -> Tuple[str, tuple]:
+        """Format ALTER TABLE ADD CONSTRAINT with PostgreSQL extensions.
+
+        Adds EXCLUDE constraint support and the PostgreSQL-proprietary
+        ``NOT VALID`` suffix to the standard formatting.
+
+        Args:
+            action: AddTableConstraint action to format.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple)
         """
         ...

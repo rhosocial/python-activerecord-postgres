@@ -18,6 +18,12 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import VarCharType
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQLExpression,
+)
+from rhosocial.activerecord.backend.expression.core import CastExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
 from typing import Tuple, Any  # noqa: F401
 
 
@@ -44,11 +50,12 @@ def test_postgres_validate_data_type(dialect):
 def test_postgres_format_column_definition_data_type_validation(dialect):
     """Test column definition formats data_type correctly."""
     col_def = ColumnDefinition(
+        dialect,
         name="test_col",
-        data_type=VarCharType(255),
+        data_type=VarCharType(length=255, dialect=dialect),
     )
 
-    sql, params = dialect.format_column_definition(col_def)
+    sql, params = col_def.to_sql()
     assert "VARCHAR(255)" in sql
 
 
@@ -56,6 +63,7 @@ def test_postgres_column_definition_rejects_string_data_type(dialect):
     """Test that ColumnDefinition rejects string data_type at construction."""
     with pytest.raises(TypeError, match="data_type must be a DataType instance"):
         ColumnDefinition(
+            dialect,
             name="test_col",
             data_type="VARCHAR(255); DROP TABLE users--",
         )
@@ -64,6 +72,7 @@ def test_postgres_column_definition_rejects_string_data_type(dialect):
 def test_postgres_format_default_constraint_string_escaping(dialect):
     """Test DEFAULT constraint string is escaped."""
     constraint = ColumnConstraint(
+        dialect,
         constraint_type=ColumnConstraintType.DEFAULT,
         default_value="test's value",
     )
@@ -75,21 +84,24 @@ def test_postgres_format_default_constraint_string_escaping(dialect):
 
 def test_postgres_format_storage_options_string_escaping(dialect):
     """Test storage options string values are escaped."""
-    storage_opts = {"key": "value's"}
+    from rhosocial.activerecord.backend.expression.statements import StorageOptionsExpression
+    storage_opts = StorageOptionsExpression(dialect, {"key": "value's"})
     sql, params = dialect.format_storage_options(storage_opts)
     assert "value''s" in sql
     assert "'; DROP" not in sql
 
 
 def test_postgres_format_cast_expression_valid(dialect):
-    """Test that CAST expression validates target_type."""
-    sql, params = dialect.format_cast_expression("column", "INTEGER", (), None)
+    """Test that CAST expression renders the target type (:: syntax)."""
+    expr = CastExpression(dialect, RawSQLExpression(dialect, "column"), "INTEGER")
+    sql, params = expr.to_sql()
     assert "INTEGER" in sql
 
 
 def test_exclude_constraint_valid_using_methods(dialect):
     """Test valid index access methods are accepted."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -111,12 +123,13 @@ def test_exclude_constraint_valid_operators(dialect):
         ("box", "~="),
     ]
 
-    for expr, op in valid_ops:
+    for elem, op in valid_ops:
         constraint = TableConstraint(
+            dialect,
             constraint_type=TableConstraintType.EXCLUDE,
             name="test_exclude",
             dialect_options={
-                "exclude_elements": [(expr, op)],
+                "exclude_elements": [(elem, op)],
             },
         )
 
@@ -127,6 +140,7 @@ def test_exclude_constraint_valid_operators(dialect):
 def test_exclude_constraint_rejects_invalid_using(dialect):
     """Test that invalid index access method is rejected."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -142,6 +156,7 @@ def test_exclude_constraint_rejects_invalid_using(dialect):
 def test_exclude_constraint_rejects_invalid_operator(dialect):
     """Test that invalid exclude operator is rejected."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -156,6 +171,7 @@ def test_exclude_constraint_rejects_invalid_operator(dialect):
 def test_exclude_constraint_sql_injection_prevention(dialect):
     """Test that SQL injection attempts are blocked."""
     constraint = TableConstraint(
+        dialect,
         constraint_type=TableConstraintType.EXCLUDE,
         name="test_exclude",
         dialect_options={
@@ -319,7 +335,7 @@ class TestPostgresTriggerFunctionNameSecurity:
             function_name="my_function",
         )
 
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_function"' in sql
 
@@ -340,7 +356,7 @@ class TestPostgresTriggerFunctionNameSecurity:
             function_name="Function With Spaces",
         )
 
-        sql, params = dialect.format_create_trigger_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"Function With Spaces"' in sql
 
@@ -362,7 +378,7 @@ class TestPostgresExtendedStatisticsNameSecurity:
             statistics_type="ndistinct",
         )
 
-        sql, params = dialect.format_create_statistics_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_stats"' in sql
 
@@ -377,7 +393,7 @@ class TestPostgresExtendedStatisticsNameSecurity:
             name="my_stats",
         )
 
-        sql, params = dialect.format_drop_statistics_statement(expr)
+        sql, params = expr.to_sql()
 
         assert '"my_stats"' in sql
 
@@ -386,57 +402,58 @@ class TestPostgresExtendedStatisticsNameSecurity:
 # format_partition_value — single-quote escaping
 # ============================================================
 
-def _format_partition_value(dialect, value):
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
-
-    sql, params = dialect.format_partition_value(PartitionValue(dialect=dialect, value=value))
-    assert params == ()
-    return sql
-
-
 def test_partition_value_none(dialect):
     """None partition value returns NULL."""
-    result = _format_partition_value(dialect, None)
-    assert result == "NULL"
+    sql, params = PartitionValue(dialect=dialect, value=None).to_sql()
+    assert params == ()
+    assert sql == "NULL"
 
 
 def test_partition_value_maxvalue(dialect):
     """MAXVALUE is returned as-is (case-insensitive)."""
-    result = _format_partition_value(dialect, "MAXVALUE")
-    assert result == "MAXVALUE"
+    sql, params = PartitionValue(dialect=dialect, value="MAXVALUE").to_sql()
+    assert params == ()
+    assert sql == "MAXVALUE"
 
 
 def test_partition_value_minvalue(dialect):
     """MINVALUE is returned as-is (case-insensitive)."""
-    result = _format_partition_value(dialect, "minvalue")
-    assert result == "MINVALUE"
+    sql, params = PartitionValue(dialect=dialect, value="minvalue").to_sql()
+    assert params == ()
+    assert sql == "MINVALUE"
 
 
 def test_partition_value_normal_string(dialect):
     """Normal string value is single-quoted."""
-    result = _format_partition_value(dialect, "2024-01-01")
-    assert result == "'2024-01-01'"
+    sql, params = PartitionValue(dialect=dialect, value="2024-01-01").to_sql()
+    assert params == ()
+    assert sql == "'2024-01-01'"
 
 
 def test_partition_value_escaped_single_quote(dialect):
     """String value with single quote is properly escaped."""
-    result = _format_partition_value(dialect, "it's")
-    assert result == "'it''s'"
-    assert "'; DROP" not in result
+    sql, params = PartitionValue(dialect=dialect, value="it's").to_sql()
+    assert params == ()
+    assert sql == "'it''s'"
+    assert "'; DROP" not in sql
 
 
 def test_partition_value_injection_blocked(dialect):
     """SQL injection in partition value is safely escaped (inside quotes)."""
-    result = _format_partition_value(dialect, "x'; DROP TABLE users--")
-    assert result.count("'") % 2 == 0
-    assert result.startswith("'")
-    assert result.endswith("'")
+    sql, params = PartitionValue(
+        dialect=dialect, value="x'; DROP TABLE users--"
+    ).to_sql()
+    assert params == ()
+    assert sql.count("'") % 2 == 0
+    assert sql.startswith("'")
+    assert sql.endswith("'")
 
 
 def test_partition_value_integer(dialect):
     """Integer partition value is returned as str()."""
-    result = _format_partition_value(dialect, 42)
-    assert result == "42"
+    sql, params = PartitionValue(dialect=dialect, value=42).to_sql()
+    assert params == ()
+    assert sql == "42"
 
 
 # ============================================================
@@ -503,34 +520,43 @@ def test_format_identifier_empty_string(dialect):
 def test_format_binary_operator_percent_escaped():
     """format_binary_operator escapes % to %% for psycopg compatibility."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    from rhosocial.activerecord.backend.expression.core import Literal
     d = PostgresDialect((16, 0, 0))
 
+    def binop(op, left_sql, right_sql, right_params=()):
+        left = RawSQLExpression(d, left_sql)
+        if right_params:
+            right = Literal(d, right_params[0])
+        else:
+            right = RawSQLExpression(d, right_sql)
+        return BinaryExpression(d, op, left, right).to_sql()
+
     # % operator → %% (psycopg requires %% for literal %)
-    sql, params = d.format_binary_operator("%", "a", "b", (), ())
+    sql, params = binop("%", "a", "b")
     assert sql == "a %% b", f"Expected escaped %%, got: {sql}"
     assert params == ()
 
     # %% is pre-escaped → should NOT be double-escaped to %%%%
     # (callers must pass raw operator, not pre-escaped)
-    sql, params = d.format_binary_operator("%%", "a", "b", (), ())
+    sql, params = binop("%%", "a", "b")
     assert sql == "a %%%% b", f"raw %% should be escaped to %%%%, got: {sql}"
 
     # Operator without % → unchanged
-    sql, params = d.format_binary_operator("=", "a", "b", (), ())
+    sql, params = binop("=", "a", "b")
     assert sql == "a = b"
     assert params == ()
 
     # ? operator (hstore/jsonb) → preserved as-is, not treated as placeholder
-    sql, params = d.format_binary_operator("?", "data", "%s", (), ("key",))
+    sql, params = binop("?", "data", "%s", ("key",))
     assert sql == "data ? %s", f"? operator preserved: {sql}"
     assert params == ("key",)
 
     # ?| and ?& operators → preserved
-    sql, params = d.format_binary_operator("?|", "data", "%s", (), ("key",))
+    sql, params = binop("?|", "data", "%s", ("key",))
     assert sql == "data ?| %s", f"?| operator preserved: {sql}"
 
     # %# (pg_trgm) → %# (unchanged, no % to escape)
-    sql, params = d.format_binary_operator("%#", "a", "b", (), ())
+    sql, params = binop("%#", "a", "b")
     assert sql == "a %%# b", f"%# operator: {sql}"
 
 

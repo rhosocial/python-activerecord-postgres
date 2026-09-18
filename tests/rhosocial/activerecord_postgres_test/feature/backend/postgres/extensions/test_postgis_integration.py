@@ -47,13 +47,13 @@ def _setup_geo_points_table(backend, dialect, table):
     """Create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -84,13 +84,13 @@ def _setup_geo_distance_table(backend, dialect, table):
     """Create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -121,13 +121,13 @@ def _setup_geo_contains_table(backend, dialect, table):
     """Create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -164,13 +164,13 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     """Create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -211,13 +211,13 @@ def _setup_geog_table(backend, dialect, table):
     """Create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geog", data_type=PostgresGeographyType()),
+        ColumnDefinition(dialect, name="geog", data_type=PostgresGeographyType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -258,13 +258,13 @@ async def _async_setup_geo_points_table(backend, dialect, table):
     """Async: create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -295,13 +295,13 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
     """Async: create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -332,13 +332,13 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
     """Async: create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -375,13 +375,13 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     """Async: create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geom", data_type=PostgresGeometryType()),
+        ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -422,13 +422,13 @@ async def _async_setup_geog_table(backend, dialect, table):
     """Async: create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="geog", data_type=PostgresGeographyType()),
+        ColumnDefinition(dialect, name="geog", data_type=PostgresGeographyType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

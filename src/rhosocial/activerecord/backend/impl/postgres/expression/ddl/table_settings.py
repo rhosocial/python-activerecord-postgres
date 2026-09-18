@@ -80,11 +80,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
         self.access_method = access_method
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> "Tuple[str, tuple]":
-        """Generate the ALTER TABLE ... SET statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_alter_table_settings_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_table_settings_statement"

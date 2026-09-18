@@ -14,9 +14,6 @@ class PostgresFeaturesMixin:
     def supports_cte_search_cycle(self) -> bool:
         return self.version >= (14, 0, 0)
 
-    def supports_fetch_with_ties(self) -> bool:
-        return self.version >= (13, 0, 0)
-
     def supports_call_statement(self) -> bool:
         return self.version >= (11, 0, 0)
 

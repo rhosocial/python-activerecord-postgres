@@ -206,7 +206,7 @@ class TestPostgresAlterColumnUsingExpression:
             new_value="NUMERIC(10,2)",
             dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
         )
-        sql, serialized = dialect.format_alter_column_action(action)
+        sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
         assert 'USING ("price" + %s)' in sql
         assert serialized == (1,)
@@ -220,7 +220,7 @@ class TestPostgresAlterColumnUsingExpression:
             cascade=True,
             dialect_options={"using": Column(dialect, "price")},
         )
-        sql, serialized = dialect.format_alter_column_action(action)
+        sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
         assert 'USING ("price")' in sql
         assert sql.endswith(" CASCADE")
@@ -235,7 +235,7 @@ class TestPostgresAlterColumnUsingExpression:
             dialect_options={"using": Column(dialect, "price")},
         )
         with pytest.raises(ValueError, match="USING"):
-            dialect.format_alter_column_action(action)
+            action.to_sql()
 
     def test_without_using_unaffected(self, dialect):
         """No USING -> output matches the standard form."""
@@ -245,7 +245,7 @@ class TestPostgresAlterColumnUsingExpression:
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
         )
-        sql, _ = dialect.format_alter_column_action(action)
+        sql, _ = action.to_sql()
         assert sql == 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)'
 
 
@@ -263,52 +263,46 @@ class TestPostgresAlterColumnModifierMixin:
 
     def test_add_column(self, dialect):
         column = ColumnDefinition(
-            "email", TextType(),
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+            dialect,
+            "email", TextType(dialect),
+            constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
         )
-        sql, params = dialect.format_add_column_action(
-            AddColumn(dialect, column)
-        )
+        add = AddColumn(dialect, column)
+        sql, params = add.to_sql()
         assert sql == 'ADD COLUMN "email" TEXT NOT NULL'
         assert params == ()
 
     def test_add_column_if_not_exists(self, dialect):
-        column = ColumnDefinition("email", TextType())
-        sql, _ = dialect.format_add_column_action(
-            AddColumn(dialect, column, if_not_exists=True)
-        )
+        column = ColumnDefinition(dialect, "email", TextType(dialect))
+        add = AddColumn(dialect, column, if_not_exists=True)
+        sql, _ = add.to_sql()
         assert sql == 'ADD COLUMN IF NOT EXISTS "email" TEXT'
 
     def test_drop_column(self, dialect):
-        sql, _ = dialect.format_drop_column_action(
-            DropColumn(dialect, "email")
-        )
+        drop = DropColumn(dialect, "email")
+        sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN "email"'
 
     def test_drop_column_if_exists(self, dialect):
-        sql, _ = dialect.format_drop_column_action(
-            DropColumn(dialect, "email", if_exists=True)
-        )
+        drop = DropColumn(dialect, "email", if_exists=True)
+        sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN IF EXISTS "email"'
 
     def test_drop_constraint(self, dialect):
-        sql, _ = dialect.format_drop_table_constraint_action(
-            DropTableConstraint(dialect, "user_email_key")
-        )
+        drop = DropTableConstraint(dialect, "user_email_key")
+        sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT "user_email_key"'
 
     def test_drop_constraint_if_exists(self, dialect):
-        sql, _ = dialect.format_drop_table_constraint_action(
-            DropTableConstraint(dialect, "user_email_key", if_exists=True)
-        )
+        drop = DropTableConstraint(dialect, "user_email_key", if_exists=True)
+        sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "user_email_key"'
 
     def test_drop_constraint_if_exists_cascade(self, dialect):
-        sql, _ = dialect.format_drop_table_constraint_action(
-            DropTableConstraint(
-                dialect, "user_email_key", if_exists=True, cascade=True
-            )
+        drop = DropTableConstraint(
+            dialect, "user_email_key", if_exists=True, cascade=True
         )
+        sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "user_email_key" CASCADE'
 
 

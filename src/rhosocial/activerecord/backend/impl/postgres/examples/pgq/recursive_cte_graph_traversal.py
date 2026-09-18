@@ -57,7 +57,7 @@ from rhosocial.activerecord.backend.expression.predicates import BetweenPredicat
 from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
-    JoinExpression,
+    JoinClause,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -164,7 +164,7 @@ base_query = QueryExpression(
 )
 
 # --- Recursive query: follow edges one hop, depth+1, bound depth<4 ---
-recursive_join = JoinExpression(
+recursive_join = JoinClause(
     dialect=dialect,
     left_table=TableExpression(dialect, 'traversal', alias='t'),
     right_table=TableExpression(dialect, 'follows', alias='f'),
@@ -243,7 +243,7 @@ print("Technique:  Recursive CTE + UNION ALL + depth limit + amount aggregation"
 print("=" * 72)
 
 # --- Base query: direct sources sending to target account ACC-001 ---
-aml_base_join = JoinExpression(
+aml_base_join = JoinClause(
     dialect=dialect,
     left_table=TableExpression(dialect, 'transactions', alias='tx'),
     right_table=TableExpression(dialect, 'accounts', alias='a'),
@@ -265,7 +265,7 @@ aml_base = QueryExpression(
 )
 
 # --- Recursive query: trace upstream along the transaction chain ---
-aml_recursive_join = JoinExpression(
+aml_recursive_join = JoinClause(
     dialect=dialect,
     left_table=TableExpression(dialect, 'fund_trace', alias='tr'),
     right_table=TableExpression(dialect, 'transactions', alias='tx'),
@@ -374,7 +374,7 @@ print("""
 1. SetOperationExpression(operation='UNION ALL') combines base + recursive queries
 2. CTEExpression(name=..., query=..., columns=...) defines the CTE column signature
 3. WithQueryExpression(recursive=True) generates WITH RECURSIVE
-4. Recursive query joins the CTE reference with physical tables via chained JoinExpression
+4. Recursive query joins the CTE reference with physical tables via chained JoinClause
 5. depth field simulates the hop count of quantified path patterns
 6. WHERE depth BETWEEN x AND y simulates {x,y} range constraint
 7. Use cases: social recommendations, fund tracing, knowledge graph traversal

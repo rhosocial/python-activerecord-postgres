@@ -37,17 +37,17 @@ class PostgresLockingMixin:
         FOR SHARE, FOR KEY SHARE) and options (NOWAIT, SKIP LOCKED).
 
         Args:
-            clause: PostgresForUpdateClause instance
+            clause: ForUpdateClause instance.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-        from rhosocial.activerecord.backend.impl.postgres.expression.locking import LockStrength
+        from rhosocial.activerecord.backend.expression import LockStrength
 
         all_params = []
 
-        strength = clause.dialect_options.get("lock_strength", LockStrength.UPDATE)
+        strength = clause.strength
 
         # Check version support for lock strength
         if strength == LockStrength.NO_KEY_UPDATE:
@@ -65,6 +65,10 @@ class PostgresLockingMixin:
                 raise UnsupportedFeatureError(
                     self.name, "FOR KEY SHARE (requires PostgreSQL 9.3+)"
                 )
+        elif strength != LockStrength.UPDATE:
+            raise UnsupportedFeatureError(
+                self.name, f"{strength.value} (unsupported lock strength)"
+            )
 
         # Use the strength value directly (e.g., "FOR UPDATE", "FOR SHARE")
         sql_parts = [strength.value]
@@ -94,3 +98,31 @@ class PostgresLockingMixin:
             sql_parts.append("SKIP LOCKED")
 
         return " ".join(sql_parts), tuple(all_params)
+
+    def supports_lock_strength(self, strength) -> bool:
+        """Check if a specific lock strength is supported.
+
+        PostgreSQL lock strength support by version:
+        - FOR UPDATE: All versions
+        - FOR NO KEY UPDATE: PostgreSQL 9.0+
+        - FOR SHARE: PostgreSQL 9.0+
+        - FOR KEY SHARE: PostgreSQL 9.3+
+
+        Args:
+            strength: The LockStrength enum value to check
+
+        Returns:
+            True if the lock strength is supported, False otherwise
+
+        """
+        from rhosocial.activerecord.backend.expression import LockStrength
+
+        if strength == LockStrength.UPDATE:
+            return True  # All PostgreSQL versions support FOR UPDATE
+        elif strength == LockStrength.NO_KEY_UPDATE:
+            return self.version >= (9, 0, 0)
+        elif strength == LockStrength.SHARE:
+            return self.version >= (9, 0, 0)
+        elif strength == LockStrength.KEY_SHARE:
+            return self.version >= (9, 3, 0)
+        return False

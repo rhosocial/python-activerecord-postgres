@@ -140,8 +140,10 @@ class PostgresAlterIndexExpression(BaseExpression):
         self.nowait = nowait
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        return self.dialect.format_alter_index_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_index_statement"
 
 
 class PostgresReindexExpression(BaseExpression):
@@ -211,11 +213,7 @@ class PostgresReindexExpression(BaseExpression):
         self.verbose = verbose
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate REINDEX SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_reindex_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_reindex_statement"

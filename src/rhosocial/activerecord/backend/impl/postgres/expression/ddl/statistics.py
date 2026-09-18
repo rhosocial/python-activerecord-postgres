@@ -85,14 +85,10 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         self.if_not_exists = if_not_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate CREATE STATISTICS SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_create_statistics_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_statistics_statement"
 
 
 class PostgresDropStatisticsExpression(BaseExpression):
@@ -133,11 +129,7 @@ class PostgresDropStatisticsExpression(BaseExpression):
         self.if_exists = if_exists
         self.dialect_options = dialect_options or {}
 
-    def to_sql(self) -> Tuple[str, tuple]:
-        """Generate DROP STATISTICS SQL statement.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
-        return self.dialect.format_drop_statistics_statement(self)
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_statistics_statement"

@@ -18,6 +18,9 @@ if TYPE_CHECKING:  # pragma: no cover
         CreateIndexExpression,
         DropIndexExpression,
     )
+    from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+        FulltextMatchExpression,
+    )
 
 
 class PostgresIndexMixin:
@@ -236,25 +239,23 @@ class PostgresIndexMixin:
         return False
 
     def format_fulltext_match(
-        self, columns: List[str], search_term: str, mode: Optional[str] = None
+        self, expr: "FulltextMatchExpression"
     ) -> Tuple[str, Tuple]:
         """Format tsvector @@ tsquery expression for PostgreSQL full-text search.
 
         Produces: to_tsvector('config', col1 || ' ' || col2) @@ tsquery_func(search_term)
 
         Args:
-            columns: Columns to include in the tsvector expression
-            search_term: Search term to convert to tsquery
-            mode: Search mode:
-                  - None / 'NATURAL LANGUAGE': plainto_tsquery (plain text)
-                  - 'BOOLEAN': to_tsquery (operators &, |, !)
-                  - 'PHRASE': phraseto_tsquery (phrase matching)
+            expr: FulltextMatchExpression node carrying columns, search_term, and mode.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         config = self._FT_DEFAULT_CONFIG
         ph = self.get_parameter_placeholder()
+        columns = expr.columns
+        search_term = expr.search_term
+        mode = expr.mode
 
         if len(columns) == 1:
             tsvector_expr = f"to_tsvector('{config}', {self.format_identifier(columns[0])})"
@@ -669,3 +670,33 @@ class PostgresIndexMixin:
                 parts.append(f"WHERE {where_clause}")
 
         return (" ".join(parts), tuple(all_params))
+
+    def format_add_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE ADD INDEX.
+
+        Raises UnsupportedFeatureError — use CREATE INDEX instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE ADD INDEX",
+            suggestion="Use CREATE INDEX to create an index on the table.",
+        )
+
+    def format_drop_index_action(self, action) -> Tuple[str, tuple]:
+        """PostgreSQL does not support ALTER TABLE DROP INDEX.
+
+        Raises UnsupportedFeatureError — use DROP INDEX statement instead.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "ALTER TABLE DROP INDEX",
+            suggestion="Use DROP INDEX statement to remove an index.",
+        )

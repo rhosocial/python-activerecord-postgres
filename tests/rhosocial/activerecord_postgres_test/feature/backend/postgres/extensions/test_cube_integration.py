@@ -66,13 +66,13 @@ def cube_env(postgres_backend_single):
         table="test_cubes",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -101,13 +101,13 @@ def cube_env(postgres_backend_single):
         table="test_cube_dist",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -136,13 +136,13 @@ def cube_env(postgres_backend_single):
         table="test_cube_idx",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -352,13 +352,13 @@ async def async_cube_env(async_postgres_backend_single):
         table="test_cubes_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -387,13 +387,13 @@ async def async_cube_env(async_postgres_backend_single):
         table="test_cube_dist_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )
@@ -422,13 +422,13 @@ async def async_cube_env(async_postgres_backend_single):
         table="test_cube_idx_async",
         columns=[
             ColumnDefinition(
-                name="id",
-                data_type=PostgresSerialType(),
+                dialect, name="id",
+                data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
                 ],
             ),
-            ColumnDefinition(name="c", data_type=PostgresCubeType()),
+            ColumnDefinition(dialect, name="c", data_type=PostgresCubeType(dialect=dialect)),
         ],
         if_not_exists=True,
     )

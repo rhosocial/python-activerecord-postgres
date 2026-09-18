@@ -71,7 +71,7 @@ class TestPgPartmanMixin:
             parent_table='public.events',
             automatic_maintenance='on',
         )
-        sql, params = dialect.format_pg_partman_update_config(expr)
+        sql, params = expr.to_sql()
         assert "part_config" in sql
 
     def test_format_delete_config(self):
@@ -82,7 +82,7 @@ class TestPgPartmanMixin:
             parent_table='public.events',
             schema='custom_partman',
         )
-        sql, params = dialect.format_pg_partman_delete_config(expr)
+        sql, params = expr.to_sql()
         assert "DELETE FROM" in sql
         assert '"custom_partman"."part_config"' in sql
         assert "WHERE parent_table = %s" in sql

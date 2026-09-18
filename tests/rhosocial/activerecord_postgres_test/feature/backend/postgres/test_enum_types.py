@@ -17,8 +17,11 @@ from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumT
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateEnumTypeExpression,
     PostgresDropEnumTypeExpression,
+    PostgresAlterEnumAddValueExpression,
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
+    EnumTypeNameExpression,
+    EnumValuesExpression,
 )
 
 
@@ -437,31 +440,50 @@ class TestEnumTypeMixin:
     """Tests for EnumTypeMixin formatting methods."""
 
     def test_format_enum_type_name(self):
-        """Test format_enum_type_name method."""
+        """Test format_enum_type_name via EnumTypeNameExpression."""
         dialect = PostgresDialect()
-        assert dialect.format_enum_type_name('status') == 'status'
-        assert dialect.format_enum_type_name('status', schema='app') == 'app.status'
+        sql, params = EnumTypeNameExpression(dialect, name='status').to_sql()
+        assert sql == 'status'
+        assert params == ()
+        sql, params = EnumTypeNameExpression(
+            dialect, name='status', schema='app'
+        ).to_sql()
+        assert sql == 'app.status'
+        assert params == ()
 
     def test_format_enum_values(self):
-        """Test format_enum_values method."""
+        """Test format_enum_values via EnumValuesExpression."""
         dialect = PostgresDialect()
-        result = dialect.format_enum_values(['a', 'b', 'c'])
-        assert result == "'a', 'b', 'c'"
+        sql, params = EnumValuesExpression(
+            dialect, values=['a', 'b', 'c']
+        ).to_sql()
+        assert sql == "'a', 'b', 'c'"
+        assert params == ()
 
     def test_format_create_enum_type(self):
         """Test format_create_enum_type method."""
         dialect = PostgresDialect()
-        sql = dialect.format_create_enum_type('status', ['pending', 'ready'])
+        expr = PostgresCreateEnumTypeExpression(
+            dialect=dialect, name='status', values=['pending', 'ready']
+        )
+        sql, params = expr.to_sql()
         assert sql == "CREATE TYPE status AS ENUM ('pending', 'ready')"
+        assert params == ()
 
     def test_format_drop_enum_type(self):
         """Test format_drop_enum_type method."""
         dialect = PostgresDialect()
-        sql = dialect.format_drop_enum_type('status')
+        expr = PostgresDropEnumTypeExpression(dialect=dialect, name='status')
+        sql, params = expr.to_sql()
         assert sql == "DROP TYPE status"
+        assert params == ()
 
     def test_format_alter_enum_add_value(self):
         """Test format_alter_enum_add_value method."""
         dialect = PostgresDialect()
-        sql = dialect.format_alter_enum_add_value('status', 'failed')
+        expr = PostgresAlterEnumAddValueExpression(
+            dialect=dialect, type_name='status', new_value='failed'
+        )
+        sql, params = expr.to_sql()
         assert sql == "ALTER TYPE status ADD VALUE 'failed'"
+        assert params == ()

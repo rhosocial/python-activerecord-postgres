@@ -5,7 +5,7 @@ This module defines protocols for PostgreSQL-specific materialized view features
 that extend beyond the SQL standard.
 """
 
-from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
+from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresRefreshMaterializedViewExpression
@@ -46,6 +46,20 @@ class PostgresMaterializedViewSupport(Protocol):
 
         Args:
             expr: PostgresRefreshMaterializedViewExpression containing all options
+
+        Returns:
+            Tuple of (SQL statement, parameters tuple)
+        """
+        ...
+
+    def format_create_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
+        """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
+
+        Supports column aliases, TABLESPACE, WITH (storage_options),
+        and WITH DATA / WITH NO DATA.
+
+        Args:
+            expr: CreateMaterializedViewExpression instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

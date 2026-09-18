@@ -4,7 +4,7 @@
 This module defines the protocol for PostgreSQL-specific ENUM type management.
 """
 
-from typing import Protocol, runtime_checkable, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Protocol, runtime_checkable, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.type import (
@@ -83,7 +83,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_enum_type_name(self, name: str, schema: Optional[str] = None) -> str:
+    def format_enum_type_name(self, name: str, schema: Optional[str] = None) -> Tuple[str, tuple]:
         """Format enum type name with optional schema.
 
         Args:
@@ -91,44 +91,38 @@ class PostgresEnumTypeSupport(Protocol):
             schema: Optional schema name
 
         Returns:
-            Formatted type name (e.g., 'schema.name' or 'name')
+            Tuple of (formatted type name, empty params tuple)
         """
         ...
 
-    def format_enum_values(self, values: List[str]) -> str:
+    def format_enum_values(self, values: List[str]) -> Tuple[str, tuple]:
         """Format enum values list for SQL.
 
         Args:
             values: List of enum values
 
         Returns:
-            SQL-formatted values string
+            Tuple of (SQL-formatted values string, empty params tuple)
         """
         ...
 
     def format_create_enum_type(
         self,
-        expr_or_name: Union["PostgresCreateEnumTypeExpression", str],
-        values: Optional[List[str]] = None,
-        schema: Optional[str] = None,
-        if_not_exists: bool = False,
-    ) -> Union[str, Tuple[str, tuple]]:
-        """Format CREATE TYPE for either the legacy or expression-based API.
+        expr: "PostgresCreateEnumTypeExpression",
+    ) -> Tuple[str, tuple]:
+        """Format CREATE TYPE from its expression node.
 
         Args:
-            expr_or_name: PostgresCreateEnumTypeExpression instance or type name string
-            values: List of allowed values (required when expr_or_name is a string)
-            schema: Optional schema name
-            if_not_exists: Add IF NOT EXISTS clause
+            expr: PostgresCreateEnumTypeExpression instance
 
         Returns:
-            SQL statement string or tuple of (SQL string, params tuple)
+            Tuple of (SQL string, params tuple)
         """
         ...
 
     def format_create_enum_type_raw(
         self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format CREATE TYPE statement for enum.
 
         Args:
@@ -138,33 +132,27 @@ class PostgresEnumTypeSupport(Protocol):
             if_not_exists: Add IF NOT EXISTS
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
         """
         ...
 
     def format_drop_enum_type(
         self,
-        expr_or_name: Union["PostgresDropEnumTypeExpression", str],
-        schema: Optional[str] = None,
-        if_exists: bool = False,
-        cascade: bool = False,
-    ) -> Union[str, Tuple[str, tuple]]:
-        """Format DROP TYPE for either the legacy or expression-based API.
+        expr: "PostgresDropEnumTypeExpression",
+    ) -> Tuple[str, tuple]:
+        """Format DROP TYPE from its expression node.
 
         Args:
-            expr_or_name: PostgresDropEnumTypeExpression instance or type name string
-            schema: Optional schema name
-            if_exists: Add IF EXISTS clause
-            cascade: Add CASCADE clause
+            expr: PostgresDropEnumTypeExpression instance
 
         Returns:
-            SQL statement string or tuple of (SQL string, params tuple)
+            Tuple of (SQL string, params tuple)
         """
         ...
 
     def format_drop_enum_type_raw(
         self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format DROP TYPE statement.
 
         Args:
@@ -174,36 +162,39 @@ class PostgresEnumTypeSupport(Protocol):
             cascade: Add CASCADE
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
         """
         ...
 
     def format_alter_enum_add_value(
         self,
-        expr_or_type_name: Union["PostgresAlterEnumAddValueExpression", str],
-        new_value: Optional[str] = None,
-        schema: Optional[str] = None,
-        before: Optional[str] = None,
-        after: Optional[str] = None,
-    ) -> Union[str, Tuple[str, tuple]]:
-        """Format ALTER TYPE ADD VALUE for either the legacy or expression-based API.
+        expr: "PostgresAlterEnumAddValueExpression",
+    ) -> Tuple[str, tuple]:
+        """Format ALTER TYPE ADD VALUE from its expression node.
 
         Args:
-            expr_or_type_name: PostgresAlterEnumAddValueExpression instance or type name string
-            new_value: New value to add (required when expr_or_type_name is a string)
-            schema: Optional schema name
-            before: Add before this value
-            after: Add after this value
+            expr: PostgresAlterEnumAddValueExpression instance
 
         Returns:
-            SQL statement string or tuple of (SQL string, params tuple)
+            Tuple of (SQL string, params tuple)
+        """
+        ...
+
+    def format_enum_type_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format a PostgresEnumType type reference expression.
+
+        Args:
+            expr: PostgresEnumType instance
+
+        Returns:
+            Tuple of (SQL string, params tuple)
         """
         ...
 
     def format_alter_enum_add_value_raw(
         self, type_name: str, new_value: str, schema: Optional[str] = None,
         before: Optional[str] = None, after: Optional[str] = None
-    ) -> str:
+    ) -> Tuple[str, tuple]:
         """Format ALTER TYPE ADD VALUE statement.
 
         Args:
@@ -214,11 +205,11 @@ class PostgresEnumTypeSupport(Protocol):
             after: Add after this value
 
         Returns:
-            SQL statement string
+            Tuple of (SQL statement string, empty params tuple)
         """
         ...
 
-    def format_alter_enum_type_add_value(self, expr) -> Tuple[str, tuple]:
+    def format_alter_enum_type_add_value(self, expr: Any) -> Tuple[str, tuple]:
         """Format ALTER TYPE ADD VALUE statement from expression object.
 
         Args:
@@ -229,7 +220,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_alter_enum_type_rename_value(self, expr) -> Tuple[str, tuple]:
+    def format_alter_enum_type_rename_value(self, expr: Any) -> Tuple[str, tuple]:
         """Format ALTER TYPE RENAME VALUE statement from expression object.
 
         Args:
@@ -238,4 +229,24 @@ class PostgresEnumTypeSupport(Protocol):
         Returns:
             Tuple of (SQL string, empty params tuple)
         """
+        ...
+
+    def format_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format enum type name from expression object."""
+        ...
+
+    def format_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format enum values from expression object."""
+        ...
+
+    def format_create_enum_type_raw_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format CREATE TYPE from expression object."""
+        ...
+
+    def format_drop_enum_type_raw_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format DROP TYPE from expression object."""
+        ...
+
+    def format_alter_enum_add_value_raw_expression(self, expr: Any) -> Tuple[str, tuple]:
+        """Format ALTER TYPE ADD VALUE from expression object."""
         ...

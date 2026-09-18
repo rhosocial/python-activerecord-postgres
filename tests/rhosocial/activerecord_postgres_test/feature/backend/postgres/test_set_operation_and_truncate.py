@@ -94,7 +94,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect()
         expr = TruncateExpression(dialect, table_name="users")
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users"'
         assert params == ()
@@ -105,7 +105,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect(version=(9, 0, 0))
         expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users" RESTART IDENTITY'
         assert params == ()
@@ -116,7 +116,7 @@ class TestTruncateSupport:
 
         dialect = PostgresDialect()
         expr = TruncateExpression(dialect, table_name="orders", cascade=True)
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "orders" CASCADE'
         assert params == ()
@@ -132,20 +132,21 @@ class TestTruncateSupport:
             restart_identity=True,
             cascade=True
         )
-        sql, params = dialect.format_truncate_statement(expr)
+        sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "orders" RESTART IDENTITY CASCADE'
         assert params == ()
 
     def test_format_truncate_statement_restart_identity_unsupported_version(self):
-        """Test TRUNCATE with RESTART IDENTITY on unsupported version (should be ignored)."""
+        """Test TRUNCATE with RESTART IDENTITY on unsupported version raises error."""
+        import pytest
         from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
         # PostgreSQL 8.3 does not support RESTART IDENTITY
         dialect = PostgresDialect(version=(8, 3, 0))
         expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
-        sql, params = dialect.format_truncate_statement(expr)
 
-        # RESTART IDENTITY should be ignored on unsupported version
-        assert sql == 'TRUNCATE TABLE "users"'
-        assert params == ()
+        # RESTART IDENTITY should raise UnsupportedFeatureError on unsupported version
+        with pytest.raises(UnsupportedFeatureError, match="RESTART IDENTITY"):
+            expr.to_sql()

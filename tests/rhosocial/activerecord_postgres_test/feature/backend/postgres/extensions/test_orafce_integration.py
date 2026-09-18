@@ -62,17 +62,17 @@ def orafce_backend(postgres_backend_single):
     # Create test table using expressions
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="dt", data_type=DateType()),
-        ColumnDefinition(name="ref_dt", data_type=DateType()),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="discount", data_type=DecimalType()),
-        ColumnDefinition(name="description", data_type=TextType()),
+        ColumnDefinition(dialect, name="dt", data_type=DateType(dialect=dialect)),
+        ColumnDefinition(dialect, name="ref_dt", data_type=DateType(dialect=dialect)),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="discount", data_type=DecimalType(dialect=dialect)),
+        ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -323,17 +323,17 @@ async def async_orafce_backend(async_postgres_backend_single):
     # Create test table using expressions
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="dt", data_type=DateType()),
-        ColumnDefinition(name="ref_dt", data_type=DateType()),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="discount", data_type=DecimalType()),
-        ColumnDefinition(name="description", data_type=TextType()),
+        ColumnDefinition(dialect, name="dt", data_type=DateType(dialect=dialect)),
+        ColumnDefinition(dialect, name="ref_dt", data_type=DateType(dialect=dialect)),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="discount", data_type=DecimalType(dialect=dialect)),
+        ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

@@ -69,7 +69,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-derived-ddl"
 
       - name: Create postgres scenario config
         run: |
@@ -231,8 +231,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { python-version: '3.15.0-rc.1', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15.0-rc.1', postgres-version: '18', freethreaded: true }
+          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: false }
+          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: true }
 
     services:
       postgres:
@@ -280,7 +280,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-derived-ddl"
 
       - name: Create postgres scenario config
         run: |
@@ -392,7 +392,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-derived-ddl"
 
       - name: Create postgres scenario config
         run: |
@@ -491,7 +491,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-derived-ddl"
 
       - name: Create postgres scenario config
         run: |

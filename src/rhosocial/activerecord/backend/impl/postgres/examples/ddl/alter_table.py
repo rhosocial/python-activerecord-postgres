@@ -82,7 +82,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AddColumn,
-    RenameColumn,
+    RenameObject,
 )
 
 # Add a new column
@@ -130,7 +130,7 @@ backend.execute(sql, params)
 print("Column age added successfully")
 
 # Rename a column
-rename_action = RenameColumn(
+rename_action = RenameObject(
     dialect=dialect,
     old_name='name',
     new_name='full_name',

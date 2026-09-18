@@ -49,20 +49,20 @@ def pgrouting_env(postgres_backend_single):
     # Setup: create test_route_edges table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="source", data_type=IntegerType()),
-        ColumnDefinition(name="target", data_type=IntegerType()),
-        ColumnDefinition(name="cost", data_type=FloatType()),
-        ColumnDefinition(name="reverse_cost", data_type=FloatType()),
-        ColumnDefinition(name="x1", data_type=FloatType()),
-        ColumnDefinition(name="y1", data_type=FloatType()),
-        ColumnDefinition(name="x2", data_type=FloatType()),
-        ColumnDefinition(name="y2", data_type=FloatType()),
+        ColumnDefinition(dialect, name="source", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="target", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="cost", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="reverse_cost", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="x1", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="y1", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -178,20 +178,20 @@ async def async_pgrouting_env(async_postgres_backend_single):
     # Setup: create test_route_edges_async table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="source", data_type=IntegerType()),
-        ColumnDefinition(name="target", data_type=IntegerType()),
-        ColumnDefinition(name="cost", data_type=FloatType()),
-        ColumnDefinition(name="reverse_cost", data_type=FloatType()),
-        ColumnDefinition(name="x1", data_type=FloatType()),
-        ColumnDefinition(name="y1", data_type=FloatType()),
-        ColumnDefinition(name="x2", data_type=FloatType()),
-        ColumnDefinition(name="y2", data_type=FloatType()),
+        ColumnDefinition(dialect, name="source", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="target", data_type=IntegerType(dialect=dialect)),
+        ColumnDefinition(dialect, name="cost", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="reverse_cost", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="x1", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="y1", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
+        ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

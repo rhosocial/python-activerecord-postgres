@@ -7,6 +7,7 @@ Tests for PostgresBtreeGinMixin format methods:
 - format_btree_gin_operator_class
 """
 
+from rhosocial.activerecord.backend.expression import CreateIndexExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 
@@ -18,11 +19,19 @@ class TestPostgresBtreeGinMixin:
         self.dialect = PostgresDialect(version=(14, 0, 0))
 
     def test_format_gin_index(self):
-        """format_gin_index should return SQL containing gin."""
-        result = self.dialect.format_gin_index("idx_name", "table_name", ["column"])
-        assert "gin" in result
-        assert "idx_name" in result
-        assert "table_name" in result
+        """CreateIndexExpression with index_type gin should render a gin index."""
+        expr = CreateIndexExpression(
+            self.dialect,
+            index_name="idx_name",
+            table_name="table_name",
+            columns=["column"],
+            index_type="gin",
+        )
+        sql, params = expr.to_sql()
+        assert "gin" in sql
+        assert "idx_name" in sql
+        assert "table_name" in sql
+        assert params == ()
 
     def test_format_btree_gin_operator_class(self):
         """format_btree_gin_operator_class should return operator class name."""

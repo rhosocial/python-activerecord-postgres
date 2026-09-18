@@ -247,10 +247,11 @@ class TestPostgresPartitionedTableCreation:
             dialect=dialect,
             table="events",
             columns=[
-                ColumnDefinition("id", BigIntType()),
+                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
                 ColumnDefinition(
-                    "created_at", TimestampType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "created_at", TimestampType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 ),
             ],
             partition=PartitionClause(
@@ -271,8 +272,8 @@ class TestPostgresPartitionedTableCreation:
             dialect=dialect,
             table="events",
             columns=[
-                ColumnDefinition("id", BigIntType()),
-                ColumnDefinition("status", TextType(), constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
+                ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -293,8 +294,9 @@ class TestPostgresPartitionedTableCreation:
             table="events",
             columns=[
                 ColumnDefinition(
-                    "tenant_id", BigIntType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "tenant_id", BigIntType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 )
             ],
             partition=PartitionClause(
@@ -315,8 +317,9 @@ class TestPostgresPartitionedTableCreation:
             table="events",
             columns=[
                 ColumnDefinition(
-                    "tenant_id", BigIntType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "tenant_id", BigIntType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 )
             ],
             partition=PartitionClause(
@@ -338,8 +341,9 @@ class TestPostgresPartitionedTableCreation:
             table="events",
             columns=[
                 ColumnDefinition(
-                    "created_at", TimestampType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "created_at", TimestampType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 )
             ],
             partition=PartitionClause(
@@ -368,14 +372,16 @@ class TestPostgresPartitionedTableCreation:
             table="tenanted_events",
             columns=[
                 ColumnDefinition(
-                    "tenant_id", BigIntType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "tenant_id", BigIntType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 ),
                 ColumnDefinition(
-                    "created_at", TimestampType(),
-                    constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    dialect,
+                    "created_at", TimestampType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
                 ),
-                ColumnDefinition("payload", TextType()),
+                ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
             ],
             partition=PartitionClause(
                 dialect=dialect,

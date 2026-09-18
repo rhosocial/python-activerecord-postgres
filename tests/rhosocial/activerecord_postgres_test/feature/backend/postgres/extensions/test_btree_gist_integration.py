@@ -61,15 +61,15 @@ def btree_gist_env(postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="created_at", data_type=TimestampType()),
-        ColumnDefinition(name="value", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="created_at", data_type=TimestampType(dialect=dialect)),
+        ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -225,15 +225,15 @@ async def async_btree_gist_env(async_postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
+            dialect, name="id",
+            data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(name="name", data_type=TextType()),
-        ColumnDefinition(name="created_at", data_type=TimestampType()),
-        ColumnDefinition(name="value", data_type=IntegerType()),
+        ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
+        ColumnDefinition(dialect, name="created_at", data_type=TimestampType(dialect=dialect)),
+        ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

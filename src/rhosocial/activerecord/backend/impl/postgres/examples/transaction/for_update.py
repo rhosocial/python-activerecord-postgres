@@ -184,9 +184,9 @@ except Exception as e:
 # FOR SHARE - shared lock (read lock)
 # FOR KEY SHARE - for foreign key detection
 
-# Use PostgresForUpdateClause with LockStrength.SHARE for FOR SHARE
-from rhosocial.activerecord.backend.impl.postgres.expression.locking import (  # noqa: E402
-    PostgresForUpdateClause,
+# Use the generic ForUpdateClause with LockStrength.SHARE for FOR SHARE
+from rhosocial.activerecord.backend.expression import (  # noqa: E402
+    ForUpdateClause,
     LockStrength,
 )
 
@@ -196,7 +196,7 @@ with backend.transaction():
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=TableExpression(dialect, 'accounts'),
-        for_update=PostgresForUpdateClause(dialect, strength=LockStrength.SHARE),
+        for_update=ForUpdateClause(dialect, strength=LockStrength.SHARE),
     )
     sql, params = share_query.to_sql()
     result = backend.execute(sql, params, options=dql_options)
@@ -222,5 +222,5 @@ backend.disconnect()
 # 1. Use ForUpdateClause with QueryExpression for SELECT ... FOR UPDATE
 # 2. ForUpdateClause(dialect, skip_locked=True) for SKIP LOCKED
 # 3. ForUpdateClause(dialect, nowait=True) for NOWAIT
-# 4. Use PostgresForUpdateClause with LockStrength.SHARE for FOR SHARE
+# 4. Use ForUpdateClause with LockStrength.SHARE for FOR SHARE
 # 5. Locks released on COMMIT/ROLLBACK

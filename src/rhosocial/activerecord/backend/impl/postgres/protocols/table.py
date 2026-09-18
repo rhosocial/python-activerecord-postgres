@@ -5,9 +5,14 @@ This module defines the PostgresTableSupport protocol for features
 exclusive to PostgreSQL table management.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from rhosocial.activerecord.backend.dialect.protocols import TableSupport
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.statements import (
+        CreateTableLikeExpression,
+    )
 
 
 @runtime_checkable
@@ -41,12 +46,12 @@ class PostgresTableSupport(TableSupport, Protocol):
         """Whether CREATE UNLOGGED TABLE is supported.
 
         UNLOGGED tables skip WAL writes (9.6+), trading crash safety for
-        speed; callers opt in via ``dialect_options={"unlogged_table":
-        True}`` on ``CreateTableExpression``.
+        speed; callers opt in via ``CreateTableOptions(unlogged=True)`` on
+        ``CreateTableExpression``.
         """
         ...
 
-    def supports_table_like_syntax(self) -> bool:
+    def supports_create_table_like(self) -> bool:
         """Whether CREATE TABLE (LIKE ...) syntax is supported.
 
         PostgreSQL supports CREATE TABLE (LIKE other_table) with
@@ -54,7 +59,7 @@ class PostgresTableSupport(TableSupport, Protocol):
         """
         ...
 
-    def format_create_table_like(self, expr) -> tuple:
+    def format_create_table_like_statement(self, expr: "CreateTableLikeExpression") -> tuple:
         """Format CREATE TABLE (LIKE ...) statement."""
 
     def format_column_definition(self, col_def) -> tuple:

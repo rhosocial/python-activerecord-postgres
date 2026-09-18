@@ -195,7 +195,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                    pg_total_relation_size(c.oid) as size_bytes
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = %s
+            WHERE n.nspname = {self.p()}
                 AND c.relkind IN {relkind_filter}
         """
 
@@ -231,7 +231,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT c.relname as table_name,
                    CASE c.relkind
                        WHEN 'r' THEN 'BASE TABLE'
@@ -245,7 +245,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                    pg_total_relation_size(c.oid) as size_bytes
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = %s AND c.relname = %s
+            WHERE n.nspname = {self.p()} AND c.relname = {self.p()}
         """
 
         return (sql, (schema, table_name))
@@ -269,7 +269,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         schema = params.get("schema") or self._get_default_schema()
 
         # Base query with standard columns
-        sql = """
+        sql = f"""
             SELECT a.attname as column_name,
                    a.attnum as ordinal_position,
                    pg_catalog.format_type(a.atttypid, a.atttypmod) as data_type,
@@ -286,8 +286,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             LEFT JOIN pg_attrdef d ON a.attrelid = d.adrelid AND a.attnum = d.adnum
             JOIN pg_class c ON a.attrelid = c.oid
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = %s
-                AND c.relname = %s
+            WHERE n.nspname = {self.p()}
+                AND c.relname = {self.p()}
                 AND a.attnum > 0
                 AND NOT a.attisdropped
         """
@@ -317,7 +317,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT i.relname as index_name,
                    a.attname as column_name,
                    array_position(ix.indkey, a.attnum) as column_position,
@@ -331,7 +331,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_namespace n ON t.relnamespace = n.oid
             JOIN pg_am am ON i.relam = am.oid
             JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-            WHERE n.nspname = %s AND t.relname = %s
+            WHERE n.nspname = {self.p()} AND t.relname = {self.p()}
             ORDER BY i.relname, column_position
         """
 
@@ -360,7 +360,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT
                 con.conname as constraint_name,
                 a.attname as column_name,
@@ -379,8 +379,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_attribute ref_a ON ref_a.attrelid = ref_class.oid
                 AND ref_a.attnum = con.confkey[array_position(con.conkey, a.attnum)]
             WHERE con.contype = 'f'
-                AND ns.nspname = %s
-                AND class.relname = %s
+                AND ns.nspname = {self.p()}
+                AND class.relname = {self.p()}
             ORDER BY con.conname, column_position
         """
 
@@ -402,13 +402,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         schema = params.get("schema") or self._get_default_schema()
         include_system = params.get("include_system", False)
 
-        sql = """
+        sql = f"""
             SELECT c.relname as view_name,
                    pg_get_viewdef(c.oid, true) as definition,
                    obj_description(c.oid) as comment
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = %s AND c.relkind = 'v'
+            WHERE n.nspname = {self.p()} AND c.relkind = 'v'
         """
 
         params_list = [schema]
@@ -435,13 +435,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         view_name = params.get("view_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT c.relname as view_name,
                    pg_get_viewdef(c.oid, true) as definition,
                    obj_description(c.oid) as comment
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = %s AND c.relname = %s AND c.relkind = 'v'
+            WHERE n.nspname = {self.p()} AND c.relname = {self.p()} AND c.relkind = 'v'
         """
 
         return (sql, (schema, view_name))
@@ -470,7 +470,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT
                 t.tgname as trigger_name,
                 c.relname as table_name,
@@ -487,14 +487,14 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_class c ON t.tgrelid = c.oid
             JOIN pg_namespace n ON c.relnamespace = n.oid
             JOIN pg_proc p ON t.tgfoid = p.oid
-            WHERE n.nspname = %s
+            WHERE n.nspname = {self.p()}
                 AND NOT t.tgisinternal
         """
 
         params_list = [schema]
 
         if table_name:
-            sql += " AND c.relname = %s"
+            sql += f" AND c.relname = {self.p()}"
             params_list.append(table_name)
 
         sql += " ORDER BY t.tgname"
@@ -517,7 +517,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = """
+        sql = f"""
             SELECT
                 t.tgname as trigger_name,
                 c.relname as table_name,
@@ -534,15 +534,15 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_class c ON t.tgrelid = c.oid
             JOIN pg_namespace n ON c.relnamespace = n.oid
             JOIN pg_proc p ON t.tgfoid = p.oid
-            WHERE n.nspname = %s
-                AND t.tgname = %s
+            WHERE n.nspname = {self.p()}
+                AND t.tgname = {self.p()}
                 AND NOT t.tgisinternal
         """
 
         params_list = [schema, trigger_name]
 
         if table_name:
-            sql += " AND c.relname = %s"
+            sql += f" AND c.relname = {self.p()}"
             params_list.append(table_name)
 
         return (sql, tuple(params_list))
