@@ -172,6 +172,10 @@ class PostgresIndexMixin:
         """PostgreSQL supports partial indexes with WHERE clause."""
         return True
 
+    def supports_drop_index_on_table(self) -> bool:
+        """PostgreSQL drops indexes by name without an ON <table> clause."""
+        return False
+
     def supports_functional_index(self) -> bool:
         """PostgreSQL supports expression/functional indexes."""
         return True
