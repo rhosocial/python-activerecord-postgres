@@ -365,6 +365,47 @@ class TestPostgresPartitionedTableCreation:
                 keys=[Column(dialect, "id")],
             )
 
+    def test_postgres_partition_clause_is_generic_subclass(self, dialect):
+        """PostgresPartitionClause derives from the generic PartitionClause."""
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresPartitionClause,
+        )
+
+        clause = PostgresPartitionClause(
+            dialect=dialect,
+            method=PartitionStrategy.RANGE,
+            keys=[Column(dialect, "created_at")],
+        )
+        assert isinstance(clause, PartitionClause)
+        sql, params = clause.to_sql()
+        assert sql == ' PARTITION BY RANGE ("created_at")'
+        assert params == ()
+
+    def test_postgres_partition_clause_in_create_table(self, dialect):
+        """CreateTableExpression accepts the PostgreSQL-owned clause subclass."""
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresPartitionClause,
+        )
+
+        expr = CreateTableExpression(
+            dialect=dialect,
+            table="events",
+            columns=[
+                ColumnDefinition(
+                    dialect,
+                    "created_at", TimestampType(dialect=dialect),
+                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                )
+            ],
+            partition=PostgresPartitionClause(
+                dialect=dialect,
+                method=PartitionStrategy.RANGE,
+                keys=[Column(dialect, "created_at")],
+            ),
+        )
+        sql, _ = expr.to_sql()
+        assert "PARTITION BY RANGE" in sql
+
     def test_multi_column_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table with multiple partition keys."""
         expr = CreateTableExpression(

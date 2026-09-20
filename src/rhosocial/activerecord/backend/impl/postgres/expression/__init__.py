@@ -22,6 +22,7 @@ from .ilike import ILIKEExpression
 from .ddl import (
     PostgresVacuumExpression,
     PostgresAnalyzeExpression,
+    PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -114,6 +115,7 @@ __all__ = [
     # ddl
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",

@@ -62,6 +62,7 @@ Example::
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
 from .partition import (
     PartitionValue,
+    PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -153,6 +154,7 @@ __all__ = [
     "PostgresAnalyzeExpression",
     # partition
     "PartitionValue",
+    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
