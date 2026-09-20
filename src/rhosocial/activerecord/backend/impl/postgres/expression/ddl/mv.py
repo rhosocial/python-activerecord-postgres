@@ -11,7 +11,7 @@ Version Requirements:
 - WITH NO DATA: PostgreSQL 9.4+
 """
 
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.statements.ddl_view import RefreshMaterializedViewExpression
 
@@ -74,15 +74,12 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         schema: Optional[str] = None,
         concurrently: bool = False,
         with_data: Optional[bool] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(
             dialect,
             view_name=name,
             concurrent=concurrently,
             with_data=with_data,
-            dialect_options=dialect_options,
         )
         self.schema = schema
 
