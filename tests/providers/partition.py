@@ -18,6 +18,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
+    PostgresColumnDefinition,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresPartitionMetadataExpression,
@@ -252,7 +253,7 @@ class PartitionProvider(IPartitionProvider):
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
-                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), dialect_options={"identity": "BY DEFAULT"}),
+                PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), identity="BY DEFAULT"),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
