@@ -14,7 +14,7 @@ Version Requirements:
 - CREATE/DROP SUBSCRIPTION: PostgreSQL 10+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -41,7 +41,6 @@ class PostgresCreatePublicationExpression(BaseExpression):
         all_tables: When True, publish all tables (``FOR ALL TABLES``).
         options: Optional list of ``WITH (...)`` options (e.g. ``publish`
             strings).
-        dialect_options: Reserved.
 
     """
 
@@ -52,14 +51,12 @@ class PostgresCreatePublicationExpression(BaseExpression):
         tables: Optional[List[str]] = None,
         all_tables: bool = False,
         options: Optional[List[str]] = None,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.tables = tables
         self.all_tables = all_tables
         self.options = options or []
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -104,7 +101,6 @@ class PostgresCreateSubscriptionExpression(BaseExpression):
         connection: Connection string for ``CONNECTION '...'``.
         publications: Publication names to subscribe to.
         options: Optional ``WITH (``...)`` creation options.
-        dialect_options: Reserved.
 
     """
 
@@ -115,14 +111,12 @@ class PostgresCreateSubscriptionExpression(BaseExpression):
         connection: str,
         publications: List[str],
         options: Optional[List[str]] = None,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.connection = connection
         self.publications = publications
         self.options = options or []
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

@@ -6,7 +6,7 @@ Version Requirements:
 - multirange_agg(): PostgreSQL 14+
 """
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -43,14 +43,11 @@ class CreateMultirangeTypeExpression(BaseExpression):
         name: str,
         range_type: str,
         schema: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.range_type = range_type
         self.schema = schema
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -88,15 +85,12 @@ class MultirangeAggFunctionExpression(BaseExpression):
         table_name: str,
         where_clause: Optional[str] = None,
         schema: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.range_column = range_column
         self.table_name = table_name
         self.where_clause = where_clause
         self.schema = schema
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

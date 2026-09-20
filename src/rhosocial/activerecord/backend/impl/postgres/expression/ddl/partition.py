@@ -17,7 +17,7 @@ Version Requirements:
 from datetime import date, datetime
 from decimal import Decimal
 from math import isfinite
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
@@ -158,8 +158,6 @@ class PostgresCreatePartitionExpression(BaseExpression):
         schema: Optional[str] = None,
         tablespace: Optional[str] = None,
         if_not_exists: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -169,7 +167,6 @@ class PostgresCreatePartitionExpression(BaseExpression):
         self.schema = schema
         self.tablespace = tablespace
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -213,8 +210,6 @@ class PostgresDetachPartitionExpression(BaseExpression):
         schema: Optional[str] = None,
         concurrently: bool = False,
         finalize: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -222,7 +217,6 @@ class PostgresDetachPartitionExpression(BaseExpression):
         self.schema = schema
         self.concurrently = concurrently
         self.finalize = finalize
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -272,8 +266,6 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_values: Dict[str, Any],
         schema: Optional[str] = None,
         concurrently: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -282,7 +274,6 @@ class PostgresAttachPartitionExpression(BaseExpression):
         self.partition_values = partition_values
         self.schema = schema
         self.concurrently = concurrently
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -306,7 +297,6 @@ class PostgresPartitionMetadataExpression(BaseExpression):
         schema: Optional[str] = None,
         *,
         include_partitions: bool = True,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         if not parent_table:
@@ -314,7 +304,6 @@ class PostgresPartitionMetadataExpression(BaseExpression):
         self.parent_table = parent_table
         self.schema = schema
         self.include_partitions = include_partitions
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

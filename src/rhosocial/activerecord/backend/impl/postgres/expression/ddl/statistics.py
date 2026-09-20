@@ -12,7 +12,7 @@ Version Requirements:
 - MCV lists: PostgreSQL 12+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -73,8 +73,6 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         schema: Optional[str] = None,
         statistics_type: Optional[str] = None,
         if_not_exists: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -83,7 +81,6 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         self.schema = schema
         self.statistics_type = statistics_type
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -120,14 +117,11 @@ class PostgresDropStatisticsExpression(BaseExpression):
         name: str,
         schema: Optional[str] = None,
         if_exists: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.schema = schema
         self.if_exists = if_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

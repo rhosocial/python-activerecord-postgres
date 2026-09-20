@@ -12,7 +12,7 @@ Version Requirements:
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -49,7 +49,6 @@ class PostgresCreateDomainExpression(BaseExpression):
         collation: Optional collation name.
         default: Optional literal default value expression.
         constraints: Optional list of constraint clauses (e.g. ``CHECK (...)``).
-        dialect_options: Reserved for extensions.
 
     """
 
@@ -62,7 +61,6 @@ class PostgresCreateDomainExpression(BaseExpression):
         collation: Optional[str] = None,
         default: Optional[str] = None,
         constraints: Optional[List[str]] = None,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -71,7 +69,6 @@ class PostgresCreateDomainExpression(BaseExpression):
         self.collation = collation
         self.default = default
         self.constraints = constraints or []
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -89,7 +86,6 @@ class PostgresAlterDomainExpression(BaseExpression):
         new_value: For ``SET DEFAULT``, the new literal default. Otherwise
             unused.
         new_name: For ``RENAME TO``, the new domain name.
-        dialect_options: Reserved.
 
     Returns:
         Formatting is delegated to
@@ -105,7 +101,6 @@ class PostgresAlterDomainExpression(BaseExpression):
         schema: Optional[str] = None,
         new_value: Any = None,
         new_name: Optional[str] = None,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -113,7 +108,6 @@ class PostgresAlterDomainExpression(BaseExpression):
         self.action = action
         self.new_value = new_value
         self.new_name = new_name
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

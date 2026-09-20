@@ -14,7 +14,7 @@ Version Requirements:
 - RANGE type: PostgreSQL 9.2+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -87,15 +87,12 @@ class PostgresCreateEnumTypeExpression(BaseExpression):
         values: List[str],
         schema: Optional[str] = None,
         if_not_exists: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.values = values
         self.schema = schema
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -143,15 +140,12 @@ class PostgresDropEnumTypeExpression(BaseExpression):
         schema: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.schema = schema
         self.if_exists = if_exists
         self.cascade = cascade
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -202,8 +196,6 @@ class PostgresAlterEnumAddValueExpression(BaseExpression):
         schema: Optional[str] = None,
         before: Optional[str] = None,
         after: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.type_name = type_name
@@ -211,7 +203,6 @@ class PostgresAlterEnumAddValueExpression(BaseExpression):
         self.schema = schema
         self.before = before
         self.after = after
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -407,13 +398,10 @@ class EnumTypeNameExpression(BaseExpression):
         dialect: "SQLDialectBase",
         name: str,
         schema: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.schema = schema
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -439,12 +427,9 @@ class EnumValuesExpression(BaseExpression):
         self,
         dialect: "SQLDialectBase",
         values: List[str],
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.values = values
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -478,15 +463,12 @@ class CreateEnumTypeExpression(BaseExpression):
         values: List[str],
         schema: Optional[str] = None,
         if_not_exists: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.values = values
         self.schema = schema
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -518,15 +500,12 @@ class DropEnumTypeExpression(BaseExpression):
         schema: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
         self.schema = schema
         self.if_exists = if_exists
         self.cascade = cascade
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -562,8 +541,6 @@ class AlterEnumAddValueExpression(BaseExpression):
         schema: Optional[str] = None,
         before: Optional[str] = None,
         after: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.type_name = type_name
@@ -571,7 +548,6 @@ class AlterEnumAddValueExpression(BaseExpression):
         self.schema = schema
         self.before = before
         self.after = after
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
