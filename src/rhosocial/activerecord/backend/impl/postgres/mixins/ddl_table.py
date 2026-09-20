@@ -134,7 +134,17 @@ class PostgresTableMixin:
         return " ".join(parts), tuple(table_params) + tuple(source_params)
 
     def format_column_definition(self, col_def) -> Tuple[str, tuple]:
+        """Format a single column definition with PostgreSQL-specific syntax.
+
+        Accepts both the generic ``ColumnDefinition`` and the PostgreSQL
+        ``PostgresColumnDefinition``; the latter's PostgreSQL-only attributes
+        (``compression`` / ``storage`` / ``statistics``) are rendered here.
+        """
         from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.column import (
+            PostgresColumnDefinition,
+        )
+
         all_params: List[Any] = []
         type_sql, _ = col_def.data_type.to_sql()
         if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", type_sql):
@@ -145,9 +155,6 @@ class PostgresTableMixin:
         col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
 
         identity = getattr(col_def, 'identity', None)
-        if not identity:
-            dialect_opts = col_def.dialect_options or {}
-            identity = dialect_opts.get("identity")
         if identity:
             if identity.upper() in ("ALWAYS", "BY DEFAULT"):
                 col_sql += f" GENERATED {identity.upper()} AS IDENTITY"
@@ -168,4 +175,11 @@ class PostgresTableMixin:
             gen_sql, gen_params = col_def.generated_expression.to_sql()
             col_sql += gen_sql
             all_params.extend(gen_params)
+        if isinstance(col_def, PostgresColumnDefinition):
+            if col_def.compression:
+                col_sql += f" COMPRESSION {col_def.compression}"
+            if col_def.storage is not None:
+                col_sql += f" STORAGE {col_def.storage.value}"
+            if col_def.statistics is not None:
+                col_sql += f" STATISTICS {col_def.statistics}"
         return col_sql, tuple(all_params)
