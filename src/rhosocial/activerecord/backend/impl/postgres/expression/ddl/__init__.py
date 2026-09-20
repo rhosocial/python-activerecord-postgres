@@ -60,6 +60,7 @@ Example::
 """
 
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
+from .table_options import PostgresCreateTableOptions
 from .column import (
     PostgresColumnStorage,
     PostgresColumnDefinition,
@@ -157,6 +158,8 @@ __all__ = [
     # vacuum
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    # table options
+    "PostgresCreateTableOptions",
     # column
     "PostgresColumnStorage",
     "PostgresColumnDefinition",
