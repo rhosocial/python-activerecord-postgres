@@ -60,6 +60,11 @@ Example::
 """
 
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
+from .column import (
+    PostgresColumnStorage,
+    PostgresColumnDefinition,
+    PostgresColumnOptions,
+)
 from .partition import (
     PartitionValue,
     PostgresPartitionClause,
@@ -152,6 +157,10 @@ __all__ = [
     # vacuum
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    # column
+    "PostgresColumnStorage",
+    "PostgresColumnDefinition",
+    "PostgresColumnOptions",
     # partition
     "PartitionValue",
     "PostgresPartitionClause",

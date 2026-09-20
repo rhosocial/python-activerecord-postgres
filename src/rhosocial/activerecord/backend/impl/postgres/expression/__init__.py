@@ -20,6 +20,9 @@ from .advisory import (
 )
 from .ilike import ILIKEExpression
 from .ddl import (
+    PostgresColumnStorage,
+    PostgresColumnDefinition,
+    PostgresColumnOptions,
     PostgresVacuumExpression,
     PostgresAnalyzeExpression,
     PostgresPartitionClause,
@@ -115,6 +118,9 @@ __all__ = [
     # ddl
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    "PostgresColumnStorage",
+    "PostgresColumnDefinition",
+    "PostgresColumnOptions",
     "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
