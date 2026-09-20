@@ -332,11 +332,11 @@ class PostgresIndexMixin:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_create_index_statement to support:
-        - Operator classes via dialect_options["opclasses"]
+        - Operator classes via the typed ``opclasses`` field
         - CONCURRENTLY clause
         - INCLUDE clause with version checks
-        - NULLS NOT DISTINCT via dialect_options["nulls_not_distinct"]
-        - WITH storage parameters via dialect_options["with"]
+        - NULLS NOT DISTINCT via the typed ``nulls_not_distinct`` field
+        - WITH storage parameters via the typed ``with_options`` field
         """
         all_params = []
         parts = ["CREATE"]
@@ -361,7 +361,7 @@ class PostgresIndexMixin:
             parts.append(f"USING {expr.index_type}")
 
         # Columns with optional operator classes
-        opclasses = expr.dialect_options.get("opclasses", {})
+        opclasses = getattr(expr, "opclasses", None) or {}
         col_parts = []
         for col in expr.columns:
             if isinstance(col, ToSQLProtocol):
@@ -389,7 +389,7 @@ class PostgresIndexMixin:
             parts.append(f"INCLUDE ({include_cols})")
 
         # NULLS NOT DISTINCT (PG 15+, requires UNIQUE)
-        if expr.dialect_options.get("nulls_not_distinct"):
+        if getattr(expr, "nulls_not_distinct", False):
             if not expr.unique:
                 raise ValueError("NULLS NOT DISTINCT is only valid for UNIQUE indexes")
             if expr.concurrent and not self.supports_concurrent_unique_nulls_not_distinct():
@@ -400,8 +400,8 @@ class PostgresIndexMixin:
                 raise ValueError("NULLS NOT DISTINCT requires PostgreSQL 15+")
             parts.append("NULLS NOT DISTINCT")
 
-        # WITH options via dialect_options
-        with_options = expr.dialect_options.get("with")
+        # WITH options via typed fields
+        with_options = getattr(expr, "with_options", None) or {}
         if with_options:
             opts = ", ".join(f"{k} = {v}" for k, v in with_options.items())
             parts.append(f"WITH ({opts})")
@@ -420,11 +420,11 @@ class PostgresIndexMixin:
         """Format DROP INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_drop_index_statement to support:
-        - CONCURRENTLY clause (PG 18+) via dialect_options["concurrent"]
+        - CONCURRENTLY clause (PG 18+) via the typed ``concurrent`` field
         """
         parts = ["DROP INDEX"]
 
-        if expr.dialect_options.get("concurrent"):
+        if getattr(expr, "concurrent", False):
             if not self.supports_streaming_btree_index_build():
                 raise ValueError("DROP INDEX CONCURRENTLY requires PostgreSQL 18+")
             parts.append("CONCURRENTLY")

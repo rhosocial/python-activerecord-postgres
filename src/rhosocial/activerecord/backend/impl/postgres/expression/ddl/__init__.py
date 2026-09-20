@@ -6,6 +6,7 @@ Directory structure:
 - vacuum.py     - VACUUM/ANALYZE expressions
 - partition.py  - Partition DDL expressions
 - index.py      - Index DDL expressions
+- index_definition.py - PostgreSQL index definition / CREATE INDEX expressions
 - statistics.py - Statistics DDL expressions
 - comment.py   - COMMENT expressions
 - mv.py         - Materialized view expressions
@@ -21,42 +22,40 @@ Directory structure:
 - routine.py    - CREATE/DROP FUNCTION / AGGREGATE expressions
 - publication.py - CREATE/DROP PUBLICATION / SUBSCRIPTION expressions
 
-Missing expressions — why?
+PostgreSQL index expressions
 ============================
-This package does **not** provide ``PostgresCreateIndexExpression`` or
-``PostgresDropIndexExpression``.  Those were removed because the generic
-``CreateIndexExpression`` / ``DropIndexExpression`` (from
-``rhosocial.activerecord.backend.expression.statements.ddl_index``) already
-accept all common parameters **and** a ``dialect_options`` dict.
+The generic ``CreateIndexExpression`` / ``DropIndexExpression`` (from
+``rhosocial.activerecord.backend.expression.statements.ddl_index``) carry all
+common parameters.
 
-PG‑specific features such as ``NULLS NOT DISTINCT`` or ``CONCURRENTLY`` on
-DROP INDEX are passed through ``dialect_options`` and consumed by the dialect
-(``PostgresIndexMixin``).  See ``index.py`` for the supported keys.
+PostgreSQL-only features are supplied through typed fields, not a
+``dialect_options`` bag:
+
+* ``PostgresCreateIndexExpression`` adds ``opclasses``,
+  ``nulls_not_distinct`` and ``with_options`` for ``CREATE INDEX``.
+* ``PostgresIndexDefinition`` adds the same options to an inline table index
+  definition.
+* ``PostgresDropIndexExpression`` marks PostgreSQL ownership of a
+  ``DROP INDEX`` (the generic expression already carries ``concurrent``).
+
+The typed fields are consumed by ``PostgresIndexMixin`` (see ``index.py``).
 
 Example::
 
-    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-        CreateIndexExpression,
-        DropIndexExpression,
-    )
     from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCreateIndexExpression,
+    )
 
     d = PostgresDialect((15, 0, 0))
 
-    # NULLS NOT DISTINCT via dialect_options
-    expr = CreateIndexExpression(
+    # NULLS NOT DISTINCT via a typed field
+    expr = PostgresCreateIndexExpression(
         d, "idx_uniq_abc", "t", ["a", "b"],
         unique=True,
-        dialect_options={"nulls_not_distinct": True},
+        nulls_not_distinct=True,
     )
     sql, _ = expr.to_sql()   # → CREATE UNIQUE INDEX … NULLS NOT DISTINCT
-
-    # DROP INDEX CONCURRENTLY via dialect_options (PG 18+)
-    expr = DropIndexExpression(
-        d, "idx_old",
-        dialect_options={"concurrent": True},
-    )
-    sql, _ = expr.to_sql()   # → DROP INDEX CONCURRENTLY …
 """
 
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
@@ -78,6 +77,11 @@ from .index import (
     PostgresAlterIndexExpression,
     PostgresAlterIndexActionType,
     PostgresReindexExpression,
+)
+from .index_definition import (
+    PostgresCreateIndexExpression,
+    PostgresIndexDefinition,
+    PostgresDropIndexExpression,
 )
 from .statistics import (
     PostgresCreateStatisticsExpression,
@@ -175,6 +179,9 @@ __all__ = [
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
     "PostgresReindexExpression",
+    "PostgresCreateIndexExpression",
+    "PostgresIndexDefinition",
+    "PostgresDropIndexExpression",
     # statistics
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",

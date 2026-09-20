@@ -11,54 +11,48 @@ Version Requirements:
 - TABLESPACE option: PostgreSQL 14+
 - CONCURRENTLY option: PostgreSQL 12+
 
-CREATE / DROP INDEX — use the generic expressions with ``dialect_options``
-==========================================================================
-This module intentionally does **not** define ``PostgresCreateIndexExpression``
-or ``PostgresDropIndexExpression``.  The generic classes from the core
-package already serve this purpose:
+CREATE / DROP INDEX — typed index expressions
+==============================================
+``PostgresCreateIndexExpression`` / ``PostgresIndexDefinition`` /
+``PostgresDropIndexExpression`` live in ``index_definition.py``.  The generic
+core classes carry all common parameters; PostgreSQL adds typed (not
+``dialect_options``) fields:
 
-    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-        CreateIndexExpression,
-        DropIndexExpression,
-    )
+======================== =======================================================
+Field                     Description
+======================== =======================================================
+``opclasses``            ``dict[str, str]`` — operator classes per column, e.g.
+                         ``{"a": "text_pattern_ops"}``.
+``nulls_not_distinct``   ``bool`` — add ``NULLS NOT DISTINCT`` (PG 15+, unique
+                         index only).
+``with_options``         ``dict[str, Any]`` — storage parameters, e.g.
+                         ``{"fillfactor": 70}``.
+``concurrent``           ``bool`` — add ``CONCURRENTLY`` (CREATE INDEX PG 11+ /
+                         DROP INDEX PG 18+); present on the generic classes.
+======================== =======================================================
 
-PostgreSQL‑specific options are supplied via the ``dialect_options`` dict and
-consumed by ``PostgresIndexMixin.format_create_index_statement`` /
-``format_drop_index_statement``.  Supported keys:
-
-======================= =======================================================
-Key                     Description
-======================= =======================================================
-``nulls_not_distinct``  ``bool`` — add ``NULLS NOT DISTINCT`` (PG 15+, unique
-                        index only).  Passed to ``CreateIndexExpression``.
-``opclasses``           ``dict[str, str]`` — operator classes per column, e.g.
-                        ``{"a": "text_pattern_ops"}``.  Passed to
-                        ``CreateIndexExpression``.
-``with``                ``dict[str, Any]`` — storage parameters, e.g.
-                        ``{"fillfactor": 70}``.  Passed to
-                        ``CreateIndexExpression``.
-``concurrent``          ``bool`` — add ``CONCURRENTLY`` to ``DROP INDEX``
-                        (PG 18+).  Passed to ``DropIndexExpression``.
-                        (For ``CREATE INDEX`` the generic class already has
-                        a ``concurrent`` named parameter.)
-======================= =======================================================
+They are consumed by ``PostgresIndexMixin.format_create_index_statement`` /
+``format_drop_index_statement``.
 
 Example::
 
     from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCreateIndexExpression,
+    )
 
     d = PostgresDialect((15, 0, 0))
 
-    expr = CreateIndexExpression(
+    expr = PostgresCreateIndexExpression(
         d, "idx_uniq_abc", "t", ["a", "b"],
         unique=True,
-        dialect_options={"nulls_not_distinct": True},
+        nulls_not_distinct=True,
     )
     sql, _ = expr.to_sql()   # → CREATE UNIQUE INDEX … NULLS NOT DISTINCT
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
