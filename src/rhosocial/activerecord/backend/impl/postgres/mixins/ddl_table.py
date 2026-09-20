@@ -40,6 +40,27 @@ class PostgresTableMixin:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
 
+    def format_create_table_options(self, expr) -> Tuple[str, tuple]:
+        """Format the CREATE header modifiers for PostgreSQL.
+
+        Accepts both the generic ``CreateTableOptions`` (renders ``OR REPLACE``)
+        and the PostgreSQL ``PostgresCreateTableOptions`` (adds ``UNLOGGED``).
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+            PostgresCreateTableOptions,
+        )
+
+        base_sql, params = super().format_create_table_options(expr)
+        parts = [base_sql] if base_sql else []
+        if isinstance(expr, PostgresCreateTableOptions) and expr.unlogged:
+            if not self.supports_unlogged_table():
+                raise UnsupportedFeatureError(self.name, "CREATE UNLOGGED TABLE")
+            parts.append("UNLOGGED")
+        return " ".join(parts), params
+
     def format_create_table_statement(self, expr) -> Tuple[str, tuple]:
         """Render CREATE TABLE for PostgreSQL.
 
@@ -59,9 +80,12 @@ class PostgresTableMixin:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+            PostgresCreateTableOptions,
+        )
         table_options = getattr(expr, "table_options", None)
         if (
-            table_options is not None
+            isinstance(table_options, PostgresCreateTableOptions)
             and table_options.unlogged
             and getattr(expr, "temporary", False)
         ):
