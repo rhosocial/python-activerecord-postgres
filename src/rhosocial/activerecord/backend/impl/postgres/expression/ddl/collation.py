@@ -11,7 +11,7 @@ Version Requirements:
 - CREATE/DROP COLLATION: PostgreSQL 9.6+ (all supported versions)
 """
 
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -36,7 +36,6 @@ class PostgresCreateCollationExpression(BaseExpression):
         provider: Optional ``PROVIDER`` (e.g. ``libc`` or ``icu``).
         version: Optional ``VERSION``.
         if_not_exists: When True, add ``IF NOT EXISTS``.
-        dialect_options: Reserved.
 
     """
 
@@ -51,7 +50,6 @@ class PostgresCreateCollationExpression(BaseExpression):
         provider: Optional[str] = None,
         version: Optional[str] = None,
         if_not_exists: bool = False,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -62,7 +60,6 @@ class PostgresCreateCollationExpression(BaseExpression):
         self.provider = provider
         self.version = version
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

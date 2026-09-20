@@ -118,7 +118,6 @@ class PostgresAlterIndexExpression(BaseExpression):
         source_tablespace: Optional[str] = None,
         target_tablespace: Optional[str] = None,
         nowait: bool = False,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.index_name = index_name
@@ -132,7 +131,6 @@ class PostgresAlterIndexExpression(BaseExpression):
         self.source_tablespace = source_tablespace
         self.target_tablespace = target_tablespace
         self.nowait = nowait
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -195,8 +193,6 @@ class PostgresReindexExpression(BaseExpression):
         tablespace: Optional[str] = None,
         concurrently: bool = False,
         verbose: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.target_type = target_type
@@ -205,7 +201,6 @@ class PostgresReindexExpression(BaseExpression):
         self.tablespace = tablespace
         self.concurrently = concurrently
         self.verbose = verbose
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

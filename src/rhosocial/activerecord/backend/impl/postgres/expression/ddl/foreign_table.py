@@ -10,7 +10,7 @@ Version Requirements:
 - CREATE/DROP FOREIGN TABLE: PostgreSQL 9.6+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -34,7 +34,6 @@ class PostgresCreateForeignTableExpression(BaseExpression):
         options: Optional ``OPTIONS ( option 'value', ... )`` list of
             ``"option 'value'"`` strings.
         if_not_exists: When True, add ``IF NOT EXISTS``.
-        dialect_options: Reserved.
 
     """
 
@@ -47,7 +46,6 @@ class PostgresCreateForeignTableExpression(BaseExpression):
         columns: Optional[List[str]] = None,
         options: Optional[List[str]] = None,
         if_not_exists: bool = False,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -56,7 +54,6 @@ class PostgresCreateForeignTableExpression(BaseExpression):
         self.columns = columns or []
         self.options = options or []
         self.if_not_exists = if_not_exists
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

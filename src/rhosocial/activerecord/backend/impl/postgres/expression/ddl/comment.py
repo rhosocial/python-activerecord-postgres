@@ -9,7 +9,7 @@ Version Requirements:
 - COMMENT: PostgreSQL 7.2+
 """
 
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -73,15 +73,12 @@ class PostgresCommentExpression(BaseExpression):
         object_name: str,
         comment: Optional[str],
         schema: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.object_type = object_type
         self.object_name = object_name
         self.comment = comment
         self.schema = schema
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
