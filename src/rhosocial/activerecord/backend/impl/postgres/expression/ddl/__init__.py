@@ -65,6 +65,7 @@ from .column import (
     PostgresColumnDefinition,
     PostgresColumnOptions,
 )
+from .alter_column import PostgresAlterColumn
 from .partition import (
     PartitionValue,
     PostgresPartitionClause,
@@ -83,6 +84,7 @@ from .index_definition import (
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
 )
+from .exclude_constraint import PostgresExcludeConstraint
 from .statistics import (
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
@@ -168,6 +170,7 @@ __all__ = [
     "PostgresColumnStorage",
     "PostgresColumnDefinition",
     "PostgresColumnOptions",
+    "PostgresAlterColumn",
     # partition
     "PartitionValue",
     "PostgresPartitionClause",
@@ -182,6 +185,7 @@ __all__ = [
     "PostgresCreateIndexExpression",
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
+    "PostgresExcludeConstraint",
     # statistics
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",

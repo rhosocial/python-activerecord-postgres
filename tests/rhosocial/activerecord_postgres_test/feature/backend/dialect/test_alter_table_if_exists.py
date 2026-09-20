@@ -122,11 +122,11 @@ class TestPostgresAlterColumnTypeAndUsing:
         return PostgresDialect(version=(15, 0, 0))
 
     def test_set_data_type_plain(self, dialect):
-        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            AlterColumn,
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresAlterColumn,
         )
 
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect, "price", "SET DATA TYPE", new_value="NUMERIC(10,2)"
         )
         sql, params = action.to_sql()
@@ -135,16 +135,16 @@ class TestPostgresAlterColumnTypeAndUsing:
 
     def test_set_data_type_with_using(self, dialect):
         from rhosocial.activerecord.backend.expression import Column, Literal
-        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            AlterColumn,
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresAlterColumn,
         )
 
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
+            using=Column(dialect, "price") + Literal(dialect, 1),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -153,16 +153,16 @@ class TestPostgresAlterColumnTypeAndUsing:
 
     def test_set_data_type_using_rejected_for_other_ops(self, dialect):
         from rhosocial.activerecord.backend.expression import Column
-        from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            AlterColumn,
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresAlterColumn,
         )
 
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DEFAULT",
             new_value="0",
-            dialect_options={"using": Column(dialect, "price")},
+            using=Column(dialect, "price"),
         )
         with pytest.raises(ValueError, match="USING"):
             action.to_sql()
