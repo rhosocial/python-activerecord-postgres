@@ -1,7 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/expression/ilike.py
 """PostgreSQL ILIKE expression class."""
 
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -36,14 +36,11 @@ class ILIKEExpression(BaseExpression):
         column: Any,
         pattern: str,
         negate: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.column = column
         self.pattern = pattern
         self.negate = negate
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
