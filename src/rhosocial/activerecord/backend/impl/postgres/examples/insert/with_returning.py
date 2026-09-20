@@ -78,7 +78,6 @@ insert_expr = InsertExpression(
     source=ValuesSource(dialect, [[Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')]]),
     columns=['name', 'email'],
     returning=ReturningClause(dialect, [Column(dialect, 'id')]),
-    dialect_options={},
 )
 
 sql, params = insert_expr.to_sql()
@@ -99,7 +98,6 @@ insert_multi = InsertExpression(
     source=ValuesSource(dialect, [[Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')]]),
     columns=['name', 'email'],
     returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
-    dialect_options={},
 )
 
 sql, params = insert_multi.to_sql()
@@ -116,7 +114,6 @@ batch_insert = InsertExpression(
     ]),
     columns=['name', 'email'],
     returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
-    dialect_options={},
 )
 
 sql, params = batch_insert.to_sql()

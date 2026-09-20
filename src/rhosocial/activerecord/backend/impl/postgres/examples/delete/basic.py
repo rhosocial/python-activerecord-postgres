@@ -97,7 +97,6 @@ delete_expr = DeleteExpression(
         Column(dialect, 'name'),
         Literal(dialect, 'Alice'),
     ),
-    dialect_options={},
 )
 
 sql, params = delete_expr.to_sql()
@@ -121,7 +120,6 @@ delete_returning = DeleteExpression(
         Literal(dialect, 'Bob'),
     ),
     returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
-    dialect_options={},
 )
 
 sql, params = delete_returning.to_sql()
