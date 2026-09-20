@@ -108,6 +108,7 @@ from .set_operation import PostgresSetOperationMixin
 from .ilike import PostgresILIKEMixin
 from .join import PostgresJoinMixin
 from .truncate import PostgresTruncateMixin
+from .ddl_database import PostgresDatabaseMixin
 from .schema import PostgresSchemaMixin
 from .sequence import PostgresSequenceMixin
 from .transaction import PostgresTransactionMixin
@@ -214,6 +215,7 @@ __all__ = [
     "PostgresJoinMixin",
     "PostgresTruncateMixin",
     "PostgresSchemaMixin",
+    "PostgresDatabaseMixin",
     "PostgresSequenceMixin",
     "PostgresTransactionMixin",
     "PostgresViewMixin",
