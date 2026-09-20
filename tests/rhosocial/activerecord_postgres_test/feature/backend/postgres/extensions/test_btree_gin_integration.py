@@ -8,8 +8,8 @@ and test:
 - GIN index creation with btree_gin operator class on TEXT columns (text_ops)
 - Query data access through GIN index
 
-btree_gin has no function factories. It works through CreateIndexExpression with
-index_type="GIN" and dialect_options={"opclasses": {"column": "int4_ops"}} for
+btree_gin has no function factories. It works through PostgresCreateIndexExpression
+with index_type="GIN" and opclasses={"column": "int4_ops"} for
 specifying btree_gin operator classes that enable B-tree equivalence on GIN indexes.
 The btree_gin extension provides opclasses like int4_ops, int8_ops, text_ops, etc.
 that allow GIN indexes to support equality comparisons on scalar data types.
@@ -32,7 +32,9 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
     Column,
-    CreateIndexExpression,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -114,14 +116,14 @@ class TestBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value",
             table_name="test_btree_gin",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "int4_ops"}},
+            opclasses={"value": "int4_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -145,14 +147,14 @@ class TestBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on TEXT column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_name",
             table_name="test_btree_gin",
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"name": "text_ops"}},
+            opclasses={"name": "text_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -176,14 +178,14 @@ class TestBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value",
             table_name="test_btree_gin",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "int4_ops"}},
+            opclasses={"value": "int4_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -270,14 +272,14 @@ class TestAsyncBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value_async",
             table_name="test_btree_gin_async",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "int4_ops"}},
+            opclasses={"value": "int4_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)
@@ -302,14 +304,14 @@ class TestAsyncBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on TEXT column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_name_async",
             table_name="test_btree_gin_async",
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"name": "text_ops"}},
+            opclasses={"name": "text_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)
@@ -334,14 +336,14 @@ class TestAsyncBtreeGinIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GIN index with btree_gin operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value_async",
             table_name="test_btree_gin_async",
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "int4_ops"}},
+            opclasses={"value": "int4_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)
