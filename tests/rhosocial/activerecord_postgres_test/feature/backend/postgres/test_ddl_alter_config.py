@@ -10,7 +10,6 @@ import pytest
 from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.expression.statements import (
     AddColumn,
-    AlterColumn,
     ColumnDefinition,
     DropColumn,
     DropTableConstraint,
@@ -28,6 +27,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresForceRlsExpression,
     PostgresAlterTableSettingsExpression,
     PostgresClusterExpression,
+    PostgresAlterColumn,
 )
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
@@ -199,12 +199,12 @@ class TestPostgresAlterColumnUsingExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_using_clause(self, dialect):
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
+            using=Column(dialect, "price") + Literal(dialect, 1),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -212,13 +212,13 @@ class TestPostgresAlterColumnUsingExpression:
         assert serialized == (1,)
 
     def test_using_clause_with_cascade(self, dialect):
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
             cascade=True,
-            dialect_options={"using": Column(dialect, "price")},
+            using=Column(dialect, "price"),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -227,19 +227,19 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_using_rejected_for_non_set_data_type(self, dialect):
         """USING is only valid on SET DATA TYPE."""
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DEFAULT",
             new_value="0",
-            dialect_options={"using": Column(dialect, "price")},
+            using=Column(dialect, "price"),
         )
         with pytest.raises(ValueError, match="USING"):
             action.to_sql()
 
     def test_without_using_unaffected(self, dialect):
         """No USING -> output matches the standard form."""
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",

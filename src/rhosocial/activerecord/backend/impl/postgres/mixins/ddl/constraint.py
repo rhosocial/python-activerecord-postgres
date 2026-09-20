@@ -72,10 +72,8 @@ class PostgresConstraintMixin:
             parts.append(exclude_sql)
 
             # NOT VALID suffix
-            if action.constraint.dialect_options:
-                validation = action.constraint.dialect_options.get('validation')
-                if validation == ConstraintValidation.NOVALIDATE:
-                    parts.append("NOT VALID")
+            if getattr(action.constraint, 'validation', None) == ConstraintValidation.NOVALIDATE:
+                parts.append("NOT VALID")
 
             return f"ADD {' '.join(parts)}", tuple(params)
 
@@ -83,10 +81,8 @@ class PostgresConstraintMixin:
         sql, params = super().format_add_table_constraint_action(action)
 
         # PostgreSQL NOT VALID suffix
-        if action.constraint.dialect_options:
-            validation = action.constraint.dialect_options.get('validation')
-            if validation == ConstraintValidation.NOVALIDATE:
-                sql += " NOT VALID"
+        if getattr(action.constraint, 'validation', None) == ConstraintValidation.NOVALIDATE:
+            sql += " NOT VALID"
 
         return sql, params
 
@@ -95,21 +91,19 @@ class PostgresConstraintMixin:
     ) -> Tuple[str, tuple]:
         """Format EXCLUDE constraint (PostgreSQL-specific).
 
-        EXCLUDE constraints use the dialect_options dict to specify:
-        - 'exclude_elements': List of (expression, operator) tuples
+        EXCLUDE constraints are built as ``PostgresExcludeConstraint``:
+        - ``elements``: List of (expression, operator) tuples
           e.g., [('range', '&&')] for EXCLUDE USING gist (range WITH &&)
-        - 'using': The index access method (default 'gist')
+        - ``using``: The index access method (default 'gist')
           e.g., 'gist', 'btree', 'spgist'
-        - 'where': Optional predicate for partial exclusion constraints
+        - ``where``: Optional predicate for partial exclusion constraints
 
         Example:
-            TableConstraint(
-                constraint_type=TableConstraintType.EXCLUDE,
+            PostgresExcludeConstraint(
+                dialect,
                 name='exclude_range_overlap',
-                dialect_options={
-                    'exclude_elements': [('range', '&&')],
-                    'using': 'gist',
-                }
+                elements=[('range', '&&')],
+                using='gist',
             )
             # Generates: EXCLUDE USING gist (range WITH &&)
 
@@ -123,7 +117,7 @@ class PostgresConstraintMixin:
 
         # USING clause - validate index access method.
         valid_using = frozenset({"gist", "btree", "spgist", "hash", "gin", "brin"})
-        using = constraint.dialect_options.get("using", "gist") if constraint.dialect_options else "gist"
+        using = getattr(constraint, "using", "gist") or "gist"
         if using not in valid_using:
             raise ValueError(
                 f"Invalid index access method '{using}': must be one of {valid_using}"
@@ -137,25 +131,24 @@ class PostgresConstraintMixin:
             "~=", "@@", "?|", "?&", "is", "is not",
         })
         exclude_elements = []
-        if constraint.dialect_options and "exclude_elements" in constraint.dialect_options:
-            for expr, op in constraint.dialect_options["exclude_elements"]:
-                if op not in valid_ops:
-                    raise ValueError(
-                        f"Invalid exclude operator '{op}': must be one of {valid_ops}"
-                    )
-                if isinstance(expr, str):
-                    exclude_elements.append(f"{self.format_identifier(expr)} WITH {op}")
-                else:
-                    expr_sql, expr_params = expr.to_sql()
-                    params.extend(expr_params)
-                    exclude_elements.append(f"{expr_sql} WITH {op}")
+        for expr, op in getattr(constraint, "elements", None) or []:
+            if op not in valid_ops:
+                raise ValueError(
+                    f"Invalid exclude operator '{op}': must be one of {valid_ops}"
+                )
+            if isinstance(expr, str):
+                exclude_elements.append(f"{self.format_identifier(expr)} WITH {op}")
+            else:
+                expr_sql, expr_params = expr.to_sql()
+                params.extend(expr_params)
+                exclude_elements.append(f"{expr_sql} WITH {op}")
 
         if exclude_elements:
             parts.append(f"({', '.join(exclude_elements)})")
 
         # WHERE clause for partial exclusion constraint
-        if constraint.dialect_options and 'where' in constraint.dialect_options:
-            where_expr = constraint.dialect_options['where']
+        where_expr = getattr(constraint, "where", None)
+        if where_expr is not None:
             where_sql, where_params = where_expr.to_sql()
             params.extend(where_params)
             parts.append(f"WHERE ({where_sql})")
