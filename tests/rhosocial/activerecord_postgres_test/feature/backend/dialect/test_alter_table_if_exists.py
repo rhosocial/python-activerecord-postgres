@@ -218,10 +218,10 @@ class TestPostgresCreateUnloggedTable:
 
     @staticmethod
     def _options(dialect):
-        from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableOptions,
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresCreateTableOptions,
         )
-        return CreateTableOptions(dialect, unlogged=True)
+        return PostgresCreateTableOptions(dialect, unlogged=True)
 
     def test_unlogged_renders_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
@@ -276,7 +276,9 @@ class TestPostgresCreateUnloggedTable:
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
             CreateTableExpression,
-            CreateTableOptions,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresCreateTableOptions,
         )
 
         low = PostgresDialect(version=(9, 4, 0))
@@ -284,7 +286,7 @@ class TestPostgresCreateUnloggedTable:
             low,
             table="audit",
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
-            table_options=CreateTableOptions(low, unlogged=True),
+            table_options=PostgresCreateTableOptions(low, unlogged=True),
         )
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
