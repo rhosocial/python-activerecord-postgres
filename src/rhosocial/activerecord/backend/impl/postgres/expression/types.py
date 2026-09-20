@@ -17,7 +17,7 @@ DDL definition expressions (``ColumnDefinition.data_type``).
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Set, TYPE_CHECKING
+from typing import Optional, Set, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -133,9 +133,8 @@ class PostgresBitType(DataType):
     name = "postgres_bit"
     n: Optional[int] = None
 
-    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None,
-                 dialect_options: Optional[Dict[str, Any]] = None):
-        super().__init__(dialect, dialect_options=dialect_options)
+    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None):
+        super().__init__(dialect)
         self.n = n
 
     def _type_params(self) -> tuple:
@@ -148,9 +147,8 @@ class PostgresVarBitType(DataType):
     name = "postgres_varbit"
     n: Optional[int] = None
 
-    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None,
-                 dialect_options: Optional[Dict[str, Any]] = None):
-        super().__init__(dialect, dialect_options=dialect_options)
+    def __init__(self, n: Optional[int] = None, dialect: Optional["SQLDialectBase"] = None):
+        super().__init__(dialect)
         self.n = n
 
     def _type_params(self) -> tuple:
@@ -358,9 +356,8 @@ class PostgresVectorType(DataType):
     name = "postgres_vector"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
-                 dialect_options: Optional[Dict[str, Any]] = None):
-        super().__init__(dialect, dialect_options=dialect_options)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
+        super().__init__(dialect)
         self.dim = dim
 
     def _type_params(self) -> tuple:
@@ -380,9 +377,8 @@ class PostgresHalfvecType(DataType):
     name = "postgres_halfvec"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
-                 dialect_options: Optional[Dict[str, Any]] = None):
-        super().__init__(dialect, dialect_options=dialect_options)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
+        super().__init__(dialect)
         self.dim = dim
 
     def _type_params(self) -> tuple:
@@ -402,9 +398,8 @@ class PostgresSparsevecType(DataType):
     name = "postgres_sparsevec"
     dim: int
 
-    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None,
-                 dialect_options: Optional[Dict[str, Any]] = None):
-        super().__init__(dialect, dialect_options=dialect_options)
+    def __init__(self, dim: int, dialect: Optional["SQLDialectBase"] = None):
+        super().__init__(dialect)
         self.dim = dim
 
     def _type_params(self) -> tuple:
