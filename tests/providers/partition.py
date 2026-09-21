@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 
 from rhosocial.activerecord.base.field_proxy import FieldProxy
+from rhosocial.activerecord.base.ddl.attributes import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -253,7 +254,7 @@ class PartitionProvider(IPartitionProvider):
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
-                PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), identity="BY DEFAULT"),
+                PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), attributes=[IdentityAttribute(generation="BY DEFAULT")]),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
