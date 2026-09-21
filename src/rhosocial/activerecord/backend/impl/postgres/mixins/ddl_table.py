@@ -178,12 +178,9 @@ class PostgresTableMixin:
             )
         col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
 
-        identity = getattr(col_def, 'identity', None)
-        if identity:
-            if identity.upper() in ("ALWAYS", "BY DEFAULT"):
-                col_sql += f" GENERATED {identity.upper()} AS IDENTITY"
-            else:
-                raise ValueError(f"Invalid identity option '{identity}': must be 'ALWAYS' or 'BY DEFAULT'")
+        attr_sql, attr_params = self.format_column_attributes(col_def)
+        col_sql += attr_sql
+        all_params.extend(attr_params)
         auto_identity_added = False
         for constraint in col_def.constraints:
             if not auto_identity_added and getattr(constraint, 'is_auto_increment', False):
