@@ -36,10 +36,6 @@ class PostgresTableMixin:
         """TABLESPACE specification is supported in all versions."""
         return True
 
-    def supports_table_inherits(self) -> bool:
-        """PostgreSQL supports table inheritance via ``INHERITS (...)``."""
-        return True
-
     def supports_create_table_like(self) -> bool:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
