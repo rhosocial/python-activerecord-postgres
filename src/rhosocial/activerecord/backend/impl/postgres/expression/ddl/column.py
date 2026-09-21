@@ -56,10 +56,7 @@ class PostgresColumnDefinition(ColumnDefinition):
         constraints=None,
         comment: Optional[str] = None,
         generated_expression=None,
-        identity: Optional[str] = None,
-        identity_start: Optional[int] = None,
-        identity_increment: Optional[int] = None,
-        identity_clause=None,
+        attributes=None,
         *,
         compression: Optional[str] = None,
         storage: Optional[PostgresColumnStorage] = None,
@@ -72,10 +69,7 @@ class PostgresColumnDefinition(ColumnDefinition):
             constraints=constraints,
             comment=comment,
             generated_expression=generated_expression,
-            identity=identity,
-            identity_start=identity_start,
-            identity_increment=identity_increment,
-            identity_clause=identity_clause,
+            attributes=attributes,
         )
         if storage is not None and not isinstance(storage, PostgresColumnStorage):
             raise TypeError(
@@ -98,16 +92,11 @@ class PostgresColumnOptions(ColumnOptions):
     def __init__(
         self,
         *,
-        identity_start: Optional[int] = None,
-        identity_increment: Optional[int] = None,
         compression: Optional[str] = None,
         storage: Optional[PostgresColumnStorage] = None,
         statistics: Optional[int] = None,
     ):
-        super().__init__(
-            identity_start=identity_start,
-            identity_increment=identity_increment,
-        )
+        super().__init__()
         if storage is not None and not isinstance(storage, PostgresColumnStorage):
             raise TypeError(
                 "storage must be a PostgresColumnStorage value, "
