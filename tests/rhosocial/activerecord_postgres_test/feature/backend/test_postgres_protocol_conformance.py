@@ -85,6 +85,7 @@ def get_postgres_protocols():
         dialect_protocols.SQLXMLQueryingSupport,
         dialect_protocols.CollationSupport,
         dialect_protocols.CTESupport,
+        dialect_protocols.ColumnAttributeSupport,
         dialect_protocols.FilterClauseSupport,
         dialect_protocols.WindowFunctionSupport,
         dialect_protocols.JSONSupport,
