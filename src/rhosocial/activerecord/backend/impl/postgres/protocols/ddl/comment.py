@@ -33,6 +33,17 @@ class PostgresCommentSupport(Protocol):
     - All versions
     """
 
+    def supports_comment_on(self) -> bool:
+        """Whether standalone ``COMMENT ON`` statements are supported.
+
+        PostgreSQL has no inline ``COMMENT`` syntax; comments are annotated
+        through the standalone ``COMMENT ON`` statement (available since 7.2).
+
+        Returns:
+            True
+        """
+        ...
+
     def format_comment_statement(self, expr: "PostgresCommentExpression") -> Tuple[str, tuple]:
         """Format COMMENT ON statement.
 

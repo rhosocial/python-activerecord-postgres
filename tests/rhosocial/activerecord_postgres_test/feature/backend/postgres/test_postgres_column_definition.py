@@ -51,10 +51,14 @@ def test_combined(dialect):
     assert sql == '"body" TEXT COMPRESSION pglz STORAGE EXTERNAL STATISTICS 100'
 
 
-def test_generic_column_still_renders_on_postgres(dialect):
+def test_generic_column_comment_raises_on_postgres(dialect):
+    # §5.19: PostgreSQL has no inline COMMENT syntax; a comment on a column
+    # definition raises instead of rendering SQL PostgreSQL would reject.
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
     generic = ColumnDefinition(dialect, "body", TextType(dialect), comment="c")
-    sql, _ = generic.to_sql()
-    assert sql == '"body" TEXT COMMENT \'c\''
+    with pytest.raises(UnsupportedFeatureError, match="COLUMN COMMENT"):
+        generic.to_sql()
 
 
 def test_invalid_storage_type(dialect):

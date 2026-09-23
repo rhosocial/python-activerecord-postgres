@@ -356,6 +356,7 @@ class PostgresDialect(
     PostgresMaterializedViewMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
+    PostgresCommentMixin,  # Before TableMixin to override format_comment_statement
     TableMixin,
     ConstraintMixin,
     PostgresPartitionMixin,
@@ -399,7 +400,6 @@ class PostgresDialect(
     PostgresAddressStandardizerMixin,
     # DDL feature mixins
     PostgresTriggerMixin,
-    PostgresCommentMixin,
     PostgresTypeMixin,
     PostgresConstraintMixin,
     PostgresPolicyMixin,
