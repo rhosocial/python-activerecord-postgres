@@ -188,7 +188,7 @@ class PostgresTableMixin:
             suffix, params = self.format_column_constraint(constraint)
             col_sql += suffix
             all_params.extend(params)
-        if col_def.comment:
+        if col_def.comment is not None:
             # PostgreSQL has no inline COMMENT syntax (the de-facto
             # vendor form is the standalone COMMENT ON statement); a comment
             # on a column definition is never silently dropped.
