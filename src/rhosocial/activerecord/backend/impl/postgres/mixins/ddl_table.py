@@ -164,7 +164,6 @@ class PostgresTableMixin:
         ``PostgresColumnDefinition``; the latter's PostgreSQL-only attributes
         (``compression`` / ``storage`` / ``statistics``) are rendered here.
         """
-        from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.column import (
             PostgresColumnDefinition,
         )
@@ -190,8 +189,15 @@ class PostgresTableMixin:
             col_sql += suffix
             all_params.extend(params)
         if col_def.comment:
-            escaped_comment = SQLDialectBase._escape_sql_string(col_def.comment)
-            col_sql += f" COMMENT '{escaped_comment}'"
+            # PostgreSQL has no inline COMMENT syntax (the de-facto
+            # vendor form is the standalone COMMENT ON statement); a comment
+            # on a column definition is never silently dropped.
+            from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+            raise UnsupportedFeatureError(
+                self.name, "COLUMN COMMENT",
+                "PostgreSQL has no inline column comment; use a standalone "
+                "COMMENT ON COLUMN statement.",
+            )
         if col_def.generated_expression is not None:
             gen_sql, gen_params = col_def.generated_expression.to_sql()
             col_sql += gen_sql

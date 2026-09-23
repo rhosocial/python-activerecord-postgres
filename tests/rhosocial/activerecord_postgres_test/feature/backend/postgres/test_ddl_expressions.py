@@ -151,7 +151,7 @@ class TestPostgresCommentExpression:
         assert params == ("User accounts table",)
 
     def test_comment_on_column(self, dialect):
-        """Test COMMENT ON COLUMN."""
+        """Test COMMENT ON COLUMN (dotted target quoted segment-by-segment)."""
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="COLUMN",
@@ -160,7 +160,7 @@ class TestPostgresCommentExpression:
         )
         sql, params = expr.to_sql()
         assert "COMMENT ON COLUMN" in sql
-        assert "users.email" in sql
+        assert '"users"."email"' in sql
         assert params == ("User email address",)
 
     def test_comment_on_index(self, dialect):
@@ -221,7 +221,7 @@ class TestPostgresCommentExpression:
         assert params == ()
 
     def test_comment_with_schema(self, dialect):
-        """Test comment on object with schema."""
+        """Test comment on object with schema (dotted target quoted per segment)."""
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
@@ -230,7 +230,7 @@ class TestPostgresCommentExpression:
             schema="public",
         )
         sql, params = expr.to_sql()
-        assert "public.users" in sql
+        assert '"public"."users"' in sql
         assert params == ("Public users table",)
 
 
