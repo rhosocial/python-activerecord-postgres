@@ -3,7 +3,7 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import ColumnDefinition
+from rhosocial.activerecord.backend.expression import ColumnCommentClause, ColumnDefinition
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -56,7 +56,9 @@ def test_generic_column_comment_raises_on_postgres(dialect):
     # definition raises instead of rendering SQL PostgreSQL would reject.
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
-    generic = ColumnDefinition(dialect, "body", TextType(dialect), comment="c")
+    generic = ColumnDefinition(
+        dialect, "body", TextType(dialect), comment=ColumnCommentClause(dialect, "c")
+    )
     with pytest.raises(UnsupportedFeatureError, match="COLUMN COMMENT"):
         generic.to_sql()
 
