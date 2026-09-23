@@ -86,6 +86,7 @@ def get_postgres_protocols():
         dialect_protocols.CollationSupport,
         dialect_protocols.CTESupport,
         dialect_protocols.ColumnAttributeSupport,
+        dialect_protocols.CommentSupport,
         dialect_protocols.FilterClauseSupport,
         dialect_protocols.WindowFunctionSupport,
         dialect_protocols.JSONSupport,
@@ -331,6 +332,9 @@ class TestProtocolNonOverlap:
             # Generic generated-column capability also declared by PG features protocol
             ('GeneratedColumnSupport', 'PostgresFeaturesSupport'),
             ('PostgresFeaturesSupport', 'GeneratedColumnSupport'),
+            # Generic COMMENT ON capability restated by the PG comment protocol
+            ('CommentSupport', 'PostgresCommentSupport'),
+            ('PostgresCommentSupport', 'CommentSupport'),
         }
 
         violations = []
