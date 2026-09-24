@@ -75,7 +75,7 @@ def test_postgres_enum_expression_renders_via_format_enum_type_expression(dialec
         values=["pending", "processing", "ready"],
     )
     sql, params = dialect.format_enum_type_expression(enum_ref)
-    assert sql == "video_status"
+    assert sql == '"video_status"'
     assert params == ()
 
 
@@ -89,7 +89,7 @@ def test_postgres_enum_expression_with_schema_renders_via_dialect(dialect):
         schema="app",
     )
     sql, params = dialect.format_enum_type_expression(enum_ref)
-    assert sql == "app.video_status"
+    assert sql == '"app"."video_status"'
     assert params == ()
 
 

@@ -92,7 +92,7 @@ class TestPostgresTableDDLDeclarations:
 
             id: int
 
-        expression = TableDDLDeriver(Plain, PostgresDialect()).create_table()
+        expression = TableDDLDeriver(Plain, PostgresDialect(version=(16, 0, 0))).create_table()
         assert expression.inherits == []
         assert expression.tablespace is None
 
