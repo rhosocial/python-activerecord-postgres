@@ -6,11 +6,10 @@ This dialect implements protocols for features that PostgreSQL actually supports
 based on the PostgreSQL version provided at initialization.
 """
 
-from typing import Tuple, Optional, TYPE_CHECKING
+from typing import Tuple, Optional, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.collation import CollateExpression
-    from .function_versions import FunctionSupportInfo, FunctionVersionRequirement
+    from rhosocial.activerecord.backend.schema.differ import SchemaDiffer
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
@@ -50,6 +49,8 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     DMLMixin,
     DDLColumnMixin,
     TransactionControlMixin,
+    UserDefinedTypeMixin,
+    DomainMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     SQLXMLSupport,
@@ -87,6 +88,8 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     TransactionControlSupport,
     SQLFunctionSupport,
     DDLTypeSupport,
+    UserDefinedTypeSupport,
+    DomainSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -194,6 +197,8 @@ from .mixins import (
     PostgresFunctionMixin,
 )
 
+from .protocols.ddl.type import PostgresTypeSupport
+from .protocols.ddl.domain import PostgresDomainSupport
 from .reserved_words import POSTGRESQL_RESERVED_WORDS
 
 # PostgreSQL-specific imports
@@ -263,13 +268,11 @@ from .protocols import (
     # DDL feature protocols
     PostgresTriggerSupport,
     PostgresCommentSupport,
-    PostgresTypeSupport,
     PostgresConstraintSupport,
     PostgresPolicySupport,
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
-    PostgresDomainSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -291,6 +294,14 @@ from .protocols import (
 
 
 class PostgresDialect(
+    PostgresTypeMixin,
+    PostgresDomainMixin,
+    PostgresTypeSupport,
+    PostgresDomainSupport,
+    UserDefinedTypeMixin,
+    DomainMixin,
+    UserDefinedTypeSupport,
+    DomainSupport,
     SQLDialectBase,
     # PG-specific mixins (before global mixins to override)
     PostgresDateTimeMixin,
@@ -400,13 +411,11 @@ class PostgresDialect(
     PostgresAddressStandardizerMixin,
     # DDL feature mixins
     PostgresTriggerMixin,
-    PostgresTypeMixin,
     PostgresConstraintMixin,
     PostgresPolicyMixin,
     PostgresRlsConfigMixin,
     PostgresAlterTableSettingsMixin,
     PostgresClusterMixin,
-    PostgresDomainMixin,
     PostgresCollationDDLMixin,
     PostgresForeignTableMixin,
     PostgresRoutineMixin,
@@ -533,13 +542,11 @@ class PostgresDialect(
     # DDL feature protocols
     PostgresTriggerSupport,
     PostgresCommentSupport,
-    PostgresTypeSupport,
     PostgresConstraintSupport,
     PostgresPolicySupport,
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
-    PostgresDomainSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -634,10 +641,10 @@ class PostgresDialect(
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
 
-    def create_schema_differ(self):
+    def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""
         from rhosocial.activerecord.backend.impl.postgres.schema.differ import (
             PostgresSchemaDiffer,
         )
 
-        return PostgresSchemaDiffer()
+        return cast("SchemaDiffer", PostgresSchemaDiffer())

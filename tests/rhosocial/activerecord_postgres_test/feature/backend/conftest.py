@@ -266,7 +266,7 @@ async def async_postgres_control_backend():
 def postgres_dialect():
     """Fixture providing PostgresDialect instance for testing transaction expressions."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-    return PostgresDialect()
+    return PostgresDialect(version=(15, 0, 0))
 
 
 # --- Extension Availability Utilities ---

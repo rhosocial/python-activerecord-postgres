@@ -10,6 +10,7 @@ import pytest
 from enum import Enum
 from typing import Tuple  # noqa: F401
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.types import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
@@ -38,7 +39,7 @@ class TestPostgresEnumType:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.dialect = PostgresDialect()
+        self.dialect = PostgresDialect(version=(14, 0, 0))
 
     def test_create_enum_type(self):
         """Test creating an enum type."""
@@ -86,7 +87,7 @@ class TestPostgresEnumType:
         result = enum_type.to_sql()
         assert isinstance(result, tuple)
         assert len(result) == 2
-        assert result[0] == 'status'
+        assert result[0] == '"status"'
         assert result[1] == ()
 
     def test_to_sql_with_schema(self):
@@ -98,7 +99,7 @@ class TestPostgresEnumType:
             schema='app'
         )
         result = enum_type.to_sql()
-        assert result == ('app.status', ())
+        assert result == ('"app"."status"', ())
 
     def test_create_type_sql(self):
         """Test CREATE TYPE SQL generation using PostgresCreateEnumTypeExpression."""
@@ -110,20 +111,18 @@ class TestPostgresEnumType:
         result = expr.to_sql()
         assert isinstance(result, tuple)
         sql, params = result
-        assert sql == "CREATE TYPE status AS ENUM ('pending', 'ready')"
+        assert sql == "CREATE TYPE \"status\" AS ENUM ('pending', 'ready')"
         assert params == ()
 
-    def test_create_type_sql_if_not_exists(self):
-        """Test CREATE TYPE IF NOT EXISTS SQL generation."""
+    def test_create_type_sql_if_not_exists_fails_fast(self):
         expr = PostgresCreateEnumTypeExpression(
             dialect=self.dialect,
             name='status',
             values=['a', 'b'],
-            if_not_exists=True
+            if_not_exists=True,
         )
-        sql, params = expr.to_sql()
-        assert 'IF NOT EXISTS' in sql
-        assert params == ()
+        with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE IF NOT EXISTS"):
+            expr.to_sql()
 
     def test_drop_type_sql(self):
         """Test DROP TYPE SQL generation using PostgresDropEnumTypeExpression."""
@@ -132,7 +131,7 @@ class TestPostgresEnumType:
             name='status'
         )
         sql, params = expr.to_sql()
-        assert sql == "DROP TYPE status"
+        assert sql == "DROP TYPE \"status\""
         assert params == ()
 
     def test_drop_type_sql_if_exists(self):
@@ -143,7 +142,7 @@ class TestPostgresEnumType:
             if_exists=True
         )
         sql, params = expr.to_sql()
-        assert sql == "DROP TYPE IF EXISTS status"
+        assert sql == "DROP TYPE IF EXISTS \"status\""
         assert params == ()
 
     def test_drop_type_sql_cascade(self):
@@ -165,7 +164,7 @@ class TestPostgresEnumType:
             new_value='failed'
         )
         sql, params = expr.to_sql()
-        assert sql == "ALTER TYPE status ADD VALUE 'failed'"
+        assert sql == "ALTER TYPE \"status\" ADD VALUE 'failed'"
         assert params == ()
 
     def test_add_value_sql_before(self):
@@ -212,7 +211,7 @@ class TestPostgresEnumType:
             new_value='draft'
         )
         sql, params = expr.to_sql()
-        assert sql == "ALTER TYPE status RENAME VALUE 'pending' TO 'draft'"
+        assert sql == "ALTER TYPE \"status\" RENAME VALUE 'pending' TO 'draft'"
         assert params == ()
 
     def test_rename_value_empty_raises_error(self):
@@ -307,7 +306,7 @@ class TestPostgresEnumAdapter:
     def test_to_database_with_validation(self):
         """Test converting with enum type validation."""
         adapter = PostgresEnumAdapter()
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         enum_type = PostgresEnumType(
             dialect=dialect,
             name='status',
@@ -319,7 +318,7 @@ class TestPostgresEnumAdapter:
     def test_to_database_validation_fails(self):
         """Test validation fails for invalid value."""
         adapter = PostgresEnumAdapter()
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         enum_type = PostgresEnumType(
             dialect=dialect,
             name='status',
@@ -376,62 +375,65 @@ class TestPostgresEnumTypeSupport:
 
     def test_dialect_implements_postgres_enum_type_support(self):
         """Test that PostgresDialect implements PostgresEnumTypeSupport."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         # Check via MRO
         from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport  # noqa: F811
         assert PostgresEnumTypeSupport in dialect.__class__.__mro__
 
     def test_create_enum_type_method(self):
         """Test create_enum_type method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.create_enum_type('status', ['pending', 'ready'])
-        assert sql == "CREATE TYPE status AS ENUM ('pending', 'ready')"
+        assert sql == "CREATE TYPE \"status\" AS ENUM ('pending', 'ready')"
 
     def test_create_enum_type_with_schema(self):
         """Test create_enum_type with schema."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.create_enum_type('status', ['pending', 'ready'], schema='app')
-        assert sql == "CREATE TYPE app.status AS ENUM ('pending', 'ready')"
+        assert sql == "CREATE TYPE \"app\".\"status\" AS ENUM ('pending', 'ready')"
 
-    def test_create_enum_type_if_not_exists(self):
-        """Test create_enum_type with IF NOT EXISTS."""
-        dialect = PostgresDialect()
-        sql = dialect.create_enum_type('status', ['pending', 'ready'], if_not_exists=True)
-        assert 'IF NOT EXISTS' in sql
+    def test_create_enum_type_if_not_exists_fails_fast(self):
+        dialect = PostgresDialect(version=(14, 0, 0))
+        with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE IF NOT EXISTS"):
+            dialect.create_enum_type(
+                'status',
+                ['pending', 'ready'],
+                if_not_exists=True,
+            )
 
     def test_drop_enum_type_method(self):
         """Test drop_enum_type method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.drop_enum_type('status')
-        assert sql == "DROP TYPE status"
+        assert sql == "DROP TYPE \"status\""
 
     def test_drop_enum_type_if_exists(self):
         """Test drop_enum_type with IF EXISTS."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.drop_enum_type('status', if_exists=True)
-        assert sql == "DROP TYPE IF EXISTS status"
+        assert sql == "DROP TYPE IF EXISTS \"status\""
 
     def test_drop_enum_type_cascade(self):
         """Test drop_enum_type with CASCADE."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.drop_enum_type('status', cascade=True)
         assert 'CASCADE' in sql
 
     def test_alter_enum_add_value_method(self):
         """Test alter_enum_add_value method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.alter_enum_add_value('status', 'failed')
-        assert sql == "ALTER TYPE status ADD VALUE 'failed'"
+        assert sql == "ALTER TYPE \"status\" ADD VALUE 'failed'"
 
     def test_alter_enum_add_value_before(self):
         """Test alter_enum_add_value with BEFORE."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.alter_enum_add_value('status', 'processing', before='ready')
         assert "BEFORE 'ready'" in sql
 
     def test_alter_enum_add_value_after(self):
         """Test alter_enum_add_value with AFTER."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql = dialect.alter_enum_add_value('status', 'processing', after='pending')
         assert "AFTER 'pending'" in sql
 
@@ -441,19 +443,19 @@ class TestEnumTypeMixin:
 
     def test_format_enum_type_name(self):
         """Test format_enum_type_name via EnumTypeNameExpression."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql, params = EnumTypeNameExpression(dialect, name='status').to_sql()
-        assert sql == 'status'
+        assert sql == '"status"'
         assert params == ()
         sql, params = EnumTypeNameExpression(
             dialect, name='status', schema='app'
         ).to_sql()
-        assert sql == 'app.status'
+        assert sql == '"app"."status"'
         assert params == ()
 
     def test_format_enum_values(self):
         """Test format_enum_values via EnumValuesExpression."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         sql, params = EnumValuesExpression(
             dialect, values=['a', 'b', 'c']
         ).to_sql()
@@ -462,28 +464,28 @@ class TestEnumTypeMixin:
 
     def test_format_create_enum_type(self):
         """Test format_create_enum_type method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         expr = PostgresCreateEnumTypeExpression(
             dialect=dialect, name='status', values=['pending', 'ready']
         )
         sql, params = expr.to_sql()
-        assert sql == "CREATE TYPE status AS ENUM ('pending', 'ready')"
+        assert sql == "CREATE TYPE \"status\" AS ENUM ('pending', 'ready')"
         assert params == ()
 
     def test_format_drop_enum_type(self):
         """Test format_drop_enum_type method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         expr = PostgresDropEnumTypeExpression(dialect=dialect, name='status')
         sql, params = expr.to_sql()
-        assert sql == "DROP TYPE status"
+        assert sql == "DROP TYPE \"status\""
         assert params == ()
 
     def test_format_alter_enum_add_value(self):
         """Test format_alter_enum_add_value method."""
-        dialect = PostgresDialect()
+        dialect = PostgresDialect(version=(14, 0, 0))
         expr = PostgresAlterEnumAddValueExpression(
             dialect=dialect, type_name='status', new_value='failed'
         )
         sql, params = expr.to_sql()
-        assert sql == "ALTER TYPE status ADD VALUE 'failed'"
+        assert sql == "ALTER TYPE \"status\" ADD VALUE 'failed'"
         assert params == ()

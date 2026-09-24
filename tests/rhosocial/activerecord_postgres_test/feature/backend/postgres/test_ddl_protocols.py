@@ -10,8 +10,30 @@ This module tests the protocol-based feature detection methods:
 """
 import pytest  # noqa: F401
 
+from rhosocial.activerecord.backend.dialect import DomainSupport, UserDefinedTypeSupport
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.dialect.mixins import DomainMixin, UserDefinedTypeMixin
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
+    DomainCheckConstraint,
+    DomainValueExpression,
+)
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresAddDomainCheckAction,
+    PostgresCompositeTypeDefinition,
+    PostgresEnumTypeDefinition,
+    PostgresRangeTypeDefinition,
+    PostgresBaseTypeDefinition,
+    PostgresRenameEnumValueAction,
+    PostgresSetTypePropertiesAction,
+    PostgresShellTypeDefinition,
+)
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.domain import PostgresDomainMixin
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.partition import PostgresPartitionMixin
+from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.type import PostgresTypeMixin
+from rhosocial.activerecord.backend.impl.postgres.protocols.ddl.domain import PostgresDomainSupport
+from rhosocial.activerecord.backend.impl.postgres.protocols.ddl.type import PostgresTypeSupport
 
 
 class TestPostgresPartitionSupportFeatureDetection:
@@ -631,6 +653,90 @@ class TestDdlVersionBaselineCoverage:
         assert d.supports_create_domain() is True
         assert d.supports_collation_ddl() is True
         assert d.supports_publication() is True
+
+
+class TestPostgresTypeDomainProtocols:
+    def test_protocol_derivation_and_runtime_support(self):
+        assert issubclass(PostgresTypeSupport, UserDefinedTypeSupport)
+        assert issubclass(PostgresDomainSupport, DomainSupport)
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert isinstance(dialect, PostgresTypeSupport)
+        assert isinstance(dialect, UserDefinedTypeSupport)
+        assert isinstance(dialect, PostgresDomainSupport)
+        assert isinstance(dialect, DomainSupport)
+
+    def test_postgres_mixins_and_protocols_precede_core_mro(self):
+        mro = PostgresDialect.__mro__
+        assert mro.index(PostgresTypeMixin) < mro.index(UserDefinedTypeMixin)
+        assert mro.index(PostgresDomainMixin) < mro.index(DomainMixin)
+        assert mro.index(PostgresTypeSupport) < mro.index(UserDefinedTypeSupport)
+        assert mro.index(PostgresDomainSupport) < mro.index(DomainSupport)
+
+    def test_type_definitions_are_explicitly_registered(self):
+        dialect = PostgresDialect(version=(14, 0, 0))
+        definitions = (
+            PostgresCompositeTypeDefinition,
+            PostgresEnumTypeDefinition,
+            PostgresRangeTypeDefinition,
+            PostgresBaseTypeDefinition,
+            PostgresShellTypeDefinition,
+        )
+        assert dialect.supported_type_definitions() == definitions
+        assert all(dialect.supports_type_definition(item) for item in definitions)
+
+    def test_type_capability_version_gates(self):
+        old = PostgresDialect(version=(9, 5, 0))
+        baseline = PostgresDialect(version=(9, 6, 0))
+        assert old.supports_type_objects() is False
+        assert baseline.supports_type_objects() is True
+        assert baseline.supports_create_type_if_not_exists() is False
+        assert baseline.supports_create_type_or_replace() is False
+        assert baseline.supports_alter_type_if_exists() is False
+        assert baseline.supports_drop_type_if_exists() is True
+        assert baseline.supports_drop_type_cascade() is True
+        assert baseline.supports_drop_type_restrict() is True
+
+    def test_multirange_data_type_gates(self):
+        pg13 = PostgresDialect(version=(13, 0, 0))
+        pg14 = PostgresDialect(version=(14, 0, 0))
+        assert pg13.supports_multirange_type() is False
+        assert pg13.supports_multirange() is False
+        assert pg13.supports_multirange_constructor() is False
+        assert pg13.supports_data_type_postgres_int4multirange() is False
+        with pytest.raises(UnsupportedFeatureError, match="INT4MULTIRANGE"):
+            pg13.format_data_type_postgres_int4multirange(None)
+        assert pg14.supports_multirange_type() is True
+        assert pg14.supports_multirange() is True
+        assert pg14.supports_multirange_constructor() is True
+        assert pg14.supports_data_type_postgres_int4multirange() is True
+
+    def test_type_action_version_gates(self):
+        pg96 = PostgresDialect(version=(9, 6, 0))
+        pg100 = PostgresDialect(version=(10, 0, 0))
+        pg12 = PostgresDialect(version=(12, 0, 0))
+        pg13 = PostgresDialect(version=(13, 0, 0))
+        assert pg96.supports_type_alter_action(PostgresRenameEnumValueAction) is False
+        assert pg100.supports_type_alter_action(PostgresRenameEnumValueAction) is True
+        assert pg12.supports_type_alter_action(PostgresSetTypePropertiesAction) is False
+        assert pg13.supports_type_alter_action(PostgresSetTypePropertiesAction) is True
+
+    def test_domain_capability_gates_and_actions(self):
+        old = PostgresDialect(version=(9, 5, 0))
+        baseline = PostgresDialect(version=(9, 6, 0))
+        assert old.supports_domains() is False
+        assert baseline.supports_create_domain() is True
+        assert baseline.supports_alter_domain() is True
+        assert baseline.supports_drop_domain() is True
+        assert baseline.supports_multiple_domain_alter_actions() is False
+        assert baseline.supports_drop_domain_if_exists() is True
+        assert baseline.supports_drop_domain_cascade() is True
+        assert baseline.supports_drop_domain_restrict() is True
+        check = DomainCheckConstraint(
+            baseline,
+            DomainValueExpression(baseline) > Literal(baseline, 0, inline_literals=True),
+        )
+        assert baseline.supports_alter_domain_action(PostgresAddDomainCheckAction) is True
+        assert isinstance(check, DomainCheckConstraint)
 
     def test_unsupported_94_rejects_unlogged(self):
         d = PostgresDialect(version=(9, 4, 0))
