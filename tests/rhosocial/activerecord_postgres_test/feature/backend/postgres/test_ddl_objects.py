@@ -99,7 +99,7 @@ class TestPostgresDomainExpression:
             dialect, "posint", "NUMERIC",
             default="0", constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
-        assert sql == "CREATE DOMAIN \"posint\" AS NUMERIC DEFAULT 0 CHECK (VALUE > 0)"
+        assert sql == "CREATE DOMAIN \"posint\" AS DECIMAL DEFAULT 0 CHECK (VALUE > 0)"
 
     def test_alter_set_default(self, dialect):
         sql, _ = PostgresAlterDomainExpression(
@@ -124,13 +124,13 @@ class TestPostgresDomainExpression:
             dialect, "posint", "NUMERIC",
             schema="app", collation="C",
         ).to_sql()
-        assert sql == 'CREATE DOMAIN "app"."posint" AS NUMERIC COLLATE "C"'
+        assert sql == 'CREATE DOMAIN "app"."posint" AS DECIMAL COLLATE "C"'
 
     def test_create_without_default(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
             dialect, "posint", "NUMERIC", constraints=["CHECK (VALUE > 0)"]
         ).to_sql()
-        assert sql == 'CREATE DOMAIN "posint" AS NUMERIC CHECK (VALUE > 0)'
+        assert sql == 'CREATE DOMAIN "posint" AS DECIMAL CHECK (VALUE > 0)'
 
     def test_alter_drop_default(self, dialect):
         sql, _ = PostgresAlterDomainExpression(

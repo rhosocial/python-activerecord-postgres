@@ -36,6 +36,10 @@ class PostgresTableMixin:
         """TABLESPACE specification is supported in all versions."""
         return True
 
+    def supports_alter_column_properties(self) -> bool:
+        """PostgreSQL supports ALTER COLUMN property changes."""
+        return True
+
     def supports_create_table_like(self) -> bool:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
