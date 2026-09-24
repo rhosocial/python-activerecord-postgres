@@ -294,6 +294,7 @@ from .protocols import (
 
 
 class PostgresDialect(
+    SQLDialectBase,
     PostgresTypeMixin,
     PostgresDomainMixin,
     PostgresTypeSupport,
@@ -302,7 +303,6 @@ class PostgresDialect(
     DomainMixin,
     UserDefinedTypeSupport,
     DomainSupport,
-    SQLDialectBase,
     # PG-specific mixins (before global mixins to override)
     PostgresDateTimeMixin,
     PostgresDQLMixin,
