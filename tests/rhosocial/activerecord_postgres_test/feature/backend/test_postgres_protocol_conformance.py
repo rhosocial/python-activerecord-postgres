@@ -119,6 +119,8 @@ def get_postgres_protocols():
         # Generic protocols Postgres also satisfies (previously omitted).
         dialect_protocols.AlterTableModifierSupport,
         dialect_protocols.DDLTypeSupport,
+        dialect_protocols.UserDefinedTypeSupport,
+        dialect_protocols.DomainSupport,
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.TriggerSupport,
@@ -203,6 +205,8 @@ class TestPostgresDialectNegativeProtocolConformance:
     def test_positive_and_negative_lists_partition_all_protocols(self):
         """Every generic protocol must be classified for Postgres."""
         all_protos = set(get_all_generic_protocols())
+        if dialect_protocols.DDLTypeSupport is dialect_protocols.DataTypeSupport:
+            all_protos.discard("DDLTypeSupport")
         positive = {p.__name__ for p in POSTGRES_PROTOCOLS if p.__module__ == dialect_protocols.__name__}
         negative = {p.__name__ for p in POSTGRES_NOT_IMPLEMENTED}
 
@@ -243,6 +247,10 @@ class TestProtocolNonOverlap:
             ('PostgresLockingSupport', 'LockingSupport'),
             ('TriggerSupport', 'PostgresTriggerSupport'),
             ('PostgresTriggerSupport', 'TriggerSupport'),
+            ('UserDefinedTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'UserDefinedTypeSupport'),
+            ('DomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'DomainSupport'),
             # SQLXMLSupport aggregates standard SQL/XML capability-family protocols
             ('SQLXMLSupport', 'SQLXMLParsingSupport'),
             ('SQLXMLParsingSupport', 'SQLXMLSupport'),
@@ -365,6 +373,8 @@ class TestPostgresProtocolDerivation:
         ("PostgresLockingSupport", "LockingSupport"),
         ("PostgresTriggerSupport", "TriggerSupport"),
         ("PostgresConstraintSupport", "ConstraintSupport"),
+        ("PostgresTypeSupport", "UserDefinedTypeSupport"),
+        ("PostgresDomainSupport", "DomainSupport"),
     ]
 
     @pytest.mark.parametrize("pg_name,generic_name", PROTOCOL_DERIVATIONS)
@@ -399,12 +409,12 @@ class TestPostgresExpressionDialectSeparation:
     EXPRESSION_DIALECT_PAIRS = [
         ("PostgresRefreshMaterializedViewExpression",
          "format_refresh_materialized_view_pg_statement"),
-        ("PostgresCreateEnumTypeExpression", "format_create_enum_type"),
-        ("PostgresDropEnumTypeExpression", "format_drop_enum_type"),
-        ("PostgresAlterEnumAddValueExpression", "format_alter_enum_add_value"),
-        ("PostgresAlterEnumTypeAddValueExpression", "format_alter_enum_type_add_value"),
-        ("PostgresAlterEnumTypeRenameValueExpression", "format_alter_enum_type_rename_value"),
-        ("PostgresCreateRangeTypeExpression", "format_create_range_type"),
+        ("PostgresCreateEnumTypeExpression", "format_create_type_statement"),
+        ("PostgresDropEnumTypeExpression", "format_drop_type_statement"),
+        ("PostgresAlterEnumAddValueExpression", "format_alter_type_statement"),
+        ("PostgresAlterEnumTypeAddValueExpression", "format_alter_type_statement"),
+        ("PostgresAlterEnumTypeRenameValueExpression", "format_alter_type_statement"),
+        ("PostgresCreateRangeTypeExpression", "format_create_type_statement"),
         ("PostgresVacuumExpression", "format_vacuum_statement"),
         ("PostgresAnalyzeExpression", "format_analyze_statement"),
         ("PostgresReindexExpression", "format_reindex_statement"),
@@ -467,6 +477,7 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     (postgres_protocols.PostgresTriggerSupport, postgres_mixins.PostgresTriggerMixin),
     (postgres_protocols.PostgresCommentSupport, postgres_mixins.PostgresCommentMixin),
     (postgres_protocols.PostgresTypeSupport, postgres_mixins.PostgresTypeMixin),
+    (postgres_protocols.PostgresDomainSupport, postgres_mixins.PostgresDomainMixin),
     (postgres_protocols.PostgresConstraintSupport, postgres_mixins.PostgresConstraintMixin),
     # DML protocols
     (postgres_protocols.PostgresVacuumSupport, postgres_mixins.PostgresVacuumMixin),

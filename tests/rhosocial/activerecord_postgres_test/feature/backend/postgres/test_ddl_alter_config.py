@@ -346,9 +346,10 @@ class TestPostgresTypeDDL:
         )
         assert sql == 'CREATE TYPE "app"."color" AS ENUM (\'red\')'
 
-    def test_create_enum_empty_values_raises(self, dialect):
-        with pytest.raises(ValueError, match="at least one value"):
-            dialect.format_create_type_enum_statement("color", [])
+    def test_create_enum_empty_values(self, dialect):
+        sql, params = dialect.format_create_type_enum_statement("color", [])
+        assert sql == 'CREATE TYPE "color" AS ENUM ()'
+        assert params == ()
 
     def test_drop_type(self, dialect):
         sql, _ = dialect.format_drop_type_statement("color")

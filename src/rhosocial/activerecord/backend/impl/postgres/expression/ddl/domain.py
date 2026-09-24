@@ -1,20 +1,30 @@
 # src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/domain.py
-"""
-PostgreSQL DDL expressions: DOMAIN operations.
+"""PostgreSQL DOMAIN DDL expressions."""
 
-PostgreSQL Documentation:
-- CREATE DOMAIN: https://www.postgresql.org/docs/current/sql-createdomain.html
-- ALTER DOMAIN:  https://www.postgresql.org/docs/current/sql-alterdomain.html
-- DROP DOMAIN:   https://www.postgresql.org/docs/current/sql-dropdomain.html
+from __future__ import annotations
 
-Version Requirements:
-- CREATE/ALTER/DROP DOMAIN: PostgreSQL 9.6+ (all supported versions)
-"""
-
+import warnings
 from enum import Enum
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.bases import BaseExpression, SQLPredicate
+from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
+    AddDomainCheckAction,
+    AlterDomainExpression,
+    CreateDomainExpression,
+    DomainAlterAction,
+    DomainCheckConstraint,
+    DomainNullability,
+    DomainValueExpression,
+    DropDomainCheckAction,
+    DropDomainDefaultAction,
+    DropDomainExpression,
+    DropDomainNotNullAction,
+    RenameDomainAction,
+    SetDomainDefaultAction,
+    SetDomainNotNullAction,
+)
+from rhosocial.activerecord.backend.expression.types import DataType
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -22,112 +32,301 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AlterDomainActionType",
+    "DomainNullability",
+    "DomainValueExpression",
+    "DomainCheckConstraint",
+    "SetDomainDefaultAction",
+    "DropDomainDefaultAction",
+    "SetDomainNotNullAction",
+    "DropDomainNotNullAction",
+    "PostgresAddDomainCheckAction",
+    "PostgresDropDomainCheckAction",
+    "PostgresRenameDomainConstraintAction",
+    "PostgresValidateDomainConstraintAction",
+    "PostgresChangeDomainOwnerAction",
+    "PostgresSetDomainSchemaAction",
     "PostgresCreateDomainExpression",
     "PostgresAlterDomainExpression",
     "PostgresDropDomainExpression",
 ]
 
 
-class AlterDomainActionType(Enum):
-    """Actions supported by ALTER DOMAIN (minimal subset)."""
+def _validate_name(value: str, field_name: str) -> None:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
 
+
+def _coerce_legacy_data_type(
+    dialect: "SQLDialectBase",
+    value: Union[DataType, str],
+) -> DataType:
+    if isinstance(value, DataType):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError("data_type must be a DataType instance")
+    warnings.warn(
+        "Raw DOMAIN data_type strings are deprecated; pass a DataType instance",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    return DataType.parse_data_type_str(dialect, value)
+
+
+class _LegacySqlExpression(BaseExpression):
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        sql: str,
+        field_name: str,
+    ) -> None:
+        super().__init__(dialect)
+        if not isinstance(sql, str) or not sql.strip():
+            raise ValueError(f"{field_name} must be a non-empty SQL string")
+        self.sql = sql
+        self.field_name = field_name
+
+    @property
+    def format_method(self) -> str:
+        return "_format_postgres_legacy_sql_expression"
+
+
+class _UnsupportedDomainAction(DomainAlterAction):
+    action_kind = "unsupported"
+
+    def __init__(self, dialect: "SQLDialectBase", action: Any) -> None:
+        super().__init__(dialect)
+        self.action = action
+
+    @property
+    def format_method(self) -> str:
+        return "_format_postgres_unsupported_domain_action"
+
+
+class AlterDomainActionType(Enum):
     SET_DEFAULT = "SET DEFAULT"
     DROP_DEFAULT = "DROP DEFAULT"
     RENAME_TO = "RENAME TO"
 
 
-class PostgresCreateDomainExpression(BaseExpression):
-    """PostgreSQL CREATE DOMAIN statement expression.
+class PostgresAddDomainCheckAction(AddDomainCheckAction):
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        check: Union[DomainCheckConstraint, SQLPredicate],
+        *,
+        not_valid: bool = False,
+    ) -> None:
+        if isinstance(check, SQLPredicate):
+            check = DomainCheckConstraint(dialect, check)
+        super().__init__(dialect, check)
+        self.not_valid = not_valid
 
-    Creates a new domain — a user-defined data type — over an underlying
-    PostgreSQL type, often reusing types and default/constraint logic.
 
-    Attributes:
-        name: Name of the domain.
-        data_type: Underlying PostgreSQL type name (e.g. ``NUMERIC(10, 2)``).
-        schema: Optional schema for the domain.
-        collation: Optional collation name.
-        default: Optional literal default value expression.
-        constraints: Optional list of constraint clauses (e.g. ``CHECK (...)``).
+class PostgresDropDomainCheckAction(DropDomainCheckAction):
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        *,
+        if_exists: bool = False,
+        cascade: bool = False,
+        restrict: bool = False,
+    ) -> None:
+        super().__init__(dialect, name=name)
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.restrict = restrict
 
-    """
+
+class PostgresRenameDomainConstraintAction(DomainAlterAction):
+    action_kind = "rename_constraint"
 
     def __init__(
         self,
         dialect: "SQLDialectBase",
         name: str,
-        data_type: str,
+        new_name: str,
+    ) -> None:
+        super().__init__(dialect)
+        _validate_name(name, "name")
+        _validate_name(new_name, "new_name")
+        self.name = name
+        self.new_name = new_name
+
+
+class PostgresValidateDomainConstraintAction(DomainAlterAction):
+    action_kind = "validate_constraint"
+
+    def __init__(self, dialect: "SQLDialectBase", name: str) -> None:
+        super().__init__(dialect)
+        _validate_name(name, "name")
+        self.name = name
+
+
+class PostgresChangeDomainOwnerAction(DomainAlterAction):
+    action_kind = "change_owner"
+
+    def __init__(self, dialect: "SQLDialectBase", new_owner: str) -> None:
+        super().__init__(dialect)
+        _validate_name(new_owner, "new_owner")
+        self.new_owner = new_owner
+
+
+class PostgresSetDomainSchemaAction(DomainAlterAction):
+    action_kind = "set_schema"
+
+    def __init__(self, dialect: "SQLDialectBase", new_schema: str) -> None:
+        super().__init__(dialect)
+        _validate_name(new_schema, "new_schema")
+        self.new_schema = new_schema
+
+
+class PostgresCreateDomainExpression(CreateDomainExpression):
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        data_type: Union[DataType, str],
         schema: Optional[str] = None,
         collation: Optional[str] = None,
-        default: Optional[str] = None,
-        constraints: Optional[List[str]] = None,
-    ):
-        super().__init__(dialect)
-        self.name = name
-        self.data_type = data_type
-        self.schema = schema
-        self.collation = collation
-        self.default = default
-        self.constraints = constraints or []
+        default: Optional[Any] = None,
+        constraints: Optional[Sequence[Union[str, DomainCheckConstraint, SQLPredicate]]] = None,
+        *,
+        nullability: DomainNullability = DomainNullability.UNSPECIFIED,
+        checks: Optional[Sequence[Union[DomainCheckConstraint, SQLPredicate]]] = None,
+        schema_name: Optional[str] = None,
+    ) -> None:
+        normalized_type = _coerce_legacy_data_type(dialect, data_type)
+        resolved_schema = schema if schema is not None else schema_name
+        if schema is not None and schema_name is not None and schema != schema_name:
+            raise ValueError("schema and schema_name must match when both are provided")
+        constraint_items: List[Any]
+        if constraints is not None and checks is not None:
+            raise ValueError("constraints and checks are mutually exclusive")
+        if checks is not None:
+            check_parameter = "checks"
+            constraint_items = list(checks)
+        elif constraints is not None:
+            check_parameter = "constraints"
+            constraint_items = list(constraints)
+        else:
+            check_parameter = None
+            constraint_items = []
+        clauses: List[BaseExpression] = []
+        normalized_checks: List[DomainCheckConstraint] = []
+        for item in constraint_items:
+            if isinstance(item, str):
+                warnings.warn(
+                    "Raw DOMAIN constraint strings are deprecated; pass SQLPredicate "
+                    "or DomainCheckConstraint instances",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                clauses.append(_LegacySqlExpression(dialect, item, "constraints"))
+            elif isinstance(item, DomainCheckConstraint):
+                clauses.append(item)
+                normalized_checks.append(item)
+            elif isinstance(item, SQLPredicate):
+                check = DomainCheckConstraint(dialect, item)
+                clauses.append(check)
+                normalized_checks.append(check)
+            else:
+                raise TypeError(
+                    "constraints must contain DomainCheckConstraint, SQLPredicate, or "
+                    "legacy string instances"
+                )
+        normalized_default = default
+        if isinstance(default, str):
+            warnings.warn(
+                "Raw DOMAIN DEFAULT strings are deprecated; pass a scalar or expression",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            normalized_default = _LegacySqlExpression(dialect, default, "default")
+        super().__init__(
+            dialect,
+            name,
+            normalized_type,
+            default=normalized_default,
+            nullability=nullability,
+            checks=normalized_checks,
+            collation=collation,
+        )
+        self.schema = resolved_schema
+        self.schema_name = resolved_schema
+        self.constraints = list(constraint_items)
+        self._constraint_clauses = clauses
+        self._check_parameter = check_parameter
+
+    def get_params(self) -> Dict[str, Any]:
+        params = super().get_params()
+        params.pop("constraints", None)
+        params.pop("checks", None)
+        if self._check_parameter == "constraints":
+            params["constraints"] = list(self.constraints)
+        elif self._check_parameter == "checks":
+            params["checks"] = list(self.checks)
+        return params
 
     @property
-    def format_method(self) -> str:
-        """The dialect formatting method that renders this expression."""
-        return "format_create_domain_statement"
+    def name(self) -> str:
+        return self.domain_name
 
 
-class PostgresAlterDomainExpression(BaseExpression):
-    """PostgreSQL ALTER DOMAIN statement expression (minimal subset).
-
-    Attributes:
-        name: Name of the domain to alter.
-        schema: Optional schema for the domain.
-        action: The action to perform (:class:`AlterDomainActionType`).
-        new_value: For ``SET DEFAULT``, the new literal default. Otherwise
-            unused.
-        new_name: For ``RENAME TO``, the new domain name.
-
-    Returns:
-        Formatting is delegated to
-        ``dialect.format_alter_domain_statement``.
-
-    """
-
+class PostgresAlterDomainExpression(AlterDomainExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
         name: str,
-        action: AlterDomainActionType,
+        action: Union[AlterDomainActionType, DomainAlterAction, Any],
         schema: Optional[str] = None,
         new_value: Any = None,
         new_name: Optional[str] = None,
-    ):
-        super().__init__(dialect)
-        self.name = name
-        self.schema = schema
+        *,
+        schema_name: Optional[str] = None,
+    ) -> None:
+        resolved_schema = schema if schema is not None else schema_name
+        if schema is not None and schema_name is not None and schema != schema_name:
+            raise ValueError("schema and schema_name must match when both are provided")
+        if isinstance(action, DomainAlterAction):
+            actions = [action]
+        elif isinstance(action, AlterDomainActionType):
+            if action is AlterDomainActionType.SET_DEFAULT:
+                normalized_default: Any = new_value
+                if isinstance(new_value, str):
+                    warnings.warn(
+                        "Raw ALTER DOMAIN DEFAULT strings are deprecated; pass a scalar "
+                        "or expression",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    normalized_default = _LegacySqlExpression(
+                        dialect,
+                        new_value,
+                        "new_value",
+                    )
+                actions = [SetDomainDefaultAction(dialect, normalized_default)]
+            elif action is AlterDomainActionType.DROP_DEFAULT:
+                actions = [DropDomainDefaultAction(dialect)]
+            else:
+                if new_name is None:
+                    raise ValueError("new_name is required for RENAME TO")
+                actions = [RenameDomainAction(dialect, new_name)]
+        else:
+            actions = [_UnsupportedDomainAction(dialect, action)]
+        super().__init__(dialect, name, actions)
+        self.schema = resolved_schema
+        self.schema_name = resolved_schema
         self.action = action
         self.new_value = new_value
         self.new_name = new_name
 
     @property
-    def format_method(self) -> str:
-        """The dialect formatting method that renders this expression."""
-        return "format_postgres_alter_domain_statement"
+    def name(self) -> str:
+        return self.domain_name
 
 
-class PostgresDropDomainExpression(BaseExpression):
-    """PostgreSQL DROP DOMAIN statement expression.
-
-    Attributes:
-        name: Name of the domain to drop.
-        schema: Optional schema for the domain.
-        if_exists: When True, add ``IF EXISTS``.
-        cascade: When True, add ``CASCADE``.
-        restrict: When True, add ``RESTRICT``. Mutually exclusive with
-            ``cascade``.
-
-    """
-
+class PostgresDropDomainExpression(DropDomainExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -136,15 +335,19 @@ class PostgresDropDomainExpression(BaseExpression):
         if_exists: bool = False,
         cascade: bool = False,
         restrict: bool = False,
-    ):
-        super().__init__(dialect)
-        self.name = name
-        self.schema = schema
+        *,
+        schema_name: Optional[str] = None,
+    ) -> None:
+        resolved_schema = schema if schema is not None else schema_name
+        if schema is not None and schema_name is not None and schema != schema_name:
+            raise ValueError("schema and schema_name must match when both are provided")
+        super().__init__(dialect, name)
+        self.schema = resolved_schema
+        self.schema_name = resolved_schema
         self.if_exists = if_exists
         self.cascade = cascade
         self.restrict = restrict
 
     @property
-    def format_method(self) -> str:
-        """The dialect formatting method that renders this expression."""
-        return "format_drop_domain_statement"
+    def name(self) -> str:
+        return self.domain_name

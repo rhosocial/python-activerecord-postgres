@@ -13,8 +13,9 @@ Methods retained in this mixin:
 - format_create_range_type: DDL statement
 """
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.statements.ddl_type import CreateTypeExpression
 
 class PostgresDataTypeMixin:
     """Mixin providing PostgreSQL data type support methods.
@@ -22,6 +23,14 @@ class PostgresDataTypeMixin:
     This mixin implements the PostgresDataTypeSupport protocol.
     Designed for multiple inheritance with SQLDialectBase.
     """
+
+    if TYPE_CHECKING:
+        version: Tuple[int, int, int]
+
+        def format_create_type_statement(
+            self,
+            expr: CreateTypeExpression,
+        ) -> Tuple[str, tuple]: ...
 
     def supports_multirange_type(self) -> bool:
         """Whether multirange data types are supported.
@@ -72,29 +81,8 @@ class PostgresDataTypeMixin:
         """
         return self.version >= (13, 0, 0)
 
-    def format_create_range_type(self, expr) -> Tuple[str, tuple]:
-        """Format CREATE TYPE AS RANGE statement from expression object.
-
-        Args:
-            expr: PostgresCreateRangeTypeExpression instance
-
-        Returns:
-            Tuple of (SQL string, empty params tuple)
-        """
-        exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
-        type_name = f"{expr.schema}.{expr.name}" if expr.schema else expr.name
-
-        options = [f"subtype={expr.subtype}"]
-
-        if expr.subtype_opclass:
-            options.append(f"subtype_opclass={expr.subtype_opclass}")
-        if expr.collation:
-            options.append(f"collation={expr.collation}")
-        if expr.canonical:
-            options.append(f"canonical={expr.canonical}")
-        if expr.subtype_diff:
-            options.append(f"subtype_diff={expr.subtype_diff}")
-
-        options_str = ", ".join(options)
-        sql = f"CREATE TYPE {exists_clause}{type_name} AS RANGE ({options_str})"
-        return (sql, ())
+    def format_create_range_type(
+        self,
+        expr: CreateTypeExpression,
+    ) -> Tuple[str, tuple]:
+        return self.format_create_type_statement(expr)
