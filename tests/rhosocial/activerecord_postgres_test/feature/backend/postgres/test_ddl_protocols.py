@@ -672,6 +672,10 @@ class TestPostgresTypeDomainProtocols:
         assert mro.index(PostgresTypeSupport) < mro.index(UserDefinedTypeSupport)
         assert mro.index(PostgresDomainSupport) < mro.index(DomainSupport)
 
+    def test_dialect_initializes_core_validation_state(self) -> None:
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert dialect.strict_validation is True
+
     def test_type_definitions_are_explicitly_registered(self):
         dialect = PostgresDialect(version=(14, 0, 0))
         definitions = (
