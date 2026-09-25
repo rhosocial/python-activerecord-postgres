@@ -575,23 +575,24 @@ class TestPostgresConstraintEnforcement:
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
             PostgresExcludeConstraint,
         )
-        from rhosocial.activerecord.ddl import DialectBinder
-
         dialect = PostgresDialect((18, 0, 0))
         declared = PostgresExcludeConstraint(
-            None,
-            elements=[(FunctionCall(None, "LOWER", Column(None, "name")), "=")],
-            where=Column(None, "active") == Literal(None, True, inline_literals=True),
+            dialect,
+            elements=[
+                (
+                    FunctionCall(dialect, "LOWER", Column(dialect, "name")),
+                    "=",
+                )
+            ],
+            where=Column(dialect, "active")
+            == Literal(dialect, True, inline_literals=True),
         )
-        bound = DialectBinder(dialect).bind(declared)
 
-        assert bound.to_sql() == (
+        assert declared.to_sql() == (
             'EXCLUDE USING gist ((LOWER("name")) WITH =) '
             'WHERE ("active" = TRUE)',
             (),
         )
-        with pytest.raises(ValueError):
-            declared.elements[0][0].to_sql()
 
         with pytest.raises(ValueError, match="Invalid exclude operator"):
             PostgresExcludeConstraint(

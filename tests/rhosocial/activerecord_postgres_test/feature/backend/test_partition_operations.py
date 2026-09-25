@@ -11,6 +11,7 @@ from typing import Optional, Sequence
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.errors import IntegrityError
 from rhosocial.activerecord.backend.expression import (
     Column,
     CreateIndexExpression,
@@ -36,7 +37,6 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraintType,
     TruncateExpression,
 )
-from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresCreatePartitionExpression,
@@ -58,17 +58,6 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint, ColumnConstraintType,
 )
-from rhosocial.activerecord.ddl import PartitionLifecycle, PartitionOperation
-
-
-class _LifecycleSource:
-    @classmethod
-    def table_name(cls):
-        return "ar_partition_events"
-
-    @classmethod
-    def schema_name(cls):
-        return "public"
 
 
 PARTITION_TABLES = (
@@ -85,101 +74,6 @@ PARTMAN_TABLES = (
 )
 
 
-def test_partition_lifecycle_provider_constructs_postgres_expressions():
-    dialect = PostgresDialect()
-    dialect.version = (15, 0, 0)
-    lifecycle = PartitionLifecycle(_LifecycleSource, dialect)
-    assert lifecycle.capabilities().supports(PartitionOperation.CREATE)
-    assert not lifecycle.supports(PartitionOperation.MERGE)
-    assert not lifecycle.supports(PartitionOperation.SPLIT)
-    clause = PartitionClause(
-        dialect,
-        PartitionStrategy.LIST,
-        [Column(dialect, "region")],
-    )
-    expression = lifecycle.create_partition(
-        "ar_partition_events_p2027",
-        "RANGE",
-        {"from": "2027-01-01", "to": "2028-01-01"},
-        partition_clause=clause,
-        partition_schema="child_schema",
-        parent_schema="parent_schema",
-    )
-    sql, params = expression.to_sql()
-    assert '"child_schema"."ar_partition_events_p2027"' in sql
-    assert 'PARTITION OF "parent_schema"."ar_partition_events"' in sql
-    assert sql.index("FOR VALUES") < sql.index("PARTITION BY LIST")
-    assert params == ()
-
-    inherited_child = lifecycle.create_partition(
-        "ar_partition_events_p2028",
-        "RANGE",
-        {"from": "2028-01-01", "to": "2029-01-01"},
-        parent_schema="other_parent_schema",
-    )
-    inherited_child_sql, _ = inherited_child.to_sql()
-    assert '"public"."ar_partition_events_p2028"' in inherited_child_sql
-    assert 'PARTITION OF "other_parent_schema"."ar_partition_events"' in inherited_child_sql
-
-
-def test_partition_lifecycle_preserves_parent_and_child_schemas():
-    dialect = PostgresDialect(version=(15, 0, 0))
-    lifecycle = PartitionLifecycle(_LifecycleSource, dialect)
-
-    create_sql, create_params = lifecycle.create_partition(
-        "ar_partition_events_p2029",
-        "RANGE",
-        {"from": "2029-01-01", "to": "2030-01-01"},
-        partition_schema="child_schema",
-        parent_schema="parent_schema",
-    ).to_sql()
-    assert create_sql == (
-        'CREATE TABLE "child_schema"."ar_partition_events_p2029" '
-        'PARTITION OF "parent_schema"."ar_partition_events" '
-        "FOR VALUES FROM ('2029-01-01') TO ('2030-01-01')"
-    )
-    assert create_params == ()
-
-    drop_sql, drop_params = lifecycle.drop_partition(
-        "ar_partition_events_p2029",
-        partition_schema="child_schema",
-    ).to_sql()
-    assert drop_sql == 'DROP TABLE "child_schema"."ar_partition_events_p2029"'
-    assert drop_params == ()
-
-    truncate_sql, truncate_params = lifecycle.truncate_partition(
-        "ar_partition_events_p2029",
-        partition_schema="child_schema",
-    ).to_sql()
-    assert truncate_sql == 'TRUNCATE TABLE "child_schema"."ar_partition_events_p2029"'
-    assert truncate_params == ()
-
-    attach_sql, attach_params = lifecycle.attach_partition(
-        "ar_partition_events_p2029",
-        "RANGE",
-        {"from": "2029-01-01", "to": "2030-01-01"},
-        partition_schema="child_schema",
-        parent_schema="parent_schema",
-    ).to_sql()
-    assert attach_sql == (
-        'ALTER TABLE "parent_schema"."ar_partition_events" '
-        'ATTACH PARTITION "child_schema"."ar_partition_events_p2029" '
-        "FOR VALUES FROM ('2029-01-01') TO ('2030-01-01')"
-    )
-    assert attach_params == ()
-
-    detach_sql, detach_params = lifecycle.detach_partition(
-        "ar_partition_events_p2029",
-        partition_schema="child_schema",
-        parent_schema="parent_schema",
-    ).to_sql()
-    assert detach_sql == (
-        'ALTER TABLE "parent_schema"."ar_partition_events" '
-        'DETACH PARTITION "child_schema"."ar_partition_events_p2029"'
-    )
-    assert detach_params == ()
-
-
 def _qualified(table_name: str) -> str:
     return f"public.{table_name}"
 
@@ -189,8 +83,22 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
         dialect=dialect,
         table=table_name,
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "created_at",
+                TimestampType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
         partition=PartitionClause(
@@ -313,10 +221,38 @@ def _create_production_parent_sql(dialect):
         dialect=dialect,
         table=PRODUCTION_PARTITION_TABLE,
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "created_at",
+                TimestampType(precision=6, dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "tenant_id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "payload",
+                TextType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
         ],
         table_constraints=[
             TableConstraint(
@@ -850,7 +786,7 @@ class TestPostgreSQLPartitionOperations:
         assert row["partition_name"] == "ar_partition_events_default"
         assert row["payload"] == "default-overflow"
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             postgres_backend.execute(
                 *_create_range_partition_sql(
                     dialect,
@@ -1068,7 +1004,7 @@ class TestAsyncPostgreSQLPartitionOperations:
         assert row["partition_name"] == "ar_partition_events_default"
         assert row["payload"] == "default-overflow"
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             await async_postgres_backend.execute(
                 *_create_range_partition_sql(
                     dialect,
@@ -1228,7 +1164,7 @@ class TestPostgreSQLProductionTimePartitionOperations:
         )
         assert [row["payload"] for row in rows] == ["year-start", "year-end"]
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             postgres_backend.execute(
                 *_insert_production_events_expression(
                     postgres_backend.dialect,
@@ -1464,7 +1400,7 @@ class TestAsyncPostgreSQLProductionTimePartitionOperations:
         )
         assert [row["payload"] for row in rows] == ["year-start", "year-end"]
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             await async_postgres_backend.execute(
                 *_insert_production_events_expression(
                     async_postgres_backend.dialect,

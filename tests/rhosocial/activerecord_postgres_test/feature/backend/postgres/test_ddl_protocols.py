@@ -392,11 +392,9 @@ class TestProtocolRuntimeCheckable:
         from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
             PostgresPartitionSupport,
         )
-        from rhosocial.activerecord.ddl import PartitionLifecycleProvider
 
         dialect = PostgresDialect(version=(14, 0, 0))
         assert isinstance(dialect, PostgresPartitionSupport)
-        assert isinstance(dialect.get_partition_lifecycle_provider(), PartitionLifecycleProvider)
 
     def test_postgres_comment_support_is_runtime_checkable(self):
         """PostgresCommentSupport should be runtime checkable."""

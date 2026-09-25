@@ -10,8 +10,6 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.ddl import PartitionLifecycleProvider
-
     from ...expression.ddl import (
         PartitionValue,
         PostgresCreatePartitionExpression,
@@ -49,10 +47,6 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Partitionwise join: PostgreSQL 11+
     - Partitionwise aggregate: PostgreSQL 11+
     """
-
-    def get_partition_lifecycle_provider(self) -> "PartitionLifecycleProvider":
-        """Return the PostgreSQL partition lifecycle provider."""
-        ...
 
     def supports_hash_partitioning(self) -> bool:
         """Whether HASH partitioning is supported.

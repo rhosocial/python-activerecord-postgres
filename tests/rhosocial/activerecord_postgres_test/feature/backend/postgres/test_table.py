@@ -2,31 +2,14 @@ from unittest.mock import patch
 
 import pytest
 
-from rhosocial.activerecord.ddl import TableDDLDeriver
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression import (
+    ColumnDefinition,
+    CreateTableExpression,
+)
+from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl_table import PostgresTableMixin
-from rhosocial.activerecord.model import ActiveRecord
-
-
-class Inheriting(ActiveRecord):
-    __table_name__ = "child"
-
-    id: int
-
-    @classmethod
-    def table_inherits(cls):
-        return ["parent_a", "parent_b"]
-
-
-class Tablespaced(ActiveRecord):
-    __table_name__ = "spaced"
-
-    id: int
-
-    @classmethod
-    def table_tablespace(cls):
-        return "ts_data"
 
 
 class TestTableSupport:
@@ -86,26 +69,33 @@ class TestPostgresTableMixinDirect:
 
 
 class TestPostgresTableDDLDeclarations:
+    @staticmethod
+    def _expression(dialect, table="child", *, inherits=None, tablespace=None):
+        return CreateTableExpression(
+            dialect,
+            table,
+            [ColumnDefinition(dialect, "id", IntegerType(dialect))],
+            inherits=inherits,
+            tablespace=tablespace,
+        )
+
     def test_table_declaration_defaults_are_absent(self):
-        class Plain(ActiveRecord):
-            __table_name__ = "plain_table_defaults"
-
-            id: int
-
-        expression = TableDDLDeriver(Plain, PostgresDialect(version=(16, 0, 0))).create_table()
+        expression = self._expression(PostgresDialect(version=(16, 0, 0)))
         assert expression.inherits == []
         assert expression.tablespace is None
 
     def test_table_inherits_is_carried_and_rendered(self):
         dialect = PostgresDialect(version=(16, 0, 0))
-        expression = TableDDLDeriver(Inheriting, dialect).create_table()
+        expression = self._expression(
+            dialect, inherits=["parent_a", "parent_b"]
+        )
         assert expression.inherits == ["parent_a", "parent_b"]
         sql, _ = expression.to_sql()
         assert 'INHERITS ("parent_a", "parent_b")' in sql
 
     def test_table_tablespace_is_carried_and_rendered(self):
         dialect = PostgresDialect(version=(16, 0, 0))
-        expression = TableDDLDeriver(Tablespaced, dialect).create_table()
+        expression = self._expression(dialect, tablespace="ts_data")
         assert expression.tablespace == "ts_data"
         sql, _ = expression.to_sql()
         assert 'TABLESPACE "ts_data"' in sql
@@ -114,10 +104,12 @@ class TestPostgresTableDDLDeclarations:
         dialect = PostgresDialect(version=(16, 0, 0))
         with patch.object(dialect, "supports_table_inheritance", return_value=False):
             with pytest.raises(UnsupportedFeatureError, match="INHERITS"):
-                TableDDLDeriver(Inheriting, dialect).create_table().to_sql()
+                self._expression(
+                    dialect, inherits=["parent_a", "parent_b"]
+                ).to_sql()
 
     def test_table_tablespace_fails_fast_when_capability_disabled(self):
         dialect = PostgresDialect(version=(16, 0, 0))
         with patch.object(dialect, "supports_table_tablespace", return_value=False):
             with pytest.raises(UnsupportedFeatureError, match="TABLESPACE"):
-                TableDDLDeriver(Tablespaced, dialect).create_table().to_sql()
+                self._expression(dialect, tablespace="ts_data").to_sql()
