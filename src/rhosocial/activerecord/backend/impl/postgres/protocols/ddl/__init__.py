@@ -11,7 +11,6 @@ from .policy import PostgresPolicySupport
 from .rls_config import PostgresRlsConfigSupport
 from .table_settings import PostgresAlterTableSettingsSupport
 from .cluster import PostgresClusterSupport
-from .repack import PostgresRepackSupport
 from .domain import PostgresDomainSupport
 from .collation import PostgresCollationDDLSupport
 from .foreign_table import PostgresForeignTableDDLSupport
@@ -29,7 +28,6 @@ __all__ = [
     "PostgresRlsConfigSupport",
     "PostgresAlterTableSettingsSupport",
     "PostgresClusterSupport",
-    "PostgresRepackSupport",
     "PostgresDomainSupport",
     "PostgresCollationDDLSupport",
     "PostgresForeignTableDDLSupport",

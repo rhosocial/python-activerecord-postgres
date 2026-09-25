@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from rhosocial.activerecord.base.ddl import TableDDLDeriver
+from rhosocial.activerecord.ddl import TableDDLDeriver
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl_table import PostgresTableMixin
