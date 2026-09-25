@@ -11,8 +11,12 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 | `AlterTableExpression` | ✅ Full | ADD/DROP COLUMN, ALTER COLUMN |
 | `CreateIndexExpression` | ✅ Full | Index types (BTREE, HASH, GIN, GiST, BRIN) |
 | `DropIndexExpression` | ✅ Full | |
-| `CreateViewExpression` | ✅ Full | Materialized views support |
+| `CreateViewExpression` | ✅ Full | |
 | `DropViewExpression` | ✅ Full | |
+| `PostgresCreateMaterializedViewExpression` | ✅ Full | IF NOT EXISTS, TABLESPACE, storage parameters (see [materialized views](./materialized_view.md)) |
+| `PostgresRefreshMaterializedViewExpression` | ✅ Full | CONCURRENTLY (PG 9.4+, requires a UNIQUE index) |
+| `PostgresAlterMaterializedViewExpression` | ✅ Full | RENAME TO, SET SCHEMA, SET/RESET storage parameters, OWNER TO |
+| `PostgresDropMaterializedViewExpression` | ✅ Full | IF EXISTS, CASCADE |
 | `CreatePartitionExpression` | ✅ Full | RANGE, LIST, HASH partitioning (PG 10+) |
 | `AttachPartitionExpression` | ✅ Full | Standard ATTACH PARTITION; `CONCURRENTLY` is unsupported |
 | `DetachPartitionExpression` | ✅ Full | Includes `CONCURRENTLY` and `FINALIZE` (PG 14+) |

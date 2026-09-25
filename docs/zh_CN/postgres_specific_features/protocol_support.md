@@ -76,7 +76,7 @@ PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` �
 | **PostgresDataTypeSupport** | 数据类型增强 | PG 11+ | [数据类型文档](https://www.postgresql.org/docs/current/datatype.html) |
 | **PostgresSQLSyntaxSupport** | SQL 语法增强 | PG 12+ | [SQL 语法文档](https://www.postgresql.org/docs/current/sql-syntax.html) |
 | **PostgresLogicalReplicationSupport** | 逻辑复制特性 | PG 10+ | [复制文档](https://www.postgresql.org/docs/current/logical-replication.html) |
-| **PostgresMaterializedViewSupport** | 物化视图 | PG 9.3+ | [物化视图文档](https://www.postgresql.org/docs/current/rules-materializedviews.html) |
+| **PostgresMaterializedViewSupport** | 物化视图（CREATE/REFRESH/ALTER/DROP、IF NOT EXISTS、CONCURRENTLY、TABLESPACE、存储参数） | PG 9.3+（CONCURRENTLY / IF NOT EXISTS：9.4+） | [物化视图 DDL 文档](https://www.postgresql.org/docs/current/sql-creatematerializedview.html) · [指南](../../ddl/materialized_view.md) |
 | **PostgresTableSupport** | 表特定特性 | 所有版本 | [表文档](https://www.postgresql.org/docs/current/ddl.html) |
 
 ## 详细原生特性支持

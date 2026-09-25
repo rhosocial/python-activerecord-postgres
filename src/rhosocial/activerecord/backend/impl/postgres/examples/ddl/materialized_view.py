@@ -12,6 +12,10 @@ This example demonstrates:
 8. REFRESH MATERIALIZED VIEW WITH DATA (after NO DATA)
 9. Schema-qualified refresh (PostgresRefreshMaterializedViewExpression)
 10. DROP MATERIALIZED VIEW with CASCADE and IF EXISTS
+11. IF NOT EXISTS (PostgreSQL 9.4+) via PostgresCreateMaterializedViewExpression
+12. Schema-qualified create/drop
+13. ALTER MATERIALIZED VIEW: RENAME TO / SET SCHEMA / SET () / RESET () / OWNER TO
+14. Introspection: list_materialized_views() with is_populated / has_unique_index
 """
 
 # ============================================================
@@ -40,6 +44,18 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
+)
+from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresAlterMaterializedViewExpression,
+    PostgresChangeMaterializedViewOwnerAction,
+    PostgresCreateMaterializedViewExpression,
+    PostgresDropMaterializedViewExpression,
+    PostgresRefreshMaterializedViewExpression,
+    PostgresRenameMaterializedViewAction,
+    PostgresResetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewSchemaAction,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -84,21 +100,22 @@ create_table = CreateTableExpression(
     table='sales',
     columns=[
         ColumnDefinition(
+            dialect,
             'id',
-            'SERIAL',
+            dialect.parse_type('SERIAL'),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
             ],
         ),
-        ColumnDefinition('product_id', 'INT', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ColumnDefinition(dialect, 'product_id', dialect.parse_type('INT'), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('amount', 'DECIMAL(10,2)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ColumnDefinition(dialect, 'amount', dialect.parse_type('DECIMAL(10,2)'), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
         ]),
-        ColumnDefinition('sale_date', 'DATE', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+        ColumnDefinition(dialect, 'sale_date', dialect.parse_type('DATE'), constraints=[
+            ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL),
         ]),
     ],
     if_not_exists=True,
@@ -145,14 +162,17 @@ summary_query = QueryExpression(
     ),
 )
 
-create_mv = CreateMaterializedViewExpression(
+create_mv = PostgresCreateMaterializedViewExpression(
     dialect=dialect,
     view_name='sales_summary',
     query=summary_query,
     column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
+    # Storage parameter names are validated against PostgresStorageParameter;
+    # unlisted names (toast.* / table access method options) need
+    # allow_unlisted_storage_parameters=True.
     storage_options={
-        'fillfactor': 70,
-        'autovacuum_enabled': 'true',
+        PostgresStorageParameter.FILLFACTOR: 70,
+        PostgresStorageParameter.AUTOVACUUM_ENABLED: 'true',
     },
 )
 sql, params = create_mv.to_sql()
@@ -347,10 +367,7 @@ for row in result.data or []:
 # ============================================================
 # The PostgreSQL backend provides an extended refresh expression that
 # supports specifying the schema for the materialized view.
-
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresRefreshMaterializedViewExpression,
-)
+# (PostgresRefreshMaterializedViewExpression is imported at the top of this file.)
 
 # Refresh with schema (public is PG's default schema)
 pg_refresh = PostgresRefreshMaterializedViewExpression(
@@ -409,8 +426,149 @@ print(f"DROP without IF EXISTS SQL (not executed): {sql}")
 print("  Note: This would fail at runtime if the MV does not exist.")
 
 # ============================================================
+# SECTION: 10. IF NOT EXISTS (PostgreSQL 9.4+)
+# ============================================================
+# IF NOT EXISTS makes creation idempotent: a second run emits a notice
+# instead of failing. Requires PostgreSQL 9.4+; the dialect raises
+# UnsupportedFeatureError below that version.
+
+if_not_exists_mv = PostgresCreateMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+    query=summary_query,
+    column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
+    if_not_exists=True,
+)
+sql, params = if_not_exists_mv.to_sql()
+print(f"\nIF NOT EXISTS SQL: {sql}")
+backend.execute(sql, params)
+
+# ============================================================
+# SECTION: 11. Schema-Qualified Create and Drop
+# ============================================================
+# Every MV statement accepts a schema; names are quoted per part, so mixed
+# case and reserved words are safe.
+
+backend.execute('CREATE SCHEMA IF NOT EXISTS mv_reporting', options=ddl_options)
+
+schema_mv = PostgresCreateMaterializedViewExpression(
+    dialect=dialect,
+    view_name='Order Summary',
+    query=summary_query,
+    schema='mv_reporting',
+    column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
+)
+sql, params = schema_mv.to_sql()
+print(f"\nSchema-qualified CREATE SQL: {sql}")
+backend.execute(sql, params)
+
+schema_verify = QueryExpression(
+    dialect=dialect,
+    select=[WildcardExpression(dialect)],
+    from_=TableExpression(
+        dialect, 'Order Summary', schema_name='mv_reporting'
+    ),
+)
+sql, params = schema_verify.to_sql()
+result = backend.execute(sql, params, options=dql_options)
+print("Schema-qualified MV result:")
+for row in result.data or []:
+    print(f"  {row}")
+
+# ============================================================
+# SECTION: 12. ALTER MATERIALIZED VIEW
+# ============================================================
+# PostgreSQL supports exactly five ALTER MATERIALIZED VIEW actions.
+# SET TABLESPACE is NOT one of them: a materialized view cannot be
+# relocated to another tablespace after creation.
+# Multiple actions render as separate statements joined with ";\n".
+
+alter_mv = PostgresAlterMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+    actions=[
+        PostgresSetMaterializedViewPropertiesAction(
+            dialect, {PostgresStorageParameter.FILLFACTOR: 85}
+        ),
+        PostgresResetMaterializedViewPropertiesAction(
+            dialect, [PostgresStorageParameter.AUTOVACUUM_ENABLED]
+        ),
+    ],
+)
+sql, params = alter_mv.to_sql()
+print(f"\nALTER SET/RESET SQL:\n{sql}")
+backend.execute(sql, params, options=ddl_options)
+
+rename_mv = PostgresAlterMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary',
+    actions=[PostgresRenameMaterializedViewAction(dialect, 'sales_summary_v2')],
+)
+sql, params = rename_mv.to_sql()
+print(f"\nALTER RENAME SQL: {sql}")
+backend.execute(sql, params, options=ddl_options)
+
+# Move the schema-qualified view into the public schema.
+set_schema_mv = PostgresAlterMaterializedViewExpression(
+    dialect=dialect,
+    view_name='Order Summary',
+    schema='mv_reporting',
+    actions=[PostgresSetMaterializedViewSchemaAction(dialect, 'public')],
+)
+sql, params = set_schema_mv.to_sql()
+print(f"\nALTER SET SCHEMA SQL: {sql}")
+backend.execute(sql, params, options=ddl_options)
+
+# CURRENT_USER / CURRENT_ROLE / SESSION_USER are emitted verbatim.
+owner_mv = PostgresAlterMaterializedViewExpression(
+    dialect=dialect,
+    view_name='sales_summary_v2',
+    actions=[PostgresChangeMaterializedViewOwnerAction(dialect, 'CURRENT_USER')],
+)
+sql, params = owner_mv.to_sql()
+print(f"\nALTER OWNER TO SQL: {sql}")
+backend.execute(sql, params, options=ddl_options)
+
+# ============================================================
+# SECTION: 13. Introspection
+# ============================================================
+# list_materialized_views() is a dedicated entry point: list_views() stays
+# limited to relkind='v'. Each entry reports whether the view is populated
+# and whether it carries the UNIQUE index CONCURRENTLY refresh needs.
+
+backend.introspector.clear_cache()
+materialized_views = backend.introspector.list_materialized_views()
+print("\nMaterialized views:")
+for view in materialized_views:
+    print(f"  {view.schema}.{view.name} populated={view.extra.get('is_populated')} "
+          f"unique_index={view.extra.get('has_unique_index')}")
+
+info = backend.introspector.get_materialized_view_info('sales_summary_v2')
+print(f"\nMV info: {info.name if info else None} definition={info.definition[:60] if info and info.definition else None}")
+
+# ============================================================
+# SECTION: 14. Schema-Qualified Drop
+# ============================================================
+
+drop_schema_mv = PostgresDropMaterializedViewExpression(
+    dialect=dialect,
+    view_name='Order Summary',
+    schema='mv_reporting',
+    if_exists=True,
+    cascade=True,
+)
+sql, params = drop_schema_mv.to_sql()
+print(f"\nSchema-qualified DROP SQL: {sql}")
+backend.execute(sql, params, options=ddl_options)
+
+# ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
+drop_mv = PostgresDropMaterializedViewExpression(
+    dialect=dialect, view_name='sales_summary_v2', if_exists=True, cascade=True,
+)
+backend.execute(*drop_mv.to_sql())
+backend.execute('DROP SCHEMA IF EXISTS mv_reporting CASCADE', options=ddl_options)
 drop_table = DropTableExpression(
     dialect=dialect,
     table='sales',
@@ -437,4 +595,7 @@ backend.disconnect()
 # 10. Use DropMaterializedViewExpression with cascade=True to drop dependent objects
 # 11. Use DropMaterializedViewExpression with if_exists=True for safe drop
 # 12. Requires PostgreSQL 9.3+ for basic MV support
-# 13. Requires PostgreSQL 9.4+ for CONCURRENTLY refresh
+# 13. Requires PostgreSQL 9.4+ for CONCURRENTLY refresh and IF NOT EXISTS
+# 14. storage_options keys are validated against PostgresStorageParameter
+# 15. ALTER MATERIALIZED VIEW supports RENAME/SET SCHEMA/SET()/RESET()/OWNER TO
+# 16. list_materialized_views() reports is_populated and has_unique_index

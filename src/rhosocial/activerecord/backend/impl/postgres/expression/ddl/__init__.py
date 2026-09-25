@@ -107,7 +107,18 @@ from .statistics import (
     PostgresDropStatisticsExpression,
 )
 from .comment import PostgresCommentExpression
-from .mv import PostgresRefreshMaterializedViewExpression
+from .mv import (
+    MaterializedViewAlterAction,
+    PostgresAlterMaterializedViewExpression,
+    PostgresChangeMaterializedViewOwnerAction,
+    PostgresCreateMaterializedViewExpression,
+    PostgresDropMaterializedViewExpression,
+    PostgresRefreshMaterializedViewExpression,
+    PostgresRenameMaterializedViewAction,
+    PostgresResetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewSchemaAction,
+)
 from .type import (
     PostgresAddEnumValueAction,
     PostgresAddTypeAttributeAction,
@@ -250,7 +261,16 @@ __all__ = [
     # comment
     "PostgresCommentExpression",
     # mv
+    "MaterializedViewAlterAction",
+    "PostgresAlterMaterializedViewExpression",
+    "PostgresChangeMaterializedViewOwnerAction",
+    "PostgresCreateMaterializedViewExpression",
+    "PostgresDropMaterializedViewExpression",
     "PostgresRefreshMaterializedViewExpression",
+    "PostgresRenameMaterializedViewAction",
+    "PostgresResetMaterializedViewPropertiesAction",
+    "PostgresSetMaterializedViewPropertiesAction",
+    "PostgresSetMaterializedViewSchemaAction",
     # type
     "PostgresCompositeTypeAttribute",
     "PostgresCompositeTypeDefinition",

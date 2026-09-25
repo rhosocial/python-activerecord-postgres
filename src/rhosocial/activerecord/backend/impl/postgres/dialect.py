@@ -361,6 +361,7 @@ class PostgresDialect(
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
+    PostgresMaterializedViewMixin,  # Before ViewMixin to override format_*_materialized_view_*
     ViewMixin,
     SchemaMixin,
     PostgresIndexMixin,
@@ -368,7 +369,6 @@ class PostgresDialect(
     SequenceMixin,
     # PostgreSQL-specific mixins
     PostgresExtensionMixin,
-    PostgresMaterializedViewMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
     PostgresCommentMixin,  # Before TableMixin to override format_comment_statement

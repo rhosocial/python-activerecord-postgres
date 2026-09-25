@@ -220,7 +220,7 @@ In addition to standard protocols, PostgreSQL provides database-specific protoco
 | **PostgresDataTypeSupport** | Data type enhancements | PG 11+ | [Data Types Docs](https://www.postgresql.org/docs/current/datatype.html) |
 | **PostgresSQLSyntaxSupport** | SQL syntax enhancements | PG 12+ | [SQL Syntax Docs](https://www.postgresql.org/docs/current/sql-syntax.html) |
 | **PostgresLogicalReplicationSupport** | Logical replication features | PG 10+ | [Replication Docs](https://www.postgresql.org/docs/current/logical-replication.html) |
-| **PostgresMaterializedViewSupport** | Materialized views | PG 9.3+ | [MV Docs](https://www.postgresql.org/docs/current/rules-materializedviews.html) |
+| **PostgresMaterializedViewSupport** | Materialized views (CREATE/REFRESH/ALTER/DROP, IF NOT EXISTS, CONCURRENTLY, TABLESPACE, storage parameters) | PG 9.3+ (CONCURRENTLY / IF NOT EXISTS: 9.4+) | [MV DDL Docs](https://www.postgresql.org/docs/current/sql-creatematerializedview.html) · [guide](../../ddl/materialized_view.md) |
 | **PostgresTableSupport** | Table-specific features | All | [Table Docs](https://www.postgresql.org/docs/current/ddl.html) |
 
 ## Detailed Native Feature Support
