@@ -111,6 +111,30 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         """
         ...
 
+    def supports_add_partition(self) -> bool:
+        """Whether ADD PARTITION is supported."""
+        ...
+
+    def supports_drop_partition(self) -> bool:
+        """Whether DROP PARTITION is supported."""
+        ...
+
+    def supports_truncate_partition(self) -> bool:
+        """Whether TRUNCATE PARTITION is supported."""
+        ...
+
+    def supports_reorganize_partition(self) -> bool:
+        """Whether REORGANIZE PARTITION is supported."""
+        ...
+
+    def supports_attach_partition(self) -> bool:
+        """Whether ATTACH PARTITION is supported."""
+        ...
+
+    def supports_detach_partition(self) -> bool:
+        """Whether DETACH PARTITION is supported."""
+        ...
+
     def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
 
