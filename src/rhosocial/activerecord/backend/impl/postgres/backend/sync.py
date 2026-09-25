@@ -16,7 +16,7 @@ Architecture:
 
 import datetime
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TYPE_CHECKING, Union
 
 import psycopg
 from psycopg.errors import Error as PsycopgError
@@ -47,6 +47,13 @@ from ..protocols import PostgresExtensionInfo
 from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
 
+if TYPE_CHECKING:
+    from ..expression import PostgresCopyFromExpression, PostgresCopyToExpression
+
+
+CopyChunk = Union[str, bytes, bytearray, memoryview]
+CopyInput = Union[CopyChunk, Iterable[CopyChunk]]
+
 
 class PostgresBackend(
     IntrospectorBackendMixin,
@@ -65,6 +72,8 @@ class PostgresBackend(
         are enabled. Call introspect_and_adapt() after connecting to detect
         the actual server version and installed extensions.
         """
+        graph_feature_overrides = kwargs.pop("graph_feature_overrides", None)
+
         # Ensure we have proper PostgreSQL configuration
         connection_config = kwargs.get("connection_config")
 
@@ -140,7 +149,9 @@ class PostgresBackend(
 
         # Initialize PostgreSQL-specific components
         # Version is None until introspect_and_adapt() is called
-        self._dialect = PostgresDialect()
+        self._dialect = PostgresDialect(
+            graph_feature_overrides=graph_feature_overrides,
+        )
 
         # Register PostgreSQL-specific type adapters (same as async backend)
         # Note: XML adapter is NOT registered by default due to potential conflicts.
@@ -287,6 +298,89 @@ class PostgresBackend(
 
         return self._connection.cursor()
 
+    @staticmethod
+    def _copy_output_chunk(chunk: Any) -> bytes:
+        if isinstance(chunk, bytes):
+            return chunk
+        if isinstance(chunk, str):
+            return chunk.encode("utf-8")
+        if isinstance(chunk, (bytearray, memoryview)):
+            return bytes(chunk)
+        raise TypeError("PostgreSQL COPY stream yielded a non-buffer chunk")
+
+    @staticmethod
+    def _validate_copy_input_chunk(
+        chunk: Any,
+        binary: bool,
+        encoding: Optional[str] = None,
+    ) -> CopyChunk:
+        if not isinstance(chunk, (str, bytes, bytearray, memoryview)):
+            raise TypeError("COPY input chunks must be str or bytes-like objects")
+        if binary and isinstance(chunk, str):
+            raise TypeError("COPY FROM BINARY requires bytes-like input chunks")
+        if encoding is not None and isinstance(chunk, str):
+            raise TypeError("COPY FROM with ENCODING requires bytes-like input chunks")
+        return chunk
+
+    def copy_to(self, expression: "PostgresCopyToExpression") -> bytes:
+        """Execute COPY TO STDOUT and return the complete byte stream."""
+        from ..expression import PostgresCopyToExpression
+
+        if not isinstance(expression, PostgresCopyToExpression):
+            raise TypeError("expression must be a PostgresCopyToExpression")
+        sql, params = expression.to_sql()
+        chunks = []
+        try:
+            with self._get_cursor() as cursor:
+                with cursor.copy(sql, params) as copy:
+                    for chunk in copy:
+                        chunks.append(self._copy_output_chunk(chunk))
+        except BaseException as error:
+            if isinstance(error, PsycopgError):
+                self._handle_error(error)
+            else:
+                self._try_rollback_transaction()
+            raise
+        return b"".join(chunks)
+
+    def copy_from(
+        self,
+        expression: "PostgresCopyFromExpression",
+        data: CopyInput,
+    ) -> int:
+        """Stream COPY FROM STDIN data and return the server-reported row count."""
+        from ..expression import PostgresCopyFromExpression
+
+        if not isinstance(expression, PostgresCopyFromExpression):
+            raise TypeError("expression must be a PostgresCopyFromExpression")
+        sql, params = expression.to_sql()
+        binary = str(expression.format).lower() == "binary"
+        chunks: Iterable[CopyChunk]
+        if isinstance(data, (str, bytes, bytearray, memoryview)):
+            chunks = (data,)
+        else:
+            try:
+                chunks = iter(data)
+            except TypeError as error:
+                raise TypeError("COPY input must be bytes, str, or an iterable of chunks") from error
+        try:
+            with self._get_cursor() as cursor:
+                with cursor.copy(sql, params) as copy:
+                    for chunk in chunks:
+                        copy.write(
+                            self._validate_copy_input_chunk(chunk, binary, expression.encoding)
+                        )
+                rowcount = int(cursor.rowcount)
+            if getattr(self, "_transaction_manager", None) is not None:
+                self._handle_auto_commit_if_needed()
+            return rowcount
+        except BaseException as error:
+            if isinstance(error, PsycopgError):
+                self._handle_error(error)
+            else:
+                self._try_rollback_transaction()
+            raise
+
     def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
         """Execute the same SQL statement multiple times with different parameters."""
         if not self._connection:
@@ -404,7 +498,12 @@ class PostgresBackend(
 
         if version_changed:
             self._server_version_cache = actual_version
-            self._dialect = PostgresDialect(actual_version)
+            self._dialect = PostgresDialect(
+                actual_version,
+                graph_feature_overrides=getattr(
+                    self._dialect, "_graph_feature_overrides", None
+                ),
+            )
 
         # Detect installed extensions
         extensions = self._detect_extensions()

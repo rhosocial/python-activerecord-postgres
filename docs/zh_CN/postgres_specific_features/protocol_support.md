@@ -24,7 +24,7 @@ PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` �
 | **ArraySupport** | ✅ 完整 | 所有版本 | 原生数组类型和操作 |
 | **JSONSupport** | ✅ 完整 | ≥ 9.2 | JSON 类型；JSONB ≥ 9.4；JSON_TABLE ≥ 12 |
 | **ExplainSupport** | ✅ 完整 | 所有版本 | EXPLAIN 和 EXPLAIN ANALYZE 支持多种格式 |
-| **GraphSupport** | ✅ 完整 | PG 19+ | SQL/PGQ 属性图查询 MATCH 子句和 GRAPH_TABLE |
+| **GraphSupport** | 已禁用 | 显式覆盖 | PostgreSQL 19 Beta 4 已撤回 SQL/PGQ |
 | **LockingSupport** | ✅ 部分 | ≥ 9.5 | FOR UPDATE；SKIP LOCKED ≥ 9.5 |
 | **MergeSupport** | ✅ 完整 | ≥ 15.0 | MERGE 语句 |
 | **OrderedSetAggregationSupport** | ✅ 完整 | ≥ 9.4 | 有序集聚合函数 |
@@ -66,7 +66,7 @@ PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` �
 | 协议 | 描述 | 最低版本 | 文档 |
 |------|------|----------|------|
 | **PostgresPartitionSupport** | 高级分区特性 | PG 10+ | [分区文档](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
-| **PostgresPropertyGraphQueryMixin** | SQL/PGQ 属性图 | PG 19+ | [属性图查询](property_graph_query.md) |
+| **PostgresPropertyGraphQueryMixin** | SQL/PGQ 兼容性门控 | 显式覆盖 | [SQL/PGQ 可用性](property_graph_query.md) |
 | **PostgresPgPartmanSupport** | pg_partman 自动分区 | PG 10+ | [分区文档](partition.md) |
 | **PostgresXMLMixin** | SQL/XML 标准表达式 | PG 8.3+ | [Dialect 表达式](dialect.md) |
 | **PostgresCollationMixin** | 表达式级 COLLATE | 所有版本 | [Dialect 表达式](dialect.md) |

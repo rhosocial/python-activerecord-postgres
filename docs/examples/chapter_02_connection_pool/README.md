@@ -16,7 +16,7 @@ Run in PostgreSQL virtual environment:
 .venv_postgres\Scripts\activate
 
 # Install dependencies
-pip install psycopg
+pip install "psycopg[binary]>=3.2.13"
 
 # Run sync stress test
 python docs\examples\chapter_02_connection_pool\connection_pool_stress_test_sync.py

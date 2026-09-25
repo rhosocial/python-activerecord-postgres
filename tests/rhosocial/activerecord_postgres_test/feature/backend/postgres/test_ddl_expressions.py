@@ -9,13 +9,20 @@ from decimal import Decimal
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression import (
+    Column,
+    FunctionCall,
+    Literal,
+    RawSQLExpression,
+)
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
     PartitionClause,
     PartitionStrategy,
 )
+from rhosocial.activerecord.backend.impl.dummy import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PartitionValue,
@@ -306,7 +313,7 @@ class TestPostgresPartitionedTableCreation:
             ),
         )
 
-        with pytest.raises(Exception, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(UnsupportedFeatureError, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_create_hash_partitioned_parent_table_pg11(self):
@@ -353,7 +360,7 @@ class TestPostgresPartitionedTableCreation:
             ),
         )
 
-        with pytest.raises(Exception, match="Declarative table partitioning requires PostgreSQL 10"):
+        with pytest.raises(UnsupportedFeatureError, match="Declarative table partitioning requires PostgreSQL 10"):
             expr.to_sql()
 
     def test_key_partitioning_is_rejected(self, dialect):
@@ -406,6 +413,31 @@ class TestPostgresPartitionedTableCreation:
         sql, _ = expr.to_sql()
         assert "PARTITION BY RANGE" in sql
 
+    def test_partition_clause_rejects_cross_dialect_key(self, dialect):
+        clause = PartitionClause(
+            dialect,
+            PartitionStrategy.RANGE,
+            [Column(DummyDialect(), "created_at")],
+        )
+        with pytest.raises(ValueError, match="same dialect|PostgreSQL dialect"):
+            clause.to_sql()
+
+    def test_create_partition_rejects_cross_dialect_clause(self, dialect):
+        clause = PartitionClause(
+            DummyDialect(),
+            PartitionStrategy.HASH,
+            [Column(DummyDialect(), "bucket")],
+        )
+        with pytest.raises(ValueError, match="same dialect"):
+            PostgresCreatePartitionExpression(
+                dialect,
+                "events_p1",
+                "events",
+                "RANGE",
+                {"from": "2026-01-01", "to": "2027-01-01"},
+                partition_clause=clause,
+            )
+
     def test_multi_column_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table with multiple partition keys."""
         expr = CreateTableExpression(
@@ -435,6 +467,34 @@ class TestPostgresPartitionedTableCreation:
         assert sql.startswith('CREATE TABLE "tenanted_events"')
         assert 'PARTITION BY RANGE ("tenant_id", "created_at")' in sql
         assert params == ()
+
+    def test_multi_column_list_partitioned_parent_table_rejected(self, dialect):
+        clause = PartitionClause(
+            dialect=dialect,
+            method=PartitionStrategy.LIST,
+            keys=[Column(dialect, "region"), Column(dialect, "status")],
+        )
+
+        with pytest.raises(ValueError, match="exactly one key expression"):
+            clause.to_sql()
+
+    def test_child_multi_column_list_partition_clause_rejected(self, dialect):
+        clause = PartitionClause(
+            dialect=dialect,
+            method=PartitionStrategy.LIST,
+            keys=[Column(dialect, "region"), Column(dialect, "status")],
+        )
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {"from": "2026-01-01", "to": "2027-01-01"},
+            partition_clause=clause,
+        )
+
+        with pytest.raises(ValueError, match="exactly one key expression"):
+            expr.to_sql()
 
 
 class TestPostgresPartitionValue:
@@ -473,6 +533,49 @@ class TestPostgresPartitionValue:
     def test_partition_value_rejects_nonfinite_numbers(self, dialect, value):
         with pytest.raises(ValueError):
             PartitionValue(dialect=dialect, value=value)
+
+    @pytest.mark.parametrize("value", ["MINVALUE", "MAXVALUE", "DEFAULT"])
+    def test_list_partition_value_quotes_special_range_strings(self, dialect, value):
+        expr = PartitionValue(dialect, value, partition_type="LIST")
+        assert expr.to_sql() == (f"'{value}'", ())
+
+    def test_partition_value_renders_function_call_with_inline_literals(self, dialect):
+        expr = PartitionValue(
+            dialect,
+            FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
+        )
+        assert expr.to_sql() == ("DATE_TRUNC('month')", ())
+
+    def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
+        expr = PartitionValue(
+            dialect,
+            RawSQLExpression(dialect, "DATE %s", ("2024-01-01",)),
+        )
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            expr.to_sql()
+
+    def test_partition_value_rejects_cross_dialect_expression(self, dialect):
+        expression = FunctionCall(DummyDialect(), "DATE", niladic=True)
+        with pytest.raises(ValueError, match="same dialect"):
+            PartitionValue(dialect, expression)
+
+    @pytest.mark.parametrize("expression_factory", [
+        lambda dialect: Column(dialect, "created_at"),
+        lambda dialect: FunctionCall(dialect, "DATE", Column(dialect, "created_at")),
+    ])
+    def test_partition_value_rejects_unsafe_expression(self, dialect, expression_factory):
+        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQLExpression"):
+            PartitionValue(dialect, expression_factory(dialect))
+
+    def test_default_partition_value_requires_pg11(self):
+        dialect = PostgresDialect(version=(10, 0, 0))
+        with pytest.raises(UnsupportedFeatureError, match="DEFAULT partitions require PostgreSQL 11"):
+            PartitionValue(dialect, "DEFAULT").to_sql()
+
+    def test_partition_value_requires_pg10(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
+            PartitionValue(dialect, 1).to_sql()
 
 
 class TestPostgresCreatePartitionExpression:
@@ -539,7 +642,7 @@ class TestPostgresCreatePartitionExpression:
             partition_type="HASH",
             partition_values={"modulus": 4, "remainder": 0},
         )
-        with pytest.raises(Exception, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(UnsupportedFeatureError, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_create_hash_partition_pg11(self, dialect):
@@ -624,6 +727,203 @@ class TestPostgresCreatePartitionExpression:
         assert expected_clause in sql
         assert params == ()
 
+    def test_create_multi_column_range_partition(self, dialect):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {
+                "from": [1, date(2026, 1, 1)],
+                "to": [2, date(2027, 1, 1)],
+            },
+        )
+        sql, params = expr.to_sql()
+        assert "FROM (1, '2026-01-01') TO (2, '2027-01-01')" in sql
+        assert params == ()
+
+    def test_create_multi_column_list_partition_rejected(self, dialect):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "LIST",
+            {"values": [["us", 1], ["eu", 2]]},
+        )
+
+        with pytest.raises(ValueError, match="nested rows"):
+            expr.to_sql()
+
+    def test_list_special_range_strings_remain_quoted(self, dialect):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_special",
+            "events",
+            "LIST",
+            {"values": ["MINVALUE", "MAXVALUE", "DEFAULT"]},
+        )
+        sql, _ = expr.to_sql()
+        assert "IN ('MINVALUE', 'MAXVALUE', 'DEFAULT')" in sql
+
+    def test_child_partition_clause_order_and_schemas(self, dialect):
+        clause = PartitionClause(
+            dialect,
+            PartitionStrategy.HASH,
+            [Column(dialect, "bucket")],
+        )
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {"from": "2026-01-01", "to": "2027-01-01"},
+            schema="child_schema",
+            parent_schema="parent_schema",
+            tablespace="fastspace",
+            partition_clause=clause,
+        )
+        sql, params = expr.to_sql()
+        assert sql == (
+            'CREATE TABLE "child_schema"."events_p1" '
+            'PARTITION OF "parent_schema"."events" '
+            "FOR VALUES FROM ('2026-01-01') TO ('2027-01-01') "
+            'PARTITION BY HASH ("bucket") TABLESPACE "fastspace"'
+        )
+        assert sql.index("FOR VALUES") < sql.index("PARTITION BY") < sql.index("TABLESPACE")
+        assert params == ()
+
+    def test_create_partition_rejects_nested_parameters(self, dialect):
+        clause = PartitionClause(
+            dialect,
+            PartitionStrategy.HASH,
+            [RawSQLExpression(dialect, "bucket %s", (1,))],
+        )
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {
+                "from": RawSQLExpression(dialect, "DATE %s", ("2026-01-01",)),
+                "to": "MAXVALUE",
+            },
+            partition_clause=clause,
+        )
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            expr.to_sql()
+
+    def test_create_partition_literals_are_inlined(self, dialect):
+        clause = PartitionClause(
+            dialect,
+            PartitionStrategy.HASH,
+            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket"))],
+        )
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {
+                "from": Literal(dialect, "2026-01-01"),
+                "to": Literal(dialect, "2027-01-01"),
+            },
+            partition_clause=clause,
+        )
+
+        sql, params = expr.to_sql()
+
+        assert params == ()
+        assert "%s" not in sql
+        assert "LOWER('bucket')" in sql
+        assert "FROM ('2026-01-01')" in sql
+
+    def test_create_list_partition_literals_are_inlined(self, dialect):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "LIST",
+            {"values": [FunctionCall(dialect, "LOWER", Literal(dialect, "ACTIVE"))]},
+        )
+
+        sql, params = expr.to_sql()
+
+        assert params == ()
+        assert "%s" not in sql
+        assert "IN (LOWER('ACTIVE'))" in sql
+
+    def test_create_default_partition_requires_pg11(self):
+        dialect = PostgresDialect(version=(10, 0, 0))
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_default",
+            "events",
+            "RANGE",
+            {"default": True},
+        )
+        with pytest.raises(UnsupportedFeatureError, match="DEFAULT partitions require PostgreSQL 11"):
+            expr.to_sql()
+
+    @pytest.mark.parametrize("modulus", [True, "4", 4.0])
+    def test_create_hash_rejects_non_integer_modulus(self, dialect, modulus):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "HASH",
+            {"modulus": modulus, "remainder": 0},
+        )
+        with pytest.raises(TypeError, match="modulus must be an int"):
+            expr.to_sql()
+
+    @pytest.mark.parametrize("modulus", [0, -1])
+    def test_create_hash_rejects_non_positive_modulus(self, dialect, modulus):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "HASH",
+            {"modulus": modulus, "remainder": 0},
+        )
+        with pytest.raises(ValueError, match="modulus must be a positive integer"):
+            expr.to_sql()
+
+    @pytest.mark.parametrize("remainder", [True, "0", 0.0])
+    def test_create_hash_rejects_non_integer_remainder(self, dialect, remainder):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "HASH",
+            {"modulus": 4, "remainder": remainder},
+        )
+        with pytest.raises(TypeError, match="remainder must be an int"):
+            expr.to_sql()
+
+    @pytest.mark.parametrize("remainder", [-1, 4])
+    def test_create_hash_rejects_out_of_range_remainder(self, dialect, remainder):
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "HASH",
+            {"modulus": 4, "remainder": remainder},
+        )
+        with pytest.raises(ValueError, match=r"0 <= remainder < modulus"):
+            expr.to_sql()
+
+    def test_create_partition_requires_pg10(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        expr = PostgresCreatePartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {"from": "2026-01-01", "to": "2027-01-01"},
+        )
+        with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
+            expr.to_sql()
+
 
 class TestPostgresDetachPartitionExpression:
     """Test PostgresDetachPartitionExpression."""
@@ -706,6 +1006,16 @@ class TestPostgresDetachPartitionExpression:
         sql, params = expr.to_sql()
         assert '"sales".' in sql
 
+    def test_detach_partition_requires_pg10(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        expr = PostgresDetachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+        )
+        with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
+            expr.to_sql()
+
 
 class TestPostgresAttachPartitionExpression:
     """Test PostgresAttachPartitionExpression."""
@@ -781,6 +1091,37 @@ class TestPostgresAttachPartitionExpression:
         with pytest.raises(ValueError, match="LIST partition requires"):
             expr.to_sql()
 
+    def test_attach_multi_column_list_partition_rejected(self, dialect):
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "LIST",
+            {"values": [["us", 1], ["eu", 2]]},
+        )
+
+        with pytest.raises(ValueError, match="nested rows"):
+            expr.to_sql()
+
+    def test_attach_partition_literals_are_inlined(self, dialect):
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {
+                "from": Literal(dialect, "2026-01-01"),
+                "to": FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "year")),
+            },
+        )
+
+        sql, params = expr.to_sql()
+
+        assert params == ()
+        assert "%s" not in sql
+        assert "FROM ('2026-01-01')" in sql
+        assert "TO (DATE_TRUNC('year'))" in sql
+
     def test_attach_hash_partition_requires_pg11(self):
         """HASH attach requires PostgreSQL 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
@@ -791,11 +1132,11 @@ class TestPostgresAttachPartitionExpression:
             partition_type="HASH",
             partition_values={"modulus": 4, "remainder": 0},
         )
-        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(UnsupportedFeatureError, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_attach_concurrently_pg13(self):
-        """ATTACH CONCURRENTLY requires PG 14+."""
+        """ATTACH CONCURRENTLY is rejected on PG 13."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
         expr = PostgresAttachPartitionExpression(
             dialect=dialect_pg13,
@@ -805,11 +1146,11 @@ class TestPostgresAttachPartitionExpression:
             partition_values={"from": "2024-01-01", "to": "2024-04-01"},
             concurrently=True,
         )
-        with pytest.raises(ValueError, match="ATTACH CONCURRENTLY requires PostgreSQL 14"):
+        with pytest.raises(UnsupportedFeatureError, match="ATTACH PARTITION CONCURRENTLY"):
             expr.to_sql()
 
     def test_attach_concurrently_pg14(self, dialect):
-        """ATTACH CONCURRENTLY with PG 14+ includes CONCURRENTLY keyword."""
+        """ATTACH CONCURRENTLY is rejected on PG 14+."""
         expr = PostgresAttachPartitionExpression(
             dialect=dialect,
             partition_name="orders_2024_q1",
@@ -818,10 +1159,8 @@ class TestPostgresAttachPartitionExpression:
             partition_values={"from": "2024-01-01", "to": "2024-04-01"},
             concurrently=True,
         )
-        sql, params = expr.to_sql()
-        assert "CONCURRENTLY" in sql
-        assert "FOR VALUES" in sql
-        assert params == ()
+        with pytest.raises(UnsupportedFeatureError, match="ATTACH PARTITION CONCURRENTLY"):
+            expr.to_sql()
 
     def test_attach_default_range_partition(self, dialect):
         """ATTACH DEFAULT partition for RANGE should emit DEFAULT keyword."""
@@ -851,6 +1190,58 @@ class TestPostgresAttachPartitionExpression:
         assert "FOR VALUES" not in sql
         assert params == ()
 
+    def test_attach_multi_column_range_partition(self, dialect):
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {"from": [1, "2026-01-01"], "to": [2, "2027-01-01"]},
+        )
+        sql, params = expr.to_sql()
+        assert "FROM (1, '2026-01-01') TO (2, '2027-01-01')" in sql
+        assert params == ()
+
+    def test_attach_default_partition_requires_pg11(self):
+        dialect = PostgresDialect(version=(10, 0, 0))
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_default",
+            "events",
+            "LIST",
+            {"default": True},
+        )
+        with pytest.raises(UnsupportedFeatureError, match="DEFAULT partitions require PostgreSQL 11"):
+            expr.to_sql()
+
+    @pytest.mark.parametrize("modulus,remainder", [
+        ("4); DROP TABLE events; --", 0),
+        (4, "0); DROP TABLE events; --"),
+        (4, 4),
+    ])
+    def test_attach_hash_rejects_invalid_integers(self, dialect, modulus, remainder):
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "HASH",
+            {"modulus": modulus, "remainder": remainder},
+        )
+        with pytest.raises((TypeError, ValueError)):
+            expr.to_sql()
+
+    def test_attach_partition_requires_pg10(self):
+        dialect = PostgresDialect(version=(9, 6, 0))
+        expr = PostgresAttachPartitionExpression(
+            dialect,
+            "events_p1",
+            "events",
+            "RANGE",
+            {"from": "2026-01-01", "to": "2027-01-01"},
+        )
+        with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
+            expr.to_sql()
+
 
 class TestPostgresPartitionMetadataExpression:
     """Test PostgreSQL partition metadata query expression."""
@@ -865,6 +1256,9 @@ class TestPostgresPartitionMetadataExpression:
         sql, params = expr.to_sql()
         assert "pg_get_partkeydef" in sql
         assert "pg_inherits" in sql
+        assert "pg_partitioned_table" in sql
+        assert "parent.relkind = 'p'" in sql
+        assert "partitioned_parent.partrelid IS NOT NULL" in sql
         assert params == ("orders",)
 
     def test_metadata_query_with_schema(self):
@@ -890,6 +1284,8 @@ class TestPostgresPartitionMetadataExpression:
         )
         sql, params = expr.to_sql()
         assert "pg_inherits" not in sql
+        assert "pg_partitioned_table" in sql
+        assert "parent.relkind = 'p'" in sql
         assert "NULL::text AS name" in sql
         assert params == ("orders",)
 
@@ -900,7 +1296,7 @@ class TestPostgresPartitionMetadataExpression:
             dialect=dialect,
             parent_table="orders",
         )
-        with pytest.raises(Exception, match="partition metadata introspection"):
+        with pytest.raises(UnsupportedFeatureError, match="partition metadata introspection"):
             expr.to_sql()
 
 

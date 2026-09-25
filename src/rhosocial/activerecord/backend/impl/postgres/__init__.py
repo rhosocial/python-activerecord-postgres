@@ -75,6 +75,14 @@ from .expression.types import (
     PostgresCidrType,
 )
 from .explain import PostgresExplainResult, PostgresExplainPlanLine
+from .expression import (
+    PostgresCopyFormat,
+    PostgresCopyFromExpression,
+    PostgresCopyLogVerbosity,
+    PostgresCopyOnError,
+    PostgresCopyToExpression,
+    PostgresRepackExpression,
+)
 from .expression.ddl import (
     PostgresAddDomainCheckAction,
     PostgresAddEnumValueAction,
@@ -355,6 +363,12 @@ __all__ = [
     # PostgreSQL EXPLAIN Result Types
     "PostgresExplainResult",
     "PostgresExplainPlanLine",
+    "PostgresCopyFormat",
+    "PostgresCopyFromExpression",
+    "PostgresCopyLogVerbosity",
+    "PostgresCopyOnError",
+    "PostgresCopyToExpression",
+    "PostgresRepackExpression",
     # PostgreSQL DDL Statements
     "PostgresCompositeTypeAttribute",
     "PostgresCompositeTypeDefinition",

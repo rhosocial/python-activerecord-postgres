@@ -3,4 +3,4 @@
 # Core dependency (rhosocial-activerecord) is installed via CI workflow from git
 
 # PostgreSQL driver
-psycopg[binary]
+psycopg[binary]>=3.2.13

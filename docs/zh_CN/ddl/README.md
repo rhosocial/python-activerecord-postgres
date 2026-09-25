@@ -14,8 +14,8 @@ PostgreSQL 后端支持与核心库相同的类型安全 DDL 表达式，并具�
 | `CreateViewExpression` | ✅ 完整 | 物化视图支持 |
 | `DropViewExpression` | ✅ 完整 | |
 | `CreatePartitionExpression` | ✅ 完整 | RANGE, LIST, HASH 分区（PG 10+） |
-| `AttachPartitionExpression` | ✅ 完整 | 含 CONCURRENTLY（PG 14+） |
-| `DetachPartitionExpression` | ✅ 完整 | 含 CONCURRENTLY（PG 14+） |
+| `AttachPartitionExpression` | ✅ 完整 | 支持标准 ATTACH PARTITION；不支持 `CONCURRENTLY` |
+| `DetachPartitionExpression` | ✅ 完整 | 含 `CONCURRENTLY` 和 `FINALIZE`（PG 14+） |
 | `AlterIndexExpression` | ✅ 完整 | RENAME TO, SET TABLESPACE, SET/RESET 存储参数 |
 | `ReindexExpression` | ✅ 完整 | 索引/表/模式/数据库级重建，含 CONCURRENTLY |
 

@@ -13,12 +13,18 @@ PostgreSQL-proprietary features:
 - EXCLUDE constraints
 """
 
-from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
+from typing import Optional, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import ConstraintSupport
 
 if TYPE_CHECKING:  # pragma: no cover
-    from rhosocial.activerecord.backend.expression.statements import AddTableConstraint
+    from rhosocial.activerecord.backend.expression.statements import (
+        AddTableConstraint,
+        AlterConstraint,
+        TableConstraint,
+        TableConstraintType,
+        ValidateConstraint,
+    )
 
 
 @runtime_checkable
@@ -35,6 +41,24 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
     - NOT VALID: https://www.postgresql.org/docs/current/sql-altertable.html
     - EXCLUDE: https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-EXCLUSION
     """
+
+    def supports_constraint_enforced(
+        self,
+        constraint_type: Optional["TableConstraintType"] = None,
+    ) -> bool:
+        """Whether CREATE/ADD constraint enforcement control is supported."""
+        ...
+
+    def supports_alter_constraint_enforced(
+        self,
+        constraint_type: Optional["TableConstraintType"] = None,
+    ) -> bool:
+        """Whether ALTER CONSTRAINT enforcement control is supported."""
+        ...
+
+    def supports_validate_constraint(self) -> bool:
+        """Whether VALIDATE CONSTRAINT is supported."""
+        ...
 
     def supports_constraint_novalidate(self) -> bool:
         """Whether NOT VALID constraint option is supported.
@@ -70,15 +94,17 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
     def format_add_table_constraint_action(
         self, action: "AddTableConstraint"
     ) -> Tuple[str, tuple]:
-        """Format ALTER TABLE ADD CONSTRAINT with PostgreSQL extensions.
+        """Format ALTER TABLE ADD CONSTRAINT with PostgreSQL extensions."""
+        ...
 
-        Adds EXCLUDE constraint support and the PostgreSQL-proprietary
-        ``NOT VALID`` suffix to the standard formatting.
+    def format_table_constraint(self, expr: "TableConstraint") -> Tuple[str, tuple]:
+        """Format CREATE TABLE constraints with PostgreSQL extensions."""
+        ...
 
-        Args:
-            action: AddTableConstraint action to format.
+    def format_alter_constraint_action(self, action: "AlterConstraint") -> Tuple[str, tuple]:
+        """Format ALTER CONSTRAINT enforcement."""
+        ...
 
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-        """
+    def format_validate_constraint_action(self, action: "ValidateConstraint") -> Tuple[str, tuple]:
+        """Format VALIDATE CONSTRAINT."""
         ...

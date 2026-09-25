@@ -75,10 +75,10 @@ class TestPostgresPartitionSupportFeatureDetection:
         assert dialect.supports_range_table_partitioning() is True
         assert dialect.supports_list_table_partitioning() is True
 
-    def test_subpartitioning_not_exposed_yet(self):
-        """Nested partitioning is not exposed by this API yet."""
-        dialect = PostgresDialect(version=(14, 0, 0))
-        assert dialect.supports_subpartitioning() is False
+    def test_subpartitioning_pg10(self):
+        """Nested partitioning is available with PostgreSQL 10+."""
+        assert PostgresDialect(version=(9, 6, 0)).supports_subpartitioning() is False
+        assert PostgresDialect(version=(10, 0, 0)).supports_subpartitioning() is True
 
     def test_partition_introspection_pg9(self):
         """Partition metadata introspection follows declarative partitioning support."""
@@ -145,9 +145,9 @@ class TestPostgresPartitionSupportFeatureDetection:
         assert dialect.supports_concurrent_attach() is False
 
     def test_supports_concurrent_attach_pg14(self):
-        """PostgreSQL 14 supports CONCURRENTLY ATTACH."""
+        """CONCURRENTLY ATTACH remains disabled on PostgreSQL 14+."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        assert dialect.supports_concurrent_attach() is True
+        assert dialect.supports_concurrent_attach() is False
 
     def test_supports_partition_bounds_expression_pg11(self):
         """Partition bounds expression requires PG 12+."""
@@ -225,9 +225,11 @@ class TestPostgresPartitionMixinDirect:
         assert self._PartitionMixin().supports_hash_table_partitioning() is True
         assert self._PartitionMixinPg10().supports_hash_table_partitioning() is False
 
-    def test_subpartitioning_not_exposed_direct(self):
-        """Nested partitioning is not exposed by this API yet."""
-        assert self._PartitionMixin().supports_subpartitioning() is False
+    def test_subpartitioning_direct(self):
+        """Nested partitioning follows declarative partitioning support."""
+        assert self._PartitionMixin().supports_subpartitioning() is True
+        assert self._PartitionMixinPg10().supports_subpartitioning() is True
+        assert self._PartitionMixinLow().supports_subpartitioning() is False
 
     def test_partition_introspection_direct(self):
         """Partition metadata introspection follows table partitioning support."""
@@ -245,8 +247,8 @@ class TestPostgresPartitionMixinDirect:
         assert mixin.supports_reorganize_partition() is False
 
     def test_supports_concurrent_attach_direct(self):
-        """CONCURRENTLY ATTACH follows PG version."""
-        assert self._PartitionMixin().supports_concurrent_attach() is True
+        """CONCURRENTLY ATTACH is always disabled."""
+        assert self._PartitionMixin().supports_concurrent_attach() is False
         assert self._PartitionMixinPg10().supports_concurrent_attach() is False
 
 
@@ -390,8 +392,11 @@ class TestProtocolRuntimeCheckable:
         from rhosocial.activerecord.backend.impl.postgres.protocols.ddl import (
             PostgresPartitionSupport,
         )
+        from rhosocial.activerecord.ddl import PartitionLifecycleProvider
+
         dialect = PostgresDialect(version=(14, 0, 0))
         assert isinstance(dialect, PostgresPartitionSupport)
+        assert isinstance(dialect.get_partition_lifecycle_provider(), PartitionLifecycleProvider)
 
     def test_postgres_comment_support_is_runtime_checkable(self):
         """PostgresCommentSupport should be runtime checkable."""

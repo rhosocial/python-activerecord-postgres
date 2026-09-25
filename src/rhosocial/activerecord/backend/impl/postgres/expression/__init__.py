@@ -19,6 +19,13 @@ from .advisory import (
     AdvisoryLockType,
 )
 from .ilike import ILIKEExpression
+from .copy import (
+    PostgresCopyFormat,
+    PostgresCopyOnError,
+    PostgresCopyLogVerbosity,
+    PostgresCopyToExpression,
+    PostgresCopyFromExpression,
+)
 from .ddl import (
     PostgresColumnStorage,
     PostgresColumnDefinition,
@@ -26,6 +33,7 @@ from .ddl import (
     PostgresAlterColumn,
     PostgresVacuumExpression,
     PostgresAnalyzeExpression,
+    PostgresRepackExpression,
     PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
@@ -38,6 +46,14 @@ from .ddl import (
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
     PostgresExcludeConstraint,
+    PostgresAlterConstraint,
+    PostgresValidateConstraint,
+    PostgresAlterConstraintAction,
+    PostgresValidateConstraintAction,
+    PostgresAlterConstraintExpression,
+    PostgresValidateConstraintExpression,
+    PostgresAlterTableConstraint,
+    PostgresValidateTableConstraint,
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
     PostgresCommentExpression,
@@ -149,9 +165,15 @@ __all__ = [
     # locking
     # ilike
     "ILIKEExpression",
+    "PostgresCopyFormat",
+    "PostgresCopyOnError",
+    "PostgresCopyLogVerbosity",
+    "PostgresCopyToExpression",
+    "PostgresCopyFromExpression",
     # ddl
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    "PostgresRepackExpression",
     "PostgresColumnStorage",
     "PostgresColumnDefinition",
     "PostgresColumnOptions",
@@ -168,6 +190,14 @@ __all__ = [
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",
+    "PostgresAlterConstraint",
+    "PostgresValidateConstraint",
+    "PostgresAlterConstraintAction",
+    "PostgresValidateConstraintAction",
+    "PostgresAlterConstraintExpression",
+    "PostgresValidateConstraintExpression",
+    "PostgresAlterTableConstraint",
+    "PostgresValidateTableConstraint",
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",
     "PostgresCommentExpression",

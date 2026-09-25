@@ -1,13 +1,9 @@
 """
-Recursive CTE graph traversal — PGQ quantified path alternative
-===============================================================
+Recursive CTE graph traversal
+=============================
 
-PostgreSQL 19 natively supports SQL/PGQ (MATCH / GRAPH_TABLE), with limitations:
-  - supports_quantified_path() → False (no variable-length paths +/*/{n,m})
-  - supports_comma_separated_patterns() → False (no comma-separated multi-pattern)
-
-This example demonstrates recursive CTE + SetOperationExpression + UNION ALL
-as an equivalent alternative for graph traversal patterns.
+PostgreSQL 19 Beta 4 withdrew SQL/PGQ. This example demonstrates recursive CTE
++ SetOperationExpression + UNION ALL as an alternative for graph traversal.
 
 Common use cases:
   1. Social network N-degree friend recommendations (replaces MATCH (a)-[e]->+(b))

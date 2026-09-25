@@ -18,10 +18,13 @@ from .ddl.domain import (
     PostgresSetDomainSchemaAction,
     PostgresValidateDomainConstraintAction,
 )
+from .copy import PostgresCopyFromExpression, PostgresCopyToExpression
 from .ddl.multirange import (
     CreateMultirangeTypeExpression,
     MultirangeAggFunctionExpression,
 )
+from .ddl.repack import PostgresRepackExpression
+from .ddl.constraint import PostgresAlterConstraint, PostgresValidateConstraint
 from .ddl.type import (
     AlterEnumAddValueExpression,
     CreateEnumTypeExpression,
@@ -54,6 +57,11 @@ from .ddl.type import (
 
 
 _POSTGRES_DDL_EXPRESSION_CLASSES: Tuple[Type[BaseExpression], ...] = (
+    PostgresCopyFromExpression,
+    PostgresCopyToExpression,
+    PostgresRepackExpression,
+    PostgresAlterConstraint,
+    PostgresValidateConstraint,
     PostgresCompositeTypeDefinition,
     PostgresEnumTypeDefinition,
     PostgresRangeTypeDefinition,

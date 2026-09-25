@@ -14,8 +14,6 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    TableConstraint,
-    TableConstraintType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresExcludeConstraint,
@@ -134,6 +132,26 @@ def test_exclude_constraint_valid_operators(dialect):
         assert f"WITH {op}" in sql
 
 
+def test_exclude_constraint_rejects_gin(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        using="gin",
+    )
+    with pytest.raises(ValueError, match="Invalid index access method"):
+        dialect._format_exclude_constraint(constraint)
+
+
+def test_exclude_constraint_accepts_symbol_operator(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("box", "|>>")],
+    )
+    sql, params = dialect._format_exclude_constraint(constraint)
+    assert 'WITH |>>' in sql
+    assert params == ()
+
+
 def test_exclude_constraint_rejects_invalid_using(dialect):
     """Test that invalid index access method is rejected."""
     constraint = PostgresExcludeConstraint(
@@ -173,6 +191,38 @@ def test_exclude_constraint_sql_injection_prevention(dialect):
     assert "; DROP" not in sql
     assert "--" not in sql
     assert "/*" not in sql
+
+
+def test_exclude_constraint_rejects_empty_elements(dialect):
+    constraint = PostgresExcludeConstraint(dialect, name="empty_exclude")
+    with pytest.raises(ValueError, match="at least one element"):
+        dialect._format_exclude_constraint(constraint)
+
+
+def test_exclude_constraint_formats_expression_and_where(dialect):
+    from rhosocial.activerecord.backend.expression import Column, Literal
+
+    where = Column(dialect, "active") == Literal(dialect, True, inline_literals=True)
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        where=where,
+    )
+
+    sql, params = dialect._format_exclude_constraint(constraint)
+
+    assert sql == 'EXCLUDE USING gist ("range" WITH &&) WHERE ("active" = TRUE)'
+    assert params == ()
+
+
+def test_exclude_constraint_rejects_raw_where(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        where="active = TRUE; DROP TABLE people",
+    )
+    with pytest.raises(TypeError, match="where must be a SQL expression"):
+        dialect._format_exclude_constraint(constraint)
 
 
 class TestPostgresEnumSecurity:

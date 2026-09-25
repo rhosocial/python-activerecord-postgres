@@ -363,25 +363,8 @@ table = xmltable(dialect,
     columns=[("id", "INTEGER", "id"), ("name", "VARCHAR(100)", "name")])
 ```
 
-## 属性图查询 (PG 19+)
+## SQL/PGQ 可用性
 
-PostgreSQL 19+ 支持 SQL/PGQ 属性图查询。详见 [属性图查询](property_graph_query.md)。
-
-```python
-from rhosocial.activerecord.backend.expression.graph import (
-    GraphVertex, GraphEdge, GraphEdgeDirection, MatchClause,
-)
-
-person = GraphVertex(dialect, variable="p", table="persons")
-product = GraphVertex(dialect, variable="pr", table="products")
-purchased = GraphEdge(dialect, variable="pu", table="purchases",
-                      direction=GraphEdgeDirection.RIGHT)
-
-match = MatchClause(dialect, person, purchased, product)
-# sql: 'MATCH (p) - [pu] -> (pr)'
-
-# 检查支持
-if dialect.supports_graph_match():
-    # PG 19+
-    pass
-```
+PostgreSQL 19 Beta 4 已撤回 SQL/PGQ。`supports_graph_match()` 和
+`supports_graph_table()` 默认关闭，且不依据服务器版本自动启用。详见
+[SQL/PGQ 可用性](property_graph_query.md)。

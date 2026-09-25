@@ -14,8 +14,8 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 | `CreateViewExpression` | ✅ Full | Materialized views support |
 | `DropViewExpression` | ✅ Full | |
 | `CreatePartitionExpression` | ✅ Full | RANGE, LIST, HASH partitioning (PG 10+) |
-| `AttachPartitionExpression` | ✅ Full | Includes CONCURRENTLY (PG 14+) |
-| `DetachPartitionExpression` | ✅ Full | Includes CONCURRENTLY (PG 14+) |
+| `AttachPartitionExpression` | ✅ Full | Standard ATTACH PARTITION; `CONCURRENTLY` is unsupported |
+| `DetachPartitionExpression` | ✅ Full | Includes `CONCURRENTLY` and `FINALIZE` (PG 14+) |
 | `AlterIndexExpression` | ✅ Full | RENAME TO, SET TABLESPACE, SET/RESET storage params |
 | `ReindexExpression` | ✅ Full | INDEX/TABLE/SCHEMA/DATABASE level, with CONCURRENTLY |
 

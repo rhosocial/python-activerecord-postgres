@@ -107,16 +107,16 @@
 
 | Package | Version | Python Version | Notes |
 |---------|---------|----------------|-------|
-| psycopg | 3.2.x | 3.8+ | Supported |
+| psycopg | 3.2.13+ | 3.8+ | Supported |
 | psycopg | 3.3.x | 3.10+ | Recommended |
-| psycopg-binary | 3.2.x | 3.8+ | Pre-compiled binary |
+| psycopg-binary | 3.2.13+ | 3.8+ | Pre-compiled binary |
 | psycopg-binary | 3.3.x | 3.10+ | Recommended |
 
 ### psycopg Version Compatibility
 
 | psycopg Version | Minimum Python | Maximum Python |
 |-----------------|----------------|----------------|
-| 3.2.x | 3.8 | All current |
+| 3.2.13+ | 3.8 | All current |
 | 3.3.x | 3.10 | All current |
 
 ## Core Library Dependencies

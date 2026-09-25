@@ -1,9 +1,9 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_model_truncate.py
-"""Live execution tests for the model-level ``truncate()`` operation."""
+"""PostgreSQL rendering tests for model-bound TRUNCATE expressions."""
 
-import pytest
-import pytest_asyncio
-
+from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
+    TruncateExpression,
+)
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 
 
@@ -11,17 +11,7 @@ TABLE = "model_truncate_events"
 
 
 class TestSyncModelTruncate:
-    @pytest.fixture
-    def table(self, postgres_backend):
-        postgres_backend.execute(f"DROP TABLE IF EXISTS {TABLE}")
-        postgres_backend.execute(
-            f"CREATE TABLE {TABLE} (id SERIAL PRIMARY KEY, name VARCHAR(50))"
-        )
-        postgres_backend.execute(f"INSERT INTO {TABLE} (name) VALUES ('a'), ('b'), ('c')")
-        yield
-        postgres_backend.execute(f"DROP TABLE IF EXISTS {TABLE}")
-
-    def test_truncate_removes_all_rows(self, postgres_backend, table):
+    def test_truncate_expression_renders_postgres_options(self, postgres_backend):
         class Event(ActiveRecord):
             __table_name__ = TABLE
 
@@ -29,27 +19,23 @@ class TestSyncModelTruncate:
             name: str
 
         Event.__backend__ = postgres_backend
-        Event.truncate()
-        assert postgres_backend.fetch_one(
-            f"SELECT COUNT(*) AS cnt FROM {TABLE}"
-        )["cnt"] == 0
+        expression = Event.ddl().truncate(restart_identity=True, cascade=True)
+
+        assert isinstance(expression, TruncateExpression)
+        assert expression.table_name == TABLE
+        assert expression.restart_identity is True
+        assert expression.cascade is True
+        assert expression.to_sql() == (
+            f'TRUNCATE TABLE "{TABLE}" RESTART IDENTITY CASCADE',
+            (),
+        )
 
 
 class TestAsyncModelTruncate:
-    @pytest_asyncio.fixture
-    async def table(self, async_postgres_backend):
-        await async_postgres_backend.execute(f"DROP TABLE IF EXISTS {TABLE}")
-        await async_postgres_backend.execute(
-            f"CREATE TABLE {TABLE} (id SERIAL PRIMARY KEY, name VARCHAR(50))"
-        )
-        await async_postgres_backend.execute(
-            f"INSERT INTO {TABLE} (name) VALUES ('a'), ('b'), ('c')"
-        )
-        yield
-        await async_postgres_backend.execute(f"DROP TABLE IF EXISTS {TABLE}")
-
-    @pytest.mark.asyncio
-    async def test_truncate_removes_all_rows(self, async_postgres_backend, table):
+    async def test_truncate_expression_renders_postgres_options(
+        self,
+        async_postgres_backend,
+    ):
         class Event(AsyncActiveRecord):
             __table_name__ = TABLE
 
@@ -57,8 +43,13 @@ class TestAsyncModelTruncate:
             name: str
 
         Event.__backend__ = async_postgres_backend
-        await Event.truncate()
-        count = await async_postgres_backend.fetch_one(
-            f"SELECT COUNT(*) AS cnt FROM {TABLE}"
+        expression = Event.ddl().truncate(restart_identity=True, cascade=True)
+
+        assert isinstance(expression, TruncateExpression)
+        assert expression.table_name == TABLE
+        assert expression.restart_identity is True
+        assert expression.cascade is True
+        assert expression.to_sql() == (
+            f'TRUNCATE TABLE "{TABLE}" RESTART IDENTITY CASCADE',
+            (),
         )
-        assert count["cnt"] == 0

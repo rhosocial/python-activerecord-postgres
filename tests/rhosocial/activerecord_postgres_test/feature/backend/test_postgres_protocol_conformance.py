@@ -431,7 +431,11 @@ class TestPostgresExpressionDialectSeparation:
         ("PostgresPartitionMetadataExpression", "format_partition_metadata_query"),
         ("PostgresCreateStatisticsExpression", "format_create_statistics_statement"),
         ("PostgresDropStatisticsExpression", "format_drop_statistics_statement"),
-        ("PostgresAlterIndexExpression", "format_alter_index_statement"),
+         ("PostgresAlterIndexExpression", "format_alter_index_statement"),
+         ("PostgresCopyToExpression", "format_copy_to_statement"),
+         ("PostgresCopyFromExpression", "format_copy_from_statement"),
+         ("PostgresRepackExpression", "format_repack_statement"),
+
     ]
 
     @pytest.mark.parametrize("expr_name,format_method", EXPRESSION_DIALECT_PAIRS)
@@ -478,9 +482,13 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     (postgres_protocols.PostgresCommentSupport, postgres_mixins.PostgresCommentMixin),
     (postgres_protocols.PostgresTypeSupport, postgres_mixins.PostgresTypeMixin),
     (postgres_protocols.PostgresDomainSupport, postgres_mixins.PostgresDomainMixin),
-    (postgres_protocols.PostgresConstraintSupport, postgres_mixins.PostgresConstraintMixin),
+     (postgres_protocols.PostgresConstraintSupport, postgres_mixins.PostgresConstraintMixin),
+     (postgres_protocols.PostgresRepackSupport, postgres_mixins.PostgresRepackMixin),
+
     # DML protocols
-    (postgres_protocols.PostgresVacuumSupport, postgres_mixins.PostgresVacuumMixin),
+     (postgres_protocols.PostgresVacuumSupport, postgres_mixins.PostgresVacuumMixin),
+     (postgres_protocols.PostgresCopySupport, postgres_mixins.PostgresCopyMixin),
+
     (postgres_protocols.PostgresStoredProcedureSupport, postgres_mixins.PostgresStoredProcedureMixin),
     (postgres_protocols.PostgresExtendedStatisticsSupport, postgres_mixins.PostgresExtendedStatisticsMixin),
     (postgres_protocols.PostgresAdvisoryLockSupport, postgres_mixins.PostgresAdvisoryLockMixin),

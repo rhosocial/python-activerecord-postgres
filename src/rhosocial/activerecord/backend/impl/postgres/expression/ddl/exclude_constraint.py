@@ -40,6 +40,7 @@ class PostgresExcludeConstraint(TableConstraint):
         deferrable: Optional[bool] = None,
         initially_deferred: Optional[bool] = None,
         validation: Any = None,
+        enforced: Optional[bool] = None,
     ):
         super().__init__(
             dialect,
@@ -48,6 +49,7 @@ class PostgresExcludeConstraint(TableConstraint):
             deferrable=deferrable,
             initially_deferred=initially_deferred,
             validation=validation,
+            enforced=enforced,
         )
         self.elements = elements or []
         self.using = using

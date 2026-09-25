@@ -601,7 +601,7 @@ dependencies = [
 ```python
 extras_require = {
     "mysql": ["mysql-connector-python>=8.0.0"],  # MySQL backend
-    "postgresql": ["psycopg2>=2.9.0"],  # PostgreSQL backend
+    "postgresql": ["psycopg[binary]>=3.2.13"],  # PostgreSQL backend
     "dev": ["pytest", "black", "mypy"],  # Development tools
 }
 ```
@@ -623,7 +623,7 @@ def discover_backends():
 
     try:
         from rhosocial.activerecord.backend.impl.postgresql import PostgreSQLBackend
-        backends['postgresql'] = PostgreSQLBackend  # Uses psycopg2 directly
+        backends['postgresql'] = PostgreSQLBackend  # Uses psycopg 3 directly
     except ImportError:
         pass
 

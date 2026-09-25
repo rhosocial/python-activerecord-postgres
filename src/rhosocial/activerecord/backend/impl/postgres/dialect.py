@@ -6,7 +6,7 @@ This dialect implements protocols for features that PostgreSQL actually supports
 based on the PostgreSQL version provided at initialization.
 """
 
-from typing import Tuple, Optional, cast, TYPE_CHECKING
+from typing import Mapping, Tuple, Optional, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.schema.differ import SchemaDiffer
@@ -106,6 +106,7 @@ from .mixins import (
     PostgresPropertyGraphQueryMixin,
     PostgresIndexMixin,
     PostgresVacuumMixin,
+    PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
@@ -167,6 +168,7 @@ from .mixins import (
     PostgresAlterTableSettingsMixin,
     PostgresClusterMixin,
     PostgresDomainMixin,
+    PostgresRepackMixin,
     PostgresCollationDDLMixin,
     PostgresForeignTableMixin,
     PostgresRoutineMixin,
@@ -216,6 +218,7 @@ from .protocols import (
     PostgresPartitionSupport,
     PostgresIndexSupport,
     PostgresVacuumSupport,
+    PostgresCopySupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
     PostgresLogicalReplicationSupport,
@@ -273,6 +276,7 @@ from .protocols import (
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
+    PostgresRepackSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -369,6 +373,7 @@ class PostgresDialect(
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
     PostgresCommentMixin,  # Before TableMixin to override format_comment_statement
     TableMixin,
+    PostgresConstraintMixin,
     ConstraintMixin,
     PostgresPartitionMixin,
     PartitionMixin,
@@ -381,6 +386,7 @@ class PostgresDialect(
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresVacuumMixin,
+    PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
@@ -411,11 +417,11 @@ class PostgresDialect(
     PostgresAddressStandardizerMixin,
     # DDL feature mixins
     PostgresTriggerMixin,
-    PostgresConstraintMixin,
     PostgresPolicyMixin,
     PostgresRlsConfigMixin,
     PostgresAlterTableSettingsMixin,
     PostgresClusterMixin,
+    PostgresRepackMixin,
     PostgresCollationDDLMixin,
     PostgresForeignTableMixin,
     PostgresRoutineMixin,
@@ -490,6 +496,7 @@ class PostgresDialect(
     PostgresPartitionSupport,
     PostgresIndexSupport,
     PostgresVacuumSupport,
+    PostgresCopySupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
     PostgresLogicalReplicationSupport,
@@ -547,6 +554,7 @@ class PostgresDialect(
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
+    PostgresRepackSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -603,7 +611,12 @@ class PostgresDialect(
     from .function_versions import POSTGRES_FUNCTION_VERSIONS as _FV
     _POSTGRES_FUNCTION_VERSIONS = _FV
 
-    def __init__(self, version: Optional[Tuple[int, int, int]] = None):
+    def __init__(
+        self,
+        version: Optional[Tuple[int, int, int]] = None,
+        *,
+        graph_feature_overrides: Optional[Mapping[str, bool]] = None,
+    ):
         """
         Initialize PostgreSQL dialect with specific version.
 
@@ -612,12 +625,24 @@ class PostgresDialect(
                 If None, the dialect must be adapted via
                 backend.introspect_and_adapt() before version-dependent
                 features can be used.
+            graph_feature_overrides: Explicit opt-ins for withdrawn or future
+                property graph features.
 
         """
         super().__init__()
         self._reserved_words = POSTGRESQL_RESERVED_WORDS
         if version is not None:
             self.version = version
+
+        overrides = dict(graph_feature_overrides or {})
+        if any(not isinstance(name, str) for name in overrides):
+            raise TypeError("Graph feature override names must be strings")
+        unknown = overrides.keys() - self.GRAPH_FEATURE_NAMES
+        if unknown:
+            raise ValueError(f"Unknown graph feature overrides: {', '.join(sorted(unknown))}")
+        if any(type(enabled) is not bool for enabled in overrides.values()):
+            raise TypeError("Graph feature override values must be booleans")
+        self._graph_feature_overrides = overrides
 
     @staticmethod
     def _validate_data_type(data_type: str) -> bool:

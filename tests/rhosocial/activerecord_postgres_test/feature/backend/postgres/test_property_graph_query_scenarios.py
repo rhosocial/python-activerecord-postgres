@@ -1,8 +1,8 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_property_graph_query_scenarios.py
-"""
-Real-world PGQ scenario tests for PostgreSQL 19+ using the expression system.
+"""Capability-gated SQL/PGQ integration scenarios.
 
-All SQL is constructed via expression classes. No raw SQL strings are used.
+The synchronous and asynchronous database tests skip unless the backend explicitly
+reports GRAPH_TABLE support. All SQL is constructed through expression classes.
 """
 import pytest
 import pytest_asyncio
@@ -90,11 +90,36 @@ def social_data(postgres_backend):
     backend.execute(*CreateTableExpression(dialect, "likes", likes_cols).to_sql())
 
     people_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, "Alice"), Literal(dialect, "alice@example.com"), Literal(dialect, "NYC")],
-        [Literal(dialect, 2), Literal(dialect, "Bob"), Literal(dialect, "bob@example.com"), Literal(dialect, "NYC")],
-        [Literal(dialect, 3), Literal(dialect, "Charlie"), Literal(dialect, "charlie@example.com"), Literal(dialect, "LA")],
-        [Literal(dialect, 4), Literal(dialect, "Diana"), Literal(dialect, "diana@example.com"), Literal(dialect, "NYC")],
-        [Literal(dialect, 5), Literal(dialect, "Eve"), Literal(dialect, "eve@example.com"), Literal(dialect, "LA")],
+        [
+            Literal(dialect, 1),
+            Literal(dialect, "Alice"),
+            Literal(dialect, "alice@example.com"),
+            Literal(dialect, "NYC"),
+        ],
+        [
+            Literal(dialect, 2),
+            Literal(dialect, "Bob"),
+            Literal(dialect, "bob@example.com"),
+            Literal(dialect, "NYC"),
+        ],
+        [
+            Literal(dialect, 3),
+            Literal(dialect, "Charlie"),
+            Literal(dialect, "charlie@example.com"),
+            Literal(dialect, "LA"),
+        ],
+        [
+            Literal(dialect, 4),
+            Literal(dialect, "Diana"),
+            Literal(dialect, "diana@example.com"),
+            Literal(dialect, "NYC"),
+        ],
+        [
+            Literal(dialect, 5),
+            Literal(dialect, "Eve"),
+            Literal(dialect, "eve@example.com"),
+            Literal(dialect, "LA"),
+        ],
     ])
     backend.execute(*InsertExpression(dialect, "people", source=people_data).to_sql())
 
@@ -167,8 +192,15 @@ class TestSocialGraph:
     def test_single_hop_followers(self, postgres_backend, social_data):
         """Q1: Who does Alice follow?"""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", "person",
-                        where=WhereClause(dialect, condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice")))
+        a = GraphVertex(
+            dialect,
+            "a",
+            "person",
+            where=WhereClause(
+                dialect,
+                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+            ),
+        )
         f = GraphEdge(dialect, "f", "follows", GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", "person")
         match = MatchClause(dialect, a, f, b)
@@ -188,8 +220,15 @@ class TestSocialGraph:
     def test_two_hop_recommendation(self, postgres_backend, social_data):
         """Q2: Friends of friends (two-hop)."""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", "person",
-                        where=WhereClause(dialect, condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice")))
+        a = GraphVertex(
+            dialect,
+            "a",
+            "person",
+            where=WhereClause(
+                dialect,
+                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+            ),
+        )
         f1 = GraphEdge(dialect, "f1", "follows", GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", "person")
         f2 = GraphEdge(dialect, "f2", "follows", GraphEdgeDirection.RIGHT)
@@ -211,13 +250,20 @@ class TestSocialGraph:
     def test_likes_on_posts(self, postgres_backend, social_data):
         """Q3: Who liked Alice's posts?"""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", "person",
-                        where=WhereClause(dialect, condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice")))
+        a = GraphVertex(
+            dialect,
+            "a",
+            "person",
+            where=WhereClause(
+                dialect,
+                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+            ),
+        )
         p = GraphEdge(dialect, "p", "authored", GraphEdgeDirection.RIGHT)
         post = GraphVertex(dialect, "post", "post")
-        l = GraphEdge(dialect, "l", "likes", GraphEdgeDirection.LEFT)
+        like_edge = GraphEdge(dialect, "l", "likes", GraphEdgeDirection.LEFT)
         liker = GraphVertex(dialect, "liker", "person")
-        match = MatchClause(dialect, a, p, post, l, liker)
+        match = MatchClause(dialect, a, p, post, like_edge, liker)
         cols = ColumnsClause(dialect, GraphColumn("liker", "name", "liker_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
@@ -236,9 +282,9 @@ class TestSocialGraph:
         a = GraphVertex(dialect, "a", "person")
         p = GraphEdge(dialect, "p", "authored", GraphEdgeDirection.RIGHT)
         post = GraphVertex(dialect, "post", "post")
-        l = GraphEdge(dialect, "l", "likes", GraphEdgeDirection.LEFT)
+        like_edge = GraphEdge(dialect, "l", "likes", GraphEdgeDirection.LEFT)
         liker = GraphVertex(dialect, "liker", "person")
-        match = MatchClause(dialect, a, p, post, l, liker)
+        match = MatchClause(dialect, a, p, post, like_edge, liker)
         cols = ColumnsClause(dialect,
                              GraphColumn("a", "name", "author"),
                              GraphColumn("liker", "name", "liker_name"))
@@ -294,8 +340,15 @@ class TestCommerceGraph:
     def test_parameter_binding(self, postgres_backend, social_data):
         """Parameter binding via expression system."""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", "person",
-                        where=WhereClause(dialect, condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice")))
+        a = GraphVertex(
+            dialect,
+            "a",
+            "person",
+            where=WhereClause(
+                dialect,
+                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+            ),
+        )
         f = GraphEdge(dialect, "f", "follows", GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", "person")
         match = MatchClause(dialect, a, f, b)
@@ -374,8 +427,15 @@ class TestAsyncSocialGraph:
     @pytest.mark.asyncio
     async def test_async_single_hop(self, async_postgres_backend, async_social_data):
         dialect = async_postgres_backend.dialect
-        a = GraphVertex(dialect, "a", "person",
-                        where=WhereClause(dialect, condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice")))
+        a = GraphVertex(
+            dialect,
+            "a",
+            "person",
+            where=WhereClause(
+                dialect,
+                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+            ),
+        )
         f = GraphEdge(dialect, "f", "follows", GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", "person")
         match = MatchClause(dialect, a, f, b)

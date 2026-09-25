@@ -41,7 +41,7 @@ User <--belongs_to-- Comment （评论作者）
 本实验依赖 `psycopg` 版本 3：
 
 ```bash
-pip install psycopg[binary]
+pip install "psycopg[binary]>=3.2.13"
 ```
 
 > **注意**：`psycopg` 不支持 Python 3.13t/3.14t 的 free-threaded 构建。如果需要 free-threaded Python，请使用 MySQL 或 SQLite 后端。
