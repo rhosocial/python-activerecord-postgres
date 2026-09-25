@@ -11,7 +11,7 @@ Version Requirements:
 - Partitioning: PostgreSQL 10+
 - HASH partitioning, DEFAULT partition: PostgreSQL 11+
 - Partition bounds expression: PostgreSQL 12+
-- ATTACH PARTITION with CONCURRENTLY: PostgreSQL 14+
+- Concurrent ATTACH: unsupported by this implementation
 """
 
 from datetime import date, datetime
@@ -20,6 +20,8 @@ from math import isfinite
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
+from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
@@ -58,15 +60,18 @@ class PartitionValue(BaseExpression):
     FOR VALUES clauses of PARTITION OF and ATTACH PARTITION statements.
 
     Value handling:
-    - None → NULL
-    - String 'MAXVALUE', 'MINVALUE', or 'DEFAULT' (case-insensitive) → as-is
-    - String/date/datetime/Decimal/numeric values → whitelist-formatted SQL literal
-    - Arbitrary objects are rejected to prevent unsafe ``str(value)`` fallback
+    - ``None`` renders as ``NULL``.
+    - RANGE ``MINVALUE`` and ``MAXVALUE`` render as keywords.
+    - LIST renders those strings as quoted values.
+    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQLExpression`` values
+      delegate through their own formatters and retain their parameters.
+    - Other scalar values use a whitelist; arbitrary objects are rejected.
 
     Delegates to dialect.format_partition_value() for SQL generation.
 
     Attributes:
-        value: The partition bound value.
+        value: The partition bound value or expression.
+        partition_type: Optional RANGE, LIST, or HASH context.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
@@ -85,20 +90,59 @@ class PartitionValue(BaseExpression):
         self,
         dialect: "SQLDialectBase",
         value: Any,
+        partition_type: Optional[str] = None,
     ):
         super().__init__(dialect)
-        if isinstance(value, bool):
-            raise TypeError("partition value must not be bool")
-        if isinstance(value, float) and not isfinite(value):
-            raise ValueError("partition value float must be finite")
-        if isinstance(value, Decimal) and not value.is_finite():
-            raise ValueError("partition value Decimal must be finite")
-        if not isinstance(value, (str, int, float, Decimal, date, datetime, type(None))):
-            raise TypeError(
-                "partition value must be str, int, float, Decimal, "
-                f"date, datetime, or None, got {type(value).__name__}"
-            )
+        if partition_type is None:
+            normalized_type = None
+        elif not isinstance(partition_type, str):
+            raise TypeError("partition_type must be a string")
+        else:
+            normalized_type = partition_type.upper()
+            if normalized_type not in {"RANGE", "LIST", "HASH"}:
+                raise ValueError("partition_type must be RANGE, LIST, or HASH")
+
+        if isinstance(value, BaseExpression):
+            if normalized_type == "HASH":
+                raise TypeError("HASH partition bounds require modulus and remainder")
+            pending = [value]
+            seen = set()
+            while pending:
+                current = pending.pop()
+                identity = id(current)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                if current.dialect is not dialect:
+                    raise ValueError(
+                        "partition value expressions must use the same dialect as PartitionValue"
+                    )
+                if isinstance(current, FunctionCall):
+                    if current.alias is not None:
+                        raise ValueError("partition value expressions must not have aliases")
+                    pending.extend(current.args)
+                elif isinstance(current, (Literal, RawSQLExpression)):
+                    if getattr(current, "alias", None) is not None:
+                        raise ValueError("partition value expressions must not have aliases")
+                else:
+                    raise TypeError(
+                        "partition value expressions must be FunctionCall, Literal, "
+                        "or RawSQLExpression"
+                    )
+        else:
+            if isinstance(value, bool):
+                raise TypeError("partition value must not be bool")
+            if isinstance(value, float) and not isfinite(value):
+                raise ValueError("partition value float must be finite")
+            if isinstance(value, Decimal) and not value.is_finite():
+                raise ValueError("partition value Decimal must be finite")
+            if not isinstance(value, (str, int, float, Decimal, date, datetime, type(None))):
+                raise TypeError(
+                    "partition value must be a supported expression, str, int, float, "
+                    f"Decimal, date, datetime, or None, got {type(value).__name__}"
+                )
         self.value = value
+        self.partition_type = normalized_type
 
     @property
     def format_method(self) -> str:
@@ -119,6 +163,8 @@ class PostgresCreatePartitionExpression(BaseExpression):
         partition_values: Partition bounds values (dict with 'from', 'to' for RANGE,
             list of values for LIST, or modulus/remainder for HASH).
         schema: Schema name for the partition.
+        parent_schema: Optional schema for the parent table.
+        partition_clause: Optional child-level PARTITION BY clause.
         tablespace: Tablespace for the partition.
         if_not_exists: Add IF NOT EXISTS clause.
 
@@ -158,13 +204,22 @@ class PostgresCreatePartitionExpression(BaseExpression):
         schema: Optional[str] = None,
         tablespace: Optional[str] = None,
         if_not_exists: bool = False,
+        parent_schema: Optional[str] = None,
+        partition_clause: Optional[PartitionClause] = None,
     ):
         super().__init__(dialect)
+        if partition_clause is not None:
+            if not isinstance(partition_clause, PartitionClause):
+                raise TypeError("partition_clause must be a PartitionClause")
+            if partition_clause.dialect is not dialect:
+                raise ValueError("partition_clause must use the same dialect")
         self.partition_name = partition_name
         self.parent_table = parent_table
         self.partition_type = partition_type
         self.partition_values = partition_values
         self.schema = schema
+        self.parent_schema = parent_schema
+        self.partition_clause = partition_clause
         self.tablespace = tablespace
         self.if_not_exists = if_not_exists
 
@@ -210,6 +265,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         schema: Optional[str] = None,
         concurrently: bool = False,
         finalize: bool = False,
+        parent_schema: Optional[str] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -217,6 +273,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         self.schema = schema
         self.concurrently = concurrently
         self.finalize = finalize
+        self.parent_schema = parent_schema
 
     @property
     def format_method(self) -> str:
@@ -228,7 +285,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
-    Supports CONCURRENTLY mode on PostgreSQL 14+.
+    Concurrent attachment is rejected for every PostgreSQL version.
 
     Attributes:
         partition_name: Name of the table to attach.
@@ -236,10 +293,10 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_type: Partition type: 'RANGE', 'LIST', or 'HASH'.
         partition_values: Partition bounds values.
         schema: Schema name for the partition.
-        concurrently: Use non-blocking ATTACH mode (PG 14+).
+        concurrently: Requests unsupported concurrent attachment.
 
     Raises:
-        ValueError: If concurrent_attach is used on PostgreSQL < 14.
+        UnsupportedFeatureError: If ``concurrently=True``.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
@@ -266,6 +323,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         partition_values: Dict[str, Any],
         schema: Optional[str] = None,
         concurrently: bool = False,
+        parent_schema: Optional[str] = None,
     ):
         super().__init__(dialect)
         self.partition_name = partition_name
@@ -274,6 +332,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         self.partition_values = partition_values
         self.schema = schema
         self.concurrently = concurrently
+        self.parent_schema = parent_schema
 
     @property
     def format_method(self) -> str:

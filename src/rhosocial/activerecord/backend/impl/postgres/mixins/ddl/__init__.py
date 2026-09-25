@@ -12,6 +12,7 @@ from .policy import PostgresPolicyMixin
 from .rls_config import PostgresRlsConfigMixin
 from .table_settings import PostgresAlterTableSettingsMixin
 from .cluster import PostgresClusterMixin
+from .repack import PostgresRepackMixin
 from .domain import PostgresDomainMixin
 from .collation import PostgresCollationDDLMixin
 from .foreign_table import PostgresForeignTableMixin
@@ -30,6 +31,7 @@ __all__ = [
     "PostgresRlsConfigMixin",
     "PostgresAlterTableSettingsMixin",
     "PostgresClusterMixin",
+    "PostgresRepackMixin",
     "PostgresDomainMixin",
     "PostgresCollationDDLMixin",
     "PostgresForeignTableMixin",

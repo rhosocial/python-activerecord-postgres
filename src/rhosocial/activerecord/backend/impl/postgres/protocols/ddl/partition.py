@@ -10,6 +10,8 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
 
 if TYPE_CHECKING:
+    from rhosocial.activerecord.ddl import PartitionLifecycleProvider
+
     from ...expression.ddl import (
         PartitionValue,
         PostgresCreatePartitionExpression,
@@ -48,6 +50,10 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Partitionwise aggregate: PostgreSQL 11+
     """
 
+    def get_partition_lifecycle_provider(self) -> "PartitionLifecycleProvider":
+        """Return the PostgreSQL partition lifecycle provider."""
+        ...
+
     def supports_hash_partitioning(self) -> bool:
         """Whether HASH partitioning is supported.
 
@@ -81,10 +87,9 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         ...
 
     def supports_concurrent_attach(self) -> bool:
-        """Whether CONCURRENTLY ATTACH PARTITION is supported.
+        """Whether CONCURRENTLY ATTACH PARTITION is exposed.
 
-        Native feature, PostgreSQL 14+.
-        Enables non-blocking partition attachment.
+        This implementation always reports False.
         """
         ...
 
@@ -148,10 +153,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
 
-        The expression supports:
-        - RANGE / LIST / HASH partition types with corresponding bound values.
-        - DEFAULT partition (PG 11+) via ``partition_values={"default": True}``.
-        - CONCURRENTLY mode (PG 14+) via ``concurrently=True``.
+        The expression supports RANGE, LIST, and HASH bounds. DEFAULT requires
+        PostgreSQL 11+. Concurrent attachment is rejected for every version.
 
         Args:
             expr: PostgresAttachPartitionExpression with attach details.
@@ -161,8 +164,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
             Tuple of (SQL string, parameters tuple)
 
         Raises:
-            ValueError: If partition_type is invalid or required bounds missing.
-            ValueError: If concurrently is used on PostgreSQL < 14.
+            ValueError: If partition_type is invalid or required bounds are missing.
+            UnsupportedFeatureError: If ``concurrently=True``.
         """
         ...
 

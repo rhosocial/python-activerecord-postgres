@@ -36,6 +36,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraintType,
     TruncateExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresCreatePartitionExpression,
@@ -57,6 +58,17 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint, ColumnConstraintType,
 )
+from rhosocial.activerecord.ddl import PartitionLifecycle, PartitionOperation
+
+
+class _LifecycleSource:
+    @classmethod
+    def table_name(cls):
+        return "ar_partition_events"
+
+    @classmethod
+    def schema_name(cls):
+        return "public"
 
 
 PARTITION_TABLES = (
@@ -71,6 +83,101 @@ PARTITION_TABLES = (
 PARTMAN_TABLES = (
     "ar_partman_events",
 )
+
+
+def test_partition_lifecycle_provider_constructs_postgres_expressions():
+    dialect = PostgresDialect()
+    dialect.version = (15, 0, 0)
+    lifecycle = PartitionLifecycle(_LifecycleSource, dialect)
+    assert lifecycle.capabilities().supports(PartitionOperation.CREATE)
+    assert not lifecycle.supports(PartitionOperation.MERGE)
+    assert not lifecycle.supports(PartitionOperation.SPLIT)
+    clause = PartitionClause(
+        dialect,
+        PartitionStrategy.LIST,
+        [Column(dialect, "region")],
+    )
+    expression = lifecycle.create_partition(
+        "ar_partition_events_p2027",
+        "RANGE",
+        {"from": "2027-01-01", "to": "2028-01-01"},
+        partition_clause=clause,
+        partition_schema="child_schema",
+        parent_schema="parent_schema",
+    )
+    sql, params = expression.to_sql()
+    assert '"child_schema"."ar_partition_events_p2027"' in sql
+    assert 'PARTITION OF "parent_schema"."ar_partition_events"' in sql
+    assert sql.index("FOR VALUES") < sql.index("PARTITION BY LIST")
+    assert params == ()
+
+    inherited_child = lifecycle.create_partition(
+        "ar_partition_events_p2028",
+        "RANGE",
+        {"from": "2028-01-01", "to": "2029-01-01"},
+        parent_schema="other_parent_schema",
+    )
+    inherited_child_sql, _ = inherited_child.to_sql()
+    assert '"public"."ar_partition_events_p2028"' in inherited_child_sql
+    assert 'PARTITION OF "other_parent_schema"."ar_partition_events"' in inherited_child_sql
+
+
+def test_partition_lifecycle_preserves_parent_and_child_schemas():
+    dialect = PostgresDialect(version=(15, 0, 0))
+    lifecycle = PartitionLifecycle(_LifecycleSource, dialect)
+
+    create_sql, create_params = lifecycle.create_partition(
+        "ar_partition_events_p2029",
+        "RANGE",
+        {"from": "2029-01-01", "to": "2030-01-01"},
+        partition_schema="child_schema",
+        parent_schema="parent_schema",
+    ).to_sql()
+    assert create_sql == (
+        'CREATE TABLE "child_schema"."ar_partition_events_p2029" '
+        'PARTITION OF "parent_schema"."ar_partition_events" '
+        "FOR VALUES FROM ('2029-01-01') TO ('2030-01-01')"
+    )
+    assert create_params == ()
+
+    drop_sql, drop_params = lifecycle.drop_partition(
+        "ar_partition_events_p2029",
+        partition_schema="child_schema",
+    ).to_sql()
+    assert drop_sql == 'DROP TABLE "child_schema"."ar_partition_events_p2029"'
+    assert drop_params == ()
+
+    truncate_sql, truncate_params = lifecycle.truncate_partition(
+        "ar_partition_events_p2029",
+        partition_schema="child_schema",
+    ).to_sql()
+    assert truncate_sql == 'TRUNCATE TABLE "child_schema"."ar_partition_events_p2029"'
+    assert truncate_params == ()
+
+    attach_sql, attach_params = lifecycle.attach_partition(
+        "ar_partition_events_p2029",
+        "RANGE",
+        {"from": "2029-01-01", "to": "2030-01-01"},
+        partition_schema="child_schema",
+        parent_schema="parent_schema",
+    ).to_sql()
+    assert attach_sql == (
+        'ALTER TABLE "parent_schema"."ar_partition_events" '
+        'ATTACH PARTITION "child_schema"."ar_partition_events_p2029" '
+        "FOR VALUES FROM ('2029-01-01') TO ('2030-01-01')"
+    )
+    assert attach_params == ()
+
+    detach_sql, detach_params = lifecycle.detach_partition(
+        "ar_partition_events_p2029",
+        partition_schema="child_schema",
+        parent_schema="parent_schema",
+    ).to_sql()
+    assert detach_sql == (
+        'ALTER TABLE "parent_schema"."ar_partition_events" '
+        'DETACH PARTITION "child_schema"."ar_partition_events_p2029"'
+    )
+    assert detach_params == ()
 
 
 def _qualified(table_name: str) -> str:

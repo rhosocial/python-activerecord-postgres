@@ -58,6 +58,13 @@ Example::
     sql, _ = expr.to_sql()   # → CREATE UNIQUE INDEX … NULLS NOT DISTINCT
 """
 
+from ..copy import (
+    PostgresCopyFormat,
+    PostgresCopyFromExpression,
+    PostgresCopyLogVerbosity,
+    PostgresCopyOnError,
+    PostgresCopyToExpression,
+)
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
 from .table_options import PostgresCreateTableOptions
 from .column import (
@@ -85,6 +92,16 @@ from .index_definition import (
     PostgresDropIndexExpression,
 )
 from .exclude_constraint import PostgresExcludeConstraint
+from .constraint import (
+    PostgresAlterConstraint,
+    PostgresValidateConstraint,
+    PostgresAlterConstraintAction,
+    PostgresValidateConstraintAction,
+    PostgresAlterConstraintExpression,
+    PostgresValidateConstraintExpression,
+    PostgresAlterTableConstraint,
+    PostgresValidateTableConstraint,
+)
 from .statistics import (
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
@@ -150,6 +167,7 @@ from .table_settings import (
     PostgresAlterTableSettingsExpression,
 )
 from .cluster import PostgresClusterExpression
+from .repack import PostgresRepackExpression
 from .domain import (
     AlterDomainActionType,
     DomainCheckConstraint,
@@ -187,6 +205,12 @@ from .publication import (
 )
 
 __all__ = [
+    # copy
+    "PostgresCopyFormat",
+    "PostgresCopyFromExpression",
+    "PostgresCopyLogVerbosity",
+    "PostgresCopyOnError",
+    "PostgresCopyToExpression",
     # vacuum
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
@@ -212,6 +236,14 @@ __all__ = [
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",
+    "PostgresAlterConstraint",
+    "PostgresValidateConstraint",
+    "PostgresAlterConstraintAction",
+    "PostgresValidateConstraintAction",
+    "PostgresAlterConstraintExpression",
+    "PostgresValidateConstraintExpression",
+    "PostgresAlterTableConstraint",
+    "PostgresValidateTableConstraint",
     # statistics
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",
@@ -274,6 +306,7 @@ __all__ = [
     "PostgresAlterTableSettingsExpression",
     # cluster
     "PostgresClusterExpression",
+    "PostgresRepackExpression",
     # domain
     "AlterDomainActionType",
     "DomainNullability",

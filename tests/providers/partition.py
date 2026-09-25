@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 
 from rhosocial.activerecord.base.field_proxy import FieldProxy
-from rhosocial.activerecord.base.ddl.attributes import IdentityAttribute
+from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
