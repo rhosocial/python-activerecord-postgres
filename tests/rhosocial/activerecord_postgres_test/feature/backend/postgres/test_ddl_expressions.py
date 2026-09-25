@@ -63,7 +63,7 @@ class TestPostgresRefreshMaterializedViewExpression:
             name="monthly_sales_summary",
         )
         sql, params = expr.to_sql()
-        assert sql == "REFRESH MATERIALIZED VIEW monthly_sales_summary"
+        assert sql == 'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
         assert params == ()
 
     def test_refresh_with_schema(self, dialect):
@@ -74,7 +74,7 @@ class TestPostgresRefreshMaterializedViewExpression:
             schema="analytics",
         )
         sql, params = expr.to_sql()
-        assert "analytics.monthly_sales_summary" in sql
+        assert sql == 'REFRESH MATERIALIZED VIEW "analytics"."monthly_sales_summary"'
         assert params == ()
 
     def test_refresh_concurrently_pg13(self):
@@ -86,8 +86,10 @@ class TestPostgresRefreshMaterializedViewExpression:
             concurrently=True,
         )
 
-        with pytest.raises(ValueError, match="CONCURRENTLY requires PostgreSQL 9"):
+        with pytest.raises(UnsupportedFeatureError) as exc:
             expr.to_sql()
+        assert "CONCURRENTLY" in str(exc.value)
+        assert "9.4" in str(exc.value)
 
     def test_refresh_concurrently_pg94(self, dialect):
         """Test CONCURRENTLY refresh with PG 9.4+."""
