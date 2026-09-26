@@ -350,6 +350,9 @@ class PostgresDialect(
 
     ArrayMixin,
     ExplainMixin,
+    # Must precede GraphMixin/GraphTableMixin so that the explicit-override
+    # probes here win the MRO lookup; the core mixins would otherwise answer
+    # from their own always-False defaults and ignore graph_feature_overrides.
     PostgresPropertyGraphQueryMixin,
     GraphMixin,
     GraphTableMixin,
@@ -625,8 +628,15 @@ class PostgresDialect(
                 If None, the dialect must be adapted via
                 backend.introspect_and_adapt() before version-dependent
                 features can be used.
-            graph_feature_overrides: Explicit opt-ins for withdrawn or future
-                property graph features.
+            graph_feature_overrides: Explicit opt-ins for SQL/PGQ property graph
+                features, keyed by ``"graph_match"`` / ``"graph_table"``.
+
+                Left unset, property graph support stays off for every version.
+                This is deliberate: SQL/PGQ was withdrawn in PostgreSQL 19 Beta 4
+                and shipped in no earlier release, so a version check can never
+                be evidence of support. Pass these only when the target server
+                (or a compatibility layer in front of it) genuinely provides the
+                feature.
 
         """
         super().__init__()

@@ -1,5 +1,12 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_pgq_format.py
-"""Tests for fail-closed PostgreSQL graph capability and formatter safeguards."""
+# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_property_graph_query_format.py
+"""Tests for fail-closed PostgreSQL graph capability and formatter safeguards.
+
+SQL/PGQ was withdrawn in PostgreSQL 19 Beta 4 and shipped in no earlier
+release, so ``supports_graph_match()`` / ``supports_graph_table()`` must report
+False for every version. The formatter tests therefore drive the dialect through
+the explicit ``graph_feature_overrides`` opt-in instead of relying on the
+default, which keeps them meaningful while the capability stays off.
+"""
 
 import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError

@@ -1,9 +1,28 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/property_graph_query.py
 """PostgreSQL property graph feature gates and formatter safeguards.
 
-PostgreSQL 19 Beta 4 withdrew SQL/PGQ. The formatter remains available only
-through explicit feature overrides so a future implementation can opt in
-without treating a server version as proof of support.
+Why SQL/PGQ is gated off
+------------------------
+PostgreSQL 19 Beta 4 withdrew the whole SQL/PGQ (SQL:2023 property graph)
+feature before the 19.0 release. Every graph-specific grammar production was
+pulled from the parser, so ``CREATE PROPERTY GRAPH``, ``CREATE VERTEX TABLE``,
+``CREATE EDGE TABLE``, ``MATCH``, ``GRAPH_TABLE`` and ``PROPERTIES`` are now
+plain syntax errors.
+
+Verified against a live PostgreSQL 19beta4 server: all of the above are rejected
+with SQLSTATE 42601, and the supporting catalog objects are gone as well
+(``pg_proc`` graph/vertex/edge functions: 0, ``pg_type`` graph/agtype types: 0,
+``pg_class`` property-graph relations: 0, and the GRAPH_TABLE/VERTEX/EDGE/
+PROPERTY parser keywords: 0). The same probes against 19beta3 return 1 / 14 / 2
+/ 4 respectively, so the withdrawal is what removed them.
+
+Because no PostgreSQL release has ever shipped SQL/PGQ, the capability is
+resolved from explicit opt-ins rather than from ``self.version``: a version
+number is not evidence of support, and inferring support from it would
+re-advertise a feature that does not exist. The expression classes and
+formatters are intentionally left in place and reachable through
+``graph_feature_overrides`` so the plumbing can be exercised and a future
+implementation (or a compatibility shim) can opt in without a rewrite.
 """
 
 from typing import Callable, Mapping, Tuple, TYPE_CHECKING, cast
@@ -20,8 +39,17 @@ if TYPE_CHECKING:
 
 
 class PostgresPropertyGraphQueryMixin:
-    """Fail-closed PostgreSQL property graph capabilities and validation."""
+    """Fail-closed PostgreSQL property graph capabilities and validation.
 
+    Every probe here answers ``False``. SQL/PGQ was withdrawn in PostgreSQL
+    19 Beta 4 and shipped in no earlier release, so there is no server version
+    for which these capabilities may be reported as supported. See the module
+    docstring for the catalog evidence behind that decision.
+    """
+
+    #: Explicit opt-in keys. SQL/PGQ was withdrawn in PostgreSQL 19 Beta 4, so
+    #: nothing enables these by default -- they exist only for compatibility
+    #: testing and for a future opt-in implementation.
     GRAPH_FEATURE_NAMES = frozenset(("graph_match", "graph_table"))
     ALTER_ACTIONS = {
         "add": "ADD",
@@ -34,20 +62,38 @@ class PostgresPropertyGraphQueryMixin:
     }
 
     def supports_graph_match(self) -> bool:
-        """Return the explicit graph MATCH capability override."""
+        """Return the explicit graph MATCH capability override.
+
+        Off unless a caller passes ``graph_feature_overrides={"graph_match":
+        True}``. Deliberately independent of ``self.version``: the MATCH clause
+        does not exist in any released PostgreSQL, including 19beta4.
+        """
         overrides = getattr(self, "_graph_feature_overrides", {}) or {}
         return overrides.get("graph_match") is True
 
     def supports_quantified_path(self) -> bool:
-        """Return whether quantified graph paths are explicitly enabled."""
+        """Return whether quantified graph paths are explicitly enabled.
+
+        Hard-coded off with no override path. Quantified paths (``+``, ``*``,
+        ``{n,m}``) were part of the withdrawn SQL/PGQ grammar, and no
+        PostgreSQL release implements them.
+        """
         return False
 
     def supports_comma_separated_patterns(self) -> bool:
-        """Return whether comma-separated graph patterns are explicitly enabled."""
+        """Return whether comma-separated graph patterns are explicitly enabled.
+
+        Hard-coded off with no override path, for the same reason as
+        :meth:`supports_quantified_path`.
+        """
         return False
 
     def supports_graph_table(self) -> bool:
-        """Return the explicit GRAPH_TABLE capability override."""
+        """Return the explicit GRAPH_TABLE capability override.
+
+        Requires both overrides, because ``GRAPH_TABLE`` wraps a MATCH clause
+        and is meaningless without it.
+        """
         overrides = getattr(self, "_graph_feature_overrides", {}) or {}
         return (
             overrides.get("graph_match") is True

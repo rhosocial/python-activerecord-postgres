@@ -1,8 +1,16 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_property_graph_query_scenarios.py
 """Capability-gated SQL/PGQ integration scenarios.
 
-The synchronous and asynchronous database tests skip unless the backend explicitly
-reports GRAPH_TABLE support. All SQL is constructed through expression classes.
+These scenarios need a live server that actually implements SQL/PGQ. That was
+true of PostgreSQL 19 Beta 3 and is false from Beta 4 onwards, where the feature
+was withdrawn before the 19.0 release, and it was never true before PostgreSQL
+19 at all. With the capability off by default the fixtures below skip, so the
+whole file is inert against a stock server; it stays here to exercise the
+opt-in path once a server (or compatibility layer) provides the feature.
+
+The synchronous and asynchronous database tests skip unless the backend
+explicitly reports GRAPH_TABLE support. All SQL is constructed through
+expression classes.
 """
 import pytest
 import pytest_asyncio
