@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.statements.explain import ExplainExpression
+    from ....expression.statements.explain import ExplainExpression
 
 
 class PostgresExplainMixin:

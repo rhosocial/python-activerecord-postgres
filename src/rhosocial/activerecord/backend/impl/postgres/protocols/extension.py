@@ -10,7 +10,7 @@ from typing import Protocol, runtime_checkable, Dict, Optional, TYPE_CHECKING
 from .base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.statements import SQLQueryAndParams
+    from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
     from ..expression.ddl.extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 
 

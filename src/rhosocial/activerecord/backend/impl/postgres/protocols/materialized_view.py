@@ -8,7 +8,7 @@ that extend beyond the SQL standard.
 from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import (
+    from ..expression.ddl import (
         PostgresAlterMaterializedViewExpression,
         PostgresRefreshMaterializedViewExpression,
     )

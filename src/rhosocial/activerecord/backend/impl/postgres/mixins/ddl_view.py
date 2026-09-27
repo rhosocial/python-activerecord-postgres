@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.statements.ddl_view import CreateViewExpression
+    from ....expression.statements.ddl_view import CreateViewExpression
 
 
 class PostgresViewMixin:

@@ -6,7 +6,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.statements.ddl_truncate import TruncateExpression
+    from ....expression.statements.ddl_truncate import TruncateExpression
 
 
 class PostgresTruncateMixin:
