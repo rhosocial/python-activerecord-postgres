@@ -25,7 +25,7 @@ from typing import List, Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
-from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase

@@ -7,7 +7,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 from rhosocial.activerecord.backend.impl.postgres.adapters.pgvector import PostgresVectorAdapter
 
 

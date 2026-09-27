@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.range import (
     range_lower_inf,
     range_upper_inf,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.range import PostgresRange
+from rhosocial.activerecord.backend.impl.postgres.type_values.range import PostgresRange
 
 
 class TestRangeContains:

@@ -60,7 +60,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.hstore import (
     hstore_subscript_get,
     hstore_subscript_set,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.hstore import PostgresHstore
+from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import PostgresHstore
 from rhosocial.activerecord.backend.expression import bases
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression

@@ -10,7 +10,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.text_search import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.text_search import (
     TsVectorLexeme,
     PostgresTsVector,
     TsQueryLexeme,

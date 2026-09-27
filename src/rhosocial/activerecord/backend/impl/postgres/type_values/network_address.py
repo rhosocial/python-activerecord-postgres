@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/network_address.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/network_address.py
 """PostgreSQL Network Address Types.
 
 This module provides type representations for PostgreSQL network address types:

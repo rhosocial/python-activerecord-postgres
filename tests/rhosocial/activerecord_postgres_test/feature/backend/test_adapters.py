@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.impl.postgres.adapters.xml import PostgresXM
 from rhosocial.activerecord.backend.impl.postgres.adapters.range import PostgresRangeAdapter, PostgresMultirangeAdapter
 from rhosocial.activerecord.backend.impl.postgres.adapters.base import PostgresListAdapter, PostgresEnumAdapter
 from rhosocial.activerecord.backend.impl.postgres.adapters.pgvector import PostgresVectorAdapter
-from rhosocial.activerecord.backend.impl.postgres.types.range import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.range import (
     PostgresRange as PG_RANGE,
     PostgresMultirange as PG_MULTIRANGE,
 )

@@ -8,7 +8,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.bit_string import PostgresBitString
+from rhosocial.activerecord.backend.impl.postgres.type_values.bit_string import PostgresBitString
 from rhosocial.activerecord.backend.impl.postgres.adapters.bit_string import PostgresBitStringAdapter
 
 

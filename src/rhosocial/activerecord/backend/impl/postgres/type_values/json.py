@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/json.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/json.py
 """PostgreSQL jsonpath type representation.
 
 This module provides PostgresJsonPath for representing PostgreSQL

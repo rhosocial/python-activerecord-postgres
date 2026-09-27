@@ -22,7 +22,7 @@ from psycopg.types.json import Jsonb
 
 from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
 
-from ..types.json import PostgresJsonPath
+from ..type_values.json import PostgresJsonPath
 
 
 class PostgresJSONBAdapter(BaseSQLTypeAdapter):

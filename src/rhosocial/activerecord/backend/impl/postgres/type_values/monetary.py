@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/monetary.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/monetary.py
 """
 PostgreSQL MONEY type representation.
 

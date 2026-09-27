@@ -29,7 +29,7 @@ Tuple Identifier:
 
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-from ..types.object_identifier import (
+from ..type_values.object_identifier import (
     OID,
     RegClass,
     RegType,

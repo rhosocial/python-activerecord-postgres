@@ -8,7 +8,7 @@ Tests for:
 """
 import pytest  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres.types.geometric import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.geometric import (
     Point,
     Line,
     LineSegment,

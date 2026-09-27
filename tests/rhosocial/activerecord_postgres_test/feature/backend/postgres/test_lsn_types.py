@@ -7,7 +7,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.pg_lsn import PostgresLsn
+from rhosocial.activerecord.backend.impl.postgres.type_values.pg_lsn import PostgresLsn
 from rhosocial.activerecord.backend.impl.postgres.adapters.pg_lsn import PostgresLsnAdapter
 
 

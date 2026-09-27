@@ -5,7 +5,7 @@
 为方便使用，提供了 PostgreSQL 类型常量。这些常量是字符串值，可在类型转换中使用：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     # 数值类型
     SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
     REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,

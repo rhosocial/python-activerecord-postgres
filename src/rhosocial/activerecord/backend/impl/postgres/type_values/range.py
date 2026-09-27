@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/range.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/range.py
 """
 PostgreSQL range types representation.
 
@@ -45,7 +45,7 @@ Usage Recommendations:
 
 1. **Recommended**: Use PostgresRange for Python code:
    ```python
-   from rhosocial.activerecord.backend.impl.postgres.types import PostgresRange
+   from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresRange
    range_obj = PostgresRange(1, 10)
    ```
 

@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/geometric.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/geometric.py
 """
 PostgreSQL geometric types representation.
 

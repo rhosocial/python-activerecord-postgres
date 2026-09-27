@@ -12,7 +12,7 @@ import pytest
 from datetime import date, datetime  # noqa: F401
 from decimal import Decimal  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres.types.range import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.range import (
     PostgresRange,
     PostgresMultirange,
     _find_bound_separator,

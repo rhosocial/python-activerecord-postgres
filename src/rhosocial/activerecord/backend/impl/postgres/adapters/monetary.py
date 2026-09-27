@@ -12,7 +12,7 @@ The range of money type is -92233720368547758.08 to +92233720368547758.07.
 
 from typing import Any, Dict, Optional, Set, Type
 
-from ..types.monetary import PostgresMoney
+from ..type_values.monetary import PostgresMoney
 
 
 class PostgresMoneyAdapter:

@@ -12,7 +12,7 @@ import pytest
 import pytest_asyncio
 
 from rhosocial.activerecord.backend.impl.postgres.adapters.pg_lsn import PostgresLsnAdapter
-from rhosocial.activerecord.backend.impl.postgres.types.pg_lsn import PostgresLsn
+from rhosocial.activerecord.backend.impl.postgres.type_values.pg_lsn import PostgresLsn
 
 
 LSN_TABLE = "test_lsn_types"

@@ -285,14 +285,14 @@ class PostgresBackendMixin:
         from enum import Enum
 
         # Import PostgreSQL-specific types
-        from ..types.range import PostgresRange, PostgresMultirange
-        from ..types.geometric import Point, Line, LineSegment, Box, Path, Polygon, Circle
-        from ..types.text_search import PostgresTsVector, PostgresTsQuery
-        from ..types.monetary import PostgresMoney
-        from ..types.network_address import PostgresMacaddr, PostgresMacaddr8
-        from ..types.pg_lsn import PostgresLsn
-        from ..types.json import PostgresJsonPath
-        from ..types.object_identifier import (
+        from ..type_values.range import PostgresRange, PostgresMultirange
+        from ..type_values.geometric import Point, Line, LineSegment, Box, Path, Polygon, Circle
+        from ..type_values.text_search import PostgresTsVector, PostgresTsQuery
+        from ..type_values.monetary import PostgresMoney
+        from ..type_values.network_address import PostgresMacaddr, PostgresMacaddr8
+        from ..type_values.pg_lsn import PostgresLsn
+        from ..type_values.json import PostgresJsonPath
+        from ..type_values.object_identifier import (
             OID,
             RegClass,
             RegType,

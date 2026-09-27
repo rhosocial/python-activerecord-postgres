@@ -14,7 +14,7 @@ The vector type requires the pgvector extension:
 
 from typing import Any, Dict, Optional, Set, Type
 
-from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 
 
 class PostgresVectorAdapter:

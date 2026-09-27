@@ -15,7 +15,7 @@ Network Address Types:
 
 from typing import Any, Dict, List, Optional, Set, Type
 
-from ..types.network_address import PostgresMacaddr, PostgresMacaddr8
+from ..type_values.network_address import PostgresMacaddr, PostgresMacaddr8
 
 
 class PostgresNetworkAddressAdapter:

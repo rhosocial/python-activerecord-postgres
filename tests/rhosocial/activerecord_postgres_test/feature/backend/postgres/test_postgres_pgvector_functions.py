@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.pgvector import (
     vector_cosine_similarity,
     vector_literal,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.expression import bases
 

@@ -15,7 +15,7 @@ Bit strings are strings of 1s and 0s used for bit masks and bit manipulation.
 
 from typing import Any, Dict, Optional, Set, Type
 
-from ..types.bit_string import PostgresBitString
+from ..type_values.bit_string import PostgresBitString
 
 
 class PostgresBitStringAdapter:

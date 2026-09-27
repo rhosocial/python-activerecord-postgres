@@ -8,7 +8,7 @@ Tests for:
 import pytest
 from decimal import Decimal
 
-from rhosocial.activerecord.backend.impl.postgres.types.monetary import PostgresMoney
+from rhosocial.activerecord.backend.impl.postgres.type_values.monetary import PostgresMoney
 from rhosocial.activerecord.backend.impl.postgres.adapters.monetary import PostgresMoneyAdapter
 
 

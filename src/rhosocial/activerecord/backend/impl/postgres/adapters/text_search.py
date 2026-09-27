@@ -16,7 +16,7 @@ lexemes (normalized words) with optional weights and positions.
 
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-from ..types.text_search import PostgresTsVector, PostgresTsQuery
+from ..type_values.text_search import PostgresTsVector, PostgresTsQuery
 
 
 class PostgresTsVectorAdapter:

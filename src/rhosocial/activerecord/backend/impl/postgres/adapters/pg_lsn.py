@@ -13,7 +13,7 @@ displayed as two hexadecimal numbers separated by a slash.
 
 from typing import Any, Dict, List, Optional, Set, Type
 
-from ..types.pg_lsn import PostgresLsn
+from ..type_values.pg_lsn import PostgresLsn
 
 
 class PostgresLsnAdapter:

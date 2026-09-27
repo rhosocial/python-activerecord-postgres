@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.expression import bases, core
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
-from ..types.xml import PostgresXML
+from ..type_values.xml import PostgresXML
 
 
 def _convert_to_expression(

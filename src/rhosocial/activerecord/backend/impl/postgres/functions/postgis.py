@@ -15,7 +15,7 @@ The PostGIS extension must be installed:
 from typing import Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
-from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
+from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase

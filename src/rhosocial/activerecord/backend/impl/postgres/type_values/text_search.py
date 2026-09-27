@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/text_search.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/text_search.py
 """
 PostgreSQL text search types representation.
 

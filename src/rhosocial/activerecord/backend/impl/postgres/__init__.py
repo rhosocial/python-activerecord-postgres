@@ -26,7 +26,7 @@ from .storage_parameters import (  # noqa: F401
     PostgresStorageParameterValueType,
 )
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
-from .types import PostgresEnumType
+from .expression.enum_ import PostgresEnumType
 from .expression.types import (
     PostgresBigSerialType,
     PostgresBitType,
@@ -125,11 +125,11 @@ from .adapters import (
     PostgresRangeAdapter,
     PostgresMultirangeAdapter,
 )
-from .types.range import (
+from .type_values.range import (
     PostgresRange,
     PostgresMultirange,
 )
-from .types.geometric import (
+from .type_values.geometric import (
     Point,
     Line,
     LineSegment,
@@ -139,22 +139,22 @@ from .types.geometric import (
     Circle,
 )
 from .adapters.geometric import PostgresGeometryAdapter
-from .types.bit_string import PostgresBitString
+from .type_values.bit_string import PostgresBitString
 from .adapters.bit_string import PostgresBitStringAdapter
-from .types.monetary import PostgresMoney
+from .type_values.monetary import PostgresMoney
 from .adapters.monetary import PostgresMoneyAdapter
-from .types.xml import PostgresXML
+from .type_values.xml import PostgresXML
 from .adapters.xml import PostgresXMLAdapter
-from .types.network_address import PostgresMacaddr, PostgresMacaddr8
+from .type_values.network_address import PostgresMacaddr, PostgresMacaddr8
 from .adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
 from .adapters.uuid import PostgresUUIDAdapter
-from .types.pgvector import PostgresVector
+from .type_values.pgvector import PostgresVector
 from .adapters.pgvector import PostgresVectorAdapter
-from .types.postgis import PostgresGeometry
+from .type_values.postgis import PostgresGeometry
 from .adapters.postgis import PostgresPostGISAdapter
-from .types.hstore import PostgresHstore
+from .type_values.hstore import PostgresHstore
 from .adapters.hstore import PostgresHstoreAdapter
-from .types.text_search import (
+from .type_values.text_search import (
     PostgresTsVector,
     PostgresTsQuery,
 )
@@ -175,9 +175,9 @@ from .functions.text_search import (
     tsvector_length,
 )
 from .adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
-from .types.pg_lsn import PostgresLsn
+from .type_values.pg_lsn import PostgresLsn
 from .adapters.pg_lsn import PostgresLsnAdapter
-from .types.object_identifier import (
+from .type_values.object_identifier import (
     OID,
     RegClass,
     RegType,
@@ -196,9 +196,9 @@ from .types.object_identifier import (
     TID,
 )
 from .adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
-from .types.json import PostgresJsonPath
+from .type_values.json import PostgresJsonPath
 from .adapters.json import PostgresJsonPathAdapter
-from .types.enum import EnumTypeManager
+from .enum_type_manager import EnumTypeManager
 
 # Import functions from functions module
 from .functions import (

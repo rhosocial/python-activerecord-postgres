@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/hstore.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/hstore.py
 """
 PostgreSQL hstore type definition.
 

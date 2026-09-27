@@ -15,7 +15,7 @@ import pytest_asyncio
 from rhosocial.activerecord.backend.impl.postgres.adapters.monetary import (
     PostgresMoneyAdapter,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.monetary import PostgresMoney
+from rhosocial.activerecord.backend.impl.postgres.type_values.monetary import PostgresMoney
 
 
 MONEY_TABLE = "test_money_types"

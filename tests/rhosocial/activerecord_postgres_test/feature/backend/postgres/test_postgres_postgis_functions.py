@@ -34,7 +34,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.postgis import (
     st_envelope,
     st_centroid,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
+from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
 from rhosocial.activerecord.backend.expression import bases
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 

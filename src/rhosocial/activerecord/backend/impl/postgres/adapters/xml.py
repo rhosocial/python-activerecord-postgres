@@ -12,7 +12,7 @@ PostgreSQL provides XML functions and XPath support.
 
 from typing import Any, Dict, List, Optional, Set, Type
 
-from ..types.xml import PostgresXML
+from ..type_values.xml import PostgresXML
 
 
 class PostgresXMLAdapter:

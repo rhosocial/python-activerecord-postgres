@@ -18,7 +18,7 @@ Geometric Types:
 
 from typing import Any, Dict, List, Optional, Set, Type
 
-from ..types.geometric import (
+from ..type_values.geometric import (
     Point,
     Line,
     LineSegment,
