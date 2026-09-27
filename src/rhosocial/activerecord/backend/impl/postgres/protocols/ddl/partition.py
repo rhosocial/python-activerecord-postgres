@@ -81,10 +81,9 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         ...
 
     def supports_concurrent_attach(self) -> bool:
-        """Whether CONCURRENTLY ATTACH PARTITION is supported.
+        """Whether CONCURRENTLY ATTACH PARTITION is exposed.
 
-        Native feature, PostgreSQL 14+.
-        Enables non-blocking partition attachment.
+        This implementation always reports False.
         """
         ...
 
@@ -110,6 +109,30 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         Native feature, PostgreSQL 11+.
         Enables aggregate optimization for partitioned tables.
         """
+        ...
+
+    def supports_add_partition(self) -> bool:
+        """Whether ADD PARTITION is supported."""
+        ...
+
+    def supports_drop_partition(self) -> bool:
+        """Whether DROP PARTITION is supported."""
+        ...
+
+    def supports_truncate_partition(self) -> bool:
+        """Whether TRUNCATE PARTITION is supported."""
+        ...
+
+    def supports_reorganize_partition(self) -> bool:
+        """Whether REORGANIZE PARTITION is supported."""
+        ...
+
+    def supports_attach_partition(self) -> bool:
+        """Whether ATTACH PARTITION is supported."""
+        ...
+
+    def supports_detach_partition(self) -> bool:
+        """Whether DETACH PARTITION is supported."""
         ...
 
     def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
@@ -148,10 +171,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
 
-        The expression supports:
-        - RANGE / LIST / HASH partition types with corresponding bound values.
-        - DEFAULT partition (PG 11+) via ``partition_values={"default": True}``.
-        - CONCURRENTLY mode (PG 14+) via ``concurrently=True``.
+        The expression supports RANGE, LIST, and HASH bounds. DEFAULT requires
+        PostgreSQL 11+. Concurrent attachment is rejected for every version.
 
         Args:
             expr: PostgresAttachPartitionExpression with attach details.
@@ -161,8 +182,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
             Tuple of (SQL string, parameters tuple)
 
         Raises:
-            ValueError: If partition_type is invalid or required bounds missing.
-            ValueError: If concurrently is used on PostgreSQL < 14.
+            ValueError: If partition_type is invalid or required bounds are missing.
+            UnsupportedFeatureError: If ``concurrently=True``.
         """
         ...
 

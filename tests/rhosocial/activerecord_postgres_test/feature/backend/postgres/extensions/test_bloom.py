@@ -9,6 +9,9 @@ Tests for PostgresBloomMixin format methods:
 
 from rhosocial.activerecord.backend.expression import CreateIndexExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresCreateIndexExpression,
+)
 
 
 class TestPostgresBloomMixin:
@@ -35,13 +38,13 @@ class TestPostgresBloomMixin:
 
     def test_format_bloom_index_with_fill_factor(self):
         """CreateIndexExpression with fillfactor should include WITH (fillfactor = ...)."""
-        expr = CreateIndexExpression(
+        expr = PostgresCreateIndexExpression(
             self.dialect,
             index_name="idx_name",
             table_name="table_name",
             columns=["col1", "col2"],
             index_type="bloom",
-            dialect_options={"with": {"fillfactor": 90}},
+            with_options={"fillfactor": 90},
         )
         sql, _ = expr.to_sql()
         assert "bloom" in sql

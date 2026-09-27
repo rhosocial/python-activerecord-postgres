@@ -25,6 +25,7 @@ from .ddl.policy import PostgresPolicySupport
 from .ddl.rls_config import PostgresRlsConfigSupport
 from .ddl.table_settings import PostgresAlterTableSettingsSupport
 from .ddl.cluster import PostgresClusterSupport
+from .ddl.repack import PostgresRepackSupport
 from .ddl.domain import PostgresDomainSupport
 from .ddl.collation import PostgresCollationDDLSupport
 from .ddl.foreign_table import PostgresForeignTableDDLSupport
@@ -33,6 +34,7 @@ from .ddl.publication import PostgresPublicationSupport
 
 # DML protocols
 from .dml.vacuum import PostgresVacuumSupport
+from .dml.copy import PostgresCopySupport
 from .dml.stored_procedure import PostgresStoredProcedureSupport
 from .dml.extended_statistics import PostgresExtendedStatisticsSupport
 from .dml.advisory_lock import PostgresAdvisoryLockSupport
@@ -124,6 +126,7 @@ __all__ = [
     "PostgresRlsConfigSupport",
     "PostgresAlterTableSettingsSupport",
     "PostgresClusterSupport",
+    "PostgresRepackSupport",
     "PostgresDomainSupport",
     "PostgresCollationDDLSupport",
     "PostgresForeignTableDDLSupport",
@@ -131,6 +134,7 @@ __all__ = [
     "PostgresPublicationSupport",
     # DML protocols
     "PostgresVacuumSupport",
+    "PostgresCopySupport",
     "PostgresStoredProcedureSupport",
     "PostgresExtendedStatisticsSupport",
     "PostgresAdvisoryLockSupport",

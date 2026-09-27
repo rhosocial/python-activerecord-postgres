@@ -4,7 +4,7 @@
 
 - Python 3.8 或更高版本
 - PostgreSQL 8.0 或更高版本（推荐 12+）
-- psycopg 3.2.12 或更高版本
+- `psycopg[binary]>=3.2.13`
 
 ## 安装
 
@@ -37,7 +37,7 @@ print("PostgreSQL 后端安装成功！")
 本包使用 `psycopg`（psycopg3）作为 PostgreSQL 适配器。您可以选择安装 `psycopg-binary` 以获取预编译二进制文件：
 
 ```bash
-pip install psycopg-binary
+pip install "psycopg-binary>=3.2.13"
 ```
 
 **注意**：`psycopg-binary` 是平台特定的。如果您的平台没有预编译版本，psycopg 将自动从源码编译。

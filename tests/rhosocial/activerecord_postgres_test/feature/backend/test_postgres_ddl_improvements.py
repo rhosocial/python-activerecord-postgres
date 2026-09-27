@@ -33,9 +33,14 @@ class TestPostgresViewCapabilityGating:
         assert dialect.supports_cascade_view() is True
 
     def test_materialized_view_supported(self):
-        """PostgreSQL supports materialized views."""
-        dialect = PostgresDialect()
-        assert dialect.supports_materialized_view() is True
+        """PostgreSQL supports materialized views (PG 9.3+).
+
+        The probe is version aware, so the dialect must carry a version —
+        same contract as supports_table_partitioning().
+        """
+        assert PostgresDialect(version=(9, 3, 0)).supports_materialized_view() is True
+        assert PostgresDialect(version=(15, 0, 0)).supports_materialized_view() is True
+        assert PostgresDialect(version=(9, 2, 0)).supports_materialized_view() is False
 
 
 class TestPostgresColumnCapabilityGating:

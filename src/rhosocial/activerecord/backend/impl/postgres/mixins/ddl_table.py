@@ -36,9 +36,34 @@ class PostgresTableMixin:
         """TABLESPACE specification is supported in all versions."""
         return True
 
+    def supports_alter_column_properties(self) -> bool:
+        """PostgreSQL supports ALTER COLUMN property changes."""
+        return True
+
     def supports_create_table_like(self) -> bool:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
+
+    def format_create_table_options(self, expr) -> Tuple[str, tuple]:
+        """Format the CREATE header modifiers for PostgreSQL.
+
+        Accepts both the generic ``CreateTableOptions`` (renders ``OR REPLACE``)
+        and the PostgreSQL ``PostgresCreateTableOptions`` (adds ``UNLOGGED``).
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+            PostgresCreateTableOptions,
+        )
+
+        base_sql, params = super().format_create_table_options(expr)
+        parts = [base_sql] if base_sql else []
+        if isinstance(expr, PostgresCreateTableOptions) and expr.unlogged:
+            if not self.supports_unlogged_table():
+                raise UnsupportedFeatureError(self.name, "CREATE UNLOGGED TABLE")
+            parts.append("UNLOGGED")
+        return " ".join(parts), params
 
     def format_create_table_statement(self, expr) -> Tuple[str, tuple]:
         """Render CREATE TABLE for PostgreSQL.
@@ -59,9 +84,12 @@ class PostgresTableMixin:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+            PostgresCreateTableOptions,
+        )
         table_options = getattr(expr, "table_options", None)
         if (
-            table_options is not None
+            isinstance(table_options, PostgresCreateTableOptions)
             and table_options.unlogged
             and getattr(expr, "temporary", False)
         ):
@@ -134,7 +162,16 @@ class PostgresTableMixin:
         return " ".join(parts), tuple(table_params) + tuple(source_params)
 
     def format_column_definition(self, col_def) -> Tuple[str, tuple]:
-        from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
+        """Format a single column definition with PostgreSQL-specific syntax.
+
+        Accepts both the generic ``ColumnDefinition`` and the PostgreSQL
+        ``PostgresColumnDefinition``; the latter's PostgreSQL-only attributes
+        (``compression`` / ``storage`` / ``statistics``) are rendered here.
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.column import (
+            PostgresColumnDefinition,
+        )
+
         all_params: List[Any] = []
         type_sql, _ = col_def.data_type.to_sql()
         if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", type_sql):
@@ -144,15 +181,9 @@ class PostgresTableMixin:
             )
         col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
 
-        identity = getattr(col_def, 'identity', None)
-        if not identity:
-            dialect_opts = col_def.dialect_options or {}
-            identity = dialect_opts.get("identity")
-        if identity:
-            if identity.upper() in ("ALWAYS", "BY DEFAULT"):
-                col_sql += f" GENERATED {identity.upper()} AS IDENTITY"
-            else:
-                raise ValueError(f"Invalid identity option '{identity}': must be 'ALWAYS' or 'BY DEFAULT'")
+        attr_sql, attr_params = self.format_column_attributes(col_def)
+        col_sql += attr_sql
+        all_params.extend(attr_params)
         auto_identity_added = False
         for constraint in col_def.constraints:
             if not auto_identity_added and getattr(constraint, 'is_auto_increment', False):
@@ -161,11 +192,25 @@ class PostgresTableMixin:
             suffix, params = self.format_column_constraint(constraint)
             col_sql += suffix
             all_params.extend(params)
-        if col_def.comment:
-            escaped_comment = SQLDialectBase._escape_sql_string(col_def.comment)
-            col_sql += f" COMMENT '{escaped_comment}'"
+        if col_def.comment is not None:
+            # PostgreSQL has no inline COMMENT syntax (the de-facto
+            # vendor form is the standalone COMMENT ON statement); a comment
+            # on a column definition is never silently dropped.
+            from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+            raise UnsupportedFeatureError(
+                self.name, "COLUMN COMMENT",
+                "PostgreSQL has no inline column comment; use a standalone "
+                "COMMENT ON COLUMN statement.",
+            )
         if col_def.generated_expression is not None:
             gen_sql, gen_params = col_def.generated_expression.to_sql()
             col_sql += gen_sql
             all_params.extend(gen_params)
+        if isinstance(col_def, PostgresColumnDefinition):
+            if col_def.compression:
+                col_sql += f" COMPRESSION {col_def.compression}"
+            if col_def.storage is not None:
+                col_sql += f" STORAGE {col_def.storage.value}"
+            if col_def.statistics is not None:
+                col_sql += f" STATISTICS {col_def.statistics}"
         return col_sql, tuple(all_params)

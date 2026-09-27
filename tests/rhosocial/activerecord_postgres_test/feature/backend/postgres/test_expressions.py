@@ -6,6 +6,7 @@ including proper quote handling for partition values.
 """
 import pytest
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresVacuumExpression,
@@ -229,7 +230,7 @@ class TestPostgresCreatePartitionExpression:
             partition_values={"modulus": 4, "remainder": 0}
         )
 
-        with pytest.raises(ValueError, match="HASH partitioning requires PostgreSQL 11"):
+        with pytest.raises(UnsupportedFeatureError, match="HASH partitioning requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_partition_with_tablespace(self, dialect):

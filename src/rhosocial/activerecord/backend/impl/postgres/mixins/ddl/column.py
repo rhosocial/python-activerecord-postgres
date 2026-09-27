@@ -64,7 +64,7 @@ class PostgresAlterColumnModifierMixin:
         ``SET DATA TYPE``). PostgreSQL additionally supports an optional
         ``USING (conversion_expression)`` on ``SET DATA TYPE`` — an
         extension the core dialect does not emit. This override injects it
-        from ``action.dialect_options["using"]``.
+        from the PostgreSQL ``PostgresAlterColumn`` typed ``using`` field.
 
         Args:
             action: An ``AlterColumn`` action (core ``ddl_alter`` module).
@@ -78,8 +78,7 @@ class PostgresAlterColumnModifierMixin:
 
         """
         sql, params = super().format_alter_column_action(action)
-        dialect_options = getattr(action, "dialect_options", None) or {}
-        using = dialect_options.get("using")
+        using = getattr(action, "using", None)
         if using is None:
             return sql, params
 

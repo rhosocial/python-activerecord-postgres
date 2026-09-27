@@ -6,11 +6,10 @@ This dialect implements protocols for features that PostgreSQL actually supports
 based on the PostgreSQL version provided at initialization.
 """
 
-from typing import Tuple, Optional, TYPE_CHECKING
+from typing import Mapping, Tuple, Optional, cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.collation import CollateExpression
-    from .function_versions import FunctionSupportInfo, FunctionVersionRequirement
+    from rhosocial.activerecord.backend.schema.differ import SchemaDiffer
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
@@ -50,6 +49,8 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     DMLMixin,
     DDLColumnMixin,
     TransactionControlMixin,
+    UserDefinedTypeMixin,
+    DomainMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     SQLXMLSupport,
@@ -87,6 +88,8 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     TransactionControlSupport,
     SQLFunctionSupport,
     DDLTypeSupport,
+    UserDefinedTypeSupport,
+    DomainSupport,
 )
 from .mixins import (
     PostgresExtensionMixin,
@@ -103,6 +106,7 @@ from .mixins import (
     PostgresPropertyGraphQueryMixin,
     PostgresIndexMixin,
     PostgresVacuumMixin,
+    PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
@@ -122,6 +126,7 @@ from .mixins import (
     PostgresJoinMixin,
     PostgresTruncateMixin,
     PostgresSchemaMixin,
+    PostgresDatabaseMixin,
     PostgresSequenceMixin,
     PostgresTransactionMixin,
     PostgresViewMixin,
@@ -163,6 +168,7 @@ from .mixins import (
     PostgresAlterTableSettingsMixin,
     PostgresClusterMixin,
     PostgresDomainMixin,
+    PostgresRepackMixin,
     PostgresCollationDDLMixin,
     PostgresForeignTableMixin,
     PostgresRoutineMixin,
@@ -193,6 +199,8 @@ from .mixins import (
     PostgresFunctionMixin,
 )
 
+from .protocols.ddl.type import PostgresTypeSupport
+from .protocols.ddl.domain import PostgresDomainSupport
 from .reserved_words import POSTGRESQL_RESERVED_WORDS
 
 # PostgreSQL-specific imports
@@ -210,6 +218,7 @@ from .protocols import (
     PostgresPartitionSupport,
     PostgresIndexSupport,
     PostgresVacuumSupport,
+    PostgresCopySupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
     PostgresLogicalReplicationSupport,
@@ -262,13 +271,12 @@ from .protocols import (
     # DDL feature protocols
     PostgresTriggerSupport,
     PostgresCommentSupport,
-    PostgresTypeSupport,
     PostgresConstraintSupport,
     PostgresPolicySupport,
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
-    PostgresDomainSupport,
+    PostgresRepackSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -291,6 +299,14 @@ from .protocols import (
 
 class PostgresDialect(
     SQLDialectBase,
+    PostgresTypeMixin,
+    PostgresDomainMixin,
+    PostgresTypeSupport,
+    PostgresDomainSupport,
+    UserDefinedTypeMixin,
+    DomainMixin,
+    UserDefinedTypeSupport,
+    DomainSupport,
     # PG-specific mixins (before global mixins to override)
     PostgresDateTimeMixin,
     PostgresDQLMixin,
@@ -313,6 +329,7 @@ class PostgresDialect(
     PostgresJoinMixin,
     PostgresTruncateMixin,
     PostgresSchemaMixin,
+    PostgresDatabaseMixin,
     PostgresSequenceMixin,
     PostgresTransactionMixin,
     PostgresViewMixin,
@@ -333,6 +350,9 @@ class PostgresDialect(
 
     ArrayMixin,
     ExplainMixin,
+    # Must precede GraphMixin/GraphTableMixin so that the explicit-override
+    # probes here win the MRO lookup; the core mixins would otherwise answer
+    # from their own always-False defaults and ignore graph_feature_overrides.
     PostgresPropertyGraphQueryMixin,
     GraphMixin,
     GraphTableMixin,
@@ -344,6 +364,7 @@ class PostgresDialect(
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
+    PostgresMaterializedViewMixin,  # Before ViewMixin to override format_*_materialized_view_*
     ViewMixin,
     SchemaMixin,
     PostgresIndexMixin,
@@ -351,10 +372,11 @@ class PostgresDialect(
     SequenceMixin,
     # PostgreSQL-specific mixins
     PostgresExtensionMixin,
-    PostgresMaterializedViewMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
+    PostgresCommentMixin,  # Before TableMixin to override format_comment_statement
     TableMixin,
+    PostgresConstraintMixin,
     ConstraintMixin,
     PostgresPartitionMixin,
     PartitionMixin,
@@ -367,6 +389,7 @@ class PostgresDialect(
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresVacuumMixin,
+    PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
@@ -397,14 +420,11 @@ class PostgresDialect(
     PostgresAddressStandardizerMixin,
     # DDL feature mixins
     PostgresTriggerMixin,
-    PostgresCommentMixin,
-    PostgresTypeMixin,
-    PostgresConstraintMixin,
     PostgresPolicyMixin,
     PostgresRlsConfigMixin,
     PostgresAlterTableSettingsMixin,
     PostgresClusterMixin,
-    PostgresDomainMixin,
+    PostgresRepackMixin,
     PostgresCollationDDLMixin,
     PostgresForeignTableMixin,
     PostgresRoutineMixin,
@@ -479,6 +499,7 @@ class PostgresDialect(
     PostgresPartitionSupport,
     PostgresIndexSupport,
     PostgresVacuumSupport,
+    PostgresCopySupport,
     PostgresQueryOptimizationSupport,
     PostgresDataTypeSupport,
     PostgresLogicalReplicationSupport,
@@ -531,13 +552,12 @@ class PostgresDialect(
     # DDL feature protocols
     PostgresTriggerSupport,
     PostgresCommentSupport,
-    PostgresTypeSupport,
     PostgresConstraintSupport,
     PostgresPolicySupport,
     PostgresRlsConfigSupport,
     PostgresAlterTableSettingsSupport,
     PostgresClusterSupport,
-    PostgresDomainSupport,
+    PostgresRepackSupport,
     PostgresCollationDDLSupport,
     PostgresForeignTableDDLSupport,
     PostgresRoutineDDLSupport,
@@ -594,7 +614,12 @@ class PostgresDialect(
     from .function_versions import POSTGRES_FUNCTION_VERSIONS as _FV
     _POSTGRES_FUNCTION_VERSIONS = _FV
 
-    def __init__(self, version: Optional[Tuple[int, int, int]] = None):
+    def __init__(
+        self,
+        version: Optional[Tuple[int, int, int]] = None,
+        *,
+        graph_feature_overrides: Optional[Mapping[str, bool]] = None,
+    ):
         """
         Initialize PostgreSQL dialect with specific version.
 
@@ -603,12 +628,31 @@ class PostgresDialect(
                 If None, the dialect must be adapted via
                 backend.introspect_and_adapt() before version-dependent
                 features can be used.
+            graph_feature_overrides: Explicit opt-ins for SQL/PGQ property graph
+                features, keyed by ``"graph_match"`` / ``"graph_table"``.
+
+                Left unset, property graph support stays off for every version.
+                This is deliberate: SQL/PGQ was withdrawn in PostgreSQL 19 Beta 4
+                and shipped in no earlier release, so a version check can never
+                be evidence of support. Pass these only when the target server
+                (or a compatibility layer in front of it) genuinely provides the
+                feature.
 
         """
         super().__init__()
         self._reserved_words = POSTGRESQL_RESERVED_WORDS
         if version is not None:
             self.version = version
+
+        overrides = dict(graph_feature_overrides or {})
+        if any(not isinstance(name, str) for name in overrides):
+            raise TypeError("Graph feature override names must be strings")
+        unknown = overrides.keys() - self.GRAPH_FEATURE_NAMES
+        if unknown:
+            raise ValueError(f"Unknown graph feature overrides: {', '.join(sorted(unknown))}")
+        if any(type(enabled) is not bool for enabled in overrides.values()):
+            raise TypeError("Graph feature override values must be booleans")
+        self._graph_feature_overrides = overrides
 
     @staticmethod
     def _validate_data_type(data_type: str) -> bool:
@@ -632,10 +676,10 @@ class PostgresDialect(
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
 
-    def create_schema_differ(self):
+    def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""
         from rhosocial.activerecord.backend.impl.postgres.schema.differ import (
             PostgresSchemaDiffer,
         )
 
-        return PostgresSchemaDiffer()
+        return cast("SchemaDiffer", PostgresSchemaDiffer())

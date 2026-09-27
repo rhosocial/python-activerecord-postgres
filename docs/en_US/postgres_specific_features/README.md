@@ -12,7 +12,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 - **[Database Introspection](./introspection.md)**: Query metadata using pg_catalog
 - **[EXPLAIN Support](./explain.md)**: Query execution plan analysis and performance diagnostics
 - **[Table Partitioning](partition.md)**: RANGE / LIST / HASH partitioning and pg_partman management
-- **[Property Graph Query](property_graph_query.md)**: SQL/PGQ property graph query (PG 19+)
+- **[SQL/PGQ Availability](property_graph_query.md)**: Fail-closed gates after PostgreSQL 19 Beta 4 withdrawal
 
 ## Feature Highlights
 

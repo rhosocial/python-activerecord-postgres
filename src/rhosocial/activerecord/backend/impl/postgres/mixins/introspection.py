@@ -40,6 +40,10 @@ if TYPE_CHECKING:  # pragma: no cover
         TriggerListExpression,
         TriggerInfoExpression,
     )
+    from ..expression.introspection import (
+        PostgresMaterializedViewInfoExpression,
+        PostgresMaterializedViewListExpression,
+    )
 
 
 class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
@@ -442,6 +446,89 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
             WHERE n.nspname = {self.p()} AND c.relname = {self.p()} AND c.relkind = 'v'
+        """
+
+        return (sql, (schema, view_name))
+
+    def format_materialized_view_list_query(
+        self, expr: "PostgresMaterializedViewListExpression"
+    ) -> Tuple[str, tuple]:
+        """Format materialized view list query.
+
+        Uses ``pg_matviews`` (a view over ``pg_class``/``pg_rewrite``) joined with
+        ``pg_index`` so callers can tell whether a materialized view is populated
+        and whether it carries the UNIQUE index that ``REFRESH ... CONCURRENTLY``
+        requires.
+
+        Args:
+            expr: Materialized view list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        schema = params.get("schema") or self._get_default_schema()
+        include_system = params.get("include_system", False)
+
+        sql = f"""
+            SELECT m.schemaname as schema_name,
+                   m.matviewname as view_name,
+                   m.definition as definition,
+                   m.ispopulated as is_populated,
+                   obj_description(c.oid) as comment,
+                   EXISTS (
+                       SELECT 1
+                       FROM pg_index i
+                       WHERE i.indrelid = c.oid AND i.indisunique
+                   ) as has_unique_index,
+                   pg_get_viewdef(c.oid, true) as view_definition
+            FROM pg_matviews m
+            JOIN pg_class c ON c.relname = m.matviewname
+            JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = m.schemaname
+            WHERE m.schemaname = {self.p()}
+        """
+
+        params_list = [schema]
+
+        if not include_system:
+            # NOTE: doubled percent — psycopg treats a bare '%' as a placeholder start.
+            sql += " AND m.matviewname NOT LIKE 'pg_%%'"
+
+        sql += " ORDER BY m.matviewname"
+
+        return (sql, tuple(params_list))
+
+    def format_materialized_view_info_query(
+        self, expr: "PostgresMaterializedViewInfoExpression"
+    ) -> Tuple[str, tuple]:
+        """Format single materialized view information query.
+
+        Args:
+            expr: Materialized view info expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        view_name = params.get("view_name", "")
+        schema = params.get("schema") or self._get_default_schema()
+
+        sql = f"""
+            SELECT m.schemaname as schema_name,
+                   m.matviewname as view_name,
+                   m.definition as definition,
+                   m.ispopulated as is_populated,
+                   obj_description(c.oid) as comment,
+                   EXISTS (
+                       SELECT 1
+                       FROM pg_index i
+                       WHERE i.indrelid = c.oid AND i.indisunique
+                   ) as has_unique_index,
+                   pg_get_viewdef(c.oid, true) as view_definition
+            FROM pg_matviews m
+            JOIN pg_class c ON c.relname = m.matviewname
+            JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = m.schemaname
+            WHERE m.schemaname = {self.p()} AND m.matviewname = {self.p()}
         """
 
         return (sql, (schema, view_name))

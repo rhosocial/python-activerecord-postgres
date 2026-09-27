@@ -16,18 +16,23 @@ Version requirements:
 - Adding values: PostgreSQL 9.1+
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
+from rhosocial.activerecord.backend.expression.statements.ddl_type import (
+    AlterTypeExpression,
+    CreateTypeExpression,
+)
+
 from ..expression.ddl import (
-    PostgresCreateEnumTypeExpression,
-    PostgresDropEnumTypeExpression,
-    PostgresAlterEnumTypeAddValueExpression,
-    PostgresAlterEnumTypeRenameValueExpression,
+    PostgresAddEnumValueAction,
+    PostgresDropTypeExpression,
+    PostgresEnumTypeDefinition,
+    PostgresRenameEnumValueAction,
 )
 
 
@@ -180,7 +185,7 @@ class EnumTypeManager:
     and deletion of PostgreSQL enum types.
     """
 
-    def __init__(self, backend):
+    def __init__(self, backend: Any) -> None:
         """Initialize with a database backend.
 
         Args:
@@ -205,11 +210,14 @@ class EnumTypeManager:
             enum_type: PostgresEnumType instance
             if_not_exists: Use IF NOT EXISTS clause
         """
-        expr = PostgresCreateEnumTypeExpression(
+        expr = CreateTypeExpression(
             dialect=self._backend.dialect,
-            name=enum_type.name,
-            values=enum_type.values,
-            schema=enum_type.schema,
+            type_name=enum_type.name,
+            definition=PostgresEnumTypeDefinition(
+                self._backend.dialect,
+                enum_type.values,
+            ),
+            schema_name=enum_type.schema,
             if_not_exists=if_not_exists,
         )
         sql, params = expr.to_sql()
@@ -224,10 +232,10 @@ class EnumTypeManager:
             if_exists: Use IF EXISTS clause
             cascade: Use CASCADE clause
         """
-        expr = PostgresDropEnumTypeExpression(
+        expr = PostgresDropTypeExpression(
             dialect=self._backend.dialect,
-            name=enum_type.name,
-            schema=enum_type.schema,
+            type_name=enum_type.name,
+            schema_name=enum_type.schema,
             if_exists=if_exists,
             cascade=cascade,
         )
@@ -253,13 +261,17 @@ class EnumTypeManager:
         if new_value in enum_type.values:
             raise ValueError(f"Value '{new_value}' already exists in enum")
 
-        expr = PostgresAlterEnumTypeAddValueExpression(
-            dialect=self._backend.dialect,
-            type_name=enum_type.name,
-            new_value=new_value,
-            schema=enum_type.schema,
+        action = PostgresAddEnumValueAction(
+            self._backend.dialect,
+            new_value,
             before=before,
             after=after,
+        )
+        expr = AlterTypeExpression(
+            dialect=self._backend.dialect,
+            type_name=enum_type.name,
+            actions=[action],
+            schema_name=enum_type.schema,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -278,12 +290,16 @@ class EnumTypeManager:
         if old_value not in enum_type.values:
             raise ValueError(f"Value '{old_value}' not found in enum")
 
-        expr = PostgresAlterEnumTypeRenameValueExpression(
+        action = PostgresRenameEnumValueAction(
+            self._backend.dialect,
+            old_value,
+            new_value,
+        )
+        expr = AlterTypeExpression(
             dialect=self._backend.dialect,
             type_name=enum_type.name,
-            old_value=old_value,
-            new_value=new_value,
-            schema=enum_type.schema,
+            actions=[action],
+            schema_name=enum_type.schema,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)

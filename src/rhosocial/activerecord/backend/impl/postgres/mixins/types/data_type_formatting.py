@@ -6,6 +6,7 @@ from __future__ import annotations
 import re
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
@@ -40,10 +41,6 @@ from ...expression.types import (
     PostgresCharacterVaryingType,
 )
 
-if TYPE_CHECKING:
-    pass
-
-
 class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     """PostgreSQL DataType formatting and parsing.
 
@@ -51,6 +48,10 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     expressions to SQL strings and parse raw SQL type strings back into
     ``DataType`` instances.
     """
+
+    if TYPE_CHECKING:
+        name: str
+        version: Tuple[int, int, int]
 
     # ------------------------------------------------------------------
     # DDLTypeSupport — formatting
@@ -162,23 +163,32 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_postgres_daterange(self, data_type) -> Tuple[str, tuple]:
         return "DATERANGE", ()
 
+    def _format_postgres_multirange_data_type(self, sql: str) -> Tuple[str, tuple]:
+        if self.version < (14, 0, 0):
+            raise UnsupportedFeatureError(
+                self.name,
+                sql,
+                suggestion="requires PostgreSQL 14+",
+            )
+        return sql, ()
+
     def format_data_type_postgres_int4multirange(self, data_type) -> Tuple[str, tuple]:
-        return "INT4MULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("INT4MULTIRANGE")
 
     def format_data_type_postgres_int8multirange(self, data_type) -> Tuple[str, tuple]:
-        return "INT8MULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("INT8MULTIRANGE")
 
     def format_data_type_postgres_nummultirange(self, data_type) -> Tuple[str, tuple]:
-        return "NUMMULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("NUMMULTIRANGE")
 
     def format_data_type_postgres_tsmultirange(self, data_type) -> Tuple[str, tuple]:
-        return "TSMULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("TSMULTIRANGE")
 
     def format_data_type_postgres_tstzmultirange(self, data_type) -> Tuple[str, tuple]:
-        return "TSTZMULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("TSTZMULTIRANGE")
 
     def format_data_type_postgres_datemultirange(self, data_type) -> Tuple[str, tuple]:
-        return "DATEMULTIRANGE", ()
+        return self._format_postgres_multirange_data_type("DATEMULTIRANGE")
 
     def format_data_type_postgres_oid(self, data_type) -> Tuple[str, tuple]:
         return "OID", ()
@@ -464,22 +474,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_int4multirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_int8multirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_nummultirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_tsmultirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_tstzmultirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_datemultirange(self) -> bool:
-        return True
+        return self.version >= (14, 0, 0)
 
     def supports_data_type_postgres_oid(self) -> bool:
         return True

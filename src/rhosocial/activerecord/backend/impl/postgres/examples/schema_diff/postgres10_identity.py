@@ -19,6 +19,7 @@ Supported versions: PostgreSQL 9 — SERIAL only.
 import os
 from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.expression.statements import IdentityClause
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
@@ -61,14 +62,14 @@ sql, params = pg9_table.to_sql()
 backend.execute(sql, params)
 
 # PostgreSQL 10+: GENERATED AS IDENTITY
-# Note: dialect_options={'identity': 'ALWAYS'} triggers GENERATED ALWAYS AS IDENTITY
+# Note: IdentityClause(generation='ALWAYS') triggers GENERATED ALWAYS AS IDENTITY
 # in the PostgreSQL dialect's format_column_definition
 try:
     pg10_table = CreateTableExpression(
         dialect=dialect, table="pg10_style", columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect),
                 constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],
-                dialect_options={"identity": "ALWAYS"}),
+                identity_clause=IdentityClause(dialect, generation="ALWAYS")),
             ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ]
     )

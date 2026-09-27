@@ -30,6 +30,9 @@ partition = PostgresCreatePartitionExpression(
 
 ## 分区管理
 
+PostgreSQL 不支持 `ATTACH PARTITION CONCURRENTLY`。PostgreSQL 14+ 支持
+`DETACH PARTITION CONCURRENTLY`，并可使用 `FINALIZE` 完成待处理的分离。
+
 ### ATTACH / DETACH PARTITION
 
 ```python

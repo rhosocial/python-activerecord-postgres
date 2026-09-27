@@ -1,3 +1,14 @@
+## [v1.0.0.dev17] - 2026-09-25
+
+### Changed
+
+- Updated PostgreSQL 19 SQL/PGQ status: PostgreSQL 19 Beta 4 withdrew SQL/PGQ, and graph capabilities are now fail-closed by default with explicit opt-in overrides.
+
+### Fixed
+
+- Corrected PostgreSQL partition documentation: `ATTACH PARTITION CONCURRENTLY` is unsupported; concurrent `DETACH PARTITION` with `FINALIZE` is supported on PostgreSQL 14+.
+
+
 ## [v1.0.0.dev16] - 2026-08-15
 
 ### Added
@@ -17,8 +28,8 @@
 - Added PostgreSQL expression-level `COLLATE` support with schema-qualified collation validation. ([#40](https://github.com/rhosocial/python-activerecord-postgres/issues/40))
 - Added PostgreSQL support for core SQL/XML standard expressions, including XML construction, serialization, aggregation, and query/table expression capability declarations. ([#41](https://github.com/rhosocial/python-activerecord-postgres/issues/41))
 - Added PostgreSQL dialect support for datetime interval expressions (`EXTRACT`, `DATE_PART`, `DATE_TRUNC`, `INTERVAL` add/subtract, date diff) with EXPLAIN-backed index usage verification tests. ([#42](https://github.com/rhosocial/python-activerecord-postgres/issues/42))
-- Added comprehensive PostgreSQL partitioning support including ATTACH CONCURRENTLY/DEFAULT partition, partition auto-management via named expressions (monthly/quarterly), pg_partman create_parent parameter completion, enhanced partition metadata queries, and full test coverage ([#43](https://github.com/rhosocial/python-activerecord-postgres/issues/43))
-- Add SQL/PGQ property graph query support and PostgreSQL 19 compatibility enhancements ([#44](https://github.com/rhosocial/python-activerecord-postgres/issues/44))
+- Added comprehensive PostgreSQL partitioning support including standard ATTACH PARTITION, concurrent DETACH PARTITION with FINALIZE (PG 14+), DEFAULT partition, partition auto-management via named expressions (monthly/quarterly), pg_partman create_parent parameter completion, enhanced partition metadata queries, and full test coverage ([#43](https://github.com/rhosocial/python-activerecord-postgres/issues/43))
+- Added capability-gated SQL/PGQ property graph query expressions and PostgreSQL 19 compatibility gates ([#44](https://github.com/rhosocial/python-activerecord-postgres/issues/44))
 
 
 

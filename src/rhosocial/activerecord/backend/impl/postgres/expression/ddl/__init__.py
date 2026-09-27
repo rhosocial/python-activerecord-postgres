@@ -6,6 +6,7 @@ Directory structure:
 - vacuum.py     - VACUUM/ANALYZE expressions
 - partition.py  - Partition DDL expressions
 - index.py      - Index DDL expressions
+- index_definition.py - PostgreSQL index definition / CREATE INDEX expressions
 - statistics.py - Statistics DDL expressions
 - comment.py   - COMMENT expressions
 - mv.py         - Materialized view expressions
@@ -21,47 +22,60 @@ Directory structure:
 - routine.py    - CREATE/DROP FUNCTION / AGGREGATE expressions
 - publication.py - CREATE/DROP PUBLICATION / SUBSCRIPTION expressions
 
-Missing expressions — why?
+PostgreSQL index expressions
 ============================
-This package does **not** provide ``PostgresCreateIndexExpression`` or
-``PostgresDropIndexExpression``.  Those were removed because the generic
-``CreateIndexExpression`` / ``DropIndexExpression`` (from
-``rhosocial.activerecord.backend.expression.statements.ddl_index``) already
-accept all common parameters **and** a ``dialect_options`` dict.
+The generic ``CreateIndexExpression`` / ``DropIndexExpression`` (from
+``rhosocial.activerecord.backend.expression.statements.ddl_index``) carry all
+common parameters.
 
-PG‑specific features such as ``NULLS NOT DISTINCT`` or ``CONCURRENTLY`` on
-DROP INDEX are passed through ``dialect_options`` and consumed by the dialect
-(``PostgresIndexMixin``).  See ``index.py`` for the supported keys.
+PostgreSQL-only features are supplied through typed fields, not a
+``dialect_options`` bag:
+
+* ``PostgresCreateIndexExpression`` adds ``opclasses``,
+  ``nulls_not_distinct`` and ``with_options`` for ``CREATE INDEX``.
+* ``PostgresIndexDefinition`` adds the same options to an inline table index
+  definition.
+* ``PostgresDropIndexExpression`` marks PostgreSQL ownership of a
+  ``DROP INDEX`` (the generic expression already carries ``concurrent``).
+
+The typed fields are consumed by ``PostgresIndexMixin`` (see ``index.py``).
 
 Example::
 
-    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-        CreateIndexExpression,
-        DropIndexExpression,
-    )
     from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCreateIndexExpression,
+    )
 
     d = PostgresDialect((15, 0, 0))
 
-    # NULLS NOT DISTINCT via dialect_options
-    expr = CreateIndexExpression(
+    # NULLS NOT DISTINCT via a typed field
+    expr = PostgresCreateIndexExpression(
         d, "idx_uniq_abc", "t", ["a", "b"],
         unique=True,
-        dialect_options={"nulls_not_distinct": True},
+        nulls_not_distinct=True,
     )
     sql, _ = expr.to_sql()   # → CREATE UNIQUE INDEX … NULLS NOT DISTINCT
-
-    # DROP INDEX CONCURRENTLY via dialect_options (PG 18+)
-    expr = DropIndexExpression(
-        d, "idx_old",
-        dialect_options={"concurrent": True},
-    )
-    sql, _ = expr.to_sql()   # → DROP INDEX CONCURRENTLY …
 """
 
+from ..copy import (
+    PostgresCopyFormat,
+    PostgresCopyFromExpression,
+    PostgresCopyLogVerbosity,
+    PostgresCopyOnError,
+    PostgresCopyToExpression,
+)
 from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
+from .table_options import PostgresCreateTableOptions
+from .column import (
+    PostgresColumnStorage,
+    PostgresColumnDefinition,
+    PostgresColumnOptions,
+)
+from .alter_column import PostgresAlterColumn
 from .partition import (
     PartitionValue,
+    PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -72,24 +86,68 @@ from .index import (
     PostgresAlterIndexActionType,
     PostgresReindexExpression,
 )
+from .index_definition import (
+    PostgresCreateIndexExpression,
+    PostgresIndexDefinition,
+    PostgresDropIndexExpression,
+)
+from .exclude_constraint import PostgresExcludeConstraint
+from .constraint import (
+    PostgresAlterConstraint,
+    PostgresValidateConstraint,
+    PostgresAlterConstraintAction,
+    PostgresValidateConstraintAction,
+    PostgresAlterConstraintExpression,
+    PostgresValidateConstraintExpression,
+    PostgresAlterTableConstraint,
+    PostgresValidateTableConstraint,
+)
 from .statistics import (
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
 )
 from .comment import PostgresCommentExpression
-from .mv import PostgresRefreshMaterializedViewExpression
+from .mv import (
+    MaterializedViewAlterAction,
+    PostgresAlterMaterializedViewExpression,
+    PostgresChangeMaterializedViewOwnerAction,
+    PostgresCreateMaterializedViewExpression,
+    PostgresDropMaterializedViewExpression,
+    PostgresRefreshMaterializedViewExpression,
+    PostgresRenameMaterializedViewAction,
+    PostgresResetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewPropertiesAction,
+    PostgresSetMaterializedViewSchemaAction,
+)
 from .type import (
-    PostgresCreateEnumTypeExpression,
-    PostgresDropEnumTypeExpression,
+    PostgresAddEnumValueAction,
+    PostgresAddTypeAttributeAction,
     PostgresAlterEnumAddValueExpression,
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
+    PostgresAlterTypeAttributeAction,
+    PostgresBaseTypeDefinition,
+    PostgresChangeTypeOwnerAction,
+    PostgresCompositeTypeAttribute,
+    PostgresCompositeTypeDefinition,
+    PostgresCreateEnumTypeExpression,
     PostgresCreateRangeTypeExpression,
-    EnumTypeNameExpression,
-    EnumValuesExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresDropTypeAttributeAction,
+    PostgresDropTypeExpression,
+    PostgresEnumTypeDefinition,
+    PostgresRangeTypeDefinition,
+    PostgresRenameEnumValueAction,
+    PostgresRenameTypeAction,
+    PostgresRenameTypeAttributeAction,
+    PostgresSetTypePropertiesAction,
+    PostgresSetTypeSchemaAction,
+    PostgresShellTypeDefinition,
+    AlterEnumAddValueExpression,
     CreateEnumTypeExpression,
     DropEnumTypeExpression,
-    AlterEnumAddValueExpression,
+    EnumTypeNameExpression,
+    EnumValuesExpression,
 )
 from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 from .multirange import (
@@ -120,11 +178,21 @@ from .table_settings import (
     PostgresAlterTableSettingsExpression,
 )
 from .cluster import PostgresClusterExpression
+from .repack import PostgresRepackExpression
 from .domain import (
     AlterDomainActionType,
-    PostgresCreateDomainExpression,
+    DomainCheckConstraint,
+    DomainNullability,
+    DomainValueExpression,
+    PostgresAddDomainCheckAction,
     PostgresAlterDomainExpression,
+    PostgresChangeDomainOwnerAction,
+    PostgresCreateDomainExpression,
+    PostgresDropDomainCheckAction,
     PostgresDropDomainExpression,
+    PostgresRenameDomainConstraintAction,
+    PostgresSetDomainSchemaAction,
+    PostgresValidateDomainConstraintAction,
 )
 from .collation import (
     PostgresCreateCollationExpression,
@@ -148,11 +216,25 @@ from .publication import (
 )
 
 __all__ = [
+    # copy
+    "PostgresCopyFormat",
+    "PostgresCopyFromExpression",
+    "PostgresCopyLogVerbosity",
+    "PostgresCopyOnError",
+    "PostgresCopyToExpression",
     # vacuum
     "PostgresVacuumExpression",
     "PostgresAnalyzeExpression",
+    # table options
+    "PostgresCreateTableOptions",
+    # column
+    "PostgresColumnStorage",
+    "PostgresColumnDefinition",
+    "PostgresColumnOptions",
+    "PostgresAlterColumn",
     # partition
     "PartitionValue",
+    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
@@ -161,14 +243,52 @@ __all__ = [
     "PostgresAlterIndexExpression",
     "PostgresAlterIndexActionType",
     "PostgresReindexExpression",
+    "PostgresCreateIndexExpression",
+    "PostgresIndexDefinition",
+    "PostgresDropIndexExpression",
+    "PostgresExcludeConstraint",
+    "PostgresAlterConstraint",
+    "PostgresValidateConstraint",
+    "PostgresAlterConstraintAction",
+    "PostgresValidateConstraintAction",
+    "PostgresAlterConstraintExpression",
+    "PostgresValidateConstraintExpression",
+    "PostgresAlterTableConstraint",
+    "PostgresValidateTableConstraint",
     # statistics
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",
     # comment
     "PostgresCommentExpression",
     # mv
+    "MaterializedViewAlterAction",
+    "PostgresAlterMaterializedViewExpression",
+    "PostgresChangeMaterializedViewOwnerAction",
+    "PostgresCreateMaterializedViewExpression",
+    "PostgresDropMaterializedViewExpression",
     "PostgresRefreshMaterializedViewExpression",
-    # type (enum/range)
+    "PostgresRenameMaterializedViewAction",
+    "PostgresResetMaterializedViewPropertiesAction",
+    "PostgresSetMaterializedViewPropertiesAction",
+    "PostgresSetMaterializedViewSchemaAction",
+    # type
+    "PostgresCompositeTypeAttribute",
+    "PostgresCompositeTypeDefinition",
+    "PostgresEnumTypeDefinition",
+    "PostgresRangeTypeDefinition",
+    "PostgresBaseTypeDefinition",
+    "PostgresShellTypeDefinition",
+    "PostgresRenameTypeAction",
+    "PostgresSetTypeSchemaAction",
+    "PostgresChangeTypeOwnerAction",
+    "PostgresRenameTypeAttributeAction",
+    "PostgresAddTypeAttributeAction",
+    "PostgresDropTypeAttributeAction",
+    "PostgresAlterTypeAttributeAction",
+    "PostgresAddEnumValueAction",
+    "PostgresRenameEnumValueAction",
+    "PostgresSetTypePropertiesAction",
+    "PostgresDropTypeExpression",
     "PostgresCreateEnumTypeExpression",
     "PostgresDropEnumTypeExpression",
     "PostgresAlterEnumAddValueExpression",
@@ -206,8 +326,18 @@ __all__ = [
     "PostgresAlterTableSettingsExpression",
     # cluster
     "PostgresClusterExpression",
+    "PostgresRepackExpression",
     # domain
     "AlterDomainActionType",
+    "DomainNullability",
+    "DomainValueExpression",
+    "DomainCheckConstraint",
+    "PostgresAddDomainCheckAction",
+    "PostgresDropDomainCheckAction",
+    "PostgresRenameDomainConstraintAction",
+    "PostgresValidateDomainConstraintAction",
+    "PostgresChangeDomainOwnerAction",
+    "PostgresSetDomainSchemaAction",
     "PostgresCreateDomainExpression",
     "PostgresAlterDomainExpression",
     "PostgresDropDomainExpression",

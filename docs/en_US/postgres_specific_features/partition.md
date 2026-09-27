@@ -25,6 +25,9 @@ partition = PostgresCreatePartitionExpression(
 
 ## Partition Management
 
+PostgreSQL does not support `ATTACH PARTITION CONCURRENTLY`. PostgreSQL 14+ supports
+`DETACH PARTITION CONCURRENTLY`, with `FINALIZE` for completing a pending detach.
+
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
     PostgresAttachPartitionExpression, PostgresDetachPartitionExpression,

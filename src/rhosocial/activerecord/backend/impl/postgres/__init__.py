@@ -21,6 +21,10 @@ from .backend import PostgresBackend, AsyncPostgresBackend
 from .collation import PostgresCollation  # noqa: F401
 from .config import PostgresConnectionConfig
 from .dialect import PostgresDialect
+from .storage_parameters import (  # noqa: F401
+    PostgresStorageParameter,
+    PostgresStorageParameterValueType,
+)
 from .transaction import PostgresTransactionManager, AsyncPostgresTransactionManager
 from .types import PostgresEnumType
 from .expression.types import (
@@ -75,12 +79,46 @@ from .expression.types import (
     PostgresCidrType,
 )
 from .explain import PostgresExplainResult, PostgresExplainPlanLine
+from .expression import (
+    PostgresCopyFormat,
+    PostgresCopyFromExpression,
+    PostgresCopyLogVerbosity,
+    PostgresCopyOnError,
+    PostgresCopyToExpression,
+    PostgresRepackExpression,
+)
 from .expression.ddl import (
-    PostgresCreateEnumTypeExpression,
-    PostgresDropEnumTypeExpression,
+    PostgresAddDomainCheckAction,
+    PostgresAddEnumValueAction,
+    PostgresAddTypeAttributeAction,
+    PostgresAlterDomainExpression,
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
+    PostgresAlterTypeAttributeAction,
+    PostgresBaseTypeDefinition,
+    PostgresChangeDomainOwnerAction,
+    PostgresChangeTypeOwnerAction,
+    PostgresCompositeTypeAttribute,
+    PostgresCompositeTypeDefinition,
+    PostgresCreateDomainExpression,
+    PostgresCreateEnumTypeExpression,
     PostgresCreateRangeTypeExpression,
+    PostgresDropDomainCheckAction,
+    PostgresDropDomainExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresDropTypeAttributeAction,
+    PostgresDropTypeExpression,
+    PostgresEnumTypeDefinition,
+    PostgresRangeTypeDefinition,
+    PostgresRenameDomainConstraintAction,
+    PostgresRenameEnumValueAction,
+    PostgresRenameTypeAction,
+    PostgresRenameTypeAttributeAction,
+    PostgresSetDomainSchemaAction,
+    PostgresSetTypePropertiesAction,
+    PostgresSetTypeSchemaAction,
+    PostgresShellTypeDefinition,
+    PostgresValidateDomainConstraintAction,
 )
 from .adapters import (
     PostgresEnumAdapter,
@@ -320,6 +358,9 @@ __all__ = [
     "PostgresConnectionConfig",
     # Dialect related
     "PostgresDialect",
+    # PostgreSQL Relation Storage Parameters
+    "PostgresStorageParameter",
+    "PostgresStorageParameterValueType",
     # Transaction - Sync and Async
     "PostgresTransactionManager",
     "AsyncPostgresTransactionManager",
@@ -329,12 +370,44 @@ __all__ = [
     # PostgreSQL EXPLAIN Result Types
     "PostgresExplainResult",
     "PostgresExplainPlanLine",
+    "PostgresCopyFormat",
+    "PostgresCopyFromExpression",
+    "PostgresCopyLogVerbosity",
+    "PostgresCopyOnError",
+    "PostgresCopyToExpression",
+    "PostgresRepackExpression",
     # PostgreSQL DDL Statements
+    "PostgresCompositeTypeAttribute",
+    "PostgresCompositeTypeDefinition",
+    "PostgresEnumTypeDefinition",
+    "PostgresRangeTypeDefinition",
+    "PostgresBaseTypeDefinition",
+    "PostgresShellTypeDefinition",
+    "PostgresRenameTypeAction",
+    "PostgresSetTypeSchemaAction",
+    "PostgresChangeTypeOwnerAction",
+    "PostgresRenameTypeAttributeAction",
+    "PostgresAddTypeAttributeAction",
+    "PostgresDropTypeAttributeAction",
+    "PostgresAlterTypeAttributeAction",
+    "PostgresAddEnumValueAction",
+    "PostgresRenameEnumValueAction",
+    "PostgresSetTypePropertiesAction",
+    "PostgresDropTypeExpression",
     "PostgresCreateEnumTypeExpression",
     "PostgresDropEnumTypeExpression",
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
+    "PostgresAddDomainCheckAction",
+    "PostgresDropDomainCheckAction",
+    "PostgresRenameDomainConstraintAction",
+    "PostgresValidateDomainConstraintAction",
+    "PostgresChangeDomainOwnerAction",
+    "PostgresSetDomainSchemaAction",
+    "PostgresCreateDomainExpression",
+    "PostgresAlterDomainExpression",
+    "PostgresDropDomainExpression",
     # Range Types
     "PostgresRange",
     "PostgresRangeAdapter",

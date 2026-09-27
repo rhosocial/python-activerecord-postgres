@@ -14,80 +14,31 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
     BlobType,
     BooleanType,
-    CharType,
     DataType,
     DecimalType,
-    DoubleType,
     FloatType,
     IntegerType,
-    IntType,
     JsonBType,
     JsonType,
-    RealType,
     SmallIntType,
     TextType,
     TimeType,
     TimestampType,
-    TinyIntType,
     VarCharType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-    PostgresArrayType,
-    PostgresBigSerialType,
     PostgresBitType,
-    PostgresBoxType,
     PostgresByteaType,
-    PostgresCIDType,
-    PostgresCharacterVaryingType,
-    PostgresCidrType,
-    PostgresCircleType,
-    PostgresCitextType,
-    PostgresCubeType,
-    PostgresDateMultirangeType,
-    PostgresDateRangeType,
-    PostgresGeographyType,
-    PostgresGeometryType,
     PostgresHalfvecType,
-    PostgresHstoreType,
     PostgresInetType,
-    PostgresInt4MultirangeType,
-    PostgresInt4RangeType,
-    PostgresInt8MultirangeType,
-    PostgresInt8RangeType,
     PostgresJsonPathType,
-    PostgresLineSegmentType,
-    PostgresLineType,
-    PostgresLtreeType,
-    PostgresMacAddr8Type,
-    PostgresMacAddrType,
-    PostgresMoneyType,
-    PostgresNumMultirangeType,
-    PostgresNumRangeType,
-    PostgresOIDType,
-    PostgresPathType,
-    PostgresPgLSNType,
     PostgresPointType,
-    PostgresPolygonType,
-    PostgresRasterType,
-    PostgresRegClassType,
-    PostgresRegTypeType,
     PostgresSerialType,
-    PostgresSmallSerialType,
     PostgresSparsevecType,
-    PostgresTIDType,
-    PostgresTSQueryType,
-    PostgresTSVectorType,
-    PostgresTsMultirangeType,
     PostgresTsRangeType,
-    PostgresTsTzMultirangeType,
-    PostgresTsTzRangeType,
     PostgresUUIDType,
-    PostgresVarBitType,
     PostgresVectorType,
-    PostgresXID8Type,
-    PostgresXIDType,
-    PostgresXMLType,
 )
 
 
@@ -104,13 +55,13 @@ def dialect():
 def test_format_data_type_postgres_enum_exists(dialect):
     """format_data_type_postgres_enum method exists on the dialect."""
     assert hasattr(dialect, "format_data_type_postgres_enum")
-    assert callable(getattr(dialect, "format_data_type_postgres_enum"))
+    assert callable(dialect.format_data_type_postgres_enum)
 
 
 def test_supports_data_type_postgres_enum_exists(dialect):
     """supports_data_type_postgres_enum method exists on the dialect."""
     assert hasattr(dialect, "supports_data_type_postgres_enum")
-    assert callable(getattr(dialect, "supports_data_type_postgres_enum"))
+    assert callable(dialect.supports_data_type_postgres_enum)
     assert dialect.supports_data_type_postgres_enum() is True
 
 
@@ -124,7 +75,7 @@ def test_postgres_enum_expression_renders_via_format_enum_type_expression(dialec
         values=["pending", "processing", "ready"],
     )
     sql, params = dialect.format_enum_type_expression(enum_ref)
-    assert sql == "video_status"
+    assert sql == '"video_status"'
     assert params == ()
 
 
@@ -138,7 +89,7 @@ def test_postgres_enum_expression_with_schema_renders_via_dialect(dialect):
         schema="app",
     )
     sql, params = dialect.format_enum_type_expression(enum_ref)
-    assert sql == "app.video_status"
+    assert sql == '"app"."video_status"'
     assert params == ()
 
 
@@ -278,63 +229,23 @@ def test_suggested_data_types_keys_disjoint_from_supported(dialect):
 
 
 # ---------------------------------------------------------------------------
-# W1: dialect_options forwarding and equality
+# W1: type-param equality (dialect_options bag removed)
 # ---------------------------------------------------------------------------
 
 
-def test_bit_type_dialect_options_forwarded():
-    t1 = PostgresBitType(n=8, dialect_options={"flag": True})
-    t2 = PostgresBitType(n=8, dialect_options={"flag": True})
-    t3 = PostgresBitType(n=8, dialect_options={"flag": False})
-    t4 = PostgresBitType(n=8)
-
-    # Same options → equal
-    assert t1 == t2
-    assert hash(t1) == hash(t2)
-
-    # Different options → not equal
-    assert t1 != t3
-    assert t1 != t4
+def test_type_constructor_rejects_dialect_options():
+    with pytest.raises(TypeError):
+        PostgresBitType(n=8, dialect_options={"flag": True})
 
 
-def test_vector_type_dialect_options_forwarded():
-    t1 = PostgresVectorType(dim=384, dialect_options={"metric": "cosine"})
-    t2 = PostgresVectorType(dim=384, dialect_options={"metric": "cosine"})
-    t3 = PostgresVectorType(dim=384, dialect_options={"metric": "l2"})
-
-    assert t1 == t2
-    assert hash(t1) == hash(t2)
-    assert t1 != t3
 
 
-def test_halfvec_type_dialect_options_forwarded():
-    t1 = PostgresHalfvecType(dim=128, dialect_options={"quantize": True})
-    t2 = PostgresHalfvecType(dim=128, dialect_options={"quantize": True})
-    t3 = PostgresHalfvecType(dim=128)
-
-    assert t1 == t2
-    assert hash(t1) == hash(t2)
-    assert t1 != t3
 
 
-def test_sparsevec_type_dialect_options_forwarded():
-    t1 = PostgresSparsevecType(dim=16, dialect_options={"sparse": True})
-    t2 = PostgresSparsevecType(dim=16, dialect_options={"sparse": True})
-    t3 = PostgresSparsevecType(dim=16)
-
-    assert t1 == t2
-    assert hash(t1) == hash(t2)
-    assert t1 != t3
 
 
-def test_varbit_type_dialect_options_forwarded():
-    t1 = PostgresVarBitType(n=16, dialect_options={"strict": True})
-    t2 = PostgresVarBitType(n=16, dialect_options={"strict": True})
-    t3 = PostgresVarBitType(n=16)
 
-    assert t1 == t2
-    assert hash(t1) == hash(t2)
-    assert t1 != t3
+
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 
 from rhosocial.activerecord.base.field_proxy import FieldProxy
+from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -18,6 +19,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
+    PostgresColumnDefinition,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresPartitionMetadataExpression,
@@ -252,7 +254,7 @@ class PartitionProvider(IPartitionProvider):
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
-                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), dialect_options={"identity": "BY DEFAULT"}),
+                PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), attributes=[IdentityAttribute(generation="BY DEFAULT")]),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
@@ -319,7 +321,6 @@ class PartitionProvider(IPartitionProvider):
 
         class PartitionEvent(ActiveRecord):
             __table_name__ = table_name
-            __primary_key__ = "id"
             __backend__ = backend
             c: ClassVar[FieldProxy] = FieldProxy()
 
@@ -336,7 +337,6 @@ class PartitionProvider(IPartitionProvider):
 
         class AsyncPartitionEvent(AsyncActiveRecord):
             __table_name__ = table_name
-            __primary_key__ = "id"
             __backend__ = backend
             c: ClassVar[FieldProxy] = FieldProxy()
 

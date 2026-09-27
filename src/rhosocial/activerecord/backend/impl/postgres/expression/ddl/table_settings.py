@@ -11,7 +11,7 @@ Version Requirements:
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -70,15 +70,12 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
         schema: Optional[str] = None,
         mode: Optional[LoggingMode] = None,
         access_method: Optional[str] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.table_name = table_name
         self.schema = schema
         self.mode = mode
         self.access_method = access_method
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

@@ -20,7 +20,7 @@ This backend CANNOT be used with free-threaded Python builds. Free-threaded test
 
 ```toml
 dependencies = [
-    "psycopg[binary]",
+    "psycopg[binary]>=3.2.13",
     "rhosocial-activerecord"
 ]
 ```

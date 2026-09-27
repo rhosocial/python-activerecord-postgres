@@ -53,7 +53,6 @@ class PostgresMixedAnnotationModel(ActiveRecord):
     - metadata: Uses JSONB (adapter handles dict <-> str)
     """
     __table_name__ = "mixed_annotation_items"
-    __primary_key__ = "id"
 
     name: str
     item_id: Annotated[Optional[int], UseColumn("id")] = None
@@ -68,7 +67,6 @@ class PostgresMixedAnnotationModel(ActiveRecord):
 class AsyncPostgresMixedAnnotationModel(AsyncActiveRecord):
     """Async version of PostgresMixedAnnotationModel."""
     __table_name__ = "mixed_annotation_items"
-    __primary_key__ = "id"
     c: ClassVar[FieldProxy] = FieldProxy()
 
     name: str

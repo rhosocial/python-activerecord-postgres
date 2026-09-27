@@ -189,7 +189,7 @@ print(user.id)  # Populated automatically via RETURNING
 
 - **Python**: 3.8+ (including 3.13t/3.14t free-threaded builds)
 - **Core**: `rhosocial-activerecord>=1.0.0`
-- **Driver**: `psycopg>=3.2.12`
+- **Driver**: `psycopg[binary]>=3.2.13`
 
 ## PostgreSQL Version Compatibility
 

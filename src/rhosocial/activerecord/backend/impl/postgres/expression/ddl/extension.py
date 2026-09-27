@@ -11,7 +11,7 @@ Version Requirements:
 - DROP EXTENSION: PostgreSQL 9.1+
 """
 
-from typing import Optional, Dict, Any, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -67,8 +67,6 @@ class PostgresCreateExtensionExpression(BaseExpression):
         version: Optional[str] = None,
         if_not_exists: bool = True,
         cascade: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -76,7 +74,6 @@ class PostgresCreateExtensionExpression(BaseExpression):
         self.version = version
         self.if_not_exists = if_not_exists
         self.cascade = cascade
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -119,8 +116,6 @@ class PostgresDropExtensionExpression(BaseExpression):
         if_exists: bool = True,
         cascade: bool = False,
         restrict: bool = False,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -128,7 +123,6 @@ class PostgresDropExtensionExpression(BaseExpression):
         self.if_exists = if_exists
         self.cascade = cascade
         self.restrict = restrict
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

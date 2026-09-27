@@ -33,6 +33,7 @@ from .ddl.policy import PostgresPolicyMixin
 from .ddl.rls_config import PostgresRlsConfigMixin
 from .ddl.table_settings import PostgresAlterTableSettingsMixin
 from .ddl.cluster import PostgresClusterMixin
+from .ddl.repack import PostgresRepackMixin
 from .ddl.domain import PostgresDomainMixin
 from .ddl.collation import PostgresCollationDDLMixin
 from .ddl.foreign_table import PostgresForeignTableMixin
@@ -41,6 +42,7 @@ from .ddl.publication import PostgresPublicationMixin
 
 # DML mixins
 from .dml.vacuum import PostgresVacuumMixin
+from .dml.copy import PostgresCopyMixin
 from .dml.stored_procedure import PostgresStoredProcedureMixin
 from .dml.extended_statistics import PostgresExtendedStatisticsMixin
 from .dml.advisory_lock import PostgresAdvisoryLockMixin
@@ -108,6 +110,7 @@ from .set_operation import PostgresSetOperationMixin
 from .ilike import PostgresILIKEMixin
 from .join import PostgresJoinMixin
 from .truncate import PostgresTruncateMixin
+from .ddl_database import PostgresDatabaseMixin
 from .schema import PostgresSchemaMixin
 from .sequence import PostgresSequenceMixin
 from .transaction import PostgresTransactionMixin
@@ -143,6 +146,7 @@ __all__ = [
     "PostgresRlsConfigMixin",
     "PostgresAlterTableSettingsMixin",
     "PostgresClusterMixin",
+    "PostgresRepackMixin",
     "PostgresDomainMixin",
     "PostgresCollationDDLMixin",
     "PostgresForeignTableMixin",
@@ -150,6 +154,7 @@ __all__ = [
     "PostgresPublicationMixin",
     # DML mixins
     "PostgresVacuumMixin",
+    "PostgresCopyMixin",
     "PostgresStoredProcedureMixin",
     "PostgresExtendedStatisticsMixin",
     "PostgresAdvisoryLockMixin",
@@ -214,6 +219,7 @@ __all__ = [
     "PostgresJoinMixin",
     "PostgresTruncateMixin",
     "PostgresSchemaMixin",
+    "PostgresDatabaseMixin",
     "PostgresSequenceMixin",
     "PostgresTransactionMixin",
     "PostgresViewMixin",

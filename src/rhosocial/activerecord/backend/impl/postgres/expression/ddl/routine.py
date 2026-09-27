@@ -16,7 +16,7 @@ Note: CREATE/DROP PROCEDURE is covered by the existing
 ``PostgresStoredProcedureMixin``; this module covers FUNCTION and AGGREGATE.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -48,7 +48,6 @@ class PostgresCreateFunctionExpression(BaseExpression):
         cost: Estimated execution cost (optional).
         rows: Estimated rows returned (optional).
         is_strict: When True, add ``STRICT``.
-        dialect_options: Reserved.
 
     """
 
@@ -66,7 +65,6 @@ class PostgresCreateFunctionExpression(BaseExpression):
         cost: Optional[float] = None,
         rows: Optional[int] = None,
         strict: bool = False,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -80,7 +78,6 @@ class PostgresCreateFunctionExpression(BaseExpression):
         self.cost = cost
         self.rows = rows
         self.strict = strict
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -137,7 +134,6 @@ class PostgresCreateAggregateExpression(BaseExpression):
         schema: Optional schema for the aggregate.
         finalfunc: Optional final function name.
         initcond: Optional initial condition value.
-        dialect_options: Reserved.
 
     """
 
@@ -150,7 +146,6 @@ class PostgresCreateAggregateExpression(BaseExpression):
         schema: Optional[str] = None,
         finalfunc: Optional[str] = None,
         initcond: Optional[str] = None,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.name = name
@@ -159,7 +154,6 @@ class PostgresCreateAggregateExpression(BaseExpression):
         self.stype = stype
         self.finalfunc = finalfunc
         self.initcond = initcond
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

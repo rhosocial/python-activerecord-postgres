@@ -41,6 +41,9 @@ from rhosocial.activerecord.backend.expression.query_parts import (
 from rhosocial.activerecord.backend.expression.statements.ddl_index import (
     CreateIndexExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index_definition import (
+    PostgresCreateIndexExpression,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -202,15 +205,13 @@ def create_vector_index(
         if lists is not None:
             with_options["lists"] = lists
 
-    return CreateIndexExpression(
+    return PostgresCreateIndexExpression(
         dialect=dialect,
         index_name=idx_name,
         table_name=table_name,
         columns=[column_name],
         index_type=index_type_l.upper(),
         if_not_exists=if_not_exists,
-        dialect_options={
-            "opclasses": {column_name: _METRIC_OPCLASS[metric]},
-            "with": with_options,
-        },
+        opclasses={column_name: _METRIC_OPCLASS[metric]},
+        with_options=with_options,
     )

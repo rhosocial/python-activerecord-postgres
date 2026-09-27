@@ -25,7 +25,7 @@ Design principle: Sync and Async are separate and cannot coexist.
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
@@ -44,6 +44,7 @@ from rhosocial.activerecord.backend.introspection.types import (
     IndexColumnInfo,
     IndexInfo,
     IndexType,
+    IntrospectionScope,
     ReferentialAction,
     TableInfo,
     TableType,
@@ -253,6 +254,83 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             comment=row.get("comment"),
         )
 
+    @staticmethod
+    def _parse_materialized_view(row: Dict[str, Any], default_schema: str, default_name: str = "") -> ViewInfo:
+        """Build a ViewInfo for a materialized view.
+
+        Materialized views are never updatable/insertable; ``extra`` carries the
+        PostgreSQL specific state: ``is_materialized``, ``is_populated`` and
+        ``has_unique_index`` (the prerequisite for a CONCURRENTLY refresh).
+        """
+        return ViewInfo(
+            name=row.get("view_name") or default_name,
+            schema=row.get("schema_name") or default_schema,
+            definition=row.get("definition"),
+            is_updatable=False,
+            is_insertable=False,
+            comment=row.get("comment"),
+            extra={
+                "is_materialized": True,
+                "is_populated": bool(row.get("is_populated")),
+                "has_unique_index": bool(row.get("has_unique_index")),
+            },
+        )
+
+    @staticmethod
+    def _parse_materialized_views(
+        rows: List[Dict[str, Any]], schema: str
+    ) -> List[ViewInfo]:
+        return [
+            PostgreSQLIntrospectorMixin._parse_materialized_view(row, schema) for row in rows
+        ]
+
+    @staticmethod
+    def _parse_materialized_view_info(
+        rows: List[Dict[str, Any]], view_name: str, schema: str
+    ) -> Optional[ViewInfo]:
+        if not rows:
+            return None
+        return PostgreSQLIntrospectorMixin._parse_materialized_view(
+            rows[0], schema, view_name
+        )
+
+    def _build_materialized_view_list_sql(
+        self, schema: Optional[str], include_system: bool
+    ) -> Tuple[str, tuple]:
+        from ..expression.introspection import PostgresMaterializedViewListExpression
+
+        target_schema = schema if schema is not None else self._get_default_schema()
+        expr = PostgresMaterializedViewListExpression(self.dialect).schema(
+            target_schema
+        ).include_system(include_system)
+        return expr.to_sql()
+
+    def _build_materialized_view_info_sql(
+        self, view_name: str, schema: Optional[str]
+    ) -> Tuple[str, tuple]:
+        from ..expression.introspection import PostgresMaterializedViewInfoExpression
+
+        target_schema = schema if schema is not None else self._get_default_schema()
+        expr = PostgresMaterializedViewInfoExpression(self.dialect, view_name).schema(
+            target_schema
+        )
+        return expr.to_sql()
+
+    def _materialized_view_cache_key(
+        self, schema: Optional[str], view_name: Optional[str] = None, include_system: bool = False
+    ) -> str:
+        """Build the cache key for materialized view introspection results.
+
+        Materialized views share ``IntrospectionScope.VIEW`` with regular views,
+        so the key is namespaced to avoid cross-contamination.
+        """
+        return self._make_cache_key(
+            IntrospectionScope.VIEW,
+            view_name or "*",
+            schema=schema,
+            extra=f"matviews:{include_system}",
+        )
+
     def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[TriggerInfo]:
         triggers = []
         for row in rows:
@@ -344,6 +422,63 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             self._status_instance = SyncPostgreSQLStatusIntrospector(self._backend)
         return self._status_instance
 
+    def list_materialized_views(
+        self,
+        schema: Optional[str] = None,
+        include_system: bool = False,
+    ) -> List[ViewInfo]:
+        """List materialized views in the given schema.
+
+        Each entry carries ``extra['is_populated']`` (false for a view created
+        WITH NO DATA that was never refreshed) and ``extra['has_unique_index']``
+        (the prerequisite for REFRESH ... CONCURRENTLY).
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_system: Whether to include system objects.
+
+        Returns:
+            List of ViewInfo describing each materialized view.
+        """
+        target = schema if schema is not None else self._get_default_schema()
+        key = self._materialized_view_cache_key(schema, include_system=include_system)
+        cached = self._get_cached(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_materialized_view_list_sql(schema, include_system)
+        result = self._parse_materialized_views(self._executor.execute(sql, params), target)
+        self._set_cached(key, result)
+        return result
+
+    def get_materialized_view_info(
+        self, view_name: str, schema: Optional[str] = None
+    ) -> Optional[ViewInfo]:
+        """Return information for a single materialized view, or None if absent.
+
+        Args:
+            view_name: Materialized view name.
+            schema: Schema to inspect. Defaults to the connection default schema.
+
+        Returns:
+            ViewInfo, or None when the materialized view does not exist.
+        """
+        target = schema if schema is not None else self._get_default_schema()
+        key = self._materialized_view_cache_key(schema, view_name=view_name)
+        cached = self._get_cached(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_materialized_view_info_sql(view_name, schema)
+        result = self._parse_materialized_view_info(
+            self._executor.execute(sql, params), view_name, target
+        )
+        if result is not None:
+            self._set_cached(key, result)
+        return result
+
+    def materialized_view_exists(self, view_name: str, schema: Optional[str] = None) -> bool:
+        """Return True when the named materialized view exists."""
+        return self.get_materialized_view_info(view_name, schema) is not None
+
 
 class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntrospector):
     """Asynchronous introspector for PostgreSQL backends.
@@ -371,3 +506,58 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         if self._status_instance is None:
             self._status_instance = AsyncPostgreSQLStatusIntrospector(self._backend)
         return self._status_instance
+
+    async def list_materialized_views(
+        self,
+        schema: Optional[str] = None,
+        include_system: bool = False,
+    ) -> List[ViewInfo]:
+        """List materialized views in the given schema (async counterpart).
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_system: Whether to include system objects.
+
+        Returns:
+            List of ViewInfo describing each materialized view.
+        """
+        target = schema if schema is not None else self._get_default_schema()
+        key = self._materialized_view_cache_key(schema, include_system=include_system)
+        cached = self._get_cached(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_materialized_view_list_sql(schema, include_system)
+        rows = await self._executor.execute(sql, params)
+        result = self._parse_materialized_views(rows, target)
+        self._set_cached(key, result)
+        return result
+
+    async def get_materialized_view_info(
+        self, view_name: str, schema: Optional[str] = None
+    ) -> Optional[ViewInfo]:
+        """Return information for a single materialized view, or None (async).
+
+        Args:
+            view_name: Materialized view name.
+            schema: Schema to inspect. Defaults to the connection default schema.
+
+        Returns:
+            ViewInfo, or None when the materialized view does not exist.
+        """
+        target = schema if schema is not None else self._get_default_schema()
+        key = self._materialized_view_cache_key(schema, view_name=view_name)
+        cached = self._get_cached(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_materialized_view_info_sql(view_name, schema)
+        rows = await self._executor.execute(sql, params)
+        result = self._parse_materialized_view_info(rows, view_name, target)
+        if result is not None:
+            self._set_cached(key, result)
+        return result
+
+    async def materialized_view_exists(
+        self, view_name: str, schema: Optional[str] = None
+    ) -> bool:
+        """Return True when the named materialized view exists (async)."""
+        return await self.get_materialized_view_info(view_name, schema) is not None

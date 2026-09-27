@@ -11,6 +11,7 @@ from typing import Optional, Sequence
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.errors import IntegrityError
 from rhosocial.activerecord.backend.expression import (
     Column,
     CreateIndexExpression,
@@ -82,8 +83,22 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
         dialect=dialect,
         table=table_name,
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "created_at",
+                TimestampType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
         partition=PartitionClause(
@@ -206,10 +221,38 @@ def _create_production_parent_sql(dialect):
         dialect=dialect,
         table=PRODUCTION_PARTITION_TABLE,
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "created_at",
+                TimestampType(precision=6, dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "tenant_id",
+                BigIntType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "payload",
+                TextType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                ],
+            ),
         ],
         table_constraints=[
             TableConstraint(
@@ -743,7 +786,7 @@ class TestPostgreSQLPartitionOperations:
         assert row["partition_name"] == "ar_partition_events_default"
         assert row["payload"] == "default-overflow"
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             postgres_backend.execute(
                 *_create_range_partition_sql(
                     dialect,
@@ -961,7 +1004,7 @@ class TestAsyncPostgreSQLPartitionOperations:
         assert row["partition_name"] == "ar_partition_events_default"
         assert row["payload"] == "default-overflow"
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             await async_postgres_backend.execute(
                 *_create_range_partition_sql(
                     dialect,
@@ -1121,7 +1164,7 @@ class TestPostgreSQLProductionTimePartitionOperations:
         )
         assert [row["payload"] for row in rows] == ["year-start", "year-end"]
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             postgres_backend.execute(
                 *_insert_production_events_expression(
                     postgres_backend.dialect,
@@ -1357,7 +1400,7 @@ class TestAsyncPostgreSQLProductionTimePartitionOperations:
         )
         assert [row["payload"] for row in rows] == ["year-start", "year-end"]
 
-        with pytest.raises(Exception):
+        with pytest.raises(IntegrityError):
             await async_postgres_backend.execute(
                 *_insert_production_events_expression(
                     async_postgres_backend.dialect,

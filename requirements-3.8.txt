@@ -1,2 +1,2 @@
-psycopg[binary]
+psycopg[binary]>=3.2.13
 rhosocial-activerecord

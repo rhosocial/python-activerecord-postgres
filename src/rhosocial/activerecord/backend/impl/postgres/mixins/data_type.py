@@ -6,12 +6,17 @@ methods to check support for various PostgreSQL data type features
 based on the server version.
 """
 
+from typing import Tuple, TYPE_CHECKING
+
 
 class PostgresDataTypeMixin:
     """PostgreSQL data type enhancements implementation.
 
     All features are native, using version number for detection.
     """
+
+    if TYPE_CHECKING:
+        version: Tuple[int, int, int]
 
     def supports_multirange_type(self) -> bool:
         """Multirange is native feature, PG 14+."""

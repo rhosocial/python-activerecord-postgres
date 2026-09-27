@@ -10,7 +10,6 @@ import pytest
 from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.expression.statements import (
     AddColumn,
-    AlterColumn,
     ColumnDefinition,
     DropColumn,
     DropTableConstraint,
@@ -28,6 +27,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresForceRlsExpression,
     PostgresAlterTableSettingsExpression,
     PostgresClusterExpression,
+    PostgresAlterColumn,
 )
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
@@ -199,12 +199,12 @@ class TestPostgresAlterColumnUsingExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_using_clause(self, dialect):
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            dialect_options={"using": Column(dialect, "price") + Literal(dialect, 1)},
+            using=Column(dialect, "price") + Literal(dialect, 1),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -212,13 +212,13 @@ class TestPostgresAlterColumnUsingExpression:
         assert serialized == (1,)
 
     def test_using_clause_with_cascade(self, dialect):
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
             cascade=True,
-            dialect_options={"using": Column(dialect, "price")},
+            using=Column(dialect, "price"),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -227,19 +227,19 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_using_rejected_for_non_set_data_type(self, dialect):
         """USING is only valid on SET DATA TYPE."""
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DEFAULT",
             new_value="0",
-            dialect_options={"using": Column(dialect, "price")},
+            using=Column(dialect, "price"),
         )
         with pytest.raises(ValueError, match="USING"):
             action.to_sql()
 
     def test_without_using_unaffected(self, dialect):
         """No USING -> output matches the standard form."""
-        action = AlterColumn(
+        action = PostgresAlterColumn(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -346,9 +346,10 @@ class TestPostgresTypeDDL:
         )
         assert sql == 'CREATE TYPE "app"."color" AS ENUM (\'red\')'
 
-    def test_create_enum_empty_values_raises(self, dialect):
-        with pytest.raises(ValueError, match="at least one value"):
-            dialect.format_create_type_enum_statement("color", [])
+    def test_create_enum_empty_values(self, dialect):
+        sql, params = dialect.format_create_type_enum_statement("color", [])
+        assert sql == 'CREATE TYPE "color" AS ENUM ()'
+        assert params == ()
 
     def test_drop_type(self, dialect):
         sql, _ = dialect.format_drop_type_statement("color")
@@ -359,4 +360,264 @@ class TestPostgresTypeDDL:
             "color", schema="app", if_exists=True, cascade=True
         )
         assert sql == 'DROP TYPE IF EXISTS "app"."color" CASCADE'
+
+
+class TestPostgresConstraintEnforcement:
+    def test_capability_versions(self):
+        from rhosocial.activerecord.backend.expression import TableConstraintType
+
+        assert PostgresDialect((17, 0, 0)).supports_constraint_enforced() is False
+        assert PostgresDialect((18, 0, 0)).supports_constraint_enforced() is True
+        pg18 = PostgresDialect((18, 0, 0))
+        assert pg18.supports_alter_constraint_enforced() is False
+        assert pg18.supports_alter_constraint_enforced(TableConstraintType.FOREIGN_KEY) is True
+        assert pg18.supports_alter_constraint_enforced(TableConstraintType.CHECK) is False
+        pg19 = PostgresDialect((19, 0, 0))
+        assert pg19.supports_alter_constraint_enforced(TableConstraintType.FOREIGN_KEY) is True
+        assert pg19.supports_alter_constraint_enforced(TableConstraintType.CHECK) is True
+        assert PostgresDialect((14, 0, 0)).supports_validate_constraint() is True
+
+    def test_create_and_add_check_fk_enforcement(self):
+        from rhosocial.activerecord.backend.expression import (
+            AddTableConstraint,
+            Column,
+            ColumnConstraint,
+            ColumnConstraintType,
+            ColumnDefinition,
+            ForeignKeyConstraint,
+            Literal,
+            TableConstraint,
+            TableConstraintType,
+        )
+        from rhosocial.activerecord.backend.expression.types import IntegerType
+
+        dialect = PostgresDialect((18, 0, 0))
+        condition = Column(dialect, "age") > Literal(dialect, 0, inline_literals=True)
+        check = TableConstraint(
+            dialect,
+            TableConstraintType.CHECK,
+            name="age_check",
+            check_condition=condition,
+            enforced=False,
+        )
+        fk = ForeignKeyConstraint(
+            dialect,
+            columns=["parent_id"],
+            foreign_key_table="people",
+            foreign_key_columns=["id"],
+            enforced=True,
+        )
+        column_check = ColumnConstraint(
+            dialect,
+            ColumnConstraintType.CHECK,
+            check_condition=condition,
+            enforced=False,
+        )
+
+        assert check.to_sql()[0] == 'CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
+        assert fk.to_sql()[0] == (
+            'FOREIGN KEY ("parent_id") REFERENCES "people"("id") ENFORCED'
+        )
+        assert ColumnDefinition(
+            dialect, "age", IntegerType(dialect), [column_check]
+        ).to_sql()[0] == '"age" INTEGER CHECK ("age" > 0) NOT ENFORCED'
+        assert AddTableConstraint(dialect, check).to_sql()[0] == (
+            'ADD CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
+        )
+
+    def test_not_valid_is_limited_to_check_and_fk(self):
+        from rhosocial.activerecord.backend.expression import AddTableConstraint
+        from rhosocial.activerecord.backend.expression.statements import (
+            ConstraintValidation,
+            ForeignKeyConstraint,
+            TableConstraint,
+            TableConstraintType,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
+
+        dialect = PostgresDialect((18, 0, 0))
+        constraint = ForeignKeyConstraint(
+            dialect,
+            columns=["parent_id"],
+            foreign_key_table="people",
+            foreign_key_columns=["id"],
+            validation=ConstraintValidation.NOVALIDATE,
+        )
+        assert AddTableConstraint(dialect, constraint).to_sql()[0].endswith("NOT VALID")
+        string_constraint = TableConstraint(
+            dialect,
+            " check ",
+            check_condition=Column(dialect, "age") > Literal(dialect, 0, inline_literals=True),
+            validation=" not valid ",
+        )
+        assert AddTableConstraint(dialect, string_constraint).to_sql()[0].endswith("NOT VALID")
+        assert "NOT VALID" not in string_constraint.to_sql()[0]
+        for constraint_type in (TableConstraintType.PRIMARY_KEY, TableConstraintType.UNIQUE):
+            table_constraint = TableConstraint(
+                dialect,
+                constraint_type,
+                columns=["id"],
+                validation=ConstraintValidation.NOVALIDATE,
+            )
+            with pytest.raises(ValueError, match="NOT VALID"):
+                AddTableConstraint(dialect, table_constraint).to_sql()
+        exclude = PostgresExcludeConstraint(
+            dialect,
+            elements=[("range", "&&")],
+            validation=ConstraintValidation.NOVALIDATE,
+        )
+        with pytest.raises(ValueError, match="NOT VALID"):
+            AddTableConstraint(dialect, exclude).to_sql()
+
+    def test_alter_and_validate_actions(self):
+        from rhosocial.activerecord.backend.expression import (
+            ColumnConstraintType,
+            TableConstraintType,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresAlterConstraint,
+            PostgresValidateConstraint,
+        )
+
+        pg18 = PostgresDialect((18, 0, 0))
+        fk_action = PostgresAlterConstraint(
+            pg18,
+            "parent_fk",
+            False,
+            constraint_type=ColumnConstraintType.FOREIGN_KEY,
+        )
+        assert fk_action.constraint_type is TableConstraintType.FOREIGN_KEY
+        assert fk_action.to_sql()[0] == (
+            'ALTER CONSTRAINT "parent_fk" NOT ENFORCED'
+        )
+        with pytest.raises(UnsupportedFeatureError):
+            PostgresAlterConstraint(
+                pg18,
+                "age_check",
+                False,
+                constraint_type=TableConstraintType.CHECK,
+            ).to_sql()
+        assert PostgresValidateConstraint(pg18, "age_check").to_sql()[0] == (
+            'VALIDATE CONSTRAINT "age_check"'
+        )
+
+        pg19 = PostgresDialect((19, 0, 0))
+        assert PostgresAlterConstraint(
+            pg19,
+            "age_check",
+            False,
+            constraint_type=TableConstraintType.CHECK,
+        ).to_sql()[0] == 'ALTER CONSTRAINT "age_check" NOT ENFORCED'
+        with pytest.raises(TypeError):
+            PostgresAlterConstraint(pg19, "age_check", False)
+
+    def test_exclude_create_and_add(self):
+        from rhosocial.activerecord.backend.expression import (
+            AddTableConstraint,
+            Column,
+            ColumnDefinition,
+            CreateTableExpression,
+        )
+        from rhosocial.activerecord.backend.expression.types import IntegerType
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
+
+        dialect = PostgresDialect((18, 0, 0))
+        with pytest.raises(ValueError, match="at least one element"):
+            PostgresExcludeConstraint(dialect).to_sql()
+        exclude = PostgresExcludeConstraint(
+            dialect,
+            name="range_ex",
+            elements=[("range", "&&")],
+        )
+        create = CreateTableExpression(
+            dialect,
+            "ranges",
+            [ColumnDefinition(dialect, "range", IntegerType(dialect))],
+            table_constraints=[exclude],
+        )
+        assert create.to_sql()[0] == (
+            'CREATE TABLE "ranges" ("range" INTEGER, CONSTRAINT "range_ex" '
+            'EXCLUDE USING gist ("range" WITH &&))'
+        )
+        assert AddTableConstraint(dialect, exclude).to_sql()[0] == (
+            'ADD CONSTRAINT "range_ex" EXCLUDE USING gist ("range" WITH &&)'
+        )
+
+        from rhosocial.activerecord.backend.expression.statements import (
+            ConstraintValidation,
+            TableConstraint,
+            TableConstraintType,
+        )
+
+        not_valid_check = TableConstraint(
+            dialect,
+            TableConstraintType.CHECK,
+            check_condition=Column(dialect, "id") > 0,
+            validation=ConstraintValidation.NOVALIDATE,
+        )
+        invalid_create = CreateTableExpression(
+            dialect,
+            "invalid_checks",
+            [ColumnDefinition(dialect, "id", IntegerType(dialect))],
+            table_constraints=[not_valid_check],
+        )
+        with pytest.raises(ValueError, match="only valid when adding"):
+            invalid_create.to_sql()
+
+    def test_exclude_expression_parentheses_and_recursive_binding(self):
+        from rhosocial.activerecord.backend.expression import (
+            Column,
+            FunctionCall,
+            Literal,
+            RawSQLExpression,
+            RawSQLPredicate,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresExcludeConstraint,
+        )
+        dialect = PostgresDialect((18, 0, 0))
+        declared = PostgresExcludeConstraint(
+            dialect,
+            elements=[
+                (
+                    FunctionCall(dialect, "LOWER", Column(dialect, "name")),
+                    "=",
+                )
+            ],
+            where=Column(dialect, "active")
+            == Literal(dialect, True, inline_literals=True),
+        )
+
+        assert declared.to_sql() == (
+            'EXCLUDE USING gist ((LOWER("name")) WITH =) '
+            'WHERE ("active" = TRUE)',
+            (),
+        )
+
+        with pytest.raises(ValueError, match="Invalid exclude operator"):
+            PostgresExcludeConstraint(
+                dialect,
+                elements=[("name", "is not")],
+            ).to_sql()
+        with pytest.raises(ValueError, match="parenthesized"):
+            PostgresExcludeConstraint(
+                dialect,
+                elements=[("(lower(name))", "=")],
+            ).to_sql()
+        with pytest.raises(ValueError, match="unbalanced"):
+            PostgresExcludeConstraint(
+                dialect,
+                elements=[(RawSQLExpression(dialect, "lower(name"), "=")],
+            ).to_sql()
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            PostgresExcludeConstraint(
+                dialect,
+                elements=[(RawSQLExpression(dialect, "lower(name)", ("x",)), "=")],
+            ).to_sql()
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            PostgresExcludeConstraint(
+                dialect,
+                elements=[("name", "=")],
+                where=RawSQLPredicate(dialect, "active = %s", (True,)),
+            ).to_sql()
 

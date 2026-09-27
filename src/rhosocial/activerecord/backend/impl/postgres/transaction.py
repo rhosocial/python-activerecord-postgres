@@ -18,7 +18,7 @@ from rhosocial.activerecord.backend.transaction import (
 
 if TYPE_CHECKING:
     from .backend import PostgresBackend
-    from .async_backend import AsyncPostgresBackend
+    from .backend.async_backend import AsyncPostgresBackend
 
 
 class PostgresTransactionMixin:

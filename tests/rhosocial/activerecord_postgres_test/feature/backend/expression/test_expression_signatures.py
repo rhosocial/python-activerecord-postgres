@@ -4,6 +4,9 @@
 These tests build expressions with a bare ``PostgresDialect`` (no DB
 connection) and assert on the generated SQL, so they run without a server.
 """
+import pytest
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
     ILIKEExpression,
@@ -74,13 +77,13 @@ class TestEnumTypeNameExpression:
     def test_name_without_schema(self, postgres_dialect):
         expr = EnumTypeNameExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
-        assert sql == "status"
+        assert sql == '"status"'
         assert params == ()
 
     def test_name_with_schema(self, postgres_dialect):
         expr = EnumTypeNameExpression(postgres_dialect, name="status", schema="app")
         sql, params = expr.to_sql()
-        assert sql == "app.status"
+        assert sql == '"app"."status"'
         assert params == ()
 
 
@@ -108,17 +111,19 @@ class TestCreateEnumTypeExpression:
             postgres_dialect, name="status", values=["active", "inactive"],
         )
         sql, params = expr.to_sql()
-        assert sql == "CREATE TYPE status AS ENUM ('active', 'inactive')"
+        assert sql == "CREATE TYPE \"status\" AS ENUM ('active', 'inactive')"
         assert params == ()
 
-    def test_create_with_schema_and_if_not_exists(self, postgres_dialect):
+    def test_create_if_not_exists_fails_fast(self, postgres_dialect):
         expr = CreateEnumTypeExpression(
-            postgres_dialect, name="priority", values=["low", "high"],
-            schema="app", if_not_exists=True,
+            postgres_dialect,
+            name="priority",
+            values=["low", "high"],
+            schema="app",
+            if_not_exists=True,
         )
-        sql, params = expr.to_sql()
-        assert sql == "CREATE TYPE IF NOT EXISTS app.priority AS ENUM ('low', 'high')"
-        assert params == ()
+        with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE IF NOT EXISTS"):
+            expr.to_sql()
 
 
 class TestDropEnumTypeExpression:
@@ -127,7 +132,7 @@ class TestDropEnumTypeExpression:
     def test_basic_drop(self, postgres_dialect):
         expr = DropEnumTypeExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
-        assert sql == "DROP TYPE status"
+        assert sql == "DROP TYPE \"status\""
         assert params == ()
 
     def test_drop_with_if_exists_and_cascade(self, postgres_dialect):
@@ -136,7 +141,7 @@ class TestDropEnumTypeExpression:
             if_exists=True, cascade=True,
         )
         sql, params = expr.to_sql()
-        assert sql == "DROP TYPE IF EXISTS app.status CASCADE"
+        assert sql == "DROP TYPE IF EXISTS \"app\".\"status\" CASCADE"
         assert params == ()
 
 
@@ -148,7 +153,7 @@ class TestAlterEnumAddValueExpression:
             postgres_dialect, type_name="status", new_value="archived",
         )
         sql, params = expr.to_sql()
-        assert sql == "ALTER TYPE status ADD VALUE 'archived'"
+        assert sql == "ALTER TYPE \"status\" ADD VALUE 'archived'"
         assert params == ()
 
     def test_add_value_with_before_after(self, postgres_dialect):
@@ -157,28 +162,19 @@ class TestAlterEnumAddValueExpression:
             schema="app", before="active",
         )
         sql, params = expr.to_sql()
-        assert sql == "ALTER TYPE app.status ADD VALUE 'pending' BEFORE 'active'"
+        assert sql == "ALTER TYPE \"app\".\"status\" ADD VALUE 'pending' BEFORE 'active'"
         assert params == ()
 
 
 class TestCreateMultirangeTypeExpression:
-    """Tests for CreateMultirangeTypeExpression."""
-
-    def test_basic_create(self, postgres_dialect):
+    def test_explicit_multirange_ddl_fails_fast(self, postgres_dialect):
         expr = CreateMultirangeTypeExpression(
-            postgres_dialect, name="my_multirange", range_type="my_range",
+            postgres_dialect,
+            name="my_multirange",
+            range_type="my_range",
         )
-        sql, params = expr.to_sql()
-        assert sql == "CREATE TYPE my_multirange AS MULTIRANGE (my_range)"
-        assert params == ()
-
-    def test_create_with_schema(self, postgres_dialect):
-        expr = CreateMultirangeTypeExpression(
-            postgres_dialect, name="mr", range_type="int4range", schema="app",
-        )
-        sql, params = expr.to_sql()
-        assert sql == "CREATE TYPE app.mr AS MULTIRANGE (int4range)"
-        assert params == ()
+        with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE AS MULTIRANGE"):
+            expr.to_sql()
 
 
 class TestMultirangeAggFunctionExpression:
@@ -189,7 +185,7 @@ class TestMultirangeAggFunctionExpression:
             postgres_dialect, range_column="period", table_name="events",
         )
         sql, params = expr.to_sql()
-        assert sql == "SELECT multirange_agg(period) FROM events"
+        assert sql == 'SELECT multirange_agg("period") FROM "events"'
         assert params == ()
 
     def test_agg_with_where_and_schema(self, postgres_dialect):
@@ -198,5 +194,5 @@ class TestMultirangeAggFunctionExpression:
             where_clause="status = 'active'", schema="public",
         )
         sql, params = expr.to_sql()
-        assert sql == "SELECT multirange_agg(period) FROM public.events WHERE status = 'active'"
+        assert sql == "SELECT multirange_agg(\"period\") FROM \"public\".\"events\" WHERE status = 'active'"
         assert params == ()

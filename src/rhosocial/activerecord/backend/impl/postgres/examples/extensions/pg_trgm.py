@@ -233,7 +233,7 @@ if installed:
         columns=["title"],
         index_type="GIN",
         if_not_exists=True,
-        dialect_options={"opclasses": {"title": "gin_trgm_ops"}},
+        opclasses={"title": "gin_trgm_ops"},
     )
     sql, params = create_idx.to_sql()
     print("\n--- CREATE GIN INDEX ---")

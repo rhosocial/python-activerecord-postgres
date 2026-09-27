@@ -14,7 +14,7 @@ Version Requirements:
 - TRUNCATE option: PostgreSQL 14+
 """
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -83,8 +83,6 @@ class PostgresVacuumExpression(BaseExpression):
         skip_locked: bool = False,
         truncate: bool = False,
         columns: Optional[List[str]] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.table_name = table_name
@@ -99,7 +97,6 @@ class PostgresVacuumExpression(BaseExpression):
         self.skip_locked = skip_locked
         self.truncate = truncate
         self.columns = columns
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:
@@ -149,8 +146,6 @@ class PostgresAnalyzeExpression(BaseExpression):
         verbose: bool = False,
         skip_locked: bool = False,
         columns: Optional[List[str]] = None,
-        *,
-        dialect_options: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(dialect)
         self.table_name = table_name
@@ -158,7 +153,6 @@ class PostgresAnalyzeExpression(BaseExpression):
         self.verbose = verbose
         self.skip_locked = skip_locked
         self.columns = columns
-        self.dialect_options = dialect_options or {}
 
     @property
     def format_method(self) -> str:

@@ -169,7 +169,7 @@ if installed:
         columns=["name", "email"],
         index_type="BLOOM",
         if_not_exists=True,
-        dialect_options={"with": {"length": 64, "col1": 2, "col2": 2}},
+        with_options={"length": 64, "col1": 2, "col2": 2},
     )
     sql, params = create_idx_opts.to_sql()
     print("\n--- CREATE BLOOM INDEX WITH OPTIONS ---")

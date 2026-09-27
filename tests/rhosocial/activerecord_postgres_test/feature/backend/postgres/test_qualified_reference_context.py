@@ -40,7 +40,6 @@ RISK_SCHEMA = "tenant_qualified_ref"
 class Author(ActiveRecord):
     __table_name__ = "authors"
     __schema_name__ = RISK_SCHEMA
-    __primary_key__ = "id"
     c: ClassVar[FieldProxy] = FieldProxy()
 
     id: Optional[int] = None
@@ -51,7 +50,6 @@ class Author(ActiveRecord):
 class Book(ActiveRecord):
     __table_name__ = "books"
     __schema_name__ = RISK_SCHEMA
-    __primary_key__ = "id"
     c: ClassVar[FieldProxy] = FieldProxy()
 
     id: Optional[int] = None

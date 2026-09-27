@@ -4,7 +4,7 @@
 
 - Python 3.8 or higher
 - PostgreSQL 8.0 or higher (12+ recommended)
-- psycopg 3.2.12 or higher
+- `psycopg[binary]>=3.2.13`
 
 ## Installation
 
@@ -37,7 +37,7 @@ print("PostgreSQL backend installed successfully!")
 The package uses `psycopg` (psycopg3) as the PostgreSQL adapter. You can optionally install `psycopg-binary` for pre-compiled binaries:
 
 ```bash
-pip install psycopg-binary
+pip install "psycopg-binary>=3.2.13"
 ```
 
 **Note**: `psycopg-binary` is platform-specific. If unavailable for your platform, psycopg will compile from source automatically.

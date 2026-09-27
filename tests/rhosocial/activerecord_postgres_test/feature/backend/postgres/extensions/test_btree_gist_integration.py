@@ -8,8 +8,8 @@ and test:
 - GiST index creation with btree_gist operator class on INTEGER columns (gist_int4_ops)
 - Range queries using ComparisonPredicate on GiST-indexed columns
 
-btree_gist has no function factories. It works through CreateIndexExpression with
-index_type="GIST" and dialect_options={"opclasses": {"column": "gist_int4_ops"}} for
+btree_gist has no function factories. It works through PostgresCreateIndexExpression
+with index_type="GIST" and opclasses={"column": "gist_int4_ops"} for
 specifying btree_gist operator classes that enable B-tree equivalence on GiST indexes.
 The btree_gist extension provides opclasses like gist_int4_ops, gist_timestamp_ops,
 gist_text_ops, etc. that allow GiST indexes to support B-tree-like operations.
@@ -33,7 +33,9 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     TableExpression,
     Column,
-    CreateIndexExpression,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -117,14 +119,14 @@ class TestBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at",
             table_name="test_btree_gist",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"created_at": "gist_timestamp_ops"}},
+            opclasses={"created_at": "gist_timestamp_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -148,14 +150,14 @@ class TestBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_value",
             table_name="test_btree_gist",
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "gist_int4_ops"}},
+            opclasses={"value": "gist_int4_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -179,14 +181,14 @@ class TestBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at",
             table_name="test_btree_gist",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"created_at": "gist_timestamp_ops"}},
+            opclasses={"created_at": "gist_timestamp_ops"},
         )
         sql, params = create_idx.to_sql()
         backend.execute(sql, params)
@@ -282,14 +284,14 @@ class TestAsyncBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at_async",
             table_name="test_btree_gist_async",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"created_at": "gist_timestamp_ops"}},
+            opclasses={"created_at": "gist_timestamp_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)
@@ -314,14 +316,14 @@ class TestAsyncBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on INTEGER column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_value_async",
             table_name="test_btree_gist_async",
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"value": "gist_int4_ops"}},
+            opclasses={"value": "gist_int4_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)
@@ -346,14 +348,14 @@ class TestAsyncBtreeGistIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
-        create_idx = CreateIndexExpression(
+        create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at_async",
             table_name="test_btree_gist_async",
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
-            dialect_options={"opclasses": {"created_at": "gist_timestamp_ops"}},
+            opclasses={"created_at": "gist_timestamp_ops"},
         )
         sql, params = create_idx.to_sql()
         await backend.execute(sql, params)

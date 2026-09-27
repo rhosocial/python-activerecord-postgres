@@ -6,7 +6,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.statements.ddl_truncate import TruncateExpression
+    from ....expression.statements.ddl_truncate import TruncateExpression
 
 
 class PostgresTruncateMixin:
@@ -29,7 +29,13 @@ class PostgresTruncateMixin:
         - ``expr.cascade`` — add ``CASCADE``.
         """
         parts = ["TRUNCATE TABLE"]
-        parts.append(self.format_identifier(expr.table_name))
+        table_name = self.format_identifier(expr.table_name)
+        if expr.schema:
+            table_name = (
+                f"{self.format_identifier(expr.schema)}."
+                f"{table_name}"
+            )
+        parts.append(table_name)
 
         if expr.restart_identity:
             if not self.supports_truncate_restart_identity():

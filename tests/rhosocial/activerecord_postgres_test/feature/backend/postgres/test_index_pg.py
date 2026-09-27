@@ -31,6 +31,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterIndexExpression,
     PostgresAlterIndexActionType,
     PostgresReindexExpression,
+    PostgresCreateIndexExpression,
 )
 
 
@@ -640,42 +641,42 @@ class TestCreateIndexExpression:
 
     def test_nulls_not_distinct(self):
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=True, dialect_options={"nulls_not_distinct": True}
+        expr = PostgresCreateIndexExpression(
+            d, "idx_u", "t", ["a"], unique=True, nulls_not_distinct=True
         )
         sql, _ = expr.to_sql()
         assert sql == 'CREATE UNIQUE INDEX "idx_u" ON "t" ("a") NULLS NOT DISTINCT'
 
     def test_nulls_not_distinct_pg14_raises(self):
         d = PostgresDialect((14, 0, 0))
-        expr = CreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=True, dialect_options={"nulls_not_distinct": True}
+        expr = PostgresCreateIndexExpression(
+            d, "idx_u", "t", ["a"], unique=True, nulls_not_distinct=True
         )
         with pytest.raises(ValueError, match="NULLS NOT DISTINCT requires PostgreSQL 15"):
             expr.to_sql()
 
     def test_nulls_not_distinct_non_unique_raises(self):
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=False, dialect_options={"nulls_not_distinct": True}
+        expr = PostgresCreateIndexExpression(
+            d, "idx_u", "t", ["a"], unique=False, nulls_not_distinct=True
         )
         with pytest.raises(ValueError, match="NULLS NOT DISTINCT is only valid for UNIQUE"):
             expr.to_sql()
 
     def test_concurrent_and_nulls_not_distinct_pg15_raises(self):
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(
+        expr = PostgresCreateIndexExpression(
             d, "idx_u", "t", ["a"],
-            unique=True, concurrent=True, dialect_options={"nulls_not_distinct": True},
+            unique=True, concurrent=True, nulls_not_distinct=True,
         )
         with pytest.raises(ValueError, match="CONCURRENTLY.*NULLS NOT DISTINCT.*PostgreSQL 16"):
             expr.to_sql()
 
     def test_concurrent_and_nulls_not_distinct_pg16(self):
         d = PostgresDialect((16, 0, 0))
-        expr = CreateIndexExpression(
+        expr = PostgresCreateIndexExpression(
             d, "idx_u", "t", ["a"],
-            unique=True, concurrent=True, dialect_options={"nulls_not_distinct": True},
+            unique=True, concurrent=True, nulls_not_distinct=True,
         )
         sql, _ = expr.to_sql()
         assert "NULLS NOT DISTINCT" in sql
@@ -699,19 +700,19 @@ class TestDropIndexExpression:
 
     def test_drop_concurrently(self):
         d = PostgresDialect((18, 0, 0))
-        expr = DropIndexExpression(d, "idx_test", dialect_options={"concurrent": True})
+        expr = DropIndexExpression(d, "idx_test", concurrent=True)
         sql, _ = expr.to_sql()
         assert sql == 'DROP INDEX CONCURRENTLY "idx_test"'
 
     def test_drop_concurrently_pg17_raises(self):
         d = PostgresDialect((17, 0, 0))
-        expr = DropIndexExpression(d, "idx_test", dialect_options={"concurrent": True})
+        expr = DropIndexExpression(d, "idx_test", concurrent=True)
         with pytest.raises(ValueError, match="DROP INDEX CONCURRENTLY requires PostgreSQL 18"):
             expr.to_sql()
 
     def test_drop_concurrently_if_exists(self):
         d = PostgresDialect((18, 0, 0))
-        expr = DropIndexExpression(d, "idx_test", if_exists=True, dialect_options={"concurrent": True})
+        expr = DropIndexExpression(d, "idx_test", if_exists=True, concurrent=True)
         sql, _ = expr.to_sql()
         assert sql == 'DROP INDEX CONCURRENTLY IF EXISTS "idx_test"'
 
@@ -902,18 +903,18 @@ class TestCreateIndexExpressionAllOptions:
 
     def test_with_options(self):
         d = PostgresDialect()
-        expr = CreateIndexExpression(
+        expr = PostgresCreateIndexExpression(
             d, "idx_w", "t", ["a"],
-            dialect_options={"with": {"fillfactor": 70}},
+            with_options={"fillfactor": 70},
         )
         sql, _ = expr.to_sql()
         assert "WITH (fillfactor = 70)" in sql
 
     def test_opclasses(self):
         d = PostgresDialect()
-        expr = CreateIndexExpression(
+        expr = PostgresCreateIndexExpression(
             d, "idx_o", "t", ["a", "b"],
-            dialect_options={"opclasses": {"a": "text_pattern_ops"}},
+            opclasses={"a": "text_pattern_ops"},
         )
         sql, _ = expr.to_sql()
         assert '"a" text_pattern_ops' in sql

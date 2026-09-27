@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.statements.ddl_view import CreateViewExpression
+    from ....expression.statements.ddl_view import CreateViewExpression
 
 
 class PostgresViewMixin:
@@ -30,18 +30,6 @@ class PostgresViewMixin:
         return True
 
     def supports_cascade_view(self) -> bool:
-        return True
-
-    def supports_materialized_view(self) -> bool:
-        return True
-
-    def supports_refresh_materialized_view(self) -> bool:
-        return True
-
-    def supports_materialized_view_tablespace(self) -> bool:
-        return True
-
-    def supports_materialized_view_storage_options(self) -> bool:
         return True
 
     def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:

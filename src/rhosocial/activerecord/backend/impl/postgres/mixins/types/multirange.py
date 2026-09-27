@@ -1,20 +1,9 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/types/multirange.py
-"""PostgreSQL multirange type support mixin implementation.
-
-This module provides the MultirangeMixin class for handling PostgreSQL
-multirange type operations.
-
-For SQL expression generation of multirange operators and functions,
-use the function factories in ``functions/range.py`` instead of the
-removed format_* methods.
-
-Methods retained in this mixin:
-- supports_*: Capability detection
-- format_create_multirange_type_statement: DDL statement
-- format_multirange_agg_function: Complete SELECT query template
-"""
+"""PostgreSQL multirange support."""
 
 from typing import Optional, Tuple, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
@@ -23,112 +12,75 @@ if TYPE_CHECKING:
     )
 
 
-class MultirangeMixin:
-    """Mixin providing PostgreSQL multirange type support methods.
+__all__ = ["MultirangeMixin"]
 
-    This mixin implements the PostgresMultirangeSupport protocol.
-    Designed for multiple inheritance with SQLDialectBase.
-    """
+
+class MultirangeMixin:
+    if TYPE_CHECKING:
+        name: str
+        version: Tuple[int, int, int]
+
+        def format_identifier(self, identifier: str, need_quote: bool = True) -> str: ...
 
     def supports_multirange(self) -> bool:
-        """Check if multirange types are supported.
-
-        Returns:
-            True if PostgreSQL version >= 14.0
-        """
         return self.version >= (14, 0, 0)
 
     def supports_multirange_constructor(self) -> bool:
-        """Check if multirange constructor function is supported.
+        return self.version >= (14, 0, 0)
 
-        Returns:
-            True if PostgreSQL version >= 14.0
-        """
+    def supports_multirange_agg(self) -> bool:
         return self.version >= (14, 0, 0)
 
     def format_create_multirange_type_statement(
-        self, name: str, range_type: str, schema: Optional[str] = None
+        self,
+        name: str,
+        range_type: str,
+        schema: Optional[str] = None,
     ) -> Tuple[str, tuple]:
-        """Format CREATE TYPE statement for a custom multirange type.
-
-        Note: PostgreSQL automatically creates multirange types when you create
-        a range type. This method is for documentation and explicit creation
-        if needed.
-
-        Args:
-            name: The multirange type name
-            range_type: The associated range type
-            schema: Optional schema name
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-
-        Example:
-            >>> format_create_multirange_type_statement('my_multirange', 'my_range')
-            ('CREATE TYPE my_multirange AS MULTIRANGE (my_range)', ())
-        """
-        full_name = f"{schema}.{name}" if schema else name
-        sql = f"CREATE TYPE {full_name} AS MULTIRANGE ({range_type})"
-        return (sql, ())
+        raise UnsupportedFeatureError(
+            self.name,
+            "CREATE TYPE AS MULTIRANGE",
+            suggestion="set MULTIRANGE_TYPE_NAME on a RANGE definition",
+        )
 
     def format_multirange_agg_function(
-        self, range_column: str, table_name: str, where_clause: Optional[str] = None, schema: Optional[str] = None
+        self,
+        range_column: str,
+        table_name: str,
+        where_clause: Optional[str] = None,
+        schema: Optional[str] = None,
     ) -> Tuple[str, tuple]:
-        """Format multirange_agg aggregate function call.
-
-        The multirange_agg function aggregates multiple ranges into a multirange.
-
-        Args:
-            range_column: The range column to aggregate
-            table_name: Table name
-            where_clause: Optional WHERE clause
-            schema: Optional schema name
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-
-        Example:
-            >>> format_multirange_agg_function('period', 'events')
-            ('SELECT multirange_agg(period) FROM events', ())
-        """
-        full_table = f"{schema}.{table_name}" if schema else table_name
-        sql = f"SELECT multirange_agg({range_column}) FROM {full_table}"
+        if not self.supports_multirange_agg():
+            raise UnsupportedFeatureError(
+                self.name,
+                "multirange_agg",
+                suggestion="requires PostgreSQL 14+",
+            )
+        full_name = f"{schema}.{table_name}" if schema is not None else table_name
+        table_sql = ".".join(self.format_identifier(part) for part in full_name.split("."))
+        column_sql = self.format_identifier(range_column)
+        sql = f"SELECT multirange_agg({column_sql}) FROM {table_sql}"
         if where_clause:
             sql += f" WHERE {where_clause}"
-        return (sql, ())
-
-    # =========================================================================
-    # Expression-based format methods
-    # =========================================================================
+        return sql, ()
 
     def format_create_multirange_type_statement_expression(
-        self, expr: "CreateMultirangeTypeExpression"
+        self,
+        expr: "CreateMultirangeTypeExpression",
     ) -> Tuple[str, tuple]:
-        """Format CREATE TYPE ... AS MULTIRANGE from expression object.
-
-        Args:
-            expr: :class:`CreateMultirangeTypeExpression` instance.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
         return self.format_create_multirange_type_statement(
-            expr.name, expr.range_type, expr.schema
+            expr.name,
+            expr.range_type,
+            expr.schema,
         )
 
     def format_multirange_agg_function_expression(
-        self, expr: "MultirangeAggFunctionExpression"
+        self,
+        expr: "MultirangeAggFunctionExpression",
     ) -> Tuple[str, tuple]:
-        """Format multirange_agg aggregate function call from expression object.
-
-        Args:
-            expr: :class:`MultirangeAggFunctionExpression` instance.
-
-        Returns:
-            Tuple of (SQL string, empty params tuple).
-
-        """
         return self.format_multirange_agg_function(
-            expr.range_column, expr.table_name, expr.where_clause, expr.schema
+            expr.range_column,
+            expr.table_name,
+            expr.where_clause,
+            expr.schema,
         )
