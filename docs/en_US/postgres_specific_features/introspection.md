@@ -253,7 +253,7 @@ for idx in indexes:
 The async backend provides identical introspection methods with the same names as the sync version:
 
 ```python
-rhosocial.activerecord.backend.impl.postgres.async_backend import AsyncPostgresBackend
+rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 backend = AsyncPostgresBackend(
     host="localhost",
     port=5432,

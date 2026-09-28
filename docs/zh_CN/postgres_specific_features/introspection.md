@@ -253,7 +253,7 @@ for idx in indexes:
 异步后端提供相同的内省方法，方法名与同步版本相同：
 
 ```python
-rhosocial.activerecord.backend.impl.postgres.async_backend import AsyncPostgresBackend
+rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 backend = AsyncPostgresBackend(
     host="localhost",
     port=5432,
