@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/backend_base.py
+# src/rhosocial/activerecord/backend/impl/postgres/backend/base.py
 """PostgreSQL backend shared functionality.
 
 This module provides the base mixin class for PostgreSQL backend implementations,
