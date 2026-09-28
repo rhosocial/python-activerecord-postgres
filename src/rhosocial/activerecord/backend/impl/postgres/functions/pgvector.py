@@ -90,7 +90,7 @@ def vector_l2_distance(
         BinaryArithmeticExpression for the distance calculation
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> d = PostgresDialect()
         >>> expr = vector_l2_distance(d, "embedding", [1.0, 2.0, 3.0])
     """

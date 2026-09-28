@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
 from typing import ClassVar
 from rhosocial.activerecord.model import ActiveRecord
 from rhosocial.activerecord.base import FieldProxy
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     CreateTableExpression,
@@ -39,7 +39,7 @@ class User(ActiveRecord):
 
 def main():
     # Configure with PostgreSQL backend
-    from rhosocial.activerecord.backend.impl.postgres import PostgresConnectionConfig
+    from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
     config = PostgresConnectionConfig(
         host="db-dev-1-n.rho.im",

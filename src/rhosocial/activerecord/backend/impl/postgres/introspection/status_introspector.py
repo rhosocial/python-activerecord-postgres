@@ -245,7 +245,7 @@ class SyncPostgreSQLStatusIntrospector(
 
     Usage::
 
-        backend = PostgreSQLBackend(connection_config=config)
+        backend = PostgresBackend(connection_config=config)
         backend.connect()
         status = backend.introspector.status.get_overview()
         print(status.server_version)
@@ -839,7 +839,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
     Usage::
 
-        backend = AsyncPostgreSQLBackend(connection_config=config)
+        backend = AsyncPostgresBackend(connection_config=config)
         await backend.connect()
         status = await backend.introspector.status.get_overview()
         print(status.server_version)

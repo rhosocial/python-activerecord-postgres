@@ -20,10 +20,10 @@ SELECT pg_reload_conf();
 ### 使用 EXPLAIN ANALYZE
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend, PostgreSQLConnectionConfig
-
-backend = PostgreSQLBackend(
-    connection_config=PostgreSQLConnectionConfig(
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+backend = PostgresBackend(
+    connection_config=PostgresConnectionConfig(
         host='localhost',
         database='myapp',
         username='user',
@@ -87,7 +87,7 @@ VACUUM ANALYZE users;
 对于高并发应用，使用连接池：
 
 ```python
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host='localhost',
     database='myapp',
     username='user',

@@ -377,7 +377,7 @@ dialect.supports_postgis_spatial_functions()  # 使用缓存的扩展状态
 框架提供了便捷的方法进行版本感知的特性检测：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 # 连接并内省（一次性）
 backend = PostgresBackend(...)
@@ -517,7 +517,7 @@ backend.introspect_and_adapt()
 ### 检查协议支持
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.protocols import (
     SetOperationSupport, TruncateSupport, CTESupport
 )
@@ -539,7 +539,7 @@ assert dialect.supports_merge_statement()  # False（需要 ≥ 15）
 ### 版本特定特性检测
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # 旧版本 PostgreSQL
 old_dialect = PostgresDialect(version=(8, 3, 0))

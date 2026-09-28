@@ -4,7 +4,10 @@
 named-expression requires connection arguments and output arguments.
 """
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import (
+    PostgresBackend,
+    AsyncPostgresBackend,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 
 from .connection import create_connection_parent_parser, resolve_connection_config_from_args

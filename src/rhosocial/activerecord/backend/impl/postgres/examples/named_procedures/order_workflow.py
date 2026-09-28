@@ -135,7 +135,8 @@ from rhosocial.activerecord.backend.named_expression import ProcedureRunner, Tra
 if __name__ == "__main__":
     import os
 
-    from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig
+    from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+    from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
     from rhosocial.activerecord.backend.impl.postgres.examples.named_expressions.order_expressions import (
         prepare_orders_demo,
     )

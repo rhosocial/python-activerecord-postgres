@@ -35,14 +35,15 @@ class PostgresXMLAdapter:
 
     1. Register it explicitly on your backend instance:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresXMLAdapter
+    from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresXMLAdapter
     adapter = PostgresXMLAdapter()
     backend.adapter_registry.register(adapter, PostgresXML, str)
     ```
 
     2. Specify it directly when executing queries:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresXML, PostgresXMLAdapter
+    from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresXML
+    from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresXMLAdapter
     xml_adapter = PostgresXMLAdapter()
     result = backend.execute(
         "INSERT INTO docs (content) VALUES (%s)",

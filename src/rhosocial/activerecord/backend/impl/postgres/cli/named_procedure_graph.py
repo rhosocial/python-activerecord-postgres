@@ -15,7 +15,7 @@ Usage:
         myapp.npg.monthly_report
 """
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 from .connection import create_connection_parent_parser, resolve_connection_config_from_args
 from .output import create_provider
@@ -64,7 +64,7 @@ def handle(args):
 
         def backend_async_factory():
             nonlocal async_backend
-            from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+            from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 
             config = resolve_connection_config_from_args(args)
             async_backend = AsyncPostgresBackend(connection_config=config)

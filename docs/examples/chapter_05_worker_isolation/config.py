@@ -7,7 +7,7 @@ import os
 import yaml
 from typing import Optional  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 

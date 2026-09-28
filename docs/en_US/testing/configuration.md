@@ -10,9 +10,8 @@ The `dummy` backend is recommended for unit tests as it does not require a real 
 
 ```python
 from rhosocial.activerecord.model import ActiveRecord
-from rhosocial.activerecord.backend.impl.dummy import DummyBackend, DummyConnectionConfig
-
-
+from rhosocial.activerecord.backend.impl.dummy.backend import DummyBackend
+rhosocial.activerecord.backend.config import ConnectionConfig
 class User(ActiveRecord):
     name: str
     email: str
@@ -25,7 +24,7 @@ class User(ActiveRecord):
 
 
 # Configure Dummy backend
-config = DummyConnectionConfig()
+config = ConnectionConfig()
 User.configure(config, DummyBackend)
 ```
 
@@ -34,7 +33,8 @@ User.configure(config, DummyBackend)
 For tests requiring real database behavior, use the SQLite backend:
 
 ```python
-from rhosocial.activerecord.backend.impl.sqlite import SQLiteBackend, SQLiteConnectionConfig
+from rhosocial.activerecord.backend.impl.sqlite.backend import SQLiteBackend
+from rhosocial.activerecord.backend.impl.sqlite.config import SQLiteConnectionConfig
 
 
 class User(ActiveRecord):
@@ -59,9 +59,8 @@ For complete PostgreSQL behavior testing, use the PostgreSQL backend:
 
 ```python
 import os
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend, PostgreSQLConnectionConfig
-
-
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 class User(ActiveRecord):
     name: str
     email: str
@@ -74,26 +73,25 @@ class User(ActiveRecord):
 
 
 # Read configuration from environment variables
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host=os.environ.get('PG_HOST', 'localhost'),
     port=int(os.environ.get('PG_PORT', 5432)),
     database=os.environ.get('PG_DATABASE', 'test'),
     username=os.environ.get('PG_USER', 'postgres'),
     password=os.environ.get('PG_PASSWORD', ''),
 )
-User.configure(config, PostgreSQLBackend)
+User.configure(config, PostgresBackend)
 ```
 
 ## Test Fixtures
 
 ```python
 import pytest
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend, PostgreSQLConnectionConfig
-
-
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 @pytest.fixture
 def postgres_config():
-    return PostgreSQLConnectionConfig(
+    return PostgresConnectionConfig(
         host='localhost',
         port=5432,
         database='test',
@@ -104,7 +102,7 @@ def postgres_config():
 
 @pytest.fixture
 def postgres_backend(postgres_config):
-    backend = PostgreSQLBackend(connection_config=postgres_config)
+    backend = PostgresBackend(connection_config=postgres_config)
     backend.connect()
     yield backend
     backend.disconnect()

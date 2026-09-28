@@ -46,7 +46,7 @@ class PostgresVacuumExpression(BaseExpression):
         columns: Specific columns to analyze (PG 16+).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> vacuum = PostgresVacuumExpression(
         ...     dialect=dialect,
@@ -118,7 +118,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         columns: Specific columns to analyze (PG 16+).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> analyze = PostgresAnalyzeExpression(
         ...     dialect=dialect,

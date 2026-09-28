@@ -36,7 +36,7 @@ They are consumed by ``PostgresIndexMixin.format_create_index_statement`` /
 
 Example::
 
-    from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
         PostgresCreateIndexExpression,
     )
@@ -89,7 +89,7 @@ class PostgresAlterIndexExpression(BaseExpression):
     - Bulk tablespace move with ALL IN TABLESPACE
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Rename index
         >>> expr = PostgresAlterIndexExpression(
@@ -153,7 +153,7 @@ class PostgresReindexExpression(BaseExpression):
         verbose: Print progress messages.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Reindex a specific index
         >>> reindex = PostgresReindexExpression(

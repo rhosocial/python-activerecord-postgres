@@ -79,7 +79,7 @@ def citext_literal(
         BaseExpression with ::citext type cast applied
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> citext_literal(dialect, 'Hello World')
         # Produces: 'Hello World'::citext

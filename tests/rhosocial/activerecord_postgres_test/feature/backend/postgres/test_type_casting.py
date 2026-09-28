@@ -11,7 +11,7 @@ import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     MONEY, NUMERIC, FLOAT8, INTEGER, VARCHAR, TEXT,
     JSONB, TIMESTAMP, TIMESTAMPTZ, BOOLEAN, BIGINT,

@@ -17,7 +17,7 @@ PostgreSQL 扩展系统允许安装额外的功能模块，如：
 ### 基本用法
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(
     host='localhost',

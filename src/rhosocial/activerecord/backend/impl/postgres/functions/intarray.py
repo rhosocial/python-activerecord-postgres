@@ -89,7 +89,7 @@ def intarray_contains(
         BinaryExpression for column @> values
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> intarray_contains(dialect, 'tags', '{1,2}')
         # Generates SQL: tags @> '{1,2}'

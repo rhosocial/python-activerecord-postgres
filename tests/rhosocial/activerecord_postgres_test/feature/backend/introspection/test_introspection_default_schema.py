@@ -10,7 +10,7 @@ Both introspection stacks gained config-aware default-schema resolution:
 
 Priority: config.default_schema > first entry of config.search_path > 'public'.
 """
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.introspection import (

@@ -92,7 +92,7 @@ def st_rast_from_hexwkb(
         FunctionCall for ST_SetSRID(ST_RastFromHexWKB(raster_data), srid)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> st_rast_from_hexwkb(dialect, '0100000...', srid=4326)
         # Generates: ST_SetSRID(ST_RastFromHexWKB('0100000...'), 4326)

@@ -5,7 +5,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import ColumnCommentClause, ColumnDefinition
 from rhosocial.activerecord.backend.expression.types import TextType
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresColumnDefinition,
     PostgresColumnOptions,

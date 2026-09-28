@@ -162,7 +162,8 @@ def prepare_orders_demo(backend) -> None:
 if __name__ == "__main__":
     import os
 
-    from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig
+    from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+    from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
     config = PostgresConnectionConfig(
         host=os.getenv("POSTGRES_HOST", "127.0.0.1"),

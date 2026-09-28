@@ -70,7 +70,7 @@ pip install rhosocial-activerecord-postgres
 
 ```python
 from rhosocial.activerecord.model import ActiveRecord
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from typing import Optional
 from uuid import UUID

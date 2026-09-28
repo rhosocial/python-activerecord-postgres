@@ -40,7 +40,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..",
                              "python-activerecord-postgres", "src"))
 
 from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 

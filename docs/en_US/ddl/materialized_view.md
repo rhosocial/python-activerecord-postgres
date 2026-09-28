@@ -25,7 +25,7 @@ usable; they simply do not carry `schema` / `if_not_exists`.
 
 ```python
 from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression, TableExpression
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
 )
@@ -86,7 +86,7 @@ standard heap relation options, enumerated by
 [`PostgresStorageParameter`](../../api/storage_parameters.md):
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 
 PostgresStorageParameter.FILLFACTOR.value            # 'fillfactor'
 PostgresStorageParameter.FILLFACTOR.value_type       # PostgresStorageParameterValueType.INT

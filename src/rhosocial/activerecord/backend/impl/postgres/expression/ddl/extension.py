@@ -38,7 +38,7 @@ class PostgresCreateExtensionExpression(BaseExpression):
         cascade: Cascade to dependent extensions.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> create_ext = PostgresCreateExtensionExpression(
         ...     dialect=dialect,
@@ -94,7 +94,7 @@ class PostgresDropExtensionExpression(BaseExpression):
         restrict: Drop only if no dependent objects (RESTRICT).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> drop_ext = PostgresDropExtensionExpression(
         ...     dialect=dialect,

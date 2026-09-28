@@ -44,7 +44,7 @@ class PostgresEnumType(BaseExpression):
         schema: Optional schema name
 
     Examples:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> status_enum = PostgresEnumType(
         ...     dialect=dialect,

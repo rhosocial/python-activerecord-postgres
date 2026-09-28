@@ -4,7 +4,7 @@
 import os
 from dataclasses import replace
 from typing import Dict, Any, Tuple, Type
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.testsuite.core.pool import pooled_database_name
 

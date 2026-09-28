@@ -175,7 +175,7 @@ class AsyncPostgresBackend(
         # Initialize transaction manager (will use backend.execute())
         self._transaction_manager = AsyncPostgresTransactionManager(self, self.logger)
 
-        self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
+        self.log(logging.INFO, "AsyncPostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
         """Create and return an AsyncPostgreSQLIntrospector with an async executor."""

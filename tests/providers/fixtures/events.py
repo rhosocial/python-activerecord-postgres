@@ -20,9 +20,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TimestampTzType,
     VarCharType,
 )
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresSerialType,
-)
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresSerialType
 
 
 # ---------------------------------------------------------------------------

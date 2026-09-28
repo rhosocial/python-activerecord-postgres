@@ -8,7 +8,7 @@ query classes context awareness (ActiveQuery, CTEQuery, SetOperationQuery).
 from typing import Type, Tuple, Optional, List
 
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig  # noqa: F401
 from rhosocial.activerecord.connection.pool import BackendPool, AsyncBackendPool, PoolConfig
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -103,7 +103,7 @@ class QueryConnectionProvider(IQueryConnectionProvider):
 
     async def setup_async_pool_and_model(self, scenario_name: str) -> Tuple[AsyncBackendPool, Type[AsyncActiveRecord]]:
         """Setup async connection pool and model for query context tests."""
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 
         _, config = get_scenario(scenario_name)
 

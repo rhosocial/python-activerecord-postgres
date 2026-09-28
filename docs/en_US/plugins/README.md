@@ -17,7 +17,7 @@ The backend automatically detects server capabilities and installed extensions v
 ### Basic Usage
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(
     host='localhost',

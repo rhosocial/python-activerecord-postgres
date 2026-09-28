@@ -107,8 +107,10 @@ class User(ActiveRecord):
 For PostgreSQL-specific types with registered adapters, use the corresponding wrapper classes:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresMoney, Point, PostgresTsVector
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresMoney,
+    Point,
+    PostgresTsVector,
 )
 
 class Order(ActiveRecord):
@@ -136,9 +138,8 @@ backend.execute(
 **Method 2: Use PostgresRange wrapper (recommended for ActiveRecord models)**
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresRange, PostgresRangeAdapter
-)
+from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresRange
+from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresRangeAdapter
 
 # Manually register the adapter
 backend.adapter_registry.register(PostgresRangeAdapter(), PostgresRange, str)
@@ -152,10 +153,15 @@ class Order(ActiveRecord):
 For types with str→str mapping conflicts, you must explicitly register the adapter:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresXML, PostgresXMLAdapter,
-    PostgresBitString, PostgresBitStringAdapter,
-    PostgresJsonPath, PostgresJsonPathAdapter
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresXML,
+    PostgresBitString,
+    PostgresJsonPath,
+)
+from rhosocial.activerecord.backend.impl.postgres.adapters import (
+    PostgresXMLAdapter,
+    PostgresBitStringAdapter,
+    PostgresJsonPathAdapter,
 )
 
 # Method 1: Global registration on backend
@@ -175,9 +181,13 @@ result = backend.execute(
 
 ```python
 from rhosocial.activerecord import ActiveRecord
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresXML, PostgresXMLAdapter,
-    PostgresBitString, PostgresBitStringAdapter
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresXML,
+    PostgresBitString,
+)
+from rhosocial.activerecord.backend.impl.postgres.adapters import (
+    PostgresXMLAdapter,
+    PostgresBitStringAdapter,
 )
 
 class Document(ActiveRecord):

@@ -14,11 +14,11 @@ Covers:
 
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres import (
+from rhosocial.activerecord.backend.impl.postgres.backend import (
     AsyncPostgresBackend,
     PostgresBackend,
-    PostgresConnectionConfig,
 )
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 
 class FakeConnection:

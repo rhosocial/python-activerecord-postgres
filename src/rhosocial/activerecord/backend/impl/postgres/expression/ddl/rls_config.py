@@ -57,7 +57,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
             ``ALWAYS`` has no meaning with ``DISABLE`` and raises an error.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresAlterTableRlsExpression(
         ...     dialect, table_name="orders", mode=RlsConfigurationMode.ENABLE

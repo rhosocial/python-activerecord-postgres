@@ -23,7 +23,10 @@ import asyncio
 import time
 import logging
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import (
+    PostgresBackend,
+    AsyncPostgresBackend,
+)
 
 
 logger = logging.getLogger(__name__)

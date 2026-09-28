@@ -24,7 +24,7 @@
 
 ```python
 from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression, TableExpression
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
 )
@@ -83,7 +83,7 @@ create = PostgresCreateMaterializedViewExpression(
 关系选项，已由 [`PostgresStorageParameter`](../../api/storage_parameters.md) 枚举：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 
 PostgresStorageParameter.FILLFACTOR.value                  # 'fillfactor'
 PostgresStorageParameter.FILLFACTOR.value_type             # PostgresStorageParameterValueType.INT

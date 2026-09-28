@@ -10,7 +10,7 @@ object behaves as documented.
 import pytest
 
 from rhosocial.activerecord.backend.errors import DatabaseError
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterMaterializedViewExpression,
     PostgresChangeMaterializedViewOwnerAction,

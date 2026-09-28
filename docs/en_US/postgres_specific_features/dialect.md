@@ -8,7 +8,7 @@ PostgreSQL uses the `::` operator for type casting, which is PostgreSQL-specific
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import INTEGER, NUMERIC, MONEY
 
 dialect = PostgresDialect()
@@ -32,7 +32,7 @@ PostgreSQL supports chained type conversions:
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import MONEY, NUMERIC, FLOAT8
 
 dialect = PostgresDialect()

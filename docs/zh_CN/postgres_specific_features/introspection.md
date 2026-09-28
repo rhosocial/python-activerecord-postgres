@@ -19,9 +19,8 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 ### 访问内省器
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend
-
-backend = PostgreSQLBackend(
+rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+backend = PostgresBackend(
     host="localhost",
     port=5432,
     database="mydb",
@@ -254,9 +253,8 @@ for idx in indexes:
 异步后端提供相同的内省方法，方法名与同步版本相同：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgreSQLBackend
-
-backend = AsyncPostgreSQLBackend(
+rhosocial.activerecord.backend.impl.postgres.async_backend import AsyncPostgresBackend
+backend = AsyncPostgresBackend(
     host="localhost",
     port=5432,
     database="mydb",

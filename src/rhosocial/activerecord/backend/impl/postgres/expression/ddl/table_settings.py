@@ -50,7 +50,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
             ``logging_mode``.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresAlterTableSettingsExpression(
         ...     dialect, table_name="orders", mode=LoggingMode.UNLOGGED

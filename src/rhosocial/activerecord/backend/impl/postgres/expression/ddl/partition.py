@@ -74,7 +74,7 @@ class PartitionValue(BaseExpression):
         partition_type: Optional RANGE, LIST, or HASH context.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> PartitionValue(dialect=dialect, value=None).to_sql()
         ('NULL', ())
@@ -169,7 +169,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         if_not_exists: Add IF NOT EXISTS clause.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # RANGE partition
         >>> partition = PostgresCreatePartitionExpression(
@@ -243,7 +243,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         finalize: Finalize concurrent detach (PG 14+).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> detach = PostgresDetachPartitionExpression(
         ...     dialect=dialect,
@@ -299,7 +299,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         UnsupportedFeatureError: If ``concurrently=True``.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> attach = PostgresAttachPartitionExpression(
         ...     dialect=dialect,

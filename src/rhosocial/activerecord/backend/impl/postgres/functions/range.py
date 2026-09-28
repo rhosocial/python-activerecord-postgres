@@ -69,7 +69,7 @@ def range_contains(
         BinaryExpression for range @> element
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> range_contains(dialect, 'int4range_col', 5)
     """

@@ -159,7 +159,7 @@ class EventsAsyncProvider(EventsProviderBase, IEventsAsyncProvider):
         self._active_async_backends = []
 
     async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
         _, config = get_scenario(scenario_name)
         await model_class.configure(config, AsyncPostgresBackend)
         backend_instance = model_class.__backend__

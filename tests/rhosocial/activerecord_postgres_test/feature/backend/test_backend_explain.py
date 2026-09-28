@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.explain import (
 )
 from rhosocial.activerecord.backend.expression import RawSQLExpression
 from rhosocial.activerecord.backend.expression.statements import ExplainOptions
-from rhosocial.activerecord.backend.impl.postgres import (
+from rhosocial.activerecord.backend.impl.postgres.explain import (
     PostgresExplainResult,
     PostgresExplainPlanLine,
 )

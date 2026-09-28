@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     PartitionStrategy,
     TruncateExpression,
 )
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
     PostgresColumnDefinition,

@@ -546,7 +546,7 @@ StorageBackendBase (ABC)
 ```python
 # 1. User configures model
 from rhosocial.activerecord.model import ActiveRecord
-from rhosocial.activerecord.backend.impl.sqlite import SQLiteBackend
+from rhosocial.activerecord.backend.impl.sqlite.backend import SQLiteBackend
 
 class User(ActiveRecord):
     __table_name__ = "users"
@@ -616,7 +616,7 @@ def discover_backends():
 
     # Check for installed backends (each uses only native drivers)
     try:
-        from rhosocial.activerecord.backend.impl.mysql import MySQLBackend
+        from rhosocial.activerecord.backend.impl.mysql.backend import MySQLBackend
         backends['mysql'] = MySQLBackend  # Uses mysql-connector-python directly
     except ImportError:
         pass

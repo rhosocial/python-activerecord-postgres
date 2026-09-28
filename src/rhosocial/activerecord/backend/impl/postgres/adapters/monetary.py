@@ -35,7 +35,7 @@ class PostgresMoneyAdapter:
 
     To use with Decimal values:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresMoney
+    from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresMoney
     # Wrap Decimal in PostgresMoney
     money = PostgresMoney(Decimal('100.50'))
     ```

@@ -161,7 +161,7 @@ class PostgresBackend(
         # Initialize transaction manager (will use backend.execute())
         self._transaction_manager = PostgresTransactionManager(self, self.logger)
 
-        self.log(logging.INFO, "PostgreSQLBackend initialized")
+        self.log(logging.INFO, "PostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
         """Create and return a SyncPostgreSQLIntrospector with a sync executor."""

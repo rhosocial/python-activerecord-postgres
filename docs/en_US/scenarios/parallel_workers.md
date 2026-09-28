@@ -22,8 +22,8 @@ In scenarios such as data processing, task queues, and batch imports, developers
 
 `rhosocial-activerecord` follows the core design principle of **one ActiveRecord class bound to one connection**:
 
-- **Sync**: `Post.configure(config, PostgreSQLBackend)` → writes to `Post.__backend__`
-- **Async**: `await Post.configure(config, AsyncPostgreSQLBackend)` → writes to `Post.__backend__`
+- **Sync**: `Post.configure(config, PostgresBackend)` → writes to `Post.__backend__`
+- **Async**: `await Post.configure(config, AsyncPostgresBackend)` → writes to `Post.__backend__`
 
 The configuration writes to a **class-level attribute**, which is still unsafe for multi-threading. PostgreSQL differs from other databases in the following ways:
 
@@ -59,19 +59,20 @@ Multi-processing is the recommended approach for parallel worker scenarios. Each
 
 ```python
 import multiprocessing
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend, PostgreSQLConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from models import Comment, Post, User
 
 def worker(post_ids: list[int]):
     # 1. After process starts, configure connection within process - each process establishes independent TCP connection
-    config = PostgreSQLConnectionConfig(
+    config = PostgresConnectionConfig(
         host="localhost",
         port=5432,
         database="mydb",
         username="app",
         password="secret",
     )
-    User.configure(config, PostgreSQLBackend)
+    User.configure(config, PostgresBackend)
     Post.__backend__ = User.backend()
     Comment.__backend__ = User.backend()
 
@@ -103,16 +104,17 @@ if __name__ == "__main__":
 ```python
 import asyncio
 import multiprocessing
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgreSQLBackend, PostgreSQLConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from models import AsyncComment, AsyncPost, AsyncUser
 
 async def async_worker_main(post_ids: list[int]):
     # 1. Configure async connection within process (psycopg native async, TCP network I/O)
-    config = PostgreSQLConnectionConfig(
+    config = PostgresConnectionConfig(
         host="localhost", port=5432,
         database="mydb", username="app", password="secret",
     )
-    await AsyncUser.configure(config, AsyncPostgreSQLBackend)
+    await AsyncUser.configure(config, AsyncPostgresBackend)
     AsyncPost.__backend__ = AsyncUser.backend()
     AsyncComment.__backend__ = AsyncUser.backend()
 
@@ -161,7 +163,7 @@ Runnable timing comparison demo at [exp1_basic_multiprocess.py](../../examples/c
 
 ### 3.1 Single Connection Model Constraints
 
-`rhosocial-activerecord`'s async PostgreSQL backend (`AsyncPostgreSQLBackend`) is based on `psycopg` version 3's async interface, **each ActiveRecord class binds to one connection**. This differs from connection pool solutions:
+`rhosocial-activerecord`'s async PostgreSQL backend (`AsyncPostgresBackend`) is based on `psycopg` version 3's async interface, **each ActiveRecord class binds to one connection**. This differs from connection pool solutions:
 
 | Feature | Single Connection ORM (This Project) | Connection Pool Solution |
 | --- | --- | --- |
@@ -397,7 +399,7 @@ When a system contains two distinctly different workloads, it is recommended to 
 | Workload Type | Characteristics | Suitable Deployment |
 | --- | --- | --- |
 | Web API Service | Short requests, high concurrency, response time sensitive | FastAPI / Django + asyncio + connection pool |
-| Data Analysis Batch Processing | Long running, large data volume, CPU intensive | Standalone script + multiprocessing + PostgreSQLBackend |
+| Data Analysis Batch Processing | Long running, large data volume, CPU intensive | Standalone script + multiprocessing + PostgresBackend |
 | Task Queue Consumer | Regular polling, independent tasks, easy horizontal scaling | Standalone worker process pool |
 
 ### 5.2 Recommended Architecture
@@ -408,7 +410,7 @@ User requests ──→ Web application (asyncio + connection pool)
                       └──→ Task queue (PostgreSQL database table / Redis)
                                   │
                                   └──→ Background worker process pool
-                                        (Each process independent PostgreSQLBackend sync connection)
+                                        (Each process independent PostgresBackend sync connection)
 ```
 
 Web application receives requests and writes to task queue; worker process pool executes time-consuming tasks.
@@ -518,7 +520,7 @@ async def async_worker_task(user_id, conn_params):
 async def async_worker_task(user_id, conn_params):
     # Only pass connection parameters (serializable), create new instance in child process
     config = conn_params['config_kwargs']
-    await Model.configure(config, AsyncPostgreSQLBackend)
+    await Model.configure(config, AsyncPostgresBackend)
     user = await Model.find_one(user_id)
     await Model.backend().disconnect()
 ```
@@ -550,8 +552,8 @@ Sync test coverage is higher; async test coverage has uncovered code paths due t
 
 ### 8.3 Production Recommendations
 
-1. **Sync Workers Preferred**: In multi-process Worker scenarios, sync backend (`PostgreSQLBackend`) is the more stable choice
-2. **Async for Single Process**: Async backend (`AsyncPostgreSQLBackend`) works well in single-process sequential execution scenarios
+1. **Sync Workers Preferred**: In multi-process Worker scenarios, sync backend (`PostgresBackend`) is the more stable choice
+2. **Async for Single Process**: Async backend (`AsyncPostgresBackend`) works well in single-process sequential execution scenarios
 3. **Avoid Cross-Process Async Instance Passing**: Only pass serializable connection parameters, create new async backend instances in child processes
 
 ### 8.4 FOR UPDATE Capability Detection Experience
@@ -751,7 +753,7 @@ In FastAPI + PostgreSQL + async backend scenario:
 ```python
 # database.py - Connection pool manager
 from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 
 # Global connection pool (created at application startup)
 _pool: AsyncBackendPool = None

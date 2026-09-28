@@ -468,7 +468,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
         self._active_async_backends = []
 
     async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str, shared_backend=None) -> Type[ActiveRecord]:
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
         _, config = get_scenario(scenario_name)
         if shared_backend is None:
             await model_class.configure(config, AsyncPostgresBackend)
@@ -580,7 +580,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
 
     async def setup_order_item_model(self, scenario_name: str) -> Type[AsyncActiveRecord]:
         """Set up the composite-PK AsyncOrderItem model for the query feature tests."""
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
         from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
         from providers.fixtures._common import drop_table
         from providers.fixtures.basic import TABLE_EXPRESSIONS as BASIC_EXPRS
@@ -609,7 +609,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
             AsyncSchemaOrder,
         )
 
-        from rhosocial.activerecord.backend.impl.postgres import (
+        from rhosocial.activerecord.backend.impl.postgres.backend import (
             AsyncPostgresBackend,
             PostgresBackend,
         )
@@ -665,7 +665,7 @@ class QueryAsyncProvider(QueryProviderBase, IQueryAsyncProvider):
 
     async def setup_mixed_schema_fixtures(self, scenario_name: str):
         """(AsyncUser, AsyncOrder, AsyncMixedSchemaOrder) with orders also in SCHEMA_A."""
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
         from rhosocial.activerecord.testsuite.feature.query.cross_schema.mixed_schema_models import (
             AsyncMixedSchemaOrder,
         )
