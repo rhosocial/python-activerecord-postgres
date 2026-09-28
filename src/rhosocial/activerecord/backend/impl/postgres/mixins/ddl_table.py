@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/mixins/table.py
+# src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py
 import re
 from typing import Any, List, Tuple
 

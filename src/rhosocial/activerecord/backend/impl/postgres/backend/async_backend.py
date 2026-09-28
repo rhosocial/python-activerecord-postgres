@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/async_backend.py
+# src/rhosocial/activerecord/backend/impl/postgres/backend/async_backend.py
 """PostgreSQL asynchronous backend implementation.
 
 This module provides an asynchronous PostgreSQL implementation:

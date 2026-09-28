@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/backend/sync.py
+# src/rhosocial/activerecord/backend/impl/postgres/backend/backend.py
 """PostgreSQL synchronous backend implementation.
 
 This module provides a synchronous PostgreSQL implementation:
