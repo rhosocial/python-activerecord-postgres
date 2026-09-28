@@ -356,7 +356,7 @@ class BasicSyncProvider(BasicProviderBase, IBasicSyncProvider, WorkerTestProtoco
         if pooled_db:
             config_dict = {**config_dict, "database": pooled_db}
         return {
-            'backend_module': 'rhosocial.activerecord.backend.impl.postgres',
+            'backend_module': 'rhosocial.activerecord.backend.impl.postgres.backend',
             'backend_class_name': backend_class_name,
             'config_class_module': 'rhosocial.activerecord.backend.impl.postgres.config',
             'config_class_name': 'PostgresConnectionConfig',
