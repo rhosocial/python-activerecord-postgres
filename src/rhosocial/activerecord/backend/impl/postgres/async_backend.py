@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/backend/async_backend.py
+# src/rhosocial/activerecord/backend/impl/postgres/async_backend.py
 """PostgreSQL asynchronous backend implementation.
 
 This module provides an asynchronous PostgreSQL implementation:
@@ -51,11 +51,11 @@ from rhosocial.activerecord.backend.errors import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.result import QueryResult
-from ..config import PostgresConnectionConfig
-from ..dialect import PostgresDialect
-from .base import PostgresBackendMixin, PostgresConcurrencyMixin
-from ..protocols import PostgresExtensionInfo
-from ..transaction import AsyncPostgresTransactionManager
+from .config import PostgresConnectionConfig
+from .dialect import PostgresDialect
+from .backend_base import PostgresBackendMixin, PostgresConcurrencyMixin
+from .protocols import PostgresExtensionInfo
+from .transaction import AsyncPostgresTransactionManager
 
 if TYPE_CHECKING:
     from ..expression import PostgresCopyFromExpression, PostgresCopyToExpression

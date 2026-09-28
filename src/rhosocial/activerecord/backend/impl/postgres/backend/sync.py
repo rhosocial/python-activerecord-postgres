@@ -42,7 +42,7 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.result import QueryResult
 from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
-from .base import PostgresBackendMixin, PostgresConcurrencyMixin
+from ..backend_base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import PostgresTransactionManager
 from ..introspection import SyncPostgreSQLIntrospector
