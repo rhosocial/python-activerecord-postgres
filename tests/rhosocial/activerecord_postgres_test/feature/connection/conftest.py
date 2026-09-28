@@ -14,10 +14,8 @@ import pytest
 import pytest_asyncio
 import yaml
 
-from rhosocial.activerecord.backend.impl.postgres.backend import (
-    PostgresBackend,
-    AsyncPostgresBackend,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.connection.pool import (
     PoolConfig,

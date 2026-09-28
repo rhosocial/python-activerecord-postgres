@@ -7,10 +7,8 @@ import yaml
 import os
 from typing import Dict, Any, Tuple, Type  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres.backend import (
-    PostgresBackend,
-    AsyncPostgresBackend,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 

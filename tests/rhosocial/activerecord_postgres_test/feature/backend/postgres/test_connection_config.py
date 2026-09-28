@@ -14,10 +14,8 @@ Covers:
 
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.backend import (
-    AsyncPostgresBackend,
-    PostgresBackend,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 

@@ -96,7 +96,9 @@ def postgres_backend_sync_context(request, benchmark_size):
 
 @pytest.fixture(scope="function", params=SCENARIO_PARAMS)
 def postgres_backend_async_context(request, benchmark_size):
-    from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
+    from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+        AsyncPostgresBackend,
+    )
 
     scenario = request.param
     _, config = get_scenario(scenario)

@@ -64,7 +64,9 @@ def handle(args):
 
         def backend_async_factory():
             nonlocal async_backend
-            from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
+            from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+                AsyncPostgresBackend,
+            )
 
             config = resolve_connection_config_from_args(args)
             async_backend = AsyncPostgresBackend(connection_config=config)
