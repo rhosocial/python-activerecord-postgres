@@ -24,9 +24,26 @@ class RangeAdapterMode(Enum):
     BOTH = "both"
 
 
+SSL_CONNECTION_PARAMS = (
+    "sslmode",
+    "sslcert",
+    "sslkey",
+    "sslrootcert",
+    "sslcrl",
+    "sslcompression",
+)
+
+
 @dataclass
 class PostgresSSLMixin:
-    """Mixin implementing postgres-specific SSL/TLS options."""
+    """Mixin implementing postgres-specific SSL/TLS options.
+
+    The field names mirror libpq connection keywords so they can be handed to
+    ``psycopg.connect()`` unchanged. They are deliberately distinct from the
+    generic :class:`~rhosocial.activerecord.backend.config.SSLMixin` names
+    (``ssl_ca``/``ssl_cert``/``ssl_key``/``ssl_mode``), which libpq does not
+    understand.
+    """
 
     sslmode: Optional[str] = None  # 'disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'
     sslcert: Optional[str] = None
@@ -95,6 +112,22 @@ class PostgresConnectionConfig(
         json_type_preference: Preferred JSON type for dict fields (default: jsonb)
         enable_type_compatibility_warnings: Enable type conversion warnings (default: True)
     """
+
+    def get_ssl_connection_params(self) -> Dict[str, Any]:
+        """Get the libpq SSL/TLS keywords that should be forwarded to the driver.
+
+        Both the sync and async backends call this when building their
+        ``psycopg.connect()`` keyword arguments, so the two paths cannot drift
+        apart. ``None`` values are dropped so that psycopg (which also drops
+        ``None``) falls back to libpq/PGSERVICE defaults for anything the user
+        did not set.
+        """
+        params: Dict[str, Any] = {}
+        for name in SSL_CONNECTION_PARAMS:
+            value = getattr(self, name, None)
+            if value is not None:
+                params[name] = value
+        return params
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary, including postgres-specific parameters."""
