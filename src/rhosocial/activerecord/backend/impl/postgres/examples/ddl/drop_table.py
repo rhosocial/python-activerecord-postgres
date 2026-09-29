@@ -10,7 +10,7 @@ This example demonstrates:
 # SECTION: Setup
 # ============================================================
 import os
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(

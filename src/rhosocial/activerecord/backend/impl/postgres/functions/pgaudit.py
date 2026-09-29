@@ -88,7 +88,7 @@ def pgaudit_set_role(
         FunctionCall for set_config('pgaudit.role', role, false)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> pgaudit_set_role(dialect, 'audit_role')
         # Generates: set_config('pgaudit.role', 'audit_role', false)

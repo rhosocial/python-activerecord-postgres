@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/expression/advisory/__init__.py
+# src/rhosocial/activerecord/backend/impl/postgres/expression/advisory/__init__.py
 """
 Advisory lock expression classes.
 

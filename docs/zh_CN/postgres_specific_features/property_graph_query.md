@@ -30,7 +30,7 @@ PostgreSQL 19 Beta 4 在 19.0 正式发布前撤回了 SQL/PGQ，更早的版本
 ## 能力检测
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 dialect = PostgresDialect(version=(19, 0, 4))
 assert dialect.supports_graph_match() is False

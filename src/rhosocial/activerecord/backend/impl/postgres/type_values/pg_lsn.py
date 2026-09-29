@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/pg_lsn.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/pg_lsn.py
 """PostgreSQL pg_lsn type representation.
 
 This module provides PostgresLsn for representing PostgreSQL

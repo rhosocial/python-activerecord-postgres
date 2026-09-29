@@ -16,7 +16,7 @@ from typing import Any, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
-from rhosocial.activerecord.backend.impl.postgres.types.range import PostgresRange
+from rhosocial.activerecord.backend.impl.postgres.type_values.range import PostgresRange
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -69,7 +69,7 @@ def range_contains(
         BinaryExpression for range @> element
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> range_contains(dialect, 'int4range_col', 5)
     """

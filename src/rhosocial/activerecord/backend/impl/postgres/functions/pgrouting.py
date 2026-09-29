@@ -89,7 +89,7 @@ def pgr_dijkstra(
         FunctionCall for pgr_dijkstra(edges_sql, start_vid, end_vid[, directed])
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> pgr_dijkstra(
         ...     dialect,

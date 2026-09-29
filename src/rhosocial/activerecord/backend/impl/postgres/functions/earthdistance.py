@@ -81,7 +81,7 @@ def ll_to_earth(
         FunctionCall for ll_to_earth(latitude, longitude)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> ll_to_earth(dialect, 40.7128, -74.0060)
         # Generates: ll_to_earth(40.7128, -74.006)

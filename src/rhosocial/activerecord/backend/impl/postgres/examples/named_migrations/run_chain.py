@@ -17,7 +17,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.migration import (
     MigrationRunner,

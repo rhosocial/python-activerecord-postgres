@@ -91,7 +91,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
             when ``command`` is SELECT or DELETE.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresCreatePolicyExpression(
         ...     dialect=dialect,

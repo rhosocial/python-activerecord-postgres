@@ -36,7 +36,7 @@ class PostgresClusterExpression(BaseExpression):
         verbose: When True, report the table being clustered (``VERBOSE``).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = PostgresClusterExpression(
         ...     dialect, table_name="orders", using_index="orders_pkey"

@@ -90,7 +90,7 @@ def cron_schedule(
         FunctionCall for cron_schedule(schedule, command[, comment])
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> cron_schedule(dialect, '0 * * * *', 'DELETE FROM logs WHERE created < now() - interval ''7 days''')
         >>> cron_schedule(dialect, '30 3 * * *', 'VACUUM ANALYZE', 'Nightly vacuum')

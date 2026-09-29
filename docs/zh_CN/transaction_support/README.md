@@ -12,7 +12,7 @@ PostgreSQL 提供强大的事务支持，包括保存点、隔离级别和可延
 ## 快速开始
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(connection_config=config)
 tm = backend.transaction_manager

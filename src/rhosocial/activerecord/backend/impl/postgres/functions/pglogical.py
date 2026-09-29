@@ -82,7 +82,7 @@ def pglogical_create_node(
         FunctionCall for pglogical.create_node(node_name, dsn)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> pglogical_create_node(dialect, 'provider_node', 'host=127.0.0.1 dbname=mydb')
     """

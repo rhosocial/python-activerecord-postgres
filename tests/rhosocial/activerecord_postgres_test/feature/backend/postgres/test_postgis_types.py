@@ -7,7 +7,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
+from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
 from rhosocial.activerecord.backend.impl.postgres.adapters.postgis import PostgresPostGISAdapter
 
 

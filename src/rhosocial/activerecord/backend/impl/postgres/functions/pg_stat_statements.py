@@ -63,7 +63,7 @@ def pg_stat_statements_reset(
         FunctionCall for pg_stat_statements_reset()
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> pg_stat_statements_reset(dialect)
         # Generates: pg_stat_statements_reset()

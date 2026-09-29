@@ -12,10 +12,10 @@ import pytest
 import pytest_asyncio
 
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
-from rhosocial.activerecord.backend.impl.postgres.types.enum import (
+from rhosocial.activerecord.backend.impl.postgres.enum_type_manager import (
     EnumTypeManager,
-    PostgresEnumType,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
 
 
 ENUM_TYPE = "test_status_enum"

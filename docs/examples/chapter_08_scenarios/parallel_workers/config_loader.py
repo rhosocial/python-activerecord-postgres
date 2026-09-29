@@ -8,7 +8,7 @@ PostgreSQL connection configuration loading (three-level priority):
 3. Hardcoded defaults (localhost:5432/test_db/postgres/)
 
 Public interface:
-    load_config(scenario=None)  → PostgreSQLConnectionConfig
+    load_config(scenario=None)  → PostgresConnectionConfig
     list_scenarios()            → list[str]
 """
 
@@ -24,7 +24,7 @@ _src = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresConnectionConfig  # noqa: E402
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 # ─── Default preferred scenarios (by priority) ─────────────────────────────────────
 
@@ -52,7 +52,7 @@ def load_config(scenario: Optional[str] = None) -> PostgresConnectionConfig:
         scenario: Scenario name in YAML (e.g., "postgres_16"). If None, auto-select by priority.
 
     Returns:
-        PostgreSQLConnectionConfig instance.
+        PostgresConnectionConfig instance.
     """
     yaml_path = _find_scenarios_yaml()
     if yaml_path:

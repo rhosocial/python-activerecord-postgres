@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/pgvector.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/pgvector.py
 """
 PostgreSQL pgvector vector type.
 

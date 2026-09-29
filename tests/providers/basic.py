@@ -356,7 +356,7 @@ class BasicSyncProvider(BasicProviderBase, IBasicSyncProvider, WorkerTestProtoco
         if pooled_db:
             config_dict = {**config_dict, "database": pooled_db}
         return {
-            'backend_module': 'rhosocial.activerecord.backend.impl.postgres',
+            'backend_module': 'rhosocial.activerecord.backend.impl.postgres.backend',
             'backend_class_name': backend_class_name,
             'config_class_module': 'rhosocial.activerecord.backend.impl.postgres.config',
             'config_class_name': 'PostgresConnectionConfig',
@@ -395,7 +395,9 @@ class BasicAsyncProvider(BasicProviderBase, IBasicAsyncProvider):
         return super().get_dialect(scenario_name)
 
     async def _setup_async_model(self, model_class: Type[ActiveRecord], scenario_name: str, table_name: str) -> Type[ActiveRecord]:
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+            AsyncPostgresBackend,
+        )
         _, config = get_scenario(scenario_name)
         await model_class.configure(config, AsyncPostgresBackend)
         backend_instance = model_class.__backend__

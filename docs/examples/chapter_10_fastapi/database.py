@@ -28,7 +28,7 @@ if _src not in sys.path:
 
 from fastapi import Request  # noqa: F401
 from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 
 from config_loader import load_config
 from models import AsyncUser, AsyncPost, AsyncComment

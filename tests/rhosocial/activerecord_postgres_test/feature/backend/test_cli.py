@@ -428,7 +428,8 @@ class TestCLINamedProcedureGraphAdapter:
             'resolve_connection_config_from_args',
             return_value='config',
         ), patch(
-            'rhosocial.activerecord.backend.impl.postgres.AsyncPostgresBackend',
+            'rhosocial.activerecord.backend.impl.postgres.backend.async_backend.'
+            'AsyncPostgresBackend',
             return_value=async_backend,
         ) as backend_cls, patch(
             'rhosocial.activerecord.backend.named_expression.cli_procedure_graph.'

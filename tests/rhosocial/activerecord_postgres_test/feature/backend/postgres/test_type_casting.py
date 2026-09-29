@@ -11,8 +11,8 @@ import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     MONEY, NUMERIC, FLOAT8, INTEGER, VARCHAR, TEXT,
     JSONB, TIMESTAMP, TIMESTAMPTZ, BOOLEAN, BIGINT,
 )
@@ -239,7 +239,7 @@ class TestTypeConstants:
         """Test boolean type constants."""
         assert BOOLEAN == "boolean"
         # BOOL is an alias
-        from rhosocial.activerecord.backend.impl.postgres.types.constants import BOOL
+        from rhosocial.activerecord.backend.impl.postgres.type_values.constants import BOOL
         assert BOOL == "bool"
 
 

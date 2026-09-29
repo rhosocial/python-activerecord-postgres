@@ -41,11 +41,9 @@ from rhosocial.activerecord.backend.expression import (
     xmlserialize,
     xmltable,
 )
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresBackend,
-    PostgresConnectionConfig,
-    PostgresDialect,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 SQLParam = Optional[Union[str, int, float, bool]]
 SQLParams = Tuple[SQLParam, ...]

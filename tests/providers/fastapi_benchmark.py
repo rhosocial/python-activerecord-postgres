@@ -143,7 +143,9 @@ class FastAPIBenchmarkProvider:
     async def _setup_async_model(
         self, model_class: Type[ActiveRecord], scenario: str
     ) -> Type[ActiveRecord]:
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+            AsyncPostgresBackend,
+        )
 
         _, config = get_scenario(scenario)
         await model_class.configure(config, AsyncPostgresBackend)
@@ -158,7 +160,9 @@ class FastAPIBenchmarkProvider:
         await backend.execute(self._schema_sql(), options=options)
 
     def _create_async_context_factory(self, config):
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+            AsyncPostgresBackend,
+        )
 
         @asynccontextmanager
         async def context_factory():
@@ -177,7 +181,9 @@ class FastAPIBenchmarkProvider:
             ) from exc
 
     async def _create_async_pool(self, config, runtime_config):
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+            AsyncPostgresBackend,
+        )
         from rhosocial.activerecord.connection.pool import AsyncBackendPool, PoolConfig
 
         pool_config = PoolConfig(

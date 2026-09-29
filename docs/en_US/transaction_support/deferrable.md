@@ -9,7 +9,7 @@ Deferrable constraints are checked at transaction commit time, not at statement 
 ## Usage
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.transaction import IsolationLevel
 
 backend = PostgresBackend(connection_config=config)

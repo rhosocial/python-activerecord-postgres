@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/__init__.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/__init__.py
 """
 PostgreSQL type definitions.
 
@@ -20,12 +20,6 @@ Type modules and their corresponding PostgreSQL documentation:
 - monetary: MONEY type - https://www.postgresql.org/docs/current/datatype-money.html
 - xml: XML type - https://www.postgresql.org/docs/current/datatype-xml.html
 """
-
-# Enum types
-from .enum import (
-    PostgresEnumType,
-    EnumTypeManager,
-)
 
 # Bit string types
 from .bit_string import (
@@ -226,8 +220,6 @@ from .constants import (
 
 __all__ = [
     # Enum types
-    "PostgresEnumType",
-    "EnumTypeManager",
     # Bit string types
     "PostgresBitString",
     # Geometric types

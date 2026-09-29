@@ -1,6 +1,7 @@
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend, PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.transaction import (

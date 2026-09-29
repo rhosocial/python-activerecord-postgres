@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/postgis.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/postgis.py
 """
 PostgreSQL PostGIS geometry/geography type.
 

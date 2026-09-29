@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/bit_string.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/bit_string.py
 """
 PostgreSQL bit string type representation.
 

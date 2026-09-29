@@ -148,7 +148,7 @@ def resolve_connection_config_from_args(args):
 
 def create_backend(args):
     """Create, connect, and introspect a PostgreSQL backend from parsed args."""
-    from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+    from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
     config = resolve_connection_config_from_args(args)
     backend = PostgresBackend(connection_config=config)
     backend.connect()

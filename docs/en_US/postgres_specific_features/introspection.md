@@ -19,9 +19,8 @@ The PostgreSQL introspection system is accessible via `backend.introspector` and
 ### Accessing the Introspector
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend
-
-backend = PostgreSQLBackend(
+rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+backend = PostgresBackend(
     host="localhost",
     port=5432,
     database="mydb",
@@ -254,9 +253,8 @@ for idx in indexes:
 The async backend provides identical introspection methods with the same names as the sync version:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgreSQLBackend
-
-backend = AsyncPostgreSQLBackend(
+rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+backend = AsyncPostgresBackend(
     host="localhost",
     port=5432,
     database="mydb",

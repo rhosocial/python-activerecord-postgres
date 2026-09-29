@@ -92,7 +92,7 @@ def cube_literal(
         FunctionCall for cube(ARRAY[coordinates])
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> cube_literal(dialect, [1.0, 2.0, 3.0])
         # Generates SQL: cube(ARRAY[1.0, 2.0, 3.0])

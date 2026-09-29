@@ -94,7 +94,7 @@ def crosstab(
         FunctionCall for crosstab(source_sql[, categories_sql])
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> crosstab(dialect, 'SELECT row_name, category, value FROM data')
         >>> crosstab(

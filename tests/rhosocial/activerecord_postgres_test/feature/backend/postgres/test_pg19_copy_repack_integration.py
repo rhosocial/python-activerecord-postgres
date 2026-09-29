@@ -4,7 +4,7 @@
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal, QueryExpression, TableExpression
-from rhosocial.activerecord.backend.impl.postgres import (
+from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromExpression,
     PostgresCopyToExpression,
     PostgresRepackExpression,

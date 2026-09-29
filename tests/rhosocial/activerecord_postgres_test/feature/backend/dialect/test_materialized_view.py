@@ -690,11 +690,11 @@ class TestPostgresStorageParameterEnum:
         assert PostgresStorageParameter.AUTOVACUUM_PARALLEL_WORKERS.min_version == (16, 0, 0)
         assert PostgresStorageParameter.FILLFACTOR.min_version is None
 
-    def test_enum_exported_from_package_root(self):
-        from rhosocial.activerecord.backend.impl import postgres as pg
+    def test_enum_exported_from_owning_package(self):
+        from rhosocial.activerecord.backend.impl.postgres import storage_parameters as pkg
 
-        assert pg.PostgresStorageParameter is PostgresStorageParameter
-        assert "PostgresStorageParameter" in pg.__all__
+        assert pkg.PostgresStorageParameter is PostgresStorageParameter
+        assert "PostgresStorageParameter" in pkg.__all__
 
     def test_expressions_render_enum_members(self):
         """Enum members and their string values render identically."""

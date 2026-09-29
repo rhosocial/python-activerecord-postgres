@@ -12,7 +12,7 @@ PostgreSQL Documentation: https://www.postgresql.org/docs/current/hstore.html
 from typing import Any, Dict, Optional, Type, Union, List
 
 from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
-from rhosocial.activerecord.backend.impl.postgres.types.hstore import PostgresHstore
+from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import PostgresHstore
 
 
 class PostgresHstoreAdapter(BaseSQLTypeAdapter):

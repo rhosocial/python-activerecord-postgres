@@ -19,7 +19,7 @@ Key components:
 # SECTION: Setup (reference only — creates tables and data)
 # ============================================================
 import os
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(

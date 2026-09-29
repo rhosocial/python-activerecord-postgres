@@ -38,7 +38,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TimestampTzType,
     VarCharType,
 )
-from rhosocial.activerecord.backend.impl.postgres import (
+from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresSerialType,
     PostgresUUIDType,
     PostgresByteaType,

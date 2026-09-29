@@ -22,7 +22,7 @@ This example demonstrates:
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
 import os
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -45,7 +45,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
     ColumnConstraintType,
 )
-from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterMaterializedViewExpression,
     PostgresChangeMaterializedViewOwnerAction,

@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgresql/reserved_words.py
+# src/rhosocial/activerecord/backend/impl/postgres/reserved_words.py
 """
 PostgreSQL reserved words list.
 

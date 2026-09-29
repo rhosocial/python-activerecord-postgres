@@ -24,7 +24,7 @@ rhosocial-activerecord-postgres (Backend)
 The PostgreSQL backend registers itself with the core library through the standard backend interface:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 # Configure model with PostgreSQL backend
 User.configure(

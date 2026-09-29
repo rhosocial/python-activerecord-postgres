@@ -109,11 +109,12 @@ class AsyncPostgresBackend(
                 "pool_name",
                 "pool_reset_session",
                 "pool_pre_ping",
-                "ssl_ca",
-                "ssl_cert",
-                "ssl_key",
-                "ssl_verify_cert",
-                "ssl_verify_identity",
+                "sslmode",
+                "sslcert",
+                "sslkey",
+                "sslrootcert",
+                "sslcrl",
+                "sslcompression",
                 "log_queries",
                 "log_level",
                 "application_name",
@@ -175,7 +176,7 @@ class AsyncPostgresBackend(
         # Initialize transaction manager (will use backend.execute())
         self._transaction_manager = AsyncPostgresTransactionManager(self, self.logger)
 
-        self.log(logging.INFO, "AsyncPostgreSQLBackend initialized")
+        self.log(logging.INFO, "AsyncPostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
         """Create and return an AsyncPostgreSQLIntrospector with an async executor."""
@@ -253,19 +254,10 @@ class AsyncPostgresBackend(
                 else:
                     conn_params["options"] = options_value
 
-            # Add SSL parameters if provided
-            ssl_params = {}
-            if hasattr(self.config, "ssl_ca"):
-                ssl_params["sslcert"] = self.config.ssl_ca
-            if hasattr(self.config, "ssl_cert"):
-                ssl_params["sslcert"] = self.config.ssl_cert
-            if hasattr(self.config, "ssl_key"):
-                ssl_params["sslkey"] = self.config.ssl_key
-            if hasattr(self.config, "ssl_mode"):
-                ssl_params["sslmode"] = self.config.ssl_mode
-
-            if ssl_params:
-                conn_params.update(ssl_params)
+            # Add SSL/TLS parameters. The config exposes libpq keyword names
+            # (sslmode/sslcert/sslkey/sslrootcert/sslcrl/sslcompression) so they
+            # can be forwarded to psycopg verbatim.
+            conn_params.update(self.config.get_ssl_connection_params())
 
             self._connection = await AsyncConnection.connect(**conn_params)
             await self._connection.set_autocommit(True)  # Disable psycopg auto-transaction management

@@ -67,7 +67,7 @@ def test_supports_data_type_postgres_enum_exists(dialect):
 
 def test_postgres_enum_expression_renders_via_format_enum_type_expression(dialect):
     """PostgresEnumType (BaseExpression) renders via format_enum_type_expression."""
-    from rhosocial.activerecord.backend.impl.postgres.types.enum import PostgresEnumType
+    from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
 
     enum_ref = PostgresEnumType(
         dialect=dialect,
@@ -80,7 +80,7 @@ def test_postgres_enum_expression_renders_via_format_enum_type_expression(dialec
 
 
 def test_postgres_enum_expression_with_schema_renders_via_dialect(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.types.enum import PostgresEnumType
+    from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
 
     enum_ref = PostgresEnumType(
         dialect=dialect,
@@ -353,7 +353,7 @@ def test_time_precision_validation(dialect):
 def test_postgres_enum_type_is_not_data_type():
     """PostgresEnumType extends BaseExpression, not DataType."""
     from rhosocial.activerecord.backend.expression.bases import BaseExpression
-    from rhosocial.activerecord.backend.impl.postgres.types.enum import PostgresEnumType
+    from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
 
     assert not issubclass(PostgresEnumType, DataType)
     assert issubclass(PostgresEnumType, BaseExpression)

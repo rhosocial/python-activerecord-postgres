@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import BigIntType, TextType, TimestampType
-from rhosocial.activerecord.backend.impl.postgres import PostgresExplainResult
+from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreatePartitionExpression,
 )

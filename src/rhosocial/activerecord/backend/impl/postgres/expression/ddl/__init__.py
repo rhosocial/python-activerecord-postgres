@@ -42,7 +42,7 @@ The typed fields are consumed by ``PostgresIndexMixin`` (see ``index.py``).
 
 Example::
 
-    from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
         PostgresCreateIndexExpression,
     )

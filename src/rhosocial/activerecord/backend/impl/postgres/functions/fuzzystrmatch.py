@@ -77,7 +77,7 @@ def levenshtein(
         FunctionCall for levenshtein(source, target)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> levenshtein(dialect, 'name_col', 'search_term')
     """

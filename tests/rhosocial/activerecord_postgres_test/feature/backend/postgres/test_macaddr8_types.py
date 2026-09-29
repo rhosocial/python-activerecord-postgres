@@ -7,7 +7,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.network_address import PostgresMacaddr8
+from rhosocial.activerecord.backend.impl.postgres.type_values.network_address import PostgresMacaddr8
 from rhosocial.activerecord.backend.impl.postgres.adapters.network_address import PostgresMacaddr8Adapter
 
 

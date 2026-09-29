@@ -14,7 +14,7 @@ The geometry/geography types require the PostGIS extension:
 
 from typing import Any, Dict, Optional, Set, Type
 
-from rhosocial.activerecord.backend.impl.postgres.types.postgis import PostgresGeometry
+from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
 
 
 class PostgresPostGISAdapter:

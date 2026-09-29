@@ -8,8 +8,8 @@ PostgreSQL uses the `::` operator for type casting, which is PostgreSQL-specific
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.types.constants import INTEGER, NUMERIC, MONEY
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import INTEGER, NUMERIC, MONEY
 
 dialect = PostgresDialect()
 
@@ -32,8 +32,8 @@ PostgreSQL supports chained type conversions:
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.types.constants import MONEY, NUMERIC, FLOAT8
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import MONEY, NUMERIC, FLOAT8
 
 dialect = PostgresDialect()
 col = Column(dialect, "amount")
@@ -63,7 +63,7 @@ When using incompatible type conversions, the system will emit a warning to guid
 For convenience, PostgreSQL type constants are provided:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     # Numeric types
     SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
     REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,

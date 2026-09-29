@@ -60,7 +60,7 @@ PostgreSQL provides comprehensive support for SQL set operations:
 
 **Example:**
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 dialect = PostgresDialect()
 assert dialect.supports_union()  # True
@@ -86,7 +86,7 @@ PostgreSQL supports TRUNCATE TABLE with several database-specific features:
 
 **Example:**
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.statements import TruncateExpression
 
 # Basic truncate
@@ -521,7 +521,7 @@ After calling `introspect_and_adapt()`, the following is cached:
 The framework provides a convenient method for version-aware feature detection:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 # Connect and introspect (one-time)
 backend = PostgresBackend(...)
@@ -661,7 +661,7 @@ backend.introspect_and_adapt()
 ### Checking Protocol Support
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.protocols import (
     SetOperationSupport, TruncateSupport, CTESupport
 )
@@ -683,7 +683,7 @@ assert dialect.supports_merge_statement()  # False (requires ≥ 15)
 ### Version-Specific Feature Detection
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # Old PostgreSQL version
 old_dialect = PostgresDialect(version=(8, 3, 0))

@@ -280,7 +280,7 @@ class PostgresEnumAdapter(BaseSQLTypeAdapter):
 
         # Validate if enum_type provided
         if options and "enum_type" in options:
-            from ..types import PostgresEnumType
+            from ..expression.enum_ import PostgresEnumType
 
             enum_type = options["enum_type"]
             if isinstance(enum_type, PostgresEnumType):

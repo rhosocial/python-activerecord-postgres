@@ -35,7 +35,7 @@ class PostgresCommentExpression(BaseExpression):
         schema: Schema name for the object.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Comment on a table
         >>> comment = PostgresCommentExpression(

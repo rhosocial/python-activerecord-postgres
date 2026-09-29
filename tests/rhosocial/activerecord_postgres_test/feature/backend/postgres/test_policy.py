@@ -18,7 +18,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.policy import (
     AlterPolicyMode,
     PostgresAlterPolicyExpression,

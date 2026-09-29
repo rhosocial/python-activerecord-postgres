@@ -16,16 +16,16 @@ from rhosocial.activerecord.backend.expression import (
     TableExpression,
 )
 from rhosocial.activerecord.backend.expression.serialization import deserialize, serialize
-from rhosocial.activerecord.backend.impl.postgres import (
-    AsyncPostgresBackend,
-    PostgresBackend,
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromExpression,
     PostgresCopyLogVerbosity,
     PostgresCopyOnError,
     PostgresCopyToExpression,
-    PostgresDialect,
     PostgresRepackExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins import (
     PostgresCopyMixin,
     PostgresRepackMixin,

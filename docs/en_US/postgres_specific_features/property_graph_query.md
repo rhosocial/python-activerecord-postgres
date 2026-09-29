@@ -35,7 +35,7 @@ feature.
 ## Capability Detection
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 dialect = PostgresDialect(version=(19, 0, 4))
 assert dialect.supports_graph_match() is False

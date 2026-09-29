@@ -1,22 +1,16 @@
 # src/rhosocial/activerecord/backend/impl/postgres/backend/__init__.py
 """PostgreSQL backend implementations.
 
-This module provides PostgreSQL backend implementations for both
-synchronous and asynchronous database operations.
-
-Exports:
-    - PostgresBackendMixin: Shared functionality mixin for sync/async backends
-    - PostgresBackend: Synchronous PostgreSQL backend
-    - AsyncPostgresBackend: Asynchronous PostgreSQL backend
+Every backend keeps both classes in this package: the sync class in
+``backend.py`` and the async class in ``async_backend.py``. So the sync class
+is at ``impl.postgres.backend.backend`` and the async class at
+``impl.postgres.backend.async_backend``, and both are re-exported here.
 """
 
-from .base import PostgresBackendMixin
-from .sync import PostgresBackend
+from .backend import PostgresBackend
 from .async_backend import AsyncPostgresBackend
 
-
 __all__ = [
-    "PostgresBackendMixin",
     "PostgresBackend",
     "AsyncPostgresBackend",
 ]

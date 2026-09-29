@@ -5,7 +5,7 @@
 For convenience, PostgreSQL type constants are provided. These constants are string values that can be used in type casting:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     # Numeric types
     SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
     REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,

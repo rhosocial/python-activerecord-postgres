@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.xml import (
     xpath_exists,
     xpath_query,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.xml import PostgresXML
+from rhosocial.activerecord.backend.impl.postgres.type_values.xml import PostgresXML
 
 
 XML_TABLE = "test_xml_types"

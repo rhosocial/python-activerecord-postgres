@@ -55,7 +55,7 @@ def create_next_monthly_partition(
         ValueError: If reference_date is not a valid date string.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = create_next_monthly_partition(
         ...     dialect, "orders", reference_date="2026-06-01")
@@ -128,7 +128,7 @@ def create_range_partition_for_month(
         ValueError: If month is not in 1..12.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = create_range_partition_for_month(dialect, "orders", 2026, 6)
         >>> sql, _ = expr.to_sql()
@@ -186,7 +186,7 @@ def create_range_partition_for_quarter(
         ValueError: If quarter is not in 1..4.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> expr = create_range_partition_for_quarter(dialect, "orders", 2026, 1)
         >>> sql, _ = expr.to_sql()
@@ -253,7 +253,7 @@ def create_range_partitions_for_interval(
             if date range is invalid.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
         >>> exprs = create_range_partitions_for_interval(
         ...     dialect, "orders", "2026-01-01", "2026-03-01")

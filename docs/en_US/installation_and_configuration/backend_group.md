@@ -6,7 +6,8 @@ This document describes how to use `BackendGroup` and `BackendManager` with the 
 
 ```python
 from rhosocial.activerecord.connection import BackendGroup
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.model import ActiveRecord
 
 

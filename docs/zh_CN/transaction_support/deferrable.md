@@ -9,7 +9,7 @@ PostgreSQL 支持 SERIALIZABLE 事务的可延迟约束。
 ## 使用方法
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.transaction import IsolationLevel
 
 backend = PostgresBackend(connection_config=config)

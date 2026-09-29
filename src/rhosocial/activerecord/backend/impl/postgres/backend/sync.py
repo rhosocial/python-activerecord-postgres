@@ -95,11 +95,12 @@ class PostgresBackend(
                 "pool_name",
                 "pool_reset_session",
                 "pool_pre_ping",
-                "ssl_ca",
-                "ssl_cert",
-                "ssl_key",
-                "ssl_verify_cert",
-                "ssl_verify_identity",
+                "sslmode",
+                "sslcert",
+                "sslkey",
+                "sslrootcert",
+                "sslcrl",
+                "sslcompression",
                 "log_queries",
                 "log_level",
                 "application_name",
@@ -161,7 +162,7 @@ class PostgresBackend(
         # Initialize transaction manager (will use backend.execute())
         self._transaction_manager = PostgresTransactionManager(self, self.logger)
 
-        self.log(logging.INFO, "PostgreSQLBackend initialized")
+        self.log(logging.INFO, "PostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
         """Create and return a SyncPostgreSQLIntrospector with a sync executor."""
@@ -240,19 +241,10 @@ class PostgresBackend(
                 else:
                     conn_params["options"] = options_value
 
-            # Add SSL parameters if provided
-            ssl_params = {}
-            if hasattr(self.config, "ssl_ca"):
-                ssl_params["sslcert"] = self.config.ssl_ca
-            if hasattr(self.config, "ssl_cert"):
-                ssl_params["sslcert"] = self.config.ssl_cert
-            if hasattr(self.config, "ssl_key"):
-                ssl_params["sslkey"] = self.config.ssl_key
-            if hasattr(self.config, "ssl_mode"):
-                ssl_params["sslmode"] = self.config.ssl_mode
-
-            if ssl_params:
-                conn_params.update(ssl_params)
+            # Add SSL/TLS parameters. The config exposes libpq keyword names
+            # (sslmode/sslcert/sslkey/sslrootcert/sslcrl/sslcompression) so they
+            # can be forwarded to psycopg verbatim.
+            conn_params.update(self.config.get_ssl_connection_params())
 
             self._connection = psycopg.connect(**conn_params)
             self._connection.autocommit = True  # Disable psycopg auto-transaction management

@@ -22,7 +22,7 @@ from rhosocial.activerecord.backend.expression import bases, core
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
 
 def _convert_to_expression(
@@ -64,7 +64,7 @@ def _convert_jsonpath(
     Returns:
         BaseExpression representing the jsonpath literal
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
         return core.Literal(dialect, str(path))
@@ -87,7 +87,7 @@ def json_path_root() -> "PostgresJsonPath":
         >>> json_path_root()
         PostgresJsonPath('$')
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     return PostgresJsonPath("$")
 
@@ -109,7 +109,7 @@ def json_path_key(path: Union["PostgresJsonPath", str], key: str) -> "PostgresJs
         >>> json_path_key('$.store', 'book')
         PostgresJsonPath('$.store.book')
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
         return path.key(key)
@@ -133,7 +133,7 @@ def json_path_index(path: Union["PostgresJsonPath", str], index: Union[int, str]
         >>> json_path_index('$.items', 'last')
         PostgresJsonPath('$.items[last]')
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
         return path.index(index)
@@ -160,7 +160,7 @@ def json_path_wildcard(path: Union["PostgresJsonPath", str], array: bool = True)
         >>> json_path_wildcard('$.items')
         PostgresJsonPath('$.items[*]')
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
         return path.wildcard_array() if array else path.wildcard_object()
@@ -185,7 +185,7 @@ def json_path_filter(path: Union["PostgresJsonPath", str], condition: str) -> "P
         >>> json_path_filter('$.books[*]', '@.author == "King"')
         PostgresJsonPath('$.books[*]?(@.author == "King")')
     """
-    from ..types.json import PostgresJsonPath
+    from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
         return path.filter(condition)

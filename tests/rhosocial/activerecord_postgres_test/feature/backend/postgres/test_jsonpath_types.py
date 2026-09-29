@@ -10,7 +10,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.json import PostgresJsonPath
+from rhosocial.activerecord.backend.impl.postgres.type_values.json import PostgresJsonPath
 from rhosocial.activerecord.backend.impl.postgres.adapters.json import PostgresJsonPathAdapter
 from rhosocial.activerecord.backend.impl.postgres.functions.json import (
     json_path_root,

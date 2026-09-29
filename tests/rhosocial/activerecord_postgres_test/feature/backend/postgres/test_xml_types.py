@@ -11,7 +11,7 @@ import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import XMLParseExpression, core
 from rhosocial.activerecord.backend.expression.functions.xml import xmlparse
-from rhosocial.activerecord.backend.impl.postgres.types.xml import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.xml import (
     PostgresXML,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.xml import (

@@ -3,7 +3,7 @@
 
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-from ..types.range import PostgresRange, PostgresMultirange
+from ..type_values.range import PostgresRange, PostgresMultirange
 
 
 class PostgresRangeAdapter:

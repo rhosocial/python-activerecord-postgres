@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/constants.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/constants.py
 """PostgreSQL data type constants.
 
 These constants provide convenient type name references for use with
@@ -7,7 +7,7 @@ type casting operations. Users can also use string type names directly.
 PostgreSQL Documentation: https://www.postgresql.org/docs/current/datatype.html
 
 Example:
-    >>> from rhosocial.activerecord.backend.impl.postgres.types.constants import MONEY, NUMERIC
+    >>> from rhosocial.activerecord.backend.impl.postgres.type_values.constants import MONEY, NUMERIC
     >>> col.cast(MONEY)  # Equivalent to col.cast("money")
     >>> col.cast("money")  # Also valid
 

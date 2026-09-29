@@ -12,7 +12,7 @@ PostgreSQL provides robust transaction support with advanced features like savep
 ## Quick Start
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(connection_config=config)
 tm = backend.transaction_manager

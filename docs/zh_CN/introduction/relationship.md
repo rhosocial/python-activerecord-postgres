@@ -93,13 +93,10 @@ class User(UUIDMixin, TimestampMixin, ActiveRecord):
 ### 3. 配置后端
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresBackend,
-    PostgreSQLConnectionConfig,
-)
-
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 # 配置 PostgreSQL 连接
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host='localhost',
     port=5432,
     database='myapp',

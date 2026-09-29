@@ -82,7 +82,7 @@ def gen_salt(
         FunctionCall for gen_salt(algorithm)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> gen_salt(dialect, 'bf')
         >>> gen_salt(dialect)  # uses md5

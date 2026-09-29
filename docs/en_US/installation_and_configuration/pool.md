@@ -5,7 +5,7 @@
 The PostgreSQL backend uses a "connect-on-use" pattern by default:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(connection_config=config)
 # Connection is NOT established yet
@@ -55,7 +55,7 @@ pip install rhosocial-activerecord-postgres[pooling]
 ```
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 config = PostgresConnectionConfig(
     # ... basic config ...

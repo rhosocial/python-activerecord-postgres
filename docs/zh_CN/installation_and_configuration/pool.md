@@ -5,7 +5,7 @@
 PostgreSQL 后端默认使用"随用随连"模式：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 backend = PostgresBackend(connection_config=config)
 # 此时连接尚未建立
@@ -55,7 +55,7 @@ pip install rhosocial-activerecord-postgres[pooling]
 ```
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 config = PostgresConnectionConfig(
     # ... 基础配置 ...

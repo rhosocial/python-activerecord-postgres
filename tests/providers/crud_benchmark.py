@@ -128,7 +128,9 @@ class CrudBenchmarkProvider:
     async def _setup_async_model(
         self, model_class: Type[ActiveRecord], scenario: str
     ) -> Type[ActiveRecord]:
-        from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+        from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+            AsyncPostgresBackend,
+        )
 
         _, config = get_scenario(scenario)
         await model_class.configure(config, AsyncPostgresBackend)

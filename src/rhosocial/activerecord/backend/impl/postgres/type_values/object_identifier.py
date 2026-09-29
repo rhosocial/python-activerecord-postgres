@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/object_identifier.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/object_identifier.py
 """
 PostgreSQL Object Identifier (OID) types representation.
 

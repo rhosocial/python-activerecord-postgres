@@ -39,7 +39,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         if_not_exists: Add IF NOT EXISTS clause.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Create ndistinct statistics
         >>> stats = PostgresCreateStatisticsExpression(
@@ -99,7 +99,7 @@ class PostgresDropStatisticsExpression(BaseExpression):
         if_exists: Add IF EXISTS clause (prevent error if not exists).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> drop = PostgresDropStatisticsExpression(
         ...     dialect=dialect,

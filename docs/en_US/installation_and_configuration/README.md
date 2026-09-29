@@ -17,10 +17,8 @@ pip install rhosocial-activerecord-postgres
 ```
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresBackend,
-    PostgresConnectionConfig
-)
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
     host="localhost",

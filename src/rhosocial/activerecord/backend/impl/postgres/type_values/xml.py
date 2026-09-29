@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/types/xml.py
+# src/rhosocial/activerecord/backend/impl/postgres/type_values/xml.py
 """
 PostgreSQL XML type representation.
 

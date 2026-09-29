@@ -36,7 +36,7 @@ def xid8_literal(
         BaseExpression with ::xid8 type cast applied
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> xid8_literal(dialect, 123456789)
         # Produces: 123456789::xid8
@@ -67,7 +67,7 @@ def array_literal(
         BaseExpression representing the array literal
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> array_literal(dialect, [1, 2, 3], 'int')
         # Produces parameterized: '{1,2,3}'::int[]

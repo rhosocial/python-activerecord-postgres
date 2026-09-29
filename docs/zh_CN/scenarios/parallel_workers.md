@@ -22,8 +22,8 @@
 
 `rhosocial-activerecord` 同样遵循**一个 ActiveRecord 类，绑定一条连接**的核心设计原则：
 
-- **同步**：`Post.configure(config, PostgreSQLBackend)` → 写入 `Post.__backend__`
-- **异步**：`await Post.configure(config, AsyncPostgreSQLBackend)` → 写入 `Post.__backend__`
+- **同步**：`Post.configure(config, PostgresBackend)` → 写入 `Post.__backend__`
+- **异步**：`await Post.configure(config, AsyncPostgresBackend)` → 写入 `Post.__backend__`
 
 配置写入的是**类级别属性**，多线程间仍然不安全。PostgreSQL 在以下方面与其他数据库有差异：
 
@@ -59,19 +59,20 @@
 
 ```python
 import multiprocessing
-from rhosocial.activerecord.backend.impl.postgres import PostgreSQLBackend, PostgreSQLConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from models import Comment, Post, User
 
 def worker(post_ids: list[int]):
     # 1. 进程启动后，在进程内配置连接——每个进程建立独立 TCP 连接
-    config = PostgreSQLConnectionConfig(
+    config = PostgresConnectionConfig(
         host="localhost",
         port=5432,
         database="mydb",
         username="app",
         password="secret",
     )
-    User.configure(config, PostgreSQLBackend)
+    User.configure(config, PostgresBackend)
     Post.__backend__ = User.backend()
     Comment.__backend__ = User.backend()
 
@@ -103,16 +104,17 @@ if __name__ == "__main__":
 ```python
 import asyncio
 import multiprocessing
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgreSQLBackend, PostgreSQLConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from models import AsyncComment, AsyncPost, AsyncUser
 
 async def async_worker_main(post_ids: list[int]):
     # 1. 在进程内配置异步连接（psycopg 原生 async，TCP 网络 I/O）
-    config = PostgreSQLConnectionConfig(
+    config = PostgresConnectionConfig(
         host="localhost", port=5432,
         database="mydb", username="app", password="secret",
     )
-    await AsyncUser.configure(config, AsyncPostgreSQLBackend)
+    await AsyncUser.configure(config, AsyncPostgresBackend)
     AsyncPost.__backend__ = AsyncUser.backend()
     AsyncComment.__backend__ = AsyncUser.backend()
 
@@ -161,7 +163,7 @@ if __name__ == "__main__":
 
 ### 3.1 单连接模型的约束
 
-`rhosocial-activerecord` 的异步 PostgreSQL 后端（`AsyncPostgreSQLBackend`）基于 `psycopg` 版本 3 的异步接口，**每个 ActiveRecord 类绑定一条连接**。这与连接池方案不同：
+`rhosocial-activerecord` 的异步 PostgreSQL 后端（`AsyncPostgresBackend`）基于 `psycopg` 版本 3 的异步接口，**每个 ActiveRecord 类绑定一条连接**。这与连接池方案不同：
 
 | 特性 | 单连接 ORM（本项目） | 连接池方案 |
 | --- | --- | --- |
@@ -414,7 +416,7 @@ def claim_posts_with_retry(batch_size: int = 5, max_retry: int = 3) -> list:
 | 工作负载类型 | 特征 | 合适部署 |
 | --- | --- | --- |
 | Web API 服务 | 短请求、高并发、响应时间敏感 | FastAPI / Django + asyncio + 连接池 |
-| 数据分析批处理 | 长时间运行、大数据量、CPU 密集 | 独立脚本 + multiprocessing + PostgreSQLBackend |
+| 数据分析批处理 | 长时间运行、大数据量、CPU 密集 | 独立脚本 + multiprocessing + PostgresBackend |
 | 任务队列消费 | 定期轮询、任务间独立、易于水平扩展 | 独立 Worker 进程池 |
 
 ### 5.2 推荐架构
@@ -425,7 +427,7 @@ def claim_posts_with_retry(batch_size: int = 5, max_retry: int = 3) -> list:
                 └──→ 任务队列（PostgreSQL 数据库表 / Redis）
                             │
                             └──→ 后台 Worker 进程池
-                                  （每进程独立 PostgreSQLBackend 同步连接）
+                                  （每进程独立 PostgresBackend 同步连接）
 ```
 
 Web 应用负责接收请求、写入任务队列；Worker 进程池负责执行耗时任务。
@@ -536,7 +538,7 @@ async def async_worker_task(user_id, conn_params):
 async def async_worker_task(user_id, conn_params):
     # 只传递连接参数（可序列化），在子进程内创建新实例
     config = conn_params['config_kwargs']
-    await Model.configure(config, AsyncPostgreSQLBackend)
+    await Model.configure(config, AsyncPostgresBackend)
     user = await Model.find_one(user_id)
     await Model.backend().disconnect()
 ```
@@ -568,8 +570,8 @@ Worker 测试对 PostgreSQL 后端的覆盖率贡献：
 
 ### 8.3 生产环境建议
 
-1. **同步 Worker 是首选**：在多进程 Worker 场景下，同步后端（`PostgreSQLBackend`）是更稳定的选择
-2. **异步适用于单进程**：异步后端（`AsyncPostgreSQLBackend`）在单进程内的顺序执行场景下表现良好
+1. **同步 Worker 是首选**：在多进程 Worker 场景下，同步后端（`PostgresBackend`）是更稳定的选择
+2. **异步适用于单进程**：异步后端（`AsyncPostgresBackend`）在单进程内的顺序执行场景下表现良好
 3. **避免跨进程传递异步实例**：只传递可序列化的连接参数，在子进程内创建新的异步后端实例
 
 ### 8.4 FOR UPDATE 能力检测经验
@@ -845,7 +847,7 @@ def thread_worker(group, thread_id):
 ```python
 # database.py - 连接池管理器
 from rhosocial.activerecord.connection.pool import PoolConfig, AsyncBackendPool
-from rhosocial.activerecord.backend.impl.postgres import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import AsyncPostgresBackend
 
 # 全局连接池（应用启动时创建）
 _pool: AsyncBackendPool = None

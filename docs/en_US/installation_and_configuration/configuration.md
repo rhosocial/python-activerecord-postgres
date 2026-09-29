@@ -3,7 +3,7 @@
 ## Basic Configuration
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
     host="localhost",
@@ -49,7 +49,7 @@ For security, use environment variables:
 
 ```python
 import os
-from rhosocial.activerecord.backend.impl.postgres import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 config = PostgresConnectionConfig(
     host=os.getenv("PG_HOST", "localhost"),

@@ -27,7 +27,7 @@ pip install rhosocial-activerecord-postgres[test,dev,docs]
 ## Verifying Installation
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 print("PostgreSQL backend installed successfully!")
 ```

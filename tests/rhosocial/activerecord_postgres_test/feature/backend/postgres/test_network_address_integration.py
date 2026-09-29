@@ -18,7 +18,7 @@ from rhosocial.activerecord.backend.impl.postgres.adapters.network_address impor
     PostgresMacaddrAdapter,
     PostgresNetworkAddressAdapter,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.network_address import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.network_address import (
     PostgresMacaddr,
     PostgresMacaddr8,
 )

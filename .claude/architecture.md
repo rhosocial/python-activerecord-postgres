@@ -104,26 +104,25 @@ Clear distinction between Backend and ActiveRecord, avoiding tight coupling betw
 
 **Implementation**: The `SQLDialectBase` (and its concrete implementations like `SQLiteDialect`) provides dedicated methods for this:
 - `format_identifier(self, identifier: str) -> str`: Formats and quotes identifiers.
-- `format_string_literal(self, value: str) -> str`: Formats and quotes string literals.
+- `format_literal(self, value: Any) -> str`: Formats and quotes string literals.
 
 All query building components (e.g., mixins, `SQLExpression` subclasses) are designed to route identifier and literal formatting through these dialect methods, ensuring a single, centralized point of control for SQL syntax generation.
 
 ```python
-# In backend/dialect.py
+# In backend/dialect/base.py
 class SQLDialectBase(ABC):
     @abstractmethod
     def format_identifier(self, identifier: str) -> str:
         """Format identifier (table name, column name)."""
         pass
 
-    @abstractmethod
-    def format_string_literal(self, value: str) -> str:
-        """Format string literal."""
+    def format_literal(self, value: Any) -> str:
+        """Format a Python value as a SQL literal."""
         pass
 
 # Usage in query builder (conceptual)
 # formatted_column = self.model_class.backend().dialect.format_identifier(column_name)
-# formatted_string = self.model_class.backend().dialect.format_string_literal(string_value)
+# formatted_string = self.model_class.backend().dialect.format_literal(string_value)
 ```
 
 ## Package Architecture
@@ -290,7 +289,10 @@ class ActiveRecord(
 ```python
 # backend/base.py
 class StorageBackend(
-    # ...composed from LoggingMixin, CapabilityMixin, TypeAdaptionMixin, SQLBuildingMixin, etc.
+    # ...composed from LoggingMixin, TypeAdaptionMixin, SQLBuildingMixin,
+    # ReturningClauseMixin, ResultProcessingMixin, SQLOperationsMixin, ExecutionMixin,
+    # BatchExecutionMixin, ExecutionHooksMixin, ConnectionMixin,
+    # TransactionManagementMixin. There is no `CapabilityMixin`.
     ABC
 ):
     """
@@ -404,14 +406,14 @@ class Article(TimestampMixin, SoftDeleteMixin, ActiveRecord):
 
 ```python
 # The project's query builder is ActiveQuery, composed from specialized mixins.
-from rhosocial.activerecord.query import ActiveQuery, BaseQueryMixin, AggregateQueryMixin, CTEQueryMixin, JoinQueryMixin, RangeQueryMixin, RelationalQueryMixin
+from rhosocial.activerecord.query import ActiveQuery, BaseQueryMixin, AggregateQueryMixin, CTEQuery, JoinQueryMixin, RangeQueryMixin, RelationalQueryMixin
 
 class ActiveQuery(
-    CTEQueryMixin,
+    CTEQuery,
     JoinQueryMixin,
     RelationalQueryMixin,
     RangeQueryMixin,
-    # BaseQueryMixin and AggregateQueryMixin are inherited through CTEQueryMixin
+    # BaseQueryMixin and AggregateQueryMixin are inherited through CTEQuery
 ):
     """
     Complete ActiveQuery implementation, combining all query mixins.
@@ -495,7 +497,7 @@ def create_backend(backend_type: str, **config) -> StorageBackend:
     backends = {
         'sqlite': SQLiteBackend,
         'mysql': MySQLBackend,
-        'postgresql': PostgreSQLBackend,
+        'postgres': PostgresBackend,
     }
 
     backend_class = backends.get(backend_type)
@@ -511,8 +513,10 @@ def create_backend(backend_type: str, **config) -> StorageBackend:
 
 ```
 BaseModel (Pydantic)
-    └── IActiveRecord (Interface - implemented by BaseActiveRecord)
-        └── BaseActiveRecord (Core implementation, implements IActiveRecord)
+    └── BaseActiveRecord (Core CRUD implementation, a BaseModel subclass)
+        # NOTE: BaseActiveRecord does NOT inherit from IActiveRecord.
+        # IActiveRecord is a Protocol the QUERY mixins implement
+        # (e.g. `class QueryMixin(IActiveRecord)` in interface/query.py).
             # ActiveRecord is composed from these mixins and BaseActiveRecord
             └── QueryMixin
             └── RelationManagementMixin
@@ -530,7 +534,7 @@ StorageBackendBase (ABC)
     └── StorageBackend (ABC)
         └── SQLiteBackend # Concrete implementation
         # └── MySQLBackend (if implemented)
-        # └── PostgreSQLBackend (if implemented)
+        # └── PostgresBackend (if implemented)
 
 StorageBackendBase (ABC)
     # Composed from mixins for async operations
@@ -546,7 +550,7 @@ StorageBackendBase (ABC)
 ```python
 # 1. User configures model
 from rhosocial.activerecord.model import ActiveRecord
-from rhosocial.activerecord.backend.impl.sqlite import SQLiteBackend
+from rhosocial.activerecord.backend.impl.sqlite.backend import SQLiteBackend
 
 class User(ActiveRecord):
     __table_name__ = "users"
@@ -589,8 +593,10 @@ The project maintains **minimal core dependencies** by design:
 ```python
 # Minimal core dependencies - Pydantic only
 dependencies = [
-    "pydantic>=2.0.0",  # Data validation and model definition
-    "typing_extensions>=4.0.0",  # Backported typing features for Python 3.8
+    "pydantic==2.10.6; python_version < '3.9'",   # Data validation and model definition
+    "pydantic>=2.12.0; python_version >= '3.9'",
+    "typing-extensions>=4.12.0; python_version < '3.9'",  # Backported typing for 3.8
+    "backports.zoneinfo; python_version < '3.9'",
 ]
 ```
 
@@ -599,9 +605,11 @@ dependencies = [
 ### Optional Dependencies
 
 ```python
+# The core ships NO driver extras. Each extra points at the separate backend
+# distribution, which is what pulls the driver in transitively.
 extras_require = {
-    "mysql": ["mysql-connector-python>=8.0.0"],  # MySQL backend
-    "postgresql": ["psycopg[binary]>=3.2.13"],  # PostgreSQL backend
+    "mysql": ["rhosocial-activerecord-mysql>=1.0.0,<2.0.0"],
+    "postgres": ["rhosocial-activerecord-postgres>=1.0.0,<2.0.0"],
     "dev": ["pytest", "black", "mypy"],  # Development tools
 }
 ```
@@ -616,14 +624,14 @@ def discover_backends():
 
     # Check for installed backends (each uses only native drivers)
     try:
-        from rhosocial.activerecord.backend.impl.mysql import MySQLBackend
+        from rhosocial.activerecord.backend.impl.mysql.backend import MySQLBackend
         backends['mysql'] = MySQLBackend  # Uses mysql-connector-python directly
     except ImportError:
         pass
 
     try:
-        from rhosocial.activerecord.backend.impl.postgresql import PostgreSQLBackend
-        backends['postgresql'] = PostgreSQLBackend  # Uses psycopg 3 directly
+        from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+        backends['postgres'] = PostgresBackend  # Uses psycopg 3 directly
     except ImportError:
         pass
 
@@ -635,16 +643,18 @@ def discover_backends():
 ### 1. Custom Fields
 
 ```python
-class EncryptedField(Field):
-    """Custom encrypted field type."""
+# There is no `Field` base class to subclass. `base/fields.py` holds only
+# annotation markers (DDLAnnotation, UseColumn, UseAdapter, UseSqlType,
+# UseIndex, UseConstraint, UseColumnAttributes, UseComment, UseGeneratedColumn,
+# DerivedField). For transparent encryption use a pydantic field_validator, or
+# a SQLTypeAdapter for the column type.
+class EncryptedModel(ActiveRecord):
+    settings: str
 
-    def __set__(self, instance, value):
-        encrypted = encrypt(value)
-        super().__set__(instance, encrypted)
-
-    def __get__(self, instance, owner):
-        value = super().__get__(instance, owner)
-        return decrypt(value) if value else None
+    @field_validator("settings", mode="before")
+    @classmethod
+    def _decrypt(cls, v):
+        return decrypt(v) if v else None
 ```
 
 ### 2. Custom Validators
@@ -681,14 +691,16 @@ class User(UserQueryMixin, ActiveRecord):
 ### 4. Event Hooks
 
 ```python
-class User(ActiveRecord):
-    def before_save(self):
-        """Called before saving."""
-        self.updated_at = datetime.now()
+# `before_save` / `after_save` are NEVER called -- no such hook exists and
+# nothing dispatches to them, so code written this way is silently dead.
+# Register against the ModelEvent enum instead.
+from rhosocial.activerecord.interface.base import ModelEvent
 
-    def after_save(self):
-        """Called after saving."""
-        cache.invalidate(f"user:{self.id}")
+user = User(name="Alice")
+user.on(ModelEvent.AFTER_INSERT, lambda rec: cache.invalidate(f"user:{rec.id}"))
+
+# Events: BEFORE_VALIDATE, AFTER_VALIDATE, BEFORE_INSERT, AFTER_INSERT,
+# BEFORE_UPDATE, AFTER_UPDATE, BEFORE_DELETE, AFTER_DELETE.
 ```
 
 ## Performance Optimization
@@ -791,17 +803,18 @@ class ThreadSafeDict(Dict[K, V]):
 ### Exception Hierarchy
 
 ```python
-class ActiveRecordError(Exception):
+# backend/errors.py -- there is NO `ActiveRecordError` class. `DatabaseError`
+# is the actual root, and everything below derives from it.
+class DatabaseError(Exception):
     """Base exception for all ActiveRecord errors."""
 
-class DatabaseError(ActiveRecordError):
-    """Database operation errors."""
-
-class ValidationError(ActiveRecordError):
-    """Data validation errors."""
-
-class RecordNotFound(DatabaseError):
-    """Record not found in database."""
+class ConnectionError(DatabaseError): ...
+class TransactionError(DatabaseError): ...
+class QueryError(DatabaseError): ...
+class ValidationError(DatabaseError): ...
+class IntegrityError(DatabaseError): ...
+class LockError(DatabaseError): ...
+class RecordNotFound(DatabaseError): ...
 ```
 
 ### Error Propagation

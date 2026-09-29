@@ -62,7 +62,7 @@ psycopg.OperationalError: connection timeout expired
 
 ### Solutions
 ```python
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host='remote.host.com',
     connect_timeout=30,  # Increase timeout
 )
@@ -82,7 +82,7 @@ psycopg.OperationalError: SSL connection failed
 
 ### Solutions
 ```python
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host='remote.host.com',
     sslmode='require',  # Options: disable, prefer, require, verify-ca, verify-full
     sslrootcert='/path/to/ca.crt',  # For verify-ca or verify-full
@@ -256,7 +256,7 @@ SET GLOBAL idle_in_transaction_session_timeout = '10min';
 For high-concurrency scenarios, configure connection pooling:
 
 ```python
-config = PostgreSQLConnectionConfig(
+config = PostgresConnectionConfig(
     host='localhost',
     database='mydb',
     # Connection pool settings

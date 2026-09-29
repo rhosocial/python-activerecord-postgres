@@ -23,7 +23,7 @@ from rhosocial.activerecord.backend.expression.functions import (
     extract,
 )
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
-from rhosocial.activerecord.backend.impl.postgres import PostgresExplainResult
+from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 

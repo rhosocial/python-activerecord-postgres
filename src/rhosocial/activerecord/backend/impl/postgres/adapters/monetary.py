@@ -12,7 +12,7 @@ The range of money type is -92233720368547758.08 to +92233720368547758.07.
 
 from typing import Any, Dict, Optional, Set, Type
 
-from ..types.monetary import PostgresMoney
+from ..type_values.monetary import PostgresMoney
 
 
 class PostgresMoneyAdapter:
@@ -35,7 +35,7 @@ class PostgresMoneyAdapter:
 
     To use with Decimal values:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresMoney
+    from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresMoney
     # Wrap Decimal in PostgresMoney
     money = PostgresMoney(Decimal('100.50'))
     ```

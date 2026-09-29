@@ -24,10 +24,8 @@ _src = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
-from rhosocial.activerecord.backend.impl.postgres import (  # noqa: E402
-    AsyncPostgresBackend,
-    PostgresBackend,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 from config_loader import load_config, show_active_config  # noqa: E402
 from models import (  # noqa: E402

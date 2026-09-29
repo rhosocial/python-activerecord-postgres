@@ -8,8 +8,8 @@ PostgreSQL 使用 `::` 操作符进行类型转换，这是 PostgreSQL 特有的
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.types.constants import INTEGER, NUMERIC, MONEY
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import INTEGER, NUMERIC, MONEY
 
 dialect = PostgresDialect()
 
@@ -32,8 +32,8 @@ PostgreSQL 支持链式类型转换：
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.types.constants import MONEY, NUMERIC, FLOAT8
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import MONEY, NUMERIC, FLOAT8
 
 dialect = PostgresDialect()
 col = Column(dialect, "amount")
@@ -63,7 +63,7 @@ col.cast("money").cast("numeric").cast("float8")
 为方便使用，提供了 PostgreSQL 类型常量：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.types.constants import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     # 数值类型
     SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL,
     REAL, DOUBLE_PRECISION, FLOAT8, FLOAT4,

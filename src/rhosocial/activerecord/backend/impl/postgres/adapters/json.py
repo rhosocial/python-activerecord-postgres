@@ -22,7 +22,7 @@ from psycopg.types.json import Jsonb
 
 from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
 
-from ..types.json import PostgresJsonPath
+from ..type_values.json import PostgresJsonPath
 
 
 class PostgresJSONBAdapter(BaseSQLTypeAdapter):
@@ -81,7 +81,7 @@ class PostgresJsonPathAdapter:
 
     1. Register it explicitly on your backend instance:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresJsonPathAdapter
+    from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJsonPathAdapter
     adapter = PostgresJsonPathAdapter()
     backend.adapter_registry.register(adapter, PostgresJsonPath, str)
     ```
@@ -89,7 +89,8 @@ class PostgresJsonPathAdapter:
 
     2. Specify it directly when executing queries:
     ```python
-    from rhosocial.activerecord.backend.impl.postgres import PostgresJsonPath, PostgresJsonPathAdapter
+    from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresJsonPath
+    from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresJsonPathAdapter
     path_adapter = PostgresJsonPathAdapter()
     result = backend.execute(
         "SELECT * FROM data WHERE content @? %s",

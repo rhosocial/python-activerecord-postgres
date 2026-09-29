@@ -169,7 +169,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         concurrently: Alias for concurrent (backward compatibility).
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
         >>> refresh = PostgresRefreshMaterializedViewExpression(
@@ -277,7 +277,7 @@ class PostgresSetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
     :class:`~....storage_parameters.PostgresStorageParameter`.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresStorageParameter
+        >>> from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
         >>> action = PostgresSetMaterializedViewPropertiesAction(
         ...     dialect,
         ...     {PostgresStorageParameter.FILLFACTOR: 90, "autovacuum_enabled": "true"},
@@ -346,7 +346,7 @@ class PostgresAlterMaterializedViewExpression(BaseExpression):
     """Expression for ``ALTER MATERIALIZED VIEW``.
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
         ...     PostgresAlterMaterializedViewExpression,
         ...     PostgresRenameMaterializedViewAction,

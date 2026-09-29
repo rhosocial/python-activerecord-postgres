@@ -2,7 +2,8 @@
 import pytest
 import pytest_asyncio  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 
 
 class TestPostgresVersion:

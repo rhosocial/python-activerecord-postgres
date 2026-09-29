@@ -107,8 +107,10 @@ class User(ActiveRecord):
 对于已注册适配器的 PostgreSQL 特有类型，使用对应的包装类：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresMoney, Point, PostgresTsVector
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresMoney,
+    Point,
+    PostgresTsVector,
 )
 
 class Order(ActiveRecord):
@@ -136,9 +138,8 @@ backend.execute(
 **方式二：使用 PostgresRange 包装器（推荐 ActiveRecord 模型）**
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresRange, PostgresRangeAdapter
-)
+from rhosocial.activerecord.backend.impl.postgres.type_values import PostgresRange
+from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresRangeAdapter
 
 # 手动注册适配器
 backend.adapter_registry.register(PostgresRangeAdapter(), PostgresRange, str)
@@ -152,10 +153,15 @@ class Order(ActiveRecord):
 对于存在 str→str 映射冲突的类型，必须显式注册适配器：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresXML, PostgresXMLAdapter,
-    PostgresBitString, PostgresBitStringAdapter,
-    PostgresJsonPath, PostgresJsonPathAdapter
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresXML,
+    PostgresBitString,
+    PostgresJsonPath,
+)
+from rhosocial.activerecord.backend.impl.postgres.adapters import (
+    PostgresXMLAdapter,
+    PostgresBitStringAdapter,
+    PostgresJsonPathAdapter,
 )
 
 # 方式一：在 backend 上全局注册
@@ -175,9 +181,13 @@ result = backend.execute(
 
 ```python
 from rhosocial.activerecord import ActiveRecord
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresXML, PostgresXMLAdapter,
-    PostgresBitString, PostgresBitStringAdapter
+from rhosocial.activerecord.backend.impl.postgres.type_values import (
+    PostgresXML,
+    PostgresBitString,
+)
+from rhosocial.activerecord.backend.impl.postgres.adapters import (
+    PostgresXMLAdapter,
+    PostgresBitStringAdapter,
 )
 
 class Document(ActiveRecord):

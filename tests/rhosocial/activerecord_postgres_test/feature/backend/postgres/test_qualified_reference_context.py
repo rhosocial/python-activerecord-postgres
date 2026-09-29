@@ -25,10 +25,8 @@ from typing import ClassVar, Optional
 
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres import (
-    PostgresBackend,
-    PostgresConnectionConfig,
-)
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.base.field_proxy import FieldProxy

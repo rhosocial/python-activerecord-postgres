@@ -32,7 +32,8 @@ if _src not in sys.path:
 
 from rhosocial.activerecord.connection import BackendGroup
 from rhosocial.activerecord.connection.pool import PoolConfig, BackendPool
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend, PostgresConnectionConfig  # noqa: F401
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 from config_loader import load_config
 from models import Comment, Post, User

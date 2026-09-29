@@ -11,7 +11,7 @@
 ## 设置隔离级别
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.transaction import IsolationLevel
 
 backend = PostgresBackend(connection_config=config)

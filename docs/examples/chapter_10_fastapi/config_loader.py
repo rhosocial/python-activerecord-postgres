@@ -10,7 +10,7 @@ _src = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..",
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
-from rhosocial.activerecord.backend.impl.postgres import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 
 def load_config() -> PostgresConnectionConfig:

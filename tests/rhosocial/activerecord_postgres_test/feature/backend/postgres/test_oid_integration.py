@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.impl.postgres.adapters.object_identifier imp
     PostgresOidAdapter,
     PostgresTidAdapter,
 )
-from rhosocial.activerecord.backend.impl.postgres.types.object_identifier import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.object_identifier import (
     OID,
     RegClass,
     RegType,

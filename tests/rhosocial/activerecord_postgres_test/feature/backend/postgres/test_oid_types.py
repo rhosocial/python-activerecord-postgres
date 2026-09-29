@@ -9,7 +9,7 @@ Tests for:
 """
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.types.object_identifier import (
+from rhosocial.activerecord.backend.impl.postgres.type_values.object_identifier import (
     OID, RegClass, RegType, RegProc, RegProcedure,
     RegOper, RegOperator, RegConfig, RegDictionary,
     RegNamespace, RegRole, RegCollation,

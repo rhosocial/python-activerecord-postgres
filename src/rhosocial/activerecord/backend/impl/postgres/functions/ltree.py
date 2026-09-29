@@ -93,7 +93,7 @@ def ltree_literal(
         Literal expression for the ltree path
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> ltree_literal(dialect, 'Top.Science.Astronomy')
     """

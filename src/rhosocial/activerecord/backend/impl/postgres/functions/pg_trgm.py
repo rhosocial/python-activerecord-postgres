@@ -84,7 +84,7 @@ def similarity(
         FunctionCall for similarity(text1, text2)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> similarity(dialect, 'name_col', 'search_term')
         >>> # Generates: similarity(name_col, 'search_term')
@@ -119,7 +119,7 @@ def word_similarity(
         FunctionCall for word_similarity(column, query)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> word_similarity(dialect, 'title_col', 'search')
         >>> # Generates: word_similarity(title_col, 'search')
@@ -151,7 +151,7 @@ def show_trgm(
         FunctionCall for show_trgm(text)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> show_trgm(dialect, 'hello')
         >>> # Generates: show_trgm('hello')
@@ -189,7 +189,7 @@ def similarity_operator(
         BinaryExpression for column % text (or column !% text if negate)
 
     Example:
-        >>> from rhosocial.activerecord.backend.impl.postgres import PostgresDialect
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> similarity_operator(dialect, 'name_col', 'search')
         >>> # Generates: name_col % 'search'
