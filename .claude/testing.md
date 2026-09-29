@@ -21,6 +21,8 @@ This backend CANNOT be used with free-threaded Python builds. Free-threaded test
 ```toml
 dependencies = [
     "psycopg[binary]>=3.2.13",
+    "rhosocial-activerecord>=1.0.0.dev0,<2.0.0",
+    "rhosocial-activerecord>=1.0.0.dev0,<2.0.0",
     "rhosocial-activerecord"
 ]
 ```
@@ -30,8 +32,8 @@ dependencies = [
 ```bash
 # Activate virtual environment and set PYTHONPATH
 cd /mnt/i/GitHubRepositories/rhosocial/python-activerecord-postgres
-source .venv/bin/activate
-export PYTHONPATH=src
+source .venv3.14-ubuntu26.04/bin/activate
+export PYTHONPATH=src:tests
 
 # Run tests
 pytest
@@ -57,5 +59,5 @@ markers = [
 
 ## Reference
 
-- [Core testing guide](../python-activerecord/.claude/testing.md)
-- [PostgreSQL backend development](../python-activerecord/.claude/backend_development.md)
+- [Core testing guide](../../python-activerecord/.claude/testing.md)
+- [PostgreSQL backend development](../../../python-activerecord/.claude/backend_development.md)
