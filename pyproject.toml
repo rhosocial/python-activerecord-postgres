@@ -36,7 +36,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "psycopg[binary]>=3.2.13",
+    # psycopg 3.3.6 requires Python 3.10+; 3.8 and 3.9 stay on the 3.2 line.
+    "psycopg[binary]>=3.3.6; python_version >= '3.10'",
+    "psycopg[binary]>=3.2.13; python_version < '3.10'",
     "rhosocial-activerecord>=1.0.0.dev0,<2.0.0"
 ]
 
