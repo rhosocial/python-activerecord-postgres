@@ -13,5 +13,15 @@ class PostgresUuidOssMixin:
     """uuid-ossp UUID generation functionality implementation."""
 
     def supports_uuid_generation(self) -> bool:
-        """Check if UUID generation functions are supported."""
-        return self.check_extension_feature("uuid_ossp", "generation")
+        """Whether UUID generation is available on this server.
+
+        The dialect answers this from :class:`PostgresUUIDMixin`, which folds
+        both routes together: the built-in ``gen_random_uuid()`` on 13.0+ and
+        ``uuid_generate_v4()`` when uuid-ossp is installed. This method exists
+        so the class still satisfies :class:`PostgresUuidOssSupport`; on a
+        dialect it is shadowed by that mixin, and it must not become a second,
+        different answer.
+        """
+        from ..uuid import PostgresUUIDMixin
+
+        return PostgresUUIDMixin.supports_uuid_generation(self)

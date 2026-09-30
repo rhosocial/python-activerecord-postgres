@@ -30,10 +30,6 @@ class PostgresDataTypeMixin:
         """Composite domains are native feature, PG 11+."""
         return self.version >= (11, 0, 0)
 
-    def supports_jsonb_subscript(self) -> bool:
-        """JSONB subscript is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
-
     def supports_numeric_infinity(self) -> bool:
         """Numeric Infinity is native feature, PG 14+."""
         return self.version >= (14, 0, 0)
@@ -50,10 +46,3 @@ class PostgresDataTypeMixin:
     # PostgreSQL 17+ Data Type Features
     # =========================================================================
 
-    def supports_infinity_numeric_infinity_jsonb(self) -> bool:
-        """Numeric infinity in JSONB is supported since PostgreSQL 17.
-
-        Returns:
-            True if supported
-        """
-        return self.version >= (17, 0, 0)

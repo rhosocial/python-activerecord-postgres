@@ -53,12 +53,6 @@ class PostgresDataTypeMixin:
         """
         return self.version >= (11, 0, 0)
 
-    def supports_jsonb_subscript(self) -> bool:
-        """Whether JSONB subscript notation is supported.
-
-        Native feature, PostgreSQL 14+.
-        """
-        return self.version >= (14, 0, 0)
 
     def supports_numeric_infinity(self) -> bool:
         """Whether NUMERIC type supports Infinity values.

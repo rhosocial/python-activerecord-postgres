@@ -75,6 +75,7 @@ from .extensions.pgcrypto import PostgresPgcryptoMixin
 from .extensions.fuzzystrmatch import PostgresFuzzystrmatchMixin
 from .extensions.cube import PostgresCubeMixin
 from .extensions.uuid_ossp import PostgresUuidOssMixin
+from .uuid import PostgresUUIDMixin
 from .extensions.bloom import PostgresBloomMixin
 from .extensions.btree_gin import PostgresBtreeGinMixin
 from .extensions.btree_gist import PostgresBtreeGistMixin
@@ -185,6 +186,7 @@ __all__ = [
     "PostgresFuzzystrmatchMixin",
     "PostgresCubeMixin",
     "PostgresUuidOssMixin",
+    "PostgresUUIDMixin",
     "PostgresBloomMixin",
     "PostgresBtreeGinMixin",
     "PostgresBtreeGistMixin",

@@ -7,6 +7,8 @@ Implements the PostgresJSONBEnhancedSupport protocol.
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression import JSONExpression
 
@@ -16,10 +18,68 @@ class PostgresJSONBEnhancedMixin:
 
     Provides version-aware capability detection for PostgreSQL
     JSON and JSONB features beyond the standard JSONSupport protocol.
+
+    PostgreSQL can navigate a document two ways, and which one applies is
+    decided by the expression's :class:`JSONPathMode` rather than by
+    preference:
+
+    - ``->`` / ``->>`` arrows, available since 9.4 for ``jsonb``. Cheap, and
+      the idiomatic form.
+    - ``jsonb_path_query_first``, the SQL/JSON path language, since 12.0. More
+      expressive, and the only form that can evaluate a real path predicate.
     """
 
     def format_json_expression(self, expr: "JSONExpression") -> Tuple[str, tuple]:
+        """Render a JSON path access according to the expression's mode.
+
+        Overriding the core dispatch entry point previously ignored
+        ``expr.mode`` entirely, which meant ``ARROW`` silently produced
+        jsonpath SQL and ``FUNCTION`` was indistinguishable from ``AUTO`` —
+        even though ``supports_json_arrow_operators()`` advertised arrows
+        that this method never emitted.
+
+        Args:
+            expr: The JSONExpression node.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+
+        Raises:
+            UnsupportedFeatureError: If FUNCTION mode is requested before
+                PostgreSQL 12, or ARROW mode on a server without jsonb.
+        """
+        from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
+
+        mode: JSONPathMode = getattr(expr, "mode", JSONPathMode.AUTO)
+
+        if mode is JSONPathMode.ARROW:
+            return self.format_json_arrow_expression(expr)
+
+        if mode is JSONPathMode.FUNCTION:
+            return self._format_json_path_expression(expr)
+
+        # AUTO follows the core contract: arrows when the server has them,
+        # the path language otherwise.
+        if self.supports_json_arrow_operators():
+            return self.format_json_arrow_expression(expr)
+        return self._format_json_path_expression(expr)
+
+    def _format_json_path_expression(self, expr: "JSONExpression") -> Tuple[str, tuple]:
+        """Render via ``jsonb_path_query_first``, the SQL/JSON path form.
+
+        The path is bound as a ``jsonpath`` parameter rather than inlined, so
+        a document-driven path cannot alter the statement's shape.
+        """
         from rhosocial.activerecord.backend.expression import bases
+
+        if not self.supports_json_path():
+            raise UnsupportedFeatureError(
+                self.name,
+                "SQL/JSON path expressions (jsonb_path_query_first)",
+                "This PostgreSQL is older than 12.0, which introduced the "
+                "SQL/JSON path language. Use JSONPathMode.ARROW, or the -> "
+                "and ->> operators, instead.",
+            )
 
         if isinstance(expr.column, bases.BaseExpression):
             col_sql, col_params = expr.column.to_sql()
@@ -48,16 +108,49 @@ class PostgresJSONBEnhancedMixin:
         return self.version >= (9, 4, 0)
 
     def supports_json_path(self) -> bool:
-        """Whether JSON path expressions are supported (PostgreSQL 12+)."""
+        """Whether SQL/JSON path expressions are supported (PostgreSQL 12+)."""
         return self.version >= (12, 0, 0)
 
     def supports_json_table(self) -> bool:
-        """JSON_TABLE function is supported since PostgreSQL 12."""
-        return self.version >= (12, 0, 0)
+        """PostgreSQL has no ``JSON_TABLE`` function, so this is always False.
+
+        The probe previously claimed 12.0+ and the core formatter then emitted
+        ``JSON_TABLE(col, 'path' COLUMNS(...))``, which the server rejects.
+        PostgreSQL's closest relative is ``jsonb_to_recordset()``, and it is
+        not a drop-in: it takes no path, no per-column path, and returns a
+        set of rows rather than a table expression. See
+        :meth:`format_json_table_expression` for the guided error.
+        """
+        return False
+
+    def format_json_table_expression(self, expr) -> Tuple[str, tuple]:
+        """Always refuse, naming the construct that actually works here.
+
+        Args:
+            expr: The JSONTableExpression node.
+
+        Raises:
+            UnsupportedFeatureError: Always.
+        """
+        raise UnsupportedFeatureError(
+            self.name,
+            "JSON_TABLE function",
+            "PostgreSQL has no JSON_TABLE. Use jsonb_to_recordset() in a "
+            "FROM clause instead: it takes the document and a column "
+            "definition list, but it has no path argument and no per-column "
+            "PATH, so a nested JSON_TABLE cannot be translated one-for-one.",
+        )
 
     def supports_jsonb_subscript(self) -> bool:
-        """Whether JSONB subscript is supported (PostgreSQL 11+)."""
-        return self.version >= (11, 0, 0)
+        """PostgreSQL has no ``jsonb['key']`` subscript, so this is always False.
+
+        This probe was previously defined three times across the mixin
+        hierarchy with two different version gates (11.0 and 14.0), and the
+        MRO silently picked a winner. No formatter anywhere emitted a
+        subscript — the arrow operators are the only spelling this backend
+        uses — so a True here advertised syntax PostgreSQL cannot parse.
+        """
+        return False
 
     def supports_infinity_numeric_infinity_jsonb(self) -> bool:
         """Whether numeric infinity values are allowed in JSONB (PostgreSQL 17+)."""

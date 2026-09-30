@@ -19,6 +19,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
 
     WindowFunctionMixin,
     JSONMixin,
+    UUIDMixin,
 
     ArrayMixin,
     ExplainMixin,
@@ -180,6 +181,7 @@ from .mixins import (
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
     PostgresJSONBEnhancedMixin,
+    PostgresUUIDMixin,
     PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
     # DDL/DML operation mixins (new)
@@ -347,6 +349,10 @@ class PostgresDialect(
     WindowFunctionMixin,
     PostgresJSONBEnhancedMixin,
     JSONMixin,
+    # PG's UUID answer (version 13+ built-in, or uuid-ossp) must win over
+    # the core UUIDMixin table, which has a single fixed spelling per operation.
+    PostgresUUIDMixin,
+    UUIDMixin,
 
     ArrayMixin,
     ExplainMixin,
