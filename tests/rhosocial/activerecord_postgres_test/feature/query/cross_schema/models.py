@@ -9,6 +9,9 @@ nests schema inside a database. A shared contract would have to assert the
 lowest common denominator and stop catching the dialect-specific mistakes.
 """
 
+from rhosocial.activerecord.testsuite.feature.query.fixtures.async_models import (
+    AsyncOrder,
+)
 from rhosocial.activerecord.testsuite.feature.query.fixtures.models import Order
 
 # Non-default namespace provisioned by this repository's provider.
@@ -23,5 +26,11 @@ class MixedSchemaOrder(Order):
     ``__schema_name__`` differs. Overriding ``schema_name()`` would be
     equivalent; the attribute keeps the intent declarative.
     """
+
+    __schema_name__ = SCHEMA_A
+
+
+class AsyncMixedSchemaOrder(AsyncOrder):
+    """Async variant of :class:`MixedSchemaOrder`."""
 
     __schema_name__ = SCHEMA_A
