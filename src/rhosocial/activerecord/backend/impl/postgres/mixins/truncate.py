@@ -30,13 +30,11 @@ class PostgresTruncateMixin:
         - ``expr.cascade`` — add ``CASCADE``.
         """
         parts = ["TRUNCATE TABLE"]
-        table_name = TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]
-        if expr.schema:
-            table_name = (
-                f"{self.format_identifier(expr.schema)}."
-                f"{table_name}"
-            )
-        parts.append(table_name)
+        parts.append(
+            TableExpression(
+                self, expr.table_name, schema_name=expr.schema
+            ).to_sql()[0]
+        )
 
         if expr.restart_identity:
             if not self.supports_truncate_restart_identity():

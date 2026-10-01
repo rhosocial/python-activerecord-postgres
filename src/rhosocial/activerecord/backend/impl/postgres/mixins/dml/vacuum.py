@@ -107,10 +107,11 @@ class PostgresVacuumMixin:
 
         # Add table name if specified
         if expr.table_name:
-            if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}")
-            else:
-                parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+            parts.append(
+                TableExpression(
+                    self, expr.table_name, schema_name=expr.schema
+                ).to_sql()[0]
+            )
 
             # Add columns for ANALYZE
             if expr.columns:
@@ -144,10 +145,11 @@ class PostgresVacuumMixin:
 
         # Add table name if specified
         if expr.table_name:
-            if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}")
-            else:
-                parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+            parts.append(
+                TableExpression(
+                    self, expr.table_name, schema_name=expr.schema
+                ).to_sql()[0]
+            )
 
             # Add columns
             if expr.columns:

@@ -58,12 +58,12 @@ class PostgresExtendedStatisticsMixin:
         if not self.supports_create_statistics():
             raise ValueError("CREATE STATISTICS requires PostgreSQL 10+")
 
-        if expr.schema:
-            full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
-            table_full = f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}"
-        else:
-            full_name = self.format_identifier(expr.name)
-            table_full = TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]
+        full_name = TableExpression(
+            self, expr.name, schema_name=expr.schema
+        ).to_sql()[0]
+        table_full = TableExpression(
+            self, expr.table_name, schema_name=expr.schema
+        ).to_sql()[0]
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 
