@@ -45,6 +45,15 @@ class PostgresJSONBEnhancedSupport(Protocol):
         """Format a PostgreSQL JSON expression."""
         ...
 
+    def supports_json_function(self, function_name: str) -> bool:
+        """Whether a named JSON path function is available (PostgreSQL 9.4+).
+
+        Declared because a conformance check compares the rendered SQL against
+        the functions this dialect claims, and PostgreSQL spells them
+        jsonb_path_query_* rather than the core's MySQL-shaped JSON_EXTRACT.
+        """
+        ...
+
     def supports_json_type(self) -> bool:
         """Whether JSON data type is supported.
 
