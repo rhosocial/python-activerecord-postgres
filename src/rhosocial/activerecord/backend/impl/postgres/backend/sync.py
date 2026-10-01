@@ -458,6 +458,26 @@ class PostgresBackend(
             if cursor:
                 cursor.close()
 
+    def get_current_schema(self) -> Optional[str]:
+        """Get the schema an unqualified reference currently resolves against.
+
+        Asks the server via current_schema(), which walks the search_path and
+        returns the first schema that exists. None means the search_path
+        resolves to no existing schema, which is a legitimate state rather than
+        an error.
+        """
+        from ....expression.statements.dql import QueryExpression
+        from ..functions.schema import current_schema
+
+        query = QueryExpression(
+            dialect=self.dialect,
+            select=[current_schema(self.dialect)],
+        )
+        row = self.fetch_one(query.to_sql()[0])
+        if not row:
+            return None
+        return next(iter(row.values()), None)
+
     def introspect_and_adapt(self) -> None:
         """Introspect backend and adapt backend instance to actual server capabilities.
 
