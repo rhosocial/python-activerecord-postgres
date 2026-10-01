@@ -6,6 +6,7 @@ which help the query planner make better estimates for combined column values.
 """
 
 from typing import Tuple, TYPE_CHECKING
+from .....expression.core import TableExpression
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression
@@ -59,10 +60,10 @@ class PostgresExtendedStatisticsMixin:
 
         if expr.schema:
             full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
-            table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}"
+            table_full = f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}"
         else:
             full_name = self.format_identifier(expr.name)
-            table_full = self.format_identifier(expr.table_name)
+            table_full = TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 

@@ -6,6 +6,7 @@ PostgreSQL-specific index features and operations.
 """
 
 from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
+from .....expression.core import TableExpression
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 
@@ -296,9 +297,9 @@ class PostgresIndexMixin:
         parts = ["CREATE INDEX"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
         parts.append("USING GIN")
 
         if len(expr.columns) == 1:
@@ -325,7 +326,7 @@ class PostgresIndexMixin:
         parts = ["DROP INDEX"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
         return " ".join(parts), ()
 
     def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
@@ -353,9 +354,9 @@ class PostgresIndexMixin:
 
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
 
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")
@@ -432,7 +433,7 @@ class PostgresIndexMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
 
         # table_name is ignored for PostgreSQL (unlike MySQL)
         return " ".join(parts), ()
@@ -487,7 +488,7 @@ class PostgresIndexMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
 
         if action == PostgresAlterIndexActionType.RENAME_TO:
             if not expr.new_name:

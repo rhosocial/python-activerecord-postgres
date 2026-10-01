@@ -1,5 +1,6 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
 from typing import Tuple
+from .....expression.core import TableExpression
 
 
 class PostgresTriggerMixin:
@@ -71,7 +72,7 @@ class PostgresTriggerMixin:
         if expr.if_not_exists and self.supports_trigger_if_not_exists():
             parts.append("IF NOT EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(TableExpression(self, expr.trigger_name, schema_name=expr.schema_name).to_sql()[0])
 
         parts.append(expr.timing.value)
 
@@ -83,7 +84,7 @@ class PostgresTriggerMixin:
         parts.append(events_str)
 
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
 
         if expr.referencing and self.supports_trigger_referencing():
             parts.append(expr.referencing)
@@ -98,7 +99,7 @@ class PostgresTriggerMixin:
             all_params.extend(cond_params)
 
         parts.append("EXECUTE FUNCTION")
-        parts.append(f"{self.format_identifier(expr.function_name)}()")
+        parts.append(f"{TableExpression(self, expr.function_name, schema_name=expr.schema_name).to_sql()[0]}()")
 
         return " ".join(parts), tuple(all_params)
 
@@ -121,10 +122,10 @@ class PostgresTriggerMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(TableExpression(self, expr.trigger_name, schema_name=expr.schema_name).to_sql()[0])
 
         if expr.table_name:
             parts.append("ON")
-            parts.append(self.format_identifier(expr.table_name))
+            parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
 
         return " ".join(parts), ()

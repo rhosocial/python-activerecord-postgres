@@ -6,6 +6,7 @@ statement generation with PostgreSQL-specific options.
 """
 
 from typing import Tuple, TYPE_CHECKING
+from .....expression.core import TableExpression
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
@@ -107,9 +108,9 @@ class PostgresVacuumMixin:
         # Add table name if specified
         if expr.table_name:
             if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
+                parts.append(f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}")
             else:
-                parts.append(self.format_identifier(expr.table_name))
+                parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
 
             # Add columns for ANALYZE
             if expr.columns:
@@ -144,9 +145,9 @@ class PostgresVacuumMixin:
         # Add table name if specified
         if expr.table_name:
             if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
+                parts.append(f"{self.format_identifier(expr.schema)}.{TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]}")
             else:
-                parts.append(self.format_identifier(expr.table_name))
+                parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
 
             # Add columns
             if expr.columns:

@@ -2,6 +2,7 @@
 """PostgreSQL truncate feature support implementation."""
 
 from typing import Tuple, TYPE_CHECKING
+from ....expression.core import TableExpression
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -29,7 +30,7 @@ class PostgresTruncateMixin:
         - ``expr.cascade`` — add ``CASCADE``.
         """
         parts = ["TRUNCATE TABLE"]
-        table_name = self.format_identifier(expr.table_name)
+        table_name = TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0]
         if expr.schema:
             table_name = (
                 f"{self.format_identifier(expr.schema)}."
