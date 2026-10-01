@@ -220,8 +220,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   test-experimental-python-315:
-    # Temporarily disabled until Python 3.15 toolchain compatibility stabilizes.
-    if: ${{ false }}
+    # psycopg 3.3.6 supports Python 3.15, so the build is exercised here
+    # rather than left disabled. 3.15 has no stable release yet, hence the
+    # explicit rc. The free-threaded entry is dropped: there is no 3.15t build
+    # for psycopg to install.
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }} (experimental)
     runs-on: ubuntu-latest
     permissions:
@@ -232,7 +234,6 @@ jobs:
       matrix:
         include:
           - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: true }
 
     services:
       postgres:
