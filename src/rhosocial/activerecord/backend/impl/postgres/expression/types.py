@@ -91,6 +91,52 @@ class PostgresBigSerialType(DataType):
 # UUID
 # ---------------------------------------------------------------------------
 
+class PostgresEnumColumnType(DataType):
+    """A PostgreSQL ENUM type used as a column's storage type.
+
+    A PostgreSQL enum is not an inline list of values the way MySQL's is: it is
+    a named type created once by ``CREATE TYPE ... AS ENUM`` and then referred
+    to by name, which is what lets two columns share one set of labels. So the
+    storage type carries the type's *name*, not its values, and the generic
+    ``EnumType`` — which has values and no name — cannot be rendered as one.
+
+    This is the DataType-shaped door into that machinery; creating the type
+    itself is ``EnumTypeManager.create_type`` or
+    :class:`PostgresCreateEnumTypeExpression`. The values are carried so the
+    type can be introspected, and so equality compares the labels rather than
+    just the name.
+
+    Args:
+        dialect: The dialect that will render the type reference.
+        type_name: Name of the created enum type.
+        schema: Optional schema holding it.
+        values: The labels, for introspection and equality.
+    """
+
+    name = "postgres_enum"
+
+    def __init__(
+        self,
+        dialect=None,
+        type_name: Optional[str] = None,
+        schema: Optional[str] = None,
+        values: Optional[list] = None,
+    ):
+        super().__init__(dialect)
+        if not type_name:
+            raise ValueError(
+                "PostgresEnumColumnType requires a type_name: PostgreSQL refers "
+                "to an enum by the name given to CREATE TYPE, so a column "
+                "cannot state one without it"
+            )
+        self.type_name = type_name
+        self.schema = schema
+        self.values = list(values or [])
+
+    def _type_params(self) -> tuple:
+        return (self.type_name, self.schema, tuple(self.values))
+
+
 class PostgresUUIDType(DataType):
     """PostgreSQL ``UUID`` — universally unique identifier."""
 

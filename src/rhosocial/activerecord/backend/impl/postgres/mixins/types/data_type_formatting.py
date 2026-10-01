@@ -654,19 +654,33 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                     result[name] = cls
         return result
 
+    def format_data_type_postgres_enum(self, data_type) -> Tuple[str, tuple]:
+        """Render the reference to a created enum type.
+
+        A column of an enum type states the type's name, not its labels — the
+        labels belong to the CREATE TYPE that made it.
+        """
+        return self.format_enum_type_name(data_type.type_name, data_type.schema)
+
+    def supports_data_type_postgres_enum(self) -> bool:
+        return True
+
     def suggested_data_types(self) -> dict:
         """Cross-backend type-consistency suggestion map.
 
-        PostgreSQL has native BYTEA for binary data (mapped via ``blob``),
-        and all core types it supports are rendered through their own
-        ``format_data_type_<name>`` formatters.  There are no core types
-        that PostgreSQL cannot handle natively and honestly suggest an
-        alternative for.
+        PostgreSQL has native BYTEA for binary data (mapped via ``blob``), and
+        renders every other core type it supports through its own
+        ``format_data_type_<name>`` formatters.
 
-        Returns an empty dict — PostgreSQL covers every core type it
-        renders; suggestions are not needed.
+        The exception is ``enum``. PostgreSQL does have enums, but a named
+        type created by CREATE TYPE and referred to by name, so the generic
+        ``EnumType`` — which carries labels and no name — is not something it
+        can render. The suggestion is the DataType-shaped door into that
+        machinery, which does need a name.
         """
-        return {}
+        from ...expression.types import PostgresEnumColumnType
+
+        return {"enum": PostgresEnumColumnType}
 
     def format_data_type_uuid(self, data_type) -> Tuple[str, tuple]:
         return "UUID", ()
