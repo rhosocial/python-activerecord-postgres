@@ -88,15 +88,17 @@ def test_generation_consults_the_extension_probe(monkeypatch):
     )
 
     dialect = _dialect((12, 4, 0))
+    # Patch where the method is defined, not on the dialect's own class: the
+    # previous version patched PostgresDialect, so the direct mixin call below
+    # still reached the real implementation and read the extension state.
     monkeypatch.setattr(
-        type(dialect),
+        PostgresUuidOssMixin,
         "supports_uuid_ossp_extension",
-        lambda *a, **k: True,
+        lambda self: True,
         raising=True,
     )
     assert PostgresUUIDMixin.supports_uuid_generation(dialect) is True
-    # And the extension probe keeps its own narrower answer.
-    assert PostgresUuidOssMixin.supports_uuid_ossp_extension(dialect) is True
+    assert dialect.supports_uuid_ossp_extension() is True
 
 
 def test_the_dialect_itself_resolves_one_answer(monkeypatch):
