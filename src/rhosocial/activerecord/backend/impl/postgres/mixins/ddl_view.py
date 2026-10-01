@@ -58,7 +58,7 @@ class PostgresViewMixin:
             parts.append("OR REPLACE")
 
         parts.append("VIEW")
-        parts.append(self._format_view_name(expr))
+        parts.append(self.format_view_name(expr))
 
         if expr.column_aliases:
             cols = ", ".join(self.format_identifier(c) for c in expr.column_aliases)
