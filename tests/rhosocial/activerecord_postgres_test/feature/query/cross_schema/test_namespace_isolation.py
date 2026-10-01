@@ -103,6 +103,21 @@ def _provision(backend) -> None:
         backend.execute(sql, options=opts)
 
 
+async def _provision_async(backend) -> None:
+    """Async counterpart of :func:`_provision`.
+
+    ``execute`` is a coroutine on an async backend, so the sync helper would
+    build the DDL and drop the coroutine on the floor, leaving both tables
+    absent for the first ``save()``.
+    """
+    from rhosocial.activerecord.backend.base.execution import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+
+    opts = ExecutionOptions(stmt_type=StatementType.DDL)
+    for sql in _ddl_statements(backend):
+        await backend.execute(sql, options=opts)
+
+
 def _bind(model, source_model) -> None:
     model.__connection_config__ = source_model.__connection_config__
     model.__backend_class__ = source_model.__backend_class__
@@ -207,7 +222,7 @@ async def test_async_soft_delete_restore_stays_namespace_scoped(pg_async_mixed_s
     AsyncUser, _, _ = await provider.setup_mixed_schema_fixtures(pg_async_mixed_schema)
     _bind(AsyncScopedSoftOrder, AsyncUser)
     _bind(AsyncScopedSoftOrderInSchema, AsyncUser)
-    _provision(AsyncScopedSoftOrderInSchema.backend())
+    await _provision_async(AsyncScopedSoftOrderInSchema.backend())
 
     plain = AsyncScopedSoftOrder(id=1, label="plain")
     await plain.save()
