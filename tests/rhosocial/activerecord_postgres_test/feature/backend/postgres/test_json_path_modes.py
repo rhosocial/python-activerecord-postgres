@@ -141,7 +141,7 @@ def test_jsonb_subscript_is_not_claimed():
     assert _dialect((16, 2, 1)).supports_jsonb_subscript() is False
 
 
-def test_probes_declared_twice_agree(dialect):
+def test_probes_declared_twice_agree():
     """A probe may be declared in two mixins, but both must answer the same.
 
     ``supports_jsonb_subscript`` is declared by two protocols, so two mixins
@@ -156,6 +156,7 @@ def test_probes_declared_twice_agree(dialect):
         PostgresJSONBEnhancedMixin,
     )
 
+    dialect = _dialect()
     answers = {
         PostgresDataTypeMixin.supports_jsonb_subscript(dialect),
         PostgresJSONBEnhancedMixin.supports_jsonb_subscript(dialect),
