@@ -354,6 +354,10 @@ class PostgresDialect(
     PostgresUUIDMixin,
     UUIDMixin,
 
+    # Before ArrayMixin: this answers True where the core answers False, and
+    # it was listed in the backend block further down, so the core default
+    # was what every caller actually saw.
+    PostgresArrayEnhancedMixin,
     ArrayMixin,
     ExplainMixin,
     # Must precede GraphMixin/GraphTableMixin so that the explicit-override
@@ -441,7 +445,6 @@ class PostgresDialect(
     MultirangeMixin,
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
-    PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
