@@ -43,6 +43,10 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresLqueryType,
+    PostgresLtxtqueryType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -120,7 +124,7 @@ def lquery_literal(
         >>> lquery_literal(dialect, '*.Astronomy.*')
         # Generates SQL: '*.Astronomy.*'::lquery
     """
-    return core.Literal(dialect, pattern).cast("lquery")
+    return core.Literal(dialect, pattern).cast(PostgresLqueryType(dialect))
 
 
 def ltxtquery_literal(
@@ -143,7 +147,7 @@ def ltxtquery_literal(
         >>> ltxtquery_literal(dialect, 'Science & Astronomy')
         # Generates SQL: 'Science & Astronomy'::ltxtquery
     """
-    return core.Literal(dialect, query).cast("ltxtquery")
+    return core.Literal(dialect, query).cast(PostgresLtxtqueryType(dialect))
 
 
 # ============== ltree Operators ==============

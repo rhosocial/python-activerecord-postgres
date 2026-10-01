@@ -26,6 +26,9 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresRegTypeType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -103,7 +106,7 @@ def enum_range(
         return core.FunctionCall(dialect, "enum_range", start_expr, end_expr)
     if enum_type is not None:
         type_expr = _convert_to_expression(dialect, enum_type)
-        return core.FunctionCall(dialect, "enum_range", type_expr.cast("regtype"))
+        return core.FunctionCall(dialect, "enum_range", type_expr.cast(PostgresRegTypeType(dialect)))
     if enum_value is not None:
         value_expr = _convert_to_expression(dialect, enum_value)
         return core.FunctionCall(dialect, "enum_range", value_expr)
@@ -132,7 +135,7 @@ def enum_first(
         ("enum_first(CAST(%s AS regtype))", ('status',))
     """
     type_expr = _convert_to_expression(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_first", type_expr.cast("regtype"))
+    return core.FunctionCall(dialect, "enum_first", type_expr.cast(PostgresRegTypeType(dialect)))
 
 
 def enum_last(
@@ -157,7 +160,7 @@ def enum_last(
         ("enum_last(CAST(%s AS regtype))", ('status',))
     """
     type_expr = _convert_to_expression(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_last", type_expr.cast("regtype"))
+    return core.FunctionCall(dialect, "enum_last", type_expr.cast(PostgresRegTypeType(dialect)))
 
 
 # ============== Comparison Operators ==============

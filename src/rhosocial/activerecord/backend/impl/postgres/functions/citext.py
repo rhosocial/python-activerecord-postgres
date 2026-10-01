@@ -27,6 +27,9 @@ All functions follow the expression-dialect separation architecture:
 from typing import Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresCitextType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -85,7 +88,7 @@ def citext_literal(
         # Produces: 'Hello World'::citext
     """
     converted = _convert_to_expression(dialect, value)
-    return converted.cast("citext")
+    return converted.cast(PostgresCitextType(dialect))
 
 
 __all__ = [

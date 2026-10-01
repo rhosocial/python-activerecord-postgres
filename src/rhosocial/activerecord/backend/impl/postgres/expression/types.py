@@ -388,6 +388,27 @@ class PostgresLtreeType(DataType):
     """PostgreSQL ``LTREE`` — label tree (ltree extension)."""
 
     name = "postgres_ltree"
+class PostgresLqueryType(DataType):
+    """PostgreSQL ``LQUERY`` — regular-expression match of an ltree label path.
+
+    Named by the extension itself rather than by what it holds: a value of this
+    type is a pattern such as ``*.Astronomy.*``, and casting a literal to
+    ``LQUERY`` is how the library tells PostgreSQL to check it as one.
+    """
+
+    name = "postgres_lquery"
+
+
+class PostgresLtxtqueryType(DataType):
+    """PostgreSQL ``LTXTQUERY`` — regular-expression match of an ltree label.
+
+    The label counterpart of :class:`PostgresLqueryType`: it matches a single
+    label rather than a whole path.
+    """
+
+    name = "postgres_ltxtquery"
+
+
 class PostgresRasterType(DataType):
     """PostgreSQL ``RASTER`` — raster (PostGIS raster extension)."""
 

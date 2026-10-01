@@ -68,6 +68,9 @@ from rhosocial.activerecord.backend.expression.operators import (
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresHstoreType,
+)
 
 # Check if hstore extension is available
 available = dialect.is_extension_available("hstore")
@@ -121,7 +124,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert hstore data using InsertExpression + ValuesSource
-    # Use Literal with .cast("hstore") for type-safe hstore insertion
+    # Use Literal with .cast(PostgresHstoreType(self.dialect)) for type-safe hstore insertion
     insert_expr = InsertExpression(
         dialect=dialect,
         into="products",
@@ -131,15 +134,15 @@ if installed:
             [
                 [
                     Literal(dialect, "Laptop"),
-                    Literal(dialect, "color=>silver, weight=>2.5").cast("hstore"),
+                    Literal(dialect, "color=>silver, weight=>2.5").cast(PostgresHstoreType(dialect)),
                 ],
                 [
                     Literal(dialect, "Phone"),
-                    Literal(dialect, "color=>black, weight=>0.2").cast("hstore"),
+                    Literal(dialect, "color=>black, weight=>0.2").cast(PostgresHstoreType(dialect)),
                 ],
                 [
                     Literal(dialect, "Tablet"),
-                    Literal(dialect, "color=>silver, weight=>0.5, brand=>Acme").cast("hstore"),
+                    Literal(dialect, "color=>silver, weight=>0.5, brand=>Acme").cast(PostgresHstoreType(dialect)),
                 ],
             ],
         ),
@@ -201,7 +204,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "attributes"),
-            Literal(dialect, "color=>silver").cast("hstore"),
+            Literal(dialect, "color=>silver").cast(PostgresHstoreType(dialect)),
         ),
     )
     sql, params = query.to_sql()
@@ -219,7 +222,7 @@ if installed:
             Subquery(dialect, BinaryExpression(
                 dialect, "||",
                 Column(dialect, "attributes"),
-                Literal(dialect, "brand=>Acme").cast("hstore"),
+                Literal(dialect, "brand=>Acme").cast(PostgresHstoreType(dialect)),
             )).as_("with_brand"),
         ],
         from_=TableExpression(dialect, "products"),
@@ -318,7 +321,7 @@ if installed:
             "attributes": BinaryExpression(
                 dialect, "||",
                 Column(dialect, "attributes"),
-                Literal(dialect, "discount=>true").cast("hstore"),
+                Literal(dialect, "discount=>true").cast(PostgresHstoreType(dialect)),
             ),
         },
         where=ComparisonPredicate(

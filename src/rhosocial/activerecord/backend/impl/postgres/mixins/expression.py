@@ -24,12 +24,12 @@ class PostgresExpressionMixin:
             Tuple of (SQL string, parameters)
 
         Example:
-            >>> Column(dialect, 'price').cast('numeric').to_sql()
+            >>> Column(dialect, 'price').cast(DecimalType(dialect)).to_sql()
             # Returns: ('"price"::numeric', ())
 
         Note:
             For chained type conversions, each ::type is appended:
-            >>> col.cast('money').cast('numeric').cast('float8')
+            >>> col.cast(PostgresMoneyType(self.dialect)).cast(DecimalType(self.dialect)).cast(FloatType(self.dialect))
             # Generates: "col"::money::numeric::float8
 
         """

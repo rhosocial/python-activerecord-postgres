@@ -26,6 +26,9 @@ from typing import List, Optional, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresVectorType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -60,7 +63,7 @@ def _convert_to_expression(
         literal = core.Literal(dialect, expr.to_postgres_string())
         if expr.dimensions is not None:
             return literal.cast(f"vector({expr.dimensions})")
-        return literal.cast("vector")
+        return literal.cast(PostgresVectorType(dialect))
     elif isinstance(expr, list):
         vec = PostgresVector(values=expr)
         literal = core.Literal(dialect, vec.to_postgres_string())

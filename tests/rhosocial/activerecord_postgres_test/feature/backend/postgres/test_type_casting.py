@@ -23,6 +23,10 @@ from rhosocial.activerecord.backend.impl.postgres.type_compatibility import (
     WARNED_CASTS,  # noqa: F401
     DIRECT_COMPATIBLE_CASTS,  # noqa: F401
 )
+from rhosocial.activerecord.backend.expression.types import (
+    FloatType,
+    VarCharType,
+)
 
 
 class TestTypeCastingMixin:
@@ -43,7 +47,7 @@ class TestTypeCastingMixin:
     def test_column_cast_with_varchar_length(self):
         """Test type cast with VARCHAR length modifier."""
         col = Column(self.dialect, "name")
-        expr = col.cast("VARCHAR(100)")
+        expr = col.cast(VarCharType(self.dialect, length=100))
         sql, params = expr.to_sql()
         assert sql == '"name"::VARCHAR(100)'
         assert params == ()
@@ -255,7 +259,7 @@ class TestComplexCastScenarios:
         # This should trigger a warning
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            expr = col.cast("float8")  # noqa: F841
+            expr = col.cast(FloatType(self.dialect))  # noqa: F841
             # The warning should suggest using numeric as intermediate
             if len(w) > 0:
                 assert "numeric" in str(w[0].message)

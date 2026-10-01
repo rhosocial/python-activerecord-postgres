@@ -90,11 +90,11 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top").cast("ltree")],
-                [Literal(dialect, "Top.Science").cast("ltree")],
-                [Literal(dialect, "Top.Science.Astronomy").cast("ltree")],
-                [Literal(dialect, "Top.Science.Physics").cast("ltree")],
-                [Literal(dialect, "Top.History").cast("ltree")],
+                [Literal(dialect, "Top").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -129,11 +129,11 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "root").cast("ltree"), Literal(dialect, "Root")],
-                [Literal(dialect, "root.level1").cast("ltree"), Literal(dialect, "Level 1")],
-                [Literal(dialect, "root.level1.level2a").cast("ltree"), Literal(dialect, "Level 2a")],
-                [Literal(dialect, "root.level1.level2b").cast("ltree"), Literal(dialect, "Level 2b")],
-                [Literal(dialect, "root.other").cast("ltree"), Literal(dialect, "Other branch")],
+                [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
+                [Literal(dialect, root.level1.level2a).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")]
+                [Literal(dialect, root.level1.level2b).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")]
+                [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
             ],
         ),
     )
@@ -166,7 +166,7 @@ def ltree_env(postgres_backend_single):
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "A.B.C.D").cast("ltree")]],
+            [[Literal(dialect, "A.B.C.D").cast(PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
@@ -199,9 +199,9 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "a.b.c").cast("ltree")],
-                [Literal(dialect, "a.b.d").cast("ltree")],
-                [Literal(dialect, "x.y.z").cast("ltree")],
+                [Literal(dialect, "a.b.c").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "a.b.d").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "x.y.z").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -247,9 +247,9 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top.Science.Astronomy").cast("ltree")],
-                [Literal(dialect, "Top.Science.Physics").cast("ltree")],
-                [Literal(dialect, "Top.History").cast("ltree")],
+                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -295,7 +295,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -315,7 +315,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -335,7 +335,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -596,11 +596,11 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top").cast("ltree")],
-                [Literal(dialect, "Top.Science").cast("ltree")],
-                [Literal(dialect, "Top.Science.Astronomy").cast("ltree")],
-                [Literal(dialect, "Top.Science.Physics").cast("ltree")],
-                [Literal(dialect, "Top.History").cast("ltree")],
+                [Literal(dialect, "Top").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -635,11 +635,11 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "root").cast("ltree"), Literal(dialect, "Root")],
-                [Literal(dialect, "root.level1").cast("ltree"), Literal(dialect, "Level 1")],
-                [Literal(dialect, "root.level1.level2a").cast("ltree"), Literal(dialect, "Level 2a")],
-                [Literal(dialect, "root.level1.level2b").cast("ltree"), Literal(dialect, "Level 2b")],
-                [Literal(dialect, "root.other").cast("ltree"), Literal(dialect, "Other branch")],
+                [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
+                [Literal(dialect, root.level1.level2a).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")]
+                [Literal(dialect, root.level1.level2b).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")]
+                [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
             ],
         ),
     )
@@ -672,7 +672,7 @@ async def async_ltree_env(async_postgres_backend_single):
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "A.B.C.D").cast("ltree")]],
+            [[Literal(dialect, "A.B.C.D").cast(PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
@@ -705,9 +705,9 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "a.b.c").cast("ltree")],
-                [Literal(dialect, "a.b.d").cast("ltree")],
-                [Literal(dialect, "x.y.z").cast("ltree")],
+                [Literal(dialect, "a.b.c").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "a.b.d").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "x.y.z").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -753,9 +753,9 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top.Science.Astronomy").cast("ltree")],
-                [Literal(dialect, "Top.Science.Physics").cast("ltree")],
-                [Literal(dialect, "Top.History").cast("ltree")],
+                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
+                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -802,7 +802,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -822,7 +822,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -842,7 +842,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast("ltree"),
+                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()

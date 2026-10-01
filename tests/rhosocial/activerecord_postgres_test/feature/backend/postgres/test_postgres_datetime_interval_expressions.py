@@ -15,6 +15,7 @@ from rhosocial.activerecord.backend.expression.functions import (
     interval,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.types import IntegerType
 
 
 class TestPostgresDateTimeIntervalExpressions:
@@ -184,7 +185,7 @@ class TestPostgresDateTimeIntervalExpressions:
             "day",
             Column(postgres_dialect, "started_at"),
             Column(postgres_dialect, "ended_at"),
-        ).cast("INTEGER").as_("elapsed_days")
+        ).cast(IntegerType(postgres_dialect)).as_("elapsed_days")
 
         sql, params = expr.to_sql()
 

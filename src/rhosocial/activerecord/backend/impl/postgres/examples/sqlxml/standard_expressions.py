@@ -44,6 +44,10 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresXMLType,
+)
 
 SQLParam = Optional[Union[str, int, float, bool]]
 SQLParams = Tuple[SQLParam, ...]
@@ -70,13 +74,13 @@ class SQLXMLExample:
 
 def text_literal(dialect: PostgresDialect, value: str) -> Literal:
     expr = Literal(dialect, value)
-    expr.cast("TEXT")
+    expr.cast(TextType(dialect))
     return expr
 
 
 def xml_literal(dialect: PostgresDialect, value: str) -> Literal:
     expr = Literal(dialect, value)
-    expr.cast("XML")
+    expr.cast(PostgresXMLType(dialect))
     return expr
 
 

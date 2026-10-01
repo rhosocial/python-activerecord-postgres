@@ -70,6 +70,9 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresGeographyType,
+)
 
 # Check if postgis extension is available
 available = dialect.is_extension_available("postgis")
@@ -249,7 +252,7 @@ if installed:
                     Literal(dialect, 40.7128),
                 ),
                 Literal(dialect, 4326),
-            ).cast("geography"),
+            ).cast(PostgresGeographyType(dialect)),
             Literal(dialect, 500000),
         ),
     )

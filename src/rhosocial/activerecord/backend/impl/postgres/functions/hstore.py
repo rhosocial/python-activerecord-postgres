@@ -39,6 +39,9 @@ from typing import Dict, Optional, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import PostgresHstore
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresHstoreType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -67,11 +70,11 @@ def _convert_to_expression(
         return expr
     elif isinstance(expr, PostgresHstore):
         literal = core.Literal(dialect, expr.to_postgres_string())
-        return literal.cast("hstore")
+        return literal.cast(PostgresHstoreType(dialect))
     elif isinstance(expr, dict):
         hstore = PostgresHstore(data=expr)
         literal = core.Literal(dialect, hstore.to_postgres_string())
-        return literal.cast("hstore")
+        return literal.cast(PostgresHstoreType(dialect))
     elif isinstance(expr, str):
         return core.Literal(dialect, expr)
     else:

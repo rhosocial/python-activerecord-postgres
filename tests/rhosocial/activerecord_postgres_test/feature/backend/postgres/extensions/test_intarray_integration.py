@@ -79,9 +79,9 @@ def _setup_intarray_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3,4,5}").cast("integer[]")],
-                [Literal(dialect, "{10,20,30}").cast("integer[]")],
-                [Literal(dialect, "{3,4}").cast("integer[]")],
+                [Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{10,20,30}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{3,4}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -117,9 +117,9 @@ def _setup_intarray_overlap_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3}").cast("integer[]")],
-                [Literal(dialect, "{4,5,6}").cast("integer[]")],
-                [Literal(dialect, "{3,4}").cast("integer[]")],
+                [Literal(dialect, "{1,2,3}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{4,5,6}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{3,4}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -155,9 +155,9 @@ def _setup_intarray_contained_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2}").cast("integer[]")],
-                [Literal(dialect, "{1,2,3,4,5}").cast("integer[]")],
-                [Literal(dialect, "{10,20}").cast("integer[]")],
+                [Literal(dialect, "{1,2}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{10,20}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -192,7 +192,7 @@ def _setup_intarray_idx_table(backend, dialect, table):
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{10,20,30,40}").cast("integer[]")]],
+            [[Literal(dialect, "{10,20,30,40}").cast(IntegerType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -237,7 +237,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{1,5,10}").cast("integer[]")]],
+            [[Literal(dialect, "{1,5,10}").cast(IntegerType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -283,9 +283,9 @@ async def _async_setup_intarray_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3,4,5}").cast("integer[]")],
-                [Literal(dialect, "{10,20,30}").cast("integer[]")],
-                [Literal(dialect, "{3,4}").cast("integer[]")],
+                [Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{10,20,30}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{3,4}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -321,9 +321,9 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3}").cast("integer[]")],
-                [Literal(dialect, "{4,5,6}").cast("integer[]")],
-                [Literal(dialect, "{3,4}").cast("integer[]")],
+                [Literal(dialect, "{1,2,3}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{4,5,6}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{3,4}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -359,9 +359,9 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2}").cast("integer[]")],
-                [Literal(dialect, "{1,2,3,4,5}").cast("integer[]")],
-                [Literal(dialect, "{10,20}").cast("integer[]")],
+                [Literal(dialect, "{1,2}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect))],
+                [Literal(dialect, "{10,20}").cast(IntegerType(dialect))],
             ],
         ),
     )
@@ -396,7 +396,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{10,20,30,40}").cast("integer[]")]],
+            [[Literal(dialect, "{10,20,30,40}").cast(IntegerType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -440,7 +440,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{1,5,10}").cast("integer[]")]],
+            [[Literal(dialect, "{1,5,10}").cast(IntegerType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -517,7 +517,7 @@ class TestIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "@>",
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast("integer[]"),
+                Literal(dialect, "{3,4}").cast(IntegerType(dialect)),
             ),
         ).as_("contains")
         query = QueryExpression(
@@ -546,7 +546,7 @@ class TestIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "&&",
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast("integer[]"),
+                Literal(dialect, "{3,4}").cast(IntegerType(dialect)),
             ),
         ).as_("overlaps")
         query = QueryExpression(
@@ -576,7 +576,7 @@ class TestIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "<@",
                 Column(dialect, "tags"),
-                Literal(dialect, "{1,2,3,4,5}").cast("integer[]"),
+                Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect)),
             ),
         ).as_("contained")
         query = QueryExpression(
@@ -667,7 +667,7 @@ class TestIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "@>",
                 Column(dialect, "tags"),
-                Literal(dialect, "{5}").cast("integer[]"),
+                Literal(dialect, "{5}").cast(IntegerType(dialect)),
             ),
         ).as_("contains")
         query2 = QueryExpression(
@@ -726,7 +726,7 @@ class TestAsyncIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "@>",
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast("integer[]"),
+                Literal(dialect, "{3,4}").cast(IntegerType(dialect)),
             ),
         ).as_("contains")
         query = QueryExpression(
@@ -755,7 +755,7 @@ class TestAsyncIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "&&",
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast("integer[]"),
+                Literal(dialect, "{3,4}").cast(IntegerType(dialect)),
             ),
         ).as_("overlaps")
         query = QueryExpression(
@@ -784,7 +784,7 @@ class TestAsyncIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "<@",
                 Column(dialect, "tags"),
-                Literal(dialect, "{1,2,3,4,5}").cast("integer[]"),
+                Literal(dialect, "{1,2,3,4,5}").cast(IntegerType(dialect)),
             ),
         ).as_("contained")
         query = QueryExpression(
@@ -876,7 +876,7 @@ class TestAsyncIntarrayIntegration:
             ComparisonPredicate(
                 dialect, "@>",
                 Column(dialect, "tags"),
-                Literal(dialect, "{5}").cast("integer[]"),
+                Literal(dialect, "{5}").cast(IntegerType(dialect)),
             ),
         ).as_("contains")
         query2 = QueryExpression(
