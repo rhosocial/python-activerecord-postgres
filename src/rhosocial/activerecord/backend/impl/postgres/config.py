@@ -69,11 +69,19 @@ class PostgresConnectionMixin:
     # When False (default), the backend issues an explicit COMMIT after statements
     # executed outside a managed transaction; when True, those commits are skipped.
     autocommit: bool = False
-    # Schema namespace support
-    # Applied at connect time as a libpq parameter, so it is fixed for the
-    # life of the connection and cannot be changed per query or transaction.
-    # Unqualified object names resolve through it, which is how a model that
-    # does not set ``__schema_name__`` reaches its tables.
+    # Schema namespace support.
+    # Applied at connect time and fixed for the life of the connection: it
+    # cannot be changed per query or per transaction. Unqualified object names
+    # resolve through it, which is how a model that does not set
+    # ``__schema_name__`` reaches its tables.
+    #
+    # The backend folds this into the libpq ``options`` keyword as
+    # ``-c search_path=...`` rather than passing it as its own keyword.
+    # ``search_path`` is a server runtime parameter, not a libpq connection
+    # keyword, and handing it to libpq as one fails the connect outright with
+    # 'invalid connection option "search_path"' -- so setting this field used
+    # to make the connection impossible rather than merely ineffective.
+    # ``options`` remains available for anything else you need to pass.
     search_path: Optional[str] = None
     # DEPRECATED: has never affected generated SQL. A model that does not set
     # ``__schema_name__`` resolves through ``search_path``; use that instead.

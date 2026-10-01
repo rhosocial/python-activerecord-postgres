@@ -193,12 +193,20 @@ class PostgresBackend(
                 "password": self.config.password,
             }
 
-            # Add additional parameters if they exist in config
-            additional_params = [
+            # Add additional parameters if they exist in config.
+            #
+            # Split into two groups, because psycopg treats them differently.
+            # The first are libpq *connection* keywords and go through as
+            # kwargs. The second are PostgreSQL *server runtime parameters*:
+            # libpq has no connection keyword for them, and passing one as a
+            # kwarg fails the connect with 'invalid connection option "..."'.
+            # They have to travel inside the ``options`` keyword instead, which
+            # is why setting e.g. ``search_path`` used to make connecting
+            # impossible rather than just ineffective.
+            connection_keyword_params = [
                 "application_name",
                 "fallback_application_name",
                 "connect_timeout",
-                "options",
                 "service",
                 "target_session_attrs",
                 "gssencmode",
@@ -206,25 +214,28 @@ class PostgresBackend(
                 "replication",
                 "assume_role",
                 "role",
-                "search_path",
-                "row_security",
-                "datestyle",
-                "intervalstyle",
-                "timezone",
-                "extra_float_digits",
                 "client_encoding",
                 "tcp_user_timeout",
-                "tcp_keepalives_idle",
-                "tcp_keepalives_interval",
-                "tcp_keepalives_count",
-                "load_balance_hosts",
                 "keepalives",
                 "keepalives_idle",
                 "keepalives_interval",
                 "keepalives_count",
+                "load_balance_hosts",
+            ]
+            # Runtime parameters, which have no libpq connection keyword of
+            # their own. Only search_path is actually a config field; the
+            # earlier list also named datestyle, timezone, intervalstyle,
+            # row_security, extra_float_digits and the tcp_keepalives_* trio,
+            # none of which PostgresConnectionConfig has ever declared, so the
+            # hasattr guard below skipped them and they were dead entries
+            # rather than reachable parameters. They are not listed again: a
+            # name here that no field backs is a name that silently does
+            # nothing.
+            server_runtime_params = [
+                "search_path",
             ]
 
-            for param in additional_params:
+            for param in connection_keyword_params:
                 if hasattr(self.config, param):
                     value = getattr(self.config, param)
                     if value is not None:  # Only add the parameter if it's not None
@@ -240,6 +251,20 @@ class PostgresBackend(
                     conn_params["options"] = options_str
                 else:
                     conn_params["options"] = options_value
+
+            # Fold the runtime parameters into whatever ``options`` already
+            # holds, so setting search_path and options together works rather
+            # than one silently replacing the other.
+            runtime_settings = {}
+            for param in server_runtime_params:
+                if hasattr(self.config, param):
+                    value = getattr(self.config, param)
+                    if value is not None:
+                        runtime_settings[param] = value
+            if runtime_settings:
+                existing = conn_params.get("options") or ""
+                folded = " ".join(f"-c {k}={v}" for k, v in runtime_settings.items())
+                conn_params["options"] = f"{existing} {folded}".strip()
 
             # Add SSL/TLS parameters. The config exposes libpq keyword names
             # (sslmode/sslcert/sslkey/sslrootcert/sslcrl/sslcompression) so they
