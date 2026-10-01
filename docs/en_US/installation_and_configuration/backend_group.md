@@ -88,7 +88,9 @@ config = PostgresConnectionConfig(
 
 ### Search Path
 
-Set default schema search path:
+`search_path` is the connection's schema resolution order. A model that does
+not declare `__schema_name__` resolves through it, which makes it the right
+knob for the common case:
 
 ```python
 config = PostgresConnectionConfig(
@@ -97,6 +99,48 @@ config = PostgresConnectionConfig(
     database="myapp",
     username="app",
     password="secret",
-    options="-c search_path=public,extensions",
+    search_path="app,public",
 )
 ```
+
+Three things to know:
+
+- **Use the `search_path` field**, not `options="-c search_path=..."`. The
+  dedicated field is validated and forwarded as a libpq connect parameter; the
+  generic `options` string bypasses that and is easy to get wrong.
+- **It is fixed at connect time.** It is a connection-establishment parameter, so
+  it cannot be changed per query or per transaction. Switching tenants at
+  runtime is not possible through this setting.
+- **`default_schema` does not do this.** That field has never affected
+  generated SQL; use `search_path`, or declare `__schema_name__` on the model.
+
+See [Schema Namespaces](../../../../rhosocial/docs/en_US/modeling/schema_namespace.md)
+in the core documentation for the model side of the same rule.
+
+### Schema Namespaces
+
+`__schema_name__` on a model selects the read/write namespace for that model.
+`search_path` covers the common case, and `__schema_name__` is for the
+exceptions:
+
+```python
+class Order(ActiveRecord):
+    __table_name__ = "orders"           # -> "shop"."orders"
+    __schema_name__ = "shop"
+```
+
+PostgreSQL-specific notes:
+
+- **An aliased range must be referenced by its alias alone.** `FROM
+  "shop"."orders" AS "o"` accepts `"o"."id"` but rejects both `"orders"."id"`
+  and `"shop"."orders"."id"` with `invalid reference to FROM-clause entry`.
+  The framework handles this by dropping the schema when a table alias is in
+  effect.
+- **`CREATE EXTENSION` now quotes its target schema**, so extensions can be
+  installed into a mixed-case schema.
+- **orafce functions are schema-qualified** with `oracle.` by default. Pass
+  `schema=` to any function in `functions.orafce` if the extension lives
+  elsewhere.
+- **PostGIS types are emitted unqualified** (`GEOMETRY`, `GEOGRAPHY`), as are
+  the `ST_*` calls. PostGIS must therefore be installed into a schema on
+  `search_path` — typically `public`, or an `extensions` schema added to it.

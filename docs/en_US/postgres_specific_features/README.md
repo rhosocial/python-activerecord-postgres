@@ -4,6 +4,7 @@ PostgreSQL offers many advanced features beyond standard SQL. This section cover
 
 ## Topics
 
+- **[Schema Namespaces](./schema_namespace.md)**: alias rules, `search_path`, extensions, orafce, PostGIS
 - **[PostgreSQL-Specific Field Types](./field_types.md)**: ARRAY, JSONB, UUID, Range types
 - **[PostgreSQL Dialect Expressions](./dialect.md)**: PostgreSQL-specific SQL syntax
 - **[Advanced Indexing](./indexing.md)**: GIN, GiST, BRIN indexes

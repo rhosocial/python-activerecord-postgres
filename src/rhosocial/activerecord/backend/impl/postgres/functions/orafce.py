@@ -14,9 +14,13 @@ PostgreSQL Documentation: https://github.com/orafce/orafce
 The orafce extension must be installed:
     CREATE EXTENSION IF NOT EXISTS orafce;
 
-Note: orafce functions are installed in the "oracle" schema, so all function
-calls are schema-qualified (e.g., oracle.ADD_MONTHS) to ensure they resolve
-correctly regardless of the current search_path setting.
+Note: orafce functions are installed in the ``oracle`` schema by default, so all
+function calls are schema-qualified (e.g. ``oracle.ADD_MONTHS``) to ensure they
+resolve correctly regardless of the current ``search_path`` setting. When the
+extension is installed into a different schema, pass ``schema=`` to any
+function in this module:
+
+    >>> add_months(dialect, "2024-01-15", 3, schema="ext")
 
 Supported functions:
 - Date functions: ADD_MONTHS, LAST_DAY, MONTHS_BETWEEN, NEXT_DAY
@@ -28,14 +32,57 @@ Supported functions:
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
 - They return Expression objects (FunctionCall, BinaryExpression, etc.)
+
+.. note::
+   The qualified name is emitted unquoted, because
+   ``SQLDialectBase.format_function_call`` upper-cases ``func_name`` verbatim.
+   A ``schema`` containing uppercase letters, spaces, or reserved words
+   therefore cannot be expressed through this module -- it would be
+   case-folded by the server into a different (usually non-existent) schema.
+   Use a plain lowercase schema name, or install orafce into the default one.
 """
 
+import re
+import warnings
 from typing import Union, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+#: Schema the orafce extension installs into by default.
+DEFAULT_ORAFCE_SCHEMA = "oracle"
+
+#: A schema name that survives the unquoted, upper-cased rendering path.
+_PLAIN_SCHEMA_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
+
+
+def _qualified(schema: Optional[str], name: str) -> str:
+    """Return a schema-qualified orafce function name.
+
+    Args:
+        schema: Target schema, or ``None`` for :data:`DEFAULT_ORAFCE_SCHEMA`.
+        name: Bare upper-case function name.
+
+    Returns:
+        The ``"<schema>.<NAME>"`` string consumed by ``FunctionCall``.
+
+    Warns:
+        UserWarning: If ``schema`` is not a plain lowercase identifier, since
+            the rendering path cannot quote it safely.
+    """
+    target = DEFAULT_ORAFCE_SCHEMA if schema is None else schema
+    if not _PLAIN_SCHEMA_RE.match(target):
+        warnings.warn(
+            f"orafce schema {target!r} is not a plain lowercase identifier; "
+            "function names are rendered unquoted and upper-cased, so the "
+            "server will look for a different schema. Use a lowercase name.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return f"{target}.{name}"
 
 
 def _convert_to_expression(
@@ -67,6 +114,8 @@ def add_months(
     dialect: "SQLDialectBase",
     date_expr: Union[str, "bases.BaseExpression"],
     months: Union[int, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Add months to a date.
 
@@ -87,7 +136,7 @@ def add_months(
         >>> add_months(dialect, '2024-01-31', 1)
     """
     return core.FunctionCall(
-        dialect, "oracle.ADD_MONTHS",
+        dialect, _qualified(schema, "ADD_MONTHS"),
         _convert_to_expression(dialect, date_expr),
         _convert_to_expression(dialect, months),
     )
@@ -96,6 +145,8 @@ def add_months(
 def last_day(
     dialect: "SQLDialectBase",
     date_expr: Union[str, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Return the last day of the month for a given date.
 
@@ -114,7 +165,7 @@ def last_day(
         >>> last_day(dialect, '2024-01-01')
     """
     return core.FunctionCall(
-        dialect, "oracle.LAST_DAY",
+        dialect, _qualified(schema, "LAST_DAY"),
         _convert_to_expression(dialect, date_expr),
     )
 
@@ -123,6 +174,8 @@ def months_between(
     dialect: "SQLDialectBase",
     date1: Union[str, "bases.BaseExpression"],
     date2: Union[str, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Calculate the number of months between two dates.
 
@@ -144,7 +197,7 @@ def months_between(
         >>> months_between(dialect, '2024-06-20', '2024-01-10')
     """
     return core.FunctionCall(
-        dialect, "oracle.MONTHS_BETWEEN",
+        dialect, _qualified(schema, "MONTHS_BETWEEN"),
         _convert_to_expression(dialect, date1),
         _convert_to_expression(dialect, date2),
     )
@@ -154,6 +207,8 @@ def next_day(
     dialect: "SQLDialectBase",
     date_expr: Union[str, "bases.BaseExpression"],
     day: Union[str, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Return the date of the next specified day of the week after a given date.
 
@@ -173,7 +228,7 @@ def next_day(
         >>> next_day(dialect, '2024-06-15', 'FRIDAY')
     """
     return core.FunctionCall(
-        dialect, "oracle.NEXT_DAY",
+        dialect, _qualified(schema, "NEXT_DAY"),
         _convert_to_expression(dialect, date_expr),
         _convert_to_expression(dialect, day),
     )
@@ -185,6 +240,8 @@ def nvl(
     dialect: "SQLDialectBase",
     expr1: Union[str, "bases.BaseExpression"],
     expr2: Union[str, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Return expr2 if expr1 is NULL, otherwise return expr1.
 
@@ -204,7 +261,7 @@ def nvl(
         >>> nvl(dialect, 'discount', '0')
     """
     return core.FunctionCall(
-        dialect, "oracle.NVL",
+        dialect, _qualified(schema, "NVL"),
         _convert_to_expression(dialect, expr1),
         _convert_to_expression(dialect, expr2),
     )
@@ -215,6 +272,8 @@ def nvl2(
     expr1: Union[str, "bases.BaseExpression"],
     expr2: Union[str, "bases.BaseExpression"],
     expr3: Union[str, "bases.BaseExpression"],
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Return expr2 if expr1 is NOT NULL, otherwise return expr3.
 
@@ -235,7 +294,7 @@ def nvl2(
         >>> nvl2(dialect, 'email', "'has email'", "'no email'")
     """
     return core.FunctionCall(
-        dialect, "oracle.NVL2",
+        dialect, _qualified(schema, "NVL2"),
         _convert_to_expression(dialect, expr1),
         _convert_to_expression(dialect, expr2),
         _convert_to_expression(dialect, expr3),
@@ -249,6 +308,7 @@ def decode(
     expr: Union[str, "bases.BaseExpression"],
     *matches: Union[str, "bases.BaseExpression"],
     default: Optional[Union[str, "bases.BaseExpression"]] = None,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Oracle-compatible DECODE conditional expression.
 
@@ -279,7 +339,7 @@ def decode(
         args.append(_convert_to_expression(dialect, m))
     if default is not None:
         args.append(_convert_to_expression(dialect, default))
-    return core.FunctionCall(dialect, "oracle.DECODE", *args)
+    return core.FunctionCall(dialect, _qualified(schema, "DECODE"), *args)
 
 
 # ============== Numeric Functions ==============
@@ -288,6 +348,8 @@ def orafce_trunc(
     dialect: "SQLDialectBase",
     value: Union[str, "bases.BaseExpression"],
     format: Optional[Union[str, "bases.BaseExpression"]] = None,
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Truncate a date or number to the specified precision.
 
@@ -313,13 +375,15 @@ def orafce_trunc(
     args = [_convert_to_expression(dialect, value)]
     if format is not None:
         args.append(_convert_to_expression(dialect, format))
-    return core.FunctionCall(dialect, "oracle.TRUNC", *args)
+    return core.FunctionCall(dialect, _qualified(schema, "TRUNC"), *args)
 
 
 def orafce_round(
     dialect: "SQLDialectBase",
     value: Union[str, "bases.BaseExpression"],
     format: Optional[Union[str, "bases.BaseExpression"]] = None,
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Round a date or number to the specified precision.
 
@@ -345,7 +409,7 @@ def orafce_round(
     args = [_convert_to_expression(dialect, value)]
     if format is not None:
         args.append(_convert_to_expression(dialect, format))
-    return core.FunctionCall(dialect, "oracle.ROUND", *args)
+    return core.FunctionCall(dialect, _qualified(schema, "ROUND"), *args)
 
 
 # ============== String Functions ==============
@@ -356,6 +420,8 @@ def instr(
     substring_expr: Union[str, "bases.BaseExpression"],
     position: Union[int, "bases.BaseExpression"] = 1,
     occurrence: Union[int, "bases.BaseExpression"] = 1,
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Find the position of a substring within a string.
 
@@ -378,7 +444,7 @@ def instr(
         >>> instr(dialect, 'description', "'the'", position=1, occurrence=2)
     """
     return core.FunctionCall(
-        dialect, "oracle.INSTR",
+        dialect, _qualified(schema, "INSTR"),
         _convert_to_expression(dialect, string_expr),
         _convert_to_expression(dialect, substring_expr),
         _convert_to_expression(dialect, position),
@@ -391,6 +457,8 @@ def substr(
     string_expr: Union[str, "bases.BaseExpression"],
     position: Union[int, "bases.BaseExpression"],
     length: Optional[Union[int, "bases.BaseExpression"]] = None,
+    *,
+    schema: Optional[str] = None,
 ) -> core.FunctionCall:
     """Extract a substring from a string.
 
@@ -419,7 +487,7 @@ def substr(
     ]
     if length is not None:
         args.append(_convert_to_expression(dialect, length))
-    return core.FunctionCall(dialect, "oracle.SUBSTR", *args)
+    return core.FunctionCall(dialect, _qualified(schema, "SUBSTR"), *args)
 
 
 __all__ = [

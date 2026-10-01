@@ -1,18 +1,24 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/introspection/test_introspection_default_schema.py
-"""Offline tests for ``_get_default_schema`` config-aware resolution.
+"""Offline tests for introspector default-schema resolution.
 
-Both introspection stacks gained config-aware default-schema resolution:
+``PostgreSQLIntrospectorMixin._get_default_schema`` reads the introspector's
+own ``self._backend.config`` and resolves in this order:
 
-1. ``PostgreSQLIntrospectorMixin._get_default_schema`` (introspector) reads
-   ``self._backend.config``.
-2. ``PostgresIntrospectionCapabilityMixin._get_default_schema`` (dialect SQL
-   generation) reads ``self._config`` or ``self._backend``.
+    config.default_schema > first entry of config.search_path > 'public'
 
-Priority: config.default_schema > first entry of config.search_path > 'public'.
+The *dialect*-side counterpart used to mirror this, but it read
+``self._config`` / ``self._backend`` -- attributes ``SQLDialectBase.__init__``
+never assigns. It therefore always returned ``'public'`` in production, and its
+tests only passed because they monkeypatched those attributes onto a bare
+``PostgresDialect()``. That implementation, and the test class covering it,
+have been removed; the dialect now states its ``'public'`` result directly.
+
+Note that ``config.default_schema`` has no effect on generated SQL either -- it
+never did. Model-level ``__schema_name__`` is the only thing that qualifies a
+statement; unqualified names resolve through the connection's ``search_path``.
 """
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
-from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.introspection import (
     SyncPostgreSQLIntrospector,
 )
@@ -59,26 +65,3 @@ class TestIntrospectorDefaultSchema:
             make_config(default_schema="app", search_path="broker, public")
         )
         assert introspector._get_default_schema() == "app"
-
-
-class TestDialectMixinDefaultSchema:
-    """PostgresIntrospectionCapabilityMixin._get_default_schema (dialect)."""
-
-    def test_returns_public_when_not_configured(self):
-        assert PostgresDialect()._get_default_schema() == "public"
-
-    def test_returns_default_schema_from_config(self):
-        dialect = PostgresDialect()
-        dialect._config = make_config(default_schema="broker")
-        assert dialect._get_default_schema() == "broker"
-
-    def test_returns_first_entry_of_search_path(self):
-        dialect = PostgresDialect()
-        dialect._config = make_config(search_path="broker, public")
-        assert dialect._get_default_schema() == "broker"
-
-    def test_returns_schema_from_backend(self):
-        dialect = PostgresDialect()
-        backend = PostgresBackend(connection_config=make_config(search_path="warehouse"))
-        dialect._backend = backend
-        assert dialect._get_default_schema() == "warehouse"

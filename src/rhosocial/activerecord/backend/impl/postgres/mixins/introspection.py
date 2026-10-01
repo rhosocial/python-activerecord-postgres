@@ -109,24 +109,21 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     # ========== Helper Methods ==========
 
     def _get_default_schema(self) -> str:
-        """Get default schema name.
+        """Resolve the schema that unqualified object names land in.
 
-        PostgreSQL's default schema is 'public', but may be overridden by
-        the connection config's `default_schema` or the first entry of
-        `search_path`. Returns 'public' if neither is set.
+        Always ``"public"``. The previous implementation tried to read
+        ``self._config`` / ``self._backend``, but ``SQLDialectBase.__init__``
+        never assigns either attribute, so the config was unreachable and the
+        method silently returned ``"public"`` in production -- its unit tests
+        only passed because they monkeypatched those attributes.
+
+        The connection's real resolution order is the server-side
+        ``search_path``, applied at connect time by libpq
+        (``PostgresConnectionConfig.search_path``). Introspection deliberately
+        does not mirror that: a caller that wants a specific namespace passes
+        ``schema=`` explicitly. See ``schema_namespace`` docs for the model
+        side of the same rule.
         """
-        config = getattr(self, "_config", None) or getattr(self, "_backend", None)
-        cfg = config.config if hasattr(config, "config") else config
-        if cfg is not None:
-            default_schema = getattr(cfg, "default_schema", None)
-            if default_schema:
-                return str(default_schema)
-            search_path = getattr(cfg, "search_path", None)
-            if search_path:
-                # search_path 形如 "broker", public → 取第一个有效 schema
-                first = str(search_path).split(",")[0].strip().strip('"').strip("'")
-                if first:
-                    return first
         return "public"
 
     # ========== Query Formatting Methods ==========

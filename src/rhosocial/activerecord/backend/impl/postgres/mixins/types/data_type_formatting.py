@@ -218,9 +218,25 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return "HSTORE", ()
 
     def format_data_type_postgres_geometry(self, data_type) -> Tuple[str, tuple]:
+        """Render the unqualified ``GEOMETRY`` type name.
+
+        The type is emitted **without** a schema qualifier, so the server
+        resolves it through the connection's ``search_path``. PostGIS must
+        therefore be installed into a schema on that path -- typically
+        ``public``, or an ``extensions`` schema added to ``search_path`` via
+        ``PostgresConnectionConfig.search_path``.
+
+        Installing PostGIS elsewhere without extending ``search_path`` makes
+        every geometry DDL and DML statement fail with
+        ``type "geometry" does not exist``.
+        """
         return "GEOMETRY", ()
 
     def format_data_type_postgres_geography(self, data_type) -> Tuple[str, tuple]:
+        """Render the unqualified ``GEOGRAPHY`` type name.
+
+        Same ``search_path`` requirement as :meth:`format_data_type_postgres_geometry`.
+        """
         return "GEOGRAPHY", ()
 
     def format_data_type_postgres_vector(self, data_type) -> Tuple[str, tuple]:

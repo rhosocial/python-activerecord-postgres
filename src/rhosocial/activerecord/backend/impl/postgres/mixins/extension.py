@@ -631,7 +631,7 @@ class PostgresExtensionMixin:
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
 
-        # Quote extension name if it contains hyphen or other special chars
+        # Quote the extension name if it contains hyphen or other special chars
         if "-" in expr.name or "_" in expr.name or any(c.isupper() for c in expr.name):
             name = f'"{expr.name}"'
         else:
@@ -639,7 +639,9 @@ class PostgresExtensionMixin:
         parts.append(name)
 
         if expr.schema:
-            parts.append(f"SCHEMA {expr.schema}")
+            # Always quote the target schema: an unquoted identifier would be
+            # case-folded by the server and break on mixed-case names.
+            parts.append(f"SCHEMA {self.format_identifier(expr.schema)}")
 
         if expr.version:
             parts.append(f"VERSION '{expr.version}'")

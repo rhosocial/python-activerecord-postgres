@@ -27,7 +27,11 @@ class TestPostgresCreateExtensionExpression:
         assert params == ()
 
     def test_create_extension_with_schema(self, postgres_dialect):
-        """Test CREATE EXTENSION with schema specification."""
+        """Test CREATE EXTENSION with schema specification.
+
+        The schema is always quoted: an unquoted identifier would be
+        case-folded by the server, breaking on mixed-case schema names.
+        """
         from rhosocial.activerecord.backend.impl.postgres.expression import (
             PostgresCreateExtensionExpression,
         )
@@ -40,7 +44,7 @@ class TestPostgresCreateExtensionExpression:
         )
         sql, params = expr.to_sql()
 
-        assert sql == "CREATE EXTENSION IF NOT EXISTS hstore SCHEMA public"
+        assert sql == 'CREATE EXTENSION IF NOT EXISTS hstore SCHEMA "public"'
         assert params == ()
 
     def test_create_extension_with_version(self, postgres_dialect):
@@ -109,7 +113,7 @@ class TestPostgresCreateExtensionExpression:
         )
         sql, params = expr.to_sql()
 
-        assert sql == 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions VERSION \'1.1\' CASCADE'
+        assert sql == 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA "extensions" VERSION \'1.1\' CASCADE'
         assert params == ()
 
 

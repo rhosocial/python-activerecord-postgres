@@ -70,8 +70,14 @@ class PostgresConnectionMixin:
     # executed outside a managed transaction; when True, those commits are skipped.
     autocommit: bool = False
     # Schema namespace support
-    search_path: Optional[str] = None  # Set connection's search_path (passed directly to psycopg)
-    default_schema: Optional[str] = None  # Default schema when Model doesn't specify __schema_name__
+    # Applied at connect time as a libpq parameter, so it is fixed for the
+    # life of the connection and cannot be changed per query or transaction.
+    # Unqualified object names resolve through it, which is how a model that
+    # does not set ``__schema_name__`` reaches its tables.
+    search_path: Optional[str] = None
+    # DEPRECATED: has never affected generated SQL. A model that does not set
+    # ``__schema_name__`` resolves through ``search_path``; use that instead.
+    default_schema: Optional[str] = None
 
 
 @dataclass

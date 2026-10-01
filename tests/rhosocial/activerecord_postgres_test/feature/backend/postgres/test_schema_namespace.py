@@ -109,9 +109,6 @@ class TestSchemaNamespaceDialect:
 class TestSchemaNamespaceBackend:
     """Test schema namespace operations with real PostgresBackend."""
 
-    def test_get_default_schema_is_public(self, postgres_backend_single):
-        assert postgres_backend_single.get_default_schema() == "public"
-
     def test_create_and_drop_schema(self, postgres_backend_single):
         schema_name = "test_schema_ns"
         # Ensure clean state
@@ -208,9 +205,6 @@ class TestSchemaNamespaceAsync:
     """Test schema namespace operations with AsyncPostgresBackend."""
 
     @pytest.mark.asyncio
-    async def test_async_get_default_schema_is_public(self, async_postgres_backend_single):
-        assert async_postgres_backend_single.get_default_schema() == "public"
-
     @pytest.mark.asyncio
     async def test_async_create_and_drop_schema(self, async_postgres_backend_single):
         schema_name = "test_schema_async"
