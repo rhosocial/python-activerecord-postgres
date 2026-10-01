@@ -30,6 +30,15 @@ class PostgresDataTypeMixin:
         """Composite domains are native feature, PG 11+."""
         return self.version >= (11, 0, 0)
 
+    def supports_jsonb_subscript(self) -> bool:
+        """Always False: PostgreSQL has no ``jsonb['key']`` subscript.
+
+        Declared in PostgresDataTypeSupport, so the mixin must define it even
+        though the single real answer lives in PostgresJSONBEnhancedMixin.
+        Both return False, so the MRO cannot produce two different results.
+        """
+        return False
+
     def supports_numeric_infinity(self) -> bool:
         """Numeric Infinity is native feature, PG 14+."""
         return self.version >= (14, 0, 0)

@@ -33,10 +33,20 @@ class PostgresJSONBEnhancedMixin:
         """Render a JSON path access according to the expression's mode.
 
         Overriding the core dispatch entry point previously ignored
-        ``expr.mode`` entirely, which meant ``ARROW`` silently produced
-        jsonpath SQL and ``FUNCTION`` was indistinguishable from ``AUTO`` —
-        even though ``supports_json_arrow_operators()`` advertised arrows
-        that this method never emitted.
+        ``expr.mode`` entirely, so ``ARROW`` silently produced jsonpath SQL
+        and ``FUNCTION`` was indistinguishable from ``AUTO`` — even though
+        ``supports_json_arrow_operators()`` advertised arrows that this method
+        never emitted.
+
+        ``AUTO`` keeps resolving to the path form rather than to arrows, and
+        that is deliberate. The two spellings do not take the same path
+        argument: ``->`` and ``->>`` take a *key name*, while
+        ``jsonb_path_query_first`` takes a *jsonpath* such as
+        ``$.tags[0]``. ``expression.functions.json_extract_text`` passes a
+        jsonpath, so preferring arrows here would look up a key literally named
+        ``$.tags[0]``, find nothing, and yield NULL. Preferring arrows is only
+        safe when the path is a single key, which the caller cannot be assumed
+        to know.
 
         Args:
             expr: The JSONExpression node.
@@ -45,8 +55,8 @@ class PostgresJSONBEnhancedMixin:
             Tuple of (SQL string, parameters tuple).
 
         Raises:
-            UnsupportedFeatureError: If FUNCTION mode is requested before
-                PostgreSQL 12, or ARROW mode on a server without jsonb.
+            UnsupportedFeatureError: If ARROW mode is requested before
+                PostgreSQL 9.4, or FUNCTION mode before 12.0.
         """
         from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
 
@@ -55,13 +65,8 @@ class PostgresJSONBEnhancedMixin:
         if mode is JSONPathMode.ARROW:
             return self.format_json_arrow_expression(expr)
 
-        if mode is JSONPathMode.FUNCTION:
-            return self._format_json_path_expression(expr)
-
-        # AUTO follows the core contract: arrows when the server has them,
-        # the path language otherwise.
-        if self.supports_json_arrow_operators():
-            return self.format_json_arrow_expression(expr)
+        # AUTO and FUNCTION both render the path form: the path argument is a
+        # jsonpath, which the arrow operators cannot consume.
         return self._format_json_path_expression(expr)
 
     def _format_json_path_expression(self, expr: "JSONExpression") -> Tuple[str, tuple]:

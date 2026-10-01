@@ -5,7 +5,7 @@ This module defines the protocol for PostgreSQL-specific JSON/JSONB
 enhancements beyond the core JSON support.
 """
 
-from typing import Protocol, runtime_checkable, TYPE_CHECKING
+from typing import Any, Protocol, Tuple, runtime_checkable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression import JSONExpression
@@ -79,11 +79,21 @@ class PostgresJSONBEnhancedSupport(Protocol):
         """
         ...
 
+    def format_json_table_expression(self, expr: Any) -> Tuple[str, Tuple]:
+        """Always refuses; PostgreSQL has no JSON_TABLE function.
+
+        The probe reports absence, so this exists to name the construct that
+        does work here (``jsonb_to_recordset``) instead of letting the caller
+        reach a generic error.
+        """
+        ...
+
     def supports_jsonb_subscript(self) -> bool:
         """Whether JSONB subscript notation is supported.
 
-        Native feature, PostgreSQL 14+.
-        Enables jsonb['key'] subscript syntax for accessing values.
+        Always False: PostgreSQL has no ``jsonb['key']`` subscript. SQL
+        subscripting covers arrays and composites, and jsonb values are read
+        with ``->`` / ``->>`` or the SQL/JSON path language.
         """
         ...
 

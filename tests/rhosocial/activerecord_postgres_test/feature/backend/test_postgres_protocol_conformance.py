@@ -90,6 +90,7 @@ def get_postgres_protocols():
         dialect_protocols.FilterClauseSupport,
         dialect_protocols.WindowFunctionSupport,
         dialect_protocols.JSONSupport,
+        dialect_protocols.UUIDSupport,
         dialect_protocols.ReturningSupport,
         dialect_protocols.AdvancedGroupingSupport,
         dialect_protocols.ArraySupport,
