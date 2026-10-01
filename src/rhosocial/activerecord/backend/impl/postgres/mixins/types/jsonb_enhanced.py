@@ -29,6 +29,16 @@ class PostgresJSONBEnhancedMixin:
       expressive, and the only form that can evaluate a real path predicate.
     """
 
+    #: The JSON path functions PostgreSQL spells this way. Declared so a
+    #: conformance check can tell them from a function inherited from the core,
+    #: which is MySQL's JSON_EXTRACT. Both operators go through
+    #: jsonb_path_query_first; `->>` then casts the result to text.
+    _JSON_FUNCTION_NAMES = ("jsonb_path_query_first", "jsonb_path_query_array", "#>>")
+
+    def supports_json_function(self, function_name: str) -> bool:
+        """Whether a named JSON function is available on this server."""
+        return function_name.lower() in {n.lower() for n in self._JSON_FUNCTION_NAMES}
+
     def format_json_expression(self, expr: "JSONExpression") -> Tuple[str, tuple]:
         """Render a JSON path access according to the expression's mode.
 
