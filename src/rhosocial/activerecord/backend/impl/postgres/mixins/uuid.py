@@ -63,11 +63,13 @@ class PostgresUUIDMixin:
         ``supports_uuid_generation`` used to mean two different things — "can
         the database produce a UUID" here and "is uuid-ossp installed" in
         :class:`PostgresUuidOssMixin` — so the MRO decided which question got
-        answered. There is one question, and this is its answer.
+        answered. There is one question, and this is its answer; the narrower
+        "is the extension installed" question is
+        ``supports_uuid_ossp_extension``.
         """
         if self.version >= (13, 0, 0):
             return True
-        return self.check_extension_feature("uuid_ossp", "generation")
+        return self.supports_uuid_ossp_extension()
 
     def format_uuid_generation(
         self, expr: "UUIDGenerationExpression"
@@ -85,7 +87,7 @@ class PostgresUUIDMixin:
         """
         if self.version >= (13, 0, 0):
             sql = "gen_random_uuid()"
-        elif self.check_extension_feature("uuid_ossp", "generation"):
+        elif self.supports_uuid_ossp_extension():
             sql = "uuid_generate_v4()"
         else:
             raise UnsupportedFeatureError(

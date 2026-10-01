@@ -28,13 +28,23 @@ class PostgresUuidOssSupport(Protocol):
     - Minimum version: 1.0
     - Documentation: https://www.postgresql.org/docs/current/uuid-ossp.html
 
-    This protocol deliberately declares no methods. It used to declare
-    ``supports_uuid_generation``, which collided with the core
-    :class:`UUIDSupport` on the same name — the overlap check rejected the two
-    protocols, and the overlap was a real ambiguity rather than a bookkeeping
-    problem. The question "is uuid-ossp installed" is a property of the
-    database, not of the dialect, so the answer belongs to
-    ``check_extension_feature``; the question "can this server generate a
-    UUID" belongs to ``UUIDSupport.supports_uuid_generation``, which answers
-    it once by folding in both the 13.0 built-in and the extension route.
+    It used to declare ``supports_uuid_generation``, which collided with the
+    core :class:`UUIDSupport` on the same name, and the overlap check rejected
+    the pair. The overlap was a real ambiguity, not bookkeeping: this protocol
+    asked whether the extension is *installed*, while the core asked whether
+    the server can *generate* a UUID. Two questions, two names.
+
+    ``supports_uuid_generation`` now answers both at once and lives only in the
+    core protocol; :class:`PostgresUUIDMixin` folds the 13.0 built-in and this
+    extension into that single answer. What remains here is the narrower
+    question, under a name that cannot be confused with it.
     """
+
+    def supports_uuid_ossp_extension(self) -> bool:
+        """Whether the uuid-ossp extension is installed on this database.
+
+        Distinct from generating a UUID: 13.0+ servers generate one with no
+        extension at all, so a True here says nothing about whether
+        ``supports_uuid_generation()`` is True.
+        """
+        ...

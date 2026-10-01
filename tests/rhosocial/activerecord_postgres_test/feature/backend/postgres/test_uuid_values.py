@@ -73,8 +73,15 @@ def test_old_server_with_the_extension_falls_back_to_ossp(monkeypatch):
     assert UUIDGenerationExpression(dialect).to_sql() == ("uuid_generate_v4()", ())
 
 
-def test_the_two_probes_agree_when_the_extension_is_present(monkeypatch):
-    """The MRO must not be able to pick a different answer for this name."""
+def test_generation_consults_the_extension_probe(monkeypatch):
+    """The merged probe must go through the extension's own narrower probe.
+
+    The two used to share the name ``supports_uuid_generation`` while asking
+    different questions, so the MRO picked an answer by class order. The
+    extension question now has its own name, and this asserts the merge still
+    consults it — otherwise a 12.4 server with uuid-ossp would report no
+    generation.
+    """
     from rhosocial.activerecord.backend.impl.postgres.mixins import (
         PostgresUUIDMixin,
         PostgresUuidOssMixin,
@@ -82,10 +89,14 @@ def test_the_two_probes_agree_when_the_extension_is_present(monkeypatch):
 
     dialect = _dialect((12, 4, 0))
     monkeypatch.setattr(
-        type(dialect), "check_extension_feature", lambda *a, **k: True, raising=True
+        type(dialect),
+        "supports_uuid_ossp_extension",
+        lambda *a, **k: True,
+        raising=True,
     )
-    merged = PostgresUUIDMixin.supports_uuid_generation(dialect)
-    assert merged == PostgresUuidOssMixin.supports_uuid_generation(dialect)
+    assert PostgresUUIDMixin.supports_uuid_generation(dialect) is True
+    # And the extension probe keeps its own narrower answer.
+    assert PostgresUuidOssMixin.supports_uuid_ossp_extension(dialect) is True
 
 
 def test_the_dialect_itself_resolves_one_answer(monkeypatch):

@@ -15,6 +15,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import Column, JSONExpression
+from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 
@@ -33,14 +34,15 @@ def _expr(dialect, mode=None, operation="->>", path="$.a"):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("mode", [None, "arrow"])
+@pytest.mark.parametrize("mode", ["arrow", JSONPathMode.ARROW])
 def test_arrow_modes_use_the_operators(mode):
-    """ARROW mode means arrows; so does the default that never asked for a mode.
+    """Only an explicit ARROW renders arrows.
 
-    AUTO is *not* in this list on purpose. It renders the path form, because
-    the two spellings take different path arguments: ``->`` takes a key name
-    while ``jsonb_path_query_first`` takes a jsonpath. ``json_extract_text``
-    passes jsonpaths, so AUTO cannot assume the caller wants a key.
+    The default (mode=None, which becomes AUTO) is deliberately absent. It
+    renders the path form, because the two spellings take different path
+    arguments: ``->`` takes a key name while ``jsonb_path_query_first`` takes a
+    jsonpath. ``json_extract_text`` passes jsonpaths, so AUTO cannot assume
+    the caller wants a key.
     """
     sql, _ = _expr(_dialect(), mode).to_sql()
     assert sql == """"t"."data"->>'$.a'"""
@@ -162,6 +164,11 @@ def test_probes_declared_twice_agree(dialect):
 
 
 def test_arrow_probe_matches_what_is_actually_emitted():
+    """A dialect advertising arrows must emit them when ARROW is asked for.
+
+    AUTO is deliberately not checked here: on this dialect it renders the path
+    form instead, which is why the check lives on the explicit mode.
+    """
     dialect = _dialect()
     assert dialect.supports_json_arrow_operators() is True
-    assert "->>" in _expr(dialect, "auto").to_sql()[0]
+    assert "->>" in _expr(dialect, "arrow").to_sql()[0]
