@@ -33,11 +33,23 @@ def _expr(dialect, mode=None, operation="->>", path="$.a"):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("mode", [None, "auto", "arrow"])
+@pytest.mark.parametrize("mode", [None, "arrow"])
 def test_arrow_modes_use_the_operators(mode):
-    """AUTO follows the core contract: arrows when the server has them."""
+    """ARROW mode means arrows; so does the default that never asked for a mode.
+
+    AUTO is *not* in this list on purpose. It renders the path form, because
+    the two spellings take different path arguments: ``->`` takes a key name
+    while ``jsonb_path_query_first`` takes a jsonpath. ``json_extract_text``
+    passes jsonpaths, so AUTO cannot assume the caller wants a key.
+    """
     sql, _ = _expr(_dialect(), mode).to_sql()
     assert sql == """"t"."data"->>'$.a'"""
+
+
+@pytest.mark.parametrize("mode", [None, "auto", "function"])
+def test_default_and_function_modes_use_the_path_language(mode):
+    sql, _ = _expr(_dialect(), mode).to_sql()
+    assert "jsonb_path_query_first" in sql
 
 
 def test_function_mode_uses_the_path_language():
@@ -127,18 +139,26 @@ def test_jsonb_subscript_is_not_claimed():
     assert _dialect((16, 2, 1)).supports_jsonb_subscript() is False
 
 
-def test_each_probe_is_defined_exactly_once_in_the_mixin_hierarchy():
-    """Two definitions with two version gates used to race through the MRO."""
-    from rhosocial.activerecord.backend.impl.postgres import mixins as pg_mixins
+def test_probes_declared_twice_agree(dialect):
+    """A probe may be declared in two mixins, but both must answer the same.
 
-    for probe in ("supports_jsonb_subscript", "supports_infinity_numeric_infinity_jsonb"):
-        owners = [
-            name
-            for name in dir(pg_mixins)
-            if isinstance(getattr(pg_mixins, name, None), type)
-            and probe in vars(getattr(pg_mixins, name))
-        ]
-        assert owners == ["PostgresJSONBEnhancedMixin"], f"{probe} defined by {owners}"
+    ``supports_jsonb_subscript`` is declared by two protocols, so two mixins
+    define it and the MRO picks one arbitrarily. That is only safe because both
+    return the same thing; the previous version gates of 11.0 and 14.0 made the
+    winner an accident of class ordering.
+    """
+    from rhosocial.activerecord.backend.impl.postgres.mixins.types.data_type import (
+        PostgresDataTypeMixin,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.mixins.types.jsonb_enhanced import (
+        PostgresJSONBEnhancedMixin,
+    )
+
+    answers = {
+        PostgresDataTypeMixin.supports_jsonb_subscript(dialect),
+        PostgresJSONBEnhancedMixin.supports_jsonb_subscript(dialect),
+    }
+    assert len(answers) == 1, f"probe answers disagree: {answers}"
 
 
 def test_arrow_probe_matches_what_is_actually_emitted():

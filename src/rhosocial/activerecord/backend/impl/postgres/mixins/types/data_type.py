@@ -53,6 +53,19 @@ class PostgresDataTypeMixin:
         """
         return self.version >= (11, 0, 0)
 
+    def supports_jsonb_subscript(self) -> bool:
+        """Always False: PostgreSQL has no ``jsonb['key']`` subscript.
+
+        SQL subscripting covers arrays and composites; jsonb values are read
+        with ``->`` / ``->>`` or the SQL/JSON path language. This probe used to
+        claim 14.0+, dating a capability the server does not have.
+
+        Declared in PostgresDataTypeSupport, so this mixin must define it even
+        though PostgresJSONBEnhancedMixin is where JSONB concerns live. Both
+        return False, so the MRO cannot produce two different answers.
+        """
+        return False
+
 
     def supports_numeric_infinity(self) -> bool:
         """Whether NUMERIC type supports Infinity values.

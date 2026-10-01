@@ -27,8 +27,14 @@ class PostgresUuidOssSupport(Protocol):
     - Install command: CREATE EXTENSION uuid-ossp;
     - Minimum version: 1.0
     - Documentation: https://www.postgresql.org/docs/current/uuid-ossp.html
-    """
 
-    def supports_uuid_generation(self) -> bool:
-        """Whether UUID generation functions are supported."""
-        ...
+    This protocol deliberately declares no methods. It used to declare
+    ``supports_uuid_generation``, which collided with the core
+    :class:`UUIDSupport` on the same name — the overlap check rejected the two
+    protocols, and the overlap was a real ambiguity rather than a bookkeeping
+    problem. The question "is uuid-ossp installed" is a property of the
+    database, not of the dialect, so the answer belongs to
+    ``check_extension_feature``; the question "can this server generate a
+    UUID" belongs to ``UUIDSupport.supports_uuid_generation``, which answers
+    it once by folding in both the 13.0 built-in and the extension route.
+    """
