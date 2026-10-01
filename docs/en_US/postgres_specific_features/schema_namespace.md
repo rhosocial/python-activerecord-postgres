@@ -42,7 +42,40 @@ Practical consequences:
   architecture that manages `search_path` explicitly (not implemented here).
 - `default_schema` has never affected generated SQL. Use `search_path`.
 
+## DDL statements take a schema of their own
+
+`__schema_name__` selects the read/write namespace. It is not consulted when DDL
+is built, so a migration has to name the schema it means — but it can say so
+directly now, rather than assembling a qualified name by hand.
+
+| Statement | How to qualify it |
+|---|---|
+| `CREATE TABLE` / `DROP TABLE` | pass `TableExpression(dialect, "users", schema_name="app")` |
+| `CREATE` / `ALTER` / `DROP` VIEW, incl. materialized | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` TYPE | `schema_name="app"` |
+| `CREATE` / `DROP` INDEX, incl. full-text | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` SEQUENCE | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` DOMAIN | `schema_name="app"` |
+| `CREATE` / `DROP` FUNCTION | `schema_name="app"` |
+| `CREATE` / `DROP` TRIGGER | `schema_name="app"` |
+
+`schema_name` defaults to `None`, which means unqualified. Passing `""` is
+rejected: an empty string is a mistake, not a way of saying "unqualified".
+
+## Asking the server which schema is current
+
+```python
+backend.get_current_schema()   # 'public'
+await async_backend.get_current_schema()
+```
+
+This reads `current_schema()`, which walks `search_path` and returns the first
+schema that actually exists. `search_path` may name schemas that do not, so it
+can legitimately resolve to nothing; that comes back as `None` rather than an
+error, and is returned as-is.
+
 ## Extensions
+
 
 `CREATE EXTENSION` quotes its target schema, so a mixed-case schema works:
 

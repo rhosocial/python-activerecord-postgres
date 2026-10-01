@@ -39,7 +39,38 @@
   `search_path` 的架构（本库未实现）。
 - `default_schema` 从未影响生成的 SQL。请改用 `search_path`。
 
+## DDL 语句有自己的 schema 参数
+
+`__schema_name__` 决定的是读写命名空间，构造 DDL 时不会读取它，
+所以迁移必须自己写明它要的 schema —— 但现在可以直接写，不必再手工拼接限定名。
+
+| 语句 | 如何限定 |
+|---|---|
+| `CREATE TABLE` / `DROP TABLE` | 传 `TableExpression(dialect, "users", schema_name="app")` |
+| `CREATE` / `ALTER` / `DROP` VIEW（含物化视图） | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` TYPE | `schema_name="app"` |
+| `CREATE` / `DROP` INDEX（含全文索引） | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` SEQUENCE | `schema_name="app"` |
+| `CREATE` / `ALTER` / `DROP` DOMAIN | `schema_name="app"` |
+| `CREATE` / `DROP` FUNCTION | `schema_name="app"` |
+| `CREATE` / `DROP` TRIGGER | `schema_name="app"` |
+
+`schema_name` 默认为 `None`，含义是"不限定"。传 `""` 会被拒绝：
+空串是笔误，而不是表示"不限定"的方式。
+
+## 查询服务端当前所在的 schema
+
+```python
+backend.get_current_schema()   # 'public'
+await async_backend.get_current_schema()
+```
+
+它读取 `current_schema()`，该函数沿 `search_path` 向前查找并返回第一个
+实际存在的 schema。`search_path` 里可能列了并不存在的 schema，
+因此完全可能解析不到任何结果；此时返回 `None` 而非报错，并原样返回。
+
 ## 扩展
+
 
 `CREATE EXTENSION` 会为其目标 schema 加引号，因此混合大小写的 schema 可用：
 
