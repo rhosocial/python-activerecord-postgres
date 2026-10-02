@@ -107,11 +107,11 @@ class PostgresAlterIndexExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-index_name: str,
-          action_type: PostgresAlterIndexActionType,
-          *,
-          schema_name: Optional[str] = None,
-          if_exists: bool = False,
+        index_name: str,
+        action_type: PostgresAlterIndexActionType,
+        *,
+        schema_name: Optional[str] = None,
+        if_exists: bool = False,
         new_name: Optional[str] = None,
         tablespace: Optional[str] = None,
         storage_parameters: Optional[Dict[str, Any]] = None,
@@ -121,6 +121,13 @@ index_name: str,
         target_tablespace: Optional[str] = None,
         nowait: bool = False,
     ):
+        """
+        Args:
+            schema_name: Namespace to qualify the index with, e.g. ``app``.
+                None leaves the name unqualified. An empty string raises
+                ValueError, and a dialect with no namespace raises
+                UnsupportedFeatureError.
+        """
         super().__init__(dialect)
         self.index_name = index_name
         self.schema_name = _validate_schema_name(schema_name, type(self).__name__)
