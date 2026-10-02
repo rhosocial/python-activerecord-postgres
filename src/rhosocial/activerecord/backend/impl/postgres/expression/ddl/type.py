@@ -499,6 +499,13 @@ class PostgresDropTypeExpression(DropTypeExpression):
         cascade: bool = False,
         restrict: bool = False,
     ) -> None:
+        """
+        Args:
+            schema_name: Namespace to qualify the type with, e.g. ``app``.
+                None leaves the name unqualified. An empty string raises
+                ValueError, and a dialect with no namespace raises
+                UnsupportedFeatureError.
+        """
         super().__init__(
             dialect,
             type_name,
