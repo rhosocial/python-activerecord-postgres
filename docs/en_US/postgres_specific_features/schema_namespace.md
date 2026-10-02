@@ -40,7 +40,8 @@ Practical consequences:
 - A model without `__schema_name__` always resolves through the same path.
 - Per-tenant schemas require either one model class per tenant, or an
   architecture that manages `search_path` explicitly (not implemented here).
-- `default_schema` has never affected generated SQL. Use `search_path`.
+- `default_schema` is deprecated and inert: it has never affected generated
+  SQL. Set `search_path` instead.
 
 ## DDL statements take a schema of their own
 

@@ -111,8 +111,8 @@ Three things to know:
 - **It is fixed at connect time.** It is a connection-establishment parameter, so
   it cannot be changed per query or per transaction. Switching tenants at
   runtime is not possible through this setting.
-- **`default_schema` does not do this.** That field has never affected
-  generated SQL; use `search_path`, or declare `__schema_name__` on the model.
+- **`default_schema` is deprecated and inert.** It has never affected generated
+  SQL; set `search_path`, or declare `__schema_name__` on the model.
 
 See [Schema Namespaces](../../../../rhosocial/docs/en_US/modeling/schema_namespace.md)
 in the core documentation for the model side of the same rule.

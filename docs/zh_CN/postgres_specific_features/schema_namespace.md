@@ -38,7 +38,8 @@
 - 未设置 `__schema_name__` 的模型始终通过同一条路径解析。
 - 想按租户划分 schema，只能每个租户一个模型类，或者另做一套显式管理
   `search_path` 的方案（本库没有实现）。
-- `default_schema` 从未影响生成的 SQL。请改用 `search_path`。
+- `default_schema` 已废弃，不起作用：它从来没有影响过生成的 SQL。要改这个
+  行为请设 `search_path`。
 
 ## DDL 语句自己带 schema 参数
 
