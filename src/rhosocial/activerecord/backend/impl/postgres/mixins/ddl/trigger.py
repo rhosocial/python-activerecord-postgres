@@ -1,6 +1,6 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
 from typing import Tuple
-from .....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 
 class PostgresTriggerMixin:

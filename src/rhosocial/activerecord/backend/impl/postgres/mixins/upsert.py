@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ....expression.statements.dml import OnConflictClause
+    from rhosocial.activerecord.backend.expression.statements.dml import OnConflictClause
 
 
 class PostgresUpsertMixin:

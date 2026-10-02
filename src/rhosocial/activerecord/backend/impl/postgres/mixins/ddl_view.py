@@ -2,10 +2,10 @@
 """PostgreSQL view feature support implementation."""
 
 from typing import Tuple, TYPE_CHECKING
-from ....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateViewExpression
+    from rhosocial.activerecord.backend.expression.statements.ddl_view import CreateViewExpression
 
 
 class PostgresViewMixin:

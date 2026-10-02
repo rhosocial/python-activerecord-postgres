@@ -466,7 +466,7 @@ class PostgresBackend(
         resolves to no existing schema, which is a legitimate state rather than
         an error.
         """
-        from ....expression.statements.dql import QueryExpression
+        from rhosocial.activerecord.backend.expression.statements.dql import QueryExpression
         from ..functions.schema import current_schema
 
         query = QueryExpression(

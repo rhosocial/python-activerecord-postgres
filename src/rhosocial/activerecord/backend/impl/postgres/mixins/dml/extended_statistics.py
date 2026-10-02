@@ -6,7 +6,7 @@ which help the query planner make better estimates for combined column values.
 """
 
 from typing import Tuple, TYPE_CHECKING
-from .....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression

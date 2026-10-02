@@ -40,7 +40,7 @@ from ..expression.ddl.mv import (
 from ..storage_parameters import resolve_storage_parameter
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateMaterializedViewExpression
+    from rhosocial.activerecord.backend.expression.statements.ddl_view import CreateMaterializedViewExpression
     from ..expression.ddl.mv import (
         PostgresAlterMaterializedViewExpression,
         PostgresRefreshMaterializedViewExpression,

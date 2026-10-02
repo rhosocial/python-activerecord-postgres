@@ -2,12 +2,12 @@
 """PostgreSQL truncate feature support implementation."""
 
 from typing import Tuple, TYPE_CHECKING
-from ....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_truncate import TruncateExpression
+    from rhosocial.activerecord.backend.expression.statements.ddl_truncate import TruncateExpression
 
 
 class PostgresTruncateMixin:

@@ -6,7 +6,7 @@ PostgreSQL-specific index features and operations.
 """
 
 from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
-from .....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 

@@ -6,7 +6,7 @@ statement generation with PostgreSQL-specific options.
 """
 
 from typing import Tuple, TYPE_CHECKING
-from .....expression.core import TableExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
