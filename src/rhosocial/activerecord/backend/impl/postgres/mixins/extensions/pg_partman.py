@@ -81,7 +81,7 @@ class PostgresPgPartmanMixin:
 
         schema = expr.schema or "partman"
         function_name_sql, _ = QualifiedIdentifierExpression(
-            dialect=self, schema=schema, name="create_parent"
+            dialect=self, schema_name=schema, name="create_parent"
         ).to_sql()
         placeholder = self.get_parameter_placeholder()
 
@@ -140,7 +140,7 @@ class PostgresPgPartmanMixin:
         from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
         schema = expr.schema or "partman"
         function_name_sql, _ = QualifiedIdentifierExpression(
-            dialect=self, schema=schema, name="run_maintenance"
+            dialect=self, schema_name=schema, name="run_maintenance"
         ).to_sql()
         if expr.parent_table is None:
             return f"SELECT {function_name_sql}()", ()
@@ -193,7 +193,7 @@ class PostgresPgPartmanMixin:
 
         schema = expr.schema or "partman"
         config_table_sql, _ = QualifiedIdentifierExpression(
-            dialect=self, schema=schema, name="part_config"
+            dialect=self, schema_name=schema, name="part_config"
         ).to_sql()
         params.append(expr.parent_table)
         return (
@@ -222,7 +222,7 @@ class PostgresPgPartmanMixin:
         from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
         schema = expr.schema or "partman"
         config_table_sql, _ = QualifiedIdentifierExpression(
-            dialect=self, schema=schema, name="part_config"
+            dialect=self, schema_name=schema, name="part_config"
         ).to_sql()
         placeholder = self.get_parameter_placeholder()
         return (

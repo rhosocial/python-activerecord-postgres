@@ -531,7 +531,7 @@ def _pg_partman_delete_config_sql(dialect, partman_schema: str):
 def _pg_partman_config_table_sql(dialect, partman_schema: str) -> str:
     sql, _ = QualifiedIdentifierExpression(
         dialect=dialect,
-        schema=partman_schema,
+        schema_name=partman_schema,
         name="part_config",
     ).to_sql()
     return sql

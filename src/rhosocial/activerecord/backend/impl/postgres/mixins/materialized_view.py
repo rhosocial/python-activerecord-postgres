@@ -99,7 +99,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         name_sql, _ = self.format_qualified_identifier(
             QualifiedIdentifierExpression(
                 self,
-                schema=getattr(expr, "schema", None),
+                schema_name=getattr(expr, "schema", None),
                 name=expr.view_name,
             )
         )
