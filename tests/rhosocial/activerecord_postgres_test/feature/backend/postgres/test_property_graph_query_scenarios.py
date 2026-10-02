@@ -17,6 +17,7 @@ import pytest_asyncio
 
 from rhosocial.activerecord.backend.dialect.protocols import GraphTableSupport
 from rhosocial.activerecord.backend.expression import (
+    Literal,
     GraphVertex, GraphEdge, GraphEdgeDirection, MatchClause,
     GraphColumn, ColumnsClause, GraphTableExpression,
     TablePropertiesClause, VertexTable, EdgeTable,

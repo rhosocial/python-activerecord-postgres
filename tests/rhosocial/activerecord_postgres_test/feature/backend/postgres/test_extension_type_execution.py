@@ -25,6 +25,7 @@ statements, and only one of them would ever be checked otherwise.
 import pytest
 
 from rhosocial.activerecord.backend.expression import (
+    Literal,
     Column,
     ColumnConstraint,
     ColumnConstraintType,
@@ -155,7 +156,7 @@ class TestNetworkOperationsExecute:
         assert str(read(pg, self.col(pg).netmask(), self.TABLE)) == "255.255.255.0"
 
     def test_set_mask_widens(self, pg):
-        result = self.col(pg).set_mask(16)
+        result = self.col(pg).set_mask(Literal(pg.dialect, 16))
         assert str(read(pg, result, self.TABLE)) == "192.168.0.0/16"
 
     def test_abbrev(self, pg):
@@ -220,7 +221,7 @@ class TestRangeOperationsExecute:
         "value,contains", [(1, True), (3, True), (4, True), (5, False), (9, False)]
     )
     def test_containment(self, pg, value, contains):
-        result = self.col(pg).contains(value)
+        result = self.col(pg).contains(Literal(pg.dialect, value))
         assert bool(read(pg, result, self.TABLE)) is contains
 
     @pytest.mark.parametrize(
@@ -339,24 +340,24 @@ class TestHstoreOperationsExecute:
         return cls(backend.dialect, Column(backend.dialect, "v", table=self.TABLE))
 
     def test_get(self, pg):
-        assert read(pg, self.col(pg).get("a"), self.TABLE) == "1"
+        assert read(pg, self.col(pg).get(Literal(pg.dialect, "a")), self.TABLE) == "1"
 
     def test_get_of_a_missing_key(self, pg):
-        assert read(pg, self.col(pg).get("zz"), self.TABLE) is None
+        assert read(pg, self.col(pg).get(Literal(pg.dialect, "zz")), self.TABLE) is None
 
     def test_a_present_but_null_value(self, pg):
         """b exists with a NULL value; get() gives NULL, not a missing key."""
-        assert read(pg, self.col(pg).get("b"), self.TABLE) is None
+        assert read(pg, self.col(pg).get(Literal(pg.dialect, "b")), self.TABLE) is None
 
     @pytest.mark.parametrize("key,exists", [("a", True), ("b", True), ("zz", False)])
     def test_exist(self, pg, key, exists):
         """exist() counts a NULL value as existing, which is the whole point."""
-        assert bool(read(pg, self.col(pg).has_key(key), self.TABLE)) is exists
+        assert bool(read(pg, self.col(pg).has_key(Literal(pg.dialect, key)), self.TABLE)) is exists
 
     @pytest.mark.parametrize("key,defined", [("a", True), ("b", False), ("zz", False)])
     def test_defined(self, pg, key, defined):
         """defined() is the stricter one: present *and* not NULL."""
-        assert bool(read(pg, self.col(pg).is_defined(key), self.TABLE)) is defined
+        assert bool(read(pg, self.col(pg).is_defined(Literal(pg.dialect, key)), self.TABLE)) is defined
 
     def test_keys(self, pg):
         keys = read(pg, self.col(pg).keys(), self.TABLE)

@@ -51,9 +51,21 @@ def _typed_element(dialect, element_type, element):
     The query is right and the parameter is an integer; only the width is
     wrong, and no amount of care at the call site would catch it because
     nothing about a Python int says which PostgreSQL type is wanted. The
-    width is taken from the multirange's own element type, so an int8range
-    gets bigint and an int4multirange gets integer.
+    width is taken from the range's own element type, so an int8range gets
+    bigint and an int4range gets integer.
+
+    A ``Literal`` wrapping a number is unwrapped and re-typed the same way.
+    The width is a property of the range, not of how the caller chose to spell
+    the value, and testing the Python type instead meant that passing an
+    explicit ``Literal(dialect, 5)`` -- the form everything else in this
+    codebase now takes -- silently bound smallint again and took the operator
+    down with it.
     """
+    if isinstance(element, Literal):
+        value = getattr(element, "value", None)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return element
+        element = value
     if not isinstance(element, int) or isinstance(element, bool):
         return element
     name = getattr(element_type, "name", "")

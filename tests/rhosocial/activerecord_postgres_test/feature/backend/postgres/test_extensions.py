@@ -14,7 +14,7 @@ import pytest  # noqa: F401
 from unittest.mock import MagicMock  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core, operators
+from rhosocial.activerecord.backend.expression import core, operators, Literal
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
     ltree_literal,
@@ -261,7 +261,7 @@ class TestPostGISFunctions:
     def test_st_geom_from_text(self):
         """Test geometry from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = st_geom_from_text(dialect, 'POINT(0 0)', srid=4326)
+        result = st_geom_from_text(dialect, Literal(dialect, 'POINT(0 0)'), Literal(dialect, 4326))
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
         assert "st_geomfromtext" in sql.lower()
@@ -269,7 +269,7 @@ class TestPostGISFunctions:
     def test_st_geog_from_text(self):
         """Test geography from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = st_geog_from_text(dialect, 'POINT(0 0)')
+        result = st_geog_from_text(dialect, Literal(dialect, 'POINT(0 0)'))
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
         assert "st_geogfromtext" in sql.lower()

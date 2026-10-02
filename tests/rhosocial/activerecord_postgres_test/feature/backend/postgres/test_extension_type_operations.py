@@ -24,7 +24,7 @@ every backend and only PostgreSQL would have let it through.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
@@ -240,7 +240,7 @@ class TestHstoreOperations:
     )
     def test_accessors(self, dialect, method, expected):
         expr = typed(PostgresHstoreType(dialect), dialect)
-        sql, params = getattr(expr, method)("k").to_sql()
+        sql, params = getattr(expr, method)(Literal(dialect, "k")).to_sql()
         assert expected in sql
         assert "k" in params
 
@@ -249,14 +249,14 @@ class TestHstoreOperations:
     )
     def test_predicates(self, dialect, method):
         expr = typed(PostgresHstoreType(dialect), dialect)
-        sql, params = getattr(expr, method)("k").to_sql()
+        sql, params = getattr(expr, method)(Literal(dialect, "k")).to_sql()
         assert "k" in params
         assert sql
 
     def test_a_value_is_not_a_document(self, dialect):
         """get() returns text; calling keys() on it would be a type error."""
         expr = typed(PostgresHstoreType(dialect), dialect)
-        assert not hasattr(expr.get("k"), "keys")
+        assert not hasattr(expr.get(Literal(dialect, "k")), "keys")
 
 
 # ---------------------------------------------------------------------------
