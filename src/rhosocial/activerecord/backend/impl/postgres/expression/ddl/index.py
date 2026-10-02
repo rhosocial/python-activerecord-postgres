@@ -55,7 +55,6 @@ from enum import Enum
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import _validate_schema_name
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -130,7 +129,7 @@ class PostgresAlterIndexExpression(BaseExpression):
         """
         super().__init__(dialect)
         self.index_name = index_name
-        self.schema_name = _validate_schema_name(schema_name, type(self).__name__)
+        self.schema_name = schema_name
         self.action_type = action_type
         self.if_exists = if_exists
         self.new_name = new_name
