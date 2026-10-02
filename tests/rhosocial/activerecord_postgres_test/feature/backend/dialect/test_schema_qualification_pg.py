@@ -29,7 +29,7 @@ TABLE = "users"
 class TestPostgresColumnQualifierForm:
     """Three-part vs two-part qualification, and the alias boundary."""
 
-    def test_t27_no_alias_keeps_three_parts(self):
+    def test_no_alias_keeps_three_parts(self):
         d = PostgresDialect()
         col = Column(d, "id", table=TABLE, schema_name=SCHEMA)
         sql, params = col.to_sql()
@@ -37,7 +37,7 @@ class TestPostgresColumnQualifierForm:
         assert sql == f'"{SCHEMA}"."{TABLE}"."id"'
         assert params == ()
 
-    def test_t26_alias_without_schema_is_two_parts(self):
+    def test_alias_without_schema_is_two_parts(self):
         """The shape ``FieldProxy`` produces for an aliased range."""
         d = PostgresDialect()
         col = Column(d, "id", table="u", schema_name=None)
@@ -69,8 +69,8 @@ class TestPostgresColumnQualifierForm:
         col = Column(d, "id", table="u", schema_name=SCHEMA)
         assert col.to_sql()[0] == f'"{SCHEMA}"."u"."id"'
 
-    def test_t19_column_schema_without_table_drops_schema(self, dialect_note=None):
-        """C6 -- a schema with no table is silently discarded.
+    def test_column_schema_without_table_drops_schema(self, dialect_note=None):
+        """a schema with no table is silently discarded.
 
         Currently *not* an error: the core ladder is
         ``if schema_name and expr.table:`` so the schema evaporates. Phase 5
@@ -101,9 +101,9 @@ class TestPostgresTableRangeForm:
 
 
 class TestPostgresCreateExtensionSchemaQuoting:
-    """C11 -- ``SCHEMA {schema}`` must go through ``format_identifier``."""
+    """``SCHEMA {schema}`` must go through ``format_identifier``."""
 
-    def test_t24_extension_schema_is_quoted(self):
+    def test_extension_schema_is_quoted(self):
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.extension import (
             PostgresCreateExtensionExpression,
         )
