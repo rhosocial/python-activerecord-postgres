@@ -34,7 +34,11 @@ class PostgresExpressionMixin:
 
         """
         expr_sql, params = expr.expression.to_sql()
-        sql = f"{expr_sql}::{expr.target_type}"
+        # The target is an expression, so it renders itself and this
+        # concatenates. Interpolating it would have produced
+        # `col::IntegerType()` instead of `col::INTEGER`.
+        type_sql, _ = expr.target_type.to_sql()
+        sql = f"{expr_sql}::{type_sql}"
         if expr.alias:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, params

@@ -241,6 +241,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_postgres_ltree(self, data_type) -> Tuple[str, tuple]:
         return "LTREE", ()
 
+    def format_data_type_postgres_lquery(self, data_type) -> Tuple[str, tuple]:
+        return "LQUERY", ()
+
+    def format_data_type_postgres_ltxtquery(self, data_type) -> Tuple[str, tuple]:
+        return "LTXTQUERY", ()
+
     def format_data_type_postgres_raster(self, data_type) -> Tuple[str, tuple]:
         return "RASTER", ()
 
