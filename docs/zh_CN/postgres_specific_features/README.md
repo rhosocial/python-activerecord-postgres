@@ -4,7 +4,7 @@ PostgreSQL 提供了许多超越标准 SQL 的高级功能。本节介绍 Postgr
 
 ## 主题
 
-- **[Schema 命名空间](./schema_namespace.md)**: 别名规则、`search_path`、扩展、orafce、PostGIS
+- **[Schema 命名空间](./schema_namespace.md)**: 声明 `__schema_name__`、DDL 的 `schema_name`、`search_path` 与 `__schema_name__` 的分工、三段引用与别名、扩展、orafce、PostGIS
 - **[PostgreSQL 特定字段类型](./field_types.md)**: ARRAY, JSONB, UUID, Range 类型
 - **[PostgreSQL Dialect 表达式](./dialect.md)**: PostgreSQL 特定的 SQL 语法
 - **[高级索引](./indexing.md)**: GIN, GiST, BRIN 索引
