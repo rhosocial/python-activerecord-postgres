@@ -45,32 +45,6 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Cube Construction ==============
 
 def cube_literal(
@@ -108,14 +82,15 @@ def cube_literal(
         )
     return core.FunctionCall(
         dialect, "cube",
-        _convert_to_expression(dialect, coordinates),
+        coordinates if isinstance(coordinates, bases.BaseExpression)
+        else core.Literal(dialect, coordinates),
     )
 
 
 def cube_dimension(
     dialect: "SQLDialectBase",
-    dim: Union[int, str, "bases.BaseExpression"],
-    coord: Union[float, str, "bases.BaseExpression"],
+    dim: int,
+    coord: float,
 ) -> core.FunctionCall:
     """Generate SQL expression for the cube constructor from dimension and coordinate.
 
@@ -138,8 +113,8 @@ def cube_dimension(
     """
     return core.FunctionCall(
         dialect, "cube",
-        _convert_to_expression(dialect, dim),
-        _convert_to_expression(dialect, coord),
+        dim if isinstance(dim, bases.BaseExpression) else core.Literal(dialect, dim),
+        coord if isinstance(coord, bases.BaseExpression) else core.Literal(dialect, coord),
     )
 
 
@@ -147,7 +122,7 @@ def cube_dimension(
 
 def cube_size(
     dialect: "SQLDialectBase",
-    cube_expr: Union[str, "bases.BaseExpression"],
+    cube_expr: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for the cube_size function.
 
@@ -168,7 +143,8 @@ def cube_size(
     """
     return core.FunctionCall(
         dialect, "cube_size",
-        _convert_to_expression(dialect, cube_expr),
+        cube_expr if isinstance(cube_expr, bases.BaseExpression)
+        else core.Literal(dialect, cube_expr),
     )
 
 
@@ -176,8 +152,8 @@ def cube_size(
 
 def cube_union(
     dialect: "SQLDialectBase",
-    cube1: Union[str, "bases.BaseExpression"],
-    cube2: Union[str, "bases.BaseExpression"],
+    cube1: bases.BaseExpression,
+    cube2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube union operator.
 
@@ -198,15 +174,15 @@ def cube_union(
     """
     return BinaryExpression(
         dialect, "union",
-        _convert_to_expression(dialect, cube1),
-        _convert_to_expression(dialect, cube2),
+        cube1 if isinstance(cube1, bases.BaseExpression) else core.Literal(dialect, cube1),
+        cube2 if isinstance(cube2, bases.BaseExpression) else core.Literal(dialect, cube2),
     )
 
 
 def cube_inter(
     dialect: "SQLDialectBase",
-    cube1: Union[str, "bases.BaseExpression"],
-    cube2: Union[str, "bases.BaseExpression"],
+    cube1: bases.BaseExpression,
+    cube2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube intersection operator.
 
@@ -227,15 +203,15 @@ def cube_inter(
     """
     return BinaryExpression(
         dialect, "inter",
-        _convert_to_expression(dialect, cube1),
-        _convert_to_expression(dialect, cube2),
+        cube1 if isinstance(cube1, bases.BaseExpression) else core.Literal(dialect, cube1),
+        cube2 if isinstance(cube2, bases.BaseExpression) else core.Literal(dialect, cube2),
     )
 
 
 def cube_contains(
     dialect: "SQLDialectBase",
-    cube_expr: Union[str, "bases.BaseExpression"],
-    target: Union[str, "bases.BaseExpression"],
+    cube_expr: bases.BaseExpression,
+    target: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube contains operator (@>).
 
@@ -257,15 +233,16 @@ def cube_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        _convert_to_expression(dialect, cube_expr),
-        _convert_to_expression(dialect, target),
+        cube_expr if isinstance(cube_expr, bases.BaseExpression)
+        else core.Literal(dialect, cube_expr),
+        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
     )
 
 
 def cube_distance(
     dialect: "SQLDialectBase",
-    cube_expr: Union[str, "bases.BaseExpression"],
-    target: Union[str, "bases.BaseExpression"],
+    cube_expr: bases.BaseExpression,
+    target: bases.BaseExpression,
 ) -> BinaryArithmeticExpression:
     """Generate SQL expression for the cube distance operator (<->).
 
@@ -288,8 +265,9 @@ def cube_distance(
     """
     return BinaryArithmeticExpression(
         dialect, "<->",
-        _convert_to_expression(dialect, cube_expr),
-        _convert_to_expression(dialect, target),
+        cube_expr if isinstance(cube_expr, bases.BaseExpression)
+        else core.Literal(dialect, cube_expr),
+        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
     )
 
 

@@ -24,7 +24,7 @@ Supported functions:
 - metaphone: Calculate the Metaphone code for a string
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -32,35 +32,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Levenshtein Distance Functions ==============
 
 def levenshtein(
     dialect: "SQLDialectBase",
-    source: Union[str, "bases.BaseExpression"],
-    target: Union[str, "bases.BaseExpression"],
+    source: bases.BaseExpression,
+    target: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the Levenshtein distance between two strings.
 
@@ -83,16 +60,16 @@ def levenshtein(
     """
     return core.FunctionCall(
         dialect, "levenshtein",
-        _convert_to_expression(dialect, source),
-        _convert_to_expression(dialect, target),
+        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
     )
 
 
 def levenshtein_less_equal(
     dialect: "SQLDialectBase",
-    source: Union[str, "bases.BaseExpression"],
-    target: Union[str, "bases.BaseExpression"],
-    threshold: Union[int, "bases.BaseExpression"],
+    source: bases.BaseExpression,
+    target: bases.BaseExpression,
+    threshold: int,
 ) -> core.FunctionCall:
     """Calculate the Levenshtein distance with a maximum threshold.
 
@@ -115,9 +92,10 @@ def levenshtein_less_equal(
     """
     return core.FunctionCall(
         dialect, "levenshtein_less_equal",
-        _convert_to_expression(dialect, source),
-        _convert_to_expression(dialect, target),
-        _convert_to_expression(dialect, threshold),
+        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        threshold if isinstance(threshold, bases.BaseExpression)
+        else core.Literal(dialect, threshold),
     )
 
 
@@ -125,7 +103,7 @@ def levenshtein_less_equal(
 
 def soundex(
     dialect: "SQLDialectBase",
-    text: Union[str, "bases.BaseExpression"],
+    text: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the Soundex code for a string.
 
@@ -144,14 +122,14 @@ def soundex(
     """
     return core.FunctionCall(
         dialect, "soundex",
-        _convert_to_expression(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
     )
 
 
 def difference(
     dialect: "SQLDialectBase",
-    source: Union[str, "bases.BaseExpression"],
-    target: Union[str, "bases.BaseExpression"],
+    source: bases.BaseExpression,
+    target: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the difference between two Soundex codes.
 
@@ -172,8 +150,8 @@ def difference(
     """
     return core.FunctionCall(
         dialect, "difference",
-        _convert_to_expression(dialect, source),
-        _convert_to_expression(dialect, target),
+        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
     )
 
 
@@ -181,8 +159,8 @@ def difference(
 
 def metaphone(
     dialect: "SQLDialectBase",
-    text: Union[str, "bases.BaseExpression"],
-    max_length: Union[int, "bases.BaseExpression"],
+    text: bases.BaseExpression,
+    max_length: int,
 ) -> core.FunctionCall:
     """Calculate the Metaphone code for a string.
 
@@ -203,14 +181,15 @@ def metaphone(
     """
     return core.FunctionCall(
         dialect, "metaphone",
-        _convert_to_expression(dialect, text),
-        _convert_to_expression(dialect, max_length),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        max_length if isinstance(max_length, bases.BaseExpression)
+        else core.Literal(dialect, max_length),
     )
 
 
 def dmetaphone(
     dialect: "SQLDialectBase",
-    text: Union[str, "bases.BaseExpression"],
+    text: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the primary Double Metaphone code for a string.
 
@@ -230,13 +209,13 @@ def dmetaphone(
     """
     return core.FunctionCall(
         dialect, "dmetaphone",
-        _convert_to_expression(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
     )
 
 
 def dmetaphone_alt(
     dialect: "SQLDialectBase",
-    text: Union[str, "bases.BaseExpression"],
+    text: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the alternate Double Metaphone code for a string.
 
@@ -257,7 +236,7 @@ def dmetaphone_alt(
     """
     return core.FunctionCall(
         dialect, "dmetaphone_alt",
-        _convert_to_expression(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
     )
 
 

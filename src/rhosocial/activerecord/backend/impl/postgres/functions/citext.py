@@ -35,32 +35,6 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== citext Functions ==============
 
 def citext_literal(
@@ -87,7 +61,7 @@ def citext_literal(
         >>> citext_literal(dialect, 'Hello World')
         # Produces: 'Hello World'::citext
     """
-    converted = _convert_to_expression(dialect, value)
+    converted = value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)
     return converted.cast(PostgresCitextType(dialect))
 
 

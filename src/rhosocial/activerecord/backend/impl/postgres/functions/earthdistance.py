@@ -28,7 +28,7 @@ Supported operators:
 - <@ : Point inside circle containment check (point_inside_circle)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
@@ -37,35 +37,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression", float],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, floats, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Functions ==============
 
 def ll_to_earth(
     dialect: "SQLDialectBase",
-    latitude: Union[float, str, "bases.BaseExpression"],
-    longitude: Union[float, str, "bases.BaseExpression"],
+    latitude: float,
+    longitude: float,
 ) -> core.FunctionCall:
     """Convert latitude and longitude to a point on the earth's surface.
 
@@ -88,15 +65,17 @@ def ll_to_earth(
     """
     return core.FunctionCall(
         dialect, "ll_to_earth",
-        _convert_to_expression(dialect, latitude),
-        _convert_to_expression(dialect, longitude),
+        latitude if isinstance(latitude, bases.BaseExpression)
+        else core.Literal(dialect, latitude),
+        longitude if isinstance(longitude, bases.BaseExpression)
+        else core.Literal(dialect, longitude),
     )
 
 
 def earth_distance(
     dialect: "SQLDialectBase",
-    point1: Union[str, "bases.BaseExpression"],
-    point2: Union[str, "bases.BaseExpression"],
+    point1: bases.BaseExpression,
+    point2: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the great-circle distance between two points on the earth's surface.
 
@@ -121,15 +100,15 @@ def earth_distance(
     """
     return core.FunctionCall(
         dialect, "earth_distance",
-        _convert_to_expression(dialect, point1),
-        _convert_to_expression(dialect, point2),
+        point1 if isinstance(point1, bases.BaseExpression) else core.Literal(dialect, point1),
+        point2 if isinstance(point2, bases.BaseExpression) else core.Literal(dialect, point2),
     )
 
 
 def earth_box(
     dialect: "SQLDialectBase",
-    center: Union[str, "bases.BaseExpression"],
-    radius: Union[float, str, "bases.BaseExpression"],
+    center: bases.BaseExpression,
+    radius: float,
 ) -> core.FunctionCall:
     """Calculate a bounding box for a point and radius on the earth's surface.
 
@@ -151,8 +130,8 @@ def earth_box(
     """
     return core.FunctionCall(
         dialect, "earth_box",
-        _convert_to_expression(dialect, center),
-        _convert_to_expression(dialect, radius),
+        center if isinstance(center, bases.BaseExpression) else core.Literal(dialect, center),
+        radius if isinstance(radius, bases.BaseExpression) else core.Literal(dialect, radius),
     )
 
 
@@ -160,9 +139,9 @@ def earth_box(
 
 def earthdistance_operator(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
-    latitude: Union[float, str, "bases.BaseExpression"],
-    longitude: Union[float, str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
+    latitude: float,
+    longitude: float,
     operator: str = "<->",
 ) -> BinaryExpression:
     """Generate SQL expression for earth distance operator.
@@ -189,17 +168,17 @@ def earthdistance_operator(
     """
     return BinaryExpression(
         dialect, operator,
-        _convert_to_expression(dialect, column),
+        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
         ll_to_earth(dialect, latitude, longitude),
     )
 
 
 def point_inside_circle(
     dialect: "SQLDialectBase",
-    point: Union[str, "bases.BaseExpression"],
-    center_lat: Union[float, str, "bases.BaseExpression"],
-    center_lon: Union[float, str, "bases.BaseExpression"],
-    radius: Union[float, str, "bases.BaseExpression"],
+    point: bases.BaseExpression,
+    center_lat: float,
+    center_lon: float,
+    radius: float,
 ) -> BinaryExpression:
     """Generate SQL expression for checking if a point is inside a circle.
 
@@ -223,7 +202,7 @@ def point_inside_circle(
     """
     return BinaryExpression(
         dialect, "<@",
-        _convert_to_expression(dialect, point),
+        point if isinstance(point, bases.BaseExpression) else core.Literal(dialect, point),
         earth_box(dialect, ll_to_earth(dialect, center_lat, center_lon), radius),
     )
 

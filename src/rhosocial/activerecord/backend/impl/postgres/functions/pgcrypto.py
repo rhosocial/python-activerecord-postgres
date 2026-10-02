@@ -26,35 +26,12 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, BinaryExpression, etc.)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-
-
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
 
 
 # ============== Salt Generation ==============
@@ -89,7 +66,7 @@ def gen_salt(
     """
     return core.FunctionCall(
         dialect, "gen_salt",
-        _convert_to_expression(dialect, algorithm),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
     )
 
 
@@ -97,8 +74,8 @@ def gen_salt(
 
 def crypt(
     dialect: "SQLDialectBase",
-    password: Union[str, "bases.BaseExpression"],
-    salt: Union[str, "bases.BaseExpression"],
+    password: bases.BaseExpression,
+    salt: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Hash a password using the crypt() function.
 
@@ -119,8 +96,8 @@ def crypt(
     """
     return core.FunctionCall(
         dialect, "crypt",
-        _convert_to_expression(dialect, password),
-        _convert_to_expression(dialect, salt),
+        password if isinstance(password, bases.BaseExpression) else core.Literal(dialect, password),
+        salt if isinstance(salt, bases.BaseExpression) else core.Literal(dialect, salt),
     )
 
 
@@ -128,8 +105,8 @@ def crypt(
 
 def encrypt(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
-    key: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
+    key: bases.BaseExpression,
     algorithm: str = "aes",
 ) -> core.FunctionCall:
     """Encrypt data using the encrypt() function.
@@ -164,16 +141,16 @@ def encrypt(
     """
     return core.FunctionCall(
         dialect, "encrypt",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, key),
-        _convert_to_expression(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
     )
 
 
 def decrypt(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
-    key: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
+    key: bases.BaseExpression,
     algorithm: str = "aes",
 ) -> core.FunctionCall:
     """Decrypt data using the decrypt() function.
@@ -196,9 +173,9 @@ def decrypt(
     """
     return core.FunctionCall(
         dialect, "decrypt",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, key),
-        _convert_to_expression(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
     )
 
 
@@ -206,7 +183,7 @@ def decrypt(
 
 def gen_random_bytes(
     dialect: "SQLDialectBase",
-    length: Union[int, "bases.BaseExpression"],
+    length: int,
 ) -> core.FunctionCall:
     """Generate random bytes.
 
@@ -225,7 +202,7 @@ def gen_random_bytes(
     """
     return core.FunctionCall(
         dialect, "gen_random_bytes",
-        _convert_to_expression(dialect, length),
+        length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length),
     )
 
 
@@ -233,8 +210,8 @@ def gen_random_bytes(
 
 def hmac(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
-    key: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
+    key: bases.BaseExpression,
     algorithm: str = "sha256",
 ) -> core.FunctionCall:
     """Compute HMAC (Hash-based Message Authentication Code).
@@ -266,15 +243,15 @@ def hmac(
     """
     return core.FunctionCall(
         dialect, "hmac",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, key),
-        _convert_to_expression(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
     )
 
 
 def digest(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
     algorithm: str = "sha256",
 ) -> core.FunctionCall:
     """Compute a hash digest.
@@ -304,8 +281,8 @@ def digest(
     """
     return core.FunctionCall(
         dialect, "digest",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
     )
 
 
@@ -313,8 +290,8 @@ def digest(
 
 def pgp_sym_encrypt(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
-    key: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
+    key: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Encrypt data with a symmetric PGP key.
 
@@ -338,15 +315,15 @@ def pgp_sym_encrypt(
     """
     return core.FunctionCall(
         dialect, "pgp_sym_encrypt",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, key),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
     )
 
 
 def pgp_sym_decrypt(
     dialect: "SQLDialectBase",
-    data: Union[str, "bases.BaseExpression"],
-    key: Union[str, "bases.BaseExpression"],
+    data: bases.BaseExpression,
+    key: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Decrypt data with a symmetric PGP key.
 
@@ -366,8 +343,8 @@ def pgp_sym_decrypt(
     """
     return core.FunctionCall(
         dialect, "pgp_sym_decrypt",
-        _convert_to_expression(dialect, data),
-        _convert_to_expression(dialect, key),
+        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
     )
 
 

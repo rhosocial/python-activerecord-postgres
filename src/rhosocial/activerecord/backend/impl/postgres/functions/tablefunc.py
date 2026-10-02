@@ -26,7 +26,7 @@ All functions follow the expression-dialect separation architecture:
 - They do not concatenate SQL strings directly
 """
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -34,38 +34,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Crosstab Functions ==============
 
 def crosstab(
     dialect: "SQLDialectBase",
-    source_sql: Union[str, "bases.BaseExpression"],
-    categories_sql: Optional[Union[str, "bases.BaseExpression"]] = None,
+    source_sql: str,
+    categories_sql: Optional[str] = None,
 ) -> core.FunctionCall:
     """Produce a pivot table (crosstab) display from query results.
 
@@ -105,12 +79,13 @@ def crosstab(
     if categories_sql is not None:
         return core.FunctionCall(
             dialect, "crosstab",
-            _convert_to_expression(dialect, source_sql),
-            _convert_to_expression(dialect, categories_sql),
+            source_sql if isinstance(source_sql, bases.BaseExpression) else core.Literal(dialect, source_sql),
+            categories_sql if isinstance(categories_sql, bases.BaseExpression)
+            else core.Literal(dialect, categories_sql),
         )
     return core.FunctionCall(
         dialect, "crosstab",
-        _convert_to_expression(dialect, source_sql),
+        source_sql if isinstance(source_sql, bases.BaseExpression) else core.Literal(dialect, source_sql),
     )
 
 
@@ -118,12 +93,12 @@ def crosstab(
 
 def connectby(
     dialect: "SQLDialectBase",
-    table_name: Union[str, "bases.BaseExpression"],
-    key_column: Union[str, "bases.BaseExpression"],
-    parent_column: Union[str, "bases.BaseExpression"],
-    start_value: Union[str, "bases.BaseExpression"],
-    max_depth: Optional[Union[int, "bases.BaseExpression"]] = None,
-    branch_delim: Optional[Union[str, "bases.BaseExpression"]] = None,
+    table_name: str,
+    key_column: str,
+    parent_column: str,
+    start_value: str,
+    max_depth: Optional[int] = None,
+    branch_delim: Optional[str] = None,
 ) -> core.FunctionCall:
     """Produce a tree-structured display of hierarchical data.
 
@@ -154,15 +129,17 @@ def connectby(
         >>> connectby(dialect, 'employees', 'emp_id', 'manager_id', '1', max_depth=3, branch_delim='~')
     """
     args = [
-        _convert_to_expression(dialect, table_name),
-        _convert_to_expression(dialect, key_column),
-        _convert_to_expression(dialect, parent_column),
-        _convert_to_expression(dialect, start_value),
+        table_name if isinstance(table_name, bases.BaseExpression) else core.Literal(dialect, table_name),
+        key_column if isinstance(key_column, bases.BaseExpression) else core.Literal(dialect, key_column),
+        parent_column if isinstance(parent_column, bases.BaseExpression) else core.Literal(dialect, parent_column),
+        start_value if isinstance(start_value, bases.BaseExpression) else core.Literal(dialect, start_value),
     ]
     if max_depth is not None:
-        args.append(_convert_to_expression(dialect, max_depth))
+        args.append(max_depth if isinstance(max_depth, bases.BaseExpression) else core.Literal(dialect, max_depth))
     if branch_delim is not None:
-        args.append(_convert_to_expression(dialect, branch_delim))
+        args.append(
+            branch_delim if isinstance(branch_delim, bases.BaseExpression)
+            else core.Literal(dialect, branch_delim))
     return core.FunctionCall(dialect, "connectby", *args)
 
 
@@ -170,10 +147,10 @@ def connectby(
 
 def normal_rand(
     dialect: "SQLDialectBase",
-    num_values: Union[int, "bases.BaseExpression"],
-    mean: Union[float, "bases.BaseExpression"],
-    stddev: Union[float, "bases.BaseExpression"],
-    seed: Optional[Union[int, "bases.BaseExpression"]] = None,
+    num_values: int,
+    mean: float,
+    stddev: float,
+    seed: Optional[int] = None,
 ) -> core.FunctionCall:
     """Generate a set of normally distributed random values.
 
@@ -196,12 +173,12 @@ def normal_rand(
         >>> normal_rand(dialect, 50, 0, 1, seed=42)
     """
     args = [
-        _convert_to_expression(dialect, num_values),
-        _convert_to_expression(dialect, mean),
-        _convert_to_expression(dialect, stddev),
+        num_values if isinstance(num_values, bases.BaseExpression) else core.Literal(dialect, num_values),
+        mean if isinstance(mean, bases.BaseExpression) else core.Literal(dialect, mean),
+        stddev if isinstance(stddev, bases.BaseExpression) else core.Literal(dialect, stddev),
     ]
     if seed is not None:
-        args.append(_convert_to_expression(dialect, seed))
+        args.append(seed if isinstance(seed, bases.BaseExpression) else core.Literal(dialect, seed))
     return core.FunctionCall(dialect, "normal_rand", *args)
 
 

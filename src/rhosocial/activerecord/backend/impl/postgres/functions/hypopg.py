@@ -27,7 +27,7 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, etc.)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -35,34 +35,11 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, int, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, integers, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Hypothetical Index Functions ==============
 
 def hypopg_create_index(
     dialect: "SQLDialectBase",
-    index_def: Union[str, "bases.BaseExpression"],
+    index_def: str,
 ) -> core.FunctionCall:
     """Create a hypothetical index.
 
@@ -87,7 +64,7 @@ def hypopg_create_index(
     """
     return core.FunctionCall(
         dialect, "hypopg_create_index",
-        _convert_to_expression(dialect, index_def),
+        index_def if isinstance(index_def, bases.BaseExpression) else core.Literal(dialect, index_def),
     )
 
 
@@ -138,7 +115,7 @@ def hypopg_show_indexes(
 
 def hypopg_estimate_size(
     dialect: "SQLDialectBase",
-    index_id: Union[int, "bases.BaseExpression"],
+    index_id: int,
 ) -> core.FunctionCall:
     """Estimate the disk size of a hypothetical index.
 
@@ -161,7 +138,7 @@ def hypopg_estimate_size(
     """
     return core.FunctionCall(
         dialect, "hypopg_relation_size",
-        _convert_to_expression(dialect, index_id),
+        index_id if isinstance(index_id, bases.BaseExpression) else core.Literal(dialect, index_id),
     )
 
 

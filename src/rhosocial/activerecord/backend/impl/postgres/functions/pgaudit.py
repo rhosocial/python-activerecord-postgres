@@ -29,7 +29,7 @@ All functions follow the expression-dialect separation architecture:
 - They do not concatenate SQL strings directly
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -37,37 +37,11 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Configuration Functions ==============
 
 def pgaudit_set_role(
     dialect: "SQLDialectBase",
-    role: Union[str, "bases.BaseExpression"],
+    role: str,
 ) -> core.FunctionCall:
     """Set the pgaudit.role configuration parameter.
 
@@ -95,15 +69,15 @@ def pgaudit_set_role(
     """
     return core.FunctionCall(
         dialect, "set_config",
-        _convert_to_expression(dialect, "pgaudit.role"),
-        _convert_to_expression(dialect, role),
-        _convert_to_expression(dialect, "false"),
+        core.Literal(dialect, "pgaudit.role"),
+        role if isinstance(role, bases.BaseExpression) else core.Literal(dialect, role),
+        core.Literal(dialect, "false"),
     )
 
 
 def pgaudit_log_level(
     dialect: "SQLDialectBase",
-    level: Union[str, "bases.BaseExpression"],
+    level: str,
 ) -> core.FunctionCall:
     """Set the pgaudit.log_level configuration parameter.
 
@@ -134,15 +108,15 @@ def pgaudit_log_level(
     """
     return core.FunctionCall(
         dialect, "set_config",
-        _convert_to_expression(dialect, "pgaudit.log_level"),
-        _convert_to_expression(dialect, level),
-        _convert_to_expression(dialect, "false"),
+        core.Literal(dialect, "pgaudit.log_level"),
+        level if isinstance(level, bases.BaseExpression) else core.Literal(dialect, level),
+        core.Literal(dialect, "false"),
     )
 
 
 def pgaudit_include_catalog(
     dialect: "SQLDialectBase",
-    include: Union[bool, "bases.BaseExpression"],
+    include: bool,
 ) -> core.FunctionCall:
     """Set the pgaudit.log_catalog configuration parameter.
 
@@ -176,9 +150,9 @@ def pgaudit_include_catalog(
         value = include
     return core.FunctionCall(
         dialect, "set_config",
-        _convert_to_expression(dialect, "pgaudit.log_catalog"),
-        _convert_to_expression(dialect, value),
-        _convert_to_expression(dialect, "false"),
+        core.Literal(dialect, "pgaudit.log_catalog"),
+        value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value),
+        core.Literal(dialect, "false"),
     )
 
 

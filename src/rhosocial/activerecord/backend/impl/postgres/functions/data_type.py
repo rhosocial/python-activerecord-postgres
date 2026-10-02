@@ -14,6 +14,7 @@ All functions follow the expression-dialect separation architecture:
 from typing import Any, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresXID8Type,
 )
@@ -79,7 +80,8 @@ def array_literal(
     """
     if not elements:
         if element_type:
-            return core.Literal(dialect, "{}").cast(f"{element_type}[]")
+            return core.Literal(dialect, "{}").cast(
+                CustomType(dialect, raw=f"{element_type}[]"))
         return core.Literal(dialect, "{}")
 
     formatted = []
@@ -94,7 +96,7 @@ def array_literal(
     array_str = "{" + ",".join(formatted) + "}"
     result = core.Literal(dialect, array_str)
     if element_type:
-        return result.cast(f"{element_type}[]")
+        return result.cast(CustomType(dialect, raw=f"{element_type}[]"))
     return result
 
 
