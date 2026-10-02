@@ -18,56 +18,57 @@
 | `FROM "shop"."orders" AS "o"` | `"shop"."orders"."id"` | `invalid reference to FROM-clause entry` |
 | `FROM "shop"."orders" AS "o"` | `"orders"."id"` | `missing FROM-clause entry` |
 
-框架在表别名生效时即丢弃 schema 限定符，因此 `Model.c.with_table_alias("o")`
-会生成 `"o"."col"`，需与 `join(..., alias="o")` 配对使用。
+表别名一旦生效，框架就不再给列引用加 schema 限定。所以
+`Model.c.with_table_alias("o")` 生成的是 `"o"."col"`，要配合
+`join(..., alias="o")` 一起用。
 
-注意：执行该约束的并不是 `PostgresColumnMixin.format_column` —— 它检查的是
-*列*别名，而该路径上列别名并未设置。真正的保证来自 `FieldProxy`。手工构造
-`Column` 会绕过它，可能产出 PostgreSQL 拒绝的 SQL。
+注意，真正执行这条约束的不是 `PostgresColumnMixin.format_column`。它检查的是
+*列*别名，而这条路径上并没有设列别名。保证来自 `FieldProxy`。手工构造
+`Column` 会绕开它，生成 PostgreSQL 不接受的 SQL。
 
 ## `search_path` 是建连期设置
 
-`PostgresConnectionConfig.search_path` 会作为 libpq 参数传给
-`psycopg.connect()`。因此它在连接生命周期内固定，**无法**按查询或按事务切换。
+`PostgresConnectionConfig.search_path` 是作为 libpq 参数传给 `psycopg.connect()`
+的，所以它在连接生命周期内固定，**没法**按查询或按事务切换。
 后端在受管事务之外还以 `autocommit=True` 运行，`SET LOCAL search_path`
-没有可依附的事务。
+没有可以依附的事务。
 
 实际影响：
 
 - 未设置 `__schema_name__` 的模型始终通过同一条路径解析。
-- 按租户划分 schema 需要每个租户一个模型类，或另行设计显式管理
-  `search_path` 的架构（本库未实现）。
+- 想按租户划分 schema，只能每个租户一个模型类，或者另做一套显式管理
+  `search_path` 的方案（本库没有实现）。
 - `default_schema` 从未影响生成的 SQL。请改用 `search_path`。
 
-## DDL 语句有自己的 schema 参数
+## DDL 语句自己带 schema 参数
 
-`__schema_name__` 决定的是读写命名空间，构造 DDL 时不会读取它，
-所以迁移必须自己写明它要的 schema —— 但现在可以直接写，不必再手工拼接限定名。
+`__schema_name__` 只管读和写，构造 DDL 时不会读它。以前迁移想限定 schema，只能
+自己拼限定名；现在每个相关语句都收 `schema_name`，直接写就行。
 
-| 语句 | 如何限定 |
+| 语句 | 怎么限定 |
 |---|---|
 | `CREATE TABLE` / `DROP TABLE` | 传 `TableExpression(dialect, "users", schema_name="app")` |
 | `CREATE` / `ALTER` / `DROP` VIEW（含物化视图） | `schema_name="app"` |
 | `CREATE` / `ALTER` / `DROP` TYPE | `schema_name="app"` |
-| `CREATE` / `DROP` INDEX（含全文索引） | `schema_name="app"` |
+| `CREATE INDEX` / `DROP INDEX`（含全文索引） | `schema_name="app"` |
 | `CREATE` / `ALTER` / `DROP` SEQUENCE | `schema_name="app"` |
 | `CREATE` / `ALTER` / `DROP` DOMAIN | `schema_name="app"` |
 | `CREATE` / `DROP` FUNCTION | `schema_name="app"` |
 | `CREATE` / `DROP` TRIGGER | `schema_name="app"` |
 
-`schema_name` 默认为 `None`，含义是"不限定"。传 `""` 会被拒绝：
-空串是笔误，而不是表示"不限定"的方式。
+`schema_name` 默认是 `None`，也就是不加限定。空串会被拒绝——那是笔误，
+"不加限定"请用 `None`。
 
-## 查询服务端当前所在的 schema
+## 取服务端当前的 schema
 
 ```python
 backend.get_current_schema()   # 'public'
 await async_backend.get_current_schema()
 ```
 
-它读取 `current_schema()`，该函数沿 `search_path` 向前查找并返回第一个
-实际存在的 schema。`search_path` 里可能列了并不存在的 schema，
-因此完全可能解析不到任何结果；此时返回 `None` 而非报错，并原样返回。
+读的是 `current_schema()`：沿 `search_path` 往后找，返回第一个真正存在的
+schema。`search_path` 里可以列着并不存在的 schema，所以有可能一个都找不到——
+这时返回 `None` 而不是报错，原样给你。
 
 ## 扩展
 
