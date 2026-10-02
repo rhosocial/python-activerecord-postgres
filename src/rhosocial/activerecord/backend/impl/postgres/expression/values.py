@@ -21,7 +21,10 @@ backwards from the method name. Both are wrapped so the method reads naturally
 and the call site still matches the function.
 """
 
+from typing import Callable, TypeVar
+
 from rhosocial.activerecord.backend.expression.core import SQLValueExpression
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.mixins import (
     AliasableMixin,
     ComparisonMixin,
@@ -68,7 +71,82 @@ def _typed_element(dialect, element_type, element):
     return element
 
 
+_T = TypeVar("_T")
+_F = TypeVar("_F", bound=Callable[..., _T])
+
+
+class _ResultMixinBase:
+    """Shared wrapping for the result-type mixins below.
+
+    Only the Python class changes; the node, and therefore the SQL, is left as
+    it was. The statement was already correct -- what was missing was the
+    knowledge of what it yields.
+    """
+
+    def _retype(self, cls):
+        return cls(self._dialect, self)
+
+
+class NetworkResultMixin(_ResultMixinBase):
+    """State that an expression yields a PostgreSQL address.
+
+    For a column whose type is not among the ones this backend models -- a
+    domain type of the user's, say -- this is how the address operations become
+    reachable on it.
+    """
+
+    def as_inet(self) -> "NetworkValueExpression":
+        """This yields an inet or cidr, whatever the data turns out to be."""
+        return self._retype(NetworkValueExpression)
+
+    def as_cidr(self) -> "NetworkValueExpression":
+        """This yields a cidr specifically."""
+        return self._retype(NetworkValueExpression)
+
+
+class RangeResultMixin(_ResultMixinBase):
+    """State that an expression yields a PostgreSQL range or multirange."""
+
+    def as_range(self) -> "RangeValueExpression":
+        """This yields a range, so containment and overlap apply."""
+        return self._retype(RangeValueExpression)
+
+    def as_multirange(self) -> "RangeValueExpression":
+        """This yields a multirange, whose containment is a different operator."""
+        return self._retype(RangeValueExpression)
+
+
+class HstoreResultMixin(_ResultMixinBase):
+    """State that an expression yields an hstore document.
+
+    The accessors return values rather than documents, so they are typed as what
+    they are: ``hstore_get_value(h, k)`` is text, and asking it for keys would
+    be a type error.
+    """
+
+    def as_hstore(self) -> "HstoreValueExpression":
+        """This yields an hstore, so the key and value accessors apply."""
+        return self._retype(HstoreValueExpression)
+
+
+class LtreeResultMixin(_ResultMixinBase):
+    """State that an expression yields an ltree path or one of its patterns."""
+
+    def as_ltree(self) -> "LtreeValueExpression":
+        """This yields an ltree, so the path operations apply."""
+        return self._retype(LtreeValueExpression)
+
+    def as_lquery(self) -> "LtreeValueExpression":
+        """This yields an lquery, the pattern an ltree is matched against."""
+        return self._retype(LtreeValueExpression)
+
+    def as_ltxtquery(self) -> "LtreeValueExpression":
+        """This yields an ltxtquery, the label-matching pattern."""
+        return self._retype(LtreeValueExpression)
+
+
 class NetworkValueExpression(
+    NetworkResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
@@ -113,74 +191,73 @@ class NetworkValueExpression(
         """Render the wrapped call."""
         return self.call.to_sql()
 
-
-
-    def _network_op(self, factory, *args):
-        """Call a network factory and keep an address an address.
+    def _network_op(self, factory: _F, *args) -> _T:
+        """Call one of ``functions.network`` and hand back what it returns.
 
         Args:
-            factory: Name of the function in ``functions.network``.
+            factory: The function to call, imported by name. A string looked up
+                with getattr would be invisible to a checker, and the result
+                would arrive as Any -- every chained call unchecked.
             args: Positional arguments forwarded to the factory.
 
         Returns:
-            A :class:`NetworkValueExpression` where the result is an address,
-            otherwise the factory's result unchanged.
+            The factory's result. Which of these is an address and which is a
+            scalar is stated by the method that calls this -- by wrapping the
+            address ones and declaring the return type -- so there is no list
+            here to fall out of step with the methods above.
         """
-        result = getattr(_network, factory)(self._dialect, self, *args)
-        if factory in _ADDRESS_RESULTS:
-            return NetworkValueExpression(self._dialect, result)
-        return result
+        return factory(self._dialect, self, *args)
 
     # --- parts of an address ---
 
     def network(self) -> "NetworkValueExpression":
         """The network part. ``NETWORK(addr)``"""
-        return self._network_op("inet_network")
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_network))
 
     def netmask(self) -> "NetworkValueExpression":
         """The netmask. ``NETMASK(addr)``"""
-        return self._network_op("inet_netmask")
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_netmask))
 
     def masklen(self) -> "SQLValueExpression":
         """The netmask length in bits. ``MASKLEN(addr)`` -> integer"""
-        return self._network_op("inet_masklen")
+        return self._network_op(_network.inet_masklen)
 
     def set_mask(self, mask_len: int) -> "NetworkValueExpression":
         """Re-mask to *mask_len* bits. ``SET_MASKLEN(addr, n)``"""
-        return self._network_op("inet_set_mask", mask_len)
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_set_mask, mask_len))
 
     # --- set operations ---
 
     def merge(self, other) -> "NetworkValueExpression":
         """The smallest network containing both. ``NETMERGE(a, b)``"""
-        return self._network_op("inet_merge", other)
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_merge, other))
 
     def and_mask(self, other) -> "NetworkValueExpression":
         """Bitwise AND of two addresses. ``a & b``"""
-        return self._network_op("inet_and", other)
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_and, other))
 
     def or_mask(self, other) -> "NetworkValueExpression":
         """Bitwise OR of two addresses. ``a | b``"""
-        return self._network_op("inet_or", other)
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inet_or, other))
 
     def invert(self) -> "NetworkValueExpression":
         """The complement. ``~addr``"""
-        return self._network_op("inetnot")
+        return NetworkValueExpression(
+            self._dialect, self._network_op(_network.inetnot))
 
     def abbrev(self) -> "SQLValueExpression":
         """The abbreviated first-octet form. ``ABBREV(addr)``"""
-        return self._network_op("inet_show")
-
-
-#: Operations whose result is still an address. The rest return scalars and
-#: must not pretend otherwise: MASKLEN is an integer and ABBREV is text.
-_ADDRESS_RESULTS = frozenset({
-    "inet_network", "inet_netmask", "inet_set_mask", "inet_merge",
-    "inet_and", "inet_or", "inetnot",
-})
+        return self._network_op(_network.inet_show)
 
 
 class RangeValueExpression(
+    RangeResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
@@ -231,46 +308,45 @@ class RangeValueExpression(
         """Render the wrapped call."""
         return self.call.to_sql()
 
-
-
-    def _range_op(self, factory, *args):
+    def _range_op(self, factory: _F, *args) -> _T:
         """Call a range factory.
 
         Args:
-            factory: Name of the function in ``functions.range``.
+            factory: The function to call, imported by name.
             args: Positional arguments forwarded to the factory.
 
         Returns:
             The factory's result.
         """
-        return getattr(_range, factory)(self._dialect, self, *args)
+        return factory(self._dialect, self, *args)
 
     # --- containment ---
 
-    def contains(self, other):
+    def contains(self, other) -> "BinaryExpression":
         """The range holds *other*. ``range_contains(range, x)``"""
         return self._range_op(
-            "range_contains", _typed_element(self._dialect, self.element_type, other))
+            _range.range_contains,
+            _typed_element(self._dialect, self.element_type, other))
 
-    def contains_range(self, other):
+    def contains_range(self, other) -> "BinaryExpression":
         """The range holds *other* whole. ``range_contains(range1, range2)``"""
-        return self._range_op("range_contains_range", other)
+        return self._range_op(_range.range_contains_range, other)
 
-    def overlaps(self, other):
+    def overlaps(self, other) -> "BinaryExpression":
         """The two share at least one point. ``range_overlaps(r1, r2)``"""
-        return self._range_op("range_overlaps", other)
+        return self._range_op(_range.range_overlaps, other)
 
-    def adjacent(self, other):
+    def adjacent(self, other) -> "BinaryExpression":
         """The two touch without overlapping. ``range_adjacent(r1, r2)``"""
-        return self._range_op("range_adjacent", other)
+        return self._range_op(_range.range_adjacent, other)
 
-    def strictly_left_of(self, other):
+    def strictly_left_of(self, other) -> "BinaryExpression":
         """Entirely below *other*. ``range_strictly_left_of(r1, r2)``"""
-        return self._range_op("range_strictly_left_of", other)
+        return self._range_op(_range.range_strictly_left_of, other)
 
-    def strictly_right_of(self, other):
+    def strictly_right_of(self, other) -> "BinaryExpression":
         """Entirely above *other*. ``range_strictly_right_of(r1, r2)``"""
-        return self._range_op("range_strictly_right_of", other)
+        return self._range_op(_range.range_strictly_right_of, other)
 
     def merge(self) -> "SQLValueExpression":
         """The smallest range covering every range in a multirange.
@@ -281,23 +357,23 @@ class RangeValueExpression(
         a gap -- ``range_union`` and ``multirange_merge`` are the two that do
         exist, and both are named for what they take.
         """
-        return self._range_op("range_merge")
+        return self._range_op(_range.range_merge)
 
     def union(self, other) -> "SQLValueExpression":
         """The union of two ranges. ``range_union(r1, r2)``"""
-        return self._range_op("range_union", other)
+        return self._range_op(_range.range_union, other)
 
     # --- multiranges, which contain differently ---
 
-    def multirange_contains(self, element):
+    def multirange_contains(self, element) -> "BinaryExpression":
         """The multirange holds *element*. ``multirange_contains(mr, x)``"""
         return self._range_op(
-            "multirange_contains",
+            _range.multirange_contains,
             _typed_element(self._dialect, self.element_type, element))
 
-    def multirange_overlaps(self, other):
+    def multirange_overlaps(self, other) -> "BinaryExpression":
         """The multirange shares a point with *other*."""
-        return self._range_op("multirange_overlaps", other)
+        return self._range_op(_range.multirange_overlaps, other)
 
 
 class RangeBoundMixin:
@@ -320,6 +396,7 @@ class RangeBoundMixin:
 
 
 class HstoreValueExpression(
+    HstoreResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
@@ -364,58 +441,61 @@ class HstoreValueExpression(
         """Render the wrapped call."""
         return self.call.to_sql()
 
-
-
-    def _hstore_op(self, factory, *args):
+    def _hstore_op(self, factory: _F, *args) -> _T:
         """Call an hstore factory.
 
         Args:
-            factory: Name of the function in ``functions.hstore``.
+            factory: The function to call, imported by name.
             args: Positional arguments forwarded to the factory.
 
         Returns:
             The factory's result.
         """
-        return getattr(_hstore, factory)(self._dialect, self, *args)
+        return factory(self._dialect, self, *args)
 
-    def keys(self) -> "HstoreValueExpression":
-        """The keys, as an array. ``akeys(h)``"""
-        return self._hstore_op("hstore_akeys")
+    def keys(self) -> "SQLValueExpression":
+        """The keys, as an array. ``akeys(h)``
 
-    def values(self) -> "HstoreValueExpression":
+        An array of text rather than a document: nothing can be looked up in it,
+        and typing it as an hstore would let ``h.keys().get("k")`` check out.
+        """
+        return self._hstore_op(_hstore.hstore_akeys)
+
+    def values(self) -> "SQLValueExpression":
         """The values, as an array. ``avals(h)``"""
-        return self._hstore_op("hstore_avals")
+        return self._hstore_op(_hstore.hstore_avals)
 
     def get(self, key: str) -> "SQLValueExpression":
         """The value at *key*, or NULL. ``hstore_get_value(h, k)``"""
-        return self._hstore_op("hstore_get_value", key)
+        return self._hstore_op(_hstore.hstore_get_value, key)
 
     def get_as_text(self, key: str) -> "SQLValueExpression":
         """The value at *key*, as text. ``->(h, k)``"""
-        return self._hstore_op("hstore_get_value_as_text", key)
+        return self._hstore_op(_hstore.hstore_get_value_as_text, key)
 
     def subscript(self, key: str) -> "SQLValueExpression":
         """The value at *key*. ``h -> k``"""
-        return self._hstore_op("hstore_subscript_get", key)
+        return self._hstore_op(_hstore.hstore_subscript_get, key)
 
     def has_key(self, key: str):
         """Whether *key* is present. ``exist(h, k)``"""
-        return self._hstore_op("hstore_exist", key)
+        return self._hstore_op(_hstore.hstore_exist, key)
 
     def is_defined(self, key: str):
         """Whether *key* is present and not NULL. ``defined(h, k)``"""
-        return self._hstore_op("hstore_defined", key)
+        return self._hstore_op(_hstore.hstore_defined, key)
 
     def key_exists(self, key: str):
         """Whether *key* is present and non-NULL. ``hstore_key_exists(h, k)``"""
-        return self._hstore_op("hstore_key_exists", key)
+        return self._hstore_op(_hstore.hstore_key_exists, key)
 
     def to_json(self) -> "SQLValueExpression":
         """The document as json. ``hstore_to_json(h)``"""
-        return self._hstore_op("hstore_to_json")
+        return self._hstore_op(_hstore.hstore_to_json)
 
 
 class LtreeValueExpression(
+    LtreeResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
@@ -460,24 +540,21 @@ class LtreeValueExpression(
         """Render the wrapped call."""
         return self.call.to_sql()
 
-
-
-    def _ltree_op(self, factory, *args):
+    def _ltree_op(self, factory: _F, *args) -> _T:
         """Call an ltree factory.
 
         Args:
-            factory: Name of the function in ``functions.ltree``.
+            factory: The function to call, imported by name.
             args: Positional arguments forwarded to the factory.
 
         Returns:
-            The factory's result, wrapped as an ltree when it is one.
+            The factory's result. ``subpath`` and ``concat`` are wrapped by the
+            methods below, which declare that they are paths again; a string
+            looked up here would make the whole chain Any to a checker.
         """
-        result = getattr(_ltree, factory)(self._dialect, self, *args)
-        if factory in _LTREE_RESULTS:
-            return LtreeValueExpression(self._dialect, result)
-        return result
+        return factory(self._dialect, self, *args)
 
-    def is_ancestor_of(self, path):
+    def is_ancestor_of(self, path) -> "BinaryExpression":
         """This path is an ancestor of *path*. ``ltree_ancestor(l, path)``
 
         Named for what it answers rather than for what it returns: the
@@ -485,39 +562,37 @@ class LtreeValueExpression(
         called ``ancestors_of`` would read as returning a list of ancestors
         when it returns a predicate about one.
         """
-        return self._ltree_op("ltree_ancestor", path)
+        return self._ltree_op(_ltree.ltree_ancestor, path)
 
-    def is_descendant_of(self, path):
+    def is_descendant_of(self, path) -> "BinaryExpression":
         """This path is below *path*. ``ltree_descendant(tree, path)``"""
-        return self._ltree_op("ltree_descendant", path)
+        return self._ltree_op(_ltree.ltree_descendant, path)
 
-    def matches(self, pattern):
+    def matches(self, pattern) -> "BinaryExpression":
         """This path matches an ``lquery``. ``ltree_matches(l, q)``"""
-        return self._ltree_op("ltree_matches", pattern)
+        return self._ltree_op(_ltree.ltree_matches, pattern)
 
-    def matches_text(self, query):
+    def matches_text(self, query) -> "BinaryExpression":
         """This path matches an ``ltxtquery``. ``ltree_text_search(l, q)``"""
-        return self._ltree_op("ltree_text_search", query)
+        return self._ltree_op(_ltree.ltree_text_search, query)
 
     def nlevel(self) -> "SQLValueExpression":
         """The number of labels. ``nlevel(l)`` -> integer"""
-        return self._ltree_op("ltree_nlevel")
+        return self._ltree_op(_ltree.ltree_nlevel)
 
     def subpath(self, start: int, length=None) -> "LtreeValueExpression":
         """A slice of the path. ``subpath(l, off[, len])``"""
-        return self._ltree_op("ltree_subpath", start, length)
+        return LtreeValueExpression(
+            self._dialect, self._ltree_op(_ltree.ltree_subpath, start, length))
 
     def concat(self, other) -> "LtreeValueExpression":
         """Append *other*. ``l || r``"""
-        return self._ltree_op("ltree_concat", other)
+        return LtreeValueExpression(
+            self._dialect, self._ltree_op(_ltree.ltree_concat, other))
 
-    def lca(self, paths):
+    def lca(self, paths) -> "SQLValueExpression":
         """The longest common ancestor of the given paths."""
-        return self._ltree_op("ltree_lca", paths)
-
-
-#: ltree operations whose result is another path.
-_LTREE_RESULTS = frozenset({"ltree_subpath", "ltree_concat"})
+        return self._ltree_op(_ltree.ltree_lca, paths)
 
 
 __all__ = [

@@ -548,6 +548,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def supports_data_type_postgres_ltree(self) -> bool:
         return True
 
+    def supports_data_type_postgres_lquery(self) -> bool:
+        return True
+
+    def supports_data_type_postgres_ltxtquery(self) -> bool:
+        return True
+
     def supports_data_type_postgres_raster(self) -> bool:
         return True
 
