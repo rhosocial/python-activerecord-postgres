@@ -109,6 +109,11 @@ class PostgresAlterColumnModifierMixin:
           full three-segment form: ``"schema"."table"."column"``.
         - Otherwise use the standard two-segment or single-segment form.
         """
+        from rhosocial.activerecord.backend.dialect.protocols import SchemaSupport
+
+        if isinstance(self, SchemaSupport):
+            self.validate_schema_name(expr)
+
         name = expr.name
         table = expr.table
         alias = expr.alias
