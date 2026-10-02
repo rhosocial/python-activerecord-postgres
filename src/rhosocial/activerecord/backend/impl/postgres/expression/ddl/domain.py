@@ -196,6 +196,13 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
         checks: Optional[Sequence[Union[DomainCheckConstraint, SQLPredicate]]] = None,
         schema_name: Optional[str] = None,
     ) -> None:
+        """
+        Args:
+            schema_name: Namespace to qualify the domain with, e.g. ``app``.
+                None leaves the name unqualified. An empty string raises
+                ValueError, and a dialect with no namespace raises
+                UnsupportedFeatureError.
+        """
         normalized_type = _coerce_legacy_data_type(dialect, data_type)
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
@@ -251,9 +258,12 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
             nullability=nullability,
             checks=normalized_checks,
             collation=collation,
+            schema_name=resolved_schema,
         )
-        self.schema = resolved_schema
-        self.schema_name = resolved_schema
+        # ``schema`` is this dialect's older spelling of the same namespace. The
+        # parent validated and assigned ``schema_name`` from the resolved value,
+        # so read it back rather than storing an unvalidated copy.
+        self.schema = self.schema_name
         self.constraints = list(constraint_items)
         self._constraint_clauses = clauses
         self._check_parameter = check_parameter
@@ -285,6 +295,13 @@ class PostgresAlterDomainExpression(AlterDomainExpression):
         *,
         schema_name: Optional[str] = None,
     ) -> None:
+        """
+        Args:
+            schema_name: Namespace to qualify the domain with, e.g. ``app``.
+                None leaves the name unqualified. An empty string raises
+                ValueError, and a dialect with no namespace raises
+                UnsupportedFeatureError.
+        """
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
             raise ValueError("schema and schema_name must match when both are provided")
@@ -314,9 +331,11 @@ class PostgresAlterDomainExpression(AlterDomainExpression):
                 actions = [RenameDomainAction(dialect, new_name)]
         else:
             actions = [_UnsupportedDomainAction(dialect, action)]
-        super().__init__(dialect, name, actions)
-        self.schema = resolved_schema
-        self.schema_name = resolved_schema
+        super().__init__(dialect, name, actions, schema_name=resolved_schema)
+        # ``schema`` is this dialect's older spelling of the same namespace. The
+        # parent validated and assigned ``schema_name`` from the resolved value,
+        # so read it back rather than storing an unvalidated copy.
+        self.schema = self.schema_name
         self.action = action
         self.new_value = new_value
         self.new_name = new_name
@@ -338,12 +357,21 @@ class PostgresDropDomainExpression(DropDomainExpression):
         *,
         schema_name: Optional[str] = None,
     ) -> None:
+        """
+        Args:
+            schema_name: Namespace to qualify the domain with, e.g. ``app``.
+                None leaves the name unqualified. An empty string raises
+                ValueError, and a dialect with no namespace raises
+                UnsupportedFeatureError.
+        """
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
             raise ValueError("schema and schema_name must match when both are provided")
-        super().__init__(dialect, name)
-        self.schema = resolved_schema
-        self.schema_name = resolved_schema
+        super().__init__(dialect, name, schema_name=resolved_schema)
+        # ``schema`` is this dialect's older spelling of the same namespace. The
+        # parent validated and assigned ``schema_name`` from the resolved value,
+        # so read it back rather than storing an unvalidated copy.
+        self.schema = self.schema_name
         self.if_exists = if_exists
         self.cascade = cascade
         self.restrict = restrict
