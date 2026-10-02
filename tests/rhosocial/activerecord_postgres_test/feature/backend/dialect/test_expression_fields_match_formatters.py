@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_sqlserver_test/feature/backend/dialect/test_expression_fields_match_formatters.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/dialect/test_expression_fields_match_formatters.py
 """A formatter may not read a field its statement does not carry.
 
 A statement formatter that reads ``expr.schema_name`` needs the expression to
@@ -7,171 +7,188 @@ expression was not given the field, the result is not wrong SQL -- it is an
 ``AttributeError`` on a statement that can never be built, which is how
 SQLServerColumnstoreIndexExpression reached CI.
 
-These are source scans rather than runtime tests because the failure needs the
-right dialect, the right statement options and a live server to reach; a scan
-fails the build the moment the shape reappears, wherever it appears.
+These were source scans rather than runtime tests. A scan does not work here:
+whether the field exists depends on inheritance reaching core, which lives in
+another repository, and on **core_kwargs forwarding. Reading the source of this
+repository can see neither, so a scan reported defects that were not there --
+two were chased down and both were false alarms -- while a field genuinely
+removed still passed. Building the statement answers the question the defect
+actually asks: does this statement build, and does the schema reach the SQL?
 """
-import ast
+import importlib
 import inspect
-from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[5]
-SRC = REPO_ROOT / "src" / "rhosocial" / "activerecord"
-
-#: Statement fields a formatter may read that the core expression classes carry
+#: Statement fields a formatter may read that some expression classes carry
 #: under a different name. Reading these by their own name is the defect.
+#: TruncateExpression and the PostgreSQL vacuum/statistics expressions name the
+#: field `schema`; the DDL statements name it `schema_name`.
 KNOWN_ALIASES = {
-    # TruncateExpression and the PostgreSQL vacuum/statistics expressions name
-    # the field `schema`; the DDL statements name it `schema_name`.
     "schema": {"TruncateExpression"},
 }
 
 
-def _python_files():
-    return sorted(
-        p
-        for p in SRC.rglob("*.py")
-        if "__pycache__" not in p.parts
-    )
+class TestQualifiedStatementsRender:
+    """A statement whose formatter qualifies names must build with a schema.
 
-
-def _class_fields(tree):
-    """Map class name -> (own field names, base class names, has **kwargs)."""
-    out = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
-        fields = {
-            sub.attr
-            for sub in ast.walk(node)
-            if isinstance(sub, ast.Attribute)
-            and isinstance(sub.value, ast.Name)
-            and sub.value.id == "self"
-        }
-        bases = [b.id for b in node.bases if isinstance(b, ast.Name)]
-        takes_kwargs = any(
-            isinstance(a, ast.arg) and a.arg == "kwargs" for a in ast.walk(node)
-        )
-        out[node.name] = (fields, bases, takes_kwargs)
-    return out
-
-
-def _has_field(name, field, table, seen=None):
-    seen = set() if seen is None else seen
-    if name in seen or name not in table:
-        return False
-    seen.add(name)
-    fields, bases, takes_kwargs = table[name]
-    if field in fields or takes_kwargs:
-        return True
-    return any(_has_field(b, field, table, seen) for b in bases)
-
-
-class TestFormattersOnlyReadRealFields:
-    def _table(self):
-        table = {}
-        for path in _python_files():
-            try:
-                table.update(_class_fields(ast.parse(path.read_text(encoding="utf-8"))))
-            except SyntaxError:  # pragma: no cover - syntax errors fail elsewhere
-                continue
-        return table
-
-    def test_no_formatter_reads_an_absent_schema_field(self):
-        """Every expr.<field> a formatter reads must exist on its statement."""
-        table = self._table()
-        offenders = []
-        for path in _python_files():
-            try:
-                tree = ast.parse(path.read_text(encoding="utf-8"))
-            except SyntaxError:  # pragma: no cover
-                continue
-            source = path.read_text(encoding="utf-8")
-            for node in ast.walk(tree):
-                if not isinstance(node, ast.FunctionDef):
-                    continue
-                if not node.name.startswith("format_"):
-                    continue
-                segment = ast.get_source_segment(source, node) or ""
-                if "expr.schema_name" not in segment:
-                    continue
-                import re
-
-                # The annotation is the authority on which statement this
-                # formatter formats. Scanning the whole body for a class name
-                # misses formatters annotated `expr: Any`, which is how
-                # format_create_spatial_index slipped through once already.
-                annotations = [
-                    ast.unparse(a.annotation)
-                    for a in list(node.args.args) + list(node.args.kwonlyargs)
-                    if a.annotation is not None
-                ]
-                candidates = set()
-                for text in annotations:
-                    candidates.update(re.findall(r"\b(\w+Expression)\b", text))
-                for cls in candidates or set(
-                    re.findall(r"\b(\w+Expression)\b", segment)
-                ):
-                    if cls not in table:
-                        continue
-                    if _has_field(cls, "schema_name", table):
-                        continue
-                    if cls in KNOWN_ALIASES.get("schema", set()):
-                        continue
-                    offenders.append(
-                        f"{path.relative_to(REPO_ROOT)}:{node.lineno} "
-                        f"{node.name} -> {cls}"
-                    )
-        assert not offenders, (
-            "These formatters read expr.schema_name but the statement has no "
-            "such field, so building that statement raises AttributeError "
-            "rather than producing SQL. Give the expression the field, or read "
-            "the one it actually has:\n  " + "\n  ".join(offenders)
-        )
-
-
-class TestQualifiedExpressionsAcceptSchemaName:
-    """The statements these formatters qualify must take the field.
-
-    The scan above cannot see a formatter annotated ``expr: Any``, which is how
-    a missing field reached CI twice on this branch. These assertions go
-    through the dialect's own formatters, so they hold no matter how the
-    formatter is annotated.
+    Checked by building each statement and rendering it, not by scanning
+    source. Each case names the statement and how to build it, so adding
+    coverage for a newly qualified object type is one entry rather than a new
+    mechanism.
     """
 
-    def _dialect(self):
-        import importlib
+    @pytest.fixture
+    def dialect(self):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
-        module = importlib.import_module(
-            "rhosocial.activerecord.backend.impl.postgres.dialect"
+        return PostgresDialect(version=(16, 0, 0))
+
+    def test_create_index(self, dialect):
+        """Both the index and the table it sits on are qualified."""
+        from rhosocial.activerecord.backend.expression import CreateIndexExpression
+
+        expr = CreateIndexExpression(
+            dialect, index_name="idx_orders_id", table_name="orders", columns=["id"]
         )
-        return getattr(module, "PostgresDialect")(version=(16, 0, 0))
+        assert expr.to_sql()[0] == (
+            'CREATE INDEX "idx_orders_id" ON "orders" ("id")'
+        ), expr.to_sql()[0]
+        qualified = CreateIndexExpression(
+            dialect,
+            index_name="idx_orders_id",
+            table_name="orders",
+            columns=["id"],
+            schema_name="app",
+        )
+        assert qualified.to_sql()[0] == (
+            'CREATE INDEX "app"."idx_orders_id" ON "app"."orders" ("id")'
+        ), qualified.to_sql()[0]
 
-    def test_formatters_qualifying_names_are_reachable(self):
-        """Naming the formatters keeps this honest as coverage grows.
+    def test_drop_index(self, dialect):
+        from rhosocial.activerecord.backend.expression import DropIndexExpression
 
-        Add a formatter here and this fails until its statement carries the
-        field -- which is the defect, caught at build time rather than in CI on
-        a server this test does not have.
-        """
-        dialect = self._dialect()
-        for name in ("format_create_table_statement", "format_drop_table_statement", "format_alter_table_statement", "format_create_index_statement", "format_create_sequence_statement", "format_create_trigger_statement"):
-            assert callable(getattr(dialect, name, None)), (
-                f"{name} is missing; whatever it qualified no longer qualifies"
+        expr = DropIndexExpression(
+            dialect, index_name="idx_orders_id", table_name="orders"
+        )
+        assert expr.to_sql()[0] == 'DROP INDEX "idx_orders_id"', expr.to_sql()[0]
+        qualified = DropIndexExpression(
+            dialect,
+            index_name="idx_orders_id",
+            table_name="orders",
+            schema_name="app",
+        )
+        assert qualified.to_sql()[0] == (
+            'DROP INDEX "app"."idx_orders_id"'
+        ), qualified.to_sql()[0]
+
+    def test_create_trigger(self, dialect):
+        """The trigger, its table and the function it calls are all qualified."""
+        from rhosocial.activerecord.backend.expression import CreateTriggerExpression
+        from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
+            TriggerEvent,
+            TriggerLevel,
+            TriggerTiming,
+        )
+
+        def build(schema_name=None):
+            return CreateTriggerExpression(
+                dialect,
+                trigger_name="trg_audit",
+                table_name="orders",
+                timing=TriggerTiming.BEFORE,
+                events=[TriggerEvent.INSERT],
+                function_name="audit_fn",
+                level=TriggerLevel.ROW,
+                schema_name=schema_name,
             )
 
-    def test_column_reference_with_a_schema_renders(self):
-        """The path that needs the field: a schema on a column reference.
+        expr = build()
+        assert expr.to_sql()[0] == (
+            'CREATE TRIGGER "trg_audit" BEFORE INSERT ON "orders" FOR EACH ROW '
+            'EXECUTE FUNCTION "audit_fn"()'
+        ), expr.to_sql()[0]
+        qualified = build(schema_name="app").to_sql()[0]
+        assert qualified == (
+            'CREATE TRIGGER "app"."trg_audit" BEFORE INSERT ON "app"."orders" '
+            'FOR EACH ROW EXECUTE FUNCTION "app"."audit_fn"()'
+        ), qualified
 
-        How many parts the rendered reference has differs per backend, so this
-        asserts the statement builds and names the column and its table rather
-        than one particular spelling.
+    def test_create_view(self, dialect):
+        from rhosocial.activerecord.backend.expression import (
+            Column,
+            CreateViewExpression,
+            QueryExpression,
+        )
+
+        query = QueryExpression(dialect, [Column(dialect, "id")], from_="orders")
+        expr = CreateViewExpression(dialect, view_name="v_orders", query=query)
+        assert expr.to_sql()[0] == (
+            'CREATE VIEW "v_orders" AS SELECT "id" FROM "orders"'
+        ), expr.to_sql()[0]
+        qualified = CreateViewExpression(
+            dialect, view_name="v_orders", query=query, schema_name="app"
+        )
+        assert qualified.to_sql()[0] == (
+            'CREATE VIEW "app"."v_orders" AS SELECT "id" FROM "orders"'
+        ), qualified.to_sql()[0]
+
+    def test_drop_type_inherits_the_field_from_core(self, dialect):
+        """The case a source scan got wrong in both directions.
+
+        DropTypeExpression lives in core and assigns schema_name there. A scan
+        of this repository sees the formatter reading the field and no
+        assignment at all, so it either misses a field that is there or reports
+        one that is not, depending on how it resolves the base. Building it
+        settles the question.
         """
-        from rhosocial.activerecord.backend.expression.core import Column
+        from rhosocial.activerecord.backend.expression import DropTypeExpression
 
-        dialect = self._dialect()
-        sql, _ = Column(dialect, "id", table="t", schema_name="app").to_sql()
-        assert "`id`" in sql or '"id"' in sql, sql
-        assert "`t`" in sql or '"t"' in sql, sql
+        expr = DropTypeExpression(dialect, type_name="my_enum")
+        assert expr.to_sql()[0] == 'DROP TYPE "my_enum"', expr.to_sql()[0]
+        qualified = DropTypeExpression(
+            dialect, type_name="my_enum", schema_name="app"
+        )
+        assert qualified.to_sql()[0] == 'DROP TYPE "app"."my_enum"', qualified.to_sql()[0]
+
+
+class TestExpressionSignatures:
+    """The expressions this backend's formatters qualify must take the field."""
+
+    @pytest.mark.parametrize(
+        "import_path,class_name",
+        [
+            (
+                "rhosocial.activerecord.backend.expression.statements.ddl_index",
+                "CreateIndexExpression",
+            ),
+            (
+                "rhosocial.activerecord.backend.expression.statements.ddl_index",
+                "DropIndexExpression",
+            ),
+            (
+                "rhosocial.activerecord.backend.expression.statements.ddl_trigger",
+                "CreateTriggerExpression",
+            ),
+            (
+                "rhosocial.activerecord.backend.expression.statements.ddl_view",
+                "CreateViewExpression",
+            ),
+            (
+                "rhosocial.activerecord.backend.expression.statements.ddl_type",
+                "DropTypeExpression",
+            ),
+        ],
+    )
+    def test_qualified_expression_accepts_schema_name(self, import_path, class_name):
+        module = importlib.import_module(import_path)
+        cls = getattr(module, class_name)
+        params = inspect.signature(cls.__init__).parameters
+        assert "schema_name" in params, (
+            f"{class_name} is qualified by its formatter, so it needs the "
+            f"field; got {list(params)}"
+        )
+        assert params["schema_name"].default is None, (
+            f"{class_name} must default schema_name to None -- None is what "
+            f"means unqualified"
+        )
