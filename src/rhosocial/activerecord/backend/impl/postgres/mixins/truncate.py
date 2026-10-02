@@ -32,7 +32,7 @@ class PostgresTruncateMixin:
         parts = ["TRUNCATE TABLE"]
         parts.append(
             TableExpression(
-                self, expr.table_name, schema_name=expr.schema
+                self, expr.table_name, schema_name=expr.schema_name
             ).to_sql()[0]
         )
 
