@@ -96,10 +96,10 @@ class TestQualifiedStatementsRender:
             return CreateTriggerExpression(
                 dialect,
                 trigger_name="trg_audit",
-                table_name="orders",
+                table=TableExpression(dialect, "orders", schema_name=schema_name),
                 timing=TriggerTiming.BEFORE,
                 events=[TriggerEvent.INSERT],
-                function_name="audit_fn",
+                function_name=TableExpression(dialect, "audit_fn", schema_name=schema_name),
                 level=TriggerLevel.ROW,
                 schema_name=schema_name,
             )

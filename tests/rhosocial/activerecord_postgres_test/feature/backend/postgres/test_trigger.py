@@ -10,6 +10,7 @@ import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.trigger import PostgresTriggerMixin
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements import (
     CreateTriggerExpression,
     DropTriggerExpression,
@@ -82,10 +83,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="update_timestamp",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="update_updated_at_column"
+            function_name=TableExpression(dialect, "update_updated_at_column")
         )
         sql, params = expr.to_sql()
         assert 'CREATE TRIGGER "update_timestamp"' in sql
@@ -99,10 +100,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="log_insert",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
-            function_name="log_user_insert"
+            function_name=TableExpression(dialect, "log_user_insert")
         )
         sql, params = expr.to_sql()
         assert "AFTER INSERT" in sql
@@ -113,10 +114,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="audit_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT, TriggerEvent.UPDATE, TriggerEvent.DELETE],
-            function_name="audit_function"
+            function_name=TableExpression(dialect, "audit_function")
         )
         sql, params = expr.to_sql()
         assert "INSERT OR UPDATE OR DELETE" in sql
@@ -127,11 +128,11 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="check_status",
-            table_name="orders",
+            table=TableExpression(dialect, "orders"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             update_columns=["status", "updated_at"],
-            function_name="validate_status_change"
+            function_name=TableExpression(dialect, "validate_status_change")
         )
         sql, params = expr.to_sql()
         assert 'UPDATE OF "status", "updated_at"' in sql
@@ -142,10 +143,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="test_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function_name=TableExpression(dialect, "test_func"),
             level=TriggerLevel.ROW
         )
         sql, params = expr.to_sql()
@@ -157,10 +158,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="test_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
-            function_name="test_func",
+            function_name=TableExpression(dialect, "test_func"),
             level=TriggerLevel.STATEMENT
         )
         sql, params = expr.to_sql()
@@ -172,10 +173,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="test_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function_name=TableExpression(dialect, "test_func"),
             if_not_exists=True
         )
         sql, params = expr.to_sql()
@@ -187,10 +188,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="test_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function_name=TableExpression(dialect, "test_func"),
             referencing="OLD TABLE AS old NEW TABLE AS new"
         )
         sql, params = expr.to_sql()
@@ -203,10 +204,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="simple_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
-            function_name="simple_func",
+            function_name=TableExpression(dialect, "simple_func"),
             level=None,
         )
         sql, params = expr.to_sql()
@@ -220,10 +221,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="check_status",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="validate_status",
+            function_name=TableExpression(dialect, "validate_status"),
             condition=condition,
         )
         sql, params = expr.to_sql()
@@ -237,10 +238,10 @@ class TestFormatCreateTriggerStatement:
         expr = CreateTriggerExpression(
             dialect,
             trigger_name="view_trigger",
-            table_name="user_view",
+            table=TableExpression(dialect, "user_view"),
             timing=TriggerTiming.INSTEAD_OF,
             events=[TriggerEvent.INSERT],
-            function_name="handle_view_insert"
+            function_name=TableExpression(dialect, "handle_view_insert")
         )
         sql, params = expr.to_sql()
         assert "INSTEAD OF INSERT" in sql
@@ -265,7 +266,7 @@ class TestFormatDropTriggerStatement:
         expr = DropTriggerExpression(
             dialect,
             trigger_name="test_trigger",
-            table_name="users"
+            table=TableExpression(dialect, "users")
         )
         sql, params = expr.to_sql()
         assert 'ON "users"' in sql

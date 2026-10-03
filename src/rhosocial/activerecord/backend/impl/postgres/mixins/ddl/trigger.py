@@ -54,11 +54,11 @@ class PostgresTriggerMixin:
         - ``expr.timing`` — ``BEFORE``, ``AFTER``, or ``INSTEAD OF``.
         - ``expr.events`` — list of event types (``INSERT``, ``UPDATE``, ``DELETE``, ``TRUNCATE``).
         - ``expr.update_columns`` — column list for ``UPDATE OF``.
-        - ``expr.table_name`` — target table (identifier).
+        - ``expr.table`` — target table, carrying its own namespace.
         - ``expr.referencing`` — ``REFERENCING`` clause string (PG 10+).
         - ``expr.level`` — ``FOR EACH ROW`` or ``FOR EACH STATEMENT``.
         - ``expr.condition`` — ``WHEN`` predicate expression.
-        - ``expr.function_name`` — function to execute.
+        - ``expr.function`` — function to execute, carrying its own namespace.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -84,7 +84,7 @@ class PostgresTriggerMixin:
         parts.append(events_str)
 
         parts.append("ON")
-        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+        parts.append(expr.table.to_sql()[0])
 
         if expr.referencing and self.supports_trigger_referencing():
             parts.append(expr.referencing)
@@ -99,7 +99,7 @@ class PostgresTriggerMixin:
             all_params.extend(cond_params)
 
         parts.append("EXECUTE FUNCTION")
-        parts.append(f"{TableExpression(self, expr.function_name, schema_name=expr.schema_name).to_sql()[0]}()")
+        parts.append(f"{expr.function.to_sql()[0]}()")
 
         return " ".join(parts), tuple(all_params)
 
@@ -108,7 +108,7 @@ class PostgresTriggerMixin:
 
         - ``expr.if_exists`` — add ``IF EXISTS``.
         - ``expr.trigger_name`` — trigger name (identifier).
-        - ``expr.table_name`` — optional ``ON table_name`` clause.
+        - ``expr.table`` — optional ``ON table`` clause, carrying its own namespace.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -124,8 +124,8 @@ class PostgresTriggerMixin:
 
         parts.append(TableExpression(self, expr.trigger_name, schema_name=expr.schema_name).to_sql()[0])
 
-        if expr.table_name:
+        if expr.table is not None:
             parts.append("ON")
-            parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+            parts.append(expr.table.to_sql()[0])
 
         return " ".join(parts), ()

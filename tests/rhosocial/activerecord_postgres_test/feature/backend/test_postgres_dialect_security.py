@@ -23,7 +23,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
     RawSQLExpression,
 )
-from rhosocial.activerecord.backend.expression.core import CastExpression
+from rhosocial.activerecord.backend.expression.core import CastExpression, TableExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
 from typing import Tuple, Any  # noqa: F401
 
@@ -367,10 +367,10 @@ class TestPostgresTriggerFunctionNameSecurity:
         expr = CreateTriggerExpression(
             dialect=dialect,
             trigger_name="my_trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
-            function_name="my_function",
+            function_name=TableExpression(dialect, "my_function"),
         )
 
         sql, params = expr.to_sql()
@@ -388,10 +388,10 @@ class TestPostgresTriggerFunctionNameSecurity:
         expr = CreateTriggerExpression(
             dialect=dialect,
             trigger_name="trigger",
-            table_name="users",
+            table=TableExpression(dialect, "users"),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
-            function_name="Function With Spaces",
+            function_name=TableExpression(dialect, "Function With Spaces"),
         )
 
         sql, params = expr.to_sql()
