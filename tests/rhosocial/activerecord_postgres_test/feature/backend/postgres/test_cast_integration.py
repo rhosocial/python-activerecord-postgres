@@ -199,7 +199,13 @@ CASES = [
     # CID is a network line number, not a dotted quad: it goes in as an
     # integer and casts back to the same integer.
     Case("cid", lambda d: PostgresCIDType(d), "16909060", "16909060"),
-    Case("pg_lsn", lambda d: PostgresPgLSNType(d), "0/16B3748", "0/016B3748"),
+    # tolerant, because PostgreSQL 19 zero-pads the high half of a pg_lsn and
+    # 16 through 18 do not: the same value reads back as '0/16B3748' on 16.15,
+    # 17.11 and 18.6, and as '0/016B3748' on 19beta4. Both spellings are
+    # accepted on input on every version, so the value round trips either way
+    # and the text is the server's to choose.
+    Case("pg_lsn", lambda d: PostgresPgLSNType(d), "0/16B3748",
+         "0/16B3748", tolerant=True),
     Case("jsonpath", lambda d: PostgresJsonPathType(d), '"$.a"', '"$.a"'),
     Case("regtype", lambda d: PostgresRegTypeType(d), "integer", "integer"),
     Case("regclass", lambda d: PostgresRegClassType(d), "pg_class", "pg_class"),

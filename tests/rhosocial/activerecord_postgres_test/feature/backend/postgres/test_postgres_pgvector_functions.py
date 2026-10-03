@@ -52,7 +52,7 @@ class TestPgvectorDistanceFunctions:
         assert isinstance(result, BinaryArithmeticExpression)
         sql, params = result.to_sql()
         assert "<->" in sql
-        assert "vector(3)" in sql
+        assert "VECTOR(3)" in sql
 
     def test_vector_cosine_distance_with_list(self, postgres_dialect: PostgresDialect):
         """Test cosine distance with List[float] input."""
@@ -60,7 +60,7 @@ class TestPgvectorDistanceFunctions:
         assert isinstance(result, BinaryArithmeticExpression)
         sql, params = result.to_sql()
         assert "<=>" in sql
-        assert "vector(3)" in sql
+        assert "VECTOR(3)" in sql
 
     def test_vector_inner_product_with_list(self, postgres_dialect: PostgresDialect):
         """Test inner product with List[float] input."""
@@ -68,7 +68,7 @@ class TestPgvectorDistanceFunctions:
         assert isinstance(result, BinaryArithmeticExpression)
         sql, params = result.to_sql()
         assert "<#>" in sql
-        assert "vector(3)" in sql
+        assert "VECTOR(3)" in sql
 
     def test_vector_cosine_similarity(self, postgres_dialect: PostgresDialect):
         """Test cosine similarity expression (1 - cosine_distance)."""
@@ -87,13 +87,13 @@ class TestPgvectorLiteralFunction:
         result = vector_literal(postgres_dialect, [1.0, 2.0, 3.0])
         assert isinstance(result, bases.BaseExpression)
         sql, params = result.to_sql()
-        assert "vector(3)" in sql
+        assert "VECTOR(3)" in sql
 
     def test_vector_literal_with_dimensions(self, postgres_dialect: PostgresDialect):
         """Test constructing vector literal with explicit dimensions."""
         result = vector_literal(postgres_dialect, [1.0, 2.0, 3.0], dimensions=3)
         sql, params = result.to_sql()
-        assert "vector(3)" in sql
+        assert "VECTOR(3)" in sql
 
     def test_vector_literal_returns_expression(self, postgres_dialect: PostgresDialect):
         """Test that vector_literal returns a BaseExpression."""
