@@ -105,6 +105,7 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
             tablespace=tablespace,
             with_data=with_data,
             storage_options=storage_options,
+                schema_name=schema,
         )
         _validate_name(view_name, "view_name")
         if schema is not None:
@@ -115,7 +116,6 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
                 "storage_options",
                 allow_unlisted=allow_unlisted_storage_parameters,
             )
-        self.schema = schema
         self.if_not_exists = if_not_exists
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
@@ -144,11 +144,11 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
             view_name=view_name,
             if_exists=if_exists,
             cascade=cascade,
+                schema_name=schema,
         )
         _validate_name(view_name, "view_name")
         if schema is not None:
             _validate_name(schema, "schema")
-        self.schema = schema
 
 
 class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpression):
@@ -209,11 +209,11 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
             view_name=name,
             concurrent=concurrently,
             with_data=with_data,
+                schema_name=schema,
         )
         _validate_name(name, "name")
         if schema is not None:
             _validate_name(schema, "schema")
-        self.schema = schema
 
     @property
     def name(self) -> str:
@@ -387,7 +387,7 @@ ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
                     f"got {type(action).__name__}"
                 )
         self.view_name = view_name
-        self.schema = schema
+        self.schema_name = schema
         self.actions = action_list
 
     @property

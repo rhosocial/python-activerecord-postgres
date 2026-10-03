@@ -99,7 +99,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         name_sql, _ = TableExpression(
             self,
             name=expr.view_name,
-            schema_name=expr.schema,
+            schema_name=expr.schema_name,
         ).to_sql()
         return name_sql
 
@@ -139,7 +139,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         [WITH [NO] DATA]``.
 
         - ``expr.view_name`` — view name (identifier).
-        - ``expr.schema`` — optional schema (PostgreSQL extension expression).
+        - ``expr.schema_name`` — optional namespace for the view.
         - ``expr.column_aliases`` — optional list of column aliases.
         - ``expr.if_not_exists`` — ``IF NOT EXISTS`` (PostgreSQL 9.4+).
         - ``expr.storage_options`` — optional dict of storage parameters (``WITH (… )``).
