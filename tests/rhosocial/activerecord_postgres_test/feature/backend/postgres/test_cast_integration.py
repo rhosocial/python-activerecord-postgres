@@ -118,7 +118,7 @@ class Case:
 
     def __init__(self, label, factory=None, literal=None, rendered=None,
                  extension=None, declared_only=False, tolerant=False,
-                 make=None):
+                 make=None, type_name=None):
         self.label = label
         self.factory = factory or make
         self.literal = literal
@@ -129,6 +129,12 @@ class Case:
         #: the session timezone, the lc_monetary style -- so the text is not a
         #: fixed expectation. The value still has to survive the round trip.
         self.tolerant = tolerant
+        #: The dialect's own name for this type, used to ask whether the server
+        #: running the test has it. Multiranges and jsonpath arrived in
+        #: PostgreSQL 14; the dialect already refuses to render them below that,
+        #: and the tests have to decline rather than report the refusal as a
+        #: failure of the type.
+        self.type_name = type_name
 
 
 def _pg_types_module():
@@ -206,7 +212,8 @@ CASES = [
     # and the text is the server's to choose.
     Case("pg_lsn", lambda d: PostgresPgLSNType(d), "0/16B3748",
          "0/16B3748", tolerant=True),
-    Case("jsonpath", lambda d: PostgresJsonPathType(d), '"$.a"', '"$.a"'),
+    Case("jsonpath", lambda d: PostgresJsonPathType(d), '"$.a"', '"$.a"',
+         type_name="postgres_jsonpath"),
     Case("regtype", lambda d: PostgresRegTypeType(d), "integer", "integer"),
     Case("regclass", lambda d: PostgresRegClassType(d), "pg_class", "pg_class"),
     Case("xml", lambda d: PostgresXMLType(d), "<a/>", "<a/>"),
@@ -237,19 +244,21 @@ CASES = [
     Case("daterange", lambda d: PostgresDateRangeType(d),
          "[2026-01-01,2026-02-01)", "[2026-01-01,2026-02-01)"),
     Case("int4multirange", lambda d: PostgresInt4MultirangeType(d),
-         "{[1,5)}", "{[1,5)}"),
+         "{[1,5)}", "{[1,5)}", type_name="postgres_int4multirange"),
     Case("int8multirange", lambda d: PostgresInt8MultirangeType(d),
-         "{[1,5)}", "{[1,5)}"),
+         "{[1,5)}", "{[1,5)}", type_name="postgres_int8multirange"),
     Case("nummultirange", lambda d: PostgresNumMultirangeType(d),
-         "{[1.0,5.0)}", "{[1.0,5.0)}"),
+         "{[1.0,5.0)}", "{[1.0,5.0)}", type_name="postgres_nummultirange"),
     Case("tsmultirange", lambda d: PostgresTsMultirangeType(d),
          '{["2026-01-01 00:00:00","2026-02-01 00:00:00")}',
-         "{[\"2026-01-01 00:00:00\",\"2026-02-01 00:00:00\")}"),
+         "{[\"2026-01-01 00:00:00\",\"2026-02-01 00:00:00\")}",
+         type_name="postgres_tsmultirange"),
     Case("tstzmultirange", lambda d: PostgresTsTzMultirangeType(d),
          '{["2026-01-01 00:00:00+00","2026-02-01 00:00:00+00")}',
-         tolerant=True),
+         tolerant=True, type_name="postgres_tstzmultirange"),
     Case("datemultirange", lambda d: PostgresDateMultirangeType(d),
-         "{[2026-01-01,2026-02-01)}", "{[2026-01-01,2026-02-01)}"),
+         "{[2026-01-01,2026-02-01)}", "{[2026-01-01,2026-02-01)}",
+         type_name="postgres_datemultirange"),
 
     # ---- extension types ----
     Case("citext", lambda d: PostgresCitextType(d), "Hello", "Hello",
