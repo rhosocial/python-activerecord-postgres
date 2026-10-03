@@ -58,7 +58,7 @@ class PostgresTriggerMixin:
         - ``expr.referencing`` — ``REFERENCING`` clause string (PG 10+).
         - ``expr.level`` — ``FOR EACH ROW`` or ``FOR EACH STATEMENT``.
         - ``expr.condition`` — ``WHEN`` predicate expression.
-        - ``expr.function`` — function to execute, carrying its own namespace.
+        - ``expr.function_name`` — function to execute, carrying its own namespace.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -98,8 +98,9 @@ class PostgresTriggerMixin:
             parts.append(f"WHEN ({cond_sql})")
             all_params.extend(cond_params)
 
-        parts.append("EXECUTE FUNCTION")
-        parts.append(f"{expr.function.to_sql()[0]}()")
+        if expr.function_name is not None:
+            parts.append("EXECUTE FUNCTION")
+            parts.append(f"{expr.function_name.to_sql()[0]}()")
 
         return " ".join(parts), tuple(all_params)
 
