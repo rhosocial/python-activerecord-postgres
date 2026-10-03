@@ -563,3 +563,79 @@ class TestVersionGatesAreNotEmpty:
             dialect = PostgresDialect(version=version)
             assert getattr(dialect, f"supports_data_type_{name}")() is True, (
                 name, version)
+
+
+#: Every version boundary this backend gates on, and the server it was read
+#: off. Recorded so the next empty gate is a deliberate omission rather than an
+#: oversight -- four of these were found by CI, one at a time: jsonpath (12),
+#: xid8 (13), the multiranges (14) and macaddr8 (10).
+KNOWN_VERSIONED_TYPES = {
+    "postgres_macaddr8": (10, 0, 0),
+    "postgres_jsonpath": (12, 0, 0),
+    "postgres_xid8": (13, 0, 0),
+    "postgres_int4multirange": (14, 0, 0),
+    "postgres_int8multirange": (14, 0, 0),
+    "postgres_nummultirange": (14, 0, 0),
+    "postgres_datemultirange": (14, 0, 0),
+    "postgres_tsmultirange": (14, 0, 0),
+    "postgres_tstzmultirange": (14, 0, 0),
+}
+
+
+class TestEveryVersionedTypeIsGated:
+    """A gate that says yes to a server that says no costs a round trip.
+
+    Each of these was an unconditional True. The dialect rendered the type, the
+    DDL went out, and the server answered "type X does not exist" -- so the
+    failure arrived at execution, naming a table rather than the version gap
+    that caused it.
+    """
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_refused_below_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        below = floor[0] - 1
+        dialect = PostgresDialect(version=(below, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is False, name
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_available_from_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=floor)
+        assert getattr(dialect, f"supports_data_type_{name}")() is True, name
+
+    def test_no_unconditional_gate_left_on_a_versioned_type(self):
+        """A versioned type must not answer yes unconditionally.
+
+        The reverse is fine and common: text, integer and varchar have been in
+        PostgreSQL since before the oldest server this backend supports, so
+        their gates say yes on purpose. What must not happen is the opposite --
+        a type that arrived later carrying a gate that cannot say no. That is
+        the whole of what went wrong here four times.
+        """
+        import inspect
+
+        from rhosocial.activerecord.backend.impl.postgres.mixins.types import (
+            PostgresTypeFormatSupportMixin,
+        )
+
+        unconditional = set()
+        for attr in dir(PostgresTypeFormatSupportMixin):
+            if not attr.startswith("supports_data_type_"):
+                continue
+            fn = getattr(PostgresTypeFormatSupportMixin, attr)
+            try:
+                body = inspect.getsource(fn)
+            except (OSError, TypeError):  # pragma: no cover
+                continue
+            if "return True" in body and "version" not in body:
+                unconditional.add(attr[len("supports_data_type_"):])
+        # The versioned ones must not be in that set.
+        assert not (unconditional & set(KNOWN_VERSIONED_TYPES)), (
+            unconditional & set(KNOWN_VERSIONED_TYPES))

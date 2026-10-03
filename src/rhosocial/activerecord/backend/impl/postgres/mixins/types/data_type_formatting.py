@@ -442,7 +442,13 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_macaddr8(self) -> bool:
-        return True
+        """macaddr8 arrived in PostgreSQL 10.
+
+        The fourth empty gate in this file and the last one: creating
+        (v MACADDR8) on 9.6 comes back 'type "macaddr8" does not exist'.
+        jsonpath is 12, xid8 is 13, the multiranges are 14, this is 10.
+        """
+        return self.version >= (10, 0, 0)
 
     def supports_data_type_postgres_point(self) -> bool:
         return True

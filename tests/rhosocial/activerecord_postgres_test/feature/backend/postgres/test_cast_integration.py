@@ -195,7 +195,7 @@ CASES = [
     Case("inet", lambda d: PostgresInetType(d), "192.168.1.1", "192.168.1.1/32"),
     Case("macaddr", lambda d: PostgresMacAddrType(d), "08:00:2b:01:02:03",
          "08:00:2b:01:02:03"),
-    Case("macaddr8", lambda d: PostgresMacAddr8Type(d),
+    Case("macaddr8", lambda d: PostgresMacAddr8Type(d, type_name="postgres_macaddr8"),
          "08:00:2b:01:02:03:04:05", "08:00:2b:01:02:03:04:05"),
     Case("money", lambda d: PostgresMoneyType(d), "12.34", "$12.34"),
     Case("oid", lambda d: PostgresOIDType(d), "1234", "1234"),
