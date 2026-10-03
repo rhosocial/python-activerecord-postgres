@@ -118,7 +118,7 @@ def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
 def _create_range_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=RANGE_PARENT,
+        table=TableExpression(dialect, RANGE_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -136,7 +136,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
     expr = PostgresCreatePartitionExpression(
         dialect=dialect,
         partition_name=partition_name,
-        parent_table=RANGE_PARENT,
+        parent_table=TableExpression(dialect, RANGE_PARENT),
         partition_type="RANGE",
         partition_values={"from": start, "to": end},
     )
@@ -334,7 +334,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             attach = PostgresAttachPartitionExpression(
                 dialect=dialect,
                 partition_name=default_partition_name,
-                parent_table=RANGE_PARENT,
+                parent_table=TableExpression(dialect, RANGE_PARENT),
                 partition_type="RANGE",
                 partition_values={"default": True},
             )
@@ -354,7 +354,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             detach = PostgresDetachPartitionExpression(
                 dialect=dialect,
                 partition_name=default_partition_name,
-                parent_table=RANGE_PARENT,
+                parent_table=TableExpression(dialect, RANGE_PARENT),
             )
             postgres_backend.execute(*detach.to_sql())
 
@@ -434,7 +434,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         )
         update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=TableExpression(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )
@@ -447,7 +447,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
 
         invalid_update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=TableExpression(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-03-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )
@@ -498,7 +498,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         sql, params = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name=RANGE_JAN,
-            parent_table=RANGE_PARENT,
+            parent_table=TableExpression(dialect, RANGE_PARENT),
             concurrently=True,
         ).to_sql()
         try:
@@ -559,7 +559,7 @@ class TestAsyncPostgreSQLAdvancedPartitionOperations:
         )
         update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=TableExpression(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )

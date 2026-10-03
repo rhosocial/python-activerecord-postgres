@@ -454,7 +454,7 @@ class TestHstoreIntegration:
         # SET data = data || 'status=>inactive'::hstore
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_UPDATE,
+            table=TableExpression(dialect, T_HSTORE_UPDATE),
             assignments={
                 "data": BinaryExpression(
                     dialect, "||",
@@ -502,7 +502,7 @@ class TestHstoreIntegration:
         # SET data = delete(data, 'remove')
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_DELETE,
+            table=TableExpression(dialect, T_HSTORE_DELETE),
             assignments={
                 "data": FunctionCall(
                     dialect, "delete",
@@ -857,7 +857,7 @@ class TestAsyncHstoreIntegration:
         # SET data = data || 'status=>inactive'::hstore
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_UPDATE_ASYNC,
+            table=TableExpression(dialect, T_HSTORE_UPDATE_ASYNC),
             assignments={
                 "data": BinaryExpression(
                     dialect, "||",
@@ -906,7 +906,7 @@ class TestAsyncHstoreIntegration:
         # SET data = delete(data, 'remove')
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_DELETE_ASYNC,
+            table=TableExpression(dialect, T_HSTORE_DELETE_ASYNC),
             assignments={
                 "data": FunctionCall(
                     dialect, "delete",

@@ -409,7 +409,7 @@ class TestPgvectorIntegration:
             # Update the vector
             update_expr = UpdateExpression(
                 dialect=dialect,
-                table="test_vector_update",
+                table=TableExpression(dialect, "test_vector_update"),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast("vector")},
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )
@@ -911,7 +911,7 @@ class TestAsyncPgvectorIntegration:
 
             update_expr = UpdateExpression(
                 dialect=dialect,
-                table="test_vector_update_async",
+                table=TableExpression(dialect, "test_vector_update_async"),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast("vector")},
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )

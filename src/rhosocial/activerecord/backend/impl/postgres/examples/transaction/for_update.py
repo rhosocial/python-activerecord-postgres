@@ -115,7 +115,7 @@ with backend.transaction():
     # Update the balance
     update_expr = UpdateExpression(
         dialect=dialect,
-        table='accounts',
+        table=TableExpression(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 900)},
         where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
     )

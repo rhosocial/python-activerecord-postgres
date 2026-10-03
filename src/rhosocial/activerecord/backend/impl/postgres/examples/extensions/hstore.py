@@ -313,7 +313,7 @@ if installed:
     dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
     update_expr = UpdateExpression(
         dialect=dialect,
-        table="products",
+        table=TableExpression(dialect, "products"),
         assignments={
             "attributes": BinaryExpression(
                 dialect, "||",
