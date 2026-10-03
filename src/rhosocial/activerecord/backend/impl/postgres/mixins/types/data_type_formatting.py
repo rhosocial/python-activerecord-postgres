@@ -517,7 +517,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_xid8(self) -> bool:
-        return True
+        """xid8 arrived in PostgreSQL 13.
+
+        Measured: rejected on 11 and 12, accepted on 13 and 14. Unconditional
+        True sent CREATE TABLE ... (v XID8) to a 9 or 10 server, where it came
+        back as 'type "xid8" does not exist' rather than at the point of asking
+        the dialect what it supports.
+        """
+        return self.version >= (13, 0, 0)
 
     def supports_data_type_postgres_cid(self) -> bool:
         return True

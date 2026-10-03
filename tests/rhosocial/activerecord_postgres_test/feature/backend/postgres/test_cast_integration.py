@@ -200,7 +200,7 @@ CASES = [
     Case("money", lambda d: PostgresMoneyType(d), "12.34", "$12.34"),
     Case("oid", lambda d: PostgresOIDType(d), "1234", "1234"),
     Case("xid", lambda d: PostgresXIDType(d), "1", "1"),
-    Case("xid8", lambda d: PostgresXID8Type(d), "1", "1"),
+    Case("xid8", lambda d: PostgresXID8Type(d), "1", "1", type_name="postgres_xid8"),
     Case("tid", lambda d: PostgresTIDType(d), "(0,1)", "(0,1)"),
     # CID is a network line number, not a dotted quad: it goes in as an
     # integer and casts back to the same integer.

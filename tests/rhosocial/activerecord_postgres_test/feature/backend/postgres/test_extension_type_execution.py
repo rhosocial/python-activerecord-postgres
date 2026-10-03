@@ -284,6 +284,11 @@ class TestMultirangeOperationsExecute:
 
     @pytest.fixture(autouse=True)
     def table(self, pg):
+        # int4multirange arrived in PostgreSQL 14. The dialect knows, and
+        # asking it here keeps four tests from failing on every older server
+        # with the CREATE TABLE, which says nothing about containment.
+        if not pg.dialect.supports_data_type_postgres_int4multirange():
+            pytest.skip("int4multirange needs PostgreSQL 14+")
         mr = PostgresInt4MultirangeType(pg.dialect)
         make_table(pg, self.TABLE, [("v", mr)])
         insert(pg, self.TABLE, "v", "{[1,5)}", mr)
