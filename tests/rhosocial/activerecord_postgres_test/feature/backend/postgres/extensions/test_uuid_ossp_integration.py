@@ -73,7 +73,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Setup: create test_uuid_ossp table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_ossp",
+        table=TableExpression(dialect, "test_uuid_ossp"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -109,7 +109,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Setup: create test_uuid_explicit table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_explicit",
+        table=TableExpression(dialect, "test_uuid_explicit"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -278,7 +278,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Setup: create test_uuid_ossp_async table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_ossp_async",
+        table=TableExpression(dialect, "test_uuid_ossp_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -314,7 +314,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Setup: create test_uuid_explicit_async table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_explicit_async",
+        table=TableExpression(dialect, "test_uuid_explicit_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",

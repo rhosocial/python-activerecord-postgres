@@ -63,7 +63,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cubes table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table="test_cubes",
+        table=TableExpression(dialect, "test_cubes"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -98,7 +98,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_dist table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_dist",
+        table=TableExpression(dialect, "test_cube_dist"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -133,7 +133,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_idx",
+        table=TableExpression(dialect, "test_cube_idx"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -349,7 +349,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cubes_async table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table="test_cubes_async",
+        table=TableExpression(dialect, "test_cubes_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -384,7 +384,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_dist_async table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_dist_async",
+        table=TableExpression(dialect, "test_cube_dist_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -419,7 +419,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_idx_async",
+        table=TableExpression(dialect, "test_cube_idx_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",

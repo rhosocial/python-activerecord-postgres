@@ -231,7 +231,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=TableExpression(dialect, "audit"),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             table_options=self._options(dialect),
         )
@@ -246,7 +246,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=TableExpression(dialect, "audit"),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
         )
         sql, params = expr.to_sql()
@@ -263,7 +263,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=TableExpression(dialect, "audit"),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             temporary=True,
             table_options=self._options(dialect),
@@ -285,7 +285,7 @@ class TestPostgresCreateUnloggedTable:
         low = PostgresDialect(version=(9, 4, 0))
         expr = CreateTableExpression(
             low,
-            table="audit",
+            table=TableExpression(low, "audit"),
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
             table_options=PostgresCreateTableOptions(low, unlogged=True),
         )

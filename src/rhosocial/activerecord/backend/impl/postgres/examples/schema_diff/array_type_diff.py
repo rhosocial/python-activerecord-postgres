@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
+    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, ArrayType,
@@ -37,8 +38,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_v1 = DropTableExpression(dialect, "scores_v1", if_exists=True, cascade=True)
-drop_v2 = DropTableExpression(dialect, "scores_v2", if_exists=True, cascade=True)
+drop_v1 = DropTableExpression(dialect, TableExpression(dialect, "scores_v1"), if_exists=True, cascade=True)
+drop_v2 = DropTableExpression(dialect, TableExpression(dialect, "scores_v2"), if_exists=True, cascade=True)
 sql, params = drop_v1.to_sql()
 backend.execute(sql, params)
 sql, params = drop_v2.to_sql()
@@ -46,7 +47,7 @@ backend.execute(sql, params)
 
 # One-dimensional array column
 scores_v1_table = CreateTableExpression(
-    dialect=dialect, table="scores_v1", columns=[
+    dialect=dialect, table=TableExpression(dialect, "scores_v1"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=1)),
@@ -57,7 +58,7 @@ backend.execute(sql, params)
 
 # Two-dimensional array column
 scores_v2_table = CreateTableExpression(
-    dialect=dialect, table="scores_v2", columns=[
+    dialect=dialect, table=TableExpression(dialect, "scores_v2"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=2)),

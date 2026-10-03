@@ -377,9 +377,10 @@ def test_table_declarations_preserve_identity_order_and_composite_primary_key():
 
 def test_collected_table_options_render_with_postgres_dialect():
     table_options = SyncDDLSource.table_options()
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     expression = CreateTableExpression(
         DIALECT,
-        "ddl_source_orders",
+        TableExpression(DIALECT, "ddl_source_orders"),
         [ColumnDefinition(DIALECT, "id", IntegerType(DIALECT))],
         table_options=table_options[0],
     )

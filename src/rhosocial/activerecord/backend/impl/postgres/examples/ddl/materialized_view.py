@@ -89,7 +89,7 @@ _drop_mv = DropMaterializedViewExpression(
 backend.execute(*_drop_mv.to_sql())
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='sales',
+    table=TableExpression(dialect, 'sales'),
     if_exists=True,
     cascade=True,
 )
@@ -97,7 +97,7 @@ backend.execute(*drop_table.to_sql())
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table='sales',
+    table=TableExpression(dialect, 'sales'),
     columns=[
         ColumnDefinition(
             dialect,
@@ -571,7 +571,7 @@ backend.execute(*drop_mv.to_sql())
 backend.execute('DROP SCHEMA IF EXISTS mv_reporting CASCADE', options=ddl_options)
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='sales',
+    table=TableExpression(dialect, 'sales'),
     if_exists=True,
     cascade=True,
 )

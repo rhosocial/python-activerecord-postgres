@@ -64,7 +64,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 # Clean up for demo
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table=TableExpression(dialect, "articles"),
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()
@@ -112,7 +112,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="articles",
+        table=TableExpression(dialect, "articles"),
         columns=columns,
         if_not_exists=True,
     )
@@ -251,7 +251,7 @@ else:
 # ============================================================
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table=TableExpression(dialect, "articles"),
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()

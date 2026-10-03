@@ -60,9 +60,10 @@ def hypopg_env(postgres_backend_single):
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_hypopg_items",
+        table=TableExpression(dialect, "test_hypopg_items"),
         columns=columns,
         if_not_exists=True,
     )
@@ -102,7 +103,7 @@ def hypopg_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_hypopg_items",
+        table=TableExpression(dialect, "test_hypopg_items"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -276,9 +277,10 @@ async def async_hypopg_env(async_postgres_backend_single):
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_hypopg_items_async",
+        table=TableExpression(dialect, "test_hypopg_items_async"),
         columns=columns,
         if_not_exists=True,
     )
@@ -318,7 +320,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_hypopg_items_async",
+        table=TableExpression(dialect, "test_hypopg_items_async"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

@@ -252,9 +252,10 @@ class TestPostgresPartitionedTableCreation:
 
     def test_create_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table."""
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
                 ColumnDefinition(
@@ -277,9 +278,10 @@ class TestPostgresPartitionedTableCreation:
 
     def test_create_list_partitioned_parent_table(self, dialect):
         """Test creating a LIST-partitioned parent table."""
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
                 ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -298,9 +300,10 @@ class TestPostgresPartitionedTableCreation:
     def test_create_hash_partitioned_parent_table_pg10(self):
         """HASH parent table partitioning requires PostgreSQL 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -321,9 +324,10 @@ class TestPostgresPartitionedTableCreation:
     def test_create_hash_partitioned_parent_table_pg11(self):
         """Test HASH parent table partitioning on PostgreSQL 11+."""
         dialect = PostgresDialect(version=(11, 0, 0))
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -345,9 +349,10 @@ class TestPostgresPartitionedTableCreation:
     def test_create_partitioned_parent_table_pg9(self):
         """Declarative parent table partitioning requires PostgreSQL 10+."""
         dialect = PostgresDialect(version=(9, 6, 0))
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -396,9 +401,10 @@ class TestPostgresPartitionedTableCreation:
             PostgresPartitionClause,
         )
 
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=TableExpression(dialect, "events"),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -442,9 +448,10 @@ class TestPostgresPartitionedTableCreation:
 
     def test_multi_column_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table with multiple partition keys."""
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         expr = CreateTableExpression(
             dialect=dialect,
-            table="tenanted_events",
+            table=TableExpression(dialect, "tenanted_events"),
             columns=[
                 ColumnDefinition(
                     dialect,

@@ -43,7 +43,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     if_exists=True,
 )
 sql, params = drop_table.to_sql()
@@ -51,7 +51,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL'),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -109,7 +109,7 @@ print(f"Updated rows: {result.affected_rows}")
 # ============================================================
 # SECTION: Teardown
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name='users', if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

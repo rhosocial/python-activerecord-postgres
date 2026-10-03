@@ -18,6 +18,7 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     DropTableExpression,
+    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -41,7 +42,7 @@ backend.connect()
 dialect = backend.dialect
 
 # Drop if exists for clean setup
-drop = DropTableExpression(dialect=dialect, table='products', if_exists=True)
+drop = DropTableExpression(dialect=dialect, table=TableExpression(dialect, 'products'), if_exists=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
@@ -103,7 +104,7 @@ indexes = [
 
 create_expr = CreateTableExpression(
     dialect=dialect,
-    table='products',
+    table=TableExpression(dialect, 'products'),
     columns=columns,
     indexes=indexes,
     if_not_exists=True,
@@ -128,7 +129,7 @@ for col in columns_info:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table='products', if_exists=True)
+drop_table = DropTableExpression(dialect=dialect, table=TableExpression(dialect, 'products'), if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

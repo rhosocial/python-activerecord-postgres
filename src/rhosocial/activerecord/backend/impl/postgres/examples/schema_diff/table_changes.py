@@ -16,6 +16,7 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType, TableConstraint, TableConstraintType,
+    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType, DecimalType,
@@ -36,8 +37,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_users = DropTableExpression(dialect, "users", if_exists=True, cascade=True)
-drop_orders = DropTableExpression(dialect, "orders", if_exists=True, cascade=True)
+drop_users = DropTableExpression(dialect, TableExpression(dialect, "users"), if_exists=True, cascade=True)
+drop_orders = DropTableExpression(dialect, TableExpression(dialect, "orders"), if_exists=True, cascade=True)
 sql, params = drop_users.to_sql()
 backend.execute(sql, params)
 sql, params = drop_orders.to_sql()
@@ -57,7 +58,7 @@ builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 snapshot_before = builder.build(schema="public")
 
 users_table = CreateTableExpression(
-    dialect=dialect, table="users", columns=[
+    dialect=dialect, table=TableExpression(dialect, "users"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
@@ -68,7 +69,7 @@ sql, params = users_table.to_sql()
 backend.execute(sql, params)
 
 orders_table = CreateTableExpression(
-    dialect=dialect, table="orders", columns=[
+    dialect=dialect, table=TableExpression(dialect, "orders"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "user_id", IntegerType(dialect)),

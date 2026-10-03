@@ -36,7 +36,7 @@ dialect = backend.dialect
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=table_name, if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
@@ -55,7 +55,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, TableExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
     normal_rand,
     crosstab,
@@ -102,7 +102,7 @@ if installed:
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="monthly_sales",
+        table=TableExpression(dialect, "monthly_sales"),
         columns=columns,
         if_not_exists=True,
     )
@@ -146,7 +146,7 @@ if installed:
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="org_tree",
+        table=TableExpression(dialect, "org_tree"),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -281,7 +281,7 @@ else:
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=table_name, if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 backend.disconnect()

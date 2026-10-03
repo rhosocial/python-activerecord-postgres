@@ -33,9 +33,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableExpression, TableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, "products"), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -101,7 +101,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="products",
+        table=TableExpression(dialect, "products"),
         columns=columns,
         if_not_exists=True,
     )
@@ -191,7 +191,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, "products"), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

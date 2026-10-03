@@ -58,7 +58,7 @@ def social_data(postgres_backend):
         ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, "people", people_cols).to_sql())
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "people"), people_cols).to_sql())
 
     follows_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -71,7 +71,7 @@ def social_data(postgres_backend):
                                           foreign_key_reference=("people", ["id"]))]),
         ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, "follows", follows_cols).to_sql())
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "follows"), follows_cols).to_sql())
 
     posts_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -82,7 +82,7 @@ def social_data(postgres_backend):
         ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, "posts", posts_cols).to_sql())
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "posts"), posts_cols).to_sql())
 
     likes_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -95,7 +95,7 @@ def social_data(postgres_backend):
                                           foreign_key_reference=("posts", ["id"]))]),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, "likes", likes_cols).to_sql())
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "likes"), likes_cols).to_sql())
 
     people_data = ValuesSource(dialect, [
         [
@@ -393,7 +393,7 @@ class TestAsyncSocialGraph:
             ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
             ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableExpression(dialect, "people", people_cols).to_sql())
+        await backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "people"), people_cols).to_sql())
 
         follows_cols = [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -406,7 +406,10 @@ class TestAsyncSocialGraph:
                                               foreign_key_reference=("people", ["id"]))]),
             ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableExpression(dialect, "follows", follows_cols).to_sql())
+        await backend.execute(*CreateTableExpression(dialect, TableExpression(
+                                                                  dialect,
+                                                                  "follows",
+                                                              ), follows_cols).to_sql())
 
         people_data = ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice"), Literal(dialect, "a@x.com"), Literal(dialect, "NYC")],

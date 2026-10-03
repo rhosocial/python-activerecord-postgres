@@ -66,7 +66,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree",
+        table=TableExpression(dialect, "test_ltree"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -104,7 +104,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_tree table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_tree",
+        table=TableExpression(dialect, "test_ltree_tree"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -143,7 +143,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_func table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_func",
+        table=TableExpression(dialect, "test_ltree_func"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -175,7 +175,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_idx",
+        table=TableExpression(dialect, "test_ltree_idx"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -223,7 +223,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_txtq table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_txtq",
+        table=TableExpression(dialect, "test_ltree_txtq"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -572,7 +572,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_async table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_async",
+        table=TableExpression(dialect, "test_ltree_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -610,7 +610,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_tree_async table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_tree_async",
+        table=TableExpression(dialect, "test_ltree_tree_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -649,7 +649,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_func_async table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_func_async",
+        table=TableExpression(dialect, "test_ltree_func_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -681,7 +681,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_idx_async",
+        table=TableExpression(dialect, "test_ltree_idx_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -729,7 +729,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_txtq_async table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_txtq_async",
+        table=TableExpression(dialect, "test_ltree_txtq_async"),
         columns=[
             ColumnDefinition(
                 dialect, name="id",

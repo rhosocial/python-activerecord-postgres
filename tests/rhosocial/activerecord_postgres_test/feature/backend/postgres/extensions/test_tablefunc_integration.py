@@ -71,9 +71,10 @@ def tablefunc_env(postgres_backend_single):
         ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_sales",
+        table=TableExpression(dialect, "test_tf_sales"),
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -112,7 +113,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_tree",
+        table=TableExpression(dialect, "test_tf_tree"),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -140,7 +141,7 @@ def tablefunc_env(postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table="test_tf_sales",
+        table=TableExpression(dialect, "test_tf_sales"),
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -148,7 +149,7 @@ def tablefunc_env(postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table="test_tf_tree",
+        table=TableExpression(dialect, "test_tf_tree"),
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()
@@ -349,9 +350,10 @@ async def async_tablefunc_env(async_postgres_backend_single):
         ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_sales_async",
+        table=TableExpression(dialect, "test_tf_sales_async"),
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -390,7 +392,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_tree_async",
+        table=TableExpression(dialect, "test_tf_tree_async"),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -418,7 +420,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table="test_tf_sales_async",
+        table=TableExpression(dialect, "test_tf_sales_async"),
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -426,7 +428,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table="test_tf_tree_async",
+        table=TableExpression(dialect, "test_tf_tree_async"),
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()

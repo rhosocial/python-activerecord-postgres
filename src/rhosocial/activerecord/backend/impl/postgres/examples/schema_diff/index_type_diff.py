@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
+    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.types import (
     VarCharType, ArrayType, TextType,
@@ -40,12 +41,12 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_demo = DropTableExpression(dialect, "demo", if_exists=True, cascade=True)
+drop_demo = DropTableExpression(dialect, TableExpression(dialect, "demo"), if_exists=True, cascade=True)
 sql, params = drop_demo.to_sql()
 backend.execute(sql, params)
 
 demo_table = CreateTableExpression(
-    dialect=dialect, table="demo", columns=[
+    dialect=dialect, table=TableExpression(dialect, "demo"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=200)),
@@ -68,16 +69,16 @@ from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa
 builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 
 # Snapshot with BTREE index
-idx_btree = CreateIndexExpression(dialect, "idx_name", "demo", ["name"], index_type="BTREE")
+idx_btree = CreateIndexExpression(dialect, "idx_name", TableExpression(dialect, "demo"), ["name"], index_type="BTREE")
 sql, params = idx_btree.to_sql()
 backend.execute(sql, params)
 snap_btree = builder.build(schema="public")
 
 # Drop BTREE, create GIN index on array column — different index type
-drop_idx = DropIndexExpression(dialect, "idx_name", "demo", if_exists=True)
+drop_idx = DropIndexExpression(dialect, "idx_name", TableExpression(dialect, "demo"), if_exists=True)
 sql, params = drop_idx.to_sql()
 backend.execute(sql, params)
-idx_gin = CreateIndexExpression(dialect, "idx_tags", "demo", ["tags"], index_type="GIN")
+idx_gin = CreateIndexExpression(dialect, "idx_tags", TableExpression(dialect, "demo"), ["tags"], index_type="GIN")
 sql, params = idx_gin.to_sql()
 backend.execute(sql, params)
 snap_gin = builder.build(schema="public")

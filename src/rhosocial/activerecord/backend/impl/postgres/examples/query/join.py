@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, TableExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -37,7 +37,7 @@ dialect = backend.dialect
 for table in ['orders', 'customers']:
     drop_table = DropTableExpression(
         dialect=dialect,
-        table_name=table,
+        table=table,
         if_exists=True,
         cascade=True,
     )
@@ -46,7 +46,7 @@ for table in ['orders', 'customers']:
 
 create_customers = CreateTableExpression(
     dialect=dialect,
-    table_name='customers',
+    table=TableExpression(dialect, 'customers'),
     columns=[
         ColumnDefinition(
             'id',
@@ -68,7 +68,7 @@ backend.execute(*create_customers.to_sql())
 
 create_orders = CreateTableExpression(
     dialect=dialect,
-    table_name='orders',
+    table=TableExpression(dialect, 'orders'),
     columns=[
         ColumnDefinition(
             'id',

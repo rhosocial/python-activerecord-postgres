@@ -41,12 +41,12 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_demo = DropTableExpression(dialect, "demo", if_exists=True, cascade=True)
+drop_demo = DropTableExpression(dialect, TableExpression(dialect, "demo"), if_exists=True, cascade=True)
 sql, params = drop_demo.to_sql()
 backend.execute(sql, params)
 
 demo_table = CreateTableExpression(
-    dialect=dialect, table="demo", columns=[
+    dialect=dialect, table=TableExpression(dialect, "demo"), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),

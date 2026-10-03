@@ -64,9 +64,10 @@ def pgrouting_env(postgres_backend_single):
         ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
         ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_route_edges",
+        table=TableExpression(dialect, "test_route_edges"),
         columns=columns,
         if_not_exists=True,
     )
@@ -115,7 +116,7 @@ def pgrouting_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_route_edges",
+        table=TableExpression(dialect, "test_route_edges"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -193,9 +194,10 @@ async def async_pgrouting_env(async_postgres_backend_single):
         ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
         ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
+    from rhosocial.activerecord.backend.expression.core import TableExpression
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_route_edges_async",
+        table=TableExpression(dialect, "test_route_edges_async"),
         columns=columns,
         if_not_exists=True,
     )
@@ -244,7 +246,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_route_edges_async",
+        table=TableExpression(dialect, "test_route_edges_async"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

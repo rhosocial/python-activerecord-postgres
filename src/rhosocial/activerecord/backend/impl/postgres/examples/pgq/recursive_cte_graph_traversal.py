@@ -71,7 +71,7 @@ users_cols = [
     ColumnDefinition('name', 'VARCHAR(100)'),
     ColumnDefinition('city', 'VARCHAR(50)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'users', users_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, 'users'), users_cols, if_not_exists=True).to_sql())
 
 follows_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -79,7 +79,7 @@ follows_cols = [
     ColumnDefinition('follower_id', 'INTEGER'),
     ColumnDefinition('followed_id', 'INTEGER'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'follows', follows_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, 'follows'), follows_cols, if_not_exists=True).to_sql())
 
 users_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice'), Literal(dialect, 'NYC')],
@@ -106,7 +106,7 @@ accounts_cols = [
     ColumnDefinition('account_holder', 'VARCHAR(100)'),
     ColumnDefinition('account_type', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'accounts', accounts_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, 'accounts'), accounts_cols, if_not_exists=True).to_sql())
 
 txn_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -116,7 +116,7 @@ txn_cols = [
     ColumnDefinition('amount', 'NUMERIC(12,2)'),
     ColumnDefinition('ts', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'transactions', txn_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, 'transactions'), txn_cols, if_not_exists=True).to_sql())
 
 accounts_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice Smith'), Literal(dialect, 'checking')],

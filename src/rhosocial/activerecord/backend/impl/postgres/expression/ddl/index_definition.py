@@ -39,7 +39,7 @@ class PostgresCreateIndexExpression(CreateIndexExpression):
         self,
         dialect: Any,
         index_name: str,
-        table: Union[str, TableExpression],
+        table: TableExpression,
         columns: List[Any],
         unique: bool = False,
         if_not_exists: bool = False,

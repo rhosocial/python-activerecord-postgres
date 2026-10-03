@@ -175,7 +175,7 @@ class TestBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_bloom_opts",
+            table=TableExpression(dialect, "test_bloom_opts"),
             columns=columns,
             if_not_exists=True,
         )
@@ -215,7 +215,7 @@ class TestBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_bloom_opts",
+                table=TableExpression(dialect, "test_bloom_opts"),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -352,7 +352,7 @@ class TestAsyncBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_bloom_opts_async",
+            table=TableExpression(dialect, "test_bloom_opts_async"),
             columns=columns,
             if_not_exists=True,
         )
@@ -390,7 +390,7 @@ class TestAsyncBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_bloom_opts_async",
+                table=TableExpression(dialect, "test_bloom_opts_async"),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()

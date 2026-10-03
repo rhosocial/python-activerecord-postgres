@@ -630,20 +630,20 @@ class TestCreateIndexExpression:
 
     def test_basic_create(self):
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(d, "idx_test", "t", ["a"])
+        expr = CreateIndexExpression(d, "idx_test", TableExpression(d, "t"), ["a"])
         sql, _ = expr.to_sql()
         assert sql == 'CREATE INDEX "idx_test" ON "t" ("a")'
 
     def test_unique(self):
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(d, "idx_u", "t", ["a"], unique=True)
+        expr = CreateIndexExpression(d, "idx_u", TableExpression(d, "t"), ["a"], unique=True)
         sql, _ = expr.to_sql()
         assert sql == 'CREATE UNIQUE INDEX "idx_u" ON "t" ("a")'
 
     def test_nulls_not_distinct(self):
         d = PostgresDialect((15, 0, 0))
         expr = PostgresCreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=True, nulls_not_distinct=True
+            d, "idx_u", TableExpression(d, "t"), ["a"], unique=True, nulls_not_distinct=True
         )
         sql, _ = expr.to_sql()
         assert sql == 'CREATE UNIQUE INDEX "idx_u" ON "t" ("a") NULLS NOT DISTINCT'
@@ -651,7 +651,7 @@ class TestCreateIndexExpression:
     def test_nulls_not_distinct_pg14_raises(self):
         d = PostgresDialect((14, 0, 0))
         expr = PostgresCreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=True, nulls_not_distinct=True
+            d, "idx_u", TableExpression(d, "t"), ["a"], unique=True, nulls_not_distinct=True
         )
         with pytest.raises(ValueError, match="NULLS NOT DISTINCT requires PostgreSQL 15"):
             expr.to_sql()
@@ -659,7 +659,7 @@ class TestCreateIndexExpression:
     def test_nulls_not_distinct_non_unique_raises(self):
         d = PostgresDialect((15, 0, 0))
         expr = PostgresCreateIndexExpression(
-            d, "idx_u", "t", ["a"], unique=False, nulls_not_distinct=True
+            d, "idx_u", TableExpression(d, "t"), ["a"], unique=False, nulls_not_distinct=True
         )
         with pytest.raises(ValueError, match="NULLS NOT DISTINCT is only valid for UNIQUE"):
             expr.to_sql()
@@ -667,7 +667,7 @@ class TestCreateIndexExpression:
     def test_concurrent_and_nulls_not_distinct_pg15_raises(self):
         d = PostgresDialect((15, 0, 0))
         expr = PostgresCreateIndexExpression(
-            d, "idx_u", "t", ["a"],
+            d, "idx_u", TableExpression(d, "t"), ["a"],
             unique=True, concurrent=True, nulls_not_distinct=True,
         )
         with pytest.raises(ValueError, match="CONCURRENTLY.*NULLS NOT DISTINCT.*PostgreSQL 16"):
@@ -676,7 +676,7 @@ class TestCreateIndexExpression:
     def test_concurrent_and_nulls_not_distinct_pg16(self):
         d = PostgresDialect((16, 0, 0))
         expr = PostgresCreateIndexExpression(
-            d, "idx_u", "t", ["a"],
+            d, "idx_u", TableExpression(d, "t"), ["a"],
             unique=True, concurrent=True, nulls_not_distinct=True,
         )
         sql, _ = expr.to_sql()
@@ -851,32 +851,32 @@ class TestCreateIndexExpressionAllOptions:
 
     def test_concurrent(self):
         d = PostgresDialect((11, 0, 0))
-        expr = CreateIndexExpression(d, "idx_c", "t", ["a"], concurrent=True)
+        expr = CreateIndexExpression(d, "idx_c", TableExpression(d, "t"), ["a"], concurrent=True)
         sql, _ = expr.to_sql()
         assert "CONCURRENTLY" in sql
 
     def test_concurrent_pg10_raises(self):
         d = PostgresDialect((10, 0, 0))
-        expr = CreateIndexExpression(d, "idx_c", "t", ["a"], concurrent=True)
+        expr = CreateIndexExpression(d, "idx_c", TableExpression(d, "t"), ["a"], concurrent=True)
         with pytest.raises(ValueError, match="CONCURRENTLY requires PostgreSQL 11"):
             expr.to_sql()
 
     def test_if_not_exists(self):
         d = PostgresDialect()
-        expr = CreateIndexExpression(d, "idx_t", "t", ["a"], if_not_exists=True)
+        expr = CreateIndexExpression(d, "idx_t", TableExpression(d, "t"), ["a"], if_not_exists=True)
         sql, _ = expr.to_sql()
         assert "IF NOT EXISTS" in sql
 
     def test_index_type(self):
         d = PostgresDialect()
-        expr = CreateIndexExpression(d, "idx_h", "t", ["a"], index_type="hash")
+        expr = CreateIndexExpression(d, "idx_h", TableExpression(d, "t"), ["a"], index_type="hash")
         sql, _ = expr.to_sql()
         assert "USING hash" in sql
 
     def test_include(self):
         d = PostgresDialect((12, 0, 0))
         expr = CreateIndexExpression(
-            d, "idx_i", "t", ["a"], include=["b", "c"]
+            d, "idx_i", TableExpression(d, "t"), ["a"], include=["b", "c"]
         )
         sql, _ = expr.to_sql()
         assert 'INCLUDE ("b", "c")' in sql
@@ -884,7 +884,7 @@ class TestCreateIndexExpressionAllOptions:
     def test_tablespace(self):
         d = PostgresDialect()
         expr = CreateIndexExpression(
-            d, "idx_t", "t", ["a"], tablespace="fast_ts"
+            d, "idx_t", TableExpression(d, "t"), ["a"], tablespace="fast_ts"
         )
         sql, _ = expr.to_sql()
         assert 'TABLESPACE "fast_ts"' in sql
@@ -894,7 +894,7 @@ class TestCreateIndexExpressionAllOptions:
         from rhosocial.activerecord.backend.expression import Literal
         from rhosocial.activerecord.backend.expression import Column
         expr = CreateIndexExpression(
-            d, "idx_w", "t", ["a"],
+            d, "idx_w", TableExpression(d, "t"), ["a"],
             where=Column(d, "status") == Literal(d, 1),
         )
         sql, params = expr.to_sql()
@@ -905,7 +905,7 @@ class TestCreateIndexExpressionAllOptions:
     def test_with_options(self):
         d = PostgresDialect()
         expr = PostgresCreateIndexExpression(
-            d, "idx_w", "t", ["a"],
+            d, "idx_w", TableExpression(d, "t"), ["a"],
             with_options={"fillfactor": 70},
         )
         sql, _ = expr.to_sql()
@@ -914,7 +914,7 @@ class TestCreateIndexExpressionAllOptions:
     def test_opclasses(self):
         d = PostgresDialect()
         expr = PostgresCreateIndexExpression(
-            d, "idx_o", "t", ["a", "b"],
+            d, "idx_o", TableExpression(d, "t"), ["a", "b"],
             opclasses={"a": "text_pattern_ops"},
         )
         sql, _ = expr.to_sql()
@@ -1041,14 +1041,14 @@ class TestPostgresIndexMixinDirect:
     def test_format_create_index_expression_column(self):
         from rhosocial.activerecord.backend.expression import Column, Literal  # noqa: F401
         d = PostgresDialect((15, 0, 0))
-        expr = CreateIndexExpression(d, "idx_e", "t", [Column(d, "a")])
+        expr = CreateIndexExpression(d, "idx_e", TableExpression(d, "t"), [Column(d, "a")])
         sql, _ = expr.to_sql()
         assert '"a"' in sql
 
     def test_include_gist_low_raises(self):
         d = PostgresDialect((11, 0, 0))
         expr = CreateIndexExpression(
-            d, "idx_g", "t", ["a"], include=["b"], index_type="gist",
+            d, "idx_g", TableExpression(d, "t"), ["a"], include=["b"], index_type="gist",
         )
         with pytest.raises(ValueError, match="INCLUDE for GiST"):
             expr.to_sql()
@@ -1056,7 +1056,7 @@ class TestPostgresIndexMixinDirect:
     def test_include_spgist_low_raises(self):
         d = PostgresDialect((12, 0, 0))
         expr = CreateIndexExpression(
-            d, "idx_s", "t", ["a"], include=["b"], index_type="spgist",
+            d, "idx_s", TableExpression(d, "t"), ["a"], include=["b"], index_type="spgist",
         )
         with pytest.raises(ValueError, match="INCLUDE for SP-GiST"):
             expr.to_sql()

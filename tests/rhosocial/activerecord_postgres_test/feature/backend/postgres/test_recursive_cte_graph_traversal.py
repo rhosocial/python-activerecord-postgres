@@ -52,13 +52,13 @@ def social_network_data(postgres_backend):
     for t in ("follows", "users"):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "users", [
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "users"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "follows", [
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "follows"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
@@ -97,14 +97,14 @@ def aml_data(postgres_backend):
     for t in ("transactions", "accounts"):
         backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "accounts", [
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "accounts"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "account_holder", VarCharType(length=100, dialect=dialect)),
         ColumnDefinition(dialect, "account_type", VarCharType(length=20, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "transactions", [
+    backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "transactions"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "source_account_id", IntegerType(dialect=dialect)),
@@ -464,13 +464,13 @@ class TestAsyncRecursiveCTEGraph:
         for t in ("follows", "users"):
             await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
 
-        await backend.execute(*CreateTableExpression(dialect, "users", [
+        await backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "users"), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
             ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
         ]).to_sql())
 
-        await backend.execute(*CreateTableExpression(dialect, "follows", [
+        await backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "follows"), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
             ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),

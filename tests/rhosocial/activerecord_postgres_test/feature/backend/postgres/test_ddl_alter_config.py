@@ -517,6 +517,7 @@ class TestPostgresConstraintEnforcement:
             Column,
             ColumnDefinition,
             CreateTableExpression,
+            TableExpression,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
@@ -531,7 +532,7 @@ class TestPostgresConstraintEnforcement:
         )
         create = CreateTableExpression(
             dialect,
-            "ranges",
+            TableExpression(dialect, "ranges"),
             [ColumnDefinition(dialect, "range", IntegerType(dialect))],
             table_constraints=[exclude],
         )
@@ -557,7 +558,7 @@ class TestPostgresConstraintEnforcement:
         )
         invalid_create = CreateTableExpression(
             dialect,
-            "invalid_checks",
+            TableExpression(dialect, "invalid_checks"),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
             table_constraints=[not_valid_check],
         )
