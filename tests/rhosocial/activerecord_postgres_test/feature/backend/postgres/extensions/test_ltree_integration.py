@@ -131,8 +131,8 @@ def ltree_env(postgres_backend_single):
             [
                 [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
                 [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
-                [Literal(dialect, root.level1.level2a).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")]
-                [Literal(dialect, root.level1.level2b).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")]
+                [Literal(dialect, "root.level1.level2a").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")],
+                [Literal(dialect, "root.level1.level2b").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")],
                 [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
             ],
         ),
@@ -637,8 +637,8 @@ async def async_ltree_env(async_postgres_backend_single):
             [
                 [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
                 [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
-                [Literal(dialect, root.level1.level2a).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")]
-                [Literal(dialect, root.level1.level2b).cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")]
+                [Literal(dialect, "root.level1.level2a").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")],
+                [Literal(dialect, "root.level1.level2b").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")],
                 [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
             ],
         ),
