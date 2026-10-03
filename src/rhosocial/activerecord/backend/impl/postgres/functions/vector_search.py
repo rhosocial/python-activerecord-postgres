@@ -208,7 +208,7 @@ def create_vector_index(
     return PostgresCreateIndexExpression(
         dialect=dialect,
         index_name=idx_name,
-        table_name=table_name,
+        table=TableExpression(dialect, table_name),
         columns=[column_name],
         index_type=index_type_l.upper(),
         if_not_exists=if_not_exists,

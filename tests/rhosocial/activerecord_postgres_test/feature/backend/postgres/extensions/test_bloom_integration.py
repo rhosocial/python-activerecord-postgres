@@ -99,7 +99,7 @@ def bloom_env(postgres_backend_single):
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_bloom_test",
-        table_name=TABLE_NAME,
+        table=TableExpression(dialect, TABLE_NAME),
         columns=["name", "email"],
         index_type="bloom",
         if_not_exists=True,
@@ -276,7 +276,7 @@ async def async_bloom_env(async_postgres_backend_single):
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_bloom_test_async",
-        table_name=ASYNC_TABLE_NAME,
+        table=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=["name", "email"],
         index_type="bloom",
         if_not_exists=True,

@@ -299,7 +299,7 @@ class PostgresIndexMixin:
             parts.append("IF NOT EXISTS")
         parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
         parts.append("ON")
-        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+        parts.append(expr.table.to_sql()[0])
         parts.append("USING GIN")
 
         if len(expr.columns) == 1:
@@ -356,7 +356,7 @@ class PostgresIndexMixin:
             parts.append("IF NOT EXISTS")
         parts.append(TableExpression(self, expr.index_name, schema_name=expr.schema_name).to_sql()[0])
         parts.append("ON")
-        parts.append(TableExpression(self, expr.table_name, schema_name=expr.schema_name).to_sql()[0])
+        parts.append(expr.table.to_sql()[0])
 
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")

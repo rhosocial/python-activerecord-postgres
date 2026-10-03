@@ -128,7 +128,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_employees_name_gin",
-        table_name="employees",
+        table=TableExpression(dialect, "employees"),
         columns=["name"],
         index_type="GIN",
         if_not_exists=True,

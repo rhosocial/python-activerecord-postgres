@@ -238,7 +238,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_categories_path",
-        table_name="categories",
+        table=TableExpression(dialect, "categories"),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,

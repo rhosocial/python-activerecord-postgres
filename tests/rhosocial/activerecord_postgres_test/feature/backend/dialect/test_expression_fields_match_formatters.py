@@ -19,6 +19,7 @@ import importlib
 import inspect
 
 import pytest
+from rhosocial.activerecord.backend.expression.core import TableExpression  # noqa: E402
 
 #: Statement fields a formatter may read that some expression classes carry
 #: under a different name. Reading these by their own name is the defect.
@@ -49,7 +50,7 @@ class TestQualifiedStatementsRender:
         from rhosocial.activerecord.backend.expression import CreateIndexExpression
 
         expr = CreateIndexExpression(
-            dialect, index_name="idx_orders_id", table_name="orders", columns=["id"]
+            dialect, index_name="idx_orders_id", table=TableExpression(dialect, "orders"), columns=["id"]
         )
         assert expr.to_sql()[0] == (
             'CREATE INDEX "idx_orders_id" ON "orders" ("id")'
@@ -57,7 +58,7 @@ class TestQualifiedStatementsRender:
         qualified = CreateIndexExpression(
             dialect,
             index_name="idx_orders_id",
-            table_name="orders",
+            table=TableExpression(dialect, "orders", schema_name="app"),
             columns=["id"],
             schema_name="app",
         )
@@ -69,13 +70,13 @@ class TestQualifiedStatementsRender:
         from rhosocial.activerecord.backend.expression import DropIndexExpression
 
         expr = DropIndexExpression(
-            dialect, index_name="idx_orders_id", table_name="orders"
+            dialect, index_name="idx_orders_id", table=TableExpression(dialect, "orders")
         )
         assert expr.to_sql()[0] == 'DROP INDEX "idx_orders_id"', expr.to_sql()[0]
         qualified = DropIndexExpression(
             dialect,
             index_name="idx_orders_id",
-            table_name="orders",
+            table=TableExpression(dialect, "orders", schema_name="app"),
             schema_name="app",
         )
         assert qualified.to_sql()[0] == (

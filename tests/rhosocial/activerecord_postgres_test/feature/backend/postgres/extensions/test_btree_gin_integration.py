@@ -119,7 +119,7 @@ class TestBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            table=TableExpression(dialect, "test_btree_gin"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -150,7 +150,7 @@ class TestBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_name",
-            table_name="test_btree_gin",
+            table=TableExpression(dialect, "test_btree_gin"),
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -181,7 +181,7 @@ class TestBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            table=TableExpression(dialect, "test_btree_gin"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -275,7 +275,7 @@ class TestAsyncBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            table=TableExpression(dialect, "test_btree_gin_async"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -307,7 +307,7 @@ class TestAsyncBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_name_async",
-            table_name="test_btree_gin_async",
+            table=TableExpression(dialect, "test_btree_gin_async"),
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -339,7 +339,7 @@ class TestAsyncBtreeGinIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            table=TableExpression(dialect, "test_btree_gin_async"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,

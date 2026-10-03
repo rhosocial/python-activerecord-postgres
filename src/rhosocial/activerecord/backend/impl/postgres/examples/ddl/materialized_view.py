@@ -305,7 +305,7 @@ for row in result.data or []:
 create_unique_idx = CreateIndexExpression(
     dialect=dialect,
     index_name='sales_summary_product_id_idx',
-    table_name='sales_summary',
+    table=TableExpression(dialect, 'sales_summary'),
     columns=['product_id'],
     unique=True,
 )

@@ -122,7 +122,7 @@ class TestBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            table=TableExpression(dialect, "test_btree_gist"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -153,7 +153,7 @@ class TestBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_value",
-            table_name="test_btree_gist",
+            table=TableExpression(dialect, "test_btree_gist"),
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -184,7 +184,7 @@ class TestBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            table=TableExpression(dialect, "test_btree_gist"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -287,7 +287,7 @@ class TestAsyncBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            table=TableExpression(dialect, "test_btree_gist_async"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -319,7 +319,7 @@ class TestAsyncBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_value_async",
-            table_name="test_btree_gist_async",
+            table=TableExpression(dialect, "test_btree_gist_async"),
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -351,7 +351,7 @@ class TestAsyncBtreeGistIntegration:
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
             index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            table=TableExpression(dialect, "test_btree_gist_async"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,

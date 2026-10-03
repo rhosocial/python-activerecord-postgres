@@ -283,7 +283,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_products_feature_vector",
-        table_name="products",
+        table=TableExpression(dialect, "products"),
         columns=["feature_vector"],
         index_type="GIST",
         if_not_exists=True,

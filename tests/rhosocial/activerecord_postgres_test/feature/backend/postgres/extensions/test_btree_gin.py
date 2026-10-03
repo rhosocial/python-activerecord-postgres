@@ -9,6 +9,7 @@ Tests for PostgresBtreeGinMixin format methods:
 
 from rhosocial.activerecord.backend.expression import CreateIndexExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.core import TableExpression  # noqa: E402
 
 
 class TestPostgresBtreeGinMixin:
@@ -23,7 +24,7 @@ class TestPostgresBtreeGinMixin:
         expr = CreateIndexExpression(
             self.dialect,
             index_name="idx_name",
-            table_name="table_name",
+            table=TableExpression(self.dialect, "table_name"),
             columns=["column"],
             index_type="gin",
         )

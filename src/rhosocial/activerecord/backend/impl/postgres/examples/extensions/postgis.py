@@ -264,7 +264,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_locations_geom",
-        table_name="locations",
+        table=TableExpression(dialect, "locations"),
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,

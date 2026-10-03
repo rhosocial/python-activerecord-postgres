@@ -33,6 +33,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresReindexExpression,
     PostgresCreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.core import TableExpression  # noqa: E402
 
 
 class TestIndexFeatureDetection:
@@ -566,7 +567,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
         expr = CreateFulltextIndexExpression(
             dialect,
             index_name="idx_ft",
-            table_name="articles",
+            table=TableExpression(dialect, "articles"),
             columns=["body"],
         )
         sql, params = expr.to_sql()
@@ -581,7 +582,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
         expr = CreateFulltextIndexExpression(
             dialect,
             index_name="idx_ft",
-            table_name="articles",
+            table=TableExpression(dialect, "articles"),
             columns=["body"],
             if_not_exists=True,
         )
@@ -593,7 +594,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
         expr = CreateFulltextIndexExpression(
             dialect,
             index_name="idx_ft",
-            table_name="articles",
+            table=TableExpression(dialect, "articles"),
             columns=["title", "body"],
         )
         sql, _ = expr.to_sql()
@@ -606,7 +607,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
         expr = DropFulltextIndexExpression(
             dialect,
             index_name="idx_ft",
-            table_name="articles",
+            table=TableExpression(dialect, "articles"),
         )
         sql, _ = expr.to_sql()
         assert sql.startswith("DROP INDEX")
@@ -617,7 +618,7 @@ class TestFulltextDdlNotSupportedSearchSupported:
         expr = DropFulltextIndexExpression(
             dialect,
             index_name="idx_ft",
-            table_name="articles",
+            table=TableExpression(dialect, "articles"),
             if_exists=True,
         )
         sql, _ = expr.to_sql()

@@ -230,7 +230,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_tags_tag_ids",
-        table_name="tags",
+        table=TableExpression(dialect, "tags"),
         columns=["tag_ids"],
         index_type="GIST",
         if_not_exists=True,

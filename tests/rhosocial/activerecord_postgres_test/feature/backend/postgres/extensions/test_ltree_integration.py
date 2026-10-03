@@ -212,7 +212,7 @@ def ltree_env(postgres_backend_single):
     create_index = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_ltree_path",
-        table_name="test_ltree_idx",
+        table=TableExpression(dialect, "test_ltree_idx"),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,
@@ -718,7 +718,7 @@ async def async_ltree_env(async_postgres_backend_single):
     create_index = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_ltree_path_async",
-        table_name="test_ltree_idx_async",
+        table=TableExpression(dialect, "test_ltree_idx_async"),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,

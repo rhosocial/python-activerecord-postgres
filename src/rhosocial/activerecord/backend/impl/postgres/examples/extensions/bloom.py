@@ -131,7 +131,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_customers_bloom",
-        table_name="customers",
+        table=TableExpression(dialect, "customers"),
         columns=["name", "email", "city"],
         index_type="BLOOM",
         if_not_exists=True,
@@ -165,7 +165,7 @@ if installed:
     create_idx_opts = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_customers_bloom_opts",
-        table_name="customers",
+        table=TableExpression(dialect, "customers"),
         columns=["name", "email"],
         index_type="BLOOM",
         if_not_exists=True,

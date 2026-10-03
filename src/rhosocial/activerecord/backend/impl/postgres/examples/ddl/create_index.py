@@ -63,11 +63,12 @@ backend.execute(*create_table.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import CreateIndexExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression  # noqa: E402
 
 create_idx = CreateIndexExpression(
     dialect=dialect,
     index_name='idx_category_price',
-    table_name='products',
+    table=TableExpression(dialect, 'products'),
     columns=['category', 'price'],
     if_not_exists=True,
 )

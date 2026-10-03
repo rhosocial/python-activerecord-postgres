@@ -229,7 +229,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_articles_title_trgm",
-        table_name="articles",
+        table=TableExpression(dialect, "articles"),
         columns=["title"],
         index_type="GIN",
         if_not_exists=True,

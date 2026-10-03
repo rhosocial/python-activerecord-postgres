@@ -129,7 +129,7 @@ if installed:
     create_idx = CreateIndexExpression(
         dialect=dialect,
         index_name="idx_events_created_at_gist",
-        table_name="events",
+        table=TableExpression(dialect, "events"),
         columns=["created_at"],
         index_type="GIST",
         if_not_exists=True,

@@ -77,7 +77,7 @@ backend.execute(sql, params)
 create_email_idx = CreateIndexExpression(
     dialect=dialect,
     index_name='idx_users_email',
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     columns=['email'],
     unique=True,
     if_not_exists=True,
@@ -90,7 +90,7 @@ print(f"Params: {params}")
 create_composite_idx = CreateIndexExpression(
     dialect=dialect,
     index_name='idx_users_username_email',
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     columns=['username', 'email'],
     unique=True,
     if_not_exists=True,

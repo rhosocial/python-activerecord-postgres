@@ -12,6 +12,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.core import TableExpression  # noqa: E402
 
 
 class TestPostgresBloomMixin:
@@ -26,7 +27,7 @@ class TestPostgresBloomMixin:
         expr = CreateIndexExpression(
             self.dialect,
             index_name="idx_name",
-            table_name="table_name",
+            table=TableExpression(self.dialect, "table_name"),
             columns=["col1", "col2"],
             index_type="bloom",
         )
@@ -41,7 +42,7 @@ class TestPostgresBloomMixin:
         expr = PostgresCreateIndexExpression(
             self.dialect,
             index_name="idx_name",
-            table_name="table_name",
+            table=TableExpression(self.dialect, "table_name"),
             columns=["col1", "col2"],
             index_type="bloom",
             with_options={"fillfactor": 90},
