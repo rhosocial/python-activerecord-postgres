@@ -77,10 +77,10 @@ class PostgresPgPartmanMixin:
             Tuple of (SELECT function_call SQL, params tuple).
         """
         from typing import List, Any
-        from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+        from rhosocial.activerecord.backend.expression.core import TableExpression
 
         schema = expr.schema or "partman"
-        function_name_sql, _ = QualifiedIdentifierExpression(
+        function_name_sql, _ = TableExpression(
             dialect=self, schema_name=schema, name="create_parent"
         ).to_sql()
         placeholder = self.get_parameter_placeholder()
@@ -137,9 +137,9 @@ class PostgresPgPartmanMixin:
         Returns:
             Tuple of (SELECT function_call SQL, params tuple).
         """
-        from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         schema = expr.schema or "partman"
-        function_name_sql, _ = QualifiedIdentifierExpression(
+        function_name_sql, _ = TableExpression(
             dialect=self, schema_name=schema, name="run_maintenance"
         ).to_sql()
         if expr.parent_table is None:
@@ -167,7 +167,7 @@ class PostgresPgPartmanMixin:
         Raises:
             ValueError: If all config options are None (nothing to update).
         """
-        from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         assignments: List[str] = []
         params: List[Any] = []
         placeholder = self.get_parameter_placeholder()
@@ -192,7 +192,7 @@ class PostgresPgPartmanMixin:
             raise ValueError("At least one pg_partman config option must be specified.")
 
         schema = expr.schema or "partman"
-        config_table_sql, _ = QualifiedIdentifierExpression(
+        config_table_sql, _ = TableExpression(
             dialect=self, schema_name=schema, name="part_config"
         ).to_sql()
         params.append(expr.parent_table)
@@ -219,9 +219,9 @@ class PostgresPgPartmanMixin:
         Returns:
             Tuple of (DELETE SQL, params tuple).
         """
-        from rhosocial.activerecord.backend.expression import QualifiedIdentifierExpression
+        from rhosocial.activerecord.backend.expression.core import TableExpression
         schema = expr.schema or "partman"
-        config_table_sql, _ = QualifiedIdentifierExpression(
+        config_table_sql, _ = TableExpression(
             dialect=self, schema_name=schema, name="part_config"
         ).to_sql()
         placeholder = self.get_parameter_placeholder()

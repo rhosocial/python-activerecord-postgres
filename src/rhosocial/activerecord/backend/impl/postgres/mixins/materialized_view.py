@@ -27,7 +27,7 @@ from typing import Any, Dict, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins import ViewMixin
-from rhosocial.activerecord.backend.expression.core import QualifiedIdentifierExpression
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
@@ -96,13 +96,11 @@ class PostgresMaterializedViewMixin(ViewMixin):
         Returns:
             The quoted (and possibly schema-qualified) identifier.
         """
-        name_sql, _ = self.format_qualified_identifier(
-            QualifiedIdentifierExpression(
-                self,
-                schema_name=getattr(expr, "schema", None),
-                name=expr.view_name,
-            )
-        )
+        name_sql, _ = TableExpression(
+            self,
+            name=expr.view_name,
+            schema_name=expr.schema,
+        ).to_sql()
         return name_sql
 
     def _format_storage_parameters(self, properties: Dict[Any, Any]) -> str:

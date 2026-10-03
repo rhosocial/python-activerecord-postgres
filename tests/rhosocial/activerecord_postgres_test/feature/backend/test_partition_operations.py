@@ -21,7 +21,6 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     LogicalPredicate,
     OrderByClause,
-    QualifiedIdentifierExpression,
     QueryExpression,
     TableExpression,
     ValuesSource,
@@ -529,7 +528,7 @@ def _pg_partman_delete_config_sql(dialect, partman_schema: str):
 
 
 def _pg_partman_config_table_sql(dialect, partman_schema: str) -> str:
-    sql, _ = QualifiedIdentifierExpression(
+    sql, _ = TableExpression(
         dialect=dialect,
         schema_name=partman_schema,
         name="part_config",
