@@ -13,6 +13,7 @@ The qualifiers are opt-in via ``if_not_exists`` / ``if_exists`` on the
 
 import pytest
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements import ColumnDefinition
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AddColumn,
@@ -61,7 +62,7 @@ class TestPostgresAddColumnIfNotExists:
             if_not_exists=True,
         )
         expr = AlterTableExpression(
-            dialect, table_name="users", actions=[action]
+            dialect, table=TableExpression(dialect, "users"), actions=[action]
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "users"' in sql
@@ -189,7 +190,7 @@ class TestPostgresRenameColumnAndTable:
 
         expr = AlterTableExpression(
             dialect,
-            table_name="orders",
+            table=TableExpression(dialect, "orders"),
             actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
         )
         sql, params = expr.to_sql()

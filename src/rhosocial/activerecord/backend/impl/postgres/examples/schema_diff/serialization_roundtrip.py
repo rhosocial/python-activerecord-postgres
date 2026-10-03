@@ -24,6 +24,7 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AlterTableExpression, AddColumn,
 )
@@ -74,7 +75,7 @@ snapshot_json = json.dumps(snapshot_before.to_dict(), default=str)
 snapshot_loaded = SchemaSnapshot.from_dict(json.loads(snapshot_json))
 
 # Modify the database
-add_phone = AlterTableExpression(dialect, "users", [
+add_phone = AlterTableExpression(dialect, TableExpression(dialect, "users"), [
     AddColumn(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
 ])
 sql, params = add_phone.to_sql()

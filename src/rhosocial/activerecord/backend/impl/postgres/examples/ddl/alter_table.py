@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Literal, TableExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -96,7 +96,7 @@ add_email_action = AddColumn(
 
 add_email_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     actions=[add_email_action],
 )
 
@@ -121,7 +121,7 @@ add_age_action = AddColumn(
 
 add_age_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     actions=[add_age_action],
 )
 
@@ -138,7 +138,7 @@ rename_action = RenameObject(
 
 rename_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=TableExpression(dialect, 'users'),
     actions=[rename_action],
 )
 

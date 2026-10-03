@@ -24,6 +24,7 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AlterTableExpression, AddColumn, DropColumn,
 )
@@ -70,14 +71,14 @@ snapshot_before = builder.build(schema="public")
 
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableExpression(dialect, "demo", [
+add_age = AlterTableExpression(dialect, TableExpression(dialect, "demo"), [
     AddColumn(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
 ])
 sql, params = add_age.to_sql()
 backend.execute(sql, params)
 
 # Now drop it — column set is identical
-drop_age = AlterTableExpression(dialect, "demo", [
+drop_age = AlterTableExpression(dialect, TableExpression(dialect, "demo"), [
     DropColumn(dialect, "age")
 ])
 sql, params = drop_age.to_sql()
