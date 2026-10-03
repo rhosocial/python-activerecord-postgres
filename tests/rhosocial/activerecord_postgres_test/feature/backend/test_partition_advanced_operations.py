@@ -137,7 +137,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
     expr = PostgresCreatePartitionExpression(
         dialect=dialect,
         partition_name=partition_name,
-        parent_table=TableExpression(dialect, RANGE_PARENT),
+        parent_table=RANGE_PARENT,
         partition_type="RANGE",
         partition_values={"from": start, "to": end},
     )
@@ -335,7 +335,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             attach = PostgresAttachPartitionExpression(
                 dialect=dialect,
                 partition_name=default_partition_name,
-                parent_table=TableExpression(dialect, RANGE_PARENT),
+                parent_table=RANGE_PARENT,
                 partition_type="RANGE",
                 partition_values={"default": True},
             )
@@ -355,7 +355,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             detach = PostgresDetachPartitionExpression(
                 dialect=dialect,
                 partition_name=default_partition_name,
-                parent_table=TableExpression(dialect, RANGE_PARENT),
+                parent_table=RANGE_PARENT,
             )
             postgres_backend.execute(*detach.to_sql())
 
@@ -499,7 +499,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         sql, params = PostgresDetachPartitionExpression(
             dialect=dialect,
             partition_name=RANGE_JAN,
-            parent_table=TableExpression(dialect, RANGE_PARENT),
+            parent_table=RANGE_PARENT,
             concurrently=True,
         ).to_sql()
         try:
