@@ -313,6 +313,16 @@ def _need_extension(backend, case):
     is not on every server -- would skip all 165 cases instead of the three
     that need it.
     """
+    if case.type_name:
+        # The dialect knows which types the running server has -- multiranges
+        # and jsonpath did not exist before 13/14 -- and says so by refusing to
+        # render them. Asking it is cheaper than treating that refusal as a
+        # failure, and it is the same answer either way.
+        supported = getattr(
+            backend.dialect, f"supports_data_type_{case.type_name}", None)
+        if supported is not None and not supported():
+            pytest.skip(
+                f"{case.type_name} needs a newer server than this one provides")
     if not case.extension:
         return
     from rhosocial.activerecord_postgres_test.feature.backend.utils import (

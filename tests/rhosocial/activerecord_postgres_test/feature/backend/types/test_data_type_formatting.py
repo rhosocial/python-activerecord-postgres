@@ -498,3 +498,68 @@ def test_supports_data_types_registers_all_postgres_types(dialect):
         IntegerType,
     ):
         assert expected in classes
+
+
+class TestVersionGatesAreNotEmpty:
+    """A gate with no lower bound is not a gate.
+
+    ``supports_data_type_x`` returning True unconditionally tells the dialect it
+    can render a type on any server, and the server disagrees at execution. That
+    is the expensive way to find out: the DDL is built, sent, and rejected.
+
+    These boundaries were measured against the scenario servers rather than
+    read off the release notes, because the release notes and the servers
+    disagreed about jsonpath -- the notes say 13, and 12 has it.
+    """
+
+    @pytest.mark.parametrize("version", [(9, 0, 0), (10, 0, 0), (11, 0, 0)])
+    def test_jsonpath_is_refused_below_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is False
+
+    @pytest.mark.parametrize("version", [(12, 0, 0), (13, 0, 0), (14, 0, 0)])
+    def test_jsonpath_is_available_from_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is True
+
+    @pytest.mark.parametrize(
+        "name", ["postgres_int4multirange", "postgres_int8multirange",
+                 "postgres_nummultirange", "postgres_datemultirange",
+                 "postgres_tsmultirange", "postgres_tstzmultirange"],
+    )
+    def test_multiranges_need_14(self, name):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(11, 0, 0), (12, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is False, (
+                name, version)
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is True
+
+    @pytest.mark.parametrize(
+        "name", ["text", "varchar", "boolean", "integer", "bigint",
+                 "postgres_int4range", "postgres_int8range"],
+    )
+    def test_base_types_are_unconditionally_available(self, name):
+        """The distinction that matters: most of these gates are True on
+        purpose, because the type has existed since before the oldest server
+        this backend supports. They are not a to-do list."""
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(9, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is True, (
+                name, version)

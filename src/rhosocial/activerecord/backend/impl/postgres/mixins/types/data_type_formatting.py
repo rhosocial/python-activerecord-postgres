@@ -417,7 +417,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_jsonpath(self) -> bool:
-        return True
+        """jsonpath arrived in PostgreSQL 12.
+
+        Measured against the scenario servers: 'CREATE TABLE t(p jsonpath)' is
+        rejected on 11 with 'type "jsonpath" does not exist' and accepted from
+        12 on. Unconditional True meant a 9, 10 or 11 server was told it could
+        have the type, and found out by executing the DDL.
+        """
+        return self.version >= (12, 0, 0)
 
     def supports_data_type_postgres_bit(self) -> bool:
         return True
