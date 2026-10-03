@@ -304,7 +304,7 @@ def _create_production_index_sql(dialect, table_name: str):
     expr = CreateIndexExpression(
         dialect,
         f"idx_{table_name}_tenant_created_at",
-        table_name,
+        TableExpression(dialect, table_name),
         ["tenant_id", "created_at"],
         if_not_exists=True,
     )

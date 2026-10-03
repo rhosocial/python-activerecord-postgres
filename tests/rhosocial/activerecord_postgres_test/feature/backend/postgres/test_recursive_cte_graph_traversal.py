@@ -50,7 +50,7 @@ def social_network_data(postgres_backend):
     dialect = backend.dialect
 
     for t in ("follows", "users"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "users"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
@@ -85,7 +85,7 @@ def social_network_data(postgres_backend):
     yield
 
     for t in ("follows", "users"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
 
 @pytest.fixture
@@ -95,7 +95,7 @@ def aml_data(postgres_backend):
     dialect = backend.dialect
 
     for t in ("transactions", "accounts"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
     backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "accounts"), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
@@ -133,7 +133,7 @@ def aml_data(postgres_backend):
     yield
 
     for t in ("transactions", "accounts"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
 
 class TestSocialNetworkTraversal:
@@ -462,7 +462,7 @@ class TestAsyncRecursiveCTEGraph:
         dialect = backend.dialect
 
         for t in ("follows", "users"):
-            await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
         await backend.execute(*CreateTableExpression(dialect, TableExpression(dialect, "users"), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
@@ -491,7 +491,7 @@ class TestAsyncRecursiveCTEGraph:
         yield
 
         for t in ("follows", "users"):
-            await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableExpression(dialect, TableExpression(dialect, t), if_exists=True, cascade=True).to_sql())
 
     @pytest.mark.asyncio
     async def test_async_single_hop(self, async_postgres_backend, async_social_network_data):
