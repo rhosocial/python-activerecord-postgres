@@ -6,6 +6,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     CreateTableExpression,
+    TableExpression,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -73,7 +74,7 @@ class TestPostgresTableDDLDeclarations:
     def _expression(dialect, table="child", *, inherits=None, tablespace=None):
         return CreateTableExpression(
             dialect,
-            table,
+            TableExpression(dialect, table),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
             inherits=inherits,
             tablespace=tablespace,

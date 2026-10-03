@@ -78,11 +78,7 @@ def _ddl_statements(backend):
     ]
     statements = []
     for schema in (None, SCHEMA_A):
-        ref = (
-            TableExpression(dialect, SOFT_TABLE, schema_name=schema)
-            if schema
-            else SOFT_TABLE
-        )
+        ref = TableExpression(dialect, SOFT_TABLE, schema_name=schema)
         statements.append(
             DropTableExpression(dialect, ref, if_exists=True, cascade=True).to_sql()[0]
         )
