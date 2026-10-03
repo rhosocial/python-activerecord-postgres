@@ -385,9 +385,18 @@ def test_parse_type_array_with_dimension_bracket(dialect):
     assert result.element_type.length == 10
 
 
-def test_parse_type_malformed_bracket_suffix_falls_back(dialect):
-    result = dialect.parse_type("FOO[abc]")
-    assert type(result) is CustomType
+def test_parse_type_malformed_bracket_suffix_is_rejected(dialect):
+    """A malformed array marker is refused, not quietly dropped.
+
+    Falling back to CustomType would put "FOO[abc]" into the statement as-is,
+    and the type position cannot take a bound parameter -- so a name that does
+    not parse is a name that has to be reported rather than passed through."""
+    from rhosocial.activerecord.backend.expression.type_name import (
+        InvalidTypeNameError,
+    )
+
+    with pytest.raises(InvalidTypeNameError):
+        dialect.parse_type("FOO[abc]")
 
 
 def test_parse_type_array_keyword(dialect):
