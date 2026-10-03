@@ -1,6 +1,7 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/postgres/test_model_truncate.py
 """PostgreSQL rendering tests for model-bound TRUNCATE expressions."""
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
     TruncateExpression,
 )
@@ -13,13 +14,13 @@ class TestSyncModelTruncate:
     def test_truncate_expression_renders_postgres_options(self, postgres_backend):
         expression = TruncateExpression(
             postgres_backend.dialect,
-            TABLE,
+            table=TableExpression(postgres_backend.dialect, TABLE),
             restart_identity=True,
             cascade=True,
         )
 
         assert isinstance(expression, TruncateExpression)
-        assert expression.table_name == TABLE
+        assert expression.table.name == TABLE
         assert expression.restart_identity is True
         assert expression.cascade is True
         assert expression.to_sql() == (
@@ -35,13 +36,13 @@ class TestAsyncModelTruncate:
     ):
         expression = TruncateExpression(
             async_postgres_backend.dialect,
-            TABLE,
+            table=TableExpression(async_postgres_backend.dialect, TABLE),
             restart_identity=True,
             cascade=True,
         )
 
         assert isinstance(expression, TruncateExpression)
-        assert expression.table_name == TABLE
+        assert expression.table.name == TABLE
         assert expression.restart_identity is True
         assert expression.cascade is True
         assert expression.to_sql() == (

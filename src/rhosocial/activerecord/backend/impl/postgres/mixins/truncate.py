@@ -2,7 +2,6 @@
 """PostgreSQL truncate feature support implementation."""
 
 from typing import Tuple, TYPE_CHECKING
-from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -25,16 +24,12 @@ class PostgresTruncateMixin:
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
-        - ``expr.table_name`` — target table.
+        - ``expr.table`` — target table.
         - ``expr.restart_identity`` — add ``RESTART IDENTITY`` (PG 8.4+).
         - ``expr.cascade`` — add ``CASCADE``.
         """
         parts = ["TRUNCATE TABLE"]
-        parts.append(
-            TableExpression(
-                self, expr.table_name, schema_name=expr.schema_name
-            ).to_sql()[0]
-        )
+        parts.append(expr.table.to_sql()[0])
 
         if expr.restart_identity:
             if not self.supports_truncate_restart_identity():

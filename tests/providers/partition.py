@@ -8,6 +8,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type
 from rhosocial.activerecord.base.field_proxy import FieldProxy
 from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
@@ -297,7 +298,9 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _truncate_partition_sql(self, dialect, partition_name: str):
-        expr = TruncateExpression(dialect=dialect, table_name=partition_name)
+        expr = TruncateExpression(
+            dialect=dialect, table=TableExpression(dialect, partition_name)
+        )
         return expr.to_sql()
 
     def _drop_partition_sql(self, dialect, table_name: str):
