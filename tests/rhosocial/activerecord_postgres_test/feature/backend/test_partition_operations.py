@@ -5,6 +5,7 @@ These tests execute against the configured PostgreSQL scenarios. They cover
 common operational needs for declarative partitioning and keep synchronous and
 asynchronous test method names identical across test classes.
 """
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from datetime import datetime
 from typing import Optional, Sequence
 
@@ -80,7 +81,7 @@ def _qualified(table_name: str) -> str:
 def _create_partitioned_parent_sql(dialect, table_name: str):
     expr = CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         columns=[
             ColumnDefinition(
                 dialect,
@@ -175,7 +176,7 @@ def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_valu
 def _drop_table_sql(dialect, table_name: str):
     expr = DropTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_exists=True,
         cascade=True,
     )
@@ -218,7 +219,7 @@ PRODUCTION_PARTITIONS = (
 def _create_production_parent_sql(dialect):
     expr = CreateTableExpression(
         dialect=dialect,
-        table=PRODUCTION_PARTITION_TABLE,
+        table=TableExpression(dialect, PRODUCTION_PARTITION_TABLE),
         columns=[
             ColumnDefinition(
                 dialect,

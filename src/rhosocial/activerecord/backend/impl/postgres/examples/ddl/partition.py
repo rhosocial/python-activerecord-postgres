@@ -11,6 +11,7 @@ This example demonstrates:
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
@@ -40,7 +41,7 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop partitions first, then parent table
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=TableExpression(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
@@ -125,7 +126,7 @@ print(f"Q1 orders: {result.data}")
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=TableExpression(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 

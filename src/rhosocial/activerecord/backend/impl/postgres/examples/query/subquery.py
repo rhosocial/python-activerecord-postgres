@@ -37,7 +37,7 @@ dialect = backend.dialect
 for table in ['employees', 'departments']:
     drop_table = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         if_exists=True,
         cascade=True,
     )

@@ -12,6 +12,7 @@ and test:
 All database operations use expression objects, not raw SQL strings.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -71,7 +72,7 @@ def _setup_trgm_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -108,7 +109,7 @@ def _setup_trgm_ops_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -149,7 +150,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -189,7 +190,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -213,7 +214,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -234,7 +235,7 @@ async def _async_setup_trgm_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -271,7 +272,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -312,7 +313,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -352,7 +353,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -376,7 +377,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

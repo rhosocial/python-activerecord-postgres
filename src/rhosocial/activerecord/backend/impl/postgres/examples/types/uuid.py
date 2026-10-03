@@ -10,6 +10,7 @@ This example demonstrates:
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
@@ -54,7 +55,7 @@ print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
 # Clean up
 for table in ['events_v13', 'events_legacy']:
-    drop = DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 

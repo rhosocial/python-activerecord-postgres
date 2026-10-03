@@ -4,6 +4,7 @@
 Reference: ``tests/rhosocial/activerecord_postgres_test/feature/query/schema/``.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from typing import Callable, Dict
 
 from rhosocial.activerecord.backend.expression import (
@@ -37,7 +38,7 @@ _CASCADE = ReferentialAction.CASCADE
 def create_users_table(dialect, table_name: str = "users") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -66,7 +67,7 @@ def create_users_table(dialect, table_name: str = "users") -> CreateTableExpress
 def create_posts_table(dialect, table_name: str = "posts") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -96,7 +97,7 @@ def create_posts_table(dialect, table_name: str = "posts") -> CreateTableExpress
 def create_comments_table(dialect, table_name: str = "comments") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -128,7 +129,7 @@ def create_comments_table(dialect, table_name: str = "comments") -> CreateTableE
 def create_orders_table(dialect, table_name: str = "orders") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -159,7 +160,7 @@ def create_orders_table(dialect, table_name: str = "orders") -> CreateTableExpre
 def create_order_items_table(dialect, table_name: str = "order_items") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -193,7 +194,7 @@ def create_order_items_table(dialect, table_name: str = "order_items") -> Create
 def create_profiles_table(dialect, table_name: str = "profiles") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -218,7 +219,7 @@ def create_profiles_table(dialect, table_name: str = "profiles") -> CreateTableE
 def create_json_users_table(dialect, table_name: str = "json_users") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -248,7 +249,7 @@ def create_json_users_table(dialect, table_name: str = "json_users") -> CreateTa
 def create_nodes_table(dialect, table_name: str = "nodes") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -277,7 +278,7 @@ def create_nodes_table(dialect, table_name: str = "nodes") -> CreateTableExpress
 def create_searchable_items_table(dialect, table_name: str = "searchable_items") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -297,7 +298,7 @@ def create_searchable_items_table(dialect, table_name: str = "searchable_items")
 def create_extended_orders_table(dialect, table_name: str = "extended_orders") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -340,7 +341,7 @@ def create_extended_orders_table(dialect, table_name: str = "extended_orders") -
 def create_extended_order_items_table(dialect, table_name: str = "extended_order_items") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),

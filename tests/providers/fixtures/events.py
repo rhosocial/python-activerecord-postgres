@@ -4,6 +4,7 @@
 Reference: ``tests/rhosocial/activerecord_postgres_test/feature/events/schema/``.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 from typing import Callable, Dict
 
 from rhosocial.activerecord.backend.expression import (
@@ -30,7 +31,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import PostgresSeri
 def create_event_tests_table(dialect, table_name: str = "event_tests") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),
@@ -57,7 +58,7 @@ def create_event_tests_table(dialect, table_name: str = "event_tests") -> Create
 def create_event_tracking_models_table(dialect, table_name: str = "event_tracking_models") -> CreateTableExpression:
     return CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=TableExpression(dialect, table_name),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect),

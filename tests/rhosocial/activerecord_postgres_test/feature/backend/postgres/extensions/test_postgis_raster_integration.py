@@ -9,6 +9,7 @@ test uses ST_MakeEmptyRaster to create test rasters and verifies the
 function factories work correctly.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -100,7 +101,7 @@ def raster_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=TableExpression(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -131,7 +132,7 @@ def raster_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=TableExpression(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -219,7 +220,7 @@ async def async_raster_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -250,7 +251,7 @@ async def async_raster_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=TableExpression(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

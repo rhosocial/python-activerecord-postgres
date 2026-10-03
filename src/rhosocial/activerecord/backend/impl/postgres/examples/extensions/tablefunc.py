@@ -36,7 +36,7 @@ dialect = backend.dialect
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
@@ -281,7 +281,7 @@ else:
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 backend.disconnect()

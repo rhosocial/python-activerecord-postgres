@@ -253,7 +253,7 @@ class PartitionProvider(IPartitionProvider):
     def _create_parent_sql(self, dialect):
         expr = CreateTableExpression(
             dialect=dialect,
-            table=self.TABLE_NAME,
+            table=TableExpression(dialect, self.TABLE_NAME),
             columns=[
                 PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), attributes=[IdentityAttribute(generation="BY DEFAULT")]),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -306,7 +306,7 @@ class PartitionProvider(IPartitionProvider):
     def _drop_partition_sql(self, dialect, table_name: str):
         expr = DropTableExpression(
             dialect=dialect,
-            table=table_name,
+            table=TableExpression(dialect, table_name),
             if_exists=True,
             cascade=True,
         )

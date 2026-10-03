@@ -11,6 +11,7 @@ and test:
 - ltxtquery search (@ operator)
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -59,7 +60,7 @@ def ltree_env(postgres_backend_single):
     # Clean up residual tables from previous runs
     for table in ["test_ltree", "test_ltree_tree", "test_ltree_func",
                        "test_ltree_idx", "test_ltree_txtq"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -268,7 +269,7 @@ def ltree_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -565,7 +566,7 @@ async def async_ltree_env(async_postgres_backend_single):
     for table in ["test_ltree_async", "test_ltree_tree_async",
                        "test_ltree_func_async", "test_ltree_idx_async",
                        "test_ltree_txtq_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -774,7 +775,7 @@ async def async_ltree_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

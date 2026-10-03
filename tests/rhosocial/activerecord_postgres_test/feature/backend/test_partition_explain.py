@@ -2,6 +2,7 @@
 """PostgreSQL EXPLAIN tests for partitioned tables."""
 
 from __future__ import annotations
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from datetime import datetime
 from typing import Any
@@ -59,13 +60,13 @@ def _iter_partitions():
 
 
 def _drop_table_sql(dialect, table_name: str):
-    return DropTableExpression(dialect=dialect, table=table_name, if_exists=True).to_sql()
+    return DropTableExpression(dialect=dialect, table=TableExpression(dialect, table_name), if_exists=True).to_sql()
 
 
 def _create_parent_table_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=PARTITION_EXPLAIN_TABLE,
+        table=TableExpression(dialect, PARTITION_EXPLAIN_TABLE),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect),

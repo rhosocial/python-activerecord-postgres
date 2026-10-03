@@ -9,6 +9,7 @@ pgvector distance operators (<->, <=>, <#>) still require RawSQLExpression
 because ComparisonPredicate does not yet support .as_() alias.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -111,7 +112,7 @@ def vector_env(postgres_backend_single):
     for table in table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -226,7 +227,7 @@ def vector_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -613,7 +614,7 @@ async def async_vector_env(async_postgres_backend_single):
     for table in async_table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -728,7 +729,7 @@ async def async_vector_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

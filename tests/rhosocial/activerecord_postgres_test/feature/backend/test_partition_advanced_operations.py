@@ -1,6 +1,7 @@
 """Advanced real PostgreSQL partition capability tests."""
 
 from __future__ import annotations
+from rhosocial.activerecord.backend.expression.core import TableExpression
 
 from typing import Any, Iterable
 
@@ -56,13 +57,13 @@ SCHEMA_CHILD = "partition_events_p2026"
 
 def _drop_table_expression(dialect, table_name: str, *, schema: str | None = None):
     table = TableExpression(dialect, table_name, schema_name=schema) if schema else table_name
-    return DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
+    return DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True, cascade=True)
 
 
 def _create_list_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=LIST_PARENT,
+        table=TableExpression(dialect, LIST_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -90,7 +91,7 @@ def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[st
 def _create_hash_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=HASH_PARENT,
+        table=TableExpression(dialect, HASH_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "bucket", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -320,7 +321,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         # Create a table with matching structure for DEFAULT attachment
         create_default = CreateTableExpression(
             dialect=dialect,
-            table=default_partition_name,
+            table=TableExpression(dialect, default_partition_name),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),

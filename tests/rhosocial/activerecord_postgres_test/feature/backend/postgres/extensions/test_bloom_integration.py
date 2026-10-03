@@ -9,6 +9,7 @@ the expression system does not structurally support index WITH parameters.
 Similarly, pg_indexes queries use raw SQL as they query system catalog views.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -54,7 +55,7 @@ def bloom_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -72,7 +73,7 @@ def bloom_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=TableExpression(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -112,7 +113,7 @@ def bloom_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=TableExpression(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -231,7 +232,7 @@ async def async_bloom_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -249,7 +250,7 @@ async def async_bloom_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -289,7 +290,7 @@ async def async_bloom_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=TableExpression(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

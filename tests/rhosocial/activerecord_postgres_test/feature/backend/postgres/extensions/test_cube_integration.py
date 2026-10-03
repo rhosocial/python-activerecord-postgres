@@ -11,6 +11,7 @@ and test:
 - GiST index on CUBE column
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -56,7 +57,7 @@ def cube_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -180,7 +181,7 @@ def cube_env(postgres_backend_single):
     for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -342,7 +343,7 @@ async def async_cube_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=TableExpression(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -466,7 +467,7 @@ async def async_cube_env(async_postgres_backend_single):
     for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=TableExpression(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()

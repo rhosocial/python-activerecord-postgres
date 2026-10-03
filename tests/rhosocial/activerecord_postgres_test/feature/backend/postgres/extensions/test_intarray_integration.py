@@ -15,6 +15,7 @@ Exception: CREATE INDEX with opclass (gin__int_ops) uses raw SQL since
 the expression system does not yet support opclass specifications.
 """
 
+from rhosocial.activerecord.backend.expression.core import TableExpression
 import pytest
 import pytest_asyncio
 
@@ -65,7 +66,7 @@ def _setup_intarray_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -103,7 +104,7 @@ def _setup_intarray_overlap_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -141,7 +142,7 @@ def _setup_intarray_contained_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -179,7 +180,7 @@ def _setup_intarray_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -217,7 +218,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -248,7 +249,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -269,7 +270,7 @@ async def _async_setup_intarray_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -307,7 +308,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -345,7 +346,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -383,7 +384,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -421,7 +422,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -451,7 +452,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=TableExpression(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
