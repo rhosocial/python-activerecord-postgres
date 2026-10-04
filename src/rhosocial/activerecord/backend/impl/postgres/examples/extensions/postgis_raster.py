@@ -126,7 +126,7 @@ if installed:
     hex_wkb = "01000001000000000000000000000000000000000000F03F000000000000F03F000000000000000000000000000000000000000000000000E6100000010001004400010101"
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="terrain_data",
+        into=TableExpression(dialect, "terrain_data"),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,

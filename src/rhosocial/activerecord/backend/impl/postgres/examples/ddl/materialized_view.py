@@ -125,7 +125,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=TableExpression(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,
@@ -270,7 +270,7 @@ except Exception as e:
 # Insert new data so refresh has an effect
 insert_new = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=TableExpression(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,
@@ -315,7 +315,7 @@ backend.execute(sql, params, options=ddl_options)
 # Insert more data
 insert_more = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=TableExpression(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,

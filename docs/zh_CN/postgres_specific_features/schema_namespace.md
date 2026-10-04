@@ -3,18 +3,19 @@
 # PostgreSQL Schema 命名空间
 
 > 本文只讲 PostgreSQL 自己的那部分：`schema_name` 在本后端指向什么、限定名渲染
-> 出来是什么样、表别名会改变什么、`search_path` 与 `__schema_name__` 如何分工，以及
-> 哪些扩展的名称根本不加限定。
+> 出来是什么样、DDL 里的每个对象各自怎么选命名空间、表别名会改变什么、
+> `search_path` 与 `__schema_name__` 如何分工，以及哪些扩展的名称根本不加限定。
 >
-> 模型层的通用部分——怎么在模型上声明 `__schema_name__`、schema 何时进入 SQL、
-> DDL 的边界、各后端支持矩阵——由核心库（`python-activerecord` 仓库）的
+> 模型层的通用部分——怎么在模型上声明 `__schema_name__`、那些替模型构造 DDL 的
+> 工厂、各后端支持矩阵——由核心库（`python-activerecord` 仓库）的
 > `docs/modeling/schema_namespace.md` 讲，见
 > [`docs/zh_CN/modeling/schema_namespace.md`][core-zh]。
 
 [core-zh]: https://github.com/Rhosocial/python-activerecord/tree/main/docs/zh_CN/modeling/schema_namespace.md
 
-除另有说明外，本文中的 SQL 都由对应的表达式对象配合 `PostgresDialect` 渲染得出，
-不经过真实服务端；标注为「服务端响应」的内容引用的是 PostgreSQL 自身的报错文本。
+除另有说明外，本文中的 SQL 都由 `PostgresDialect(version=(15, 0, 0))` 配合对应的
+表达式对象渲染得出，不经过真实服务端；标注为「服务端响应」的内容引用的是 PostgreSQL
+自身的报错文本，本仓库没有可用的 PostgreSQL 实例，这些响应未经验证。
 
 ## `schema_name` 在这里指向什么
 
@@ -36,7 +37,15 @@ dialect.supports_schema_authorization()  # True
 里通常有好几个，它们是货真价实的命名空间——`"app"."orders"` 与 `"public"."orders"`
 只是同名，毫无关系。
 
-渲染出来是这样，都用双引号：
+带命名空间的名字一律由 `TableExpression` 承载。它既用于 `FROM` 里的范围，也用于
+DDL 命名的那些对象，每个实例带自己的 `schema_name`：
+
+```python
+TableExpression(dialect, "orders", schema_name="app").to_sql()[0]   # "app"."orders"
+TableExpression(dialect, "orders").to_sql()[0]                     # "orders"
+```
+
+渲染结果都带双引号，别名落在范围上：
 
 | 表达式 | SQL |
 |---|---|
@@ -75,12 +84,13 @@ Order.query().where(Order.c.id > 1).to_sql()[0]
 # SELECT * FROM "shop"."orders" WHERE "shop"."orders"."id" > %s
 ```
 
-直接用表达式层构造的 DML 同样带限定：
+直接用表达式层构造的 DML 同样带限定；`UPDATE` 与 `MERGE` 的目标要传一个带限定的
+`TableExpression`：
 
 ```python
-# INSERT INTO "shop"."orders"  VALUES (%s)
-# UPDATE "shop"."orders" SET "user_id" = %s WHERE "shop"."orders"."id" = %s
-# DELETE FROM "shop"."orders" WHERE "shop"."orders"."id" = %s
+# INSERT INTO "app"."users" ("id") SELECT "id" FROM "staging"
+# UPDATE "app"."users" SET "name" = "src"."name"
+# DELETE FROM "app"."users"
 ```
 
 不写 `__schema_name__` 的模型不加限定，交给连接去决定：
@@ -94,10 +104,50 @@ PlainOrder.query().select(PlainOrder.c.id).to_sql()[0]
 之后再改 `__schema_name__`，不会回头改写已经建好的表达式——请重建条件，或者改完之后
 再建。
 
-## DDL 自带 schema 参数
+## DDL 为每个对象各自选命名空间
 
-`__schema_name__` 只管读和写，构造 DDL 时不读它——迁移必须自己说清楚要哪个 schema。
-好在凡涉及命名空间对象的语句都收自己的 schema 参数，不用再手拼限定名。
+凡是点名一张表的语句，收的都是 `TableExpression`；凡是点名一个数据库对象的语句，
+那个命名空间只管这一个对象。索引、触发器和它们所依附的表，各带各的。
+
+### 表名一律是 `TableExpression`
+
+传裸字符串给一条点名表的语句会直接报 `TypeError`：
+
+```python
+CreateTableExpression(dialect, "users", columns)         # TypeError
+DropTableExpression(dialect, "users")                    # TypeError
+TruncateExpression(dialect, "users")                     # TypeError
+AlterTableExpression(dialect, "users", actions)          # TypeError
+CreateIndexExpression(dialect, "idx", "users", ["id"])   # TypeError
+DropIndexExpression(dialect, "idx", "users")             # TypeError
+```
+
+```
+TypeError: table must be a TableExpression, got str
+```
+
+早先裸字符串会被包成一个不带命名空间的 `TableExpression`，于是命名空间在无人察觉的
+情况下被丢弃：`CreateIndexExpression(d, "idx", "users", ["id"], schema_name="app")`
+渲染出 `CREATE INDEX "app"."idx" ON "users"`——索引有限定，表没有。请改传带限定的
+引用：
+
+```python
+CreateIndexExpression(
+    dialect, "idx_users_email",
+    TableExpression(dialect, "users", schema_name="app"),
+    ["email"], schema_name="app",
+).to_sql()[0]
+# CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
+```
+
+`MergeExpression` 对 `target_table` 用同样的规则，只是报错信息另有一条：
+
+```
+TypeError: target_table must be a TableExpression, got str
+```
+
+DML 里只有 `INSERT` 还会把裸字符串归一化成一个无名的引用，因此要走这条路时，命名
+空间只能由那个 `TableExpression` 携带。
 
 ### 收 `schema_name` 的语句
 
@@ -108,12 +158,12 @@ DropTableExpression(dialect, TableExpression(dialect, "users", schema_name="app"
                     if_exists=True).to_sql()[0]
 # DROP TABLE IF EXISTS "app"."users"
 
-TruncateExpression(dialect, "users", schema_name="app").to_sql()[0]
+TruncateExpression(dialect, TableExpression(dialect, "users", schema_name="app")).to_sql()[0]
 # TRUNCATE TABLE "app"."users"
 
-CreateIndexExpression(dialect, "idx_users_email", "users", ["email"],
-                      schema_name="app").to_sql()[0]
-# CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
+AlterTableExpression(dialect, TableExpression(dialect, "users", schema_name="app"),
+                     [DropColumn(dialect, "legacy")]).to_sql()[0]
+# ALTER TABLE "app"."users" DROP COLUMN "legacy"
 
 PostgresAlterIndexExpression(dialect, "idx_users_email",
                              PostgresAlterIndexActionType.RENAME_TO,
@@ -122,20 +172,66 @@ PostgresAlterIndexExpression(dialect, "idx_users_email",
 # ALTER INDEX "app"."idx_users_email" RENAME TO "idx_users_email_idx"
 ```
 
-`CREATE TABLE` 与 `DROP TABLE` 是仅有的两种不带自己 `schema_name` 的普通形式——它们要
-的是一个限定过的 `TableExpression`。`(schema, table)` 元组之所以并非到处可用，也是
-这个缘故：派生形式会做归一化，`CreateTableAsExpression(dialect, ("app", "t"), query)`
-渲染成 `CREATE TABLE "app"."t" AS ...`，`CreateTableLikeExpression(dialect, ("app",
-"t"), ("app", "src"))` 渲染成 `CREATE TABLE "app"."t" (LIKE "app"."src")`；而
-`CreateTableExpression` 与 `DropTableExpression` 只收 `str` 或 `TableExpression`，
-传元组会报：
+`CREATE TABLE` 与 `DROP TABLE` 自己没有 `schema_name` 参数：表的命名空间装在它的
+`TableExpression` 里。这也正是这两种语句用不了元组写法的原因。派生形式会做归一化，
+`CreateTableAsExpression(dialect, ("app", "t"), query)` 渲染成
+`CREATE TABLE "app"."t" AS ...`，`CreateTableLikeExpression(dialect, ("app", "t"),
+("app", "src"))` 渲染成 `CREATE TABLE "app"."t" (LIKE "app"."src")`；而
+`CreateTableExpression` 与 `DropTableExpression` 只收 `TableExpression`，传元组会报：
 
 ```
-TypeError: table must be str or TableExpression, got tuple
+TypeError: table must be a TableExpression, got tuple
 ```
 
-`CreateIndexExpression` 只有一个 `schema_name`，索引与它所依附的表共用它，两者落在同一个
-schema。
+### 索引与表各选各的命名空间
+
+索引语句上的 `schema_name` 只限定**索引名**；表由它自己的 `TableExpression` 限定，
+两者不必一致：
+
+```python
+CreateIndexExpression(
+    dialect, "idx_shared",
+    TableExpression(dialect, "orders", schema_name="sales"),
+    ["user_id"], schema_name="app",
+).to_sql()[0]
+# CREATE INDEX "app"."idx_shared" ON "sales"."orders" ("user_id")
+```
+
+这里 `search_path` 与两个名字都无关：加不加限定，完全按写下来的来。
+
+`DROP INDEX` 收同一对参数，其中 `table` 是可选的。渲染结果不带 `ON` 子句，因为
+PostgreSQL 的 `DROP INDEX` 没有这个子句：
+
+```python
+DropIndexExpression(dialect, "idx_users_email",
+                    TableExpression(dialect, "users", schema_name="app"),
+                    schema_name="app").to_sql()[0]
+# DROP INDEX "app"."idx_users_email"
+```
+
+索引名能不能带命名空间，取决于语法本身，由 `supports_index_schema_qualification()`
+报告。PostgreSQL 回答 `True`；回答 `False` 的方言会在渲染阶段抛
+`UnsupportedFeatureError`，而不是输出一条服务端根本不接受的语句。
+
+### 触发器的三段命名空间
+
+`CreateTriggerExpression` 把表与函数都收成 `TableExpression`，各自带自己的命名空间，
+`schema_name` 限定触发器名：
+
+```python
+CreateTriggerExpression(
+    dialect, "trg_orders",
+    TableExpression(dialect, "orders", schema_name="sales"),
+    TriggerTiming.BEFORE, [TriggerEvent.UPDATE],
+    function_name=TableExpression(dialect, "set_updated_at", schema_name="tools"),
+    schema_name="app",
+).to_sql()[0]
+# CREATE TRIGGER "app"."trg_orders" BEFORE UPDATE ON "sales"."orders"
+#   FOR EACH ROW EXECUTE FUNCTION "tools"."set_updated_at"()
+```
+
+这条语句里的三个命名空间彼此独立：触发器建在 `app`，读的是 `sales`.`orders`，调的
+是 `tools`.`set_updated_at`。
 
 ### 本后端自己的语句写作 `schema`
 
@@ -145,22 +241,35 @@ PostgreSQL 特有的表达式大多把这个参数写作 `schema` 而不是 `sch
 ```python
 PostgresCreateMaterializedViewExpression(dialect, "Order Summary", query,
                                          schema="mv_reporting")
+# CREATE MATERIALIZED VIEW "mv_reporting"."Order Summary" AS ... WITH DATA
 PostgresRefreshMaterializedViewExpression(dialect, "Order Summary",
                                           schema="mv_reporting")
+# REFRESH MATERIALIZED VIEW "mv_reporting"."Order Summary"
 PostgresAlterMaterializedViewExpression(dialect, "Order Summary", actions,
                                          schema="mv_reporting")
+# ALTER MATERIALIZED VIEW "mv_reporting"."Order Summary" RENAME TO "Order Summary 2"
 PostgresDropMaterializedViewExpression(dialect, "Order Summary",
-                                        schema="mv_reporting")
+                                       schema="mv_reporting")
+# DROP MATERIALIZED VIEW "mv_reporting"."Order Summary"
 ```
 
 扩展、枚举、分区、`COPY`、`VACUUM`、`ANALYZE`、`REINDEX`、`REPACK`、统计信息、
-`pg_partman` 与 `COMMENT ON` 也都如此。索引那几条是例外，而且彼此还不一致：
-`PostgresCreateIndexExpression` **完全不收** schema 参数，建出来的索引跟着连接的
-`search_path` 走；`PostgresAlterIndexExpression` 与 `PostgresDropIndexExpression`
-则收 `schema_name`。要在指定 schema 里建索引，请用核心库的
-`CreateIndexExpression`。
+`pg_partman` 与 `COMMENT ON` 也都如此。索引那几条写作 `schema_name`，而且全都收——
+`PostgresCreateIndexExpression` 也不例外，它在核心参数之外还加上 PostgreSQL 自己的
+`opclasses`、`nulls_not_distinct` 与 `with_options`：
 
-关键字名随类而异，所以传之前先看签名：写错会在构造阶段报 `TypeError`。
+```python
+PostgresCreateIndexExpression(
+    dialect, "idx_users_name",
+    TableExpression(dialect, "users", schema_name="app"),
+    ["name"], schema_name="app", opclasses={"name": "text_pattern_ops"},
+).to_sql()[0]
+# CREATE INDEX "app"."idx_users_name" ON "app"."users" ("name" text_pattern_ops)
+```
+
+`PostgresDropIndexExpression` 多了 `concurrent`，对应 PostgreSQL 18 才引入的
+`DROP INDEX CONCURRENTLY`，更早的版本会拒绝。由于关键字随类而异，传之前先看签名：
+写错会在构造阶段报 `TypeError`。
 
 domain 表达式对命名空间有两种叫法：`schema=`（较早，可按位置传）与 `schema_name=`
 （仅关键字）。两个都传且值不同会报错，而且这道检查发生在**构造表达式时**，不是渲染时：
@@ -184,6 +293,78 @@ CreateSchemaExpression(dialect, "app", authorization="app_user").to_sql()[0]
 DropSchemaExpression(dialect, "app").to_sql()[0]        # DROP SCHEMA "app"
 DropSchemaExpression(dialect, "app", if_exists=True, cascade=True).to_sql()[0]
 # DROP SCHEMA IF EXISTS "app" CASCADE
+```
+
+### 命名空间在哪一步被判定
+
+构造阶段只负责收集参数：那一刻连方言都未必已经定下来，参数也未必齐全。命名空间因此
+要等到渲染阶段才由方言判定，那时整条语句才算拼完整。实现了 `SchemaSupport` 而
+`supports_schema()` 为假的方言会明确拒绝；没有实现该协议的方言则完全忽略命名空间。
+
+## 从模型构造 DDL
+
+模型的命名空间只从一处进入 DDL。`build_table_reference()` 返回带着 `__schema_name__`
+的模型表，其余工厂都经由它，因此声明一次就够，两条语句之间也不会漂移。
+
+```python
+class Order(ActiveRecord):
+    __table_name__ = "orders"
+    __schema_name__ = "shop"
+
+Order.build_table_reference(dialect).to_sql()[0]       # "shop"."orders"
+Order.build_table_reference(dialect, alias="o").to_sql()[0]
+# "shop"."orders" AS "o"
+
+Order.build_create_table_statement(dialect, columns).to_sql()[0]
+# CREATE TABLE "shop"."orders" (...)
+Order.build_drop_table_statement(dialect, if_exists=True).to_sql()[0]
+# DROP TABLE IF EXISTS "shop"."orders"
+Order.build_truncate_statement(dialect, restart_identity=True).to_sql()[0]
+# TRUNCATE TABLE "shop"."orders" RESTART IDENTITY
+Order.build_alter_table_statement(
+    dialect, [DropColumn(dialect, "legacy")]).to_sql()[0]
+# ALTER TABLE "shop"."orders" DROP COLUMN "legacy"
+```
+
+索引工厂把索引的命名空间单独收，默认取模型自己的，这几乎是调用方真正想要的；要把索引
+放到别处，传 `index_schema_name`：
+
+```python
+Order.build_create_index_statement(
+    dialect, "idx_orders_email", ["email"]).to_sql()[0]
+# CREATE INDEX "shop"."idx_orders_email" ON "shop"."orders" ("email")
+
+Order.build_create_index_statement(
+    dialect, "idx_orders_email", ["email"], index_schema_name="reporting").to_sql()[0]
+# CREATE INDEX "reporting"."idx_orders_email" ON "shop"."orders" ("email")
+
+Order.build_drop_index_statement(
+    dialect, "idx_orders_email", if_exists=True).to_sql()[0]
+# DROP INDEX IF EXISTS "shop"."idx_orders_email"
+```
+
+完整签名如下：
+
+```python
+Model.build_table_reference(dialect, alias=None)
+Model.build_create_table_statement(dialect, columns, ...)
+Model.build_drop_table_statement(dialect, if_exists=False)
+Model.build_truncate_statement(dialect, restart_identity=False, cascade=False)
+Model.build_alter_table_statement(dialect, actions)
+Model.build_create_index_statement(dialect, index_name, columns, *,
+                                   index_schema_name=None, **options)
+Model.build_drop_index_statement(dialect, index_name, *,
+                                 index_schema_name=None, if_exists=False, **options)
+```
+
+手工拼装的表达式不会自动带上 `__schema_name__`。这些工厂是从模型出发的，调用点上直接
+拼出来的表达式则是从方言出发的，因此它需要什么命名空间就得由谁交给它：
+
+```python
+# 能拿到 "shop"."orders"，只因为那个引用就是这么建的。
+DropTableExpression(
+    dialect, TableExpression(dialect, "orders", schema_name="shop")).to_sql()[0]
+# DROP TABLE "shop"."orders"
 ```
 
 ## `search_path` 与 `__schema_name__` 各管一摊
@@ -361,7 +542,7 @@ WITH "recent_orders" AS (SELECT "shop"."orders"."id" FROM "shop"."orders")
 SELECT "recent_orders"."id" FROM "recent_orders"
 ```
 
-## 空串：不等于"不加限定"，而且报错来得比预期晚
+## 空串：不等于不加限定，而且报错来得比预期晚
 
 `""` 是笔误，不是"不加限定"的另一种说法——那件事归 `None` 管。它会被拒绝，但**不是
 在构造的时候**：表达式在构造阶段只负责收集参数，那时连方言都未必已经定下来，参数也
@@ -442,6 +623,12 @@ class Report(ActiveRecord):
 Report.query().select(Report.c.app_total).to_sql()[0]
 # SELECT "app"."reports"."app_total" FROM "app"."reports"
 ```
+
+**给点名表的 DDL 语句塞一个裸表名。** 构造阶段就会报 `TypeError`，信息里指明是哪个
+参数。该修的是传一个带限定的 `TableExpression`，不是改回字符串。
+
+**手工拼 DDL，然后指望 `__schema_name__` 自己流过去。** 只有模型工厂会读那个声明。
+在调用点上拼出来的表达式，带的是你亲手给它的命名空间。
 
 **指望构造阶段就报错。** 在语句渲染出来之前，没有任何环节会拒绝一个不合法的
 `schema_name`。模型层的错误因此能一路活过包括构建查询在内的所有步骤，直到渲染才

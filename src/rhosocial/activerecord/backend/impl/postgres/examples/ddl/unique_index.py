@@ -115,7 +115,7 @@ print("Index created: idx_users_username_email (UNIQUE on username, email)")
 # Insert initial row
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['email', 'username'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice')],
@@ -129,7 +129,7 @@ print("Inserted: alice@example.com / alice")
 try:
     duplicate_insert = InsertExpression(
         dialect=dialect,
-        into='users',
+        into=TableExpression(dialect, 'users'),
         columns=['email', 'username'],
         source=ValuesSource(dialect, [
             [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice2')],

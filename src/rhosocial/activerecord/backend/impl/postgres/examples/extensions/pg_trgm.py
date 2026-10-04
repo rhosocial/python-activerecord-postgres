@@ -124,7 +124,7 @@ if installed:
     # Example 2: Insert text data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="articles",
+        into=TableExpression(dialect, "articles"),
         columns=["title"],
         source=ValuesSource(
             dialect,

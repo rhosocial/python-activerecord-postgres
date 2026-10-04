@@ -79,7 +79,7 @@ def pgrouting_env(postgres_backend_single):
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_route_edges",
+        into=TableExpression(dialect, "test_route_edges"),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,
@@ -209,7 +209,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_route_edges_async",
+        into=TableExpression(dialect, "test_route_edges_async"),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,

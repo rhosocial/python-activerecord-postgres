@@ -87,7 +87,7 @@ def _setup_trgm_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -123,7 +123,7 @@ def _setup_trgm_ops_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -168,7 +168,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -202,7 +202,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )
@@ -250,7 +250,7 @@ async def _async_setup_trgm_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -286,7 +286,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -331,7 +331,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -365,7 +365,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )

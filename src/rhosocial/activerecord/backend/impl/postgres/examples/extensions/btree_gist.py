@@ -114,7 +114,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="events",
+        into=TableExpression(dialect, "events"),
         columns=["name", "created_at"],
         source=ValuesSource(dialect, rows),
     )

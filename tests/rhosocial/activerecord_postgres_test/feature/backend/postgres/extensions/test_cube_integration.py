@@ -83,7 +83,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cubes
     insert_cubes = InsertExpression(
         dialect=dialect,
-        into="test_cubes",
+        into=TableExpression(dialect, "test_cubes"),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -118,7 +118,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cube_dist
     insert_dist = InsertExpression(
         dialect=dialect,
-        into="test_cube_dist",
+        into=TableExpression(dialect, "test_cube_dist"),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -153,7 +153,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cube_idx
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_cube_idx",
+        into=TableExpression(dialect, "test_cube_idx"),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -369,7 +369,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cubes_async
     insert_cubes = InsertExpression(
         dialect=dialect,
-        into="test_cubes_async",
+        into=TableExpression(dialect, "test_cubes_async"),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -404,7 +404,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cube_dist_async
     insert_dist = InsertExpression(
         dialect=dialect,
-        into="test_cube_dist_async",
+        into=TableExpression(dialect, "test_cube_dist_async"),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -439,7 +439,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cube_idx_async
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_cube_idx_async",
+        into=TableExpression(dialect, "test_cube_idx_async"),
         columns=["c"],
         source=ValuesSource(
             dialect,

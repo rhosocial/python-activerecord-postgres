@@ -129,7 +129,7 @@ if installed:
     # ltree paths use dot-separated labels (only alphanumeric and underscore)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="categories",
+        into=TableExpression(dialect, "categories"),
         columns=["name", "path"],
         source=ValuesSource(
             dialect,

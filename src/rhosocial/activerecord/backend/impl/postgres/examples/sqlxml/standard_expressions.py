@@ -265,7 +265,7 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
         backend,
         InsertExpression(
             dialect,
-            EXAMPLE_TABLE,
+            TableExpression(dialect, EXAMPLE_TABLE),
             ValuesSource(
                 dialect,
                 [

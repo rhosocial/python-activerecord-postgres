@@ -122,7 +122,7 @@ if available:
     # Example 2: Insert with case-insensitive data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="users",
+        into=TableExpression(dialect, "users"),
         columns=["email", "username"],
         source=ValuesSource(
             dialect,

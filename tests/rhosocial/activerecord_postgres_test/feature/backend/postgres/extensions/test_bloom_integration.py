@@ -89,7 +89,7 @@ def bloom_env(postgres_backend_single):
         ])
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=TableExpression(dialect, TABLE_NAME),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -189,7 +189,7 @@ class TestBloomIntegration:
             rows.append([Literal(dialect, f"CODE{i}")])
         insert_expr = InsertExpression(
             dialect=dialect,
-            into="test_bloom_opts",
+            into=TableExpression(dialect, "test_bloom_opts"),
             columns=["code"],
             source=ValuesSource(dialect, rows),
         )
@@ -266,7 +266,7 @@ async def async_bloom_env(async_postgres_backend_single):
         ])
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -365,7 +365,7 @@ class TestAsyncBloomIntegration:
             rows.append([Literal(dialect, f"CODE{i}")])
         insert_expr = InsertExpression(
             dialect=dialect,
-            into="test_bloom_opts_async",
+            into=TableExpression(dialect, "test_bloom_opts_async"),
             columns=["code"],
             source=ValuesSource(dialect, rows),
         )

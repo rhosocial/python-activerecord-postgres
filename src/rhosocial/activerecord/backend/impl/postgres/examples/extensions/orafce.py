@@ -122,7 +122,7 @@ if installed:
     # Example 2: Insert data with NULL values
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="employees",
+        into=TableExpression(dialect, "employees"),
         columns=["name", "hire_date", "bonus", "description"],
         source=ValuesSource(
             dialect,

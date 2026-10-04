@@ -92,7 +92,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     insert_sales = InsertExpression(
         dialect=dialect,
-        into="test_tf_sales",
+        into=TableExpression(dialect, "test_tf_sales"),
         columns=["month", "category", "amount"],
         source=ValuesSource(dialect, sales_rows),
     )
@@ -129,7 +129,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_tf_tree",
+        into=TableExpression(dialect, "test_tf_tree"),
         columns=["node_name", "parent_id"],
         source=ValuesSource(dialect, tree_rows),
     )
@@ -371,7 +371,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     insert_sales = InsertExpression(
         dialect=dialect,
-        into="test_tf_sales_async",
+        into=TableExpression(dialect, "test_tf_sales_async"),
         columns=["month", "category", "amount"],
         source=ValuesSource(dialect, sales_rows),
     )
@@ -408,7 +408,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_tf_tree_async",
+        into=TableExpression(dialect, "test_tf_tree_async"),
         columns=["node_name", "parent_id"],
         source=ValuesSource(dialect, tree_rows),
     )

@@ -63,7 +63,7 @@ backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='orders',
+    into=TableExpression(dialect, 'orders'),
     columns=['customer_name', 'tags'],
     source=ValuesSource(
         dialect,

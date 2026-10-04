@@ -74,7 +74,7 @@ def _setup_citext_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -114,7 +114,7 @@ def _setup_citext_unique_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["email"],
         source=ValuesSource(
             dialect,
@@ -148,7 +148,7 @@ def _setup_citext_like_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -185,7 +185,7 @@ def _setup_citext_users_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username"],
         source=ValuesSource(
             dialect,
@@ -220,7 +220,7 @@ def _setup_citext_roles_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
@@ -265,7 +265,7 @@ async def _async_setup_citext_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -305,7 +305,7 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["email"],
         source=ValuesSource(
             dialect,
@@ -339,7 +339,7 @@ async def _async_setup_citext_like_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -376,7 +376,7 @@ async def _async_setup_citext_users_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username"],
         source=ValuesSource(
             dialect,
@@ -411,7 +411,7 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
@@ -547,7 +547,7 @@ class TestCitextIntegration:
         # Insert with different casing should violate unique constraint
         insert_expr = InsertExpression(
             dialect=dialect,
-            into=T_CITEXT_UNIQUE,
+            into=TableExpression(dialect, T_CITEXT_UNIQUE),
             columns=["email"],
             source=ValuesSource(
                 dialect,
@@ -719,7 +719,7 @@ class TestAsyncCitextIntegration:
 
         insert_expr = InsertExpression(
             dialect=dialect,
-            into=T_CITEXT_UNIQUE_ASYNC,
+            into=TableExpression(dialect, T_CITEXT_UNIQUE_ASYNC),
             columns=["email"],
             source=ValuesSource(
                 dialect,

@@ -76,7 +76,7 @@ def earthdistance_env(postgres_backend_single):
     # Setup: insert test data using expression
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=TableExpression(dialect, TABLE_NAME),
         columns=["loc"],
         source=ValuesSource(
             dialect,
@@ -188,7 +188,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     # Setup: insert test data using expression
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=["loc"],
         source=ValuesSource(
             dialect,

@@ -89,7 +89,7 @@ for part_name, start_val, end_val in partitions:
 # 3. Insert data (PostgreSQL routes to correct partition automatically)
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='orders',
+    into=TableExpression(dialect, 'orders'),
     columns=['order_date', 'customer_name', 'amount'],
     source=ValuesSource(dialect, [
         [Literal(dialect, '2024-02-15'), Literal(dialect, 'Alice'), Literal(dialect, 150.00)],

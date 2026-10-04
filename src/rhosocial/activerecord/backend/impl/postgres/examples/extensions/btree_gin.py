@@ -114,7 +114,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="employees",
+        into=TableExpression(dialect, "employees"),
         columns=["name", "department"],
         source=ValuesSource(dialect, rows),
     )

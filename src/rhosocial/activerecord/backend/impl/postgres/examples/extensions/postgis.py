@@ -130,7 +130,7 @@ if installed:
     # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="locations",
+        into=TableExpression(dialect, "locations"),
         columns=["name", "geom"],
         source=ValuesSource(
             dialect,

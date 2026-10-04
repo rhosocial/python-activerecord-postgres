@@ -51,7 +51,7 @@ class TestPostgresOnConflictCapabilities:
         source = ValuesSource(dialect, values_list=[[Literal(dialect, 1)]])
         clause1 = OnConflictClause(dialect, conflict_target=["col_a"], do_nothing=True)
         clause2 = OnConflictClause(dialect, conflict_target=["col_b"], do_nothing=True)
-        expr = InsertExpression(dialect, into="t", source=source, on_conflict=[clause1, clause2])
+        expr = InsertExpression(dialect, into=TableExpression(dialect, "t"), source=source, on_conflict=[clause1, clause2])
 
         with pytest.raises(UnsupportedFeatureError, match="multiple ON CONFLICT clauses"):
             expr.to_sql()
@@ -63,7 +63,7 @@ class TestPostgresOnConflictRendering:
     def test_do_nothing(self, dialect):
         source = ValuesSource(dialect, values_list=[[Literal(dialect, 1)]])
         clause = OnConflictClause(dialect, conflict_target=["id"], do_nothing=True)
-        expr = InsertExpression(dialect, into="users", columns=["id"], source=source, on_conflict=clause)
+        expr = InsertExpression(dialect, into=TableExpression(dialect, "users"), columns=["id"], source=source, on_conflict=clause)
         sql, params = expr.to_sql()
         assert sql == 'INSERT INTO "users" ("id") VALUES (%s) ON CONFLICT ("id") DO NOTHING'
         assert params == (1,)
@@ -79,7 +79,7 @@ class TestPostgresOnConflictRendering:
             update_assignments={"name": Column(dialect, "name", "EXCLUDED")},
         )
         expr = InsertExpression(
-            dialect, into="users", columns=["id", "name"], source=source, on_conflict=clause
+            dialect, into=TableExpression(dialect, "users"), columns=["id", "name"], source=source, on_conflict=clause
         )
         sql, params = expr.to_sql()
         assert sql == (
@@ -99,7 +99,7 @@ class TestPostgresOnConflictRendering:
             update_where=Column(dialect, "qty", "users") > Column(dialect, "qty", "EXCLUDED"),
         )
         expr = InsertExpression(
-            dialect, into="users", columns=["id", "qty"], source=source, on_conflict=clause
+            dialect, into=TableExpression(dialect, "users"), columns=["id", "qty"], source=source, on_conflict=clause
         )
         sql, params = expr.to_sql()
         assert sql == (

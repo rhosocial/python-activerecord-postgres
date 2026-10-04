@@ -97,7 +97,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Insert data into test_uuid_ossp (id auto-generated)
     insert_ossp = InsertExpression(
         dialect=dialect,
-        into="test_uuid_ossp",
+        into=TableExpression(dialect, "test_uuid_ossp"),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -139,7 +139,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Insert with the generated UUID
     insert_explicit = InsertExpression(
         dialect=dialect,
-        into="test_uuid_explicit",
+        into=TableExpression(dialect, "test_uuid_explicit"),
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
@@ -302,7 +302,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Insert data into test_uuid_ossp_async (id auto-generated)
     insert_ossp = InsertExpression(
         dialect=dialect,
-        into="test_uuid_ossp_async",
+        into=TableExpression(dialect, "test_uuid_ossp_async"),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -344,7 +344,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Insert with the generated UUID
     insert_explicit = InsertExpression(
         dialect=dialect,
-        into="test_uuid_explicit_async",
+        into=TableExpression(dialect, "test_uuid_explicit_async"),
         columns=["id", "label"],
         source=ValuesSource(
             dialect,

@@ -80,7 +80,7 @@ def _setup_lev_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["word"],
         source=ValuesSource(dialect, rows),
     )
@@ -116,7 +116,7 @@ def _setup_diff_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -164,7 +164,7 @@ async def _async_setup_lev_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["word"],
         source=ValuesSource(dialect, rows),
     )
@@ -200,7 +200,7 @@ async def _async_setup_diff_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )

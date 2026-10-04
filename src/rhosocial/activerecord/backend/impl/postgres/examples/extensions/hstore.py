@@ -124,7 +124,7 @@ if installed:
     # Use Literal with .cast("hstore") for type-safe hstore insertion
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=TableExpression(dialect, "products"),
         columns=["name", "attributes"],
         source=ValuesSource(
             dialect,

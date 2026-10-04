@@ -112,7 +112,7 @@ def raster_env(postgres_backend_single):
     rast_expr = _make_empty_raster(dialect)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=TableExpression(dialect, TABLE_NAME),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,
@@ -231,7 +231,7 @@ async def async_raster_env(async_postgres_backend_single):
     rast_expr = _make_empty_raster(dialect)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,

@@ -79,7 +79,7 @@ backend.execute(sql, params)
 
 insert = InsertExpression(
     dialect=dialect,
-    into='articles',
+    into=TableExpression(dialect, 'articles'),
     columns=['title', 'author', 'published_at'],
     source=ValuesSource(
         dialect,

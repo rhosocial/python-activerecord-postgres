@@ -131,7 +131,7 @@ if installed:
     # Ranges: '(x1,x2),(y1,y2)' represents a hypercube
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=TableExpression(dialect, "products"),
         columns=["name", "feature_vector"],
         source=ValuesSource(
             dialect,

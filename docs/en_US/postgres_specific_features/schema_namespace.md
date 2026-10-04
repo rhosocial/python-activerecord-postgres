@@ -3,12 +3,13 @@
 # PostgreSQL Schema Namespaces
 
 > This page covers what is specific to this backend: what a `schema_name` names
-> here, how a qualified name is rendered, what a table alias does to column
-> references, how `search_path` relates to `__schema_name__`, and the
-> PostgreSQL extensions whose names are not qualified at all.
+> here, how a qualified name is rendered, how each DDL object picks its own
+> namespace, what a table alias does to column references, how `search_path`
+> relates to `__schema_name__`, and the PostgreSQL extensions whose names are
+> not qualified at all.
 >
-> The model-level API — declaring `__schema_name__`, when the schema reaches
-> the SQL, the DDL boundary, the cross-backend support matrix — is documented
+> The model-level API — declaring `__schema_name__`, the DDL factories that
+> build a model's statements, the cross-backend support matrix — is documented
 > in the core library guide `docs/modeling/schema_namespace.md`, which lives in
 > the `python-activerecord` repository
 > ([`docs/en_US/modeling/schema_namespace.md`][core-en]).
@@ -16,8 +17,10 @@
 [core-en]: https://github.com/Rhosocial/python-activerecord/tree/main/docs/en_US/modeling/schema_namespace.md
 
 Unless stated otherwise, the SQL in this page was produced by rendering the
-corresponding expression objects with `PostgresDialect`, without a live server.
-Statements marked as the server's own response quote PostgreSQL's error text.
+corresponding expression objects with `PostgresDialect(version=(15, 0, 0))`,
+without a live server. Statements marked as the server's own response quote
+PostgreSQL's error text and were not exercised here; this repository has no
+PostgreSQL instance to run against.
 
 ## What a `schema_name` names here
 
@@ -40,7 +43,16 @@ PostgreSQL database routinely holds several, and they are true namespaces —
 `"app"."orders"` and `"public"."orders"` are unrelated tables that happen to
 share a name.
 
-Two renderings, both double-quoted:
+`TableExpression` is the single carrier of a qualified name. It is used for a
+range in a `FROM` clause and for the objects that DDL names rather than
+selects, and each instance carries its own `schema_name`:
+
+```python
+TableExpression(dialect, "orders", schema_name="app").to_sql()[0]   # "app"."orders"
+TableExpression(dialect, "orders").to_sql()[0]                     # "orders"
+```
+
+Two renderings, both double-quoted, with the alias on the range:
 
 | Expression | SQL |
 |---|---|
@@ -82,12 +94,13 @@ Order.query().where(Order.c.id > 1).to_sql()[0]
 # SELECT * FROM "shop"."orders" WHERE "shop"."orders"."id" > %s
 ```
 
-DML built directly from the expression layer carries it as well:
+DML built directly from the expression layer carries it as well. `UPDATE` and
+`MERGE` take their target as a qualified `TableExpression`:
 
 ```python
-# INSERT INTO "shop"."orders"  VALUES (%s)
-# UPDATE "shop"."orders" SET "user_id" = %s WHERE "shop"."orders"."id" = %s
-# DELETE FROM "shop"."orders" WHERE "shop"."orders"."id" = %s
+# INSERT INTO "app"."users" ("id") SELECT "id" FROM "staging"
+# UPDATE "app"."users" SET "name" = "src"."name"
+# DELETE FROM "app"."users"
 ```
 
 A model without `__schema_name__` renders unqualified and lets the connection
@@ -103,12 +116,54 @@ expression as it is built. Changing `__schema_name__` afterwards therefore does
 not rewrite an expression that already exists — rebuild the condition, or build
 it after the change.
 
-## DDL statements take a schema of their own
+## DDL names its objects independently
 
-`__schema_name__` selects the read/write namespace. It is **not** consulted when
-DDL is built — a migration has to name the schema it means — but every statement
-that names a schema-bearing object accepts a schema of its own, so qualification
-no longer has to be assembled by hand.
+Every statement that names a table takes a `TableExpression`, and every
+statement that names a database object takes a namespace for that object alone.
+An index, a trigger and the table it is built on each carry their own.
+
+### Every table name is a `TableExpression`
+
+A statement that names a table refuses a bare string:
+
+```python
+CreateTableExpression(dialect, "users", columns)     # TypeError
+DropTableExpression(dialect, "users")                # TypeError
+TruncateExpression(dialect, "users")                 # TypeError
+AlterTableExpression(dialect, "users", actions)      # TypeError
+CreateIndexExpression(dialect, "idx", "users", ["id"])   # TypeError
+DropIndexExpression(dialect, "idx", "users")             # TypeError
+```
+
+```
+TypeError: table must be a TableExpression, got str
+```
+
+A bare string used to be wrapped into an unnamed `TableExpression`, which
+dropped the namespace without saying so:
+`CreateIndexExpression(d, "idx", "users", ["id"], schema_name="app")` rendered
+`CREATE INDEX "app"."idx" ON "users"` — the index qualified, the table not. Pass
+the qualified reference instead:
+
+```python
+CreateIndexExpression(
+    dialect, "idx_users_email",
+    TableExpression(dialect, "users", schema_name="app"),
+    ["email"], schema_name="app",
+).to_sql()[0]
+# CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
+```
+
+`MergeExpression` applies the same rule to `target_table`, with its own
+message:
+
+```
+TypeError: target_table must be a TableExpression, got str
+```
+
+`INSERT` is the one DML statement that still normalizes a bare string into an
+unnamed reference, so a namespace passed that way has to reach the
+`TableExpression` instead.
 
 ### Statements that take `schema_name`
 
@@ -119,12 +174,12 @@ DropTableExpression(dialect, TableExpression(dialect, "users", schema_name="app"
                     if_exists=True).to_sql()[0]
 # DROP TABLE IF EXISTS "app"."users"
 
-TruncateExpression(dialect, "users", schema_name="app").to_sql()[0]
+TruncateExpression(dialect, TableExpression(dialect, "users", schema_name="app")).to_sql()[0]
 # TRUNCATE TABLE "app"."users"
 
-CreateIndexExpression(dialect, "idx_users_email", "users", ["email"],
-                      schema_name="app").to_sql()[0]
-# CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
+AlterTableExpression(dialect, TableExpression(dialect, "users", schema_name="app"),
+                     [DropColumn(dialect, "legacy")]).to_sql()[0]
+# ALTER TABLE "app"."users" DROP COLUMN "legacy"
 
 PostgresAlterIndexExpression(dialect, "idx_users_email",
                              PostgresAlterIndexActionType.RENAME_TO,
@@ -133,22 +188,72 @@ PostgresAlterIndexExpression(dialect, "idx_users_email",
 # ALTER INDEX "app"."idx_users_email" RENAME TO "idx_users_email_idx"
 ```
 
-`CREATE TABLE` and `DROP TABLE` are the two plain forms that take a qualified
-`TableExpression` rather than a `schema_name` of their own — they have no
-`schema_name` parameter. That is also why the tuple spelling is not available
-everywhere: the derived forms normalize `(schema, table)`, so
-`CreateTableAsExpression(dialect, ("app", "t"), query)` renders
-`CREATE TABLE "app"."t" AS ...` and `CreateTableLikeExpression(dialect,
+`CREATE TABLE` and `DROP TABLE` have no `schema_name` parameter of their own:
+the table's namespace arrives inside its `TableExpression`. That is also why
+the tuple spelling is not available for them. The derived forms normalize
+`(schema, table)`, so `CreateTableAsExpression(dialect, ("app", "t"), query)`
+renders `CREATE TABLE "app"."t" AS ...` and `CreateTableLikeExpression(dialect,
 ("app", "t"), ("app", "src"))` renders `CREATE TABLE "app"."t" (LIKE
-"app"."src")`, but `CreateTableExpression` and `DropTableExpression` accept only
-`str` or `TableExpression` and raise
+"app"."src")`, while `CreateTableExpression` and `DropTableExpression` accept
+only a `TableExpression` and raise
 
 ```
-TypeError: table must be str or TableExpression, got tuple
+TypeError: table must be a TableExpression, got tuple
 ```
 
-`CreateIndexExpression` has one `schema_name` and it covers both names: the index
-and the table it is built on land in the same schema.
+### Indexes and tables choose namespaces independently
+
+`schema_name` on an index statement qualifies **the index name**. The table is
+qualified by its own `TableExpression`, so the two need not agree:
+
+```python
+CreateIndexExpression(
+    dialect, "idx_shared",
+    TableExpression(dialect, "orders", schema_name="sales"),
+    ["user_id"], schema_name="app",
+).to_sql()[0]
+# CREATE INDEX "app"."idx_shared" ON "sales"."orders" ("user_id")
+```
+
+PostgreSQL's `search_path` has nothing to do with either name: both are
+qualified or bare exactly as written.
+
+`DROP INDEX` takes the same pair, and its `table` argument is optional. It
+renders no `ON` clause, because PostgreSQL's `DROP INDEX` has none:
+
+```python
+DropIndexExpression(dialect, "idx_users_email",
+                    TableExpression(dialect, "users", schema_name="app"),
+                    schema_name="app").to_sql()[0]
+# DROP INDEX "app"."idx_users_email"
+```
+
+Whether an index name may carry a namespace at all is a property of the
+grammar, reported by `supports_index_schema_qualification()`. PostgreSQL
+answers `True`, and a dialect that answers `False` raises
+`UnsupportedFeatureError` while rendering rather than emitting a statement its
+server would reject.
+
+### Triggers choose a namespace each
+
+`CreateTriggerExpression` takes the table and the function as
+`TableExpression` values, each with its own namespace, and `schema_name`
+qualifies the trigger name:
+
+```python
+CreateTriggerExpression(
+    dialect, "trg_orders",
+    TableExpression(dialect, "orders", schema_name="sales"),
+    TriggerTiming.BEFORE, [TriggerEvent.UPDATE],
+    function_name=TableExpression(dialect, "set_updated_at", schema_name="tools"),
+    schema_name="app",
+).to_sql()[0]
+# CREATE TRIGGER "app"."trg_orders" BEFORE UPDATE ON "sales"."orders"
+#   FOR EACH ROW EXECUTE FUNCTION "tools"."set_updated_at"()
+```
+
+All three namespaces in that statement are independent: the trigger is created
+in `app`, reads `sales`.`orders`, and calls `tools`.`set_updated_at`.
 
 ### This backend's own statements spell it `schema`
 
@@ -158,25 +263,37 @@ than `schema_name`. The materialized-view statements are the clearest case:
 ```python
 PostgresCreateMaterializedViewExpression(dialect, "Order Summary", query,
                                          schema="mv_reporting")
+# CREATE MATERIALIZED VIEW "mv_reporting"."Order Summary" AS ... WITH DATA
 PostgresRefreshMaterializedViewExpression(dialect, "Order Summary",
                                           schema="mv_reporting")
+# REFRESH MATERIALIZED VIEW "mv_reporting"."Order Summary"
 PostgresAlterMaterializedViewExpression(dialect, "Order Summary", actions,
                                          schema="mv_reporting")
+# ALTER MATERIALIZED VIEW "mv_reporting"."Order Summary" RENAME TO "Order Summary 2"
 PostgresDropMaterializedViewExpression(dialect, "Order Summary",
-                                        schema="mv_reporting")
+                                       schema="mv_reporting")
+# DROP MATERIALIZED VIEW "mv_reporting"."Order Summary"
 ```
 
 and so are extensions, enums, partitions, `COPY`, `VACUUM`, `ANALYZE`, `REINDEX`,
-`REPACK`, statistics, `pg_partman` and `COMMENT ON`. The index statements are the
-exception, and they are inconsistent with each other:
-`PostgresCreateIndexExpression` accepts **no** schema parameter at all, so the
-index it creates follows the connection's `search_path`, while
-`PostgresAlterIndexExpression` and `PostgresDropIndexExpression` take
-`schema_name`. To create an index in a named schema, use the core
-`CreateIndexExpression`.
+`REPACK`, statistics, `pg_partman` and `COMMENT ON`. The index statements
+spell it `schema_name`, and they all take it — including
+`PostgresCreateIndexExpression`, which adds PostgreSQL's own `opclasses`,
+`nulls_not_distinct` and `with_options` on top:
 
-Because the keyword varies by class, check the signature before passing a schema:
-a wrong keyword name raises `TypeError` at construction.
+```python
+PostgresCreateIndexExpression(
+    dialect, "idx_users_name",
+    TableExpression(dialect, "users", schema_name="app"),
+    ["name"], schema_name="app", opclasses={"name": "text_pattern_ops"},
+).to_sql()[0]
+# CREATE INDEX "app"."idx_users_name" ON "app"."users" ("name" text_pattern_ops)
+```
+
+`PostgresDropIndexExpression` adds `concurrent` for `DROP INDEX CONCURRENTLY`,
+which PostgreSQL 18 introduced; earlier versions refuse it. Because the keyword
+varies by class, check the signature before passing a schema: a wrong keyword
+name raises `TypeError` at construction.
 
 The domain expressions accept the namespace under either name: `schema=` (older,
 positional-or-keyword) and `schema_name=` (keyword-only). Passing both with
@@ -203,6 +320,85 @@ CreateSchemaExpression(dialect, "app", authorization="app_user").to_sql()[0]
 DropSchemaExpression(dialect, "app").to_sql()[0]        # DROP SCHEMA "app"
 DropSchemaExpression(dialect, "app", if_exists=True, cascade=True).to_sql()[0]
 # DROP SCHEMA IF EXISTS "app" CASCADE
+```
+
+### When a namespace is judged
+
+Construction only collects parameters: an expression's dialect may not be
+settled yet, and its parameters may still be incomplete. A namespace is
+therefore judged while the statement is rendered, by the dialect, which is the
+point at which the statement is known to be whole. A dialect that implements
+`SchemaSupport` and answers `supports_schema()` with `False` refuses explicitly;
+one that does not implement the protocol ignores the namespace altogether.
+
+## DDL built from a model
+
+A model's namespace reaches its DDL through one place. `build_table_reference()`
+returns the model's table carrying `__schema_name__`, and every other factory is
+reached through it, so a model that declares the namespace once places all of
+its objects there and no two statements can drift apart.
+
+```python
+class Order(ActiveRecord):
+    __table_name__ = "orders"
+    __schema_name__ = "shop"
+
+Order.build_table_reference(dialect).to_sql()[0]       # "shop"."orders"
+Order.build_table_reference(dialect, alias="o").to_sql()[0]
+# "shop"."orders" AS "o"
+
+Order.build_create_table_statement(dialect, columns).to_sql()[0]
+# CREATE TABLE "shop"."orders" (...)
+Order.build_drop_table_statement(dialect, if_exists=True).to_sql()[0]
+# DROP TABLE IF EXISTS "shop"."orders"
+Order.build_truncate_statement(dialect, restart_identity=True).to_sql()[0]
+# TRUNCATE TABLE "shop"."orders" RESTART IDENTITY
+Order.build_alter_table_statement(
+    dialect, [DropColumn(dialect, "legacy")]).to_sql()[0]
+# ALTER TABLE "shop"."orders" DROP COLUMN "legacy"
+```
+
+The index factories take the index's namespace separately. It defaults to the
+model's own, which is what a caller almost always wants; pass
+`index_schema_name` to place the index elsewhere:
+
+```python
+Order.build_create_index_statement(
+    dialect, "idx_orders_email", ["email"]).to_sql()[0]
+# CREATE INDEX "shop"."idx_orders_email" ON "shop"."orders" ("email")
+
+Order.build_create_index_statement(
+    dialect, "idx_orders_email", ["email"], index_schema_name="reporting").to_sql()[0]
+# CREATE INDEX "reporting"."idx_orders_email" ON "shop"."orders" ("email")
+
+Order.build_drop_index_statement(
+    dialect, "idx_orders_email", if_exists=True).to_sql()[0]
+# DROP INDEX IF EXISTS "shop"."idx_orders_email"
+```
+
+The full signatures are:
+
+```python
+Model.build_table_reference(dialect, alias=None)
+Model.build_create_table_statement(dialect, columns, ...)
+Model.build_drop_table_statement(dialect, if_exists=False)
+Model.build_truncate_statement(dialect, restart_identity=False, cascade=False)
+Model.build_alter_table_statement(dialect, actions)
+Model.build_create_index_statement(dialect, index_name, columns, *,
+                                   index_schema_name=None, **options)
+Model.build_drop_index_statement(dialect, index_name, *,
+                                 index_schema_name=None, if_exists=False, **options)
+```
+
+A hand-assembled expression does not get `__schema_name__` for free. It is
+reached from a dialect, not from a model, so a statement built that way has to
+be handed the namespaces it needs:
+
+```python
+# Reaches "shop"."orders" only because the reference was built that way.
+DropTableExpression(
+    dialect, TableExpression(dialect, "orders", schema_name="shop")).to_sql()[0]
+# DROP TABLE "shop"."orders"
 ```
 
 ## `search_path` and `__schema_name__` are two different jobs
@@ -491,10 +687,18 @@ Report.query().select(Report.c.app_total).to_sql()[0]
 # SELECT "app"."reports"."app_total" FROM "app"."reports"
 ```
 
-**Expecting construction to raise.** Nothing rejects a bad `schema_name` until
-the statement renders. A model-level mistake therefore survives every step up to
-and including query building, and fails — or, in the case the check exists to
-prevent, resolves to the wrong table without a word about it.
+**Handing a DDL statement a bare table name.** It raises `TypeError` at
+construction, and the message says which argument is at fault. The fix is a
+qualified `TableExpression`, not a string.
+
+**Building DDL by hand and expecting `__schema_name__` to reach it.** Only the
+model factories read the declaration. An expression assembled at a call site
+carries whatever namespaces it was given.
+
+**Expecting construction to raise for a bad `schema_name`.** Nothing rejects a
+bad value until the statement renders. A model-level mistake therefore survives
+every step up to and including query building, and fails — or, in the case the
+check exists to prevent, resolves to the wrong table without a word about it.
 
 **Aliasing only one side of a join, or only the column side.** Both are covered
 above; the rule is that a reference and its range alias have to agree.

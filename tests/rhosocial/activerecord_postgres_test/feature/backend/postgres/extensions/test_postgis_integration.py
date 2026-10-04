@@ -67,7 +67,7 @@ def _setup_geo_points_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -104,7 +104,7 @@ def _setup_geo_distance_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -141,7 +141,7 @@ def _setup_geo_contains_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -184,7 +184,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -231,7 +231,7 @@ def _setup_geog_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geog"],
         source=ValuesSource(
             dialect,
@@ -278,7 +278,7 @@ async def _async_setup_geo_points_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -315,7 +315,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -352,7 +352,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -395,7 +395,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -442,7 +442,7 @@ async def _async_setup_geog_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["geog"],
         source=ValuesSource(
             dialect,

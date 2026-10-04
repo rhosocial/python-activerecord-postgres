@@ -65,7 +65,7 @@ def social_network_data(postgres_backend):
         ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
+    backend.execute(*InsertExpression(dialect, TableExpression(dialect, "users"), columns=["id", "name"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice")],
             [Literal(dialect, 2), Literal(dialect, "Bob")],
@@ -74,7 +74,7 @@ def social_network_data(postgres_backend):
             [Literal(dialect, 5), Literal(dialect, "Eve")],
         ])).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "follows", columns=["id", "follower_id", "followed_id"],
+    backend.execute(*InsertExpression(dialect, TableExpression(dialect, "follows"), columns=["id", "follower_id", "followed_id"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
             [Literal(dialect, 2), Literal(dialect, 2), Literal(dialect, 3)],
@@ -112,7 +112,7 @@ def aml_data(postgres_backend):
         ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],
+    backend.execute(*InsertExpression(dialect, TableExpression(dialect, "accounts"), columns=["id", "account_holder", "account_type"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice Smith"), Literal(dialect, "checking")],
             [Literal(dialect, 2), Literal(dialect, "Bob Corp"), Literal(dialect, "business")],
@@ -121,7 +121,7 @@ def aml_data(postgres_backend):
             [Literal(dialect, 5), Literal(dialect, "Eve Holding"), Literal(dialect, "offshore")],
         ])).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "transactions", columns=[
+    backend.execute(*InsertExpression(dialect, TableExpression(dialect, "transactions"), columns=[
         "id", "source_account_id", "target_account_id", "amount"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, 4), Literal(dialect, 3), Literal(dialect, 500000)],
@@ -477,13 +477,13 @@ class TestAsyncRecursiveCTEGraph:
             ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
         ]).to_sql())
 
-        await backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
+        await backend.execute(*InsertExpression(dialect, TableExpression(dialect, "users"), columns=["id", "name"],
             source=ValuesSource(dialect, [
                 [Literal(dialect, 1), Literal(dialect, "Alice")],
                 [Literal(dialect, 2), Literal(dialect, "Bob")],
             ])).to_sql())
 
-        await backend.execute(*InsertExpression(dialect, "follows", columns=["id", "follower_id", "followed_id"],
+        await backend.execute(*InsertExpression(dialect, TableExpression(dialect, "follows"), columns=["id", "follower_id", "followed_id"],
             source=ValuesSource(dialect, [
                 [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
             ])).to_sql())

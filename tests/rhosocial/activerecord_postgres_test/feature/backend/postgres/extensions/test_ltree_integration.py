@@ -86,7 +86,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree
     insert_ltree = InsertExpression(
         dialect=dialect,
-        into="test_ltree",
+        into=TableExpression(dialect, "test_ltree"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -125,7 +125,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_tree
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_tree",
+        into=TableExpression(dialect, "test_ltree_tree"),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
@@ -163,7 +163,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_func
     insert_func = InsertExpression(
         dialect=dialect,
-        into="test_ltree_func",
+        into=TableExpression(dialect, "test_ltree_func"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -195,7 +195,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_idx
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_ltree_idx",
+        into=TableExpression(dialect, "test_ltree_idx"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -243,7 +243,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_txtq
     insert_txtq = InsertExpression(
         dialect=dialect,
-        into="test_ltree_txtq",
+        into=TableExpression(dialect, "test_ltree_txtq"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -592,7 +592,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_async
     insert_ltree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_async",
+        into=TableExpression(dialect, "test_ltree_async"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -631,7 +631,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_tree_async
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_tree_async",
+        into=TableExpression(dialect, "test_ltree_tree_async"),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
@@ -669,7 +669,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_func_async
     insert_func = InsertExpression(
         dialect=dialect,
-        into="test_ltree_func_async",
+        into=TableExpression(dialect, "test_ltree_func_async"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -701,7 +701,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_idx_async
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_ltree_idx_async",
+        into=TableExpression(dialect, "test_ltree_idx_async"),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -749,7 +749,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_txtq_async
     insert_txtq = InsertExpression(
         dialect=dialect,
-        into="test_ltree_txtq_async",
+        into=TableExpression(dialect, "test_ltree_txtq_async"),
         columns=["path"],
         source=ValuesSource(
             dialect,

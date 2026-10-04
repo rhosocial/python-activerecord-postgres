@@ -74,7 +74,7 @@ from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 insert = InsertExpression(
     dialect=dialect,
-    into='logs',
+    into=TableExpression(dialect, 'logs'),
     columns=['level', 'message'],
     source=ValuesSource(
         dialect,

@@ -126,7 +126,7 @@ if installed:
     # Example 2: Insert integer array data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="tags",
+        into=TableExpression(dialect, "tags"),
         columns=["name", "tag_ids"],
         source=ValuesSource(
             dialect,

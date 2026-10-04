@@ -151,7 +151,7 @@ if installed:
     # Example 2: Insert city coordinate data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="cities",
+        into=TableExpression(dialect, "cities"),
         columns=["name", "latitude", "longitude"],
         source=ValuesSource(
             dialect,

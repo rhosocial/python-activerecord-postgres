@@ -113,7 +113,7 @@ if installed:
     # Insert sales data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="monthly_sales",
+        into=TableExpression(dialect, "monthly_sales"),
         columns=["month", "category", "amount"],
         source=ValuesSource(
             dialect,
@@ -157,7 +157,7 @@ if installed:
     # Insert hierarchical data (CEO -> VP Engineering, VP Sales -> Engineers)
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="org_tree",
+        into=TableExpression(dialect, "org_tree"),
         columns=["name", "parent_id"],
         source=ValuesSource(
             dialect,

@@ -75,7 +75,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["data"],
         source=ValuesSource(
             dialect,
@@ -110,7 +110,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["data"],
         source=ValuesSource(
             dialect,

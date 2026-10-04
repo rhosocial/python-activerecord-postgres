@@ -50,7 +50,7 @@ from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpr
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice')],

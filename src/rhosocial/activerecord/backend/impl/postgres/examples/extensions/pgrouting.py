@@ -133,7 +133,7 @@ if pgr_installed:
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="route_edges",
+        into=TableExpression(dialect, "route_edges"),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,

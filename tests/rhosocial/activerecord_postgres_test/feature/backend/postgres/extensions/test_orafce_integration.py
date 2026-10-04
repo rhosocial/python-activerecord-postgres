@@ -87,7 +87,7 @@ def orafce_backend(postgres_backend_single):
     # Insert seed data with NULL values for testing nvl
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=TableExpression(dialect, TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
         source=ValuesSource(
             dialect,
@@ -348,7 +348,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     # Insert seed data with NULL values for testing nvl
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=TableExpression(dialect, ASYNC_TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
         source=ValuesSource(
             dialect,

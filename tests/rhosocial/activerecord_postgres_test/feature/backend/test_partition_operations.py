@@ -135,7 +135,7 @@ def _create_default_partition_sql(dialect, partition_name: str):
 def _delete_partition_events_for_range_expression(dialect, start, end):
     return DeleteExpression(
         dialect=dialect,
-        tables="ar_partition_events",
+        tables=TableExpression(dialect, "ar_partition_events"),
         where=(Column(dialect, "created_at") >= Literal(dialect, start))
         & (Column(dialect, "created_at") < Literal(dialect, end)),
     )
@@ -144,7 +144,7 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
 def _insert_partition_events_expression(dialect, rows):
     return InsertExpression(
         dialect=dialect,
-        into="ar_partition_events",
+        into=TableExpression(dialect, "ar_partition_events"),
         columns=["id", "created_at", "payload"],
         source=ValuesSource(
             dialect,
@@ -314,7 +314,7 @@ def _create_production_index_sql(dialect, table_name: str):
 def _insert_production_events_expression(dialect, rows):
     return InsertExpression(
         dialect=dialect,
-        into=PRODUCTION_PARTITION_TABLE,
+        into=TableExpression(dialect, PRODUCTION_PARTITION_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
         source=ValuesSource(
             dialect,

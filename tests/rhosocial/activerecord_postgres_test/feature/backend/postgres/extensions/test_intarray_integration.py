@@ -75,7 +75,7 @@ def _setup_intarray_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -113,7 +113,7 @@ def _setup_intarray_overlap_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -151,7 +151,7 @@ def _setup_intarray_contained_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -189,7 +189,7 @@ def _setup_intarray_idx_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -234,7 +234,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -279,7 +279,7 @@ async def _async_setup_intarray_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -317,7 +317,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -355,7 +355,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -393,7 +393,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -437,7 +437,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,

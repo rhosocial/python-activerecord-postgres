@@ -88,7 +88,7 @@ users_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 'Diana'), Literal(dialect, 'NYC')],
     [Literal(dialect, 5), Literal(dialect, 'Eve'), Literal(dialect, 'LA')],
 ])
-backend.execute(*InsertExpression(dialect, 'users', columns=['id', 'name', 'city'], source=users_data).to_sql())
+backend.execute(*InsertExpression(dialect, TableExpression(dialect, 'users'), columns=['id', 'name', 'city'], source=users_data).to_sql())
 
 follows_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
@@ -97,7 +97,7 @@ follows_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 1)],
     [Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 5)],
 ])
-backend.execute(*InsertExpression(dialect, 'follows', columns=['id', 'follower_id', 'followed_id'], source=follows_data).to_sql())
+backend.execute(*InsertExpression(dialect, TableExpression(dialect, 'follows'), columns=['id', 'follower_id', 'followed_id'], source=follows_data).to_sql())
 
 # ---- AML tables ----
 accounts_cols = [
@@ -126,7 +126,7 @@ accounts_data = ValuesSource(dialect, [
     [Literal(dialect, 5), Literal(dialect, 'Eve Holding'), Literal(dialect, 'offshore')],
     [Literal(dialect, 6), Literal(dialect, 'Foreign Entity'), Literal(dialect, 'offshore')],
 ])
-backend.execute(*InsertExpression(dialect, 'accounts', columns=['id', 'account_holder', 'account_type'], source=accounts_data).to_sql())
+backend.execute(*InsertExpression(dialect, TableExpression(dialect, 'accounts'), columns=['id', 'account_holder', 'account_type'], source=accounts_data).to_sql())
 
 txn_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 4), Literal(dialect, 3), Literal(dialect, 500000), Literal(dialect, '2024-01-15')],
@@ -135,7 +135,7 @@ txn_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 2), Literal(dialect, 1), Literal(dialect, 450000), Literal(dialect, '2024-04-01')],
     [Literal(dialect, 5), Literal(dialect, 6), Literal(dialect, 5), Literal(dialect, 1000000), Literal(dialect, '2024-05-01')],
 ])
-backend.execute(*InsertExpression(dialect, 'transactions', columns=['id', 'source_account_id', 'target_account_id', 'amount', 'ts'], source=txn_data).to_sql())
+backend.execute(*InsertExpression(dialect, TableExpression(dialect, 'transactions'), columns=['id', 'source_account_id', 'target_account_id', 'amount', 'ts'], source=txn_data).to_sql())
 
 # ============================================================
 # SECTION: Scenario 1 — Social Network N-degree Recommendation

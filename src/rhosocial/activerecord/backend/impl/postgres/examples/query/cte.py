@@ -70,7 +70,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='employees',
+    into=TableExpression(dialect, 'employees'),
     columns=['name', 'manager_id'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'CEO'), Literal(dialect, None)],

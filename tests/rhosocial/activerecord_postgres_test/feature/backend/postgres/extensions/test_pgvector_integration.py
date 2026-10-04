@@ -129,7 +129,7 @@ def vector_env(postgres_backend_single):
 
     insert_items = InsertExpression(
         dialect=dialect,
-        into="test_vector_items",
+        into=TableExpression(dialect, "test_vector_items"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -153,7 +153,7 @@ def vector_env(postgres_backend_single):
 
     insert_l2 = InsertExpression(
         dialect=dialect,
-        into="test_vector_l2",
+        into=TableExpression(dialect, "test_vector_l2"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -178,7 +178,7 @@ def vector_env(postgres_backend_single):
 
     insert_cosine = InsertExpression(
         dialect=dialect,
-        into="test_vector_cosine",
+        into=TableExpression(dialect, "test_vector_cosine"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -203,7 +203,7 @@ def vector_env(postgres_backend_single):
 
     insert_ip = InsertExpression(
         dialect=dialect,
-        into="test_vector_ip",
+        into=TableExpression(dialect, "test_vector_ip"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -397,7 +397,7 @@ class TestPgvectorIntegration:
             # Insert initial vector
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_update",
+                into=TableExpression(dialect, "test_vector_update"),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -459,7 +459,7 @@ class TestPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_ivfflat",
+                into=TableExpression(dialect, "test_vector_ivfflat"),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -520,7 +520,7 @@ class TestPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_hnsw",
+                into=TableExpression(dialect, "test_vector_hnsw"),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -573,7 +573,7 @@ class TestPgvectorIntegration:
             # Inserting a vector with wrong dimension should fail
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_dim",
+                into=TableExpression(dialect, "test_vector_dim"),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -631,7 +631,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_items = InsertExpression(
         dialect=dialect,
-        into="test_vector_items_async",
+        into=TableExpression(dialect, "test_vector_items_async"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -655,7 +655,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_l2 = InsertExpression(
         dialect=dialect,
-        into="test_vector_l2_async",
+        into=TableExpression(dialect, "test_vector_l2_async"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -680,7 +680,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_cosine = InsertExpression(
         dialect=dialect,
-        into="test_vector_cosine_async",
+        into=TableExpression(dialect, "test_vector_cosine_async"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -705,7 +705,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_ip = InsertExpression(
         dialect=dialect,
-        into="test_vector_ip_async",
+        into=TableExpression(dialect, "test_vector_ip_async"),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -900,7 +900,7 @@ class TestAsyncPgvectorIntegration:
         try:
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_update_async",
+                into=TableExpression(dialect, "test_vector_update_async"),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -959,7 +959,7 @@ class TestAsyncPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_ivfflat_async",
+                into=TableExpression(dialect, "test_vector_ivfflat_async"),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -1017,7 +1017,7 @@ class TestAsyncPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_hnsw_async",
+                into=TableExpression(dialect, "test_vector_hnsw_async"),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -1068,7 +1068,7 @@ class TestAsyncPgvectorIntegration:
         try:
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_dim_async",
+                into=TableExpression(dialect, "test_vector_dim_async"),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,

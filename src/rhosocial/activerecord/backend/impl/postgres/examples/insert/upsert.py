@@ -87,7 +87,7 @@ backend.execute(sql, params)
 
 insert_nothing = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
@@ -105,7 +105,7 @@ backend.execute(sql, params)
 # Try to insert again - will be ignored
 insert_nothing2 = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
@@ -136,7 +136,7 @@ print(f"DO NOTHING result: {result.data}")
 
 insert_update = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
@@ -157,7 +157,7 @@ backend.execute(sql, params)
 # Insert again - will update
 insert_update2 = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=TableExpression(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],

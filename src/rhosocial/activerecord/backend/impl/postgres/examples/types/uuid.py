@@ -99,7 +99,7 @@ print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
 # 2. INSERT with auto-generated UUID (using DEFAULT)
 insert_default = InsertExpression(
     dialect=dialect,
-    into='events',
+    into=TableExpression(dialect, 'events'),
     columns=['name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'user_created')],
@@ -113,7 +113,7 @@ print("Inserted rows with auto-generated UUIDs")
 # 3. INSERT with explicit UUID value
 insert_explicit = InsertExpression(
     dialect=dialect,
-    into='events',
+    into=TableExpression(dialect, 'events'),
     columns=['id', 'name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, '550e8400-e29b-41d4-a716-446655440000'), Literal(dialect, 'explicit_uuid')],

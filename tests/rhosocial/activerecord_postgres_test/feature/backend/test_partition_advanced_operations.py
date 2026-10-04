@@ -147,7 +147,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
 def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: list[list[Any]]):
     return InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=TableExpression(dialect, table_name),
         columns=columns,
         source=ValuesSource(
             dialect,

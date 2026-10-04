@@ -88,7 +88,7 @@ def _setup_users_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -128,7 +128,7 @@ def _setup_encrypt_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )
@@ -180,7 +180,7 @@ async def _async_setup_users_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -220,7 +220,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=TableExpression(dialect, table),
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )

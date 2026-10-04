@@ -153,7 +153,7 @@ if installed:
     rows = [[Literal(dialect, f"item{i}"), Literal(dialect, i * 10)] for i in range(5)]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="stats_demo",
+        into=TableExpression(dialect, "stats_demo"),
         columns=["name", "value"],
         source=ValuesSource(dialect, rows),
     )

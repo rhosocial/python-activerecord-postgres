@@ -125,7 +125,7 @@ if installed:
     # Use Literal with .cast("vector") for type-safe vector insertion.
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="documents",
+        into=TableExpression(dialect, "documents"),
         columns=["content", "embedding"],
         source=ValuesSource(
             dialect,

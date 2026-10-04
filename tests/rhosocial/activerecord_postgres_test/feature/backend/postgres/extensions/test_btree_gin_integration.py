@@ -88,7 +88,7 @@ def btree_gin_env(postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gin",
+        into=TableExpression(dialect, "test_btree_gin"),
         columns=["name", "value", "tags"],
         source=ValuesSource(dialect, rows),
     )
@@ -243,7 +243,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gin_async",
+        into=TableExpression(dialect, "test_btree_gin_async"),
         columns=["name", "value", "tags"],
         source=ValuesSource(dialect, rows),
     )

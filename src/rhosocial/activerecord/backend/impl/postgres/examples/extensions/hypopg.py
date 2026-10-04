@@ -120,7 +120,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=TableExpression(dialect, "products"),
         columns=["name", "category", "price"],
         source=ValuesSource(dialect, rows),
     )
