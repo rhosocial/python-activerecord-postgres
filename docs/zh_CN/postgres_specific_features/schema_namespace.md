@@ -146,10 +146,24 @@ CreateIndexExpression(
 TypeError: target_table must be a TableExpression, got str
 ```
 
-DML 里只有 `INSERT` 还会把裸字符串归一化成一个无名的引用，因此要走这条路时，命名
-空间只能由那个 `TableExpression` 携带。
+`INSERT` 与 `DELETE` 现在不再是例外。`InsertExpression.into` 和
+`DeleteExpression.tables` 出于同样的理由拒绝裸字符串：
 
-### 收 `schema_name` 的语句
+```
+TypeError: into must be a TableExpression, got str
+TypeError: tables must be a TableExpression, got str
+```
+
+`DELETE` 涉及多张表时，每一张都要各自带命名空间：
+
+```python
+DeleteExpression(dialect, [
+    TableExpression(dialect, "orders", schema_name="sales"),
+    TableExpression(dialect, "archive", schema_name="cold"),
+], where=predicate).to_sql()[0]
+```
+
+### 逐条语句看命名空间从哪来
 
 ```python
 TableExpression(dialect, "users", schema_name="app").to_sql()[0]   # "app"."users"

@@ -161,11 +161,24 @@ message:
 TypeError: target_table must be a TableExpression, got str
 ```
 
-`INSERT` is the one DML statement that still normalizes a bare string into an
-unnamed reference, so a namespace passed that way has to reach the
-`TableExpression` instead.
+`INSERT` and `DELETE` are no longer exceptions. `InsertExpression.into` and
+`DeleteExpression.tables` reject a bare string for the same reason:
 
-### Statements that take `schema_name`
+```
+TypeError: into must be a TableExpression, got str
+TypeError: tables must be a TableExpression, got str
+```
+
+A `DELETE` against several tables needs every one of them qualified:
+
+```python
+DeleteExpression(dialect, [
+    TableExpression(dialect, "orders", schema_name="sales"),
+    TableExpression(dialect, "archive", schema_name="cold"),
+], where=predicate).to_sql()[0]
+```
+
+### Where the namespace comes from, statement by statement
 
 ```python
 TableExpression(dialect, "users", schema_name="app").to_sql()[0]   # "app"."users"
