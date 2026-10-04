@@ -94,14 +94,34 @@ Order.query().where(Order.c.id > 1).to_sql()[0]
 # SELECT * FROM "shop"."orders" WHERE "shop"."orders"."id" > %s
 ```
 
-DML built directly from the expression layer carries it as well. `UPDATE` and
-`MERGE` take their target as a qualified `TableExpression`:
+DML built directly from the expression layer carries it as well. `INSERT`,
+`UPDATE`, `DELETE` and `MERGE` each take their target as a qualified
+`TableExpression`:
 
 ```python
+InsertExpression(
+    dialect, TableExpression(dialect, "users", schema_name="app"),
+    SelectSource(dialect, QueryExpression(
+        dialect=dialect, select=[Column(dialect, "id")],
+        from_=[TableExpression(dialect, "staging")])),
+    columns=["id"],
+).to_sql()
 # INSERT INTO "app"."users" ("id") SELECT "id" FROM "staging"
-# UPDATE "app"."users" SET "name" = "src"."name"
+
+UpdateExpression(
+    dialect, TableExpression(dialect, "users", schema_name="app"),
+    {"name": Column(dialect, "name", table="src")},
+    from_=TableExpression(dialect, "src"),
+).to_sql()
+# UPDATE "app"."users" SET "name" = "src"."name" FROM "src"
+
+DeleteExpression(dialect, TableExpression(dialect, "users", schema_name="app")).to_sql()
 # DELETE FROM "app"."users"
 ```
+
+The column in the `SET` clause follows the same rule as any other: it takes a
+table name, so it renders `"src"."name"` rather than a third level, and the
+`from_` range is qualified separately by its own reference.
 
 A model without `__schema_name__` renders unqualified and lets the connection
 decide:
@@ -118,13 +138,13 @@ it after the change.
 
 ## DDL names its objects independently
 
-Every statement that names a table takes a `TableExpression`, and every
-statement that names a database object takes a namespace for that object alone.
-An index, a trigger and the table it is built on each carry their own.
+Every statement that names a table *as a target* takes a `TableExpression`, and
+every statement that names a database object takes a namespace for that object
+alone. An index, a trigger and the table it is built on each carry their own.
 
-### Every table name is a `TableExpression`
+### Every table target is a `TableExpression`
 
-A statement that names a table refuses a bare string:
+A statement that names a table as a target refuses a bare string:
 
 ```python
 CreateTableExpression(dialect, "users", columns)     # TypeError
@@ -133,11 +153,59 @@ TruncateExpression(dialect, "users")                 # TypeError
 AlterTableExpression(dialect, "users", actions)      # TypeError
 CreateIndexExpression(dialect, "idx", "users", ["id"])   # TypeError
 DropIndexExpression(dialect, "idx", "users")             # TypeError
+InsertExpression(dialect, "users", source)               # TypeError
+UpdateExpression(dialect, "users", assignments)          # TypeError
+DeleteExpression(dialect, "users")                       # TypeError
+MergeExpression(dialect, "users", source, condition)     # TypeError
 ```
+
+The wording names the argument at fault, and four messages cover those ten calls:
 
 ```
 TypeError: table must be a TableExpression, got str
+TypeError: into must be a TableExpression, got str
+TypeError: tables must be a TableExpression, got str
+TypeError: target_table must be a TableExpression, got str
 ```
+
+`DeleteExpression` checks every element when given a list, with its own wording
+again:
+
+```
+TypeError: every table in tables must be a TableExpression, got str
+```
+
+Two fields that name a table are deliberately **not** targets, and both are
+still plain strings. Knowing which is which is the whole difference between a
+call that works and one that raises:
+
+- **`Column.table`** names the relation a column belongs to, so that the column
+  can be rendered as `"schema"."table"."column"`. It is a *name*, not a
+  statement target, and it pairs with the column's own `schema_name`:
+
+  ```python
+  Column(dialect, "id", table="orders", schema_name="shop").to_sql()[0]
+  # "shop"."orders"."id"
+  ```
+
+- **The partition expressions' `parent_table`** names the already-existing
+  partitioned table a new partition hangs off, for `PARTITION OF` and
+  `ALTER TABLE ... ATTACH/DETACH PARTITION`. Its namespace is a separate
+  `parent_schema`, so it does not need a reference of its own:
+
+  ```python
+  PostgresCreatePartitionExpression(
+      dialect, "orders_2024_q1", "orders", "RANGE",
+      {"from": "2024-01-01", "to": "2024-04-01"},
+      schema="sales", parent_schema="core",
+  ).to_sql()[0]
+  # CREATE TABLE "sales"."orders_2024_q1" PARTITION OF "core"."orders"
+  #   FOR VALUES FROM ('2024-01-01') TO ('2024-04-01')
+  ```
+
+  `PostgresAttachPartitionExpression` and `PostgresDetachPartitionExpression`
+  take the same pair. Passing a `TableExpression` here fails — it is not what
+  these expressions read.
 
 A bare string used to be wrapped into an unnamed `TableExpression`, which
 dropped the namespace without saying so:
@@ -152,21 +220,6 @@ CreateIndexExpression(
     ["email"], schema_name="app",
 ).to_sql()[0]
 # CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
-```
-
-`MergeExpression` applies the same rule to `target_table`, with its own
-message:
-
-```
-TypeError: target_table must be a TableExpression, got str
-```
-
-`INSERT` and `DELETE` are no longer exceptions. `InsertExpression.into` and
-`DeleteExpression.tables` reject a bare string for the same reason:
-
-```
-TypeError: into must be a TableExpression, got str
-TypeError: tables must be a TableExpression, got str
 ```
 
 A `DELETE` against several tables needs every one of them qualified:
@@ -304,9 +357,18 @@ PostgresCreateIndexExpression(
 ```
 
 `PostgresDropIndexExpression` adds `concurrent` for `DROP INDEX CONCURRENTLY`,
-which PostgreSQL 18 introduced; earlier versions refuse it. Because the keyword
-varies by class, check the signature before passing a schema: a wrong keyword
-name raises `TypeError` at construction.
+which PostgreSQL 18 introduced; earlier versions refuse it, and say so by version
+rather than by capability flag:
+
+```python
+PostgresDropIndexExpression(dialect, "idx", TableExpression(dialect, "users",
+                             schema_name="app"), schema_name="app",
+                             concurrent=True).to_sql()
+# ValueError: DROP INDEX CONCURRENTLY requires PostgreSQL 18+
+```
+
+Because the keyword varies by class, check the signature before passing a schema:
+a wrong keyword name raises `TypeError` at construction.
 
 The domain expressions accept the namespace under either name: `schema=` (older,
 positional-or-keyword) and `schema_name=` (keyword-only). Passing both with
@@ -317,8 +379,13 @@ not while rendering:
 ValueError: schema and schema_name must match when both are provided
 ```
 
-`schema_name` defaults to `None`, which means unqualified. Passing `""` is
-rejected — see [The empty string](#the-empty-string-and-when-it-is-caught).
+`schema_name` defaults to `None`, which means unqualified. Passing `""` — under
+either spelling — is rejected while the statement renders, and this backend's
+own wording appears rather than the core one:
+
+```
+ValueError: PostgreSQL identifiers must contain non-empty segments
+```
 
 ### `CREATE SCHEMA` / `DROP SCHEMA` are the exception
 
@@ -337,12 +404,24 @@ DropSchemaExpression(dialect, "app", if_exists=True, cascade=True).to_sql()[0]
 
 ### When a namespace is judged
 
+Two different things are checked at two different moments, and it is worth
+keeping them apart.
+
+**The shape of a table target is checked at construction.** A bare string is
+refused there, with the `TypeError` quoted above, because the mistake is visible
+from the argument alone and there is nothing to wait for.
+
+**The value of a namespace is judged while the statement is rendered.**
 Construction only collects parameters: an expression's dialect may not be
-settled yet, and its parameters may still be incomplete. A namespace is
-therefore judged while the statement is rendered, by the dialect, which is the
-point at which the statement is known to be whole. A dialect that implements
+settled yet, and its parameters may still be incomplete. The dialect decides at
+the point where the statement is known to be whole. A dialect that implements
 `SchemaSupport` and answers `supports_schema()` with `False` refuses explicitly;
 one that does not implement the protocol ignores the namespace altogether.
+
+The exceptions to "at render time" are all checks a constructor can make on its
+own arguments, and all of them raise there: the domain expressions' agreement
+check, `PostgresPartitionMetadataExpression`'s empty `parent_table`, and the index
+expressions' version gate for `concurrent`.
 
 ## DDL built from a model
 
@@ -652,9 +731,12 @@ A non-string is rejected the same way, with its own message:
 ValueError: TableExpression.schema_name must be a string or None, not int
 ```
 
-`TruncateExpression` raises the `TableExpression` wording, because it renders
-its table through a `TableExpression` internally — the message names the object
-that validated the value, not the statement you wrote.
+`TruncateExpression` raises the `TableExpression` wording, because it
+renders its table through a `TableExpression` internally — the message names the
+object that validated the value, not the statement you wrote. The domain
+expressions raise neither: they qualify the name themselves and report
+`ValueError: PostgreSQL identifiers must contain non-empty segments`, still at
+render time.
 
 The reason to reject rather than treat `""` as absent: `format_table` decides
 whether to qualify from `bool(expr.schema_name)`, which is false for `""`, and

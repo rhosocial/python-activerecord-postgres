@@ -84,14 +84,32 @@ Order.query().where(Order.c.id > 1).to_sql()[0]
 # SELECT * FROM "shop"."orders" WHERE "shop"."orders"."id" > %s
 ```
 
-直接用表达式层构造的 DML 同样带限定；`UPDATE` 与 `MERGE` 的目标要传一个带限定的
-`TableExpression`：
+直接用表达式层构造的 DML 同样带限定。`INSERT`、`UPDATE`、`DELETE` 与 `MERGE` 的目标
+都要传一个带限定的 `TableExpression`：
 
 ```python
+InsertExpression(
+    dialect, TableExpression(dialect, "users", schema_name="app"),
+    SelectSource(dialect, QueryExpression(
+        dialect=dialect, select=[Column(dialect, "id")],
+        from_=[TableExpression(dialect, "staging")])),
+    columns=["id"],
+).to_sql()
 # INSERT INTO "app"."users" ("id") SELECT "id" FROM "staging"
-# UPDATE "app"."users" SET "name" = "src"."name"
+
+UpdateExpression(
+    dialect, TableExpression(dialect, "users", schema_name="app"),
+    {"name": Column(dialect, "name", table="src")},
+    from_=TableExpression(dialect, "src"),
+).to_sql()
+# UPDATE "app"."users" SET "name" = "src"."name" FROM "src"
+
+DeleteExpression(dialect, TableExpression(dialect, "users", schema_name="app")).to_sql()
 # DELETE FROM "app"."users"
 ```
+
+`SET` 子句里的列遵循同样的规则：它收的是表名，因此渲染成 `"src"."name"` 而不是第三级，
+而 `from_` 的范围由它自己的引用单独限定。
 
 不写 `__schema_name__` 的模型不加限定，交给连接去决定：
 
@@ -106,12 +124,12 @@ PlainOrder.query().select(PlainOrder.c.id).to_sql()[0]
 
 ## DDL 为每个对象各自选命名空间
 
-凡是点名一张表的语句，收的都是 `TableExpression`；凡是点名一个数据库对象的语句，
+凡是把表当作**目标**的语句，收的都是 `TableExpression`；凡是点名一个数据库对象的语句，
 那个命名空间只管这一个对象。索引、触发器和它们所依附的表，各带各的。
 
-### 表名一律是 `TableExpression`
+### 表目标一律是 `TableExpression`
 
-传裸字符串给一条点名表的语句会直接报 `TypeError`：
+给一条把表当作目标的语句塞裸字符串会直接报 `TypeError`：
 
 ```python
 CreateTableExpression(dialect, "users", columns)         # TypeError
@@ -120,11 +138,55 @@ TruncateExpression(dialect, "users")                     # TypeError
 AlterTableExpression(dialect, "users", actions)          # TypeError
 CreateIndexExpression(dialect, "idx", "users", ["id"])   # TypeError
 DropIndexExpression(dialect, "idx", "users")             # TypeError
+InsertExpression(dialect, "users", source)               # TypeError
+UpdateExpression(dialect, "users", assignments)          # TypeError
+DeleteExpression(dialect, "users")                       # TypeError
+MergeExpression(dialect, "users", source, condition)     # TypeError
 ```
+
+报错信息会指明是哪个参数出的问题，上面十行调用由四条信息覆盖：
 
 ```
 TypeError: table must be a TableExpression, got str
+TypeError: into must be a TableExpression, got str
+TypeError: tables must be a TableExpression, got str
+TypeError: target_table must be a TableExpression, got str
 ```
+
+`DeleteExpression` 收列表时会逐个检查，又是一条单独的信息：
+
+```
+TypeError: every table in tables must be a TableExpression, got str
+```
+
+有两个同样指名表、却刻意**不是**目标的字段，它们至今仍是普通字符串。分清哪个是哪个，
+就是一个调用能不能过的全部差别：
+
+- **`Column.table`** 点的是某列属于哪个关系，为的是把这一列渲染成
+  `"schema"."table"."column"`。它是**名字**，不是语句目标，与同一表达式自己的
+  `schema_name` 配对：
+
+  ```python
+  Column(dialect, "id", table="orders", schema_name="shop").to_sql()[0]
+  # "shop"."orders"."id"
+  ```
+
+- **分区表达式的 `parent_table`** 点的是新建分区所依附的那张已存在的分区表，服务于
+  `PARTITION OF` 与 `ALTER TABLE ... ATTACH/DETACH PARTITION`。它的命名空间是另一个
+  `parent_schema`，所以不需要自带一个引用：
+
+  ```python
+  PostgresCreatePartitionExpression(
+      dialect, "orders_2024_q1", "orders", "RANGE",
+      {"from": "2024-01-01", "to": "2024-04-01"},
+      schema="sales", parent_schema="core",
+  ).to_sql()[0]
+  # CREATE TABLE "sales"."orders_2024_q1" PARTITION OF "core"."orders"
+  #   FOR VALUES FROM ('2024-01-01') TO ('2024-04-01')
+  ```
+
+  `PostgresAttachPartitionExpression` 与 `PostgresDetachPartitionExpression` 收的是
+  同一对参数。这里传 `TableExpression` 会失败——这几个表达式并不读它。
 
 早先裸字符串会被包成一个不带命名空间的 `TableExpression`，于是命名空间在无人察觉的
 情况下被丢弃：`CreateIndexExpression(d, "idx", "users", ["id"], schema_name="app")`
@@ -138,20 +200,6 @@ CreateIndexExpression(
     ["email"], schema_name="app",
 ).to_sql()[0]
 # CREATE INDEX "app"."idx_users_email" ON "app"."users" ("email")
-```
-
-`MergeExpression` 对 `target_table` 用同样的规则，只是报错信息另有一条：
-
-```
-TypeError: target_table must be a TableExpression, got str
-```
-
-`INSERT` 与 `DELETE` 现在不再是例外。`InsertExpression.into` 和
-`DeleteExpression.tables` 出于同样的理由拒绝裸字符串：
-
-```
-TypeError: into must be a TableExpression, got str
-TypeError: tables must be a TableExpression, got str
 ```
 
 `DELETE` 涉及多张表时，每一张都要各自带命名空间：
@@ -282,8 +330,16 @@ PostgresCreateIndexExpression(
 ```
 
 `PostgresDropIndexExpression` 多了 `concurrent`，对应 PostgreSQL 18 才引入的
-`DROP INDEX CONCURRENTLY`，更早的版本会拒绝。由于关键字随类而异，传之前先看签名：
-写错会在构造阶段报 `TypeError`。
+`DROP INDEX CONCURRENTLY`，更早的版本会拒绝，而且它按版本号拒绝，不走能力标志：
+
+```python
+PostgresDropIndexExpression(dialect, "idx", TableExpression(dialect, "users",
+                             schema_name="app"), schema_name="app",
+                             concurrent=True).to_sql()
+# ValueError: DROP INDEX CONCURRENTLY requires PostgreSQL 18+
+```
+
+由于关键字随类而异，传之前先看签名：写错会在构造阶段报 `TypeError`。
 
 domain 表达式对命名空间有两种叫法：`schema=`（较早，可按位置传）与 `schema_name=`
 （仅关键字）。两个都传且值不同会报错，而且这道检查发生在**构造表达式时**，不是渲染时：
@@ -292,7 +348,12 @@ domain 表达式对命名空间有两种叫法：`schema=`（较早，可按位�
 ValueError: schema and schema_name must match when both are provided
 ```
 
-`schema_name` 默认是 `None`，也就是不加限定。传 `""` 会被拒绝，见[空串](#空串不等于不加限定而且报错来得比预期晚)。
+`schema_name` 默认是 `None`，也就是不加限定。传 `""`——两种叫法都一样——会在渲染阶段被
+拒绝，而且报出来的是本后端自己的措辞，不是核心库那条：
+
+```
+ValueError: PostgreSQL identifiers must contain non-empty segments
+```
 
 ### `CREATE SCHEMA` / `DROP SCHEMA` 是例外
 
@@ -311,9 +372,19 @@ DropSchemaExpression(dialect, "app", if_exists=True, cascade=True).to_sql()[0]
 
 ### 命名空间在哪一步被判定
 
-构造阶段只负责收集参数：那一刻连方言都未必已经定下来，参数也未必齐全。命名空间因此
-要等到渲染阶段才由方言判定，那时整条语句才算拼完整。实现了 `SchemaSupport` 而
-`supports_schema()` 为假的方言会明确拒绝；没有实现该协议的方言则完全忽略命名空间。
+有两件事在两个不同时刻检查，分清楚很有必要。
+
+**表目标的形状在构造期检查。** 裸字符串在那里就被拒，即上文那条 `TypeError`——这个错误
+从参数本身就能看出来，没有什么可等的。
+
+**命名空间的值要等到渲染时才判定。** 构造阶段只负责收集参数：那一刻连方言都未必已经定
+下来，参数也未必齐全，于是由方言在整条语句才算拼完整的那个时刻决定。实现了
+`SchemaSupport` 而 `supports_schema()` 为假的方言会明确拒绝；没有实现该协议的方言则完全
+忽略命名空间。
+
+「渲染期」这条规律也有例外，全都是构造函数只凭自己的参数就能做的检查，而且都在那里
+抛出：domain 表达式那两个参数是否一致、`PostgresPartitionMetadataExpression` 的
+`parent_table` 是否为空，以及索引表达式对 `concurrent` 的版本门槛。
 
 ## 从模型构造 DDL
 
@@ -597,6 +668,8 @@ ValueError: TableExpression.schema_name must be a string or None, not int
 
 `TruncateExpression` 抛的是 `TableExpression` 那条信息，因为它内部是靠一个
 `TableExpression` 来渲染表名的——信息里指的是执行校验的那个对象，不是你写的语句。
+domain 表达式两条都不走：它们自己限定名字，报的是
+`ValueError: PostgreSQL identifiers must contain non-empty segments`，同样在渲染阶段。
 
 之所以要拒而不是把 `""` 当作没有：`format_table` 判断是否加限定看的是
 `bool(expr.schema_name)`，对 `""` 为假，于是走不加限定的分支。于是一个本来要
