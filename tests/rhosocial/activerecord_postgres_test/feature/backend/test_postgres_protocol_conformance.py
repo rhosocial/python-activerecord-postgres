@@ -156,7 +156,8 @@ def get_postgres_protocols():
         dialect_protocols.DDLTypeSupport,
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
-        dialect_protocols.AutoIncrementSupport,
+        dialect_protocols.AutoIncrementColumnSupport,
+        dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,
         # Statement forms PostgreSQL implements through its mixins, so the
         # partition test below can classify them rather than leaving them
@@ -486,6 +487,8 @@ class TestPostgresProtocolDerivation:
         ("PostgresDomainSupport", "CreateDomainSupport"),
         ("PostgresDomainSupport", "AlterDomainSupport"),
         ("PostgresDomainSupport", "DropDomainSupport"),
+        ("PostgresIdentitySupport", "IdentityColumnSupport"),
+        ("PostgresAutoIncrementSupport", "AutoIncrementColumnSupport"),
     ]
 
     @pytest.mark.parametrize("pg_name,generic_name", PROTOCOL_DERIVATIONS)
@@ -637,6 +640,8 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     # render time.
     (postgres_protocols.PostgresNamespaceSupport, postgres_mixins.PostgresNamespaceMixin),
     (postgres_protocols.PostgresSequenceSupport, postgres_mixins.PostgresSequenceMixin),
+    (postgres_protocols.PostgresIdentitySupport, postgres_mixins.PostgresIdentityColumnMixin),
+    (postgres_protocols.PostgresAutoIncrementSupport, postgres_mixins.PostgresAutoIncrementMixin),
     (postgres_protocols.PostgresTransactionSupport, postgres_mixins.PostgresTransactionMixin),
     (postgres_protocols.PostgresViewSupport, postgres_mixins.PostgresViewMixin),
     (postgres_protocols.PostgresXMLSupport, postgres_mixins.PostgresXMLMixin),

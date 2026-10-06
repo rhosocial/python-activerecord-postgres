@@ -85,6 +85,10 @@ from .query_optimization import PostgresQueryOptimizationSupport
 from .logical_replication import PostgresLogicalReplicationSupport
 from .parallel_query import PostgresParallelQuerySupport
 
+# Identity / auto-increment mechanism protocols
+from .identity_column import PostgresIdentitySupport
+from .auto_increment import PostgresAutoIncrementSupport
+
 # Per-feature protocol imports
 from .cte import PostgresCTESupport
 from .window import PostgresWindowSupport
@@ -182,6 +186,9 @@ __all__ = [
     "PostgresQueryOptimizationSupport",
     "PostgresLogicalReplicationSupport",
     "PostgresParallelQuerySupport",
+    # Identity / auto-increment mechanism protocols
+    "PostgresIdentitySupport",
+    "PostgresAutoIncrementSupport",
     # Per-feature protocols
     "PostgresCTESupport",
     "PostgresWindowSupport",

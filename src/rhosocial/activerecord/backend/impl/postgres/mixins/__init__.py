@@ -19,6 +19,8 @@ from .datetime import PostgresDateTimeMixin
 from .dql import PostgresDQLMixin
 from .json import PostgresJSONMixin
 from .generated_column import PostgresGeneratedColumnMixin
+from .identity_column import PostgresIdentityColumnMixin
+from .auto_increment import PostgresAutoIncrementMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
 
@@ -138,6 +140,8 @@ __all__ = [
     "PostgresDQLMixin",
     "PostgresJSONMixin",
     "PostgresGeneratedColumnMixin",
+    "PostgresIdentityColumnMixin",
+    "PostgresAutoIncrementMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
     # DDL mixins

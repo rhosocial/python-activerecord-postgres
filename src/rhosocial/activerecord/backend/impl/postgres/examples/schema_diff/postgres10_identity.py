@@ -17,9 +17,9 @@ Supported versions: PostgreSQL 9 — SERIAL only.
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
 import os
+from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
-from rhosocial.activerecord.backend.expression.statements import IdentityClause
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
@@ -63,14 +63,16 @@ sql, params = pg9_table.to_sql()
 backend.execute(sql, params)
 
 # PostgreSQL 10+: GENERATED AS IDENTITY
-# Note: IdentityClause(generation='ALWAYS') triggers GENERATED ALWAYS AS IDENTITY
-# in the PostgreSQL dialect's format_column_definition
+# Note: IdentityAttribute(generation='ALWAYS') triggers
+# GENERATED ALWAYS AS IDENTITY through the dialect's gated identity formatter;
+# on PostgreSQL 9 that formatter refuses instead of rendering a clause the
+# server rejects, and the SERIAL path above stays the PG9-compatible one.
 try:
     pg10_table = CreateTableExpression(
         dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect),
                 constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],
-                identity_clause=IdentityClause(dialect, generation="ALWAYS")),
+                attributes=[IdentityAttribute(generation="ALWAYS")]),
             ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ]
     )
