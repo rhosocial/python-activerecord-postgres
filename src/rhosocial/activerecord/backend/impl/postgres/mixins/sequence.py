@@ -38,6 +38,24 @@ class PostgresSequenceMixin:
     def supports_alter_sequence(self) -> bool:
         return True
 
+    def supports_alter_sequence_start(self) -> bool:
+        """Whether ``ALTER SEQUENCE ... START WITH`` is supported.
+
+        This is a different clause from the ``CREATE SEQUENCE ... START WITH``
+        one :meth:`supports_sequence_start` describes, so ``True`` there does
+        not imply ``True`` here and the two are not interchangeable. PostgreSQL
+        accepts both: ``ALTER SEQUENCE ... START WITH n`` records the start
+        value future ``RESTART`` calls use, while ``RESTART WITH n`` sets the
+        current value.
+
+        The default is ``False``, which is the safe side: Oracle, SQL Server,
+        Firebird and Snowflake all reject ``START`` on ``ALTER SEQUENCE``, and
+        a probe answering ``True`` by default would let them emit SQL their
+        server rejects. A dialect that does accept the clause must therefore
+        say so explicitly, as this one does.
+        """
+        return True
+
     def supports_sequence_if_not_exists(self) -> bool:
         return True
 
