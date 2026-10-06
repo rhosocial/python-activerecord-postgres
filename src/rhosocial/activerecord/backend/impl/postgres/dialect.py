@@ -74,7 +74,6 @@ from rhosocial.activerecord.backend.dialect.mixins import (
 from rhosocial.activerecord.backend.dialect.protocols import (
     AlterDatabaseSupport,
     AlterDomainSupport,
-    AlterSequenceSupport,
     AlterTableSupport,
     AlterTypeSupport,
     CreateDatabaseSupport,
@@ -82,7 +81,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     CreateIndexSupport,
     CreateRoutineSupport,
     CreateSchemaSupport,
-    CreateSequenceSupport,
     CreateTableSupport,
     CreateTriggerSupport,
     CreateTypeSupport,
@@ -92,7 +90,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     DropIndexSupport,
     DropRoutineSupport,
     DropSchemaSupport,
-    DropSequenceSupport,
     DropTableSupport,
     DropTriggerSupport,
     DropTypeSupport,
@@ -580,9 +577,10 @@ class PostgresDialect(
     CreateIndexSupport,
     DropIndexSupport,
     FulltextIndexSupport,
-    CreateSequenceSupport,
-    DropSequenceSupport,
-    AlterSequenceSupport,
+    # CREATE/DROP/ALTER SEQUENCE are declared once, on PostgresSequenceSupport,
+    # which derives from the three core per-statement protocols. Listing them
+    # here as well would put a base before the subclass that restates it and
+    # break C3; the dialect still satisfies each through that derivation.
     CreateTriggerSupport,
     DropTriggerSupport,
     CreateTypeSupport,
