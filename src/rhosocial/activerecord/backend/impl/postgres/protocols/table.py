@@ -7,7 +7,12 @@ exclusive to PostgreSQL table management.
 
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from rhosocial.activerecord.backend.dialect.protocols import TableSupport
+from rhosocial.activerecord.backend.dialect.protocols import (
+    AlterTableSupport,
+    CreateTableSupport,
+    DropTableSupport,
+    TableObjectSupport,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements import (
@@ -16,7 +21,13 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
-class PostgresTableSupport(TableSupport, Protocol):
+class PostgresTableSupport(
+    CreateTableSupport,
+    DropTableSupport,
+    AlterTableSupport,
+    TableObjectSupport,
+    Protocol,
+):
     """PostgreSQL table extended features protocol.
 
     PostgreSQL's table support includes exclusive features:

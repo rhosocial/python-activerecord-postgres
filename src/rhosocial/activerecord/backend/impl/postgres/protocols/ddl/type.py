@@ -3,7 +3,12 @@
 
 from typing import List, Optional, Protocol, Tuple, Union, runtime_checkable
 
-from rhosocial.activerecord.backend.dialect.protocols import UserDefinedTypeSupport
+from rhosocial.activerecord.backend.dialect.protocols import (
+    AlterTypeSupport,
+    CreateTypeSupport,
+    DropTypeSupport,
+    TypeObjectSupport,
+)
 from rhosocial.activerecord.backend.expression.statements.ddl_type import DropTypeExpression
 
 
@@ -11,7 +16,13 @@ __all__ = ["PostgresTypeSupport"]
 
 
 @runtime_checkable
-class PostgresTypeSupport(UserDefinedTypeSupport, Protocol):
+class PostgresTypeSupport(
+    CreateTypeSupport,
+    AlterTypeSupport,
+    DropTypeSupport,
+    TypeObjectSupport,
+    Protocol,
+):
     def supports_drop_type_cascade(self) -> bool:
         ...
 

@@ -7,6 +7,8 @@ statement generation with PostgreSQL-specific options.
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.objects import Table
+
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
 
@@ -106,10 +108,10 @@ class PostgresVacuumMixin:
 
         # Add table name if specified
         if expr.table_name:
-            if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
-            else:
-                parts.append(self.format_identifier(expr.table_name))
+            parts.append(
+                self.format_table_object(Table(self, expr.table_name, schema_name=expr.schema)
+                )[0]
+            )
 
             # Add columns for ANALYZE
             if expr.columns:
@@ -143,10 +145,10 @@ class PostgresVacuumMixin:
 
         # Add table name if specified
         if expr.table_name:
-            if expr.schema:
-                parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}")
-            else:
-                parts.append(self.format_identifier(expr.table_name))
+            parts.append(
+                self.format_table_object(Table(self, expr.table_name, schema_name=expr.schema)
+                )[0]
+            )
 
             # Add columns
             if expr.columns:

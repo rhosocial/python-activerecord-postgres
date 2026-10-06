@@ -27,11 +27,11 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     UpdateExpression,
     RawSQLExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -111,7 +111,7 @@ def vector_env(postgres_backend_single):
     for table in table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -120,7 +120,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_items ---
     create_items = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_items",
+        table=Table(dialect, 'test_vector_items'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_items.to_sql()
@@ -128,7 +128,7 @@ def vector_env(postgres_backend_single):
 
     insert_items = InsertExpression(
         dialect=dialect,
-        into="test_vector_items",
+        into=Table(dialect, 'test_vector_items'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -144,7 +144,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_l2 ---
     create_l2 = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_l2",
+        table=Table(dialect, 'test_vector_l2'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_l2.to_sql()
@@ -152,7 +152,7 @@ def vector_env(postgres_backend_single):
 
     insert_l2 = InsertExpression(
         dialect=dialect,
-        into="test_vector_l2",
+        into=Table(dialect, 'test_vector_l2'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -169,7 +169,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_cosine ---
     create_cosine = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_cosine",
+        table=Table(dialect, 'test_vector_cosine'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_cosine.to_sql()
@@ -177,7 +177,7 @@ def vector_env(postgres_backend_single):
 
     insert_cosine = InsertExpression(
         dialect=dialect,
-        into="test_vector_cosine",
+        into=Table(dialect, 'test_vector_cosine'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -194,7 +194,7 @@ def vector_env(postgres_backend_single):
     # --- test_vector_ip ---
     create_ip = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_ip",
+        table=Table(dialect, 'test_vector_ip'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_ip.to_sql()
@@ -202,7 +202,7 @@ def vector_env(postgres_backend_single):
 
     insert_ip = InsertExpression(
         dialect=dialect,
-        into="test_vector_ip",
+        into=Table(dialect, 'test_vector_ip'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -226,7 +226,7 @@ def vector_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -244,7 +244,7 @@ class TestPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "embedding")],
-            from_=TableExpression(dialect, "test_vector_items"),
+            from_=Table(dialect, "test_vector_items"),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -306,7 +306,7 @@ class TestPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), distance_expr],
-            from_=TableExpression(dialect, "test_vector_l2"),
+            from_=Table(dialect, "test_vector_l2"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -335,7 +335,7 @@ class TestPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), distance_expr],
-            from_=TableExpression(dialect, "test_vector_cosine"),
+            from_=Table(dialect, "test_vector_cosine"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -364,7 +364,7 @@ class TestPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), ip_expr],
-            from_=TableExpression(dialect, "test_vector_ip"),
+            from_=Table(dialect, "test_vector_ip"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -386,7 +386,7 @@ class TestPgvectorIntegration:
         # Create temporary table
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_update",
+            table=Table(dialect, 'test_vector_update'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -396,7 +396,7 @@ class TestPgvectorIntegration:
             # Insert initial vector
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_update",
+                into=Table(dialect, 'test_vector_update'),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -409,7 +409,7 @@ class TestPgvectorIntegration:
             # Update the vector
             update_expr = UpdateExpression(
                 dialect=dialect,
-                table="test_vector_update",
+                table=Table(dialect, 'test_vector_update'),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast("vector")},
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )
@@ -421,7 +421,7 @@ class TestPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
-                from_=TableExpression(dialect, "test_vector_update"),
+                from_=Table(dialect, "test_vector_update"),
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )
             sql, params = query.to_sql()
@@ -431,7 +431,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_update",
+                table=Table(dialect, 'test_vector_update'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -444,7 +444,7 @@ class TestPgvectorIntegration:
         # Create table for IVFFlat index test
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_ivfflat",
+            table=Table(dialect, 'test_vector_ivfflat'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -458,7 +458,7 @@ class TestPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_ivfflat",
+                into=Table(dialect, 'test_vector_ivfflat'),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -477,7 +477,7 @@ class TestPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_vector_ivfflat"),
             )
             sql, params = query.to_sql()
@@ -488,7 +488,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_ivfflat",
+                table=Table(dialect, 'test_vector_ivfflat'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -505,7 +505,7 @@ class TestPgvectorIntegration:
         # Create table for HNSW index test
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_hnsw",
+            table=Table(dialect, 'test_vector_hnsw'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -519,7 +519,7 @@ class TestPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_hnsw",
+                into=Table(dialect, 'test_vector_hnsw'),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -538,7 +538,7 @@ class TestPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_vector_hnsw"),
             )
             sql, params = query.to_sql()
@@ -549,7 +549,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_hnsw",
+                table=Table(dialect, 'test_vector_hnsw'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -562,7 +562,7 @@ class TestPgvectorIntegration:
         # Create table with VECTOR(3) dimension constraint
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_dim",
+            table=Table(dialect, 'test_vector_dim'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -572,7 +572,7 @@ class TestPgvectorIntegration:
             # Inserting a vector with wrong dimension should fail
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_dim",
+                into=Table(dialect, 'test_vector_dim'),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -585,7 +585,7 @@ class TestPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_dim",
+                table=Table(dialect, 'test_vector_dim'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -613,7 +613,7 @@ async def async_vector_env(async_postgres_backend_single):
     for table in async_table_names:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -622,7 +622,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_items_async ---
     create_items = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_items_async",
+        table=Table(dialect, 'test_vector_items_async'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_items.to_sql()
@@ -630,7 +630,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_items = InsertExpression(
         dialect=dialect,
-        into="test_vector_items_async",
+        into=Table(dialect, 'test_vector_items_async'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -646,7 +646,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_l2_async ---
     create_l2 = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_l2_async",
+        table=Table(dialect, 'test_vector_l2_async'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_l2.to_sql()
@@ -654,7 +654,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_l2 = InsertExpression(
         dialect=dialect,
-        into="test_vector_l2_async",
+        into=Table(dialect, 'test_vector_l2_async'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -671,7 +671,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_cosine_async ---
     create_cosine = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_cosine_async",
+        table=Table(dialect, 'test_vector_cosine_async'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_cosine.to_sql()
@@ -679,7 +679,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_cosine = InsertExpression(
         dialect=dialect,
-        into="test_vector_cosine_async",
+        into=Table(dialect, 'test_vector_cosine_async'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -696,7 +696,7 @@ async def async_vector_env(async_postgres_backend_single):
     # --- test_vector_ip_async ---
     create_ip = CreateTableExpression(
         dialect=dialect,
-        table="test_vector_ip_async",
+        table=Table(dialect, 'test_vector_ip_async'),
         columns=[_id_column(), _embedding_column()],
     )
     sql, params = create_ip.to_sql()
@@ -704,7 +704,7 @@ async def async_vector_env(async_postgres_backend_single):
 
     insert_ip = InsertExpression(
         dialect=dialect,
-        into="test_vector_ip_async",
+        into=Table(dialect, 'test_vector_ip_async'),
         columns=["embedding"],
         source=ValuesSource(
             dialect,
@@ -728,7 +728,7 @@ async def async_vector_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -747,7 +747,7 @@ class TestAsyncPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "embedding")],
-            from_=TableExpression(dialect, "test_vector_items_async"),
+            from_=Table(dialect, "test_vector_items_async"),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -814,7 +814,7 @@ class TestAsyncPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), distance_expr],
-            from_=TableExpression(dialect, "test_vector_l2_async"),
+            from_=Table(dialect, "test_vector_l2_async"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -842,7 +842,7 @@ class TestAsyncPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), distance_expr],
-            from_=TableExpression(dialect, "test_vector_cosine_async"),
+            from_=Table(dialect, "test_vector_cosine_async"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -870,7 +870,7 @@ class TestAsyncPgvectorIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), ip_expr],
-            from_=TableExpression(dialect, "test_vector_ip_async"),
+            from_=Table(dialect, "test_vector_ip_async"),
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
@@ -890,7 +890,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_update_async",
+            table=Table(dialect, 'test_vector_update_async'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -899,7 +899,7 @@ class TestAsyncPgvectorIntegration:
         try:
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_update_async",
+                into=Table(dialect, 'test_vector_update_async'),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -911,7 +911,7 @@ class TestAsyncPgvectorIntegration:
 
             update_expr = UpdateExpression(
                 dialect=dialect,
-                table="test_vector_update_async",
+                table=Table(dialect, 'test_vector_update_async'),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast("vector")},
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )
@@ -922,7 +922,7 @@ class TestAsyncPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
-                from_=TableExpression(dialect, "test_vector_update_async"),
+                from_=Table(dialect, "test_vector_update_async"),
                 where=Column(dialect, "id") == Literal(dialect, 1),
             )
             sql, params = query.to_sql()
@@ -932,7 +932,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_update_async",
+                table=Table(dialect, 'test_vector_update_async'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -945,7 +945,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_ivfflat_async",
+            table=Table(dialect, 'test_vector_ivfflat_async'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -958,7 +958,7 @@ class TestAsyncPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_ivfflat_async",
+                into=Table(dialect, 'test_vector_ivfflat_async'),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -976,7 +976,7 @@ class TestAsyncPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_vector_ivfflat_async"),
             )
             sql, params = query.to_sql()
@@ -987,7 +987,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_ivfflat_async",
+                table=Table(dialect, 'test_vector_ivfflat_async'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -1003,7 +1003,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_hnsw_async",
+            table=Table(dialect, 'test_vector_hnsw_async'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -1016,7 +1016,7 @@ class TestAsyncPgvectorIntegration:
             ]
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_hnsw_async",
+                into=Table(dialect, 'test_vector_hnsw_async'),
                 columns=["embedding"],
                 source=ValuesSource(dialect, rows),
             )
@@ -1034,7 +1034,7 @@ class TestAsyncPgvectorIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_vector_hnsw_async"),
             )
             sql, params = query.to_sql()
@@ -1045,7 +1045,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_hnsw_async",
+                table=Table(dialect, 'test_vector_hnsw_async'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -1058,7 +1058,7 @@ class TestAsyncPgvectorIntegration:
 
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_vector_dim_async",
+            table=Table(dialect, 'test_vector_dim_async'),
             columns=[_id_column(), _embedding_column()],
         )
         sql, params = create_expr.to_sql()
@@ -1067,7 +1067,7 @@ class TestAsyncPgvectorIntegration:
         try:
             insert_expr = InsertExpression(
                 dialect=dialect,
-                into="test_vector_dim_async",
+                into=Table(dialect, 'test_vector_dim_async'),
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
@@ -1080,7 +1080,7 @@ class TestAsyncPgvectorIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_vector_dim_async",
+                table=Table(dialect, 'test_vector_dim_async'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()

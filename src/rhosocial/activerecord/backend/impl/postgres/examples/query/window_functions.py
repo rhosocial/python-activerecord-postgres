@@ -25,8 +25,8 @@ dialect = backend.dialect
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.advanced_functions import (
     WindowFunctionCall,
@@ -101,7 +101,7 @@ query = QueryExpression(
         Column(dialect, 'salary'),
         row_number,
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
 )
 
 sql, params = query.to_sql()

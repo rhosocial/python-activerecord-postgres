@@ -10,6 +10,7 @@ the dialect's ``format_create_table_like_statement`` into PostgreSQL's clause
 form ``CREATE TABLE t (LIKE src [INCLUDING ...])``.
 """
 from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 
@@ -19,7 +20,11 @@ class TestPostgreSQLCreateTableLike:
     def test_basic_like_syntax(self):
         """Test basic CREATE TABLE ... LIKE syntax."""
         dialect = PostgresDialect()
-        expr = CreateTableLikeExpression(dialect, table="users_copy", like_table="users")
+        expr = CreateTableLikeExpression(
+            dialect,
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
+        )
         sql, params = expr.to_sql()
 
         assert sql == 'CREATE TABLE "users_copy" (LIKE "users")'
@@ -30,8 +35,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['defaults']},
         )
         sql, params = expr.to_sql()
@@ -44,8 +49,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['constraints']},
         )
         sql, params = expr.to_sql()
@@ -58,8 +63,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['indexes']},
         )
         sql, params = expr.to_sql()
@@ -72,8 +77,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['defaults', 'constraints', 'indexes']},
         )
         sql, params = expr.to_sql()
@@ -89,8 +94,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={
                 'including': ['defaults', 'constraints'],
                 'excluding': ['indexes', 'comments'],
@@ -110,8 +115,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options=['defaults', 'constraints'],
         )
         sql, params = expr.to_sql()
@@ -127,8 +132,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options=[
                 ('INCLUDING', 'DEFAULTS'),
                 ('EXCLUDING', 'INDEXES'),
@@ -147,8 +152,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['comments', 'defaults']},
         )
         sql, params = expr.to_sql()
@@ -164,8 +169,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             if_not_exists=True,
         )
         sql, params = expr.to_sql()
@@ -178,8 +183,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="temp_users",
-            like_table="users",
+            table=Table(dialect, "temp_users"),
+            like_table=Table(dialect, "users"),
             temporary=True,
         )
         sql, params = expr.to_sql()
@@ -192,8 +197,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table=('public', 'users'),
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users", schema_name="public"),
         )
         sql, params = expr.to_sql()
 
@@ -205,8 +210,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="temp_users_copy",
-            like_table=('public', 'users'),
+            table=Table(dialect, "temp_users_copy"),
+            like_table=Table(dialect, "users", schema_name="public"),
             temporary=True,
             if_not_exists=True,
         )
@@ -223,8 +228,8 @@ class TestPostgreSQLCreateTableLike:
         dialect = PostgresDialect()
         expr = CreateTableLikeExpression(
             dialect,
-            table="users_copy",
-            like_table="users",
+            table=Table(dialect, "users_copy"),
+            like_table=Table(dialect, "users"),
             like_options={'including': ['all']},
         )
         sql, params = expr.to_sql()

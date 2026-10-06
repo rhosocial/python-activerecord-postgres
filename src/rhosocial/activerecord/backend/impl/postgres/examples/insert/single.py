@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL'),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -45,12 +45,13 @@ backend.execute(sql, params)
 # ============================================================
 # SECTION: Single INSERT
 # ============================================================
-from rhosocial.activerecord.backend.expression import InsertExpression, ValuesSource, QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression import InsertExpression, ValuesSource, QueryExpression
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice')],
@@ -64,7 +65,7 @@ backend.execute(sql, params)
 verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
 )
 sql, params = verify_query.to_sql()
 result = backend.execute(sql, params)
@@ -75,7 +76,7 @@ print(f"Result: {result.data}")
 # ============================================================
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name='users', if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

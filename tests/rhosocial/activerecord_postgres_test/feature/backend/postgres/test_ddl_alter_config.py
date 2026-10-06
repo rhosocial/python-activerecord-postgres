@@ -35,6 +35,7 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint, ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
@@ -403,7 +404,7 @@ class TestPostgresConstraintEnforcement:
         fk = ForeignKeyConstraint(
             dialect,
             columns=["parent_id"],
-            foreign_key_table="people",
+            foreign_key_table=Table(dialect, 'people'),
             foreign_key_columns=["id"],
             enforced=True,
         )
@@ -439,7 +440,7 @@ class TestPostgresConstraintEnforcement:
         constraint = ForeignKeyConstraint(
             dialect,
             columns=["parent_id"],
-            foreign_key_table="people",
+            foreign_key_table=Table(dialect, 'people'),
             foreign_key_columns=["id"],
             validation=ConstraintValidation.NOVALIDATE,
         )
@@ -531,7 +532,7 @@ class TestPostgresConstraintEnforcement:
         )
         create = CreateTableExpression(
             dialect,
-            "ranges",
+            Table(dialect, 'ranges'),
             [ColumnDefinition(dialect, "range", IntegerType(dialect))],
             table_constraints=[exclude],
         )
@@ -557,7 +558,7 @@ class TestPostgresConstraintEnforcement:
         )
         invalid_create = CreateTableExpression(
             dialect,
-            "invalid_checks",
+            Table(dialect, 'invalid_checks'),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
             table_constraints=[not_valid_check],
         )

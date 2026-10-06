@@ -33,14 +33,75 @@ PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` �
 
 ### DDL 相关协议
 
+> DDL 协议已按语句拆分：一条语句一个协议。旧文档里的 `TableSupport`、
+> `ViewSupport`、`SchemaSupport`、`IndexSupport`、`SequenceSupport` 这些伞形名字
+> 已经不存在，请按下表逐条对应。
+
 | 协议 | 支持状态 | 版本要求 | 备注 |
 |------|---------|---------|------|
-| **TableSupport** | ✅ 完整 | 所有版本 | CREATE TABLE、DROP TABLE、ALTER TABLE 所有功能 |
-| **ViewSupport** | ✅ 完整 | 所有版本 | CREATE VIEW、DROP VIEW 所有选项 |
+| **CreateTableSupport** | ✅ 完整 | 所有版本 | CREATE TABLE 所有功能 |
+| **DropTableSupport** | ✅ 完整 | 所有版本 | DROP TABLE；IF EXISTS、CASCADE |
+| **AlterTableSupport** | ✅ 完整 | 所有版本 | ALTER TABLE 及其动作 |
+| **CreateViewSupport** | ✅ 完整 | 所有版本 | CREATE VIEW；OR REPLACE、TEMPORARY |
+| **DropViewSupport** | ✅ 完整 | 所有版本 | DROP VIEW；IF EXISTS、CASCADE |
+| **MaterializedViewSupport** | ✅ 完整 | ≥ 9.3 | 物化视图；CONCURRENTLY / IF NOT EXISTS ≥ 9.4 |
 | **TruncateSupport** | ✅ 完整 | 所有版本 | TRUNCATE TABLE；RESTART IDENTITY ≥ 8.4；CASCADE |
-| **SchemaSupport** | ✅ 完整 | 所有版本 | CREATE SCHEMA、DROP SCHEMA 所有选项 |
-| **IndexSupport** | ✅ 完整 | 所有版本 | CREATE INDEX、DROP INDEX 所有功能 |
-| **SequenceSupport** | ✅ 完整 | 所有版本 | CREATE SEQUENCE、DROP SEQUENCE |
+| **CreateSchemaSupport** | ✅ 完整 | 所有版本 | CREATE SCHEMA 所有选项 |
+| **DropSchemaSupport** | ✅ 完整 | 所有版本 | DROP SCHEMA 所有选项 |
+| **CreateIndexSupport** | ✅ 完整 | 所有版本 | CREATE INDEX；INCLUDE ≥ 11；NULLS NOT DISTINCT ≥ 15 |
+| **DropIndexSupport** | ✅ 完整 | 所有版本 | DROP INDEX |
+| **FulltextIndexSupport** | ✅ 完整 | ≥ 9.6 | 以 GIN + to_tsvector 实现全文索引 |
+| **CreateSequenceSupport** | ✅ 完整 | 所有版本 | CREATE SEQUENCE 所有选项 |
+| **DropSequenceSupport** | ✅ 完整 | 所有版本 | DROP SEQUENCE |
+| **AlterSequenceSupport** | ✅ 完整 | 所有版本 | ALTER SEQUENCE |
+| **CreateTriggerSupport** | ✅ 完整 | 所有版本 | CREATE TRIGGER；EXECUTE FUNCTION |
+| **DropTriggerSupport** | ✅ 完整 | 所有版本 | DROP TRIGGER |
+| **CreateTypeSupport** | ✅ 完整 | ≥ 9.6 | CREATE TYPE；COMPOSITE / RANGE / BASE / SHELL |
+| **AlterTypeSupport** | ✅ 完整 | ≥ 9.6 | ALTER TYPE 动作 |
+| **DropTypeSupport** | ✅ 完整 | ≥ 9.6 | DROP TYPE |
+| **CreateDomainSupport** | ✅ 完整 | 所有版本 | CREATE DOMAIN |
+| **AlterDomainSupport** | ✅ 完整 | 所有版本 | ALTER DOMAIN |
+| **DropDomainSupport** | ✅ 完整 | 所有版本 | DROP DOMAIN |
+| **CreateRoutineSupport** | ✅ 完整 | ≥ 9.6 | CREATE FUNCTION |
+| **DropRoutineSupport** | ✅ 完整 | ≥ 9.6 | DROP FUNCTION |
+| **CreateDatabaseSupport** | ✅ 完整 | 所有版本 | CREATE DATABASE 所有选项 |
+| **DropDatabaseSupport** | ✅ 完整 | 所有版本 | DROP DATABASE；WITH (FORCE) ≥ 13 |
+| **AlterDatabaseSupport** | ✅ 完整 | 所有版本 | ALTER DATABASE |
+| **CommentSupport** | ✅ 完整 | 所有版本 | COMMENT ON |
+| **ConstraintSupport** | ✅ 完整 | 所有版本 | 约束声明与变更 |
+| **PartitionSupport** | ✅ 完整 | ≥ 10.0 | 声明式分区 |
+
+### 命名空间协议（与 DDL 分开）
+
+命名与 DDL 是两件事，因此也有两套协议：「引擎有没有 schema」由上面的
+`CreateSchemaSupport` / `DropSchemaSupport` 回答；「名字**能不能**被限定」由
+`NamespaceSupport` 回答。PostgreSQL 两者都回答「可以」——正因为答案相同，它们才
+不能合成一个开关：一个引擎可以提供 `CREATE SCHEMA` 却拒绝限定名字，读错开关就
+得不到任何线索。
+
+| 协议 | 支持状态 | 备注 |
+|------|---------|------|
+| **NamespaceSupport** | ✅ 完整 | PostgreSQL 是两级命名空间：外层 database、内层 schema，用 `.` 连接 |
+| **TableObjectSupport** | ✅ 完整 | 渲染 `Table` |
+| **ViewObjectSupport** | ✅ 完整 | 渲染 `View` |
+| **MaterializedViewObjectSupport** | ✅ 完整 | 渲染 `MaterializedView` |
+| **ForeignTableObjectSupport** | ✅ 完整 | 渲染 `ForeignTable` |
+| **IndexObjectSupport** | ✅ 完整 | 渲染 `Index` |
+| **SequenceObjectSupport** | ✅ 完整 | 渲染 `Sequence` |
+| **TriggerObjectSupport** | ✅ 完整 | 渲染 `Trigger` |
+| **TypeObjectSupport** | ✅ 完整 | 渲染 `Type` |
+| **RoutineObjectSupport** | ✅ 完整 | 渲染 `Function` / `Procedure` |
+
+`NamespaceSupport` 现在把两件事分成两个方法：
+
+- `validate_namespace(expr)` —— 校验。返回 `None` 或抛
+  `UnsupportedFeatureError`。它在**渲染时**调用而不是构造时，因为构造时方言
+  可能还没定下来，对象的槽位也可能还没填完。
+- `format_qualified_name(expr)` —— 拼写。用 `self.separator`（类属性，默认 `"."`）
+  把各级连接起来。
+
+想在代码里提前判断，请用 `isinstance(dialect, NamespaceSupport)`：这些协议都是
+`runtime_checkable` 的，运行时检查仍然有效。
 
 ## PostgreSQL 专属协议
 
@@ -66,15 +127,15 @@ PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` �
 | 协议 | 描述 | 最低版本 | 文档 |
 |------|------|----------|------|
 | **PostgresPartitionSupport** | 高级分区特性 | PG 10+ | [分区文档](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
-| **PostgresPropertyGraphQueryMixin** | SQL/PGQ 兼容性门控 | 显式覆盖 | [SQL/PGQ 可用性](property_graph_query.md) |
+| `PostgresPropertyGraphQueryMixin`（mixin，非协议） | SQL/PGQ 兼容性门控 | 显式覆盖 | [SQL/PGQ 可用性](property_graph_query.md) |
 | **PostgresPgPartmanSupport** | pg_partman 自动分区 | PG 10+ | [分区文档](partition.md) |
-| **PostgresXMLMixin** | SQL/XML 标准表达式 | PG 8.3+ | [Dialect 表达式](dialect.md) |
-| **PostgresCollationMixin** | 表达式级 COLLATE | 所有版本 | [Dialect 表达式](dialect.md) |
+| **PostgresXMLSupport** | SQL/XML 标准表达式 | PG 8.3+ | [Dialect 表达式](dialect.md) |
+| **PostgresCollationSupport** | 表达式级 COLLATE | 所有版本 | [Dialect 表达式](dialect.md) |
 | **PostgresIndexSupport** | 索引增强 | PG 10+ | [索引文档](https://www.postgresql.org/docs/current/indexes.html) |
 | **PostgresVacuumSupport** | VACUUM 改进 | PG 13+ | [VACUUM 文档](https://www.postgresql.org/docs/current/sql-vacuum.html) |
 | **PostgresQueryOptimizationSupport** | 查询优化特性 | PG 11+ | [查询文档](https://www.postgresql.org/docs/current/runtime-config-query.html) |
 | **PostgresDataTypeSupport** | 数据类型增强 | PG 11+ | [数据类型文档](https://www.postgresql.org/docs/current/datatype.html) |
-| **PostgresSQLSyntaxSupport** | SQL 语法增强 | PG 12+ | [SQL 语法文档](https://www.postgresql.org/docs/current/sql-syntax.html) |
+| **PostgresFeaturesSupport** | 生成列、CTE SEARCH/CYCLE、FETCH WITH TIES | 生成列 PG 12+ | [SQL 语法文档](https://www.postgresql.org/docs/current/sql-syntax.html) |
 | **PostgresLogicalReplicationSupport** | 逻辑复制特性 | PG 10+ | [复制文档](https://www.postgresql.org/docs/current/logical-replication.html) |
 | **PostgresMaterializedViewSupport** | 物化视图（CREATE/REFRESH/ALTER/DROP、IF NOT EXISTS、CONCURRENTLY、TABLESPACE、存储参数） | PG 9.3+（CONCURRENTLY / IF NOT EXISTS：9.4+） | [物化视图 DDL 文档](https://www.postgresql.org/docs/current/sql-creatematerializedview.html) · [指南](../../ddl/materialized_view.md) |
 | **PostgresTableSupport** | 表特定特性 | 所有版本 | [表文档](https://www.postgresql.org/docs/current/ddl.html) |
@@ -159,9 +220,12 @@ PostgreSQL 索引特性超越标准 SQL：
 
 **官方文档**：https://www.postgresql.org/docs/current/datatype.html
 
-### PostgresSQLSyntaxSupport
+### PostgresFeaturesSupport
 
 **特性来源**：原生支持（无需扩展）
+
+SQL 语法层面的增强在这里——它们不属于任何一条具体的 DDL/DML 协议，所以没有各自
+的伞形协议。
 
 | 特性 | 支持 | 版本 | 描述 |
 |------|------|------|------|

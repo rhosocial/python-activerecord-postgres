@@ -26,11 +26,11 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
     OrderByClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression import RawSQLExpression
@@ -56,14 +56,14 @@ def cube_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_cubes table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table="test_cubes",
+        table=Table(dialect, 'test_cubes'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -82,7 +82,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cubes
     insert_cubes = InsertExpression(
         dialect=dialect,
-        into="test_cubes",
+        into=Table(dialect, 'test_cubes'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -98,7 +98,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_dist table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_dist",
+        table=Table(dialect, 'test_cube_dist'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -117,7 +117,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cube_dist
     insert_dist = InsertExpression(
         dialect=dialect,
-        into="test_cube_dist",
+        into=Table(dialect, 'test_cube_dist'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -133,7 +133,7 @@ def cube_env(postgres_backend_single):
     # Setup: create test_cube_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_idx",
+        table=Table(dialect, 'test_cube_idx'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -152,7 +152,7 @@ def cube_env(postgres_backend_single):
     # Insert data into test_cube_idx
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_cube_idx",
+        into=Table(dialect, 'test_cube_idx'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -165,8 +165,8 @@ def cube_env(postgres_backend_single):
     # Create GiST index on test_cube_idx
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_test_cube",
-        table_name="test_cube_idx",
+        index=Index(dialect, 'idx_test_cube'),
+        table=Table(dialect, 'test_cube_idx'),
         columns=["c"],
         index_type="GIST",
         if_not_exists=True,
@@ -180,7 +180,7 @@ def cube_env(postgres_backend_single):
     for table in ["test_cubes", "test_cube_dist", "test_cube_idx"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -198,7 +198,7 @@ class TestCubeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "c")],
-            from_=TableExpression(dialect, "test_cubes"),
+            from_=Table(dialect, "test_cubes"),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -320,7 +320,7 @@ class TestCubeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_cube_idx"),
         )
         sql, params = query.to_sql()
@@ -342,14 +342,14 @@ async def async_cube_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_cubes_async table
     create_cubes = CreateTableExpression(
         dialect=dialect,
-        table="test_cubes_async",
+        table=Table(dialect, 'test_cubes_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -368,7 +368,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cubes_async
     insert_cubes = InsertExpression(
         dialect=dialect,
-        into="test_cubes_async",
+        into=Table(dialect, 'test_cubes_async'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -384,7 +384,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_dist_async table
     create_dist = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_dist_async",
+        table=Table(dialect, 'test_cube_dist_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -403,7 +403,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cube_dist_async
     insert_dist = InsertExpression(
         dialect=dialect,
-        into="test_cube_dist_async",
+        into=Table(dialect, 'test_cube_dist_async'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -419,7 +419,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Setup: create test_cube_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_cube_idx_async",
+        table=Table(dialect, 'test_cube_idx_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -438,7 +438,7 @@ async def async_cube_env(async_postgres_backend_single):
     # Insert data into test_cube_idx_async
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_cube_idx_async",
+        into=Table(dialect, 'test_cube_idx_async'),
         columns=["c"],
         source=ValuesSource(
             dialect,
@@ -451,8 +451,8 @@ async def async_cube_env(async_postgres_backend_single):
     # Create GiST index on test_cube_idx_async
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_test_cube_async",
-        table_name="test_cube_idx_async",
+        index=Index(dialect, 'idx_test_cube_async'),
+        table=Table(dialect, 'test_cube_idx_async'),
         columns=["c"],
         index_type="GIST",
         if_not_exists=True,
@@ -466,7 +466,7 @@ async def async_cube_env(async_postgres_backend_single):
     for table in ["test_cubes_async", "test_cube_dist_async", "test_cube_idx_async"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -485,7 +485,7 @@ class TestAsyncCubeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "c")],
-            from_=TableExpression(dialect, "test_cubes_async"),
+            from_=Table(dialect, "test_cubes_async"),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -593,7 +593,7 @@ class TestAsyncCubeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_cube_idx_async"),
         )
         sql, params = query.to_sql()

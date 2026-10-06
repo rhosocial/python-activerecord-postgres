@@ -30,7 +30,6 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     CreateMaterializedViewExpression,
     DropMaterializedViewExpression,
     RefreshMaterializedViewExpression,
@@ -38,6 +37,7 @@ from rhosocial.activerecord.backend.expression import (
     GroupByHavingClause,
     FunctionCall,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, MaterializedView, Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column, WildcardExpression
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
@@ -76,20 +76,20 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 ddl_options = ExecutionOptions(stmt_type=StatementType.DDL)
 
 _drop_mv = DropMaterializedViewExpression(
-    dialect=dialect, view_name='sales_summary', if_exists=True, cascade=True,
+    dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), if_exists=True, cascade=True,
 )
 backend.execute(*_drop_mv.to_sql())
 _drop_mv = DropMaterializedViewExpression(
-    dialect=dialect, view_name='sales_daily', if_exists=True, cascade=True,
+    dialect=dialect, view=MaterializedView(dialect, 'sales_daily'), if_exists=True, cascade=True,
 )
 backend.execute(*_drop_mv.to_sql())
 _drop_mv = DropMaterializedViewExpression(
-    dialect=dialect, view_name='sales_product_summary', if_exists=True, cascade=True,
+    dialect=dialect, view=MaterializedView(dialect, 'sales_product_summary'), if_exists=True, cascade=True,
 )
 backend.execute(*_drop_mv.to_sql())
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='sales',
+    table=Table(dialect, 'sales'),
     if_exists=True,
     cascade=True,
 )
@@ -97,7 +97,7 @@ backend.execute(*drop_table.to_sql())
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table='sales',
+    table=Table(dialect, 'sales'),
     columns=[
         ColumnDefinition(
             dialect,
@@ -125,7 +125,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=Table(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,
@@ -155,7 +155,7 @@ summary_query = QueryExpression(
         FunctionCall(dialect, 'SUM', Column(dialect, 'amount')),
         FunctionCall(dialect, 'AVG', Column(dialect, 'amount')),
     ],
-    from_=TableExpression(dialect, 'sales'),
+    from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
         dialect,
         group_by=[Column(dialect, 'product_id')],
@@ -164,7 +164,7 @@ summary_query = QueryExpression(
 
 create_mv = PostgresCreateMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     query=summary_query,
     column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
     # Storage parameter names are validated against PostgresStorageParameter;
@@ -184,7 +184,7 @@ backend.execute(sql, params)
 verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'sales_summary'),
+    from_=Table(dialect, 'sales_summary'),
     order_by=OrderByClause(dialect, [Column(dialect, 'product_id')]),
 )
 sql, params = verify_query.to_sql()
@@ -207,12 +207,12 @@ sales_query = QueryExpression(
         Column(dialect, 'amount'),
         Column(dialect, 'sale_date'),
     ],
-    from_=TableExpression(dialect, 'sales'),
+    from_=Table(dialect, 'sales'),
 )
 
 mv_tablespace = CreateMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_on_fast_storage',
+    view=MaterializedView(dialect, 'sales_on_fast_storage'),
     query=sales_query,
     tablespace='fast_ssd',
 )
@@ -231,7 +231,7 @@ daily_query = QueryExpression(
         Column(dialect, 'sale_date'),
         FunctionCall(dialect, 'SUM', Column(dialect, 'amount')),
     ],
-    from_=TableExpression(dialect, 'sales'),
+    from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
         dialect,
         group_by=[Column(dialect, 'sale_date')],
@@ -240,7 +240,7 @@ daily_query = QueryExpression(
 
 create_mv_nodata = CreateMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_daily',
+    view=MaterializedView(dialect, 'sales_daily'),
     query=daily_query,
     column_aliases=['sale_date', 'daily_total'],
     with_data=False,
@@ -253,7 +253,7 @@ backend.execute(sql, params)
 nodata_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'sales_daily'),
+    from_=Table(dialect, 'sales_daily'),
 )
 sql, params = nodata_query.to_sql()
 try:
@@ -270,7 +270,7 @@ except Exception as e:
 # Insert new data so refresh has an effect
 insert_new = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=Table(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,
@@ -283,7 +283,7 @@ backend.execute(sql, params)
 # Refresh sales_summary
 refresh_mv = RefreshMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
 )
 sql, params = refresh_mv.to_sql()
 print(f"\nREFRESH SQL: {sql}")
@@ -304,8 +304,8 @@ for row in result.data or []:
 # Create a unique index prerequisite
 create_unique_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='sales_summary_product_id_idx',
-    table_name='sales_summary',
+    index=Index(dialect, 'sales_summary_product_id_idx'),
+    table=Table(dialect, 'sales_summary'),
     columns=['product_id'],
     unique=True,
 )
@@ -315,7 +315,7 @@ backend.execute(sql, params, options=ddl_options)
 # Insert more data
 insert_more = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=Table(dialect, 'sales'),
     columns=['product_id', 'amount', 'sale_date'],
     source=ValuesSource(
         dialect,
@@ -327,7 +327,7 @@ backend.execute(sql, params)
 
 refresh_concurrent = RefreshMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     concurrent=True,
 )
 sql, params = refresh_concurrent.to_sql()
@@ -348,7 +348,7 @@ for row in result.data or []:
 
 refresh_with_data = RefreshMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_daily',
+    view=MaterializedView(dialect, 'sales_daily'),
     with_data=True,
 )
 sql, params = refresh_with_data.to_sql()
@@ -372,17 +372,16 @@ for row in result.data or []:
 # Refresh with schema (public is PG's default schema)
 pg_refresh = PostgresRefreshMaterializedViewExpression(
     dialect=dialect,
-    name='sales_summary',
-    schema='public',
+    view=MaterializedView(dialect, 'sales_summary', schema_name='public'),
 )
 sql, params = pg_refresh.to_sql()
 print(f"\nSchema-qualified REFRESH SQL: {sql}")
 backend.execute(sql, params)
 
-# Also supports backward-compatible aliases: name=, concurrently=
+# Also supports the backward-compatible concurrently= alias
 pg_refresh_c = PostgresRefreshMaterializedViewExpression(
     dialect=dialect,
-    name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     concurrently=True,
 )
 sql, params = pg_refresh_c.to_sql()
@@ -395,7 +394,7 @@ print(f"Backward-compat CONCURRENTLY SQL: {sql}")
 
 drop_mv1 = DropMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     if_exists=True,
     cascade=True,
 )
@@ -405,7 +404,7 @@ backend.execute(sql, params)
 
 drop_mv2 = DropMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_daily',
+    view=MaterializedView(dialect, 'sales_daily'),
     if_exists=True,
 )
 sql, params = drop_mv2.to_sql()
@@ -419,7 +418,7 @@ backend.execute(sql, params)
 
 drop_noexist = DropMaterializedViewExpression(
     dialect=dialect,
-    view_name='nonexistent_mv',
+    view=MaterializedView(dialect, 'nonexistent_mv'),
 )
 sql, params = drop_noexist.to_sql()
 print(f"DROP without IF EXISTS SQL (not executed): {sql}")
@@ -434,7 +433,7 @@ print("  Note: This would fail at runtime if the MV does not exist.")
 
 if_not_exists_mv = PostgresCreateMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     query=summary_query,
     column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
     if_not_exists=True,
@@ -453,9 +452,8 @@ backend.execute('CREATE SCHEMA IF NOT EXISTS mv_reporting', options=ddl_options)
 
 schema_mv = PostgresCreateMaterializedViewExpression(
     dialect=dialect,
-    view_name='Order Summary',
+    view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
     query=summary_query,
-    schema='mv_reporting',
     column_aliases=['product_id', 'total_sales', 'total_amount', 'avg_amount'],
 )
 sql, params = schema_mv.to_sql()
@@ -465,7 +463,7 @@ backend.execute(sql, params)
 schema_verify = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(
+    from_=Table(
         dialect, 'Order Summary', schema_name='mv_reporting'
     ),
 )
@@ -485,7 +483,7 @@ for row in result.data or []:
 
 alter_mv = PostgresAlterMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     actions=[
         PostgresSetMaterializedViewPropertiesAction(
             dialect, {PostgresStorageParameter.FILLFACTOR: 85}
@@ -501,7 +499,7 @@ backend.execute(sql, params, options=ddl_options)
 
 rename_mv = PostgresAlterMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary',
+    view=MaterializedView(dialect, 'sales_summary'),
     actions=[PostgresRenameMaterializedViewAction(dialect, 'sales_summary_v2')],
 )
 sql, params = rename_mv.to_sql()
@@ -511,8 +509,7 @@ backend.execute(sql, params, options=ddl_options)
 # Move the schema-qualified view into the public schema.
 set_schema_mv = PostgresAlterMaterializedViewExpression(
     dialect=dialect,
-    view_name='Order Summary',
-    schema='mv_reporting',
+    view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
     actions=[PostgresSetMaterializedViewSchemaAction(dialect, 'public')],
 )
 sql, params = set_schema_mv.to_sql()
@@ -522,7 +519,7 @@ backend.execute(sql, params, options=ddl_options)
 # CURRENT_USER / CURRENT_ROLE / SESSION_USER are emitted verbatim.
 owner_mv = PostgresAlterMaterializedViewExpression(
     dialect=dialect,
-    view_name='sales_summary_v2',
+    view=MaterializedView(dialect, 'sales_summary_v2'),
     actions=[PostgresChangeMaterializedViewOwnerAction(dialect, 'CURRENT_USER')],
 )
 sql, params = owner_mv.to_sql()
@@ -552,8 +549,7 @@ print(f"\nMV info: {info.name if info else None} definition={info.definition[:60
 
 drop_schema_mv = PostgresDropMaterializedViewExpression(
     dialect=dialect,
-    view_name='Order Summary',
-    schema='mv_reporting',
+    view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
     if_exists=True,
     cascade=True,
 )
@@ -565,13 +561,13 @@ backend.execute(sql, params, options=ddl_options)
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 drop_mv = PostgresDropMaterializedViewExpression(
-    dialect=dialect, view_name='sales_summary_v2', if_exists=True, cascade=True,
+    dialect=dialect, view=MaterializedView(dialect, 'sales_summary_v2'), if_exists=True, cascade=True,
 )
 backend.execute(*drop_mv.to_sql())
 backend.execute('DROP SCHEMA IF EXISTS mv_reporting CASCADE', options=ddl_options)
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='sales',
+    table=Table(dialect, 'sales'),
     if_exists=True,
     cascade=True,
 )

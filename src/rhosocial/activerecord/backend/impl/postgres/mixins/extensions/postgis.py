@@ -12,6 +12,8 @@ For DDL index creation, use ``format_spatial_index_statement``.
 
 from typing import Optional, Tuple
 
+from rhosocial.activerecord.backend.expression.objects import Table
+
 
 class PostgresPostGISMixin:
     """PostGIS spatial functionality implementation."""
@@ -46,6 +48,7 @@ class PostgresPostGISMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
+        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        )
         sql = f"CREATE INDEX {index_name} ON {full_table} USING gist ({column_name})"
         return (sql, ())

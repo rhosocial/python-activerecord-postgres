@@ -28,9 +28,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -69,7 +69,7 @@ def _setup_users_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -87,7 +87,7 @@ def _setup_users_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -109,7 +109,7 @@ def _setup_encrypt_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -127,7 +127,7 @@ def _setup_encrypt_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )
@@ -139,7 +139,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -161,7 +161,7 @@ async def _async_setup_users_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -179,7 +179,7 @@ async def _async_setup_users_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username", "password_hash"],
         source=ValuesSource(dialect, rows),
     )
@@ -201,7 +201,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -219,7 +219,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["secret_data"],
         source=ValuesSource(dialect, rows),
     )
@@ -231,7 +231,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -290,7 +290,7 @@ class TestPgcryptoIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[match_expr],
-            from_=TableExpression(dialect, TABLE_USERS),
+            from_=Table(dialect, TABLE_USERS),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -312,7 +312,7 @@ class TestPgcryptoIntegration:
         query_wrong = QueryExpression(
             dialect=dialect,
             select=[match_expr_wrong],
-            from_=TableExpression(dialect, TABLE_USERS),
+            from_=Table(dialect, TABLE_USERS),
             where=where_pred,
         )
         sql, params = query_wrong.to_sql()
@@ -476,7 +476,7 @@ class TestPgcryptoIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[decrypt_func],
-            from_=TableExpression(dialect, TABLE_ENCRYPT),
+            from_=Table(dialect, TABLE_ENCRYPT),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -492,7 +492,7 @@ class TestPgcryptoIntegration:
         query_wrong = QueryExpression(
             dialect=dialect,
             select=[decrypt_func_wrong],
-            from_=TableExpression(dialect, TABLE_ENCRYPT),
+            from_=Table(dialect, TABLE_ENCRYPT),
             where=where_pred,
         )
         sql, params = query_wrong.to_sql()
@@ -553,7 +553,7 @@ class TestAsyncPgcryptoIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[match_expr],
-            from_=TableExpression(dialect, TABLE_USERS_ASYNC),
+            from_=Table(dialect, TABLE_USERS_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -575,7 +575,7 @@ class TestAsyncPgcryptoIntegration:
         query_wrong = QueryExpression(
             dialect=dialect,
             select=[match_expr_wrong],
-            from_=TableExpression(dialect, TABLE_USERS_ASYNC),
+            from_=Table(dialect, TABLE_USERS_ASYNC),
             where=where_pred,
         )
         sql, params = query_wrong.to_sql()
@@ -744,7 +744,7 @@ class TestAsyncPgcryptoIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[decrypt_func],
-            from_=TableExpression(dialect, TABLE_ENCRYPT_ASYNC),
+            from_=Table(dialect, TABLE_ENCRYPT_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -760,7 +760,7 @@ class TestAsyncPgcryptoIntegration:
         query_wrong = QueryExpression(
             dialect=dialect,
             select=[decrypt_func_wrong],
-            from_=TableExpression(dialect, TABLE_ENCRYPT_ASYNC),
+            from_=Table(dialect, TABLE_ENCRYPT_ASYNC),
             where=where_pred,
         )
         sql, params = query_wrong.to_sql()

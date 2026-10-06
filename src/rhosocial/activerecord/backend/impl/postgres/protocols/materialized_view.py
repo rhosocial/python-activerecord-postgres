@@ -135,7 +135,7 @@ class PostgresMaterializedViewSupport(Protocol):
         """
         ...
 
-    def format_materialized_view_alter_action(self, expr: Any) -> str:
+    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Storage parameter names must come from
@@ -145,6 +145,10 @@ class PostgresMaterializedViewSupport(Protocol):
             expr: A ``MaterializedViewAlterAction`` subclass instance.
 
         Returns:
-            The action SQL without the leading ``ALTER MATERIALIZED VIEW <name>``.
+            A ``(sql, params)`` tuple whose ``sql`` is the action body without the
+            leading ``ALTER MATERIALIZED VIEW <name>``. Each action class names
+            this method as its ``format_method``, so the return value is what
+            ``to_sql()`` hands back -- it is a tuple even though the SQL is a
+            fragment.
         """
         ...

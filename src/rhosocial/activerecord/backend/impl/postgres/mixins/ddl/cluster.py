@@ -10,6 +10,7 @@ Version Requirements:
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from ...expression.ddl.cluster import PostgresClusterExpression
@@ -31,13 +32,14 @@ class PostgresClusterMixin:
     def _format_cluster_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(table_name)}"
-            )
-        return self.format_identifier(table_name)
+        """Render the table a CLUSTER statement targets.
+
+        The name is a :class:`Table` schema object rendered by the dialect.
+        ``CLUSTER`` with no table at all (cluster every table) is handled by
+        the caller, which never reaches this helper.
+        """
+        sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema))
+        return sql
 
     # ------------------------------------------------------------------ #
     # Statement

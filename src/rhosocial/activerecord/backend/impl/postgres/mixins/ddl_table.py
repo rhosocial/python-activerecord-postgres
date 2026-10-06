@@ -2,6 +2,9 @@
 import re
 from typing import Any, List, Tuple
 
+from rhosocial.activerecord.backend.expression.objects import Table
+
+
 class PostgresTableMixin:
     """PostgreSQL table extended features implementation."""
 
@@ -119,11 +122,28 @@ class PostgresTableMixin:
         * ``dict`` with ``"including"`` / ``"excluding"`` lists;
         * ``list`` of feature strings (treated as ``INCLUDING``);
         * ``list`` of ``(action, feature)`` tuples (``ACTION FEATURE``).
+
+        Raises:
+            TypeError: ``expr.table`` is not a :class:`Table`, or
+                ``expr.like_table`` is not a :class:`Table`. Two ``Table`` slots
+                that read alike are exactly where a wrong kind hides: both would
+                render their own name and the statement would still be
+                well-formed.
         """
         from rhosocial.activerecord.backend.dialect.exceptions import (
             UnsupportedFeatureError,
         )
 
+        if not isinstance(expr.table, Table):
+            raise TypeError(
+                f"CreateTableLikeExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
+        if not isinstance(expr.like_table, Table):
+            raise TypeError(
+                f"CreateTableLikeExpression.like_table must be a Table, "
+                f"got {type(expr.like_table).__name__}"
+            )
         if not self.supports_create_table_like():
             raise UnsupportedFeatureError(self.name, "CREATE TABLE ... (LIKE ...)")
 

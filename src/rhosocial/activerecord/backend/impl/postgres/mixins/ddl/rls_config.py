@@ -13,6 +13,7 @@ Version Requirements:
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from ...expression.ddl.rls_config import (
@@ -45,13 +46,13 @@ class PostgresRlsConfigMixin:
     def _format_rls_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(table_name)}"
-            )
-        return self.format_identifier(table_name)
+        """Render the table whose row-level security is being toggled.
+
+        The name is a :class:`Table` schema object rendered by the dialect, so
+        both RLS forms quote and qualify the table identically.
+        """
+        sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema))
+        return sql
 
     # ------------------------------------------------------------------ #
     # ENABLE / DISABLE

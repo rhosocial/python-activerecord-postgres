@@ -13,8 +13,8 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     LogicalPredicate,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.functions import (
     date_add,
     date_diff,
@@ -150,7 +150,7 @@ def _datetime_expression_query(dialect):
                 dialect, "minute", Column(dialect, "started_at"), Column(dialect, "ended_at")
             ).as_("duration_minutes"),
         ],
-        from_=TableExpression(dialect, "explain_temporal_events"),
+        from_=Table(dialect, "explain_temporal_events"),
         where=_category_created_filter(dialect),
         order_by=OrderByClause(
             dialect,
@@ -178,7 +178,7 @@ class TestSyncPostgresDateTimeIntervalExplainExamples:
             QueryExpression(
                 dialect,
                 select=[Column(dialect, "id"), Column(dialect, "created_at")],
-                from_=TableExpression(dialect, "explain_temporal_events"),
+                from_=Table(dialect, "explain_temporal_events"),
                 where=_range_filter(
                     dialect,
                     "created_at",
@@ -208,7 +208,7 @@ class TestSyncPostgresDateTimeIntervalExplainExamples:
                         Column(dialect, "category"),
                         Column(dialect, "created_at"),
                     ],
-                    from_=TableExpression(dialect, "explain_temporal_events"),
+                    from_=Table(dialect, "explain_temporal_events"),
                     where=_category_created_filter(dialect),
                 )
             )
@@ -260,7 +260,7 @@ class TestAsyncPostgresDateTimeIntervalExplainExamples:
                         Column(dialect, "category"),
                         Column(dialect, "created_at"),
                     ],
-                    from_=TableExpression(dialect, "explain_temporal_events"),
+                    from_=Table(dialect, "explain_temporal_events"),
                     where=_category_created_filter(dialect),
                 )
             )

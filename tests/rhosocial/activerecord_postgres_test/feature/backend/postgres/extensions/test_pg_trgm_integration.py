@@ -27,9 +27,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression import RawSQLExpression
@@ -71,7 +71,7 @@ def _setup_trgm_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -86,7 +86,7 @@ def _setup_trgm_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -108,7 +108,7 @@ def _setup_trgm_ops_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -122,7 +122,7 @@ def _setup_trgm_ops_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -149,7 +149,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -167,7 +167,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -189,7 +189,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -201,7 +201,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )
@@ -213,7 +213,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -234,7 +234,7 @@ async def _async_setup_trgm_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -249,7 +249,7 @@ async def _async_setup_trgm_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -271,7 +271,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -285,7 +285,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -312,7 +312,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -330,7 +330,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -352,7 +352,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -364,7 +364,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["description"],
         source=ValuesSource(dialect, rows),
     )
@@ -376,7 +376,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -432,7 +432,7 @@ class TestPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[sim_func],
-            from_=TableExpression(dialect, TABLE_TRGM),
+            from_=Table(dialect, TABLE_TRGM),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -455,7 +455,7 @@ class TestPgTrgmIntegration:
         query_world = QueryExpression(
             dialect=dialect,
             select=[sim_func_world],
-            from_=TableExpression(dialect, TABLE_TRGM),
+            from_=Table(dialect, TABLE_TRGM),
             where=where_pred_world,
         )
         sql, params = query_world.to_sql()
@@ -475,7 +475,7 @@ class TestPgTrgmIntegration:
         query_diff = QueryExpression(
             dialect=dialect,
             select=[sim_func_diff],
-            from_=TableExpression(dialect, TABLE_TRGM),
+            from_=Table(dialect, TABLE_TRGM),
             where=where_pred_diff,
         )
         sql, params = query_diff.to_sql()
@@ -511,7 +511,7 @@ class TestPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name"), sim_func_select],
-            from_=TableExpression(dialect, TABLE_TRGM_OPS),
+            from_=Table(dialect, TABLE_TRGM_OPS),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -553,7 +553,7 @@ class TestPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[count_func],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=combined_pred,
         )
         sql, params = query.to_sql()
@@ -574,7 +574,7 @@ class TestPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, TABLE_TRGM_IDX),
+            from_=Table(dialect, TABLE_TRGM_IDX),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -617,7 +617,7 @@ class TestPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[ws_func],
-            from_=TableExpression(dialect, TABLE_TRGM_WORD),
+            from_=Table(dialect, TABLE_TRGM_WORD),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -677,7 +677,7 @@ class TestAsyncPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[sim_func],
-            from_=TableExpression(dialect, TABLE_TRGM_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -700,7 +700,7 @@ class TestAsyncPgTrgmIntegration:
         query_world = QueryExpression(
             dialect=dialect,
             select=[sim_func_world],
-            from_=TableExpression(dialect, TABLE_TRGM_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_ASYNC),
             where=where_pred_world,
         )
         sql, params = query_world.to_sql()
@@ -720,7 +720,7 @@ class TestAsyncPgTrgmIntegration:
         query_diff = QueryExpression(
             dialect=dialect,
             select=[sim_func_diff],
-            from_=TableExpression(dialect, TABLE_TRGM_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_ASYNC),
             where=where_pred_diff,
         )
         sql, params = query_diff.to_sql()
@@ -757,7 +757,7 @@ class TestAsyncPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name"), sim_func_select],
-            from_=TableExpression(dialect, TABLE_TRGM_OPS_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_OPS_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -798,7 +798,7 @@ class TestAsyncPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[count_func],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=combined_pred,
         )
         sql, params = query.to_sql()
@@ -819,7 +819,7 @@ class TestAsyncPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, TABLE_TRGM_IDX_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_IDX_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -864,7 +864,7 @@ class TestAsyncPgTrgmIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[ws_func],
-            from_=TableExpression(dialect, TABLE_TRGM_WORD_ASYNC),
+            from_=Table(dialect, TABLE_TRGM_WORD_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()

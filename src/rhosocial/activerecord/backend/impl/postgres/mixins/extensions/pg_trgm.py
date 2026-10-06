@@ -12,6 +12,8 @@ For DDL index creation, use ``format_trgm_index_statement``.
 
 from typing import Optional, Tuple
 
+from rhosocial.activerecord.backend.expression.objects import Table
+
 
 class PostgresPgTrgmMixin:
     """pg_trgm trigram functionality implementation."""
@@ -39,6 +41,7 @@ class PostgresPgTrgmMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
+        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        )
         sql = f"CREATE INDEX {index_name} ON {full_table} USING {index_type} ({column_name} gin_trgm_ops)"
         return (sql, ())

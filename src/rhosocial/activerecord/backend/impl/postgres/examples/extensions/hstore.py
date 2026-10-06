@@ -35,7 +35,7 @@ dialect = backend.dialect
 # Clean up using DropTableExpression
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -55,13 +55,10 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     UpdateExpression,
 )
-from rhosocial.activerecord.backend.expression.core import (
-    Column,
-    Literal,
-    FunctionCall,
-    Subquery,
-    TableExpression,
+from rhosocial.activerecord.backend.expression import (
+    Column, Literal, FunctionCall, Subquery,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
 )
@@ -112,7 +109,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="products",
+        table=Table(dialect, 'products'),
         columns=columns,
         if_not_exists=True,
     )
@@ -124,7 +121,7 @@ if installed:
     # Use Literal with .cast("hstore") for type-safe hstore insertion
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=Table(dialect, 'products'),
         columns=["name", "attributes"],
         source=ValuesSource(
             dialect,
@@ -164,7 +161,7 @@ if installed:
                 Literal(dialect, "color"),
             )).as_("color"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Get value by key (-> operator) ---")
@@ -178,7 +175,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "attributes")],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "?",
             Column(dialect, "attributes"),
@@ -197,7 +194,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "attributes")],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "attributes"),
@@ -222,7 +219,7 @@ if installed:
                 Literal(dialect, "brand=>Acme").cast("hstore"),
             )).as_("with_brand"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Concatenation operator (||) ---")
@@ -241,7 +238,7 @@ if installed:
                 Column(dialect, "attributes"),
             ).as_("keys"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Get all keys (akeys function) ---")
@@ -260,7 +257,7 @@ if installed:
                 Column(dialect, "attributes"),
             ).as_("values"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Get all values (avals function) ---")
@@ -279,7 +276,7 @@ if installed:
                 Column(dialect, "attributes"),
             ).as_("key"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Get keys as set (skeys function) ---")
@@ -299,7 +296,7 @@ if installed:
                 Literal(dialect, "weight"),
             ).as_("without_weight"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
     )
     sql, params = query.to_sql()
     print("\n--- Delete key (delete function) ---")
@@ -313,7 +310,7 @@ if installed:
     dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
     update_expr = UpdateExpression(
         dialect=dialect,
-        table="products",
+        table=Table(dialect, 'products'),
         assignments={
             "attributes": BinaryExpression(
                 dialect, "||",
@@ -349,7 +346,7 @@ if installed:
                 Literal(dialect, "discount"),
             )).as_("discount"),
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=ComparisonPredicate(
             dialect, "=",
             BinaryExpression(
@@ -371,7 +368,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

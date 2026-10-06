@@ -19,8 +19,8 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -54,7 +54,7 @@ print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
 # Clean up
 for table in ['events_v13', 'events_legacy']:
-    drop = DropTableExpression(dialect=dialect, table_name=table, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
@@ -68,7 +68,7 @@ for table in ['events_v13', 'events_legacy']:
 #   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='events',
+    table=Table(dialect, 'events'),
     columns=[
         ColumnDefinition('id', 'UUID', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -98,7 +98,7 @@ print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
 # 2. INSERT with auto-generated UUID (using DEFAULT)
 insert_default = InsertExpression(
     dialect=dialect,
-    into='events',
+    into=Table(dialect, 'events'),
     columns=['name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'user_created')],
@@ -112,7 +112,7 @@ print("Inserted rows with auto-generated UUIDs")
 # 3. INSERT with explicit UUID value
 insert_explicit = InsertExpression(
     dialect=dialect,
-    into='events',
+    into=Table(dialect, 'events'),
     columns=['id', 'name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, '550e8400-e29b-41d4-a716-446655440000'), Literal(dialect, 'explicit_uuid')],
@@ -126,7 +126,7 @@ print("Inserted row with explicit UUID")
 verify_query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'name')],
-    from_=TableExpression(dialect, 'events'),
+    from_=Table(dialect, 'events'),
 )
 sql, params = verify_query.to_sql()
 result = backend.execute(sql, params, options=dql_options)
@@ -137,7 +137,7 @@ print(f"Events: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='events',
+    table=Table(dialect, 'events'),
     if_exists=True,
     cascade=True,
 )

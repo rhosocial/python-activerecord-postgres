@@ -12,6 +12,7 @@ from typing import Any, List, Optional, Tuple, TYPE_CHECKING  # noqa: F401
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
@@ -29,6 +30,19 @@ class PostgresPartitionMixin:
 
     All features are native, using version number for detection.
     """
+
+    def _format_partition_table_ref(
+        self, schema: Optional[str], table_name: str
+    ) -> str:
+        """Render a partition or its parent table.
+
+        Both sides of every partition statement -- CREATE ... PARTITION OF,
+        ATTACH/DETACH PARTITION -- are ordinary tables living in a schema, so
+        both go through the shared schema-object renderer and cannot drift
+        apart from each other or from the rest of the dialect.
+        """
+        sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema))
+        return sql
 
     def supports_table_partitioning(self) -> bool:
         """Check if declarative table partitioning is supported.
@@ -456,23 +470,15 @@ class PostgresPartitionMixin:
         parts = ["CREATE TABLE"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        if expr.schema:
-            child_name = (
-                f"{self.format_identifier(expr.schema)}."
-                f"{self.format_identifier(expr.partition_name)}"
-            )
-        else:
-            child_name = self.format_identifier(expr.partition_name)
+        child_name = self._format_partition_table_ref(
+            expr.schema, expr.partition_name
+        )
         parts.append(child_name)
 
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        if parent_schema:
-            parent_name = (
-                f"{self.format_identifier(parent_schema)}."
-                f"{self.format_identifier(expr.parent_table)}"
-            )
-        else:
-            parent_name = self.format_identifier(expr.parent_table)
+        parent_name = self._format_partition_table_ref(
+            parent_schema, expr.parent_table
+        )
         parts.append(f"PARTITION OF {parent_name}")
 
         params: List[Any] = []
@@ -581,22 +587,17 @@ class PostgresPartitionMixin:
         parts = ["ALTER TABLE"]
 
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        if parent_schema:
-            parts.append(
-                f"{self.format_identifier(parent_schema)}."
-                f"{self.format_identifier(expr.parent_table)}"
-            )
-        else:
-            parts.append(self.format_identifier(expr.parent_table))
+        parts.append(
+            self._format_partition_table_ref(parent_schema, expr.parent_table)
+        )
 
         if expr.concurrently and not self.supports_concurrent_detach():
             raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
         parts.append("DETACH PARTITION")
 
-        if expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.partition_name)}")
-        else:
-            parts.append(self.format_identifier(expr.partition_name))
+        parts.append(
+            self._format_partition_table_ref(expr.schema, expr.partition_name)
+        )
 
         if expr.concurrently:
             parts.append("CONCURRENTLY")
@@ -646,20 +647,12 @@ class PostgresPartitionMixin:
 
         parts = ["ALTER TABLE"]
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        if parent_schema:
-            parent_name = (
-                f"{self.format_identifier(parent_schema)}."
-                f"{self.format_identifier(expr.parent_table)}"
-            )
-        else:
-            parent_name = self.format_identifier(expr.parent_table)
-        if expr.schema:
-            partition_name = (
-                f"{self.format_identifier(expr.schema)}."
-                f"{self.format_identifier(expr.partition_name)}"
-            )
-        else:
-            partition_name = self.format_identifier(expr.partition_name)
+        parent_name = self._format_partition_table_ref(
+            parent_schema, expr.parent_table
+        )
+        partition_name = self._format_partition_table_ref(
+            expr.schema, expr.partition_name
+        )
         parts.extend((parent_name, "ATTACH PARTITION", partition_name))
 
         params: List[Any] = []

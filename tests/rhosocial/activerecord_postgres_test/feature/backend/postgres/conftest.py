@@ -9,8 +9,8 @@ from rhosocial.activerecord.backend.expression import (
     FunctionCall,
     GroupByHavingClause,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
 )
@@ -64,7 +64,7 @@ def summary_query(mv_backend):
                 FunctionCall(dialect, "COUNT", Column(dialect, "id")),
                 FunctionCall(dialect, "SUM", Column(dialect, "amount")),
             ],
-            from_=TableExpression(dialect, "mv_sales"),
+            from_=Table(dialect, "mv_sales"),
             group_by_having=GroupByHavingClause(
                 dialect=dialect, group_by=[Column(dialect, "product_id")]
             ),
@@ -84,7 +84,7 @@ def daily_query(mv_backend):
                 Column(dialect, "sale_date"),
                 FunctionCall(dialect, "SUM", Column(dialect, "amount")),
             ],
-            from_=TableExpression(dialect, "mv_sales"),
+            from_=Table(dialect, "mv_sales"),
             group_by_having=GroupByHavingClause(
                 dialect=dialect, group_by=[Column(dialect, "sale_date")]
             ),
@@ -129,10 +129,10 @@ async def async_mv_backend(async_postgres_backend_single):
 def create_summary_mv(mv_backend, summary_query):
     """Factory that creates a summary materialized view on the live server."""
 
-    def _create(view_name="mv_sales_summary", query=None, **kwargs):
+    def _create(view=None, query=None, **kwargs):
         expression = PostgresCreateMaterializedViewExpression(
             dialect=mv_backend.dialect,
-            view_name=view_name,
+            view=view if view is not None else MaterializedView(mv_backend.dialect, "mv_sales_summary"),
             query=query if query is not None else summary_query(),
             **kwargs,
         )

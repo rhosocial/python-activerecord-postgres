@@ -16,6 +16,7 @@ Version requirements:
 
 from typing import Any, Dict, List, Optional
 
+from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     AlterTypeExpression,
     CreateTypeExpression,
@@ -64,12 +65,11 @@ class EnumTypeManager:
         """
         expr = CreateTypeExpression(
             dialect=self._backend.dialect,
-            type_name=enum_type.name,
+            type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             definition=PostgresEnumTypeDefinition(
                 self._backend.dialect,
                 enum_type.values,
             ),
-            schema_name=enum_type.schema,
             if_not_exists=if_not_exists,
         )
         sql, params = expr.to_sql()
@@ -86,8 +86,7 @@ class EnumTypeManager:
         """
         expr = PostgresDropTypeExpression(
             dialect=self._backend.dialect,
-            type_name=enum_type.name,
-            schema_name=enum_type.schema,
+            type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             if_exists=if_exists,
             cascade=cascade,
         )
@@ -121,9 +120,8 @@ class EnumTypeManager:
         )
         expr = AlterTypeExpression(
             dialect=self._backend.dialect,
-            type_name=enum_type.name,
+            type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             actions=[action],
-            schema_name=enum_type.schema,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -149,9 +147,8 @@ class EnumTypeManager:
         )
         expr = AlterTypeExpression(
             dialect=self._backend.dialect,
-            type_name=enum_type.name,
+            type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             actions=[action],
-            schema_name=enum_type.schema,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)

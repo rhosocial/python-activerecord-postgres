@@ -105,27 +105,70 @@ def get_postgres_protocols():
         dialect_protocols.WildcardSupport,
         dialect_protocols.JoinSupport,
         dialect_protocols.SetOperationSupport,
-        dialect_protocols.ViewSupport,
-        dialect_protocols.SchemaSupport,
-        dialect_protocols.IndexSupport,
-        dialect_protocols.SequenceSupport,
-        dialect_protocols.TableSupport,
+        # Named objects. Core split naming out of the DDL umbrella protocols,
+        # so each kind a PostgreSQL statement can name is listed on its own.
+        dialect_protocols.NamespaceSupport,
+        dialect_protocols.TableObjectSupport,
+        dialect_protocols.ViewObjectSupport,
+        dialect_protocols.MaterializedViewObjectSupport,
+        dialect_protocols.ForeignTableObjectSupport,
+        dialect_protocols.IndexObjectSupport,
+        dialect_protocols.SequenceObjectSupport,
+        dialect_protocols.TriggerObjectSupport,
+        dialect_protocols.TypeObjectSupport,
+        dialect_protocols.RoutineObjectSupport,
+        # Per-statement DDL protocols. One per statement expression: PostgreSQL
+        # implements each of these, so it declares each.
+        dialect_protocols.CreateTableSupport,
+        dialect_protocols.DropTableSupport,
+        dialect_protocols.AlterTableSupport,
+        dialect_protocols.CreateIndexSupport,
+        dialect_protocols.DropIndexSupport,
+        dialect_protocols.CreateViewSupport,
+        dialect_protocols.DropViewSupport,
+        dialect_protocols.MaterializedViewSupport,
+        dialect_protocols.CreateSequenceSupport,
+        dialect_protocols.DropSequenceSupport,
+        dialect_protocols.AlterSequenceSupport,
+        dialect_protocols.CreateTriggerSupport,
+        dialect_protocols.DropTriggerSupport,
+        dialect_protocols.CreateTypeSupport,
+        dialect_protocols.AlterTypeSupport,
+        dialect_protocols.DropTypeSupport,
+        dialect_protocols.CreateDomainSupport,
+        dialect_protocols.AlterDomainSupport,
+        dialect_protocols.DropDomainSupport,
+        dialect_protocols.CreateSchemaSupport,
+        dialect_protocols.DropSchemaSupport,
+        dialect_protocols.CreateDatabaseSupport,
+        dialect_protocols.DropDatabaseSupport,
+        dialect_protocols.AlterDatabaseSupport,
+        dialect_protocols.CreateRoutineSupport,
+        dialect_protocols.DropRoutineSupport,
         dialect_protocols.PartitionSupport,
         dialect_protocols.ConstraintSupport,
         dialect_protocols.TruncateSupport,
         dialect_protocols.IntrospectionSupport,
         dialect_protocols.TransactionControlSupport,
         dialect_protocols.SQLFunctionSupport,
-        # Generic protocols Postgres also satisfies (previously omitted).
+        # Generic protocols Postgres also satisfies.
         dialect_protocols.AlterTableModifierSupport,
         dialect_protocols.DDLTypeSupport,
-        dialect_protocols.UserDefinedTypeSupport,
-        dialect_protocols.DomainSupport,
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
-        dialect_protocols.TriggerSupport,
         dialect_protocols.AutoIncrementSupport,
         dialect_protocols.GeneratedColumnSupport,
+        # Statement forms PostgreSQL implements through its mixins, so the
+        # partition test below can classify them rather than leaving them
+        # unclassified.
+        dialect_protocols.CreateTableAsSupport,
+        dialect_protocols.CreateTableCloneSupport,
+        dialect_protocols.CreateTableLikeSupport,
+        dialect_protocols.CreateTableUsingTemplateSupport,
+        dialect_protocols.DateTimeSupport,
+        dialect_protocols.DqlOrderSupport,
+        dialect_protocols.FulltextIndexSupport,
+        dialect_protocols.SynonymObjectSupport,
     ]
 
     postgres_mro = postgres_dialect.PostgresDialect.__mro__
@@ -167,11 +210,9 @@ class TestPostgresDialectProtocolConformance:
 # conscious decision (move to POSTGRES_PROTOCOLS or revert).
 POSTGRES_NOT_IMPLEMENTED = [
     # --- Intentional non-support ---
-    # The generic DatabaseSupport protocol is not composed by PostgresDialect.
-    dialect_protocols.DatabaseSupport,
-    # Postgres exposes routine DDL through its own PostgresRoutineSupport
-    # protocol rather than the generic SQL/PSM FunctionSupport.
-    dialect_protocols.FunctionSupport,
+    # PIVOT is not a PostgreSQL statement form. A dialect that reports support
+    # has to render one, and nothing here does.
+    dialect_protocols.PivotSupport,
 ]
 
 
@@ -207,7 +248,12 @@ class TestPostgresDialectNegativeProtocolConformance:
         all_protos = set(get_all_generic_protocols())
         if dialect_protocols.DDLTypeSupport is dialect_protocols.DataTypeSupport:
             all_protos.discard("DDLTypeSupport")
-        positive = {p.__name__ for p in POSTGRES_PROTOCOLS if p.__module__ == dialect_protocols.__name__}
+        positive = {
+        p.__name__
+        for p in POSTGRES_PROTOCOLS
+        if p.__module__ == dialect_protocols.__name__
+        or p.__module__.startswith(dialect_protocols.__name__ + ".")
+    }
         negative = {p.__name__ for p in POSTGRES_NOT_IMPLEMENTED}
 
         overlap = positive & negative
@@ -229,28 +275,41 @@ class TestProtocolNonOverlap:
             proto.__name__: get_all_protocol_methods(proto)
             for proto in POSTGRES_PROTOCOLS
         }
+        class_map = {proto.__name__: proto for proto in POSTGRES_PROTOCOLS}
 
         for name, members in member_map.items():
             assert len(members) > 0, f"Protocol {name} has no members defined"
 
         excluded_overlaps = {
             # Generic -> Postgres derivation pairs (expected overlap)
-            ('IndexSupport', 'PostgresIndexSupport'),
-            ('PostgresIndexSupport', 'IndexSupport'),
-            ('TableSupport', 'PostgresTableSupport'),
-            ('PostgresTableSupport', 'TableSupport'),
+            ('NamespaceSupport', 'PostgresNamespaceSupport'),
+            ('PostgresNamespaceSupport', 'NamespaceSupport'),
+            ('IndexObjectSupport', 'PostgresIndexSupport'),
+            ('PostgresIndexSupport', 'IndexObjectSupport'),
+            ('TableObjectSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'TableObjectSupport'),
             ('PartitionSupport', 'PostgresPartitionSupport'),
             ('PostgresPartitionSupport', 'PartitionSupport'),
             ('ConstraintSupport', 'PostgresConstraintSupport'),
             ('PostgresConstraintSupport', 'ConstraintSupport'),
             ('LockingSupport', 'PostgresLockingSupport'),
             ('PostgresLockingSupport', 'LockingSupport'),
-            ('TriggerSupport', 'PostgresTriggerSupport'),
-            ('PostgresTriggerSupport', 'TriggerSupport'),
-            ('UserDefinedTypeSupport', 'PostgresTypeSupport'),
-            ('PostgresTypeSupport', 'UserDefinedTypeSupport'),
-            ('DomainSupport', 'PostgresDomainSupport'),
-            ('PostgresDomainSupport', 'DomainSupport'),
+            ('TriggerObjectSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'TriggerObjectSupport'),
+            ('CreateTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'CreateTypeSupport'),
+            ('AlterTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'AlterTypeSupport'),
+            ('DropTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'DropTypeSupport'),
+            ('TypeObjectSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'TypeObjectSupport'),
+            ('CreateDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'CreateDomainSupport'),
+            ('AlterDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'AlterDomainSupport'),
+            ('DropDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'DropDomainSupport'),
             # SQLXMLSupport aggregates standard SQL/XML capability-family protocols
             ('SQLXMLSupport', 'SQLXMLParsingSupport'),
             ('SQLXMLParsingSupport', 'SQLXMLSupport'),
@@ -304,15 +363,36 @@ class TestProtocolNonOverlap:
             ('PostgresJoinSupport', 'JoinSupport'),
             ('SetOperationSupport', 'PostgresSetOperationSupport'),
             ('PostgresSetOperationSupport', 'SetOperationSupport'),
-            ('ViewSupport', 'PostgresViewSupport'),
-            ('PostgresViewSupport', 'ViewSupport'),
+            ('ViewObjectSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'ViewObjectSupport'),
             # PG materialized-view protocol restates the generic view formatter
-            ('ViewSupport', 'PostgresMaterializedViewSupport'),
-            ('PostgresMaterializedViewSupport', 'ViewSupport'),
-            ('SchemaSupport', 'PostgresSchemaSupport'),
-            ('PostgresSchemaSupport', 'SchemaSupport'),
-            ('SequenceSupport', 'PostgresSequenceSupport'),
-            ('PostgresSequenceSupport', 'SequenceSupport'),
+            ('MaterializedViewObjectSupport', 'PostgresMaterializedViewSupport'),
+            ('PostgresMaterializedViewSupport', 'MaterializedViewObjectSupport'),
+            ('MaterializedViewSupport', 'PostgresMaterializedViewSupport'),
+            ('PostgresMaterializedViewSupport', 'MaterializedViewSupport'),
+            # PG protocols restate the generic statement DDL they override.
+            # Core split the former umbrella protocols per statement, so the
+            # restatement is now against each half rather than one protocol.
+            ('CreateTableSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'CreateTableSupport'),
+            ('CreateTableLikeSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'CreateTableLikeSupport'),
+            ('CreateViewSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'CreateViewSupport'),
+            ('DropViewSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'DropViewSupport'),
+            ('CreateSequenceSupport', 'PostgresSequenceSupport'),
+            ('PostgresSequenceSupport', 'CreateSequenceSupport'),
+            ('DropSequenceSupport', 'PostgresSequenceSupport'),
+            ('PostgresSequenceSupport', 'DropSequenceSupport'),
+            ('CreateTriggerSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'CreateTriggerSupport'),
+            ('DropTriggerSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'DropTriggerSupport'),
+            ('CreateSchemaSupport', 'PostgresSchemaSupport'),
+            ('PostgresSchemaSupport', 'CreateSchemaSupport'),
+            ('DropSchemaSupport', 'PostgresSchemaSupport'),
+            ('PostgresSchemaSupport', 'DropSchemaSupport'),
             ('TruncateSupport', 'PostgresTruncateSupport'),
             ('PostgresTruncateSupport', 'TruncateSupport'),
             ('TransactionControlSupport', 'PostgresTransactionSupport'),
@@ -345,12 +425,37 @@ class TestProtocolNonOverlap:
             ('PostgresCommentSupport', 'CommentSupport'),
         }
 
+        # NamespaceSupport is the base of every object protocol, so all of them
+        # inherit its five namespace switches. That is the shape of the tree --
+        # naming questions are asked once and answered once -- so an overlap
+        # that is entirely NamespaceSupport's members is not two protocols
+        # competing for the same method. Anything else still is.
+        namespace_members = get_all_protocol_methods(dialect_protocols.NamespaceSupport)
+
+        # A protocol that derives another inherits its members, so the two share
+        # those names by construction rather than by accident. NamespaceSupport
+        # is the base of every object protocol and Create/Drop/AlterTableSupport
+        # and friends are the bases of the PostgreSQL protocols that extend them,
+        # which is why each is listed explicitly below; PostgresTypeSupport and
+        # PostgresDomainSupport carry the same relationship for Type/Domain.
+        # Anything that is not an inheritance relationship still competes for the
+        # same method name, and that is what this test is for.
+        inheritance_pairs = set()
+        for name, proto in class_map.items():
+            for base in getattr(proto, "__mro__", ())[1:]:
+                base_name = base.__name__
+                if base_name in class_map and base_name != name:
+                    inheritance_pairs.add((name, base_name))
+                    inheritance_pairs.add((base_name, name))
+
         violations = []
         for (name_a, members_a), (name_b, members_b) in combinations(member_map.items(), 2):
             if (name_a, name_b) in excluded_overlaps:
                 continue
+            if (name_a, name_b) in inheritance_pairs:
+                continue
             overlap = members_a & members_b
-            if overlap:
+            if overlap and not overlap <= namespace_members:
                 violations.append(f"{name_a} ∩ {name_b} = {overlap}")
 
         assert not violations, (
@@ -367,14 +472,20 @@ class TestPostgresProtocolDerivation:
     """
 
     PROTOCOL_DERIVATIONS = [
-        ("PostgresTableSupport", "TableSupport"),
+        ("PostgresTableSupport", "TableObjectSupport"),
         ("PostgresPartitionSupport", "PartitionSupport"),
-        ("PostgresIndexSupport", "IndexSupport"),
+        ("PostgresIndexSupport", "IndexObjectSupport"),
         ("PostgresLockingSupport", "LockingSupport"),
-        ("PostgresTriggerSupport", "TriggerSupport"),
+        ("PostgresTriggerSupport", "TriggerObjectSupport"),
         ("PostgresConstraintSupport", "ConstraintSupport"),
-        ("PostgresTypeSupport", "UserDefinedTypeSupport"),
-        ("PostgresDomainSupport", "DomainSupport"),
+        ("PostgresNamespaceSupport", "NamespaceSupport"),
+        ("PostgresTypeSupport", "CreateTypeSupport"),
+        ("PostgresTypeSupport", "AlterTypeSupport"),
+        ("PostgresTypeSupport", "DropTypeSupport"),
+        ("PostgresTypeSupport", "TypeObjectSupport"),
+        ("PostgresDomainSupport", "CreateDomainSupport"),
+        ("PostgresDomainSupport", "AlterDomainSupport"),
+        ("PostgresDomainSupport", "DropDomainSupport"),
     ]
 
     @pytest.mark.parametrize("pg_name,generic_name", PROTOCOL_DERIVATIONS)
@@ -520,6 +631,11 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     (postgres_protocols.PostgresJoinSupport, postgres_mixins.PostgresJoinMixin),
     (postgres_protocols.PostgresTruncateSupport, postgres_mixins.PostgresTruncateMixin),
     (postgres_protocols.PostgresSchemaSupport, postgres_mixins.PostgresSchemaMixin),
+    # The naming side. Paired with the one mixin that answers it, so a switch
+    # added to the protocol without an implementation -- or an override added to
+    # the mixin without a protocol declaration -- fails here rather than at
+    # render time.
+    (postgres_protocols.PostgresNamespaceSupport, postgres_mixins.PostgresNamespaceMixin),
     (postgres_protocols.PostgresSequenceSupport, postgres_mixins.PostgresSequenceMixin),
     (postgres_protocols.PostgresTransactionSupport, postgres_mixins.PostgresTransactionMixin),
     (postgres_protocols.PostgresViewSupport, postgres_mixins.PostgresViewMixin),
@@ -585,10 +701,11 @@ class TestProtocolMethodSignatureConformance:
         ('OrderedSetAggregationSupport', 'format_ordered_set_aggregation'),
         # QualifyClauseSupport: Mixin uses expr instead of clause
         ('QualifyClauseSupport', 'format_qualify_clause'),
-        # ViewSupport: Materialized view methods use expr instead of named params
-        ('ViewSupport', 'format_create_materialized_view_statement'),
-        ('ViewSupport', 'format_drop_materialized_view_statement'),
-        ('ViewSupport', 'format_refresh_materialized_view_statement'),
+        # MaterializedViewSupport: the PG mixin methods take expr, and the PG
+        # override carries the CONCURRENTLY gate the generic one lacks.
+        ('MaterializedViewSupport', 'format_create_materialized_view_statement'),
+        ('MaterializedViewSupport', 'format_drop_materialized_view_statement'),
+        ('MaterializedViewSupport', 'format_refresh_materialized_view_statement'),
         # ExplainSupport: Mixin uses different signature
         ('ExplainSupport', 'format_explain_statement'),
         # ILIKESupport: Mixin uses expr-based signature instead of named params

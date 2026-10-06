@@ -12,6 +12,7 @@ Version Requirements:
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Table
 from ...expression.ddl.table_settings import LoggingMode
 
 if TYPE_CHECKING:
@@ -40,13 +41,14 @@ class PostgresAlterTableSettingsMixin:
     def _format_settings_table_ref(
         self, schema: Optional[str], table_name: str
     ) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(table_name)}"
-            )
-        return self.format_identifier(table_name)
+        """Render the table a table-level setting is applied to.
+
+        The name is a :class:`Table` schema object rendered by the dialect.
+        Both settings (``LOGGED``/``UNLOGGED`` and ``ACCESS METHOD``) go
+        through it, so they cannot drift apart.
+        """
+        sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema))
+        return sql
 
     # ------------------------------------------------------------------ #
     # Statement

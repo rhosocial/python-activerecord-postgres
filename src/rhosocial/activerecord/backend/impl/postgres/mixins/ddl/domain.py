@@ -7,6 +7,7 @@ from typing import Any, List, Optional, Tuple, Type, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_domain import DomainMixin
+from rhosocial.activerecord.backend.expression.objects import Domain
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
     AlterDomainExpression,
@@ -142,6 +143,17 @@ class PostgresDomainMixin(DomainMixin):
         self,
         expr: CreateDomainExpression,
     ) -> Tuple[str, tuple]:
+        """Render ``CREATE DOMAIN``, with the PostgreSQL-only options.
+
+        Raises:
+            TypeError: ``expr.domain`` is not a :class:`Domain`. Another object
+                kind would have had its own name rendered as the domain's.
+        """
+        if not isinstance(expr.domain, Domain):
+            raise TypeError(
+                f"CreateDomainExpression.domain must be a Domain, "
+                f"got {type(expr.domain).__name__}"
+            )
         if not self.supports_domains() or not self.supports_create_domain():
             raise UnsupportedFeatureError(
                 self.name,
@@ -153,10 +165,7 @@ class PostgresDomainMixin(DomainMixin):
             raise ValueError("DOMAIN data types must render without bind parameters")
         parts = [
             "CREATE DOMAIN",
-            self._format_domain_identifier(
-                expr.domain_name,
-                getattr(expr, "schema_name", None),
-            ),
+            expr.domain.to_sql()[0],
             "AS",
             type_sql,
         ]
@@ -202,6 +211,16 @@ class PostgresDomainMixin(DomainMixin):
         self,
         expr: AlterDomainExpression,
     ) -> Tuple[str, tuple]:
+        """Render ``ALTER DOMAIN``.
+
+        Raises:
+            TypeError: ``expr.domain`` is not a :class:`Domain`.
+        """
+        if not isinstance(expr.domain, Domain):
+            raise TypeError(
+                f"AlterDomainExpression.domain must be a Domain, "
+                f"got {type(expr.domain).__name__}"
+            )
         if not self.supports_domains() or not self.supports_alter_domain():
             raise UnsupportedFeatureError(
                 self.name,
@@ -223,12 +242,8 @@ class PostgresDomainMixin(DomainMixin):
             action_sql, params = action.to_sql()
             action_parts.append(action_sql)
             action_params.extend(params)
-        domain_ref = self._format_domain_identifier(
-            expr.domain_name,
-            getattr(expr, "schema_name", None),
-        )
         return (
-            f"ALTER DOMAIN {domain_ref} {', '.join(action_parts)}",
+            f"ALTER DOMAIN {expr.domain.to_sql()[0]} {', '.join(action_parts)}",
             tuple(action_params),
         )
 
@@ -242,6 +257,16 @@ class PostgresDomainMixin(DomainMixin):
         self,
         expr: DropDomainExpression,
     ) -> Tuple[str, tuple]:
+        """Render ``DROP DOMAIN``, with the PostgreSQL-only options.
+
+        Raises:
+            TypeError: ``expr.domain`` is not a :class:`Domain`.
+        """
+        if not isinstance(expr.domain, Domain):
+            raise TypeError(
+                f"DropDomainExpression.domain must be a Domain, "
+                f"got {type(expr.domain).__name__}"
+            )
         if not self.supports_domains() or not self.supports_drop_domain():
             raise UnsupportedFeatureError(
                 self.name,
@@ -261,12 +286,7 @@ class PostgresDomainMixin(DomainMixin):
         parts = ["DROP DOMAIN"]
         if if_exists:
             parts.append("IF EXISTS")
-        parts.append(
-            self._format_domain_identifier(
-                expr.domain_name,
-                getattr(expr, "schema_name", None),
-            )
-        )
+        parts.append(expr.domain.to_sql()[0])
         if behavior:
             parts.append(behavior)
         return " ".join(parts), ()

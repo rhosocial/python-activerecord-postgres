@@ -9,6 +9,7 @@ Tests for PostgresBtreeGistMixin format methods:
 
 from rhosocial.activerecord.backend.expression import CreateIndexExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 
 
 class TestPostgresBtreeGistMixin:
@@ -22,8 +23,8 @@ class TestPostgresBtreeGistMixin:
         """CreateIndexExpression with index_type gist should render a gist index."""
         expr = CreateIndexExpression(
             self.dialect,
-            index_name="idx_name",
-            table_name="table_name",
+            index=Index(self.dialect, 'idx_name'),
+            table=Table(self.dialect, 'table_name'),
             columns=["column"],
             index_type="gist",
         )
@@ -37,8 +38,8 @@ class TestPostgresBtreeGistMixin:
         """CreateIndexExpression with include should include additional columns."""
         expr = CreateIndexExpression(
             self.dialect,
-            index_name="idx_name",
-            table_name="table_name",
+            index=Index(self.dialect, 'idx_name'),
+            table=Table(self.dialect, 'table_name'),
             columns=["column"],
             index_type="gist",
             include=["extra_col"],

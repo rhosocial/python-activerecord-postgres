@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -51,10 +51,10 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     CreateIndexExpression,
     QueryExpression,
-    TableExpression,
     Column,
     OrderByClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
@@ -114,7 +114,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="tags",
+        table=Table(dialect, 'tags'),
         columns=columns,
         if_not_exists=True,
     )
@@ -126,7 +126,7 @@ if installed:
     # Example 2: Insert integer array data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="tags",
+        into=Table(dialect, 'tags'),
         columns=["name", "tag_ids"],
         source=ValuesSource(
             dialect,
@@ -152,7 +152,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
-        from_=TableExpression(dialect, "tags"),
+        from_=Table(dialect, "tags"),
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "tag_ids"),
@@ -171,7 +171,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
-        from_=TableExpression(dialect, "tags"),
+        from_=Table(dialect, "tags"),
         where=BinaryExpression(
             dialect, "&&",
             Column(dialect, "tag_ids"),
@@ -192,7 +192,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), idx_func],
-        from_=TableExpression(dialect, "tags"),
+        from_=Table(dialect, "tags"),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
     sql, params = query.to_sql()
@@ -216,7 +216,7 @@ if installed:
             sort_func,
             unique_sorted_func,
         ],
-        from_=TableExpression(dialect, "tags"),
+        from_=Table(dialect, "tags"),
         where=Column(dialect, "id") == Literal(dialect, 4),
     )
     sql, params = query.to_sql()
@@ -229,8 +229,8 @@ if installed:
     # gist__int_ops operator class enables fast @>, &&, = queries
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_tags_tag_ids",
-        table_name="tags",
+        index=Index(dialect, 'idx_tags_tag_ids'),
+        table=Table(dialect, 'tags'),
         columns=["tag_ids"],
         index_type="GIST",
         if_not_exists=True,
@@ -248,7 +248,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="tags", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

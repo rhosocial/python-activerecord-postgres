@@ -20,9 +20,9 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     WhereClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import (
     LikePredicate,
@@ -52,7 +52,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='employees',
+    table=Table(dialect, 'employees'),
     if_exists=True,
     cascade=True,
 )
@@ -61,7 +61,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='employees',
+    table=Table(dialect, 'employees'),
     columns=[
         ColumnDefinition(
             'id',
@@ -87,7 +87,7 @@ backend.execute(sql, params)
 
 insert = InsertExpression(
     dialect=dialect,
-    into='employees',
+    into=Table(dialect, 'employees'),
     columns=['name', 'department', 'salary', 'manager_id'],
     source=ValuesSource(
         dialect,
@@ -146,7 +146,7 @@ like_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'department'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=LikePredicate(
@@ -169,7 +169,7 @@ in_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'department'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=InPredicate(
@@ -191,7 +191,7 @@ between_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'salary'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=BetweenPredicate(
@@ -214,7 +214,7 @@ is_null_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'manager_id'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=IsNullPredicate(
@@ -235,7 +235,7 @@ is_not_null_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'manager_id'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=IsNullPredicate(
@@ -258,7 +258,7 @@ combined_query = QueryExpression(
         Column(dialect, 'department'),
         Column(dialect, 'salary'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=LogicalPredicate(

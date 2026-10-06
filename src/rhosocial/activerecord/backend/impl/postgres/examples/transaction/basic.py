@@ -19,8 +19,8 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
@@ -44,13 +44,13 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableExpression(dialect=dialect, table_name='accounts', if_exists=True, cascade=True)
+drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True, cascade=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -68,7 +68,7 @@ backend.execute(sql, params)
 # Insert initial data
 insert = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'accounts'),
+    into=Table(dialect, 'accounts'),
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice'), Literal(dialect, 1000.00)],
         [Literal(dialect, 'Bob'), Literal(dialect, 500.00)],
@@ -91,7 +91,7 @@ with backend.transaction():
 
     update = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1500.00)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -107,7 +107,7 @@ with backend.transaction():
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=TableExpression(dialect, 'accounts'),
+    from_=Table(dialect, 'accounts'),
     where=ComparisonPredicate(
         dialect, '=',
         Column(dialect, 'name'),
@@ -124,7 +124,7 @@ try:
     with backend.transaction():
         update = UpdateExpression(
             dialect=dialect,
-            table=TableExpression(dialect, 'accounts'),
+            table=Table(dialect, 'accounts'),
             assignments={'balance': Literal(dialect, 0)},
             where=ComparisonPredicate(
                 dialect, '=',
@@ -143,7 +143,7 @@ except ValueError:
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=TableExpression(dialect, 'accounts'),
+    from_=Table(dialect, 'accounts'),
     where=ComparisonPredicate(
         dialect, '=',
         Column(dialect, 'name'),
@@ -160,7 +160,7 @@ with backend.transaction():
     # First operation
     update = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 2000.00)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -178,7 +178,7 @@ with backend.transaction():
     # Second operation (within savepoint)
     update = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 9999.00)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -197,7 +197,7 @@ with backend.transaction():
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=TableExpression(dialect, 'accounts'),
+    from_=Table(dialect, 'accounts'),
     order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )
 sql, params = query.to_sql()
@@ -207,7 +207,7 @@ print(f"Final state: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table_name='accounts', if_exists=True)
+drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

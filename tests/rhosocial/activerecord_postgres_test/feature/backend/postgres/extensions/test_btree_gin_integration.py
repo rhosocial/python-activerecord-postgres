@@ -30,9 +30,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
 )
@@ -73,7 +73,7 @@ def btree_gin_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_btree_gin",
+        table=Table(dialect, 'test_btree_gin'),
         columns=columns,
         if_not_exists=True,
     )
@@ -88,7 +88,7 @@ def btree_gin_env(postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gin",
+        into=Table(dialect, 'test_btree_gin'),
         columns=["name", "value", "tags"],
         source=ValuesSource(dialect, rows),
     )
@@ -100,7 +100,7 @@ def btree_gin_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_btree_gin",
+        table=Table(dialect, 'test_btree_gin'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -118,8 +118,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            index=Index(dialect, "idx_btree_gin_value"),
+            table=Table(dialect, "test_btree_gin"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -132,7 +132,7 @@ class TestBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin"),
         )
         sql, params = query.to_sql()
@@ -149,8 +149,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on TEXT column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_name",
-            table_name="test_btree_gin",
+            index=Index(dialect, "idx_btree_gin_name"),
+            table=Table(dialect, "test_btree_gin"),
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -163,7 +163,7 @@ class TestBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin"),
         )
         sql, params = query.to_sql()
@@ -180,8 +180,8 @@ class TestBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value",
-            table_name="test_btree_gin",
+            index=Index(dialect, "idx_btree_gin_value"),
+            table=Table(dialect, "test_btree_gin"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -194,7 +194,7 @@ class TestBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "value")],
-            from_=TableExpression(dialect, "test_btree_gin"),
+            from_=Table(dialect, "test_btree_gin"),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -228,7 +228,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_btree_gin_async",
+        table=Table(dialect, 'test_btree_gin_async'),
         columns=columns,
         if_not_exists=True,
     )
@@ -243,7 +243,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gin_async",
+        into=Table(dialect, 'test_btree_gin_async'),
         columns=["name", "value", "tags"],
         source=ValuesSource(dialect, rows),
     )
@@ -255,7 +255,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_btree_gin_async",
+        table=Table(dialect, 'test_btree_gin_async'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -274,8 +274,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            index=Index(dialect, "idx_btree_gin_value_async"),
+            table=Table(dialect, "test_btree_gin_async"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -288,7 +288,7 @@ class TestAsyncBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin_async"),
         )
         sql, params = query.to_sql()
@@ -306,8 +306,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on TEXT column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_name_async",
-            table_name="test_btree_gin_async",
+            index=Index(dialect, "idx_btree_gin_name_async"),
+            table=Table(dialect, "test_btree_gin_async"),
             columns=["name"],
             index_type="GIN",
             if_not_exists=True,
@@ -320,7 +320,7 @@ class TestAsyncBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin_async"),
         )
         sql, params = query.to_sql()
@@ -338,8 +338,8 @@ class TestAsyncBtreeGinIntegration:
         # Create a GIN index with btree_gin operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gin_value_async",
-            table_name="test_btree_gin_async",
+            index=Index(dialect, "idx_btree_gin_value_async"),
+            table=Table(dialect, "test_btree_gin_async"),
             columns=["value"],
             index_type="GIN",
             if_not_exists=True,
@@ -352,7 +352,7 @@ class TestAsyncBtreeGinIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "value")],
-            from_=TableExpression(dialect, "test_btree_gin_async"),
+            from_=Table(dialect, "test_btree_gin_async"),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

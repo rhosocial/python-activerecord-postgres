@@ -32,7 +32,7 @@ dialect = backend.dialect
 # Clean up for demo using DropTableExpression
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="users", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -56,10 +56,9 @@ from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
+    Column, QueryExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 
 # Check if citext extension is available
 available = dialect.is_extension_available("citext")
@@ -106,7 +105,7 @@ columns = [
 
 create_expr = CreateTableExpression(
     dialect=dialect,
-    table_name="users",
+    table=Table(dialect, 'users'),
     columns=columns,
     if_not_exists=True,
 )
@@ -122,7 +121,7 @@ if available:
     # Example 2: Insert with case-insensitive data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="users",
+        into=Table(dialect, 'users'),
         columns=["email", "username"],
         source=ValuesSource(
             dialect,
@@ -145,7 +144,7 @@ if available:
             Column(dialect, "id"),
             Column(dialect, "email"),
         ],
-        from_=TableExpression(dialect, "users"),
+        from_=Table(dialect, "users"),
         where=Column(dialect, "email", table="users")
         == Literal(dialect, "test@example.com"),
     )
@@ -166,7 +165,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="users", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

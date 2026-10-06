@@ -24,7 +24,6 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     OrderByClause,
     QueryExpression,
-    TableExpression,
     ValuesSource,
     XMLStandaloneOption,
     XMLTableColumn,
@@ -41,6 +40,7 @@ from rhosocial.activerecord.backend.expression import (
     xmlserialize,
     xmltable,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -96,7 +96,7 @@ def select_from_examples(dialect: PostgresDialect, expr) -> SQLQueryAndParams:
     sql, params = QueryExpression(
         dialect,
         [expr],
-        from_=TableExpression(dialect, EXAMPLE_TABLE),
+        from_=Table(dialect, EXAMPLE_TABLE),
     ).to_sql()
     return sql, tuple(params)
 
@@ -241,12 +241,12 @@ def execute_expression(backend: PostgresBackend, expr) -> None:
 
 
 def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> None:
-    execute_expression(backend, DropTableExpression(dialect, EXAMPLE_TABLE, if_exists=True))
+    execute_expression(backend, DropTableExpression(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
     execute_expression(
         backend,
         CreateTableExpression(
             dialect,
-            EXAMPLE_TABLE,
+            Table(dialect, EXAMPLE_TABLE),
             [
                 ColumnDefinition(
                     "id",
@@ -265,7 +265,7 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
         backend,
         InsertExpression(
             dialect,
-            EXAMPLE_TABLE,
+            Table(dialect, EXAMPLE_TABLE),
             ValuesSource(
                 dialect,
                 [
@@ -279,7 +279,7 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
 
 
 def cleanup_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> None:
-    execute_expression(backend, DropTableExpression(dialect, EXAMPLE_TABLE, if_exists=True))
+    execute_expression(backend, DropTableExpression(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
 
 
 def run_select_examples(dialect: PostgresDialect, examples: Iterable[SQLXMLExample]) -> None:

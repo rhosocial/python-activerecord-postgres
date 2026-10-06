@@ -10,6 +10,7 @@ All database operations use expression objects, not raw SQL strings.
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
     async_ensure_extension_installed,
@@ -62,7 +63,7 @@ def hypopg_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_hypopg_items",
+        table=Table(dialect, 'test_hypopg_items'),
         columns=columns,
         if_not_exists=True,
     )
@@ -80,7 +81,7 @@ def hypopg_env(postgres_backend_single):
         )
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_hypopg_items",
+        into=Table(dialect, 'test_hypopg_items'),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -102,7 +103,7 @@ def hypopg_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_hypopg_items",
+        table=Table(dialect, 'test_hypopg_items'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -278,7 +279,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_hypopg_items_async",
+        table=Table(dialect, 'test_hypopg_items_async'),
         columns=columns,
         if_not_exists=True,
     )
@@ -296,7 +297,7 @@ async def async_hypopg_env(async_postgres_backend_single):
         )
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_hypopg_items_async",
+        into=Table(dialect, 'test_hypopg_items_async'),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -318,7 +319,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_hypopg_items_async",
+        table=Table(dialect, 'test_hypopg_items_async'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

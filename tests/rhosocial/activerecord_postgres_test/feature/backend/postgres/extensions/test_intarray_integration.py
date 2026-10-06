@@ -30,10 +30,10 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     OrderByClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -65,7 +65,7 @@ def _setup_intarray_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -74,7 +74,7 @@ def _setup_intarray_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -103,7 +103,7 @@ def _setup_intarray_overlap_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -112,7 +112,7 @@ def _setup_intarray_overlap_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -141,7 +141,7 @@ def _setup_intarray_contained_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -150,7 +150,7 @@ def _setup_intarray_contained_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -179,7 +179,7 @@ def _setup_intarray_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -188,7 +188,7 @@ def _setup_intarray_idx_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -217,7 +217,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -233,7 +233,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -248,7 +248,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -269,7 +269,7 @@ async def _async_setup_intarray_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -278,7 +278,7 @@ async def _async_setup_intarray_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -307,7 +307,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -316,7 +316,7 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -345,7 +345,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -354,7 +354,7 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -383,7 +383,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -392,7 +392,7 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -421,7 +421,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -436,7 +436,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
@@ -451,7 +451,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -523,7 +523,7 @@ class TestIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_INTARRAY),
+            from_=Table(dialect, T_INTARRAY),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -552,7 +552,7 @@ class TestIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), overlap_expr],
-            from_=TableExpression(dialect, T_INTARRAY_OVERLAP),
+            from_=Table(dialect, T_INTARRAY_OVERLAP),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -582,7 +582,7 @@ class TestIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contained_expr],
-            from_=TableExpression(dialect, T_INTARRAY_CONTAINED),
+            from_=Table(dialect, T_INTARRAY_CONTAINED),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -614,7 +614,7 @@ class TestIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[idx_func],
-            from_=TableExpression(dialect, T_INTARRAY_IDX),
+            from_=Table(dialect, T_INTARRAY_IDX),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -631,7 +631,7 @@ class TestIntarrayIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[idx_func2],
-            from_=TableExpression(dialect, T_INTARRAY_IDX),
+            from_=Table(dialect, T_INTARRAY_IDX),
             where=where_pred,
         )
         sql2, params2 = query2.to_sql()
@@ -648,7 +648,7 @@ class TestIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "tablename"),
@@ -673,7 +673,7 @@ class TestIntarrayIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_INTARRAY_GIN),
+            from_=Table(dialect, T_INTARRAY_GIN),
         )
         sql2, params2 = query2.to_sql()
         result2 = backend.execute(sql2, params2, options=opts)
@@ -732,7 +732,7 @@ class TestAsyncIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_INTARRAY_ASYNC),
+            from_=Table(dialect, T_INTARRAY_ASYNC),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -761,7 +761,7 @@ class TestAsyncIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), overlap_expr],
-            from_=TableExpression(dialect, T_INTARRAY_OVERLAP_ASYNC),
+            from_=Table(dialect, T_INTARRAY_OVERLAP_ASYNC),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -790,7 +790,7 @@ class TestAsyncIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contained_expr],
-            from_=TableExpression(dialect, T_INTARRAY_CONTAINED_ASYNC),
+            from_=Table(dialect, T_INTARRAY_CONTAINED_ASYNC),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -822,7 +822,7 @@ class TestAsyncIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[idx_func],
-            from_=TableExpression(dialect, T_INTARRAY_IDX_ASYNC),
+            from_=Table(dialect, T_INTARRAY_IDX_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -839,7 +839,7 @@ class TestAsyncIntarrayIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[idx_func2],
-            from_=TableExpression(dialect, T_INTARRAY_IDX_ASYNC),
+            from_=Table(dialect, T_INTARRAY_IDX_ASYNC),
             where=where_pred,
         )
         sql2, params2 = query2.to_sql()
@@ -857,7 +857,7 @@ class TestAsyncIntarrayIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "tablename"),
@@ -882,7 +882,7 @@ class TestAsyncIntarrayIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_INTARRAY_GIN_ASYNC),
+            from_=Table(dialect, T_INTARRAY_GIN_ASYNC),
         )
         sql2, params2 = query2.to_sql()
         result2 = await backend.execute(sql2, params2, options=opts)

@@ -1,12 +1,22 @@
 # src/rhosocial/activerecord/backend/impl/postgres/protocols/schema.py
-"""PostgreSQL schema feature support protocol."""
+"""PostgreSQL schema DDL protocol.
+
+Everything declared here is the DDL side: does the engine have schemas, and what
+``CREATE``/``DROP SCHEMA`` can carry. The naming side -- whether a name may be
+*qualified* with a schema -- is
+:class:`~.catalog.PostgresNamespaceSupport`, implemented by
+:class:`~...mixins.namespace.PostgresNamespaceMixin`. PostgreSQL answers both
+switches the same way, which is exactly why they must stay two: an engine can
+offer ``CREATE SCHEMA`` and still refuse to qualify a name, and reading the wrong
+one gives the wrong answer with nothing to tell the two cases apart.
+"""
 
 from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
 class PostgresSchemaSupport(Protocol):
-    """PostgreSQL schema feature support protocol."""
+    """PostgreSQL schema DDL support protocol."""
 
     def supports_schema(self)-> bool: ...
 

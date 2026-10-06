@@ -10,6 +10,7 @@ import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.trigger import PostgresTriggerMixin
+from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
 from rhosocial.activerecord.backend.expression.statements import (
     CreateTriggerExpression,
     DropTriggerExpression,
@@ -81,11 +82,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="update_timestamp",
-            table_name="users",
+            trigger=Trigger(dialect, 'update_timestamp'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="update_updated_at_column"
+            function=Function(dialect, 'update_updated_at_column')
         )
         sql, params = expr.to_sql()
         assert 'CREATE TRIGGER "update_timestamp"' in sql
@@ -98,11 +99,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="log_insert",
-            table_name="users",
+            trigger=Trigger(dialect, 'log_insert'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
-            function_name="log_user_insert"
+            function=Function(dialect, 'log_user_insert')
         )
         sql, params = expr.to_sql()
         assert "AFTER INSERT" in sql
@@ -112,11 +113,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="audit_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'audit_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT, TriggerEvent.UPDATE, TriggerEvent.DELETE],
-            function_name="audit_function"
+            function=Function(dialect, 'audit_function')
         )
         sql, params = expr.to_sql()
         assert "INSERT OR UPDATE OR DELETE" in sql
@@ -126,12 +127,12 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="check_status",
-            table_name="orders",
+            trigger=Trigger(dialect, 'check_status'),
+            table=Table(dialect, 'orders'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
             update_columns=["status", "updated_at"],
-            function_name="validate_status_change"
+            function=Function(dialect, 'validate_status_change')
         )
         sql, params = expr.to_sql()
         assert 'UPDATE OF "status", "updated_at"' in sql
@@ -141,11 +142,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'test_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function=Function(dialect, 'test_func'),
             level=TriggerLevel.ROW
         )
         sql, params = expr.to_sql()
@@ -156,11 +157,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'test_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.INSERT],
-            function_name="test_func",
+            function=Function(dialect, 'test_func'),
             level=TriggerLevel.STATEMENT
         )
         sql, params = expr.to_sql()
@@ -171,11 +172,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'test_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function=Function(dialect, 'test_func'),
             if_not_exists=True
         )
         sql, params = expr.to_sql()
@@ -186,11 +187,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((10, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'test_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.AFTER,
             events=[TriggerEvent.UPDATE],
-            function_name="test_func",
+            function=Function(dialect, 'test_func'),
             referencing="OLD TABLE AS old NEW TABLE AS new"
         )
         sql, params = expr.to_sql()
@@ -202,11 +203,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="simple_trigger",
-            table_name="users",
+            trigger=Trigger(dialect, 'simple_trigger'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.INSERT],
-            function_name="simple_func",
+            function=Function(dialect, 'simple_func'),
             level=None,
         )
         sql, params = expr.to_sql()
@@ -219,11 +220,11 @@ class TestFormatCreateTriggerStatement:
         condition = Column(dialect, "status") == Literal(dialect, "ACTIVE")
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="check_status",
-            table_name="users",
+            trigger=Trigger(dialect, 'check_status'),
+            table=Table(dialect, 'users'),
             timing=TriggerTiming.BEFORE,
             events=[TriggerEvent.UPDATE],
-            function_name="validate_status",
+            function=Function(dialect, 'validate_status'),
             condition=condition,
         )
         sql, params = expr.to_sql()
@@ -236,11 +237,11 @@ class TestFormatCreateTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerExpression(
             dialect,
-            trigger_name="view_trigger",
-            table_name="user_view",
+            trigger=Trigger(dialect, 'view_trigger'),
+            table=Table(dialect, 'user_view'),
             timing=TriggerTiming.INSTEAD_OF,
             events=[TriggerEvent.INSERT],
-            function_name="handle_view_insert"
+            function=Function(dialect, 'handle_view_insert')
         )
         sql, params = expr.to_sql()
         assert "INSTEAD OF INSERT" in sql
@@ -254,7 +255,7 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger"
+            trigger=Trigger(dialect, 'test_trigger')
         )
         sql, params = expr.to_sql()
         assert 'DROP TRIGGER "test_trigger"' in sql
@@ -264,8 +265,8 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
-            table_name="users"
+            trigger=Trigger(dialect, 'test_trigger'),
+            table=Table(dialect, 'users')
         )
         sql, params = expr.to_sql()
         assert 'ON "users"' in sql
@@ -275,7 +276,7 @@ class TestFormatDropTriggerStatement:
         dialect = PostgresDialect((14, 0, 0))
         expr = DropTriggerExpression(
             dialect,
-            trigger_name="test_trigger",
+            trigger=Trigger(dialect, 'test_trigger'),
             if_exists=True
         )
         sql, params = expr.to_sql()

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any, List, Optional, Sequence, Tuple, cast, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     AlterTypeExpression,
     CreateTypeExpression,
@@ -46,11 +47,13 @@ class EnumTypeMixin:
         name: str,
         schema: Optional[str] = None,
     ) -> Tuple[str, tuple]:
-        value = f"{schema}.{name}" if schema is not None else name
-        parts = value.split(".")
-        if not parts or any(not part.strip() for part in parts):
-            raise ValueError("ENUM type identifiers must contain non-empty segments")
-        return ".".join(self.format_identifier(part) for part in parts), ()
+        """Render an ENUM type name, optionally schema-qualified.
+
+        The two slots are fixed on the object, so there is no joined string to
+        split back apart: the dialect receives a ``Type`` whose schema slot it
+        either renders or ignores.
+        """
+        return self.format_type_object(Type(self, name, schema_name=schema))
 
     def format_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
         return self.format_enum_type_name(expr.name, expr.schema)
@@ -74,9 +77,8 @@ class EnumTypeMixin:
         dialect = self._as_dialect()
         expr = CreateTypeExpression(
             dialect,
-            name,
+            Type(dialect, name, schema_name=schema),
             PostgresEnumTypeDefinition(dialect, values),
-            schema_name=schema,
             if_not_exists=if_not_exists,
         )
         return self.format_create_type_statement(expr)
@@ -128,7 +130,9 @@ class EnumTypeMixin:
             before=before,
             after=after,
         )
-        expr = AlterTypeExpression(dialect, type_name, [action], schema_name=schema)
+        expr = AlterTypeExpression(
+            dialect, Type(dialect, type_name, schema_name=schema), [action]
+        )
         return self.format_alter_type_statement(expr)
 
     def format_alter_enum_add_value_raw_expression(self, expr: Any) -> Tuple[str, tuple]:
@@ -228,8 +232,7 @@ class EnumTypeMixin:
         )
         statement = AlterTypeExpression(
             dialect,
-            expr.type_name,
+            Type(dialect, expr.type_name, schema_name=expr.schema),
             [action],
-            schema_name=expr.schema,
         )
         return self.format_alter_type_statement(statement)

@@ -13,8 +13,8 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     QueryExpression,
     RawSQLExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.serialization import deserialize, serialize
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
@@ -135,7 +135,7 @@ def select_query(dialect):
     return QueryExpression(
         dialect,
         select=[Column(dialect, "id")],
-        from_=TableExpression(dialect, "users"),
+        from_=Table(dialect, "users"),
         where=Column(dialect, "id") > Literal(dialect, 3),
     )
 

@@ -16,6 +16,7 @@ their generic core counterparts, and are rendered by the PostgreSQL
 from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.bases import SQLPredicate
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements.ddl_index import (
     CreateIndexExpression,
     DropIndexExpression,
@@ -37,8 +38,8 @@ class PostgresCreateIndexExpression(CreateIndexExpression):
     def __init__(
         self,
         dialect: Any,
-        index_name: str,
-        table_name: str,
+        index: Index,
+        table: Table,
         columns: List[Any],
         unique: bool = False,
         if_not_exists: bool = False,
@@ -54,8 +55,8 @@ class PostgresCreateIndexExpression(CreateIndexExpression):
     ):
         super().__init__(
             dialect,
-            index_name=index_name,
-            table_name=table_name,
+            index=index,
+            table=table,
             columns=columns,
             unique=unique,
             if_not_exists=if_not_exists,

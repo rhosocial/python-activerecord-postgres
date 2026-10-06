@@ -273,31 +273,80 @@ Every dialect inherits from:
 |----------|-------|-------------|
 | `WindowFunctionSupport` | `WindowFunctionMixin` | Window functions (OVER, PARTITION BY) |
 | `CTESupport` | `CTEMixin` | Common Table Expressions (WITH clause) |
-| `AdvancedGroupingSupport` | `AdvancedGroupingMixin` | ROLLUP, CUBE, GROUPING SETS |
-| `ReturningSupport` | `ReturningMixin` | RETURNING clause |
+| `AdvancedGroupingSupport` | `DQLMixin` | ROLLUP, CUBE, GROUPING SETS |
+| `ReturningSupport` | `DMLMixin` | RETURNING clause |
 | `UpsertSupport` | `UpsertMixin` | UPSERT operations (ON CONFLICT) |
 | `LateralJoinSupport` | `LateralJoinMixin` | LATERAL joins |
 | `ArraySupport` | `ArrayMixin` | Array types and operations |
 | `JSONSupport` | `JSONMixin` | JSON types and operations |
 | `ExplainSupport` | `ExplainMixin` | EXPLAIN statement |
-| `FilterClauseSupport` | `FilterClauseMixin` | FILTER clause for aggregates |
-| `OrderedSetAggregationSupport` | `OrderedSetAggregationMixin` | WITHIN GROUP (ORDER BY) |
+| `FilterClauseSupport` | `ExpressionMixin` | FILTER clause for aggregates |
+| `OrderedSetAggregationSupport` | `ExpressionMixin` | WITHIN GROUP (ORDER BY) |
 | `MergeSupport` | `MergeMixin` | MERGE statement |
 | `TemporalTableSupport` | `TemporalTableMixin` | FOR SYSTEM_TIME queries |
-| `QualifyClauseSupport` | `QualifyClauseMixin` | QUALIFY clause |
-| `LockingSupport` | `LockingMixin` | FOR UPDATE, SKIP LOCKED |
+| `QualifyClauseSupport` | `DQLMixin` | QUALIFY clause |
+| `LockingSupport` | `DQLMixin` | FOR UPDATE, SKIP LOCKED |
 | `GraphSupport` | `GraphMixin` | Graph queries (MATCH) |
 | `JoinSupport` | `JoinMixin` | JOIN operations |
 | `SetOperationSupport` | `SetOperationMixin` | UNION, INTERSECT, EXCEPT |
 | `ILIKESupport` | `ILIKEMixin` | Case-insensitive LIKE |
-| `TableSupport` | `TableMixin` | CREATE/DROP/ALTER TABLE |
-| `ViewSupport` | `ViewMixin` | CREATE/DROP VIEW |
+| `CreateTableSupport` | `TableMixin` | CREATE TABLE |
+| `DropTableSupport` | `TableMixin` | DROP TABLE |
+| `AlterTableSupport` | `TableMixin` | ALTER TABLE |
+| `CreateViewSupport` | `ViewMixin` | CREATE VIEW |
+| `DropViewSupport` | `ViewMixin` | DROP VIEW |
+| `MaterializedViewSupport` | `ViewMixin` | CREATE / DROP / REFRESH MATERIALIZED VIEW |
 | `TruncateSupport` | `TruncateMixin` | TRUNCATE TABLE |
-| `SchemaSupport` | `SchemaMixin` | CREATE/DROP SCHEMA |
-| `IndexSupport` | `IndexMixin` | CREATE/DROP INDEX |
-| `SequenceSupport` | `SequenceMixin` | CREATE/DROP/ALTER SEQUENCE |
-| `TriggerSupport` | `TriggerMixin` | CREATE/DROP TRIGGER (SQL:1999) |
-| `FunctionSupport` | `FunctionMixin` | CREATE/DROP FUNCTION (SQL/PSM) |
+| `CreateIndexSupport` | `IndexMixin` | CREATE INDEX |
+| `DropIndexSupport` | `IndexMixin` | DROP INDEX |
+| `FulltextIndexSupport` | `IndexMixin` | CREATE / DROP FULLTEXT INDEX |
+| `CreateSequenceSupport` | `SequenceMixin` | CREATE SEQUENCE |
+| `DropSequenceSupport` | `SequenceMixin` | DROP SEQUENCE |
+| `AlterSequenceSupport` | `SequenceMixin` | ALTER SEQUENCE |
+| `CreateTriggerSupport` | `TriggerMixin` | CREATE TRIGGER (SQL:1999) |
+| `DropTriggerSupport` | `TriggerMixin` | DROP TRIGGER |
+| `CreateRoutineSupport` | `FunctionMixin` | CREATE FUNCTION (SQL/PSM) |
+| `DropRoutineSupport` | `FunctionMixin` | DROP FUNCTION |
+| `CreateSchemaSupport` | `SchemaMixin` | CREATE SCHEMA |
+| `DropSchemaSupport` | `SchemaMixin` | DROP SCHEMA |
+| `CreateDatabaseSupport` | `DatabaseMixin` | CREATE DATABASE |
+| `DropDatabaseSupport` | `DatabaseMixin` | DROP DATABASE |
+| `AlterDatabaseSupport` | `DatabaseMixin` | ALTER DATABASE |
+
+##### Naming is its own protocol
+
+Naming was split out of the DDL protocols above, because "does the engine have
+schemas" and "may a name be qualified with one" are different questions with
+different owners and an engine can answer them differently.
+
+| Protocol | Mixin | Description |
+|----------|-------|-------------|
+| `NamespaceSupport` | `NamespaceMixin` | Whether a name may be qualified, and how it is spelled |
+| `TableObjectSupport` | `TableNameMixin` | Render a `Table` as its name |
+| `ViewObjectSupport` | `ViewNameMixin` | Render a `View` |
+| `MaterializedViewObjectSupport` | `MaterializedViewNameMixin` | Render a `MaterializedView` |
+| `ForeignTableObjectSupport` | `ForeignTableNameMixin` | Render a `ForeignTable` |
+| `IndexObjectSupport` | `IndexNameMixin` | Render an `Index` |
+| `SequenceObjectSupport` | `SequenceNameMixin` | Render a `Sequence` |
+| `TriggerObjectSupport` | `TriggerNameMixin` | Render a `Trigger` |
+| `TypeObjectSupport` | `TypeNameMixin` | Render a `Type` |
+| `RoutineObjectSupport` | `FunctionNameMixin` / `ProcedureNameMixin` | Render a `Function` or `Procedure` |
+
+`NamespaceSupport` declares two halves that used to be one method:
+
+* `validate_namespace(expr)` -- the check. Returns `None` or raises
+  `UnsupportedFeatureError`. It is called while *rendering*, not while
+  constructing, because at construction the dialect may not be settled and the
+  object's slots may not be complete.
+* `format_qualified_name(expr)` -- the spelling. Builds the qualified name and
+  joins the levels with `self.separator` (a class attribute, `"."` by default).
+
+A dialect's own answers go in **at most one** naming-side mixin, `<Backend>
+NamespaceMixin`, holding only what differs from core's default. Backends that mix
+in core's `NamespaceMixin` unchanged put it after the `*NameMixin` block in their
+base list — those subclasses it, and a subclass precedes its base, so anything
+listed first wins the MRO lookup. That ordering is load-bearing: getting it wrong
+produces a dialect that answers a question from the wrong class, silently.
 
 ##### Principles for Adding New Protocols/Mixins
 
@@ -315,8 +364,8 @@ Every dialect inherits from:
 
 | Feature | SQL Standard? | Location |
 |---------|---------------|----------|
-| `CREATE TRIGGER` | Yes (SQL:1999) | Main Package (`TriggerSupport`) |
-| `CREATE FUNCTION` | Yes (SQL/PSM) | Main Package (`FunctionSupport`) |
+| `CREATE TRIGGER` | Yes (SQL:1999) | Main Package (`CreateTriggerSupport`) |
+| `CREATE FUNCTION` | Yes (SQL/PSM) | Main Package (`CreateRoutineSupport`) |
 | `COMMENT ON` | No (PostgreSQL/Oracle) | PostgreSQL Extension |
 | `CREATE TYPE ... AS ENUM` | No (PostgreSQL-specific) | PostgreSQL Extension |
 | `AUTO_INCREMENT` | No (MySQL-specific) | MySQL Extension |

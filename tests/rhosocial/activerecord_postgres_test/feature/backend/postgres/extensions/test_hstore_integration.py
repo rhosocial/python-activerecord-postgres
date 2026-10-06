@@ -28,10 +28,10 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     UpdateExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
@@ -65,7 +65,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
     """Create and populate an hstore test table using expressions."""
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=_make_hstore_columns(dialect),
         if_not_exists=True,
     )
@@ -74,7 +74,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["data"],
         source=ValuesSource(
             dialect,
@@ -89,7 +89,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -100,7 +100,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
     """Async: create and populate an hstore test table using expressions."""
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=_make_hstore_columns(dialect),
         if_not_exists=True,
     )
@@ -109,7 +109,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["data"],
         source=ValuesSource(
             dialect,
@@ -124,7 +124,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -197,7 +197,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "data")],
-            from_=TableExpression(dialect, T_HSTORE),
+            from_=Table(dialect, T_HSTORE),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -219,7 +219,7 @@ class TestHstoreIntegration:
         query_a = QueryExpression(
             dialect=dialect,
             select=[val_a_expr],
-            from_=TableExpression(dialect, T_HSTORE),
+            from_=Table(dialect, T_HSTORE),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -240,7 +240,7 @@ class TestHstoreIntegration:
         query_b = QueryExpression(
             dialect=dialect,
             select=[val_b_expr],
-            from_=TableExpression(dialect, T_HSTORE),
+            from_=Table(dialect, T_HSTORE),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -266,7 +266,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_HSTORE_OPS),
+            from_=Table(dialect, T_HSTORE_OPS),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -287,7 +287,7 @@ class TestHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr2],
-            from_=TableExpression(dialect, T_HSTORE_OPS),
+            from_=Table(dialect, T_HSTORE_OPS),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -313,7 +313,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), has_name_expr],
-            from_=TableExpression(dialect, T_HSTORE_KEY),
+            from_=Table(dialect, T_HSTORE_KEY),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -334,7 +334,7 @@ class TestHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), has_email_expr],
-            from_=TableExpression(dialect, T_HSTORE_KEY),
+            from_=Table(dialect, T_HSTORE_KEY),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -360,7 +360,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), merged_expr],
-            from_=TableExpression(dialect, T_HSTORE_CONCAT),
+            from_=Table(dialect, T_HSTORE_CONCAT),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -385,7 +385,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[each_func],
-            from_=TableExpression(dialect, T_HSTORE_EACH),
+            from_=Table(dialect, T_HSTORE_EACH),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -410,7 +410,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[akeys_func],
-            from_=TableExpression(dialect, T_HSTORE_KEYS_VALS),
+            from_=Table(dialect, T_HSTORE_KEYS_VALS),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -431,7 +431,7 @@ class TestHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[avals_func],
-            from_=TableExpression(dialect, T_HSTORE_KEYS_VALS),
+            from_=Table(dialect, T_HSTORE_KEYS_VALS),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -454,7 +454,7 @@ class TestHstoreIntegration:
         # SET data = data || 'status=>inactive'::hstore
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_UPDATE,
+            table=Table(dialect, T_HSTORE_UPDATE),
             assignments={
                 "data": BinaryExpression(
                     dialect, "||",
@@ -480,7 +480,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[status_expr],
-            from_=TableExpression(dialect, T_HSTORE_UPDATE),
+            from_=Table(dialect, T_HSTORE_UPDATE),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -502,7 +502,7 @@ class TestHstoreIntegration:
         # SET data = delete(data, 'remove')
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_DELETE,
+            table=Table(dialect, T_HSTORE_DELETE),
             assignments={
                 "data": FunctionCall(
                     dialect, "delete",
@@ -533,7 +533,7 @@ class TestHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[has_remove_expr, has_keep_expr],
-            from_=TableExpression(dialect, T_HSTORE_DELETE),
+            from_=Table(dialect, T_HSTORE_DELETE),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -595,7 +595,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "data")],
-            from_=TableExpression(dialect, T_HSTORE_ASYNC),
+            from_=Table(dialect, T_HSTORE_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -616,7 +616,7 @@ class TestAsyncHstoreIntegration:
         query_a = QueryExpression(
             dialect=dialect,
             select=[val_a_expr],
-            from_=TableExpression(dialect, T_HSTORE_ASYNC),
+            from_=Table(dialect, T_HSTORE_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -637,7 +637,7 @@ class TestAsyncHstoreIntegration:
         query_b = QueryExpression(
             dialect=dialect,
             select=[val_b_expr],
-            from_=TableExpression(dialect, T_HSTORE_ASYNC),
+            from_=Table(dialect, T_HSTORE_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -664,7 +664,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
-            from_=TableExpression(dialect, T_HSTORE_OPS_ASYNC),
+            from_=Table(dialect, T_HSTORE_OPS_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -685,7 +685,7 @@ class TestAsyncHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr2],
-            from_=TableExpression(dialect, T_HSTORE_OPS_ASYNC),
+            from_=Table(dialect, T_HSTORE_OPS_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -712,7 +712,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), has_name_expr],
-            from_=TableExpression(dialect, T_HSTORE_KEY_ASYNC),
+            from_=Table(dialect, T_HSTORE_KEY_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -733,7 +733,7 @@ class TestAsyncHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), has_email_expr],
-            from_=TableExpression(dialect, T_HSTORE_KEY_ASYNC),
+            from_=Table(dialect, T_HSTORE_KEY_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -760,7 +760,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), merged_expr],
-            from_=TableExpression(dialect, T_HSTORE_CONCAT_ASYNC),
+            from_=Table(dialect, T_HSTORE_CONCAT_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -786,7 +786,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[each_func],
-            from_=TableExpression(dialect, T_HSTORE_EACH_ASYNC),
+            from_=Table(dialect, T_HSTORE_EACH_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -812,7 +812,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[akeys_func],
-            from_=TableExpression(dialect, T_HSTORE_KEYS_VALS_ASYNC),
+            from_=Table(dialect, T_HSTORE_KEYS_VALS_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -833,7 +833,7 @@ class TestAsyncHstoreIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[avals_func],
-            from_=TableExpression(dialect, T_HSTORE_KEYS_VALS_ASYNC),
+            from_=Table(dialect, T_HSTORE_KEYS_VALS_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -857,7 +857,7 @@ class TestAsyncHstoreIntegration:
         # SET data = data || 'status=>inactive'::hstore
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_UPDATE_ASYNC,
+            table=Table(dialect, T_HSTORE_UPDATE_ASYNC),
             assignments={
                 "data": BinaryExpression(
                     dialect, "||",
@@ -883,7 +883,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[status_expr],
-            from_=TableExpression(dialect, T_HSTORE_UPDATE_ASYNC),
+            from_=Table(dialect, T_HSTORE_UPDATE_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -906,7 +906,7 @@ class TestAsyncHstoreIntegration:
         # SET data = delete(data, 'remove')
         update_expr = UpdateExpression(
             dialect=dialect,
-            table=T_HSTORE_DELETE_ASYNC,
+            table=Table(dialect, T_HSTORE_DELETE_ASYNC),
             assignments={
                 "data": FunctionCall(
                     dialect, "delete",
@@ -937,7 +937,7 @@ class TestAsyncHstoreIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[has_remove_expr, has_keep_expr],
-            from_=TableExpression(dialect, T_HSTORE_DELETE_ASYNC),
+            from_=Table(dialect, T_HSTORE_DELETE_ASYNC),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),

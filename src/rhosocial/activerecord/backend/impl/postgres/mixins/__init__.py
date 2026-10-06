@@ -11,6 +11,7 @@ This package organizes PostgreSQL-specific mixins by category:
 - extensions: Extension mixins (pgvector, postgis, hstore, etc.)
 """
 
+from .object_name import PostgresObjectNameMixin
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
 from .ddl_table import PostgresTableMixin
@@ -112,6 +113,11 @@ from .join import PostgresJoinMixin
 from .truncate import PostgresTruncateMixin
 from .ddl_database import PostgresDatabaseMixin
 from .schema import PostgresSchemaMixin
+from .namespace import PostgresNamespaceMixin
+
+# Deprecated alias of PostgresNamespaceMixin; kept importable so an out-of-tree
+# dialect that inherited the old name keeps working.
+from .catalog import PostgresCatalogMixin
 from .sequence import PostgresSequenceMixin
 from .transaction import PostgresTransactionMixin
 from .ddl_view import PostgresViewMixin
@@ -219,6 +225,8 @@ __all__ = [
     "PostgresJoinMixin",
     "PostgresTruncateMixin",
     "PostgresSchemaMixin",
+    "PostgresNamespaceMixin",
+    "PostgresCatalogMixin",  # deprecated alias of PostgresNamespaceMixin
     "PostgresDatabaseMixin",
     "PostgresSequenceMixin",
     "PostgresTransactionMixin",

@@ -9,6 +9,7 @@ from enum import Enum
 from typing import Any, Dict, Mapping, Optional, Sequence, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     AlterTypeExpression,
     CreateTypeExpression,
@@ -492,19 +493,13 @@ class PostgresDropTypeExpression(DropTypeExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        type_name: str,
+        type: Type,
         *,
-        schema_name: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,
         restrict: bool = False,
     ) -> None:
-        super().__init__(
-            dialect,
-            type_name,
-            schema_name=schema_name,
-            if_exists=if_exists,
-        )
+        super().__init__(dialect, type, if_exists=if_exists)
         self.cascade = cascade
         self.restrict = restrict
 
@@ -521,9 +516,8 @@ class PostgresCreateEnumTypeExpression(CreateTypeExpression):
         definition = PostgresEnumTypeDefinition(dialect, values)
         super().__init__(
             dialect,
-            name,
+            Type(dialect, name, schema_name=schema),
             definition,
-            schema_name=schema,
             if_not_exists=if_not_exists,
         )
         self.name = name
@@ -543,8 +537,7 @@ class PostgresDropEnumTypeExpression(PostgresDropTypeExpression):
     ) -> None:
         super().__init__(
             dialect,
-            name,
-            schema_name=schema,
+            Type(dialect, name, schema_name=schema),
             if_exists=if_exists,
             cascade=cascade,
             restrict=restrict,
@@ -579,7 +572,9 @@ class PostgresAlterEnumAddValueExpression(AlterTypeExpression):
             after=after,
             if_not_exists=if_not_exists,
         )
-        super().__init__(dialect, type_name, [action], schema_name=schema)
+        super().__init__(
+            dialect, Type(dialect, type_name, schema_name=schema), [action]
+        )
         self.type_name = type_name
         self.new_value = new_value
         self.schema = schema
@@ -613,9 +608,8 @@ class PostgresAlterEnumTypeRenameValueExpression(AlterTypeExpression):
             raise ValueError("New value cannot be empty")
         super().__init__(
             dialect,
-            type_name,
+            Type(dialect, type_name, schema_name=schema),
             [PostgresRenameEnumValueAction(dialect, old_value, new_value)],
-            schema_name=schema,
         )
         self.type_name = type_name
         self.old_value = old_value
@@ -649,9 +643,8 @@ class PostgresCreateRangeTypeExpression(CreateTypeExpression):
         )
         super().__init__(
             dialect,
-            name,
+            Type(dialect, name, schema_name=schema),
             definition,
-            schema_name=schema,
             if_not_exists=if_not_exists,
         )
         self.name = name

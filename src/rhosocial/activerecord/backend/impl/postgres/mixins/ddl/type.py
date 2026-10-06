@@ -14,6 +14,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     TypeAlterAction,
     TypeDefinition,
 )
+from rhosocial.activerecord.backend.expression.objects import SchemaObject, Type
 from rhosocial.activerecord.backend.expression.types import DataType
 from ...expression.ddl.type import (
     PostgresAddEnumValueAction,
@@ -82,6 +83,13 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
     )
 
     def _format_qualified_identifier(self, name: str, schema: Optional[str] = None) -> str:
+        """Render a dotted identifier, each part quoted.
+
+        For the names that are types this is the type's own renderer; this
+        remains for the ones that are not types -- a COLLATE target, a SET
+        SCHEMA value -- which are bare schema-resident identifiers rather than
+        a catalogue kind the object tree models.
+        """
         value = f"{schema}.{name}" if schema is not None else name
         parts = value.split(".")
         if not parts or any(not part.strip() for part in parts):
@@ -260,9 +268,8 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         dialect = self._as_dialect()
         expr = CreateTypeExpression(
             dialect,
-            name,
+            Type(dialect, name, schema_name=schema),
             PostgresEnumTypeDefinition(dialect, values),
-            schema_name=schema,
         )
         return self.format_create_type_statement(expr)
 
@@ -270,6 +277,17 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         self,
         expr: CreateTypeExpression,
     ) -> Tuple[str, tuple]:
+        """Render ``CREATE TYPE`` for a PostgreSQL type definition.
+
+        Raises:
+            TypeError: ``expr.type`` is not a :class:`Type`. Another object kind
+                would have had its own name rendered as the type's.
+        """
+        if not isinstance(expr.type, Type):
+            raise TypeError(
+                f"CreateTypeExpression.type must be a Type, "
+                f"got {type(expr.type).__name__}"
+            )
         if not self.supports_type_objects() or not self.supports_create_type():
             raise UnsupportedFeatureError(self.name, "CREATE TYPE")
         if expr.if_not_exists and not self.supports_create_type_if_not_exists():
@@ -288,7 +306,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts.append("TYPE")
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self._format_qualified_identifier(expr.type_name, expr.schema_name))
+        parts.append(expr.type.to_sql()[0])
         if definition_sql:
             parts.append(definition_sql)
         return " ".join(parts), tuple(definition_params)
@@ -311,6 +329,16 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         self,
         expr: AlterTypeExpression,
     ) -> Tuple[str, tuple]:
+        """Render ``ALTER TYPE`` for the PostgreSQL type-alter actions.
+
+        Raises:
+            TypeError: ``expr.type`` is not a :class:`Type`.
+        """
+        if not isinstance(expr.type, Type):
+            raise TypeError(
+                f"AlterTypeExpression.type must be a Type, "
+                f"got {type(expr.type).__name__}"
+            )
         if not self.supports_type_objects() or not self.supports_alter_type():
             raise UnsupportedFeatureError(self.name, "ALTER TYPE")
         if expr.if_exists and not self.supports_alter_type_if_exists():
@@ -341,7 +369,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts = ["ALTER TYPE"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_qualified_identifier(expr.type_name, expr.schema_name))
+        parts.append(expr.type.to_sql()[0])
         parts.append(", ".join(action_parts))
         return " ".join(parts), tuple(action_params)
 
@@ -368,14 +396,18 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             resolved_schema = schema if schema is not None else schema_name
             expr = PostgresDropTypeExpression(
                 self._as_dialect(),
-                expr,
-                schema_name=resolved_schema,
+                Type(self._as_dialect(), expr, schema_name=resolved_schema),
                 if_exists=if_exists,
                 cascade=cascade,
                 restrict=restrict,
             )
         if not self.supports_type_objects() or not self.supports_drop_type():
             raise UnsupportedFeatureError(self.name, "DROP TYPE")
+        if not isinstance(expr.type, Type):
+            raise TypeError(
+                f"{type(expr).__name__}.type must be a Type, "
+                f"got {type(expr.type).__name__}"
+            )
         if expr.if_exists and not self.supports_drop_type_if_exists():
             raise UnsupportedFeatureError(self.name, "DROP TYPE IF EXISTS")
         behavior = self._format_type_behavior(
@@ -389,7 +421,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts = ["DROP TYPE"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self._format_qualified_identifier(expr.type_name, expr.schema_name))
+        parts.append(expr.type.to_sql()[0])
         if behavior:
             parts.append(behavior)
         return " ".join(parts), ()

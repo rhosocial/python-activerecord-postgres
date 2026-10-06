@@ -37,7 +37,7 @@ dialect = backend.dialect
 for table in ['orders', 'customers']:
     drop_table = DropTableExpression(
         dialect=dialect,
-        table_name=table,
+        table=Table(dialect, table),
         if_exists=True,
         cascade=True,
     )
@@ -46,7 +46,7 @@ for table in ['orders', 'customers']:
 
 create_customers = CreateTableExpression(
     dialect=dialect,
-    table_name='customers',
+    table=Table(dialect, 'customers'),
     columns=[
         ColumnDefinition(
             'id',
@@ -68,7 +68,7 @@ backend.execute(*create_customers.to_sql())
 
 create_orders = CreateTableExpression(
     dialect=dialect,
-    table_name='orders',
+    table=Table(dialect, 'orders'),
     columns=[
         ColumnDefinition(
             'id',
@@ -87,7 +87,7 @@ backend.execute(*create_orders.to_sql())
 
 insert_customers = InsertExpression(
     dialect=dialect,
-    into='customers',
+    into=Table(dialect, 'customers'),
     columns=['name', 'email'],
     source=ValuesSource(
         dialect,
@@ -101,7 +101,7 @@ backend.execute(*insert_customers.to_sql())
 
 insert_orders = InsertExpression(
     dialect=dialect,
-    into='orders',
+    into=Table(dialect, 'orders'),
     columns=['customer_id', 'total', 'status'],
     source=ValuesSource(
         dialect,
@@ -118,16 +118,15 @@ backend.execute(*insert_orders.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    Column,
-    WhereClause,
+    QueryExpression, Column, WhereClause,
 )
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-customers = TableExpression(dialect, 'customers', alias='c')
-orders = TableExpression(dialect, 'orders', alias='o')
+customers = NamedRelationRef(dialect, Table(dialect, 'customers'), alias='c')
+orders = NamedRelationRef(dialect, Table(dialect, 'orders'), alias='o')
 
 query = QueryExpression(
     dialect=dialect,

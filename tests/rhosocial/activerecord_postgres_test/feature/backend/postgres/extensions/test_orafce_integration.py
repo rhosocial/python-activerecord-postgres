@@ -26,9 +26,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -76,7 +76,7 @@ def orafce_backend(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -86,7 +86,7 @@ def orafce_backend(postgres_backend_single):
     # Insert seed data with NULL values for testing nvl
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=Table(dialect, TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
         source=ValuesSource(
             dialect,
@@ -123,7 +123,7 @@ def orafce_backend(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -148,7 +148,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -176,7 +176,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -206,7 +206,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -236,7 +236,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -267,7 +267,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -296,7 +296,7 @@ class TestOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -337,7 +337,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -347,7 +347,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     # Insert seed data with NULL values for testing nvl
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
         source=ValuesSource(
             dialect,
@@ -384,7 +384,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -410,7 +410,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -439,7 +439,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -470,7 +470,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -501,7 +501,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -533,7 +533,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -563,7 +563,7 @@ class TestAsyncOrafceIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()

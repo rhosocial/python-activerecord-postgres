@@ -26,12 +26,12 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
     OrderByClause,
     RawSQLExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -59,14 +59,14 @@ def ltree_env(postgres_backend_single):
     # Clean up residual tables from previous runs
     for table in ["test_ltree", "test_ltree_tree", "test_ltree_func",
                        "test_ltree_idx", "test_ltree_txtq"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_ltree table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree",
+        table=Table(dialect, 'test_ltree'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -85,7 +85,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree
     insert_ltree = InsertExpression(
         dialect=dialect,
-        into="test_ltree",
+        into=Table(dialect, 'test_ltree'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -104,7 +104,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_tree table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_tree",
+        table=Table(dialect, 'test_ltree_tree'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -124,7 +124,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_tree
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_tree",
+        into=Table(dialect, 'test_ltree_tree'),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
@@ -143,7 +143,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_func table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_func",
+        table=Table(dialect, 'test_ltree_func'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -162,7 +162,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_func
     insert_func = InsertExpression(
         dialect=dialect,
-        into="test_ltree_func",
+        into=Table(dialect, 'test_ltree_func'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -175,7 +175,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_idx table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_idx",
+        table=Table(dialect, 'test_ltree_idx'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -194,7 +194,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_idx
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_ltree_idx",
+        into=Table(dialect, 'test_ltree_idx'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -211,8 +211,8 @@ def ltree_env(postgres_backend_single):
     # Create GiST index on test_ltree_idx
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_ltree_path",
-        table_name="test_ltree_idx",
+        index=Index(dialect, 'idx_ltree_path'),
+        table=Table(dialect, 'test_ltree_idx'),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,
@@ -223,7 +223,7 @@ def ltree_env(postgres_backend_single):
     # Setup: create test_ltree_txtq table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_txtq",
+        table=Table(dialect, 'test_ltree_txtq'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -242,7 +242,7 @@ def ltree_env(postgres_backend_single):
     # Insert data into test_ltree_txtq
     insert_txtq = InsertExpression(
         dialect=dialect,
-        into="test_ltree_txtq",
+        into=Table(dialect, 'test_ltree_txtq'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -268,7 +268,7 @@ def ltree_env(postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -291,7 +291,7 @@ class TestLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[ancestor_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree"),
+            from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -311,7 +311,7 @@ class TestLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[not_ancestor_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree"),
+            from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -331,7 +331,7 @@ class TestLtreeIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[descendant_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree"),
+            from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -352,7 +352,7 @@ class TestLtreeIntegration:
         query4 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
-            from_=TableExpression(dialect, "test_ltree"),
+            from_=Table(dialect, "test_ltree"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql4, params4 = query4.to_sql()
@@ -378,7 +378,7 @@ class TestLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), ancestor_expr],
-            from_=TableExpression(dialect, "test_ltree_tree"),
+            from_=Table(dialect, "test_ltree_tree"),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -398,7 +398,7 @@ class TestLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), descendant_expr],
-            from_=TableExpression(dialect, "test_ltree_tree"),
+            from_=Table(dialect, "test_ltree_tree"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql2, params2 = query2.to_sql()
@@ -423,7 +423,7 @@ class TestLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[nlevel_func],
-            from_=TableExpression(dialect, "test_ltree_func"),
+            from_=Table(dialect, "test_ltree_func"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -445,7 +445,7 @@ class TestLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[subpath_func],
-            from_=TableExpression(dialect, "test_ltree_func"),
+            from_=Table(dialect, "test_ltree_func"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -467,7 +467,7 @@ class TestLtreeIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[subpath_func2],
-            from_=TableExpression(dialect, "test_ltree_func"),
+            from_=Table(dialect, "test_ltree_func"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -490,7 +490,7 @@ class TestLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "AND",
                 ComparisonPredicate(
@@ -518,7 +518,7 @@ class TestLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), descendant_expr],
-            from_=TableExpression(dialect, "test_ltree_idx"),
+            from_=Table(dialect, "test_ltree_idx"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql2, params2 = query2.to_sql()
@@ -540,7 +540,7 @@ class TestLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
-            from_=TableExpression(dialect, "test_ltree_txtq"),
+            from_=Table(dialect, "test_ltree_txtq"),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -565,14 +565,14 @@ async def async_ltree_env(async_postgres_backend_single):
     for table in ["test_ltree_async", "test_ltree_tree_async",
                        "test_ltree_func_async", "test_ltree_idx_async",
                        "test_ltree_txtq_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_ltree_async table
     create_ltree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_async",
+        table=Table(dialect, 'test_ltree_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -591,7 +591,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_async
     insert_ltree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_async",
+        into=Table(dialect, 'test_ltree_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -610,7 +610,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_tree_async table
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_tree_async",
+        table=Table(dialect, 'test_ltree_tree_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -630,7 +630,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_tree_async
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_ltree_tree_async",
+        into=Table(dialect, 'test_ltree_tree_async'),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
@@ -649,7 +649,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_func_async table
     create_func = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_func_async",
+        table=Table(dialect, 'test_ltree_func_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -668,7 +668,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_func_async
     insert_func = InsertExpression(
         dialect=dialect,
-        into="test_ltree_func_async",
+        into=Table(dialect, 'test_ltree_func_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -681,7 +681,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_idx_async table
     create_idx_table = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_idx_async",
+        table=Table(dialect, 'test_ltree_idx_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -700,7 +700,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_idx_async
     insert_idx = InsertExpression(
         dialect=dialect,
-        into="test_ltree_idx_async",
+        into=Table(dialect, 'test_ltree_idx_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -717,8 +717,8 @@ async def async_ltree_env(async_postgres_backend_single):
     # Create GiST index on test_ltree_idx_async
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_ltree_path_async",
-        table_name="test_ltree_idx_async",
+        index=Index(dialect, 'idx_ltree_path_async'),
+        table=Table(dialect, 'test_ltree_idx_async'),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,
@@ -729,7 +729,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Setup: create test_ltree_txtq_async table
     create_txtq = CreateTableExpression(
         dialect=dialect,
-        table="test_ltree_txtq_async",
+        table=Table(dialect, 'test_ltree_txtq_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -748,7 +748,7 @@ async def async_ltree_env(async_postgres_backend_single):
     # Insert data into test_ltree_txtq_async
     insert_txtq = InsertExpression(
         dialect=dialect,
-        into="test_ltree_txtq_async",
+        into=Table(dialect, 'test_ltree_txtq_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
@@ -774,7 +774,7 @@ async def async_ltree_env(async_postgres_backend_single):
     ]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -798,7 +798,7 @@ class TestAsyncLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[ancestor_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree_async"),
+            from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -818,7 +818,7 @@ class TestAsyncLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[not_ancestor_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree_async"),
+            from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -838,7 +838,7 @@ class TestAsyncLtreeIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[descendant_expr, Column(dialect, "path")],
-            from_=TableExpression(dialect, "test_ltree_async"),
+            from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
@@ -858,7 +858,7 @@ class TestAsyncLtreeIntegration:
         query4 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
-            from_=TableExpression(dialect, "test_ltree_async"),
+            from_=Table(dialect, "test_ltree_async"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql4, params4 = query4.to_sql()
@@ -884,7 +884,7 @@ class TestAsyncLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), ancestor_expr],
-            from_=TableExpression(dialect, "test_ltree_tree_async"),
+            from_=Table(dialect, "test_ltree_tree_async"),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -904,7 +904,7 @@ class TestAsyncLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), descendant_expr],
-            from_=TableExpression(dialect, "test_ltree_tree_async"),
+            from_=Table(dialect, "test_ltree_tree_async"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql2, params2 = query2.to_sql()
@@ -930,7 +930,7 @@ class TestAsyncLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[nlevel_func],
-            from_=TableExpression(dialect, "test_ltree_func_async"),
+            from_=Table(dialect, "test_ltree_func_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -952,7 +952,7 @@ class TestAsyncLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[subpath_func],
-            from_=TableExpression(dialect, "test_ltree_func_async"),
+            from_=Table(dialect, "test_ltree_func_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -974,7 +974,7 @@ class TestAsyncLtreeIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[subpath_func2],
-            from_=TableExpression(dialect, "test_ltree_func_async"),
+            from_=Table(dialect, "test_ltree_func_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
@@ -998,7 +998,7 @@ class TestAsyncLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "AND",
                 ComparisonPredicate(
@@ -1026,7 +1026,7 @@ class TestAsyncLtreeIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), descendant_expr],
-            from_=TableExpression(dialect, "test_ltree_idx_async"),
+            from_=Table(dialect, "test_ltree_idx_async"),
             order_by=OrderByClause(dialect, [Column(dialect, "path")]),
         )
         sql2, params2 = query2.to_sql()
@@ -1049,7 +1049,7 @@ class TestAsyncLtreeIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
-            from_=TableExpression(dialect, "test_ltree_txtq_async"),
+            from_=Table(dialect, "test_ltree_txtq_async"),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

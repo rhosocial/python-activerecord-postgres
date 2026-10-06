@@ -23,10 +23,10 @@ from rhosocial.activerecord.backend.expression import (
     OrderByClause,
     QualifiedIdentifierExpression,
     QueryExpression,
-    TableExpression,
     ValuesSource,
     WildcardExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableExpression,
@@ -81,7 +81,7 @@ def _qualified(table_name: str) -> str:
 def _create_partitioned_parent_sql(dialect, table_name: str):
     expr = CreateTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=Table(dialect, table_name),
         columns=[
             ColumnDefinition(
                 dialect,
@@ -135,7 +135,7 @@ def _create_default_partition_sql(dialect, partition_name: str):
 def _delete_partition_events_for_range_expression(dialect, start, end):
     return DeleteExpression(
         dialect=dialect,
-        tables="ar_partition_events",
+        tables=Table(dialect, 'ar_partition_events'),
         where=(Column(dialect, "created_at") >= Literal(dialect, start))
         & (Column(dialect, "created_at") < Literal(dialect, end)),
     )
@@ -144,7 +144,7 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
 def _insert_partition_events_expression(dialect, rows):
     return InsertExpression(
         dialect=dialect,
-        into="ar_partition_events",
+        into=Table(dialect, 'ar_partition_events'),
         columns=["id", "created_at", "payload"],
         source=ValuesSource(
             dialect,
@@ -176,7 +176,7 @@ def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_valu
 def _drop_table_sql(dialect, table_name: str):
     expr = DropTableExpression(
         dialect=dialect,
-        table=table_name,
+        table=Table(dialect, table_name),
         if_exists=True,
         cascade=True,
     )
@@ -186,7 +186,7 @@ def _drop_table_sql(dialect, table_name: str):
 def _truncate_table_sql(dialect, table_name: str):
     expr = TruncateExpression(
         dialect=dialect,
-        table_name=table_name,
+        table=Table(dialect, table_name),
     )
     return expr.to_sql()
 
@@ -219,7 +219,7 @@ PRODUCTION_PARTITIONS = (
 def _create_production_parent_sql(dialect):
     expr = CreateTableExpression(
         dialect=dialect,
-        table=PRODUCTION_PARTITION_TABLE,
+        table=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=[
             ColumnDefinition(
                 dialect,
@@ -303,8 +303,8 @@ def _attach_production_partition_sql(dialect, partition_name: str, from_value: s
 def _create_production_index_sql(dialect, table_name: str):
     expr = CreateIndexExpression(
         dialect,
-        f"idx_{table_name}_tenant_created_at",
-        table_name,
+        Index(dialect, f'idx_{table_name}_tenant_created_at'),
+        Table(dialect, table_name),
         ["tenant_id", "created_at"],
         if_not_exists=True,
     )
@@ -314,7 +314,7 @@ def _create_production_index_sql(dialect, table_name: str):
 def _insert_production_events_expression(dialect, rows):
     return InsertExpression(
         dialect=dialect,
-        into=PRODUCTION_PARTITION_TABLE,
+        into=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
         source=ValuesSource(
             dialect,
@@ -337,7 +337,7 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
     return QueryExpression(
         dialect,
         select=[Column(dialect, "payload")],
-        from_=TableExpression(dialect, PRODUCTION_PARTITION_TABLE),
+        from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
         where=predicate,
         order_by=OrderByClause(dialect, [(Column(dialect, "id"), "ASC")]),
     )
@@ -347,7 +347,7 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
     return QueryExpression(
         dialect,
         select=[WildcardExpression(dialect)],
-        from_=TableExpression(dialect, PRODUCTION_PARTITION_TABLE),
+        from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
         where=LogicalPredicate(
             dialect,
             "AND",
@@ -362,7 +362,7 @@ def _select_count_expression(dialect, table_name: str):
     return QueryExpression(
         dialect,
         select=[FunctionCall(dialect, "COUNT", WildcardExpression(dialect)).as_("count")],
-        from_=TableExpression(dialect, table_name),
+        from_=Table(dialect, table_name),
     )
 
 

@@ -20,9 +20,9 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
     UpdateExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -51,7 +51,7 @@ dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     if_exists=True,
     cascade=True,
 )
@@ -60,7 +60,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     columns=[
         ColumnDefinition(
             'id',
@@ -82,7 +82,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='accounts',
+    into=Table(dialect, 'accounts'),
     columns=['name', 'balance'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice'), Literal(dialect, 1000)],
@@ -106,7 +106,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -120,7 +120,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ
     # Update within the transaction
     update_expr = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1100)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -135,7 +135,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=TableExpression(dialect, 'accounts'),
+    from_=Table(dialect, 'accounts'),
     where=ComparisonPredicate(
         dialect, '=',
         Column(dialect, 'name'),
@@ -157,7 +157,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.REPE
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
@@ -187,7 +187,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERI
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
     )
     sql, params = query.to_sql()
@@ -197,7 +197,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERI
     # Update Bob's balance
     update_expr = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 600)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -218,7 +218,7 @@ print("\n--- Per-transaction isolation level ---")
 with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
     update_expr = UpdateExpression(
         dialect=dialect,
-        table=TableExpression(dialect, 'accounts'),
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1200)},
         where=ComparisonPredicate(
             dialect, '=',
@@ -234,7 +234,7 @@ with backend.transaction():
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
     )
     sql, params = query.to_sql()
@@ -246,7 +246,7 @@ with backend.transaction():
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     if_exists=True,
     cascade=True,
 )

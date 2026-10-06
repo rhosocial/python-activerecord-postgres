@@ -19,8 +19,8 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
@@ -47,7 +47,7 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -56,7 +56,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition(
             'id',
@@ -87,7 +87,7 @@ backend.execute(sql, params)
 
 insert_nothing = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
@@ -105,7 +105,7 @@ backend.execute(sql, params)
 # Try to insert again - will be ignored
 insert_nothing2 = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
@@ -122,7 +122,7 @@ backend.execute(sql, params)
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
     where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'alice')),
 )
 sql, params = query.to_sql()
@@ -136,7 +136,7 @@ print(f"DO NOTHING result: {result.data}")
 
 insert_update = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
@@ -157,7 +157,7 @@ backend.execute(sql, params)
 # Insert again - will update
 insert_update2 = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],
@@ -180,7 +180,7 @@ query = QueryExpression(
         Column(dialect, 'id'), Column(dialect, 'username'),
         Column(dialect, 'email'), Column(dialect, 'login_count'),
     ],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
     where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
 )
 sql, params = query.to_sql()
@@ -192,7 +192,7 @@ print(f"DO UPDATE result: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )

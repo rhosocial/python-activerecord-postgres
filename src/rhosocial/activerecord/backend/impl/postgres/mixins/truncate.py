@@ -4,6 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from ....expression.statements.ddl_truncate import TruncateExpression
@@ -24,18 +25,21 @@ class PostgresTruncateMixin:
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
-        - ``expr.table_name`` — target table.
+        - ``expr.table`` — the table being truncated, which renders its own
+          name and namespace.
         - ``expr.restart_identity`` — add ``RESTART IDENTITY`` (PG 8.4+).
         - ``expr.cascade`` — add ``CASCADE``.
+
+        Raises:
+            TypeError: ``expr.table`` is not a :class:`Table`. Another object kind
+                would have had its own name rendered as the table's.
         """
-        parts = ["TRUNCATE TABLE"]
-        table_name = self.format_identifier(expr.table_name)
-        if expr.schema:
-            table_name = (
-                f"{self.format_identifier(expr.schema)}."
-                f"{table_name}"
+        if not isinstance(expr.table, Table):
+            raise TypeError(
+                f"TruncateExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
             )
-        parts.append(table_name)
+        parts = ["TRUNCATE TABLE", expr.table.to_sql()[0]]
 
         if expr.restart_identity:
             if not self.supports_truncate_restart_identity():

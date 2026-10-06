@@ -33,7 +33,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='products',
+    table=Table(dialect, 'products'),
     if_exists=True,
     cascade=True,
 )
@@ -42,7 +42,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table='products',
+    table=Table(dialect, 'products'),
     columns=[
         ColumnDefinition(
             'id',
@@ -66,8 +66,8 @@ from rhosocial.activerecord.backend.expression import CreateIndexExpression
 
 create_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_category_price',
-    table_name='products',
+    index=Index(dialect, 'idx_category_price'),
+    table=Table(dialect, 'products'),
     columns=['category', 'price'],
     if_not_exists=True,
 )
@@ -83,13 +83,14 @@ result = backend.execute(sql, params)
 print("Index created: idx_category_price")
 
 # Verify index creation
-from rhosocial.activerecord.backend.expression import QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Column, Literal
 
 verify_expr = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'indexname')],
-    from_=TableExpression(dialect, 'pg_indexes'),
+    from_=Table(dialect, 'pg_indexes'),
     where=Column(dialect, 'indexname') == Literal(dialect, 'idx_category_price'),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)

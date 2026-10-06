@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'INT'),
     ],
@@ -45,10 +45,11 @@ backend.execute(sql, params)
 # SECTION: DROP TABLE
 # ============================================================
 from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression.objects import Table
 
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
 )
 sql, params = drop_expr.to_sql()
 print(f"DROP TABLE SQL: {sql}")
@@ -58,7 +59,7 @@ backend.execute(sql, params)
 # Already deleted
 drop_expr_exists = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
 )
 sql, params = drop_expr_exists.to_sql()

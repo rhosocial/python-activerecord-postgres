@@ -27,7 +27,7 @@ from typing import Any, Dict, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins import ViewMixin
-from rhosocial.activerecord.backend.expression.core import QualifiedIdentifierExpression
+from rhosocial.activerecord.backend.expression.objects import MaterializedView
 
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
@@ -91,19 +91,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """Render a materialized view name, schema-qualified when available.
 
         Args:
-            expr: Any MV expression exposing ``view_name`` and optionally ``schema``.
+            expr: An MV expression carrying the ``MaterializedView`` object it
+                names. The object renders itself, so the schema it carries is
+                the one that appears.
 
         Returns:
             The quoted (and possibly schema-qualified) identifier.
         """
-        name_sql, _ = self.format_qualified_identifier(
-            QualifiedIdentifierExpression(
-                self,
-                schema=getattr(expr, "schema", None),
-                name=expr.view_name,
-            )
-        )
-        return name_sql
+        return expr.view.to_sql()[0]
 
     def _format_storage_parameters(self, properties: Dict[Any, Any]) -> str:
         """Render a ``KEY = value, ...`` storage parameter list.
@@ -140,8 +135,8 @@ class PostgresMaterializedViewMixin(ViewMixin):
         [WITH (storage_parameter = value, ...)] [TABLESPACE name] AS query
         [WITH [NO] DATA]``.
 
-        - ``expr.view_name`` — view name (identifier).
-        - ``expr.schema`` — optional schema (PostgreSQL extension expression).
+        - ``expr.view`` — the ``MaterializedView`` being created; it renders
+          itself, so a qualified name comes out of the namespace machinery.
         - ``expr.column_aliases`` — optional list of column aliases.
         - ``expr.if_not_exists`` — ``IF NOT EXISTS`` (PostgreSQL 9.4+).
         - ``expr.storage_options`` — optional dict of storage parameters (``WITH (… )``).
@@ -156,9 +151,17 @@ class PostgresMaterializedViewMixin(ViewMixin):
             Tuple of (SQL string, params tuple)
 
         Raises:
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`. A plain
+                :class:`View` is the wrong kind here and would have had its own
+                name rendered as the materialized view's.
             UnsupportedFeatureError: If the dialect or the target server version
                 does not support the requested materialized view feature.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"CreateMaterializedViewExpression.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         if not self.supports_materialized_view():
             raise UnsupportedFeatureError(self.name, "CREATE MATERIALIZED VIEW")
 
@@ -199,7 +202,18 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """Format DROP MATERIALIZED VIEW statement for PostgreSQL.
 
         Extends the core formatter with schema qualification.
+
+        Raises:
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`. A plain
+                :class:`View` is the wrong kind here: the two share a name shape
+                but not a statement, and PostgreSQL refuses ``DROP MATERIALIZED
+                VIEW <a view>`` at execution time with a far worse message.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"{type(expr).__name__}.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         if not self.supports_materialized_view():
             raise UnsupportedFeatureError(self.name, "DROP MATERIALIZED VIEW")
 
@@ -233,8 +247,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
             Tuple of (SQL statement, parameters tuple)
 
         Raises:
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`.
             UnsupportedFeatureError: If CONCURRENTLY is requested on PG < 9.4.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"{type(expr).__name__}.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         self._check_concurrent_refresh_support(expr)
 
         parts = ["REFRESH MATERIALIZED VIEW"]
@@ -267,37 +287,52 @@ class PostgresMaterializedViewMixin(ViewMixin):
             raise UnsupportedFeatureError(self.name, "ALTER MATERIALIZED VIEW")
 
         target = self._format_materialized_view_name(expr)
-        rendered = [
-            f"ALTER MATERIALIZED VIEW {target} {self.format_materialized_view_alter_action(action)}"
-            for action in expr.actions
-        ]
+        rendered = []
+        for action in expr.actions:
+            action_sql, action_params = self.format_materialized_view_alter_action(
+                action
+            )
+            rendered.append(f"ALTER MATERIALIZED VIEW {target} {action_sql}")
         return ";\n".join(rendered), ()
 
-    def format_materialized_view_alter_action(self, expr: Any) -> str:
+    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
+
+        Returns the ``(sql, params)`` tuple every ``format_*`` method returns.
+        The action SQL is a fragment -- it has no ``ALTER MATERIALIZED VIEW
+        <name>`` prefix -- but the contract is the contract: each action class
+        declares this method as its ``format_method``, so ``to_sql()`` hands the
+        return value straight back to its caller. Returning a bare string here
+        made ``action.to_sql()`` a string, which then failed to unpack wherever
+        someone treated it as the documented tuple.
 
         Args:
             expr: A ``MaterializedViewAlterAction`` subclass instance.
 
         Returns:
-            The action SQL without the leading ``ALTER MATERIALIZED VIEW <name>``.
+            A ``(sql, params)`` tuple whose ``sql`` is the action body without
+            the leading ``ALTER MATERIALIZED VIEW <name>``. ``params`` is always
+            empty -- a storage-parameter name is not a bind parameter.
 
         Raises:
             UnsupportedFeatureError: If the action is not a known PostgreSQL
                 materialized view action.
         """
         if isinstance(expr, PostgresRenameMaterializedViewAction):
-            return f"RENAME TO {self.format_identifier(expr.new_name)}"
+            return f"RENAME TO {self.format_identifier(expr.new_name)}", ()
         if isinstance(expr, PostgresSetMaterializedViewSchemaAction):
-            return f"SET SCHEMA {self.format_identifier(expr.new_schema)}"
+            return f"SET SCHEMA {self.format_identifier(expr.new_schema)}", ()
         if isinstance(expr, PostgresSetMaterializedViewPropertiesAction):
-            return f"SET ({self._format_storage_parameters(expr.properties)})"
+            return f"SET ({self._format_storage_parameters(expr.properties)})", ()
         if isinstance(expr, PostgresResetMaterializedViewPropertiesAction):
-            return f"RESET ({self._format_storage_parameter_names(expr.parameters)})"
+            return (
+                f"RESET ({self._format_storage_parameter_names(expr.parameters)})",
+                (),
+            )
         if isinstance(expr, PostgresChangeMaterializedViewOwnerAction):
             if expr.new_owner.upper() in _CURRENT_ROLE_KEYWORDS:
-                return f"OWNER TO {expr.new_owner.upper()}"
-            return f"OWNER TO {self.format_identifier(expr.new_owner)}"
+                return f"OWNER TO {expr.new_owner.upper()}", ()
+            return f"OWNER TO {self.format_identifier(expr.new_owner)}", ()
         raise UnsupportedFeatureError(
             self.name,
             f"ALTER MATERIALIZED VIEW action {getattr(expr, 'action_kind', type(expr).__name__)}",

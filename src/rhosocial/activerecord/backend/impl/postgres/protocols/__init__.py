@@ -100,6 +100,7 @@ from .ilike import PostgresILIKESupport
 from .join import PostgresJoinSupport
 from .truncate import PostgresTruncateSupport
 from .schema import PostgresSchemaSupport
+from .catalog import PostgresCatalogSupport, PostgresNamespaceSupport
 from .sequence import PostgresSequenceSupport
 from .transaction import PostgresTransactionSupport
 from .view import PostgresViewSupport
@@ -196,6 +197,8 @@ __all__ = [
     "PostgresJoinSupport",
     "PostgresTruncateSupport",
     "PostgresSchemaSupport",
+    "PostgresCatalogSupport",  # deprecated alias of PostgresNamespaceSupport
+    "PostgresNamespaceSupport",
     "PostgresSequenceSupport",
     "PostgresTransactionSupport",
     "PostgresViewSupport",

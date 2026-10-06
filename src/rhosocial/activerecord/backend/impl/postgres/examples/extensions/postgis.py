@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -63,10 +63,9 @@ from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression import (
-    Column,
-    QueryExpression,
-    TableExpression,
+    Column, QueryExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -117,7 +116,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="locations",
+        table=Table(dialect, 'locations'),
         columns=columns,
         if_not_exists=True,
     )
@@ -130,7 +129,7 @@ if installed:
     # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="locations",
+        into=Table(dialect, 'locations'),
         columns=["name", "geom"],
         source=ValuesSource(
             dialect,
@@ -188,7 +187,7 @@ if installed:
         QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "geom")],
-            from_=TableExpression(dialect, "locations"),
+            from_=Table(dialect, "locations"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
@@ -202,7 +201,7 @@ if installed:
         QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "geom")],
-            from_=TableExpression(dialect, "locations"),
+            from_=Table(dialect, "locations"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
@@ -237,7 +236,7 @@ if installed:
                 dialect, "ST_AsText", Column(dialect, "geom"),
             ).as_("point"),
         ],
-        from_=TableExpression(dialect, "locations"),
+        from_=Table(dialect, "locations"),
         where=FunctionCall(
             dialect, "ST_DWithin",
             Column(dialect, "geom"),
@@ -263,8 +262,8 @@ if installed:
     # Example 5: Create GIST spatial index
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_locations_geom",
-        table_name="locations",
+        index=Index(dialect, 'idx_locations_geom'),
+        table=Table(dialect, 'locations'),
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -282,7 +281,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="locations", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

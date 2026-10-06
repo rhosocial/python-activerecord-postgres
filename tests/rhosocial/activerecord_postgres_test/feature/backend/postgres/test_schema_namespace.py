@@ -5,7 +5,7 @@ Tests for PostgreSQL schema namespace support.
 Covers:
   - PostgresDialect schema capability declarations
   - Expression/Dialect layer: CreateSchemaExpression, DropSchemaExpression,
-    Column/TableExpression/WildcardExpression with schema_name
+    Column/Table/WildcardExpression with schema_name
   - Backend layer: CREATE/DROP schema, table operations in custom schema,
     introspection with schema
   - Async Backend layer: same operations with async backend
@@ -13,9 +13,11 @@ Covers:
 
 import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression.core import (
-    Column, TableExpression, WildcardExpression,
+from rhosocial.activerecord.backend.expression import (
+    Column, WildcardExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Schema, Table
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
     CreateSchemaExpression,
     DropSchemaExpression,
@@ -56,14 +58,16 @@ class TestSchemaNamespaceDialect:
         assert params == ()
 
     def test_table_expression_with_schema(self, dialect):
-        table = TableExpression(dialect, "users", schema_name="app")
+        table = Table(dialect, "users", schema_name="app")
         sql, params = table.to_sql()
         assert sql == '"app"."users"'
         assert params == ()
 
     def test_table_expression_with_schema_and_alias(self, dialect):
-        table = TableExpression(dialect, "users", schema_name="app", alias="u")
-        sql, params = table.to_sql()
+        source = NamedRelationRef(
+            dialect, Table(dialect, "users", schema_name="app"), alias="u"
+        )
+        sql, params = source.to_sql()
         assert '"app"."users"' in sql
         assert '"u"' in sql
 
@@ -74,26 +78,26 @@ class TestSchemaNamespaceDialect:
         assert params == ()
 
     def test_create_schema_expression(self, dialect):
-        expr = CreateSchemaExpression(dialect, schema_name="app")
+        expr = CreateSchemaExpression(dialect, schema=Schema(dialect, 'app'))
         sql, params = expr.to_sql()
         assert sql == 'CREATE SCHEMA "app"'
         assert params == ()
 
     def test_drop_schema_expression(self, dialect):
-        expr = DropSchemaExpression(dialect, schema_name="app")
+        expr = DropSchemaExpression(dialect, schema=Schema(dialect, 'app'))
         sql, params = expr.to_sql()
         assert sql == 'DROP SCHEMA "app"'
         assert params == ()
 
     def test_create_schema_if_not_exists(self, dialect):
-        expr = CreateSchemaExpression(dialect, schema_name="app", if_not_exists=True)
+        expr = CreateSchemaExpression(dialect, schema=Schema(dialect, 'app'), if_not_exists=True)
         sql, params = expr.to_sql()
         assert "IF NOT EXISTS" in sql
         assert '"app"' in sql
 
     def test_drop_schema_if_exists_cascade(self, dialect):
         expr = DropSchemaExpression(
-            dialect, schema_name="app", if_exists=True, cascade=True,
+            dialect, schema=Schema(dialect, 'app'), if_exists=True, cascade=True,
         )
         sql, params = expr.to_sql()
         assert "IF EXISTS" in sql

@@ -20,6 +20,7 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.statements import IdentityClause
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
@@ -43,8 +44,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_pg9 = DropTableExpression(dialect, "pg9_style", if_exists=True, cascade=True)
-drop_pg10 = DropTableExpression(dialect, "pg10_style", if_exists=True, cascade=True)
+drop_pg9 = DropTableExpression(dialect, Table(dialect, 'pg9_style'), if_exists=True, cascade=True)
+drop_pg10 = DropTableExpression(dialect, Table(dialect, 'pg10_style'), if_exists=True, cascade=True)
 sql, params = drop_pg9.to_sql()
 backend.execute(sql, params)
 sql, params = drop_pg10.to_sql()
@@ -52,7 +53,7 @@ backend.execute(sql, params)
 
 # PostgreSQL 9-compatible: SERIAL shorthand
 pg9_table = CreateTableExpression(
-    dialect=dialect, table="pg9_style", columns=[
+    dialect=dialect, table=Table(dialect, 'pg9_style'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
@@ -66,7 +67,7 @@ backend.execute(sql, params)
 # in the PostgreSQL dialect's format_column_definition
 try:
     pg10_table = CreateTableExpression(
-        dialect=dialect, table="pg10_style", columns=[
+        dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect),
                 constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],
                 identity_clause=IdentityClause(dialect, generation="ALWAYS")),

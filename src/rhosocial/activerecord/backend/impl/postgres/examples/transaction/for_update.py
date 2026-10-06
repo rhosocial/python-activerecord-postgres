@@ -20,9 +20,9 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     UpdateExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import ForUpdateClause
@@ -50,7 +50,7 @@ dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     if_exists=True,
     cascade=True,
 )
@@ -59,7 +59,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     columns=[
         ColumnDefinition(
             'id',
@@ -81,7 +81,7 @@ backend.execute(sql, params)
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='accounts',
+    into=Table(dialect, 'accounts'),
     columns=['name', 'balance'],
     source=ValuesSource(
         dialect,
@@ -104,7 +104,7 @@ with backend.transaction():
     lock_query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
         for_update=ForUpdateClause(dialect),
     )
@@ -115,7 +115,7 @@ with backend.transaction():
     # Update the balance
     update_expr = UpdateExpression(
         dialect=dialect,
-        table='accounts',
+        table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 900)},
         where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
     )
@@ -133,7 +133,7 @@ with backend.transaction():
     lock_query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(dialect, '>', Column(dialect, 'balance'), Literal(dialect, 500)),
         for_update=ForUpdateClause(dialect),
     )
@@ -149,7 +149,7 @@ with backend.transaction():
 skip_query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=TableExpression(dialect, 'accounts'),
+    from_=Table(dialect, 'accounts'),
     for_update=ForUpdateClause(dialect, skip_locked=True),
 )
 sql, params = skip_query.to_sql()
@@ -166,7 +166,7 @@ try:
     nowait_query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
         for_update=ForUpdateClause(dialect, nowait=True),
     )
@@ -195,7 +195,7 @@ with backend.transaction():
     share_query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=TableExpression(dialect, 'accounts'),
+        from_=Table(dialect, 'accounts'),
         for_update=ForUpdateClause(dialect, strength=LockStrength.SHARE),
     )
     sql, params = share_query.to_sql()
@@ -207,7 +207,7 @@ with backend.transaction():
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='accounts',
+    table=Table(dialect, 'accounts'),
     if_exists=True,
     cascade=True,
 )

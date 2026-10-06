@@ -9,9 +9,13 @@ Version Requirements:
 - COMMENT: PostgreSQL 7.2+
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.objects import SchemaObject
+from rhosocial.activerecord.backend.expression.statements.ddl_comment import (
+    CommentObjectType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -29,30 +33,33 @@ class PostgresCommentExpression(BaseExpression):
     Attributes:
         object_type: Object type: 'TABLE', 'COLUMN', 'INDEX', 'VIEW',
                     'SCHEMA', 'FUNCTION', 'TRIGGER', etc.
-        object_name: Name of the object to comment on.
-                   For COLUMN, format as 'table.column'.
+        object: The schema object being commented on. Its own namespace is
+                   rendered by the dialect, so a qualified name needs no
+                   assembly here.
         comment: Comment text (None to remove existing comment).
-        schema: Schema name for the object.
+        column: Name of the column, when the target is a column of ``object``.
 
     Example:
+        >>> from rhosocial.activerecord.backend.expression.objects import Table
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Comment on a table
         >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="TABLE",
-        ...     object_name="users",
+        ...     object=Table(dialect, "users"),
         ...     comment="User accounts table",
         ... )
         >>> sql, params = comment.to_sql()
         >>> sql
-        "COMMENT ON TABLE users IS 'User accounts table'"
+        'COMMENT ON TABLE "users" IS ?'
 
         >>> # Comment on a column
         >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="COLUMN",
-        ...     object_name="users.email",
+        ...     object=Table(dialect, "users"),
+        ...     column="email",
         ...     comment="User email address",
         ... )
 
@@ -60,7 +67,7 @@ class PostgresCommentExpression(BaseExpression):
         >>> comment = PostgresCommentExpression(
         ...     dialect=dialect,
         ...     object_type="INDEX",
-        ...     object_name="users_email_idx",
+        ...     object=Table(dialect, "users"),
         ...     comment=None,
         ... )
 
@@ -69,16 +76,22 @@ class PostgresCommentExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        object_type: str,
-        object_name: str,
-        comment: Optional[str],
-        schema: Optional[str] = None,
+        object_type: Union["CommentObjectType", str],
+        object: "SchemaObject",
+        comment: Optional[str] = None,
+        column: Optional[str] = None,
     ):
         super().__init__(dialect)
+        if not isinstance(object, SchemaObject):
+            raise TypeError(
+                f"object must be a SchemaObject, got {type(object).__name__}"
+            )
+        if column is not None and (not isinstance(column, str) or not column.strip()):
+            raise ValueError("column must be a non-empty string or None")
         self.object_type = object_type
-        self.object_name = object_name
+        self.object = object
         self.comment = comment
-        self.schema = schema
+        self.column = column
 
     @property
     def format_method(self) -> str:

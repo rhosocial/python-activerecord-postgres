@@ -28,9 +28,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -64,7 +64,7 @@ def _setup_lev_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -79,7 +79,7 @@ def _setup_lev_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["word"],
         source=ValuesSource(dialect, rows),
     )
@@ -101,7 +101,7 @@ def _setup_diff_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -115,7 +115,7 @@ def _setup_diff_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -127,7 +127,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -148,7 +148,7 @@ async def _async_setup_lev_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -163,7 +163,7 @@ async def _async_setup_lev_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["word"],
         source=ValuesSource(dialect, rows),
     )
@@ -185,7 +185,7 @@ async def _async_setup_diff_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -199,7 +199,7 @@ async def _async_setup_diff_table(backend, dialect, table):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(dialect, rows),
     )
@@ -211,7 +211,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -293,7 +293,7 @@ class TestFuzzystrmatchIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "word")],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -382,7 +382,7 @@ class TestFuzzystrmatchIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, TABLE_NAME_DIFF),
+            from_=Table(dialect, TABLE_NAME_DIFF),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -538,7 +538,7 @@ class TestAsyncFuzzystrmatchIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "word")],
-            from_=TableExpression(dialect, TABLE_NAME_ASYNC),
+            from_=Table(dialect, TABLE_NAME_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -629,7 +629,7 @@ class TestAsyncFuzzystrmatchIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, TABLE_NAME_DIFF_ASYNC),
+            from_=Table(dialect, TABLE_NAME_DIFF_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
