@@ -76,6 +76,15 @@ class PostgresMaterializedViewSupport(Protocol):
         """
         ...
 
+    def supports_with_data_clause(self) -> bool:
+        """Whether the ``WITH [NO] DATA`` population clause can be used.
+
+        Shared by ``CREATE TABLE ... AS``, ``CREATE MATERIALIZED VIEW`` and
+        ``REFRESH MATERIALIZED VIEW``; PostgreSQL accepts every form on all
+        versions this backend supports (measured on 9.6 through 19beta4).
+        """
+        ...
+
     def format_create_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 

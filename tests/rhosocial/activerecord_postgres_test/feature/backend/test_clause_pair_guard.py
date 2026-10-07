@@ -94,6 +94,12 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
     PostgresCopyToExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.mixins import (
+    PostgresCTEMixin,
+    PostgresMaterializedViewMixin,
+    PostgresTransactionMixin,
+    PostgresTruncateMixin,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
     PostgresExcludeConstraint,
 )
@@ -482,6 +488,29 @@ PAIR_CASES = (
         r"(?<!NOT )DEFERRABLE\b",
         r"NOT DEFERRABLE\b",
     ),
+    # PostgreSQL has no WAIT / NO WAIT on BEGIN or SET TRANSACTION. The pair
+    # must refuse by name through supports_transaction_wait() rather than be
+    # silently dropped; both spellings are refused here.
+    PairCase(
+        "BeginTransactionExpression.wait",
+        lambda d, **kw: BeginTransactionExpression(d, **kw),
+        "wait",
+        "no_wait",
+        r"(?<!NO )WAIT\b",
+        r"NO WAIT\b",
+        a_refusal="WAIT",
+        b_refusal="NO WAIT",
+    ),
+    PairCase(
+        "SetTransactionExpression.wait",
+        lambda d, **kw: SetTransactionExpression(d, **kw),
+        "wait",
+        "no_wait",
+        r"(?<!NO )WAIT\b",
+        r"NO WAIT\b",
+        a_refusal="WAIT",
+        b_refusal="NO WAIT",
+    ),
     PairCase(
         "AlterConstraint.enforced",
         lambda d, **kw: AlterConstraint(
@@ -653,7 +682,9 @@ class TestGuardIsNotVacuous:
             "PostgresExcludeConstraint.initially_deferred",
             "SetOperationExpression.all_",
             "BeginTransactionExpression.deferrable",
+            "BeginTransactionExpression.wait",
             "SetTransactionExpression.deferrable",
+            "SetTransactionExpression.wait",
             "AlterConstraint.enforced",
             "PostgresCopyToExpression.force_array",
             "PostgresDropTypeExpression.cascade/restrict",
@@ -668,3 +699,153 @@ class TestGuardIsNotVacuous:
             for refusal in (case.a_refusal, case.b_refusal):
                 if refusal is not None:
                     assert refusal.strip(), case.case_id
+
+
+class TestMasterProbesAreDeclared:
+    """The master probes core now consults are answered by this package.
+
+    Core's c4d6adc gave call sites to three probes that had been decorative
+    (materialized CTE, truncate, with-data) and added a fourth (transaction
+    wait). A dialect whose answer falls back to core's fail-closed default
+    starts refusing statements it used to render. Each probe is declared on
+    the PostgreSQL mixin that owns it -- inherited core defaults are exactly
+    the gap this round closes -- and the version boundary is the measured one.
+
+    Measurement (live PostgreSQL 9.6 through 19beta4, this repository's
+    scenario matrix): ``AS [NOT] MATERIALIZED`` is a syntax error through 11
+    and accepted from 12; CTAS/MV/refresh ``WITH [NO] DATA`` and ``TRUNCATE``
+    are accepted everywhere; ``WAIT`` / ``NO WAIT`` on BEGIN/SET TRANSACTION
+    is a syntax error everywhere.
+    """
+
+    def test_materialized_cte_carries_the_measured_boundary(self):
+        assert _dialect((11, 0, 0)).supports_materialized_cte() is False
+        assert _dialect((12, 0, 0)).supports_materialized_cte() is True
+        assert _dialect(PG19).supports_materialized_cte() is True
+
+    def test_materialized_cte_refuses_before_pg12(self):
+        dialect = _dialect((11, 0, 0))
+        with pytest.raises(UnsupportedFeatureError, match="MATERIALIZED CTE"):
+            CTEExpression(dialect, "c", _query(dialect), materialized=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NOT MATERIALIZED CTE"):
+            CTEExpression(dialect, "c", _query(dialect), not_materialized=True).to_sql()
+
+    def test_materialized_cte_renders_from_pg12(self):
+        dialect = _dialect((12, 0, 0))
+        sql, _params = CTEExpression(
+            dialect, "c", _query(dialect), materialized=True
+        ).to_sql()
+        assert "AS MATERIALIZED " in sql, sql
+        sql, _params = CTEExpression(
+            dialect, "c", _query(dialect), not_materialized=True
+        ).to_sql()
+        assert "AS NOT MATERIALIZED " in sql, sql
+
+    def test_the_declarations_live_on_the_postgres_mixins(self):
+        """A probe inherited from a core default is not a declaration."""
+        for mixin, name in (
+            (PostgresCTEMixin, "supports_materialized_cte"),
+            (PostgresTruncateMixin, "supports_truncate"),
+            (PostgresMaterializedViewMixin, "supports_with_data_clause"),
+            (PostgresTransactionMixin, "supports_transaction_wait"),
+        ):
+            assert name in mixin.__dict__, (
+                f"{mixin.__name__}.{name} is inherited, not declared"
+            )
+
+    def test_probe_answers(self):
+        dialect = _dialect(PG16)
+        assert dialect.supports_truncate() is True
+        assert dialect.supports_with_data_clause() is True
+        assert dialect.supports_transaction_wait() is False
+
+
+class TestMasterProbesGateTheirConsumers:
+    """A probe flipped to False refuses each consumer of its clause by name."""
+
+    class _NoWithData(PostgresDialect):
+        def supports_with_data_clause(self) -> bool:
+            return False
+
+    class _NoTruncate(PostgresDialect):
+        def supports_truncate(self) -> bool:
+            return False
+
+    def test_with_data_is_gated_on_every_consumer(self):
+        """CTAS, CREATE MV and both REFRESH forms consult the one probe."""
+        d = self._NoWithData(version=PG16)
+        assert d.supports_with_data_clause() is False
+        cases = (
+            (
+                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: CreateMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), _query(dd), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: CreateMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), _query(dd), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: RefreshMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: RefreshMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+        )
+        for builder, kwargs, feature in cases:
+            with pytest.raises(UnsupportedFeatureError, match=feature):
+                builder(d, **kwargs).to_sql()
+
+    def test_truncate_is_gated_on_its_probe(self):
+        d = self._NoTruncate(version=PG16)
+        assert d.supports_truncate() is False
+        with pytest.raises(UnsupportedFeatureError, match="TRUNCATE"):
+            TruncateExpression(d, _table(d)).to_sql()
+
+    def test_wait_pair_refuses_by_name_on_postgres(self):
+        d = _dialect(PG16)
+        with pytest.raises(UnsupportedFeatureError, match="WAIT"):
+            BeginTransactionExpression(d, wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
+            BeginTransactionExpression(d, no_wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="WAIT"):
+            SetTransactionExpression(d, wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
+            SetTransactionExpression(d, no_wait=True).to_sql()

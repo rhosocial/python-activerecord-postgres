@@ -1,7 +1,9 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/transaction.py
 """PostgreSQL transaction feature support implementation."""
 
-from typing import Tuple, TYPE_CHECKING
+from typing import Any, Dict, Tuple, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.transaction import (
@@ -28,8 +30,37 @@ class PostgresTransactionMixin:
     def supports_deferrable_transaction(self) -> bool:
         return True
 
+    def supports_transaction_wait(self) -> bool:
+        """Whether ``WAIT`` / ``NO WAIT`` can be spelled on a transaction.
+
+        PostgreSQL has no lock-wait clause on ``BEGIN`` or ``SET
+        TRANSACTION``: ``BEGIN NO WAIT`` and ``SET TRANSACTION NO WAIT`` are
+        both syntax errors (measured on 9.6 through 19beta4), so the pair is
+        refused by name rather than dropped. The clause belongs to Firebird's
+        grammar.
+        """
+        return False
+
     def supports_savepoint(self) -> bool:
         return True
+
+    def _refuse_transaction_wait(self, params: Dict[str, Any]) -> None:
+        """Refuse the WAIT / NO WAIT pair by name when the probe declines it.
+
+        The pair has no spelling on this dialect, so a request must fail
+        closed -- the same shape as every other probe-gated clause -- instead
+        of being silently dropped from the rendered statement.
+        """
+        wait = params.get("wait")
+        no_wait = params.get("no_wait")
+        if (wait or no_wait) and not self.supports_transaction_wait():
+            feature = "WAIT" if wait else "NO WAIT"
+            raise UnsupportedFeatureError(
+                self.name,
+                feature,
+                f"{self.name} has no {feature} transaction spelling; "
+                f"WAIT / NO WAIT is Firebird grammar.",
+            )
 
     def format_begin_transaction(
         self, expr: "BeginTransactionExpression"
@@ -45,8 +76,12 @@ class PostgresTransactionMixin:
         grammar; it is rendered whenever requested, not only alongside
         SERIALIZABLE (``BEGIN DEFERRABLE`` without an isolation level is
         accepted by the server -- measured on PostgreSQL 16).
+
+        ``WAIT`` / ``NO WAIT`` has no PostgreSQL spelling; the pair is refused
+        by name through :meth:`supports_transaction_wait`.
         """
         params = expr.get_params()
+        self._refuse_transaction_wait(params)
         parts = ["BEGIN"]
 
         isolation = params.get("isolation_level")
@@ -80,8 +115,12 @@ class PostgresTransactionMixin:
         Syntax:
         SET TRANSACTION { ISOLATION LEVEL { ... } | { READ WRITE | READ ONLY } | [ NOT ] DEFERRABLE } [, ...]
         SET SESSION CHARACTERISTICS AS TRANSACTION { ... }
+
+        ``WAIT`` / ``NO WAIT`` has no PostgreSQL spelling; the pair is refused
+        by name through :meth:`supports_transaction_wait`.
         """
         params = expr.get_params()
+        self._refuse_transaction_wait(params)
         parts = []
 
         if params.get("session"):

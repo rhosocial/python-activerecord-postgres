@@ -92,9 +92,40 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """
         return True
 
+    def supports_with_data_clause(self) -> bool:
+        """Whether the ``WITH [NO] DATA`` population clause can be used.
+
+        One probe answers all three consumers -- ``CREATE TABLE ... AS``,
+        ``CREATE MATERIALIZED VIEW`` and ``REFRESH MATERIALIZED VIEW`` -- as
+        core's ``MaterializedViewSupport`` declares. The clause is part of
+        all three synopses: the CTAS form long predates materialized views,
+        and ``CREATE``/``REFRESH MATERIALIZED VIEW ... [ WITH [ NO ] DATA ]``
+        is documented from 9.3, the version that introduced materialized
+        views. The live matrix (9.6 through 19beta4) accepts every form
+        (measured), so the answer is version-independent; the statement-level
+        probes still gate the statements themselves.
+        """
+        return True
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _check_with_data_clause_support(self, expr: Any) -> None:
+        """Refuse ``WITH [NO] DATA`` by name when the clause probe declines.
+
+        The core formatter this mixin overrides applies the same gate, so the
+        refusal vocabulary stays identical across the three consumers. The
+        gate runs before any SQL is assembled: a clause the dialect declines
+        is refused, never dropped and never rendered.
+        """
+        if (expr.with_data or expr.no_data) and not self.supports_with_data_clause():
+            feature = "WITH DATA" if expr.with_data else "WITH NO DATA"
+            raise UnsupportedFeatureError(
+                self.name,
+                feature,
+                f"{self.name} does not support {feature} for materialized views.",
+            )
 
     def _format_materialized_view_name(self, expr: Any) -> str:
         """Render a materialized view name, schema-qualified when available.
@@ -166,7 +197,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
                 :class:`View` is the wrong kind here and would have had its own
                 name rendered as the materialized view's.
             UnsupportedFeatureError: If the dialect or the target server version
-                does not support the requested materialized view feature.
+                does not support the requested materialized view feature, or if
+                the ``WITH [NO] DATA`` clause is requested and the clause probe
+                declines it.
         """
         if not isinstance(expr.view, MaterializedView):
             raise TypeError(
@@ -175,6 +208,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
             )
         if not self.supports_materialized_view():
             raise UnsupportedFeatureError(self.name, "CREATE MATERIALIZED VIEW")
+        self._check_with_data_clause_support(expr)
 
         parts = ["CREATE MATERIALIZED VIEW"]
 
@@ -270,7 +304,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         Raises:
             TypeError: ``expr.view`` is not a :class:`MaterializedView`.
-            UnsupportedFeatureError: If CONCURRENTLY is requested on PG < 9.4.
+            UnsupportedFeatureError: If CONCURRENTLY is requested on PG < 9.4,
+                or if the ``WITH [NO] DATA`` clause is requested and the clause
+                probe declines it.
         """
         if not isinstance(expr.view, MaterializedView):
             raise TypeError(
@@ -278,6 +314,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
                 f"got {type(expr.view).__name__}"
             )
         self._check_concurrent_refresh_support(expr)
+        self._check_with_data_clause_support(expr)
 
         parts = ["REFRESH MATERIALIZED VIEW"]
         if expr.concurrent:
