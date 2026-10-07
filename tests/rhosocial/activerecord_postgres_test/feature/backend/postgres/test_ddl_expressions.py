@@ -102,36 +102,36 @@ class TestPostgresRefreshMaterializedViewExpression:
         assert "CONCURRENTLY" in sql
         assert params == ()
 
-    def test_refresh_with_data_false_pg93(self):
-        """Test WITH NO DATA requires PG 9.4+."""
+    def test_refresh_no_data_pg93(self):
+        """Test WITH NO DATA on the PG 9.3 baseline."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect_pg93,
             view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
-            with_data=False,
+            no_data=True,
         )
 
         sql, params = expr.to_sql()
         assert "WITH NO DATA" in sql
 
-    def test_refresh_with_data_false_pg94(self, dialect):
+    def test_refresh_no_data_pg94(self, dialect):
         """Test WITH NO DATA with PG 9.4+."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
-            with_data=False,
+            no_data=True,
         )
         sql, params = expr.to_sql()
         assert "WITH NO DATA" in sql
         assert params == ()
 
-    def test_refresh_concurrently_and_with_data(self, dialect):
+    def test_refresh_concurrently_and_no_data(self, dialect):
         """Test CONCURRENTLY with WITH NO DATA."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
-            with_data=False,
+            no_data=True,
         )
         sql, params = expr.to_sql()
         assert "CONCURRENTLY" in sql

@@ -27,6 +27,11 @@ class PostgresExcludeConstraint(TableConstraint):
     expression is either a column name (``str``) or a ``BaseExpression``;
     ``using`` selects the index access method (default ``gist``) and ``where``
     is an optional partial-exclusion predicate.
+
+    The deferrability and enforcement options follow the round's two-parameter
+    shape (``deferrable`` / ``not_deferrable``, ``initially_deferred`` /
+    ``initially_immediate``, ``enforced`` / ``not_enforced``); setting both of a
+    pair raises ``ValueError`` at construction through the generic base.
     """
 
     def __init__(
@@ -37,19 +42,25 @@ class PostgresExcludeConstraint(TableConstraint):
         *,
         using: str = "gist",
         where: Optional[SQLPredicate] = None,
-        deferrable: Optional[bool] = None,
-        initially_deferred: Optional[bool] = None,
+        deferrable: bool = False,
+        not_deferrable: bool = False,
+        initially_deferred: bool = False,
+        initially_immediate: bool = False,
         validation: Any = None,
-        enforced: Optional[bool] = None,
+        enforced: bool = False,
+        not_enforced: bool = False,
     ):
         super().__init__(
             dialect,
             TableConstraintType.EXCLUDE,
             name=name,
             deferrable=deferrable,
+            not_deferrable=not_deferrable,
             initially_deferred=initially_deferred,
+            initially_immediate=initially_immediate,
             validation=validation,
             enforced=enforced,
+            not_enforced=not_enforced,
         )
         self.elements = elements or []
         self.using = using

@@ -92,7 +92,8 @@ class PostgresCopyToExpression(BaseExpression):
         quote: Optional[str] = None,
         escape: Optional[str] = None,
         force_quote: Optional[CopyColumnSelection] = None,
-        force_array: Optional[bool] = None,
+        force_array: bool = False,
+        force_array_false: bool = False,
         partitioned: bool = False,
         is_partitioned: Optional[bool] = None,
     ):
@@ -101,6 +102,10 @@ class PostgresCopyToExpression(BaseExpression):
             raise ValueError("COPY TO requires exactly one table_name or query source")
         if table_name is not None and query is not None:
             raise ValueError("COPY TO accepts either table_name or query, not both")
+        if force_array and force_array_false:
+            raise ValueError(
+                "force_array and force_array_false are mutually exclusive options"
+            )
         if query is not None and not isinstance(query, BaseExpression):
             raise TypeError("COPY TO query must be a BaseExpression")
         if is_partitioned is not None:
@@ -121,6 +126,7 @@ class PostgresCopyToExpression(BaseExpression):
         self.escape = escape
         self.force_quote = _copy_force_columns(force_quote)
         self.force_array = force_array
+        self.force_array_false = force_array_false
         self.partitioned = partitioned
         self.is_partitioned = partitioned
 

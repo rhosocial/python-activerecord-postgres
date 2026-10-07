@@ -10,13 +10,19 @@ core sequence protocols declare and answers them True -- except
 forward/reverse coverage tests in ``test_postgres_protocol_conformance``.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import (
     AlterSequenceSupport,
     CreateSequenceSupport,
     DropSequenceSupport,
 )
+
+if TYPE_CHECKING:
+    from ...expression.statements.ddl_sequence import (
+        AlterSequenceExpression,
+        CreateSequenceExpression,
+    )
 
 
 @runtime_checkable
@@ -65,3 +71,11 @@ class PostgresSequenceSupport(
     def supports_sequence_order(self) -> bool: ...
 
     def supports_sequence_owned_by(self) -> bool: ...
+
+    def format_create_sequence_statement(
+        self, expr: "CreateSequenceExpression"
+    ) -> Tuple[str, tuple]: ...
+
+    def format_alter_sequence_statement(
+        self, expr: "AlterSequenceExpression"
+    ) -> Tuple[str, tuple]: ...

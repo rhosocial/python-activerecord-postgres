@@ -421,9 +421,11 @@ class PostgresCopyMixin:
                         )
                     )
                 )
-        if expr.force_array is not None:
-            if not isinstance(expr.force_array, bool):
-                raise TypeError("force_array must be a bool")
+        if expr.force_array or expr.force_array_false:
+            if not isinstance(expr.force_array, bool) or not isinstance(
+                expr.force_array_false, bool
+            ):
+                raise TypeError("force_array and force_array_false must be bools")
             if copy_format != "json":
                 raise ValueError("FORCE_ARRAY requires COPY TO JSON format")
             self._require_copy_version(

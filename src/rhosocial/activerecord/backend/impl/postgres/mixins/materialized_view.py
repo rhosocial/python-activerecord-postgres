@@ -83,6 +83,15 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """ALTER MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
         return self.version >= (9, 3, 0)
 
+    def supports_materialized_view_restrict(self) -> bool:
+        """``DROP MATERIALIZED VIEW ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``DROP MATERIALIZED VIEW name [ CASCADE | RESTRICT ]``
+        (measured on PostgreSQL 16); RESTRICT is the default behavior but the
+        token itself is legal.
+        """
+        return True
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -142,7 +151,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
         - ``expr.storage_options`` — optional dict of storage parameters (``WITH (… )``).
         - ``expr.tablespace`` — optional tablespace.
         - ``expr.query`` — source SELECT expression.
-        - ``expr.with_data`` — ``WITH DATA`` / ``WITH NO DATA``.
+        - ``expr.with_data`` / ``expr.no_data`` — ``WITH DATA`` / ``WITH NO
+          DATA``; neither set renders no tail (both set is refused at
+          construction).
 
         Args:
             expr: CreateMaterializedViewExpression instance
@@ -193,7 +204,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         if expr.with_data:
             parts.append("WITH DATA")
-        else:
+        elif expr.no_data:
             parts.append("WITH NO DATA")
 
         return " ".join(parts), query_params
@@ -201,13 +212,16 @@ class PostgresMaterializedViewMixin(ViewMixin):
     def format_drop_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format DROP MATERIALIZED VIEW statement for PostgreSQL.
 
-        Extends the core formatter with schema qualification.
+        Extends the core formatter with schema qualification and consumes the
+        ``cascade`` / ``restrict`` pair. An explicit RESTRICT whose probe is
+        False raises instead of being dropped.
 
         Raises:
             TypeError: ``expr.view`` is not a :class:`MaterializedView`. A plain
                 :class:`View` is the wrong kind here: the two share a name shape
                 but not a statement, and PostgreSQL refuses ``DROP MATERIALIZED
                 VIEW <a view>`` at execution time with a far worse message.
+            UnsupportedFeatureError: If RESTRICT is requested but not supported.
         """
         if not isinstance(expr.view, MaterializedView):
             raise TypeError(
@@ -223,6 +237,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
         parts.append(self._format_materialized_view_name(expr))
         if expr.cascade:
             parts.append("CASCADE")
+        elif expr.restrict:
+            if not self.supports_materialized_view_restrict():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "DROP MATERIALIZED VIEW RESTRICT",
+                    f"{self.name} does not support DROP MATERIALIZED VIEW RESTRICT.",
+                )
+            parts.append("RESTRICT")
         return " ".join(parts), ()
 
     def format_refresh_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
@@ -261,8 +283,10 @@ class PostgresMaterializedViewMixin(ViewMixin):
         if expr.concurrent:
             parts.append("CONCURRENTLY")
         parts.append(self._format_materialized_view_name(expr))
-        if expr.with_data is not None:
-            parts.append("WITH DATA" if expr.with_data else "WITH NO DATA")
+        if expr.with_data:
+            parts.append("WITH DATA")
+        elif expr.no_data:
+            parts.append("WITH NO DATA")
         return " ".join(parts), ()
 
     def format_alter_materialized_view_statement(

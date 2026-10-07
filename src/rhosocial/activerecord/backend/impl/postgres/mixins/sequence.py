@@ -17,6 +17,14 @@ mixin are held in step by ``TestProtocolMixinForwardCoverage`` and
 which fail if a switch is declared in one and not the other.
 """
 
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
+        AlterSequenceExpression,
+        CreateSequenceExpression,
+    )
+
 
 class PostgresSequenceMixin:
     """PostgreSQL sequence override implementation.
@@ -24,6 +32,15 @@ class PostgresSequenceMixin:
     Every form below has been accepted since PostgreSQL 9.6, this backend's
     baseline, so the answers are version-independent and the ``version`` the
     dialect carries does not enter into them.
+
+    One spelling the CACHE option pair carries has no PostgreSQL form:
+    ``NO CACHE``. The ``CREATE SEQUENCE`` / ``ALTER SEQUENCE`` synopsis reads
+    ``[ CACHE cache ]`` with a positive minimum, so the uncached form is
+    ``CACHE 1``; ``NO CACHE`` is a syntax error (measured on PostgreSQL 16,
+    ``syntax error at or near "CACHE"``). The formatters below therefore refuse
+    ``no_cache=True`` by name rather than render a token the server rejects --
+    the same fail-closed rule the core formatters apply to options whose probe
+    is False, applied here to the one spelling of an option whose probe is True.
     """
 
     def supports_sequence(self) -> bool:
@@ -88,3 +105,40 @@ class PostgresSequenceMixin:
 
     def supports_sequence_owned_by(self) -> bool:
         return True
+
+    # ------------------------------------------------------------------
+    # Formatter overrides: the one spelling PostgreSQL cannot express
+    # ------------------------------------------------------------------
+
+    def _refuse_no_cache(self, feature: str) -> None:
+        """Refuse ``NO CACHE`` by name; PostgreSQL spells it ``CACHE 1``."""
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            feature,
+            f"{self.name} has no NO CACHE spelling; cache=1 is the uncached "
+            f"form. The CACHE option itself is supported.",
+        )
+
+    def format_create_sequence_statement(self, expr: "CreateSequenceExpression") -> Tuple[str, tuple]:
+        """Render ``CREATE SEQUENCE``, refusing the unspellable negative.
+
+        Delegates to the core formatter for everything else so the option
+        gating and ordering stay in one place. ``no_cache`` is the one spelling
+        PostgreSQL's synopsis lacks; it is refused by name rather than rendered.
+        """
+        if expr.no_cache:
+            self._refuse_no_cache("SEQUENCE NO CACHE")
+        return super().format_create_sequence_statement(expr)
+
+    def format_alter_sequence_statement(self, expr: "AlterSequenceExpression") -> Tuple[str, tuple]:
+        """Render ``ALTER SEQUENCE``, refusing the unspellable negative.
+
+        See :meth:`format_create_sequence_statement`.
+        """
+        if expr.no_cache:
+            self._refuse_no_cache("ALTER SEQUENCE NO CACHE")
+        return super().format_alter_sequence_statement(expr)

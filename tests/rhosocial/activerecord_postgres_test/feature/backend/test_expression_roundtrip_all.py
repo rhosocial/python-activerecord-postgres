@@ -377,16 +377,19 @@ def _alter_constraint(dialect):
     ``constraint_type`` is typed ``ColumnConstraintType | TableConstraintType |
     str``, so the introspective constructor cannot know which member is legal --
     and only CHECK and FOREIGN KEY are accepted for this statement, so most
-    guesses are refused by name. PostgreSQL's own four subclasses and core's three
-    share this shape, so one constructor is registered under each name:
-    ``make_instance`` picks by ``str.endswith``, so a single shared suffix would
-    also shadow unrelated classes.
+    guesses are refused by name. The enforcement keyword is mandatory in the
+    action's grammar, so the pair is set explicitly (``enforced=True``) as well.
+    PostgreSQL's own four subclasses and core's three share this shape, so one
+    constructor is registered under each name: ``make_instance`` picks by
+    ``str.endswith``, so a single shared suffix would also shadow unrelated
+    classes.
     """
     return PostgresAlterConstraint(
         dialect,
         constraint_name="c",
         name="c",
         constraint_type=TableConstraintType.CHECK,
+        enforced=True,
     )
 
 

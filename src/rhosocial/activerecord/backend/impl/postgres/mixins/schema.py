@@ -43,5 +43,14 @@ class PostgresSchemaMixin:
     def supports_schema_cascade(self) -> bool:
         return True
 
+    def supports_schema_restrict(self) -> bool:
+        """``DROP SCHEMA ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``DROP SCHEMA name [ CASCADE | RESTRICT ]``
+        (measured on PostgreSQL 16); RESTRICT is the default behavior but the
+        token itself is legal.
+        """
+        return True
+
     def supports_schema_authorization(self) -> bool:
         return True

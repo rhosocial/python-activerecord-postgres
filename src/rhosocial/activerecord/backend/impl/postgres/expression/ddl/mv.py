@@ -78,6 +78,7 @@ class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression)
         ...     view=MaterializedView(dialect, "monthly_sales_summary", schema_name="reporting"),
         ...     query=sales_query,
         ...     if_not_exists=True,
+        ...     with_data=True,
         ...     storage_options={PostgresStorageParameter.FILLFACTOR: 70},
         ... )
         >>> sql, params = create.to_sql()
@@ -93,7 +94,8 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
         query: Any,
         column_aliases: Optional[List[str]] = None,
         tablespace: Optional[str] = None,
-        with_data: bool = True,
+        with_data: bool = False,
+        no_data: bool = False,
         storage_options: Optional[Dict[Any, Any]] = None,
         if_not_exists: bool = False,
         allow_unlisted_storage_parameters: bool = False,
@@ -105,6 +107,7 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
             column_aliases=column_aliases,
             tablespace=tablespace,
             with_data=with_data,
+            no_data=no_data,
             storage_options=storage_options,
         )
         if storage_options:
@@ -136,12 +139,14 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
         view: MaterializedView,
         if_exists: bool = False,
         cascade: bool = False,
+        restrict: bool = False,
     ):
         super().__init__(
             dialect,
             view=view,
             if_exists=if_exists,
             cascade=cascade,
+            restrict=restrict,
         )
 
 
@@ -186,7 +191,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
-        ...     with_data=False,
+        ...     no_data=True,
         ... )
 
     """
@@ -196,13 +201,15 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         dialect: "SQLDialectBase",
         view: MaterializedView,
         concurrently: bool = False,
-        with_data: Optional[bool] = None,
+        with_data: bool = False,
+        no_data: bool = False,
     ):
         super().__init__(
             dialect,
             view=view,
             concurrent=concurrently,
             with_data=with_data,
+            no_data=no_data,
         )
 
     @property

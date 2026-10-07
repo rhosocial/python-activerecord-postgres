@@ -4,9 +4,11 @@
 Declared here, implemented by
 :class:`~...mixins.identity_column.PostgresIdentityColumnMixin`. PostgreSQL
 uses the SQL-standard ``GENERATED {ALWAYS|BY DEFAULT} AS IDENTITY`` spelling,
-so the formatter is core's; this protocol restates the mechanism probe and the
-six option probes the mixin answers. The one-for-one mirror is enforced by the
-forward/reverse coverage tests in ``test_postgres_protocol_conformance``.
+so the formatter stays core's except for the one spelling the identity synopsis
+lacks (``NO CACHE``, refused by name); this protocol restates the mechanism
+probe and the seven option probes the mixin answers. The one-for-one mirror is
+enforced by the forward/reverse coverage tests in
+``test_postgres_protocol_conformance``.
 """
 
 from typing import Protocol, runtime_checkable
@@ -41,3 +43,5 @@ class PostgresIdentitySupport(IdentityColumnSupport, Protocol):
     def supports_identity_maxvalue(self) -> bool: ...
 
     def supports_identity_cycle(self) -> bool: ...
+
+    def supports_identity_cache(self) -> bool: ...

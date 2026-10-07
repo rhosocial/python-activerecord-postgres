@@ -68,6 +68,14 @@ class PostgresMaterializedViewSupport(Protocol):
         """Whether ALTER MATERIALIZED VIEW is supported (PG 9.3+)."""
         ...
 
+    def supports_materialized_view_restrict(self) -> bool:
+        """Whether ``DROP MATERIALIZED VIEW ... RESTRICT`` can be expressed.
+
+        PostgreSQL accepts the token in the drop synopsis; it is the default
+        behavior but is legal to spell.
+        """
+        ...
+
     def format_create_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 

@@ -22,17 +22,31 @@ class PostgresTruncateMixin:
     def supports_truncate_cascade(self) -> bool:
         return True
 
+    def supports_truncate_restrict(self) -> bool:
+        """``TRUNCATE ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``TRUNCATE [ TABLE ] name [ RESTART IDENTITY |
+        CONTINUE IDENTITY ] [ CASCADE | RESTRICT ]`` (measured on PostgreSQL
+        16); RESTRICT is the default behavior but the token itself is legal.
+        """
+        return True
+
     def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
         - ``expr.table`` — the table being truncated, which renders its own
           name and namespace.
-        - ``expr.restart_identity`` — add ``RESTART IDENTITY`` (PG 8.4+).
-        - ``expr.cascade`` — add ``CASCADE``.
+        - ``expr.restart_identity`` / ``expr.continue_identity`` — add
+          ``RESTART IDENTITY`` / ``CONTINUE IDENTITY`` (PG 8.4+); neither set
+          renders neither token.
+        - ``expr.cascade`` / ``expr.restrict`` — add ``CASCADE`` /
+          ``RESTRICT``; neither set renders neither token.
 
         Raises:
             TypeError: ``expr.table`` is not a :class:`Table`. Another object kind
                 would have had its own name rendered as the table's.
+            UnsupportedFeatureError: If the requested identity continuation or
+                dependent-object behavior is not supported by this version.
         """
         if not isinstance(expr.table, Table):
             raise TypeError(
@@ -41,17 +55,30 @@ class PostgresTruncateMixin:
             )
         parts = ["TRUNCATE TABLE", expr.table.to_sql()[0]]
 
-        if expr.restart_identity:
+        if expr.restart_identity or expr.continue_identity:
             if not self.supports_truncate_restart_identity():
+                feature = (
+                    "RESTART IDENTITY"
+                    if expr.restart_identity
+                    else "CONTINUE IDENTITY"
+                )
                 raise UnsupportedFeatureError(
                     self.name,
-                    "RESTART IDENTITY",
-                    f"{self.name} does not support TRUNCATE ... RESTART IDENTITY "
+                    feature,
+                    f"{self.name} does not support TRUNCATE ... {feature} "
                     f"for versions < 8.4."
                 )
-            parts.append("RESTART IDENTITY")
+            parts.append("RESTART IDENTITY" if expr.restart_identity else "CONTINUE IDENTITY")
 
         if expr.cascade:
             parts.append("CASCADE")
+        elif expr.restrict:
+            if not self.supports_truncate_restrict():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "TRUNCATE RESTRICT",
+                    f"{self.name} does not support TRUNCATE ... RESTRICT.",
+                )
+            parts.append("RESTRICT")
 
         return " ".join(parts), ()

@@ -382,7 +382,7 @@ class TestPostgresMaterializedViewExecution:
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query,
-            with_data=False
+            no_data=True
         )
 
         sql, params = create_mv.to_sql()
@@ -548,7 +548,7 @@ class TestPostgresMaterializedViewExecution:
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query,
-            with_data=False
+            no_data=True
         )
 
         sql, params = create_mv.to_sql()

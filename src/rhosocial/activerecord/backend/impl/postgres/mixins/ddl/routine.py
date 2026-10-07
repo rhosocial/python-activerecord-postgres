@@ -99,6 +99,15 @@ class PostgresRoutineMixin:
         """Whether DROP FUNCTION CASCADE is supported."""
         return self.supports_function_ddl()
 
+    def supports_drop_function_restrict(self) -> bool:
+        """Whether DROP FUNCTION RESTRICT is supported.
+
+        ``RESTRICT`` is the default behavior and is accepted by every version
+        this backend claims; the statement itself is gated on
+        :meth:`supports_function_ddl`, so the answer follows that gate.
+        """
+        return self.supports_function_ddl()
+
     # ------------------------------------------------------------------ #
     # Core's portable CREATE/DROP FUNCTION
     # ------------------------------------------------------------------ #

@@ -121,7 +121,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         from rhosocial.activerecord.backend.expression.statements import TableConstraintType
 
         constraint_type = normalize_table_constraint_type(expr.constraint_type)
-        if getattr(expr, "enforced", None) is not None:
+        if getattr(expr, "enforced", False) or getattr(expr, "not_enforced", False):
             self._require_constraint_enforced(constraint_type)
         if constraint_type == TableConstraintType.EXCLUDE:
             return self._format_exclude_constraint(expr)
@@ -134,7 +134,9 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
 
         constraint_type = normalize_table_constraint_type(action.constraint.constraint_type)
         if constraint_type == TableConstraintType.EXCLUDE:
-            if getattr(action.constraint, "enforced", None) is not None:
+            if getattr(action.constraint, "enforced", False) or getattr(
+                action.constraint, "not_enforced", False
+            ):
                 self._require_constraint_enforced(constraint_type)
             validation_sql = self._format_constraint_validation(action.constraint)
             exclude_sql, params = self._format_exclude_constraint(action.constraint)
@@ -258,14 +260,13 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             params.extend(where_params)
             parts.append(f"WHERE ({where_sql})")
 
-        if getattr(constraint, "deferrable", None) is True:
-            if getattr(constraint, "initially_deferred", None) is True:
-                parts.append("DEFERRABLE INITIALLY DEFERRED")
-            elif getattr(constraint, "initially_deferred", None) is False:
-                parts.append("DEFERRABLE INITIALLY IMMEDIATE")
-            else:
-                parts.append("DEFERRABLE")
-        elif getattr(constraint, "deferrable", None) is False:
+        if getattr(constraint, "deferrable", False):
+            parts.append("DEFERRABLE")
+        elif getattr(constraint, "not_deferrable", False):
             parts.append("NOT DEFERRABLE")
+        if getattr(constraint, "initially_deferred", False):
+            parts.append("INITIALLY DEFERRED")
+        elif getattr(constraint, "initially_immediate", False):
+            parts.append("INITIALLY IMMEDIATE")
 
         return " ".join(parts), tuple(params)

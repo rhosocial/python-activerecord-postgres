@@ -132,7 +132,7 @@ class TestCreateMaterializedViewFormatting:
         sql, _ = _create(dialect, storage_options={"fillfactor": 70}).to_sql()
         assert sql == (
             'CREATE MATERIALIZED VIEW "sales_summary" WITH (fillfactor = 70) '
-            'AS SELECT "product_id" FROM "sales" WITH DATA'
+            'AS SELECT "product_id" FROM "sales"'
         )
 
     def test_multiple_storage_options_rendered(self):
@@ -145,7 +145,7 @@ class TestCreateMaterializedViewFormatting:
         assert sql == (
             'CREATE MATERIALIZED VIEW "sales_summary" '
             'WITH (fillfactor = 70, autovacuum_enabled = true) '
-            'AS SELECT "product_id" FROM "sales" WITH DATA'
+            'AS SELECT "product_id" FROM "sales"'
         )
 
     def test_tablespace_column_aliases_with_data(self):
@@ -156,6 +156,7 @@ class TestCreateMaterializedViewFormatting:
             column_aliases=["product_id", "total_sales"],
             storage_options={"fillfactor": 90},
             tablespace="fast_ssd",
+            with_data=True,
         ).to_sql()
         assert sql == (
             'CREATE MATERIALIZED VIEW "sales_summary" ("product_id", "total_sales") '
@@ -163,11 +164,29 @@ class TestCreateMaterializedViewFormatting:
             'AS SELECT "product_id" FROM "sales" WITH DATA'
         )
 
-    def test_with_no_data(self):
-        """T-08: WITH NO DATA tail."""
+    def test_with_data(self):
+        """T-08a: WITH DATA tail is reachable through its own parameter."""
         dialect = _dialect()
-        sql, _ = _create(dialect, with_data=False).to_sql()
+        sql, _ = _create(dialect, with_data=True).to_sql()
+        assert sql.endswith("WITH DATA")
+
+    def test_with_no_data(self):
+        """T-08b: WITH NO DATA tail is reachable through its own parameter."""
+        dialect = _dialect()
+        sql, _ = _create(dialect, no_data=True).to_sql()
         assert sql.endswith("WITH NO DATA")
+
+    def test_neither_with_data_nor_no_data_omits_the_tail(self):
+        """T-08c: unspecified renders no population tail (the PG default)."""
+        dialect = _dialect()
+        sql, _ = _create(dialect).to_sql()
+        assert "WITH DATA" not in sql
+
+    def test_both_with_data_and_no_data_refused(self):
+        """T-08d: setting both of the pair is API misuse."""
+        dialect = _dialect()
+        with pytest.raises(ValueError, match="with_data and no_data are mutually exclusive"):
+            _create(dialect, with_data=True, no_data=True)
 
     def test_empty_storage_options_omitted(self):
         """T-09: no empty ``WITH ()`` is emitted when storage_options is empty."""
@@ -176,7 +195,7 @@ class TestCreateMaterializedViewFormatting:
         assert "WITH (" not in sql
         assert sql == (
             'CREATE MATERIALIZED VIEW "sales_summary" '
-            'AS SELECT "product_id" FROM "sales" WITH DATA'
+            'AS SELECT "product_id" FROM "sales"'
         )
 
 
@@ -198,6 +217,22 @@ class TestDropMaterializedViewFormatting:
         ).to_sql()
         assert sql == 'DROP MATERIALIZED VIEW IF EXISTS "sales_summary" CASCADE'
 
+    def test_drop_restrict_renders_standard_token(self):
+        """The RESTRICT spelling of the pair reaches the PostgreSQL formatter."""
+        dialect = _dialect()
+        sql, _ = DropMaterializedViewExpression(
+            dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), restrict=True
+        ).to_sql()
+        assert sql == 'DROP MATERIALIZED VIEW "sales_summary" RESTRICT'
+
+    def test_drop_neither_cascade_nor_restrict_omits_token(self):
+        dialect = _dialect()
+        sql, _ = DropMaterializedViewExpression(
+            dialect=dialect, view=MaterializedView(dialect, 'sales_summary')
+        ).to_sql()
+        assert "CASCADE" not in sql
+        assert "RESTRICT" not in sql
+
 
 class TestRefreshMaterializedViewFormatting:
     """G2: CONCURRENTLY must be gated on PostgreSQL 9.4+ on every code path."""
@@ -210,11 +245,15 @@ class TestRefreshMaterializedViewFormatting:
         assert sql == 'REFRESH MATERIALIZED VIEW "sales_summary"'
         assert params == ()
 
-    @pytest.mark.parametrize("with_data,expected", [(True, " WITH DATA"), (False, " WITH NO DATA")])
-    def test_refresh_with_data_variants(self, with_data, expected):
+    @pytest.mark.parametrize(
+        "kwargs,expected",
+        [({"with_data": True}, " WITH DATA"), ({"no_data": True}, " WITH NO DATA")],
+        ids=["with_data", "no_data"],
+    )
+    def test_refresh_data_variants(self, kwargs, expected):
         dialect = _dialect()
         sql, _ = RefreshMaterializedViewExpression(
-            dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), with_data=with_data
+            dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), **kwargs
         ).to_sql()
         assert sql == f'REFRESH MATERIALIZED VIEW "sales_summary"{expected}'
 
@@ -378,7 +417,7 @@ class TestCreateMaterializedViewIfNotExists:
         ).to_sql()
         assert sql == (
             'CREATE MATERIALIZED VIEW IF NOT EXISTS "sales_summary" '
-            'AS SELECT "product_id" FROM "sales" WITH DATA'
+            'AS SELECT "product_id" FROM "sales"'
         )
 
     def test_if_not_exists_false_omitted(self):

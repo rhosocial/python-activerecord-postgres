@@ -34,6 +34,15 @@ class PostgresViewMixin:
     def supports_cascade_view(self) -> bool:
         return True
 
+    def supports_restrict_view(self) -> bool:
+        """``DROP VIEW ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``DROP VIEW name [ CASCADE | RESTRICT ]`` (measured
+        on PostgreSQL 16); RESTRICT is the default behavior but the token
+        itself is legal.
+        """
+        return True
+
     def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
 

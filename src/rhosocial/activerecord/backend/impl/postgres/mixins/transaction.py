@@ -41,7 +41,10 @@ class PostgresTransactionMixin:
               [ { READ WRITE | READ ONLY } ]
               [ { NOT DEFERRABLE | DEFERRABLE } ]
 
-        DEFERRABLE is only meaningful for SERIALIZABLE isolation level.
+        ``[NOT] DEFERRABLE`` is an independent transaction mode in the
+        grammar; it is rendered whenever requested, not only alongside
+        SERIALIZABLE (``BEGIN DEFERRABLE`` without an isolation level is
+        accepted by the server -- measured on PostgreSQL 16).
         """
         params = expr.get_params()
         parts = ["BEGIN"]
@@ -59,11 +62,10 @@ class PostgresTransactionMixin:
             elif mode_name == "READ_WRITE":
                 parts.append("READ WRITE")
 
-        deferrable = params.get("deferrable")
-        if deferrable is not None and isolation:
-            isolation_name = isolation.name if hasattr(isolation, "name") else str(isolation)
-            if isolation_name == "SERIALIZABLE":
-                parts.append("DEFERRABLE" if deferrable else "NOT DEFERRABLE")
+        if params.get("deferrable"):
+            parts.append("DEFERRABLE")
+        elif params.get("not_deferrable"):
+            parts.append("NOT DEFERRABLE")
 
         return " ".join(parts), ()
 
@@ -103,8 +105,11 @@ class PostgresTransactionMixin:
                 options.append("READ WRITE")
 
         deferrable = params.get("deferrable")
-        if deferrable is not None:
-            options.append("DEFERRABLE" if deferrable else "NOT DEFERRABLE")
+        not_deferrable = params.get("not_deferrable")
+        if deferrable:
+            options.append("DEFERRABLE")
+        elif not_deferrable:
+            options.append("NOT DEFERRABLE")
 
         if options:
             parts.append(" ".join(options))

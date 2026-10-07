@@ -78,7 +78,7 @@ class TestCreateMaterializedView:
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_daily"),
             query=daily_query(),
-            with_data=False,
+            no_data=True,
         )
         sql, params = expression.to_sql()
         mv_backend.execute(sql, params, options=DDL)
@@ -204,7 +204,7 @@ class TestMaterializedViewIntrospection:
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_daily"),
             query=daily_query(),
-            with_data=False,
+            no_data=True,
         )
         sql, params = empty.to_sql()
         mv_backend.execute(sql, params, options=DDL)
@@ -339,7 +339,7 @@ class TestMaterializedViewAsyncParity:
             dialect=dialect,
             view=MaterializedView(dialect, "mv_sales_daily"),
             query=daily_query(),
-            with_data=False,
+            no_data=True,
         )
         sql, params = create.to_sql()
         await async_mv_backend.execute(sql, params, options=DDL)
