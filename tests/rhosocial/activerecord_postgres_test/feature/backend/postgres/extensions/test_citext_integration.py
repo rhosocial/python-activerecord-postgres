@@ -29,9 +29,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -64,7 +64,7 @@ def _setup_citext_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -73,7 +73,7 @@ def _setup_citext_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -104,7 +104,7 @@ def _setup_citext_unique_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -113,7 +113,7 @@ def _setup_citext_unique_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["email"],
         source=ValuesSource(
             dialect,
@@ -138,7 +138,7 @@ def _setup_citext_like_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -147,7 +147,7 @@ def _setup_citext_like_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -175,7 +175,7 @@ def _setup_citext_users_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -184,7 +184,7 @@ def _setup_citext_users_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username"],
         source=ValuesSource(
             dialect,
@@ -210,7 +210,7 @@ def _setup_citext_roles_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -219,7 +219,7 @@ def _setup_citext_roles_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
@@ -234,7 +234,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -255,7 +255,7 @@ async def _async_setup_citext_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -264,7 +264,7 @@ async def _async_setup_citext_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -295,7 +295,7 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -304,7 +304,7 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["email"],
         source=ValuesSource(
             dialect,
@@ -329,7 +329,7 @@ async def _async_setup_citext_like_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -338,7 +338,7 @@ async def _async_setup_citext_like_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -366,7 +366,7 @@ async def _async_setup_citext_users_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -375,7 +375,7 @@ async def _async_setup_citext_users_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username"],
         source=ValuesSource(
             dialect,
@@ -401,7 +401,7 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -410,7 +410,7 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
@@ -425,7 +425,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -492,7 +492,7 @@ class TestCitextIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT),
+            from_=Table(dialect, T_CITEXT),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -510,7 +510,7 @@ class TestCitextIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT),
+            from_=Table(dialect, T_CITEXT),
             where=where_pred2,
         )
         sql2, params2 = query2.to_sql()
@@ -530,7 +530,7 @@ class TestCitextIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT),
+            from_=Table(dialect, T_CITEXT),
             where=where_pred3,
         )
         sql3, params3 = query3.to_sql()
@@ -546,7 +546,7 @@ class TestCitextIntegration:
         # Insert with different casing should violate unique constraint
         insert_expr = InsertExpression(
             dialect=dialect,
-            into=T_CITEXT_UNIQUE,
+            into=Table(dialect, T_CITEXT_UNIQUE),
             columns=["email"],
             source=ValuesSource(
                 dialect,
@@ -571,7 +571,7 @@ class TestCitextIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT_LIKE),
+            from_=Table(dialect, T_CITEXT_LIKE),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -594,7 +594,7 @@ class TestCitextIntegration:
         query_user = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "username")],
-            from_=TableExpression(dialect, T_CITEXT_USERS),
+            from_=Table(dialect, T_CITEXT_USERS),
         )
         sql, params = query_user.to_sql()
         user_result = backend.execute(sql, params, options=opts)
@@ -611,7 +611,7 @@ class TestCitextIntegration:
         query_role = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "role")],
-            from_=TableExpression(dialect, T_CITEXT_ROLES),
+            from_=Table(dialect, T_CITEXT_ROLES),
             where=where_pred,
         )
         sql2, params2 = query_role.to_sql()
@@ -667,7 +667,7 @@ class TestAsyncCitextIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT_ASYNC),
+            from_=Table(dialect, T_CITEXT_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -685,7 +685,7 @@ class TestAsyncCitextIntegration:
         query2 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT_ASYNC),
+            from_=Table(dialect, T_CITEXT_ASYNC),
             where=where_pred2,
         )
         sql2, params2 = query2.to_sql()
@@ -703,7 +703,7 @@ class TestAsyncCitextIntegration:
         query3 = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT_ASYNC),
+            from_=Table(dialect, T_CITEXT_ASYNC),
             where=where_pred3,
         )
         sql3, params3 = query3.to_sql()
@@ -718,7 +718,7 @@ class TestAsyncCitextIntegration:
 
         insert_expr = InsertExpression(
             dialect=dialect,
-            into=T_CITEXT_UNIQUE_ASYNC,
+            into=Table(dialect, T_CITEXT_UNIQUE_ASYNC),
             columns=["email"],
             source=ValuesSource(
                 dialect,
@@ -743,7 +743,7 @@ class TestAsyncCitextIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name")],
-            from_=TableExpression(dialect, T_CITEXT_LIKE_ASYNC),
+            from_=Table(dialect, T_CITEXT_LIKE_ASYNC),
             where=where_pred,
         )
         sql, params = query.to_sql()
@@ -762,7 +762,7 @@ class TestAsyncCitextIntegration:
         query_user = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "username")],
-            from_=TableExpression(dialect, T_CITEXT_USERS_ASYNC),
+            from_=Table(dialect, T_CITEXT_USERS_ASYNC),
         )
         sql, params = query_user.to_sql()
         user_result = await backend.execute(sql, params, options=opts)
@@ -779,7 +779,7 @@ class TestAsyncCitextIntegration:
         query_role = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "role")],
-            from_=TableExpression(dialect, T_CITEXT_ROLES_ASYNC),
+            from_=Table(dialect, T_CITEXT_ROLES_ASYNC),
             where=where_pred,
         )
         sql2, params2 = query_role.to_sql()

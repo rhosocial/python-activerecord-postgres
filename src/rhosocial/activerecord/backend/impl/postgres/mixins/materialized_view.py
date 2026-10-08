@@ -27,7 +27,7 @@ from typing import Any, Dict, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins import ViewMixin
-from rhosocial.activerecord.backend.expression.core import QualifiedIdentifierExpression
+from rhosocial.activerecord.backend.expression.objects import MaterializedView
 
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
@@ -83,27 +83,62 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """ALTER MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
         return self.version >= (9, 3, 0)
 
+    def supports_materialized_view_restrict(self) -> bool:
+        """``DROP MATERIALIZED VIEW ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``DROP MATERIALIZED VIEW name [ CASCADE | RESTRICT ]``
+        (measured on PostgreSQL 16); RESTRICT is the default behavior but the
+        token itself is legal.
+        """
+        return True
+
+    def supports_with_data_clause(self) -> bool:
+        """Whether the ``WITH [NO] DATA`` population clause can be used.
+
+        One probe answers all three consumers -- ``CREATE TABLE ... AS``,
+        ``CREATE MATERIALIZED VIEW`` and ``REFRESH MATERIALIZED VIEW`` -- as
+        core's ``MaterializedViewSupport`` declares. The clause is part of
+        all three synopses: the CTAS form long predates materialized views,
+        and ``CREATE``/``REFRESH MATERIALIZED VIEW ... [ WITH [ NO ] DATA ]``
+        is documented from 9.3, the version that introduced materialized
+        views. The live matrix (9.6 through 19beta4) accepts every form
+        (measured), so the answer is version-independent; the statement-level
+        probes still gate the statements themselves.
+        """
+        return True
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _check_with_data_clause_support(self, expr: Any) -> None:
+        """Refuse ``WITH [NO] DATA`` by name when the clause probe declines.
+
+        The core formatter this mixin overrides applies the same gate, so the
+        refusal vocabulary stays identical across the three consumers. The
+        gate runs before any SQL is assembled: a clause the dialect declines
+        is refused, never dropped and never rendered.
+        """
+        if (expr.with_data or expr.no_data) and not self.supports_with_data_clause():
+            feature = "WITH DATA" if expr.with_data else "WITH NO DATA"
+            raise UnsupportedFeatureError(
+                self.name,
+                feature,
+                f"{self.name} does not support {feature} for materialized views.",
+            )
 
     def _format_materialized_view_name(self, expr: Any) -> str:
         """Render a materialized view name, schema-qualified when available.
 
         Args:
-            expr: Any MV expression exposing ``view_name`` and optionally ``schema``.
+            expr: An MV expression carrying the ``MaterializedView`` object it
+                names. The object renders itself, so the schema it carries is
+                the one that appears.
 
         Returns:
             The quoted (and possibly schema-qualified) identifier.
         """
-        name_sql, _ = self.format_qualified_identifier(
-            QualifiedIdentifierExpression(
-                self,
-                schema=getattr(expr, "schema", None),
-                name=expr.view_name,
-            )
-        )
-        return name_sql
+        return expr.view.to_sql()[0]
 
     def _format_storage_parameters(self, properties: Dict[Any, Any]) -> str:
         """Render a ``KEY = value, ...`` storage parameter list.
@@ -140,14 +175,16 @@ class PostgresMaterializedViewMixin(ViewMixin):
         [WITH (storage_parameter = value, ...)] [TABLESPACE name] AS query
         [WITH [NO] DATA]``.
 
-        - ``expr.view_name`` — view name (identifier).
-        - ``expr.schema`` — optional schema (PostgreSQL extension expression).
+        - ``expr.view`` — the ``MaterializedView`` being created; it renders
+          itself, so a qualified name comes out of the namespace machinery.
         - ``expr.column_aliases`` — optional list of column aliases.
         - ``expr.if_not_exists`` — ``IF NOT EXISTS`` (PostgreSQL 9.4+).
         - ``expr.storage_options`` — optional dict of storage parameters (``WITH (… )``).
         - ``expr.tablespace`` — optional tablespace.
         - ``expr.query`` — source SELECT expression.
-        - ``expr.with_data`` — ``WITH DATA`` / ``WITH NO DATA``.
+        - ``expr.with_data`` / ``expr.no_data`` — ``WITH DATA`` / ``WITH NO
+          DATA``; neither set renders no tail (both set is refused at
+          construction).
 
         Args:
             expr: CreateMaterializedViewExpression instance
@@ -156,11 +193,22 @@ class PostgresMaterializedViewMixin(ViewMixin):
             Tuple of (SQL string, params tuple)
 
         Raises:
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`. A plain
+                :class:`View` is the wrong kind here and would have had its own
+                name rendered as the materialized view's.
             UnsupportedFeatureError: If the dialect or the target server version
-                does not support the requested materialized view feature.
+                does not support the requested materialized view feature, or if
+                the ``WITH [NO] DATA`` clause is requested and the clause probe
+                declines it.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"CreateMaterializedViewExpression.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         if not self.supports_materialized_view():
             raise UnsupportedFeatureError(self.name, "CREATE MATERIALIZED VIEW")
+        self._check_with_data_clause_support(expr)
 
         parts = ["CREATE MATERIALIZED VIEW"]
 
@@ -190,7 +238,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         if expr.with_data:
             parts.append("WITH DATA")
-        else:
+        elif expr.no_data:
             parts.append("WITH NO DATA")
 
         return " ".join(parts), query_params
@@ -198,8 +246,22 @@ class PostgresMaterializedViewMixin(ViewMixin):
     def format_drop_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format DROP MATERIALIZED VIEW statement for PostgreSQL.
 
-        Extends the core formatter with schema qualification.
+        Extends the core formatter with schema qualification and consumes the
+        ``cascade`` / ``restrict`` pair. An explicit RESTRICT whose probe is
+        False raises instead of being dropped.
+
+        Raises:
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`. A plain
+                :class:`View` is the wrong kind here: the two share a name shape
+                but not a statement, and PostgreSQL refuses ``DROP MATERIALIZED
+                VIEW <a view>`` at execution time with a far worse message.
+            UnsupportedFeatureError: If RESTRICT is requested but not supported.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"{type(expr).__name__}.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         if not self.supports_materialized_view():
             raise UnsupportedFeatureError(self.name, "DROP MATERIALIZED VIEW")
 
@@ -209,6 +271,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
         parts.append(self._format_materialized_view_name(expr))
         if expr.cascade:
             parts.append("CASCADE")
+        elif expr.restrict:
+            if not self.supports_materialized_view_restrict():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "DROP MATERIALIZED VIEW RESTRICT",
+                    f"{self.name} does not support DROP MATERIALIZED VIEW RESTRICT.",
+                )
+            parts.append("RESTRICT")
         return " ".join(parts), ()
 
     def format_refresh_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
@@ -233,16 +303,27 @@ class PostgresMaterializedViewMixin(ViewMixin):
             Tuple of (SQL statement, parameters tuple)
 
         Raises:
-            UnsupportedFeatureError: If CONCURRENTLY is requested on PG < 9.4.
+            TypeError: ``expr.view`` is not a :class:`MaterializedView`.
+            UnsupportedFeatureError: If CONCURRENTLY is requested on PG < 9.4,
+                or if the ``WITH [NO] DATA`` clause is requested and the clause
+                probe declines it.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"{type(expr).__name__}.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
         self._check_concurrent_refresh_support(expr)
+        self._check_with_data_clause_support(expr)
 
         parts = ["REFRESH MATERIALIZED VIEW"]
         if expr.concurrent:
             parts.append("CONCURRENTLY")
         parts.append(self._format_materialized_view_name(expr))
-        if expr.with_data is not None:
-            parts.append("WITH DATA" if expr.with_data else "WITH NO DATA")
+        if expr.with_data:
+            parts.append("WITH DATA")
+        elif expr.no_data:
+            parts.append("WITH NO DATA")
         return " ".join(parts), ()
 
     def format_alter_materialized_view_statement(
@@ -267,37 +348,52 @@ class PostgresMaterializedViewMixin(ViewMixin):
             raise UnsupportedFeatureError(self.name, "ALTER MATERIALIZED VIEW")
 
         target = self._format_materialized_view_name(expr)
-        rendered = [
-            f"ALTER MATERIALIZED VIEW {target} {self.format_materialized_view_alter_action(action)}"
-            for action in expr.actions
-        ]
+        rendered = []
+        for action in expr.actions:
+            action_sql, action_params = self.format_materialized_view_alter_action(
+                action
+            )
+            rendered.append(f"ALTER MATERIALIZED VIEW {target} {action_sql}")
         return ";\n".join(rendered), ()
 
-    def format_materialized_view_alter_action(self, expr: Any) -> str:
+    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
+
+        Returns the ``(sql, params)`` tuple every ``format_*`` method returns.
+        The action SQL is a fragment -- it has no ``ALTER MATERIALIZED VIEW
+        <name>`` prefix -- but the contract is the contract: each action class
+        declares this method as its ``format_method``, so ``to_sql()`` hands the
+        return value straight back to its caller. Returning a bare string here
+        made ``action.to_sql()`` a string, which then failed to unpack wherever
+        someone treated it as the documented tuple.
 
         Args:
             expr: A ``MaterializedViewAlterAction`` subclass instance.
 
         Returns:
-            The action SQL without the leading ``ALTER MATERIALIZED VIEW <name>``.
+            A ``(sql, params)`` tuple whose ``sql`` is the action body without
+            the leading ``ALTER MATERIALIZED VIEW <name>``. ``params`` is always
+            empty -- a storage-parameter name is not a bind parameter.
 
         Raises:
             UnsupportedFeatureError: If the action is not a known PostgreSQL
                 materialized view action.
         """
         if isinstance(expr, PostgresRenameMaterializedViewAction):
-            return f"RENAME TO {self.format_identifier(expr.new_name)}"
+            return f"RENAME TO {self.format_identifier(expr.new_name)}", ()
         if isinstance(expr, PostgresSetMaterializedViewSchemaAction):
-            return f"SET SCHEMA {self.format_identifier(expr.new_schema)}"
+            return f"SET SCHEMA {self.format_identifier(expr.new_schema)}", ()
         if isinstance(expr, PostgresSetMaterializedViewPropertiesAction):
-            return f"SET ({self._format_storage_parameters(expr.properties)})"
+            return f"SET ({self._format_storage_parameters(expr.properties)})", ()
         if isinstance(expr, PostgresResetMaterializedViewPropertiesAction):
-            return f"RESET ({self._format_storage_parameter_names(expr.parameters)})"
+            return (
+                f"RESET ({self._format_storage_parameter_names(expr.parameters)})",
+                (),
+            )
         if isinstance(expr, PostgresChangeMaterializedViewOwnerAction):
             if expr.new_owner.upper() in _CURRENT_ROLE_KEYWORDS:
-                return f"OWNER TO {expr.new_owner.upper()}"
-            return f"OWNER TO {self.format_identifier(expr.new_owner)}"
+                return f"OWNER TO {expr.new_owner.upper()}", ()
+            return f"OWNER TO {self.format_identifier(expr.new_owner)}", ()
         raise UnsupportedFeatureError(
             self.name,
             f"ALTER MATERIALIZED VIEW action {getattr(expr, 'action_kind', type(expr).__name__)}",

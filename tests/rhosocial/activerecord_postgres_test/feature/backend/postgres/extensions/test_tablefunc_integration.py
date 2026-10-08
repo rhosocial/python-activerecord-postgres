@@ -49,6 +49,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.objects import Table
 
 
 @pytest.fixture
@@ -73,7 +74,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_sales",
+        table=Table(dialect, 'test_tf_sales'),
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -91,7 +92,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     insert_sales = InsertExpression(
         dialect=dialect,
-        into="test_tf_sales",
+        into=Table(dialect, 'test_tf_sales'),
         columns=["month", "category", "amount"],
         source=ValuesSource(dialect, sales_rows),
     )
@@ -112,7 +113,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_tree",
+        table=Table(dialect, 'test_tf_tree'),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -128,7 +129,7 @@ def tablefunc_env(postgres_backend_single):
     ]
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_tf_tree",
+        into=Table(dialect, 'test_tf_tree'),
         columns=["node_name", "parent_id"],
         source=ValuesSource(dialect, tree_rows),
     )
@@ -140,7 +141,7 @@ def tablefunc_env(postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table="test_tf_sales",
+        table=Table(dialect, 'test_tf_sales'),
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -148,7 +149,7 @@ def tablefunc_env(postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table="test_tf_tree",
+        table=Table(dialect, 'test_tf_tree'),
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()
@@ -351,7 +352,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     create_sales = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_sales_async",
+        table=Table(dialect, 'test_tf_sales_async'),
         columns=sales_columns,
         if_not_exists=True,
     )
@@ -369,7 +370,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     insert_sales = InsertExpression(
         dialect=dialect,
-        into="test_tf_sales_async",
+        into=Table(dialect, 'test_tf_sales_async'),
         columns=["month", "category", "amount"],
         source=ValuesSource(dialect, sales_rows),
     )
@@ -390,7 +391,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table="test_tf_tree_async",
+        table=Table(dialect, 'test_tf_tree_async'),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -406,7 +407,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     ]
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="test_tf_tree_async",
+        into=Table(dialect, 'test_tf_tree_async'),
         columns=["node_name", "parent_id"],
         source=ValuesSource(dialect, tree_rows),
     )
@@ -418,7 +419,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     # Teardown: drop both tables using DropTableExpression
     drop_sales = DropTableExpression(
         dialect=dialect,
-        table="test_tf_sales_async",
+        table=Table(dialect, 'test_tf_sales_async'),
         if_exists=True,
     )
     sql, params = drop_sales.to_sql()
@@ -426,7 +427,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     drop_tree = DropTableExpression(
         dialect=dialect,
-        table="test_tf_tree_async",
+        table=Table(dialect, 'test_tf_tree_async'),
         if_exists=True,
     )
     sql, params = drop_tree.to_sql()

@@ -13,6 +13,7 @@ Version Requirements:
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import SchemaObject
 
 if TYPE_CHECKING:
     from ...expression.ddl.collation import (
@@ -35,13 +36,16 @@ class PostgresCollationDDLMixin:
     # Helpers
     # ------------------------------------------------------------------ #
     def _format_collation_ref(self, schema: Optional[str], name: str) -> str:
-        """Format ``name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(name)}"
-            )
-        return self.format_identifier(name)
+        """Render a collation name, optionally schema-qualified.
+
+        A collation has no dedicated kind in the schema-object tree, so it is
+        carried by the base :class:`SchemaObject`; what the dialect needs
+        from it -- the three slots and their quoting -- is exactly what the
+        base provides.
+        """
+        return self._format_schema_object_name(
+            SchemaObject(self, name, schema_name=schema)
+        )
 
     # ------------------------------------------------------------------ #
     # CREATE COLLATION

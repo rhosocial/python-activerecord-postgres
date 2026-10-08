@@ -13,6 +13,8 @@ Version Requirements:
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.dialect.mixins.function import FunctionMixin
+from rhosocial.activerecord.backend.expression.objects import Function
 
 if TYPE_CHECKING:
     from ...expression.ddl.routine import (
@@ -21,10 +23,31 @@ if TYPE_CHECKING:
         PostgresDropAggregateExpression,
         PostgresDropFunctionExpression,
     )
+    from rhosocial.activerecord.backend.expression.statements import (
+        CreateFunctionExpression,
+        DropFunctionExpression,
+    )
 
 
 class PostgresRoutineMixin:
-    """PostgreSQL FUNCTION / AGGREGATE DDL implementation."""
+    """PostgreSQL FUNCTION / AGGREGATE DDL implementation.
+
+    Two spellings of each statement live in this backend and they are not the
+    same thing. ``PostgresCreateFunctionExpression`` and
+    ``PostgresDropFunctionExpression`` are the PostgreSQL-owned ones, with the
+    richer option set (``SECURITY``, ``COST``, ``ROWS``, ``STRICT``) rendered by
+    :meth:`format_create_function_ddl_statement` below. Core's own
+    ``CreateFunctionExpression`` / ``DropFunctionExpression`` carry the portable
+    SQL/PSM subset, and are rendered by delegating to core's ``FunctionMixin``.
+
+    Both are needed: :class:`PostgresDialect` declares ``CreateRoutineSupport``
+    and ``DropRoutineSupport`` in its base list, and a ``runtime_checkable``
+    protocol is satisfied by its own ``...`` bodies. With no implementation
+    anywhere, ``CreateFunctionExpression(...).to_sql()`` called the stub and
+    returned ``None``, and ``supports_function()`` returned ``None`` too -- both
+    read as falsy to every caller, and neither raised. The switches and the two
+    delegating formatters below are what make that declaration true.
+    """
 
     # ------------------------------------------------------------------ #
     # Capability switches
@@ -37,17 +60,127 @@ class PostgresRoutineMixin:
         """CREATE/DROP AGGREGATE require PostgreSQL 9.6+."""
         return self.version >= (9, 6, 0)
 
+    def supports_function(self) -> bool:
+        """PostgreSQL has user-defined functions.
+
+        Unconditional. ``CREATE FUNCTION`` predates every version this backend
+        targets; :meth:`supports_function_ddl` gates the *tracked* form, not the
+        statement, and reporting ``False`` here would make
+        ``isinstance(dialect, CreateRoutineSupport)``-style checks pass while
+        every function statement raised.
+        """
+        return True
+
+    def supports_create_function(self) -> bool:
+        """Whether CREATE FUNCTION is supported.
+
+        Tied to :meth:`supports_function_ddl` so the two cannot disagree: the
+        core renderer asks this before emitting anything.
+        """
+        return self.supports_function_ddl()
+
+    def supports_drop_function(self) -> bool:
+        """Whether DROP FUNCTION is supported. Same gate as CREATE."""
+        return self.supports_function_ddl()
+
+    def supports_function_or_replace(self) -> bool:
+        """Whether CREATE OR REPLACE FUNCTION is supported."""
+        return self.supports_function_ddl()
+
+    def supports_function_parameters(self) -> bool:
+        """Whether a named parameter list is supported."""
+        return self.supports_function_ddl()
+
+    def supports_drop_function_if_exists(self) -> bool:
+        """Whether DROP FUNCTION IF EXISTS is supported."""
+        return self.supports_function_ddl()
+
+    def supports_drop_function_cascade(self) -> bool:
+        """Whether DROP FUNCTION CASCADE is supported."""
+        return self.supports_function_ddl()
+
+    def supports_drop_function_restrict(self) -> bool:
+        """Whether DROP FUNCTION RESTRICT is supported.
+
+        ``RESTRICT`` is the default behavior and is accepted by every version
+        this backend claims; the statement itself is gated on
+        :meth:`supports_function_ddl`, so the answer follows that gate.
+        """
+        return self.supports_function_ddl()
+
+    # ------------------------------------------------------------------ #
+    # Core's portable CREATE/DROP FUNCTION
+    # ------------------------------------------------------------------ #
+    def format_create_function_statement(
+        self, expr: "CreateFunctionExpression"
+    ) -> Tuple[str, tuple]:
+        """Render core's ``CreateFunctionExpression``.
+
+        Delegates to core's renderer instead of restating it, so the object-kind
+        check and the parameter validation stay in one place -- core is where
+        that logic lives, and a second copy here would be free to drift.
+
+        Args:
+            expr: Core's :class:`CreateFunctionExpression`, holding a
+                :class:`~...expression.objects.Function` rather than a bare name.
+
+        Returns:
+            A ``(sql, params)`` tuple; ``params`` is empty, because a function
+            body is DDL and carries no bind parameters.
+
+        Raises:
+            TypeError: ``expr.function`` is not a ``Function``.
+            UnsupportedFeatureError: The configured PostgreSQL version predates
+                9.6, so this backend does not claim CREATE FUNCTION.
+        """
+        if not isinstance(expr.function, Function):
+            raise TypeError(
+                f"CreateFunctionExpression.function must be a Function, "
+                f"got {type(expr.function).__name__}"
+            )
+        return FunctionMixin.format_create_function_statement(self, expr)
+
+    def format_drop_function_statement(
+        self, expr: "DropFunctionExpression"
+    ) -> Tuple[str, tuple]:
+        """Render core's ``DropFunctionExpression``.
+
+        Delegates to core's renderer for the reason given on
+        :meth:`format_create_function_statement`.
+
+        Raises:
+            TypeError: ``expr.function`` is not a ``Function``.
+            UnsupportedFeatureError: The configured PostgreSQL version predates
+                9.6, so this backend does not claim DROP FUNCTION.
+        """
+        if not isinstance(expr.function, Function):
+            raise TypeError(
+                f"DropFunctionExpression.function must be a Function, "
+                f"got {type(expr.function).__name__}"
+            )
+        return FunctionMixin.format_drop_function_statement(self, expr)
+
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
-    def _format_routine_ref(self, schema: Optional[str], name: str) -> str:
-        """Format ``name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(name)}"
-            )
-        return self.format_identifier(name)
+    def _format_routine_ref(
+        self,
+        schema: Optional[str],
+        name: str,
+    ) -> str:
+        """Render the routine a CREATE/DROP statement names.
+
+        Args:
+            schema: The routine's schema, or ``None`` for the default one.
+            name: The routine's unqualified name.
+
+        Returns:
+            The quoted, optionally schema-qualified identifier.
+        """
+        sql, _ = self.format_function_object(
+            Function(self, name, schema_name=schema)
+        )
+        return sql
 
     # ------------------------------------------------------------------ #
     # CREATE FUNCTION

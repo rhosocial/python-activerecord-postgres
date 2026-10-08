@@ -41,7 +41,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'INT'),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -54,7 +54,7 @@ backend.execute(sql, params)
 
 insert = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['id', 'name'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 1), Literal(dialect, 'Alice')],
@@ -69,22 +69,20 @@ backend.execute(sql, params)
 # SECTION: CREATE VIEW
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    CreateViewExpression,
-    DropViewExpression,
+    QueryExpression, CreateViewExpression, DropViewExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table, View
 from rhosocial.activerecord.backend.expression.core import WildcardExpression
 
 query = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'name')],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
 )
 
 view_expr = CreateViewExpression(
     dialect=dialect,
-    view_name='user_names',
+    view=View(dialect, 'user_names'),
     query=query,
 )
 sql, params = view_expr.to_sql()
@@ -97,7 +95,7 @@ backend.execute(sql, params, options=options)
 verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'user_names'),
+    from_=Table(dialect, 'user_names'),
 )
 options_dql = ExecutionOptions(stmt_type=StatementType.DQL)
 sql, params = verify_query.to_sql()
@@ -109,7 +107,7 @@ print(f"View result: {result.data}")
 # ============================================================
 view_expr_replace = CreateViewExpression(
     dialect=dialect,
-    view_name='user_names',
+    view=View(dialect, 'user_names'),
     query=query,
     replace=True,
 )
@@ -122,7 +120,7 @@ backend.execute(sql, params, options=options)
 # ============================================================
 drop_view = DropViewExpression(
     dialect=dialect,
-    view_name='user_names',
+    view=View(dialect, 'user_names'),
 )
 sql, params = drop_view.to_sql()
 print(f"DROP VIEW SQL: {sql}")
@@ -131,7 +129,7 @@ backend.execute(sql, params, options=options)
 # ============================================================
 # SECTION: Teardown
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name='users', if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

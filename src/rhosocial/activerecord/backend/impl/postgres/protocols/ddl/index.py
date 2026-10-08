@@ -8,7 +8,12 @@ that extend beyond standard SQL.
 from enum import Enum  # noqa: F401
 from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.dialect.protocols import IndexSupport
+from rhosocial.activerecord.backend.dialect.protocols import (
+    CreateIndexSupport,
+    DropIndexSupport,
+    FulltextIndexSupport,
+    IndexObjectSupport,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
@@ -19,7 +24,13 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 @runtime_checkable
-class PostgresIndexSupport(IndexSupport, Protocol):
+class PostgresIndexSupport(
+    CreateIndexSupport,
+    DropIndexSupport,
+    FulltextIndexSupport,
+    IndexObjectSupport,
+    Protocol,
+):
     """PostgreSQL index enhancements protocol.
 
     Feature Source: Native support (no extension required)
@@ -81,6 +92,15 @@ class PostgresIndexSupport(IndexSupport, Protocol):
 
         Native feature, PostgreSQL 12+.
         Enables non-blocking index rebuilding.
+        """
+        ...  # pragma: no cover
+
+    def get_supported_index_types(self) -> List[str]:
+        """Return every index access method this dialect accepts in ``USING``.
+
+        The generic mixin answers ``["BTREE"]``; PostgreSQL adds HASH, GIST,
+        GIN, SPGIST and BRIN. An empty answer would mean no ``USING`` clause is
+        possible, so the list has to name the engine's real access methods.
         """
         ...  # pragma: no cover
 

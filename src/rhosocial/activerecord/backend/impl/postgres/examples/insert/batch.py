@@ -33,7 +33,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='logs',
+    table=Table(dialect, 'logs'),
     if_exists=True,
     cascade=True,
 )
@@ -42,7 +42,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='logs',
+    table=Table(dialect, 'logs'),
     columns=[
         ColumnDefinition(
             'id',
@@ -63,17 +63,15 @@ backend.execute(*create_table.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    InsertExpression,
-    ValuesSource,
-    QueryExpression,
-    TableExpression,
+    InsertExpression, ValuesSource, QueryExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 insert = InsertExpression(
     dialect=dialect,
-    into='logs',
+    into=Table(dialect, 'logs'),
     columns=['level', 'message'],
     source=ValuesSource(
         dialect,
@@ -100,7 +98,7 @@ print("Batch insert completed")
 verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'logs'),
+    from_=Table(dialect, 'logs'),
     order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)

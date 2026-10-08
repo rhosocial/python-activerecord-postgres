@@ -24,9 +24,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.postgis_raster import (
@@ -100,7 +100,7 @@ def raster_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -111,7 +111,7 @@ def raster_env(postgres_backend_single):
     rast_expr = _make_empty_raster(dialect)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=Table(dialect, TABLE_NAME),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,
@@ -131,7 +131,7 @@ def raster_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -149,7 +149,7 @@ class TestPostgisRasterIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[summary_func.as_("summary")],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
         )
         sql, params = query.to_sql()
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
@@ -176,7 +176,7 @@ class TestPostgisRasterIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[value_func.as_("pixel_value")],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
         )
         sql, params = query.to_sql()
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
@@ -219,7 +219,7 @@ async def async_raster_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -230,7 +230,7 @@ async def async_raster_env(async_postgres_backend_single):
     rast_expr = _make_empty_raster(dialect)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,
@@ -250,7 +250,7 @@ async def async_raster_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -269,7 +269,7 @@ class TestAsyncPostgisRasterIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[summary_func.as_("summary")],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
         )
         sql, params = query.to_sql()
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
@@ -297,7 +297,7 @@ class TestAsyncPostgisRasterIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[value_func.as_("pixel_value")],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
         )
         sql, params = query.to_sql()
         opts = ExecutionOptions(stmt_type=StatementType.DQL)

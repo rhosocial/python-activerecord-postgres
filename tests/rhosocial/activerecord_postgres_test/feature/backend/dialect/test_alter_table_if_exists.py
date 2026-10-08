@@ -22,6 +22,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
 )
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.objects import Table
 
 
 @pytest.fixture
@@ -61,7 +62,7 @@ class TestPostgresAddColumnIfNotExists:
             if_not_exists=True,
         )
         expr = AlterTableExpression(
-            dialect, table_name="users", actions=[action]
+            dialect, table=Table(dialect, 'users'), actions=[action]
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "users"' in sql
@@ -189,7 +190,7 @@ class TestPostgresRenameColumnAndTable:
 
         expr = AlterTableExpression(
             dialect,
-            table_name="orders",
+            table=Table(dialect, 'orders'),
             actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
         )
         sql, params = expr.to_sql()
@@ -230,7 +231,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             table_options=self._options(dialect),
         )
@@ -245,7 +246,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
         )
         sql, params = expr.to_sql()
@@ -262,7 +263,7 @@ class TestPostgresCreateUnloggedTable:
 
         expr = CreateTableExpression(
             dialect,
-            table="audit",
+            table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
             temporary=True,
             table_options=self._options(dialect),
@@ -284,7 +285,7 @@ class TestPostgresCreateUnloggedTable:
         low = PostgresDialect(version=(9, 4, 0))
         expr = CreateTableExpression(
             low,
-            table="audit",
+            table=Table(low, 'audit'),
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],
             table_options=PostgresCreateTableOptions(low, unlogged=True),
         )

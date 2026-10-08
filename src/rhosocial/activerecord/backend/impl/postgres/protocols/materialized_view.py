@@ -68,6 +68,23 @@ class PostgresMaterializedViewSupport(Protocol):
         """Whether ALTER MATERIALIZED VIEW is supported (PG 9.3+)."""
         ...
 
+    def supports_materialized_view_restrict(self) -> bool:
+        """Whether ``DROP MATERIALIZED VIEW ... RESTRICT`` can be expressed.
+
+        PostgreSQL accepts the token in the drop synopsis; it is the default
+        behavior but is legal to spell.
+        """
+        ...
+
+    def supports_with_data_clause(self) -> bool:
+        """Whether the ``WITH [NO] DATA`` population clause can be used.
+
+        Shared by ``CREATE TABLE ... AS``, ``CREATE MATERIALIZED VIEW`` and
+        ``REFRESH MATERIALIZED VIEW``; PostgreSQL accepts every form on all
+        versions this backend supports (measured on 9.6 through 19beta4).
+        """
+        ...
+
     def format_create_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 
@@ -135,7 +152,7 @@ class PostgresMaterializedViewSupport(Protocol):
         """
         ...
 
-    def format_materialized_view_alter_action(self, expr: Any) -> str:
+    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Storage parameter names must come from
@@ -145,6 +162,10 @@ class PostgresMaterializedViewSupport(Protocol):
             expr: A ``MaterializedViewAlterAction`` subclass instance.
 
         Returns:
-            The action SQL without the leading ``ALTER MATERIALIZED VIEW <name>``.
+            A ``(sql, params)`` tuple whose ``sql`` is the action body without the
+            leading ``ALTER MATERIALIZED VIEW <name>``. Each action class names
+            this method as its ``format_method``, so the return value is what
+            ``to_sql()`` hands back -- it is a tuple even though the SQL is a
+            fragment.
         """
         ...

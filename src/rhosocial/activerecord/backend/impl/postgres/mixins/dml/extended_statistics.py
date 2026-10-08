@@ -7,6 +7,8 @@ which help the query planner make better estimates for combined column values.
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.objects import SchemaObject, Table
+
 if TYPE_CHECKING:
     from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression
 
@@ -57,12 +59,12 @@ class PostgresExtendedStatisticsMixin:
         if not self.supports_create_statistics():
             raise ValueError("CREATE STATISTICS requires PostgreSQL 10+")
 
-        if expr.schema:
-            full_name = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
-            table_full = f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.table_name)}"
-        else:
-            full_name = self.format_identifier(expr.name)
-            table_full = self.format_identifier(expr.table_name)
+        full_name = self._format_schema_object_name(
+            SchemaObject(self, expr.name, schema_name=expr.schema)
+        )
+        table_full = self.format_table_object(
+            Table(self, expr.table_name, schema_name=expr.schema)
+        )[0]
 
         exists_clause = "IF NOT EXISTS " if expr.if_not_exists else ""
 
@@ -98,10 +100,8 @@ class PostgresExtendedStatisticsMixin:
             Tuple of (SQL string, empty params tuple)
 
         """
-        full_name = (
-            f"{self.format_identifier(expr.schema)}.{self.format_identifier(expr.name)}"
-            if expr.schema
-            else self.format_identifier(expr.name)
+        full_name = self._format_schema_object_name(
+            SchemaObject(self, expr.name, schema_name=expr.schema)
         )
         exists_clause = "IF EXISTS " if expr.if_exists else ""
 

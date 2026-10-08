@@ -39,7 +39,6 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     CTEExpression,
     WithQueryExpression,
     SetOperationExpression,
@@ -48,6 +47,8 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate
 from rhosocial.activerecord.backend.expression.query_parts import (
@@ -71,7 +72,7 @@ users_cols = [
     ColumnDefinition('name', 'VARCHAR(100)'),
     ColumnDefinition('city', 'VARCHAR(50)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'users', users_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, Table(dialect, 'users'), users_cols, if_not_exists=True).to_sql())
 
 follows_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -79,7 +80,7 @@ follows_cols = [
     ColumnDefinition('follower_id', 'INTEGER'),
     ColumnDefinition('followed_id', 'INTEGER'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'follows', follows_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), follows_cols, if_not_exists=True).to_sql())
 
 users_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice'), Literal(dialect, 'NYC')],
@@ -106,7 +107,7 @@ accounts_cols = [
     ColumnDefinition('account_holder', 'VARCHAR(100)'),
     ColumnDefinition('account_type', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'accounts', accounts_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, Table(dialect, 'accounts'), accounts_cols, if_not_exists=True).to_sql())
 
 txn_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -116,7 +117,7 @@ txn_cols = [
     ColumnDefinition('amount', 'NUMERIC(12,2)'),
     ColumnDefinition('ts', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, 'transactions', txn_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableExpression(dialect, Table(dialect, 'transactions'), txn_cols, if_not_exists=True).to_sql())
 
 accounts_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice Smith'), Literal(dialect, 'checking')],
@@ -155,19 +156,19 @@ base_query = QueryExpression(
         Column(dialect, 'name'),
         Literal(dialect, 0).as_('depth'),
     ],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
     where=WhereClause(dialect, condition=Column(dialect, 'name') == Literal(dialect, 'Alice')),
 )
 
 # --- Recursive query: follow edges one hop, depth+1, bound depth<4 ---
 recursive_join = JoinClause(
     dialect=dialect,
-    left_table=TableExpression(dialect, 'traversal', alias='t'),
-    right_table=TableExpression(dialect, 'follows', alias='f'),
+    left_table=NamedRelationRef(dialect, Table(dialect, 'traversal'), alias='t'),
+    right_table=NamedRelationRef(dialect, Table(dialect, 'follows'), alias='f'),
     join_type='INNER JOIN',
     condition=Column(dialect, 'id', table='t') == Column(dialect, 'follower_id', table='f'),
 ).inner_join(
-    right_table=TableExpression(dialect, 'users', alias='u'),
+    right_table=NamedRelationRef(dialect, Table(dialect, 'users'), alias='u'),
     condition=Column(dialect, 'followed_id', table='f') == Column(dialect, 'id', table='u'),
 )
 
@@ -206,7 +207,7 @@ friend_query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'depth'),
     ],
-    from_=TableExpression(dialect, 'traversal'),
+    from_=Table(dialect, 'traversal'),
     where=WhereClause(dialect, condition=BetweenPredicate(
         dialect, Column(dialect, 'depth'), Literal(dialect, 1), Literal(dialect, 3),
     )),
@@ -241,8 +242,8 @@ print("=" * 72)
 # --- Base query: direct sources sending to target account ACC-001 ---
 aml_base_join = JoinClause(
     dialect=dialect,
-    left_table=TableExpression(dialect, 'transactions', alias='tx'),
-    right_table=TableExpression(dialect, 'accounts', alias='a'),
+    left_table=NamedRelationRef(dialect, Table(dialect, 'transactions'), alias='tx'),
+    right_table=NamedRelationRef(dialect, Table(dialect, 'accounts'), alias='a'),
     join_type='INNER JOIN',
     condition=Column(dialect, 'source_account_id', table='tx') == Column(dialect, 'id', table='a'),
 )
@@ -263,12 +264,12 @@ aml_base = QueryExpression(
 # --- Recursive query: trace upstream along the transaction chain ---
 aml_recursive_join = JoinClause(
     dialect=dialect,
-    left_table=TableExpression(dialect, 'fund_trace', alias='tr'),
-    right_table=TableExpression(dialect, 'transactions', alias='tx'),
+    left_table=NamedRelationRef(dialect, Table(dialect, 'fund_trace'), alias='tr'),
+    right_table=NamedRelationRef(dialect, Table(dialect, 'transactions'), alias='tx'),
     join_type='INNER JOIN',
     condition=Column(dialect, 'target_account_id', table='tx') == Column(dialect, 'id', table='tr'),
 ).inner_join(
-    right_table=TableExpression(dialect, 'accounts', alias='a'),
+    right_table=NamedRelationRef(dialect, Table(dialect, 'accounts'), alias='a'),
     condition=Column(dialect, 'source_account_id', table='tx') == Column(dialect, 'id', table='a'),
 )
 
@@ -311,7 +312,7 @@ aml_query = QueryExpression(
         Column(dialect, 'amount'),
         Column(dialect, 'depth'),
     ],
-    from_=TableExpression(dialect, 'fund_trace'),
+    from_=Table(dialect, 'fund_trace'),
     where=WhereClause(dialect, condition=Column(dialect, 'depth') >= Literal(dialect, 1)),
     order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'id')]),
 )
@@ -340,7 +341,7 @@ agg_query = QueryExpression(
         FunctionCall(dialect, 'COUNT', Column(dialect, 'id'), alias='account_count'),
         FunctionCall(dialect, 'SUM', Column(dialect, 'amount'), alias='total_amount'),
     ],
-    from_=TableExpression(dialect, 'fund_trace'),
+    from_=Table(dialect, 'fund_trace'),
     order_by=OrderByClause(dialect, [Column(dialect, 'depth')]),
 )
 

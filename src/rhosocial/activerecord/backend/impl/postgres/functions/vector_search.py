@@ -23,8 +23,8 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     Literal,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import (
     BaseExpression,
     WildcardExpression,
@@ -146,7 +146,7 @@ def vector_search(
     return QueryExpression(
         dialect=dialect,
         select=select,
-        from_=TableExpression(dialect, table),
+        from_=Table(dialect, table),
         where=where,
         order_by=OrderByClause(dialect, [distance_expr]),
         limit_offset=LimitOffsetClause(dialect, limit=top_k),
@@ -207,8 +207,8 @@ def create_vector_index(
 
     return PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name=idx_name,
-        table_name=table_name,
+        index=Index(dialect, idx_name),
+        table=Table(dialect, table_name),
         columns=[column_name],
         index_type=index_type_l.upper(),
         if_not_exists=if_not_exists,

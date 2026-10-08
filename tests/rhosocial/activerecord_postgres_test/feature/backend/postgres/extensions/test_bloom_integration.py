@@ -24,10 +24,10 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -54,7 +54,7 @@ def bloom_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -72,7 +72,7 @@ def bloom_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -88,7 +88,7 @@ def bloom_env(postgres_backend_single):
         ])
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=Table(dialect, TABLE_NAME),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -98,8 +98,8 @@ def bloom_env(postgres_backend_single):
     # Setup: create bloom index using expression
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_bloom_test",
-        table_name=TABLE_NAME,
+        index=Index(dialect, 'idx_bloom_test'),
+        table=Table(dialect, TABLE_NAME),
         columns=["name", "email"],
         index_type="bloom",
         if_not_exists=True,
@@ -112,7 +112,7 @@ def bloom_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -131,7 +131,7 @@ class TestBloomIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, TABLE_NAME),
         )
         sql, params = query.to_sql()
@@ -147,7 +147,7 @@ class TestBloomIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
-            from_=TableExpression(dialect, TABLE_NAME),
+            from_=Table(dialect, TABLE_NAME),
             where=Column(dialect, "name") == Literal(dialect, "user25"),
         )
         sql, params = query.to_sql()
@@ -175,7 +175,7 @@ class TestBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_bloom_opts",
+            table=Table(dialect, 'test_bloom_opts'),
             columns=columns,
             if_not_exists=True,
         )
@@ -188,7 +188,7 @@ class TestBloomIntegration:
             rows.append([Literal(dialect, f"CODE{i}")])
         insert_expr = InsertExpression(
             dialect=dialect,
-            into="test_bloom_opts",
+            into=Table(dialect, 'test_bloom_opts'),
             columns=["code"],
             source=ValuesSource(dialect, rows),
         )
@@ -205,7 +205,7 @@ class TestBloomIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_bloom_opts"),
             )
             sql, params = query.to_sql()
@@ -215,7 +215,7 @@ class TestBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_bloom_opts",
+                table=Table(dialect, 'test_bloom_opts'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()
@@ -231,7 +231,7 @@ async def async_bloom_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -249,7 +249,7 @@ async def async_bloom_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -265,7 +265,7 @@ async def async_bloom_env(async_postgres_backend_single):
         ])
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["name", "email"],
         source=ValuesSource(dialect, rows),
     )
@@ -275,8 +275,8 @@ async def async_bloom_env(async_postgres_backend_single):
     # Setup: create bloom index using expression
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_bloom_test_async",
-        table_name=ASYNC_TABLE_NAME,
+        index=Index(dialect, 'idx_bloom_test_async'),
+        table=Table(dialect, ASYNC_TABLE_NAME),
         columns=["name", "email"],
         index_type="bloom",
         if_not_exists=True,
@@ -289,7 +289,7 @@ async def async_bloom_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -308,7 +308,7 @@ class TestAsyncBloomIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, ASYNC_TABLE_NAME),
         )
         sql, params = query.to_sql()
@@ -325,7 +325,7 @@ class TestAsyncBloomIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
-            from_=TableExpression(dialect, ASYNC_TABLE_NAME),
+            from_=Table(dialect, ASYNC_TABLE_NAME),
             where=Column(dialect, "name") == Literal(dialect, "user25"),
         )
         sql, params = query.to_sql()
@@ -352,7 +352,7 @@ class TestAsyncBloomIntegration:
         ]
         create_expr = CreateTableExpression(
             dialect=dialect,
-            table="test_bloom_opts_async",
+            table=Table(dialect, 'test_bloom_opts_async'),
             columns=columns,
             if_not_exists=True,
         )
@@ -364,7 +364,7 @@ class TestAsyncBloomIntegration:
             rows.append([Literal(dialect, f"CODE{i}")])
         insert_expr = InsertExpression(
             dialect=dialect,
-            into="test_bloom_opts_async",
+            into=Table(dialect, 'test_bloom_opts_async'),
             columns=["code"],
             source=ValuesSource(dialect, rows),
         )
@@ -380,7 +380,7 @@ class TestAsyncBloomIntegration:
             query = QueryExpression(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
-                from_=TableExpression(dialect, "pg_indexes"),
+                from_=Table(dialect, "pg_indexes"),
                 where=Column(dialect, "tablename") == Literal(dialect, "test_bloom_opts_async"),
             )
             sql, params = query.to_sql()
@@ -390,7 +390,7 @@ class TestAsyncBloomIntegration:
         finally:
             drop_expr = DropTableExpression(
                 dialect=dialect,
-                table="test_bloom_opts_async",
+                table=Table(dialect, 'test_bloom_opts_async'),
                 if_exists=True,
             )
             sql, params = drop_expr.to_sql()

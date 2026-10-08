@@ -19,7 +19,6 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     CTEExpression,
     WithQueryExpression,
     SetOperationExpression,
@@ -28,6 +27,8 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType,
     VarCharType,
@@ -50,22 +51,22 @@ def social_network_data(postgres_backend):
     dialect = backend.dialect
 
     for t in ("follows", "users"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "users", [
+    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'users'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "follows", [
+    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
+    backend.execute(*InsertExpression(dialect, Table(dialect, "users"), columns=["id", "name"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice")],
             [Literal(dialect, 2), Literal(dialect, "Bob")],
@@ -74,7 +75,7 @@ def social_network_data(postgres_backend):
             [Literal(dialect, 5), Literal(dialect, "Eve")],
         ])).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "follows", columns=["id", "follower_id", "followed_id"],
+    backend.execute(*InsertExpression(dialect, Table(dialect, "follows"), columns=["id", "follower_id", "followed_id"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
             [Literal(dialect, 2), Literal(dialect, 2), Literal(dialect, 3)],
@@ -85,7 +86,7 @@ def social_network_data(postgres_backend):
     yield
 
     for t in ("follows", "users"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
 
 @pytest.fixture
@@ -95,16 +96,16 @@ def aml_data(postgres_backend):
     dialect = backend.dialect
 
     for t in ("transactions", "accounts"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "accounts", [
+    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'accounts'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "account_holder", VarCharType(length=100, dialect=dialect)),
         ColumnDefinition(dialect, "account_type", VarCharType(length=20, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*CreateTableExpression(dialect, "transactions", [
+    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'transactions'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
             ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "source_account_id", IntegerType(dialect=dialect)),
@@ -112,7 +113,7 @@ def aml_data(postgres_backend):
         ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
     ]).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "accounts", columns=["id", "account_holder", "account_type"],
+    backend.execute(*InsertExpression(dialect, Table(dialect, "accounts"), columns=["id", "account_holder", "account_type"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice Smith"), Literal(dialect, "checking")],
             [Literal(dialect, 2), Literal(dialect, "Bob Corp"), Literal(dialect, "business")],
@@ -121,7 +122,7 @@ def aml_data(postgres_backend):
             [Literal(dialect, 5), Literal(dialect, "Eve Holding"), Literal(dialect, "offshore")],
         ])).to_sql())
 
-    backend.execute(*InsertExpression(dialect, "transactions", columns=[
+    backend.execute(*InsertExpression(dialect, Table(dialect, "transactions"), columns=[
         "id", "source_account_id", "target_account_id", "amount"],
         source=ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, 4), Literal(dialect, 3), Literal(dialect, 500000)],
@@ -133,7 +134,7 @@ def aml_data(postgres_backend):
     yield
 
     for t in ("transactions", "accounts"):
-        backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
 
 class TestSocialNetworkTraversal:
@@ -148,18 +149,18 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "name"),
                 Literal(dialect, 0).as_("depth"),
             ],
-            from_=TableExpression(dialect, "users"),
+            from_=Table(dialect, "users"),
             where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
         )
 
         recursive_join = JoinClause(
             dialect=dialect,
-            left_table=TableExpression(dialect, "traversal", alias="t"),
-            right_table=TableExpression(dialect, "follows", alias="f"),
+            left_table=NamedRelationRef(dialect, Table(dialect, "traversal"), alias="t"),
+            right_table=NamedRelationRef(dialect, Table(dialect, "follows"), alias="f"),
             join_type="INNER JOIN",
             condition=Column(dialect, "id", table="t") == Column(dialect, "follower_id", table="f"),
         ).inner_join(
-            right_table=TableExpression(dialect, "users", alias="u"),
+            right_table=NamedRelationRef(dialect, Table(dialect, "users"), alias="u"),
             condition=Column(dialect, "followed_id", table="f") == Column(dialect, "id", table="u"),
         )
 
@@ -200,7 +201,7 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "name"),
                 Column(dialect, "depth"),
             ],
-            from_=TableExpression(dialect, "traversal"),
+            from_=Table(dialect, "traversal"),
             where=WhereClause(dialect, condition=BetweenPredicate(
                 dialect, Column(dialect, "depth"), Literal(dialect, 1), Literal(dialect, 3),
             )),
@@ -235,7 +236,7 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "name"),
                 Column(dialect, "depth"),
             ],
-            from_=TableExpression(dialect, "traversal"),
+            from_=Table(dialect, "traversal"),
             where=WhereClause(dialect, condition=Column(dialect, "depth") == Literal(dialect, 2)),
             order_by=OrderByClause(dialect, [Column(dialect, "name")]),
         )
@@ -265,7 +266,7 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "name"),
                 Column(dialect, "depth"),
             ],
-            from_=TableExpression(dialect, "traversal"),
+            from_=Table(dialect, "traversal"),
             where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 1)),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "name")]),
         )
@@ -291,8 +292,8 @@ class TestAMLFundTracing:
         """Build recursive CTE expression for fund tracing."""
         base_join = JoinClause(
             dialect=dialect,
-            left_table=TableExpression(dialect, "transactions", alias="tx"),
-            right_table=TableExpression(dialect, "accounts", alias="a"),
+            left_table=NamedRelationRef(dialect, Table(dialect, "transactions"), alias="tx"),
+            right_table=NamedRelationRef(dialect, Table(dialect, "accounts"), alias="a"),
             join_type="INNER JOIN",
             condition=Column(dialect, "source_account_id", table="tx") == Column(dialect, "id", table="a"),
         )
@@ -316,12 +317,12 @@ class TestAMLFundTracing:
 
         recursive_join = JoinClause(
             dialect=dialect,
-            left_table=TableExpression(dialect, "fund_trace", alias="tr"),
-            right_table=TableExpression(dialect, "transactions", alias="tx"),
+            left_table=NamedRelationRef(dialect, Table(dialect, "fund_trace"), alias="tr"),
+            right_table=NamedRelationRef(dialect, Table(dialect, "transactions"), alias="tx"),
             join_type="INNER JOIN",
             condition=Column(dialect, "target_account_id", table="tx") == Column(dialect, "id", table="tr"),
         ).inner_join(
-            right_table=TableExpression(dialect, "accounts", alias="a"),
+            right_table=NamedRelationRef(dialect, Table(dialect, "accounts"), alias="a"),
             condition=Column(dialect, "source_account_id", table="tx") == Column(dialect, "id", table="a"),
         )
 
@@ -364,7 +365,7 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder"),
                 Column(dialect, "depth"),
             ],
-            from_=TableExpression(dialect, "fund_trace"),
+            from_=Table(dialect, "fund_trace"),
             where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 1)),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "id")]),
         )
@@ -398,7 +399,7 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder"),
                 Column(dialect, "depth"),
             ],
-            from_=TableExpression(dialect, "fund_trace"),
+            from_=Table(dialect, "fund_trace"),
             where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 2)),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "id")]),
         )
@@ -428,7 +429,7 @@ class TestAMLFundTracing:
                 Column(dialect, "depth"),
                 FunctionCall(dialect, "SUM", Column(dialect, "amount"), alias="total"),
             ],
-            from_=TableExpression(dialect, "fund_trace"),
+            from_=Table(dialect, "fund_trace"),
             group_by_having=GroupByHavingClause(
                 dialect, group_by=[Column(dialect, "depth")]
             ),
@@ -462,28 +463,28 @@ class TestAsyncRecursiveCTEGraph:
         dialect = backend.dialect
 
         for t in ("follows", "users"):
-            await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
-        await backend.execute(*CreateTableExpression(dialect, "users", [
+        await backend.execute(*CreateTableExpression(dialect, Table(dialect, 'users'), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
             ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
         ]).to_sql())
 
-        await backend.execute(*CreateTableExpression(dialect, "follows", [
+        await backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
             ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
             ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
         ]).to_sql())
 
-        await backend.execute(*InsertExpression(dialect, "users", columns=["id", "name"],
+        await backend.execute(*InsertExpression(dialect, Table(dialect, "users"), columns=["id", "name"],
             source=ValuesSource(dialect, [
                 [Literal(dialect, 1), Literal(dialect, "Alice")],
                 [Literal(dialect, 2), Literal(dialect, "Bob")],
             ])).to_sql())
 
-        await backend.execute(*InsertExpression(dialect, "follows", columns=["id", "follower_id", "followed_id"],
+        await backend.execute(*InsertExpression(dialect, Table(dialect, "follows"), columns=["id", "follower_id", "followed_id"],
             source=ValuesSource(dialect, [
                 [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
             ])).to_sql())
@@ -491,7 +492,7 @@ class TestAsyncRecursiveCTEGraph:
         yield
 
         for t in ("follows", "users"):
-            await backend.execute(*DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
     @pytest.mark.asyncio
     async def test_async_single_hop(self, async_postgres_backend, async_social_network_data):
@@ -500,7 +501,7 @@ class TestAsyncRecursiveCTEGraph:
         base = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Literal(dialect, 0).as_("depth")],
-            from_=TableExpression(dialect, "users"),
+            from_=Table(dialect, "users"),
             where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
         )
         result = base.to_sql()

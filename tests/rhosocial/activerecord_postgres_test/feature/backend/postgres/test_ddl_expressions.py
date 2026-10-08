@@ -10,6 +10,7 @@ from decimal import Decimal
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.expression import (
     Column,
     FunctionCall,
@@ -60,7 +61,7 @@ class TestPostgresRefreshMaterializedViewExpression:
         """Test basic REFRESH MATERIALIZED VIEW statement."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
-            name="monthly_sales_summary",
+            view=MaterializedView(dialect, "monthly_sales_summary"),
         )
         sql, params = expr.to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
@@ -70,8 +71,7 @@ class TestPostgresRefreshMaterializedViewExpression:
         """Test REFRESH MATERIALIZED VIEW with schema."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
-            name="monthly_sales_summary",
-            schema="analytics",
+            view=MaterializedView(dialect, "monthly_sales_summary", schema_name="analytics"),
         )
         sql, params = expr.to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "analytics"."monthly_sales_summary"'
@@ -82,7 +82,7 @@ class TestPostgresRefreshMaterializedViewExpression:
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect_pg93,
-            name="monthly_sales_summary",
+            view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
             concurrently=True,
         )
 
@@ -95,43 +95,43 @@ class TestPostgresRefreshMaterializedViewExpression:
         """Test CONCURRENTLY refresh with PG 9.4+."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
-            name="monthly_sales_summary",
+            view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
         )
         sql, params = expr.to_sql()
         assert "CONCURRENTLY" in sql
         assert params == ()
 
-    def test_refresh_with_data_false_pg93(self):
-        """Test WITH NO DATA requires PG 9.4+."""
+    def test_refresh_no_data_pg93(self):
+        """Test WITH NO DATA on the PG 9.3 baseline."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect_pg93,
-            name="monthly_sales_summary",
-            with_data=False,
+            view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
+            no_data=True,
         )
 
         sql, params = expr.to_sql()
         assert "WITH NO DATA" in sql
 
-    def test_refresh_with_data_false_pg94(self, dialect):
+    def test_refresh_no_data_pg94(self, dialect):
         """Test WITH NO DATA with PG 9.4+."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
-            name="monthly_sales_summary",
-            with_data=False,
+            view=MaterializedView(dialect, "monthly_sales_summary"),
+            no_data=True,
         )
         sql, params = expr.to_sql()
         assert "WITH NO DATA" in sql
         assert params == ()
 
-    def test_refresh_concurrently_and_with_data(self, dialect):
+    def test_refresh_concurrently_and_no_data(self, dialect):
         """Test CONCURRENTLY with WITH NO DATA."""
         expr = PostgresRefreshMaterializedViewExpression(
             dialect=dialect,
-            name="monthly_sales_summary",
+            view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
-            with_data=False,
+            no_data=True,
         )
         sql, params = expr.to_sql()
         assert "CONCURRENTLY" in sql
@@ -151,20 +151,21 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
-            object_name="users",
+            object=Table(dialect, "users"),
             comment="User accounts table",
         )
         sql, params = expr.to_sql()
         assert "COMMENT ON TABLE" in sql
-        assert "users" in sql
+        assert '"users"' in sql
         assert params == ("User accounts table",)
 
     def test_comment_on_column(self, dialect):
-        """Test COMMENT ON COLUMN (dotted target quoted segment-by-segment)."""
+        """Test COMMENT ON COLUMN (column named beside the object it belongs to)."""
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="COLUMN",
-            object_name="users.email",
+            object=Table(dialect, "users"),
+            column="email",
             comment="User email address",
         )
         sql, params = expr.to_sql()
@@ -177,7 +178,7 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="INDEX",
-            object_name="users_email_idx",
+            object=Table(dialect, "users"),
             comment="Email index for users table",
         )
         sql, params = expr.to_sql()
@@ -188,7 +189,7 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="VIEW",
-            object_name="user_stats",
+            object=Table(dialect, "user_stats"),
             comment="User statistics view",
         )
         sql, params = expr.to_sql()
@@ -199,7 +200,7 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="SCHEMA",
-            object_name="analytics",
+            object=Table(dialect, "analytics"),
             comment="Analytics schema",
         )
         sql, params = expr.to_sql()
@@ -210,7 +211,7 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="FUNCTION",
-            object_name="calculate_total",
+            object=Table(dialect, "calculate_total"),
             comment="Calculate total amount",
         )
         sql, params = expr.to_sql()
@@ -221,7 +222,7 @@ class TestPostgresCommentExpression:
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
-            object_name="users",
+            object=Table(dialect, "users"),
             comment=None,
         )
         sql, params = expr.to_sql()
@@ -230,13 +231,12 @@ class TestPostgresCommentExpression:
         assert params == ()
 
     def test_comment_with_schema(self, dialect):
-        """Test comment on object with schema (dotted target quoted per segment)."""
+        """Test comment on an object in a schema (namespace comes off the object)."""
         expr = PostgresCommentExpression(
             dialect=dialect,
             object_type="TABLE",
-            object_name="public.users",
+            object=Table(dialect, "users", schema_name="public"),
             comment="Public users table",
-            schema="public",
         )
         sql, params = expr.to_sql()
         assert '"public"."users"' in sql
@@ -254,7 +254,7 @@ class TestPostgresPartitionedTableCreation:
         """Test creating a RANGE-partitioned parent table."""
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
                 ColumnDefinition(
@@ -279,7 +279,7 @@ class TestPostgresPartitionedTableCreation:
         """Test creating a LIST-partitioned parent table."""
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
                 ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -300,7 +300,7 @@ class TestPostgresPartitionedTableCreation:
         dialect = PostgresDialect(version=(10, 0, 0))
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -323,7 +323,7 @@ class TestPostgresPartitionedTableCreation:
         dialect = PostgresDialect(version=(11, 0, 0))
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -347,7 +347,7 @@ class TestPostgresPartitionedTableCreation:
         dialect = PostgresDialect(version=(9, 6, 0))
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -398,7 +398,7 @@ class TestPostgresPartitionedTableCreation:
 
         expr = CreateTableExpression(
             dialect=dialect,
-            table="events",
+            table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
@@ -444,7 +444,7 @@ class TestPostgresPartitionedTableCreation:
         """Test creating a RANGE-partitioned parent table with multiple partition keys."""
         expr = CreateTableExpression(
             dialect=dialect,
-            table="tenanted_events",
+            table=Table(dialect, 'tenanted_events'),
             columns=[
                 ColumnDefinition(
                     dialect,

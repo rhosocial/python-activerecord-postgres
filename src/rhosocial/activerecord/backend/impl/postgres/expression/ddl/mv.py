@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
     CreateMaterializedViewExpression,
     DropMaterializedViewExpression,
@@ -56,8 +57,9 @@ def _validate_name(value: str, field_name: str) -> None:
 class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression):
     """PostgreSQL CREATE MATERIALIZED VIEW with schema and IF NOT EXISTS support.
 
-    Extends the generic expression with the two PostgreSQL-specific options:
-    ``IF NOT EXISTS`` (PG 9.4+) and schema qualification.
+    Extends the generic expression with the PostgreSQL-specific ``IF NOT EXISTS``
+    (PG 9.4+). The view is a :class:`MaterializedView` object, so its schema
+    lives on the object rather than beside it.
 
     ``storage_options`` keys are validated against
     :class:`~....storage_parameters.PostgresStorageParameter`; pass
@@ -65,6 +67,7 @@ class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression)
     a table access method (``USING method``) or namespaced under ``toast.``.
 
     Example:
+        >>> from rhosocial.activerecord.backend.expression.objects import MaterializedView
         >>> from rhosocial.activerecord.backend.impl.postgres import (
         ...     PostgresDialect,
         ...     PostgresStorageParameter,
@@ -72,10 +75,10 @@ class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression)
         >>> dialect = PostgresDialect(version=(15, 0, 0))
         >>> create = PostgresCreateMaterializedViewExpression(
         ...     dialect=dialect,
-        ...     view_name="monthly_sales_summary",
+        ...     view=MaterializedView(dialect, "monthly_sales_summary", schema_name="reporting"),
         ...     query=sales_query,
-        ...     schema="reporting",
         ...     if_not_exists=True,
+        ...     with_data=True,
         ...     storage_options={PostgresStorageParameter.FILLFACTOR: 70},
         ... )
         >>> sql, params = create.to_sql()
@@ -87,45 +90,44 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        view_name: str,
+        view: MaterializedView,
         query: Any,
         column_aliases: Optional[List[str]] = None,
         tablespace: Optional[str] = None,
-        with_data: bool = True,
+        with_data: bool = False,
+        no_data: bool = False,
         storage_options: Optional[Dict[Any, Any]] = None,
-        schema: Optional[str] = None,
         if_not_exists: bool = False,
         allow_unlisted_storage_parameters: bool = False,
     ):
         super().__init__(
             dialect,
-            view_name=view_name,
+            view=view,
             query=query,
             column_aliases=column_aliases,
             tablespace=tablespace,
             with_data=with_data,
+            no_data=no_data,
             storage_options=storage_options,
         )
-        _validate_name(view_name, "view_name")
-        if schema is not None:
-            _validate_name(schema, "schema")
         if storage_options:
             validate_storage_parameters(
                 storage_options.keys(),
                 "storage_options",
                 allow_unlisted=allow_unlisted_storage_parameters,
             )
-        self.schema = schema
         self.if_not_exists = if_not_exists
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
 class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
-    """PostgreSQL DROP MATERIALIZED VIEW with schema qualification.
+    """PostgreSQL DROP MATERIALIZED VIEW.
 
     Example:
+        >>> from rhosocial.activerecord.backend.expression.objects import MaterializedView
         >>> drop = PostgresDropMaterializedViewExpression(
-        ...     dialect=dialect, view_name="monthly_sales_summary", schema="reporting",
+        ...     dialect=dialect,
+        ...     view=MaterializedView(dialect, "monthly_sales_summary", schema_name="reporting"),
         ... )
         >>> drop.to_sql()[0]
         'DROP MATERIALIZED VIEW "reporting"."monthly_sales_summary"'
@@ -134,21 +136,18 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        view_name: str,
+        view: MaterializedView,
         if_exists: bool = False,
         cascade: bool = False,
-        schema: Optional[str] = None,
+        restrict: bool = False,
     ):
         super().__init__(
             dialect,
-            view_name=view_name,
+            view=view,
             if_exists=if_exists,
             cascade=cascade,
+            restrict=restrict,
         )
-        _validate_name(view_name, "view_name")
-        if schema is not None:
-            _validate_name(schema, "schema")
-        self.schema = schema
 
 
 class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpression):
@@ -157,41 +156,42 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
     Replaces the contents of a materialized view by recalculating its query.
     The data is replaced atomically without affecting concurrent queries.
 
-    Extends the generic RefreshMaterializedViewExpression with PostgreSQL-specific
-    schema support and backward-compatible aliases.
+    Extends the generic expression with the backward-compatible aliases
+    ``name`` and ``concurrently``.
 
     Attributes:
-        view_name: Name of the materialized view to refresh (inherited).
-        schema: Schema name for the materialized view (PostgreSQL-specific).
+        view: The materialized view being refreshed (inherited); carries its
+            own schema.
         concurrent: Whether to refresh concurrently (inherited).
         with_data: Whether to repopulate data (inherited).
-        name: Alias for view_name (backward compatibility).
-        concurrently: Alias for concurrent (backward compatibility).
+        name: Alias for the view's name.
+        concurrently: Alias for concurrent.
 
     Example:
+        >>> from rhosocial.activerecord.backend.expression.objects import MaterializedView
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
         >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
-        ...     name="monthly_sales_summary",
+        ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ... )
         >>> sql, params = refresh.to_sql()
         >>> sql
-        "REFRESH MATERIALIZED VIEW monthly_sales_summary"
+        'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
 
         >>> # Concurrent refresh (PG 9.4+, requires unique index)
         >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
-        ...     name="monthly_sales_summary",
+        ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     concurrently=True,
         ... )
 
         >>> # Refresh without data (create empty, PG 9.4+)
         >>> refresh = PostgresRefreshMaterializedViewExpression(
         ...     dialect=dialect,
-        ...     name="monthly_sales_summary",
-        ...     with_data=False,
+        ...     view=MaterializedView(dialect, "monthly_sales_summary"),
+        ...     no_data=True,
         ... )
 
     """
@@ -199,26 +199,28 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        name: str,
-        schema: Optional[str] = None,
+        view: MaterializedView,
         concurrently: bool = False,
-        with_data: Optional[bool] = None,
+        with_data: bool = False,
+        no_data: bool = False,
     ):
         super().__init__(
             dialect,
-            view_name=name,
+            view=view,
             concurrent=concurrently,
             with_data=with_data,
+            no_data=no_data,
         )
-        _validate_name(name, "name")
-        if schema is not None:
-            _validate_name(schema, "schema")
-        self.schema = schema
 
     @property
     def name(self) -> str:
-        """Alias for view_name (backward compatibility)."""
-        return self.view_name
+        """Alias for the view's unqualified name."""
+        return self.view.name
+
+    @property
+    def schema(self) -> Optional[str]:
+        """The view's schema, read off the object."""
+        return self.view.schema_name
 
     @property
     def concurrently(self) -> bool:
@@ -355,7 +357,7 @@ class PostgresAlterMaterializedViewExpression(BaseExpression):
         >>> dialect = PostgresDialect(version=(15, 0, 0))
         >>> alter = PostgresAlterMaterializedViewExpression(
         ...     dialect=dialect,
-        ...     view_name="sales_summary",
+        ...     view=MaterializedView(dialect, "sales_summary"),
         ...     actions=[
         ...         PostgresRenameMaterializedViewAction(dialect, "sales_summary_v2"),
         ...         PostgresSetMaterializedViewPropertiesAction(dialect, {"fillfactor": 90}),
@@ -369,14 +371,10 @@ ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        view_name: str,
+        view: MaterializedView,
         actions: Sequence[MaterializedViewAlterAction],
-        schema: Optional[str] = None,
     ) -> None:
         super().__init__(dialect)
-        _validate_name(view_name, "view_name")
-        if schema is not None:
-            _validate_name(schema, "schema")
         action_list = list(actions or [])
         if not action_list:
             raise ValueError("actions must contain at least one MaterializedViewAlterAction")
@@ -386,8 +384,7 @@ ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
                     "actions must contain MaterializedViewAlterAction instances, "
                     f"got {type(action).__name__}"
                 )
-        self.view_name = view_name
-        self.schema = schema
+        self.view = view
         self.actions = action_list
 
     @property

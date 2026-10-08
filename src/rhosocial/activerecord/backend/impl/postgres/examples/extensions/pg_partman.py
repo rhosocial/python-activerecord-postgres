@@ -20,6 +20,7 @@ The actual function signatures are:
 # ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
@@ -39,7 +40,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="log_entries", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -100,7 +101,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="log_entries",
+        table=Table(dialect, 'log_entries'),
         columns=columns,
         if_not_exists=True,
     )
@@ -153,7 +154,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="log_entries", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

@@ -20,6 +20,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresColumnOptions,
@@ -97,7 +98,7 @@ TABLE_CONSTRAINTS = [
         TableConstraintType.FOREIGN_KEY,
         name="fk_order_tenant",
         columns=["tenant_id"],
-        foreign_key_table="tenant",
+        foreign_key_table=Table(DIALECT, "tenant"),
         foreign_key_columns=["id"],
     ),
     TableConstraint(
@@ -379,7 +380,7 @@ def test_collected_table_options_render_with_postgres_dialect():
     table_options = SyncDDLSource.table_options()
     expression = CreateTableExpression(
         DIALECT,
-        "ddl_source_orders",
+        Table(DIALECT, 'ddl_source_orders'),
         [ColumnDefinition(DIALECT, "id", IntegerType(DIALECT))],
         table_options=table_options[0],
     )

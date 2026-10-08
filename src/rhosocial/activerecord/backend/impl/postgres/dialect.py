@@ -13,6 +13,25 @@ if TYPE_CHECKING:
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.dialect.mixins import (
+    # Named objects. Each *NameMixin supplies one ``format_<kind>_object`` and
+    # subclasses NamespaceMixin, so each has to precede it in the base list.
+    NamespaceMixin,
+    TableNameMixin,
+    ViewNameMixin,
+    MaterializedViewNameMixin,
+    ForeignTableNameMixin,
+    IndexNameMixin,
+    SequenceNameMixin,
+    TriggerNameMixin,
+    FunctionNameMixin,
+    ProcedureNameMixin,
+    TypeNameMixin,
+    DomainNameMixin,
+    SynonymNameMixin,
+    SchemaNameMixin,
+    DatabaseNameMixin,
+    PropertyGraphNameMixin,
+    RelationSourceMixin,
     SQLXMLMixin,
     CollationMixin,
     CTEMixin,
@@ -53,6 +72,40 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     DomainMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
+    AlterDatabaseSupport,
+    AlterDomainSupport,
+    AlterTableSupport,
+    AlterTypeSupport,
+    CreateDatabaseSupport,
+    CreateDomainSupport,
+    CreateIndexSupport,
+    CreateRoutineSupport,
+    CreateSchemaSupport,
+    CreateTableSupport,
+    CreateTriggerSupport,
+    CreateTypeSupport,
+    CreateViewSupport,
+    DropDatabaseSupport,
+    DropDomainSupport,
+    DropIndexSupport,
+    DropRoutineSupport,
+    DropSchemaSupport,
+    DropTableSupport,
+    DropTriggerSupport,
+    DropTypeSupport,
+    DropViewSupport,
+    FulltextIndexSupport,
+    MaterializedViewObjectSupport,
+    MaterializedViewSupport,
+    NamespaceSupport,
+    RoutineObjectSupport,
+    SequenceObjectSupport,
+    TableObjectSupport,
+    TriggerObjectSupport,
+    TypeObjectSupport,
+    IndexObjectSupport,
+    ViewObjectSupport,
+    ForeignTableObjectSupport,
     SQLXMLSupport,
     SQLXMLParsingSupport,
     SQLXMLSerializationSupport,
@@ -78,9 +131,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     LateralJoinSupport,
     WildcardSupport,
     JoinSupport,
-    ViewSupport,
-    SchemaSupport,
-    SequenceSupport,
     SetOperationSupport,
     TruncateSupport,
     ILIKESupport,
@@ -88,10 +138,9 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     TransactionControlSupport,
     SQLFunctionSupport,
     DDLTypeSupport,
-    UserDefinedTypeSupport,
-    DomainSupport,
 )
 from .mixins import (
+    PostgresObjectNameMixin,
     PostgresExtensionMixin,
     PostgresMaterializedViewMixin,
     PostgresTableMixin,
@@ -126,6 +175,7 @@ from .mixins import (
     PostgresJoinMixin,
     PostgresTruncateMixin,
     PostgresSchemaMixin,
+    PostgresNamespaceMixin,
     PostgresDatabaseMixin,
     PostgresSequenceMixin,
     PostgresTransactionMixin,
@@ -195,6 +245,8 @@ from .mixins import (
     PostgresDQLMixin,
     PostgresJSONMixin,
     PostgresGeneratedColumnMixin,
+    PostgresIdentityColumnMixin,
+    PostgresAutoIncrementMixin,
     PostgresExpressionMixin,
     PostgresFunctionMixin,
 )
@@ -237,7 +289,10 @@ from .protocols import (
     PostgresJoinSupport,
     PostgresTruncateSupport,
     PostgresSchemaSupport,
+    PostgresNamespaceSupport,
     PostgresSequenceSupport,
+    PostgresIdentitySupport,
+    PostgresAutoIncrementSupport,
     PostgresTransactionSupport,
     PostgresViewSupport,
     PostgresXMLSupport,
@@ -301,17 +356,35 @@ class PostgresDialect(
     SQLDialectBase,
     PostgresTypeMixin,
     PostgresDomainMixin,
-    PostgresTypeSupport,
-    PostgresDomainSupport,
     UserDefinedTypeMixin,
     DomainMixin,
-    UserDefinedTypeSupport,
-    DomainSupport,
+    # Named objects. Each *NameMixin subclasses NamespaceMixin, so each has to
+    # precede it in this list (C3: a subclass precedes its base) or the base's
+    # format_qualified_name would shadow the per-kind formatter.
+    TableNameMixin,
+    ViewNameMixin,
+    MaterializedViewNameMixin,
+    ForeignTableNameMixin,
+    IndexNameMixin,
+    SequenceNameMixin,
+    TriggerNameMixin,
+    FunctionNameMixin,
+    ProcedureNameMixin,
+    TypeNameMixin,
+    DomainNameMixin,
+    SynonymNameMixin,
+    SchemaNameMixin,
+    DatabaseNameMixin,
+    PropertyGraphNameMixin,
+    RelationSourceMixin,
+    PostgresObjectNameMixin,
     # PG-specific mixins (before global mixins to override)
     PostgresDateTimeMixin,
     PostgresDQLMixin,
     PostgresJSONMixin,
     PostgresGeneratedColumnMixin,
+    PostgresIdentityColumnMixin,
+    PostgresAutoIncrementMixin,
     PostgresExpressionMixin,
     PostgresFunctionMixin,
     # Per-feature mixins
@@ -329,6 +402,14 @@ class PostgresDialect(
     PostgresJoinMixin,
     PostgresTruncateMixin,
     PostgresSchemaMixin,
+    # PostgreSQL's naming side: which namespace levels exist (a database outside,
+    # a schema inside) and how they are spelled. Placed before NamespaceMixin
+    # because it subclasses it (C3: a subclass precedes its base) -- otherwise
+    # core's always-False defaults and core's two-slot spelling would win. After
+    # the *NameMixin block for the same reason: those subclass NamespaceMixin too,
+    # and each supplies one format_<kind>_object.
+    PostgresNamespaceMixin,
+    NamespaceMixin,
     PostgresDatabaseMixin,
     PostgresSequenceMixin,
     PostgresTransactionMixin,
@@ -478,9 +559,49 @@ class PostgresDialect(
     LateralJoinSupport,
     WildcardSupport,
     JoinSupport,
-    ViewSupport,
-    SchemaSupport,
-    SequenceSupport,
+    # Type and domain DDL protocols. These derive TypeObjectSupport, so they
+    # precede the object protocols further down.
+    PostgresTypeSupport,
+    PostgresDomainSupport,
+    # These three declare the PostgreSQL-only additions to the per-statement
+    # protocols below, so they derive Create/Drop/AlterTableSupport,
+    # Create/DropIndexSupport + FulltextIndexSupport and
+    # Create/DropTriggerSupport. A subclass precedes its base (C3), so each
+    # has to come before the core protocols it extends.
+    PostgresTableSupport,
+    PostgresIndexSupport,
+    PostgresTriggerSupport,
+    # Per-statement DDL protocols. Core split each former umbrella protocol
+    # into one protocol per statement expression, so a dialect that implements
+    # CREATE/DROP TABLE declares those two rather than the old umbrella.
+    CreateTableSupport,
+    DropTableSupport,
+    AlterTableSupport,
+    CreateViewSupport,
+    DropViewSupport,
+    MaterializedViewSupport,
+    CreateIndexSupport,
+    DropIndexSupport,
+    FulltextIndexSupport,
+    # CREATE/DROP/ALTER SEQUENCE are declared once, on PostgresSequenceSupport,
+    # which derives from the three core per-statement protocols. Listing them
+    # here as well would put a base before the subclass that restates it and
+    # break C3; the dialect still satisfies each through that derivation.
+    CreateTriggerSupport,
+    DropTriggerSupport,
+    CreateTypeSupport,
+    AlterTypeSupport,
+    DropTypeSupport,
+    CreateDomainSupport,
+    AlterDomainSupport,
+    DropDomainSupport,
+    CreateSchemaSupport,
+    DropSchemaSupport,
+    CreateDatabaseSupport,
+    DropDatabaseSupport,
+    AlterDatabaseSupport,
+    CreateRoutineSupport,
+    DropRoutineSupport,
     # Introspection protocol
     IntrospectionSupport,
     # Transaction control protocol
@@ -488,7 +609,6 @@ class PostgresDialect(
     # PostgreSQL-specific protocols
     PostgresExtensionSupport,
     PostgresMaterializedViewSupport,
-    PostgresTableSupport,
     PostgresPgvectorSupport,
     PostgresPostGISSupport,
     PostgresPostgisRasterSupport,
@@ -497,7 +617,6 @@ class PostgresDialect(
     PostgresHstoreSupport,
     # Native feature protocols
     PostgresPartitionSupport,
-    PostgresIndexSupport,
     PostgresVacuumSupport,
     PostgresCopySupport,
     PostgresQueryOptimizationSupport,
@@ -518,7 +637,10 @@ class PostgresDialect(
     PostgresJoinSupport,
     PostgresTruncateSupport,
     PostgresSchemaSupport,
+    PostgresNamespaceSupport,
     PostgresSequenceSupport,
+    PostgresIdentitySupport,
+    PostgresAutoIncrementSupport,
     PostgresTransactionSupport,
     PostgresViewSupport,
     PostgresXMLSupport,
@@ -550,7 +672,6 @@ class PostgresDialect(
     PostgresOrafceSupport,
     PostgresAddressStandardizerSupport,
     # DDL feature protocols
-    PostgresTriggerSupport,
     PostgresCommentSupport,
     PostgresConstraintSupport,
     PostgresPolicySupport,
@@ -569,6 +690,22 @@ class PostgresDialect(
     PostgresRangeTypeSupport,
     PostgresJSONBEnhancedSupport,
     PostgresArrayEnhancedSupport,
+    # Type and domain DDL protocols. These derive TypeObjectSupport /
+    # NamespaceSupport, so they precede the object protocols below.
+    # Named objects. Each derives NamespaceSupport, and PostgresTableSupport,
+    # PostgresIndexSupport and PostgresTriggerSupport derive from three of
+    # them, so the whole block sits after the PostgreSQL-specific protocols
+    # that restate them.
+    ViewObjectSupport,
+    MaterializedViewObjectSupport,
+    TableObjectSupport,
+    ForeignTableObjectSupport,
+    IndexObjectSupport,
+    SequenceObjectSupport,
+    TriggerObjectSupport,
+    TypeObjectSupport,
+    RoutineObjectSupport,
+    NamespaceSupport,
     # DataType Support Protocol
     DDLTypeSupport,
     # New feature protocols

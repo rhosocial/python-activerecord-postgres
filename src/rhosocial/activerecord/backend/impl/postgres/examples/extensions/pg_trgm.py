@@ -36,6 +36,7 @@ dialect = backend.dialect
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -46,12 +47,12 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     QueryExpression,
     Column,
-    TableExpression,
     FunctionCall,
     BinaryExpression,
     OrderByClause,
     Literal,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -64,7 +65,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 # Clean up for demo
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table=Table(dialect, 'articles'),
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()
@@ -112,7 +113,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="articles",
+        table=Table(dialect, 'articles'),
         columns=columns,
         if_not_exists=True,
     )
@@ -124,7 +125,7 @@ if installed:
     # Example 2: Insert text data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="articles",
+        into=Table(dialect, 'articles'),
         columns=["title"],
         source=ValuesSource(
             dialect,
@@ -165,7 +166,7 @@ if installed:
             Column(dialect, "title"),
             sim_select,
         ],
-        from_=TableExpression(dialect, "articles"),
+        from_=Table(dialect, "articles"),
         where=sim_where > Literal(dialect, 0.1),
         order_by=OrderByClause(dialect, [(sim_order, "DESC")]),
     )
@@ -183,7 +184,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "title")],
-        from_=TableExpression(dialect, "articles"),
+        from_=Table(dialect, "articles"),
         where=BinaryExpression(
             dialect, "%", Column(dialect, "title"), Literal(dialect, "Postgres guide")
         ),
@@ -214,7 +215,7 @@ if installed:
             sim_pg_select,
             sim_design_select,
         ],
-        from_=TableExpression(dialect, "articles"),
+        from_=Table(dialect, "articles"),
         order_by=OrderByClause(dialect, [(sim_pg_order, "DESC")]),
     )
     sql, params = query.to_sql()
@@ -226,10 +227,10 @@ if installed:
 
     # Example 6: Create GIN index with trigram operator class
     # GIN index with gin_trgm_ops accelerates %, similarity, LIKE queries
-    create_idx = CreateIndexExpression(
+    create_idx = PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name="idx_articles_title_trgm",
-        table_name="articles",
+        index=Index(dialect, 'idx_articles_title_trgm'),
+        table=Table(dialect, 'articles'),
         columns=["title"],
         index_type="GIN",
         if_not_exists=True,
@@ -251,7 +252,7 @@ else:
 # ============================================================
 drop_expr = DropTableExpression(
     dialect=dialect,
-    table_name="articles",
+    table=Table(dialect, 'articles'),
     if_exists=True,
 )
 sql, params = drop_expr.to_sql()

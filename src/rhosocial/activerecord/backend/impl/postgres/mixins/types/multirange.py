@@ -4,6 +4,7 @@
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
@@ -56,8 +57,8 @@ class MultirangeMixin:
                 "multirange_agg",
                 suggestion="requires PostgreSQL 14+",
             )
-        full_name = f"{schema}.{table_name}" if schema is not None else table_name
-        table_sql = ".".join(self.format_identifier(part) for part in full_name.split("."))
+        table_sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        )
         column_sql = self.format_identifier(range_column)
         sql = f"SELECT multirange_agg({column_sql}) FROM {table_sql}"
         if where_clause:

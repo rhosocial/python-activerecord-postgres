@@ -23,11 +23,11 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
     OrderByClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -57,7 +57,7 @@ def _setup_geo_points_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -66,7 +66,7 @@ def _setup_geo_points_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -94,7 +94,7 @@ def _setup_geo_distance_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -103,7 +103,7 @@ def _setup_geo_distance_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -131,7 +131,7 @@ def _setup_geo_contains_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -140,7 +140,7 @@ def _setup_geo_contains_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -174,7 +174,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -183,7 +183,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -197,8 +197,8 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
 
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name=index_name,
-        table_name=table,
+        index=Index(dialect, index_name),
+        table=Table(dialect, table),
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -221,7 +221,7 @@ def _setup_geog_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -230,7 +230,7 @@ def _setup_geog_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geog"],
         source=ValuesSource(
             dialect,
@@ -247,7 +247,7 @@ def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -268,7 +268,7 @@ async def _async_setup_geo_points_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -277,7 +277,7 @@ async def _async_setup_geo_points_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -305,7 +305,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -314,7 +314,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -342,7 +342,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -351,7 +351,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -385,7 +385,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -394,7 +394,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geom"],
         source=ValuesSource(
             dialect,
@@ -408,8 +408,8 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
 
     create_index = CreateIndexExpression(
         dialect=dialect,
-        index_name=index_name,
-        table_name=table,
+        index=Index(dialect, index_name),
+        table=Table(dialect, table),
         columns=["geom"],
         index_type="GIST",
         if_not_exists=True,
@@ -432,7 +432,7 @@ async def _async_setup_geog_table(backend, dialect, table):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         columns=columns,
         if_not_exists=True,
     )
@@ -441,7 +441,7 @@ async def _async_setup_geog_table(backend, dialect, table):
 
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=table,
+        into=Table(dialect, table),
         columns=["geog"],
         source=ValuesSource(
             dialect,
@@ -458,7 +458,7 @@ async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=table,
+        table=Table(dialect, table),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -521,7 +521,7 @@ class TestPostGISIntegration:
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geom")).as_("wkt"),
             ],
-            from_=TableExpression(dialect, T_GEO_POINTS),
+            from_=Table(dialect, T_GEO_POINTS),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -696,7 +696,7 @@ class TestPostGISIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect,
                 "=",
@@ -720,7 +720,7 @@ class TestPostGISIntegration:
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geog")).as_("wkt"),
             ],
-            from_=TableExpression(dialect, T_GEOG),
+            from_=Table(dialect, T_GEOG),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -853,7 +853,7 @@ class TestAsyncPostGISIntegration:
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geom")).as_("wkt"),
             ],
-            from_=TableExpression(dialect, T_GEO_POINTS_ASYNC),
+            from_=Table(dialect, T_GEO_POINTS_ASYNC),
             order_by=OrderByClause(dialect, [Column(dialect, "id")]),
         )
         sql, params = query.to_sql()
@@ -1031,7 +1031,7 @@ class TestAsyncPostGISIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect,
                 "=",
@@ -1056,7 +1056,7 @@ class TestAsyncPostGISIntegration:
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geog")).as_("wkt"),
             ],
-            from_=TableExpression(dialect, T_GEOG_ASYNC),
+            from_=Table(dialect, T_GEOG_ASYNC),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

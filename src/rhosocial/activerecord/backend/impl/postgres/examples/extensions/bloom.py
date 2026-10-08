@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="customers", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -43,6 +43,7 @@ backend.execute(sql, params)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -52,9 +53,9 @@ from rhosocial.activerecord.backend.expression import (
     CreateIndexExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -98,7 +99,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="customers",
+        table=Table(dialect, 'customers'),
         columns=columns,
         if_not_exists=True,
     )
@@ -117,7 +118,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="customers",
+        into=Table(dialect, 'customers'),
         columns=["name", "email", "city"],
         source=ValuesSource(dialect, rows),
     )
@@ -128,10 +129,10 @@ if installed:
 
     # Example 3: Create bloom index on multiple columns
     # Bloom index is useful for equality searches on multiple columns
-    create_idx = CreateIndexExpression(
+    create_idx = PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name="idx_customers_bloom",
-        table_name="customers",
+        index=Index(dialect, 'idx_customers_bloom'),
+        table=Table(dialect, 'customers'),
         columns=["name", "email", "city"],
         index_type="BLOOM",
         if_not_exists=True,
@@ -146,7 +147,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "email"), Column(dialect, "city")],
-        from_=TableExpression(dialect, "customers"),
+        from_=Table(dialect, "customers"),
         where=ComparisonPredicate(
             Column(dialect, "city"),
             "=",
@@ -162,10 +163,10 @@ if installed:
 
     # Example 5: Create bloom index with custom options
     # length=64 (signature size in bits), col1=2 (number of bits for first column)
-    create_idx_opts = CreateIndexExpression(
+    create_idx_opts = PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name="idx_customers_bloom_opts",
-        table_name="customers",
+        index=Index(dialect, 'idx_customers_bloom_opts'),
+        table=Table(dialect, 'customers'),
         columns=["name", "email"],
         index_type="BLOOM",
         if_not_exists=True,
@@ -184,7 +185,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="customers", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

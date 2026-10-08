@@ -27,6 +27,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     InsertExpression,
@@ -42,7 +43,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
 )
 sql, params = drop_table.to_sql()
@@ -50,7 +51,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL'),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -64,7 +65,7 @@ backend.execute(sql, params)
 
 insert = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['name', 'age'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice'), Literal(dialect, 25)],
@@ -80,7 +81,7 @@ backend.execute(sql, params)
 # ============================================================
 update_expr = UpdateExpression(
     dialect=dialect,
-    table='users',
+    table=Table(dialect, 'users'),
     assignments={'age': Literal(dialect, 26)},
     where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
 )
@@ -97,7 +98,7 @@ print(f"Updated rows: {result.affected_rows}")
 # ============================================================
 update_all = UpdateExpression(
     dialect=dialect,
-    table='users',
+    table=Table(dialect, 'users'),
     assignments={'age': Literal(dialect, 99)},
 )
 sql, params = update_all.to_sql()
@@ -108,7 +109,7 @@ print(f"Updated rows: {result.affected_rows}")
 # ============================================================
 # SECTION: Teardown
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name='users', if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

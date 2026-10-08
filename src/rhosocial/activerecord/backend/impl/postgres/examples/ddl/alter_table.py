@@ -38,7 +38,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -47,7 +47,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition(
             'id',
@@ -64,7 +64,7 @@ backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['name'],
     source=ValuesSource(
         dialect,
@@ -96,7 +96,7 @@ add_email_action = AddColumn(
 
 add_email_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     actions=[add_email_action],
 )
 
@@ -121,7 +121,7 @@ add_age_action = AddColumn(
 
 add_age_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     actions=[add_age_action],
 )
 
@@ -138,7 +138,7 @@ rename_action = RenameObject(
 
 rename_expr = AlterTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     actions=[rename_action],
 )
 
@@ -148,7 +148,8 @@ backend.execute(sql, params)
 print("Column renamed successfully")
 
 # Verify table structure
-from rhosocial.activerecord.backend.expression import QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
@@ -159,7 +160,7 @@ verify_expr = QueryExpression(
         Column(dialect, 'data_type'),
         Column(dialect, 'is_nullable'),
     ],
-    from_=TableExpression(dialect, 'columns', schema_name='information_schema'),
+    from_=Table(dialect, 'columns', schema_name='information_schema'),
     where=Column(dialect, 'table_name') == Literal(dialect, 'users'),
     order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
 )

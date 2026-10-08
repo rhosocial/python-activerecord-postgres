@@ -36,7 +36,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='sales',
+    table=Table(dialect, 'sales'),
     if_exists=True,
     cascade=True,
 )
@@ -45,7 +45,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='sales',
+    table=Table(dialect, 'sales'),
     columns=[
         ColumnDefinition(
             'id',
@@ -65,7 +65,7 @@ backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='sales',
+    into=Table(dialect, 'sales'),
     columns=['product', 'quantity', 'price', 'region'],
     source=ValuesSource(
         dialect,
@@ -84,11 +84,9 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    Column,
-    GroupByHavingClause,
+    QueryExpression, Column, GroupByHavingClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
@@ -99,7 +97,7 @@ query = QueryExpression(
         FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')).as_('total_qty'),
         FunctionCall(dialect, 'AVG', Column(dialect, 'price')).as_('avg_price'),
     ],
-    from_=TableExpression(dialect, 'sales'),
+    from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
         dialect,
         group_by=[Column(dialect, 'product')],

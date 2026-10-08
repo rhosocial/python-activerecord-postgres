@@ -35,6 +35,7 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint, ColumnConstraintType,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
@@ -398,12 +399,12 @@ class TestPostgresConstraintEnforcement:
             TableConstraintType.CHECK,
             name="age_check",
             check_condition=condition,
-            enforced=False,
+            not_enforced=True,
         )
         fk = ForeignKeyConstraint(
             dialect,
             columns=["parent_id"],
-            foreign_key_table="people",
+            foreign_key_table=Table(dialect, 'people'),
             foreign_key_columns=["id"],
             enforced=True,
         )
@@ -411,7 +412,7 @@ class TestPostgresConstraintEnforcement:
             dialect,
             ColumnConstraintType.CHECK,
             check_condition=condition,
-            enforced=False,
+            not_enforced=True,
         )
 
         assert check.to_sql()[0] == 'CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
@@ -439,7 +440,7 @@ class TestPostgresConstraintEnforcement:
         constraint = ForeignKeyConstraint(
             dialect,
             columns=["parent_id"],
-            foreign_key_table="people",
+            foreign_key_table=Table(dialect, 'people'),
             foreign_key_columns=["id"],
             validation=ConstraintValidation.NOVALIDATE,
         )
@@ -483,7 +484,7 @@ class TestPostgresConstraintEnforcement:
         fk_action = PostgresAlterConstraint(
             pg18,
             "parent_fk",
-            False,
+            not_enforced=True,
             constraint_type=ColumnConstraintType.FOREIGN_KEY,
         )
         assert fk_action.constraint_type is TableConstraintType.FOREIGN_KEY
@@ -494,7 +495,7 @@ class TestPostgresConstraintEnforcement:
             PostgresAlterConstraint(
                 pg18,
                 "age_check",
-                False,
+                not_enforced=True,
                 constraint_type=TableConstraintType.CHECK,
             ).to_sql()
         assert PostgresValidateConstraint(pg18, "age_check").to_sql()[0] == (
@@ -505,11 +506,11 @@ class TestPostgresConstraintEnforcement:
         assert PostgresAlterConstraint(
             pg19,
             "age_check",
-            False,
+            not_enforced=True,
             constraint_type=TableConstraintType.CHECK,
         ).to_sql()[0] == 'ALTER CONSTRAINT "age_check" NOT ENFORCED'
         with pytest.raises(TypeError):
-            PostgresAlterConstraint(pg19, "age_check", False)
+            PostgresAlterConstraint(pg19, "age_check", not_enforced=True)
 
     def test_exclude_create_and_add(self):
         from rhosocial.activerecord.backend.expression import (
@@ -531,7 +532,7 @@ class TestPostgresConstraintEnforcement:
         )
         create = CreateTableExpression(
             dialect,
-            "ranges",
+            Table(dialect, 'ranges'),
             [ColumnDefinition(dialect, "range", IntegerType(dialect))],
             table_constraints=[exclude],
         )
@@ -557,7 +558,7 @@ class TestPostgresConstraintEnforcement:
         )
         invalid_create = CreateTableExpression(
             dialect,
-            "invalid_checks",
+            Table(dialect, 'invalid_checks'),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
             table_constraints=[not_valid_check],
         )

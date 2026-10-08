@@ -13,6 +13,8 @@ or ``format_create_hnsw_index_statement``.
 
 from typing import Optional, Tuple
 
+from rhosocial.activerecord.backend.expression.objects import Table
+
 
 class PostgresPgvectorMixin:
     """pgvector vector similarity search implementation."""
@@ -63,7 +65,8 @@ class PostgresPgvectorMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table = f"{schema}.{table_name}" if schema else table_name
+        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        )
 
         if index_type.lower() == "hnsw":
             with_clauses = []

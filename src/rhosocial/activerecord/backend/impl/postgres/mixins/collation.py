@@ -1,6 +1,8 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/collation.py
 """PostgreSQL collation feature support implementation."""
 
+from rhosocial.activerecord.backend.expression.objects import SchemaObject
+
 
 class PostgresCollationMixin:
     """PostgreSQL collation override implementation.
@@ -22,6 +24,6 @@ class PostgresCollationMixin:
             options = ", ".join(sorted(unsupported))
             raise UnsupportedFeatureError(self.name, f"COLLATE options: {options}")
         validate_postgres_collation_name(expr.collation_name, getattr(self, "version", None))
-        if schema is not None:
-            return f"{self.format_identifier(str(schema))}.{self.format_identifier(expr.collation_name)}"
-        return self.format_identifier(expr.collation_name)
+        return self._format_schema_object_name(
+            SchemaObject(self, expr.collation_name, schema_name=schema)
+        )

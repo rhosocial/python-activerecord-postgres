@@ -19,8 +19,8 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -40,11 +40,11 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop partitions first, then parent table
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table_name=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table_name='orders', if_exists=True, cascade=True)
+drop_parent = DropTableExpression(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 
@@ -88,7 +88,7 @@ for part_name, start_val, end_val in partitions:
 # 3. Insert data (PostgreSQL routes to correct partition automatically)
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='orders',
+    into=Table(dialect, 'orders'),
     columns=['order_date', 'customer_name', 'amount'],
     source=ValuesSource(dialect, [
         [Literal(dialect, '2024-02-15'), Literal(dialect, 'Alice'), Literal(dialect, 150.00)],
@@ -105,7 +105,7 @@ print("Inserted 4 orders across all partitions")
 query_all = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'orders'),
+    from_=Table(dialect, 'orders'),
 )
 sql, params = query_all.to_sql()
 result = backend.execute(sql, params, options=dql_options)
@@ -115,7 +115,7 @@ print(f"All orders: {result.data}")
 query_q1 = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'customer_name'), Column(dialect, 'amount')],
-    from_=TableExpression(dialect, 'orders_2024_q1'),
+    from_=Table(dialect, 'orders_2024_q1'),
 )
 sql, params = query_q1.to_sql()
 result = backend.execute(sql, params, options=dql_options)
@@ -125,11 +125,11 @@ print(f"Q1 orders: {result.data}")
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table_name=partition, if_exists=True, cascade=True)
+    drop = DropTableExpression(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table_name='orders', if_exists=True, cascade=True)
+drop_parent = DropTableExpression(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

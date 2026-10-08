@@ -19,9 +19,9 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     ReturningClause,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -42,7 +42,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -51,7 +51,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -74,7 +74,7 @@ backend.execute(sql, params)
 # 1. INSERT with RETURNING id
 insert_expr = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'users'),
+    into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [[Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')]]),
     columns=['name', 'email'],
     returning=ReturningClause(dialect, [Column(dialect, 'id')]),
@@ -94,7 +94,7 @@ print(f"Returned data: {result.data}")
 # 2. INSERT with multiple RETURNING columns
 insert_multi = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'users'),
+    into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [[Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')]]),
     columns=['name', 'email'],
     returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
@@ -107,7 +107,7 @@ print(f"Multi-column RETURNING: {result.data}")
 # 3. Batch INSERT with RETURNING
 batch_insert = InsertExpression(
     dialect=dialect,
-    into=TableExpression(dialect, 'users'),
+    into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Charlie'), Literal(dialect, 'charlie@example.com')],
         [Literal(dialect, 'Diana'), Literal(dialect, 'diana@example.com')],
@@ -125,7 +125,7 @@ print(f"Batch RETURNING: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )

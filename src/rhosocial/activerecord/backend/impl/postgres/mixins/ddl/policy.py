@@ -16,6 +16,7 @@ from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import SQLPredicate
+from rhosocial.activerecord.backend.expression.objects import Table
 
 from ...expression.ddl.policy import (
     AlterPolicyMode,
@@ -89,10 +90,14 @@ class PostgresPolicyMixin:
     # Shared helpers
     # ------------------------------------------------------------------ #
     def _format_table_ref(self, schema: Optional[str], table_name: str) -> str:
-        """Format ``table_name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return f"{self.format_identifier(schema)}.{self.format_identifier(table_name)}"
-        return self.format_identifier(table_name)
+        """Render the table a POLICY is attached to.
+
+        The name is a :class:`Table` schema object rendered by the dialect, so
+        the policy statements quote and qualify it exactly as every other
+        table reference does.
+        """
+        sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema))
+        return sql
 
     def _format_role_list(self, roles: List[str]) -> Tuple[str, tuple]:
         """Format the ``TO role [, ...]`` clause.

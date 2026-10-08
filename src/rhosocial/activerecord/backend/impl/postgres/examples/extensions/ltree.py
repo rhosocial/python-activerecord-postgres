@@ -35,7 +35,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="categories", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -52,10 +52,10 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     CreateIndexExpression,
     QueryExpression,
-    TableExpression,
     Column,
     OrderByClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
@@ -116,7 +116,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="categories",
+        table=Table(dialect, 'categories'),
         columns=columns,
         if_not_exists=True,
     )
@@ -129,7 +129,7 @@ if installed:
     # ltree paths use dot-separated labels (only alphanumeric and underscore)
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="categories",
+        into=Table(dialect, 'categories'),
         columns=["name", "path"],
         source=ValuesSource(
             dialect,
@@ -159,7 +159,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=TableExpression(dialect, "categories"),
+        from_=Table(dialect, "categories"),
         where=BinaryExpression(
             dialect, "@>",
             Literal(dialect, "electronics.computers"),
@@ -179,7 +179,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=TableExpression(dialect, "categories"),
+        from_=Table(dialect, "categories"),
         where=BinaryExpression(
             dialect, "<@",
             Column(dialect, "path"),
@@ -200,7 +200,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=TableExpression(dialect, "categories"),
+        from_=Table(dialect, "categories"),
         where=BinaryExpression(
             dialect, "~",
             Column(dialect, "path"),
@@ -219,7 +219,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=TableExpression(dialect, "categories"),
+        from_=Table(dialect, "categories"),
         where=BinaryExpression(
             dialect, "~",
             Column(dialect, "path"),
@@ -237,8 +237,8 @@ if installed:
     # Example 7: Create GiST index for fast path queries
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_categories_path",
-        table_name="categories",
+        index=Index(dialect, 'idx_categories_path'),
+        table=Table(dialect, 'categories'),
         columns=["path"],
         index_type="GIST",
         if_not_exists=True,
@@ -256,7 +256,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="categories", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

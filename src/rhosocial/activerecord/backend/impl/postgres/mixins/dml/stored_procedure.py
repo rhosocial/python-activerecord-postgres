@@ -7,6 +7,8 @@ stored procedure support for PostgreSQL databases (introduced in PostgreSQL 11).
 
 from typing import Any, Dict, Optional, Tuple, List
 
+from rhosocial.activerecord.backend.expression.objects import Procedure
+
 
 class PostgresStoredProcedureMixin:
     """PostgreSQL stored procedure implementation.
@@ -15,6 +17,16 @@ class PostgresStoredProcedureMixin:
     - CALL statement for procedure invocation
     - Transaction control within procedures (COMMIT/ROLLBACK)
     """
+
+    def _format_procedure_ref(self, schema: Optional[str], name: str) -> str:
+        """Render the procedure a CALL / CREATE / DROP statement names.
+
+        A :class:`Procedure` schema object carries the two namespace slots, so
+        the three statements that name a procedure share one qualification and
+        one quoting rule instead of three copies of it.
+        """
+        sql, _ = self.format_procedure_object(Procedure(self, name, schema_name=schema))
+        return sql
 
     def supports_call_statement(self) -> bool:
         """CALL statement is supported since PostgreSQL 11."""
@@ -63,7 +75,7 @@ class PostgresStoredProcedureMixin:
         if not self.supports_call_statement():
             raise ValueError("CREATE PROCEDURE requires PostgreSQL 11+")
 
-        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)  # noqa: E501
+        full_name = self._format_procedure_ref(schema, name)
 
         # OR REPLACE clause
         replace_clause = "OR REPLACE " if or_replace else ""
@@ -126,7 +138,7 @@ class PostgresStoredProcedureMixin:
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
-        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)  # noqa: E501
+        full_name = self._format_procedure_ref(schema, name)
 
         exists_clause = "IF EXISTS " if if_exists else ""
 
@@ -158,7 +170,7 @@ class PostgresStoredProcedureMixin:
         if not self.supports_call_statement():
             raise ValueError("CALL statement requires PostgreSQL 11+")
 
-        full_name = f"{self.format_identifier(schema)}.{self.format_identifier(name)}" if schema else self.format_identifier(name)  # noqa: E501
+        full_name = self._format_procedure_ref(schema, name)
 
         if arguments:
             placeholders = ", ".join([self.p()] * len(arguments))

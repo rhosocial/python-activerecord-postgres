@@ -10,7 +10,15 @@ This module tests the protocol-based feature detection methods:
 """
 import pytest  # noqa: F401
 
-from rhosocial.activerecord.backend.dialect import DomainSupport, UserDefinedTypeSupport
+from rhosocial.activerecord.backend.dialect.protocols import (
+    AlterDomainSupport,
+    AlterTypeSupport,
+    CreateDomainSupport,
+    CreateTypeSupport,
+    DropDomainSupport,
+    DropTypeSupport,
+    TypeObjectSupport,
+)
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins import DomainMixin, UserDefinedTypeMixin
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -660,20 +668,25 @@ class TestDdlVersionBaselineCoverage:
 
 class TestPostgresTypeDomainProtocols:
     def test_protocol_derivation_and_runtime_support(self):
-        assert issubclass(PostgresTypeSupport, UserDefinedTypeSupport)
-        assert issubclass(PostgresDomainSupport, DomainSupport)
+        # Core split the former umbrella protocols into one per statement
+        # expression, so a backend protocol derives from each it restates.
+        for generic in (CreateTypeSupport, AlterTypeSupport, DropTypeSupport):
+            assert issubclass(PostgresTypeSupport, generic)
+        for generic in (CreateDomainSupport, AlterDomainSupport, DropDomainSupport):
+            assert issubclass(PostgresDomainSupport, generic)
+        # Naming a type is separate from declaring one, and both apply here.
+        assert issubclass(PostgresTypeSupport, TypeObjectSupport)
         dialect = PostgresDialect(version=(14, 0, 0))
         assert isinstance(dialect, PostgresTypeSupport)
-        assert isinstance(dialect, UserDefinedTypeSupport)
+        assert isinstance(dialect, TypeObjectSupport)
         assert isinstance(dialect, PostgresDomainSupport)
-        assert isinstance(dialect, DomainSupport)
 
     def test_postgres_mixins_and_protocols_precede_core_mro(self):
         mro = PostgresDialect.__mro__
         assert mro.index(PostgresTypeMixin) < mro.index(UserDefinedTypeMixin)
         assert mro.index(PostgresDomainMixin) < mro.index(DomainMixin)
-        assert mro.index(PostgresTypeSupport) < mro.index(UserDefinedTypeSupport)
-        assert mro.index(PostgresDomainSupport) < mro.index(DomainSupport)
+        assert mro.index(PostgresTypeSupport) < mro.index(CreateTypeSupport)
+        assert mro.index(PostgresDomainSupport) < mro.index(CreateDomainSupport)
 
     def test_dialect_initializes_core_validation_state(self) -> None:
         dialect = PostgresDialect(version=(14, 0, 0))

@@ -33,7 +33,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="events", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -42,6 +42,7 @@ backend.execute(sql, params)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -50,10 +51,10 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -96,7 +97,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="events",
+        table=Table(dialect, 'events'),
         columns=columns,
         if_not_exists=True,
     )
@@ -114,7 +115,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="events",
+        into=Table(dialect, 'events'),
         columns=["name", "created_at"],
         source=ValuesSource(dialect, rows),
     )
@@ -126,10 +127,10 @@ if installed:
     # Example 3: Create GiST index with btree_gist operator class
     # btree_gist allows GiST indexes to support B-tree operations on scalar types,
     # which is useful for exclusion constraints and range queries
-    create_idx = CreateIndexExpression(
+    create_idx = PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name="idx_events_created_at_gist",
-        table_name="events",
+        index=Index(dialect, 'idx_events_created_at_gist'),
+        table=Table(dialect, 'events'),
         columns=["created_at"],
         index_type="GIST",
         if_not_exists=True,
@@ -147,7 +148,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "created_at")],
-        from_=TableExpression(dialect, "events"),
+        from_=Table(dialect, "events"),
         where=ComparisonPredicate(
             dialect,
             ">",
@@ -168,7 +169,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="events", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

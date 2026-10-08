@@ -19,11 +19,11 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     ValuesSource,
     QueryExpression,
-    TableExpression,
     ExplainExpression,
     CreateIndexExpression,
     DropTableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -46,7 +46,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -55,7 +55,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -73,8 +73,8 @@ backend.execute(sql, params)
 
 create_index = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_email',
-    table_name='users',
+    index=Index(dialect, 'idx_users_email'),
+    table=Table(dialect, 'users'),
     columns=['email'],
     if_not_exists=True,
 )
@@ -89,7 +89,7 @@ users = [
 for name, email in users:
     insert_expr = InsertExpression(
         dialect=dialect,
-        into='users',
+        into=Table(dialect, 'users'),
         columns=['name', 'email'],
         source=ValuesSource(dialect, [[Literal(dialect, name), Literal(dialect, email)]]),
     )
@@ -104,7 +104,7 @@ for name, email in users:
 query1 = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, '*')],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
     where=ComparisonPredicate(
         dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice'),
     ),
@@ -125,7 +125,7 @@ for row in result.data:
 query2 = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, '*')],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
     where=ComparisonPredicate(
         dialect, '=', Column(dialect, 'email'), Literal(dialect, 'alice@example.com'),
     ),
@@ -173,7 +173,7 @@ for row in result.data:
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )

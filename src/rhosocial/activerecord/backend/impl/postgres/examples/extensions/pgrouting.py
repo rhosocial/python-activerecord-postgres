@@ -15,6 +15,7 @@ This example demonstrates:
 # ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
@@ -34,7 +35,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="route_edges", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -119,7 +120,7 @@ if pgr_installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="route_edges",
+        table=Table(dialect, 'route_edges'),
         columns=columns,
         if_not_exists=True,
     )
@@ -133,7 +134,7 @@ if pgr_installed:
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="route_edges",
+        into=Table(dialect, 'route_edges'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,
@@ -204,7 +205,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="route_edges", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

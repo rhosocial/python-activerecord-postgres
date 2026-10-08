@@ -21,9 +21,9 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 )
 from rhosocial.activerecord.backend.expression import (
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_stat_statements import (
     pg_stat_statements_reset,
 )
@@ -57,7 +57,7 @@ class TestPgStatStatementsIntegration:
                     Column(dialect, "query"),
                     Column(dialect, "calls"),
                 ],
-                from_=TableExpression(dialect, "pg_stat_statements"),
+                from_=Table(dialect, "pg_stat_statements"),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -122,7 +122,7 @@ class TestAsyncPgStatStatementsIntegration:
                     Column(dialect, "query"),
                     Column(dialect, "calls"),
                 ],
-                from_=TableExpression(dialect, "pg_stat_statements"),
+                from_=Table(dialect, "pg_stat_statements"),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)

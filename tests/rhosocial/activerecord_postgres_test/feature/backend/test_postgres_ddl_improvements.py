@@ -5,11 +5,11 @@ from unittest.mock import patch, PropertyMock
 
 from rhosocial.activerecord.backend.expression import (
     Column,
-    TableExpression,
     QueryExpression,
     CreateViewExpression,
     DropViewExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 

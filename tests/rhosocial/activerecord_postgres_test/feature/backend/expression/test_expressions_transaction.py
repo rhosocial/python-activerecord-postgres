@@ -67,18 +67,24 @@ class TestPostgreSQLBeginTransactionExpression:
     def test_begin_not_deferrable(self, postgres_dialect):
         """Test BEGIN with NOT DEFERRABLE."""
         expr = BeginTransactionExpression(postgres_dialect)
-        expr.isolation_level(IsolationLevel.SERIALIZABLE).deferrable(False)
+        expr.isolation_level(IsolationLevel.SERIALIZABLE).not_deferrable()
         sql, params = expr.to_sql()
         assert "NOT DEFERRABLE" in sql
         assert params == ()
 
-    def test_begin_deferrable_ignored_for_non_serializable(self, postgres_dialect):
-        """Test DEFERRABLE is ignored for non-SERIALIZABLE isolation levels."""
+    def test_begin_deferrable_renders_for_non_serializable(self, postgres_dialect):
+        """``[NOT] DEFERRABLE`` is an independent transaction mode.
+
+        The clause is rendered whenever requested; it is not restricted to
+        SERIALIZABLE isolation (``BEGIN READ COMMITTED DEFERRABLE`` is accepted
+        by the server).
+        """
         expr = BeginTransactionExpression(postgres_dialect)
         expr.isolation_level(IsolationLevel.READ_COMMITTED).deferrable()
         sql, params = expr.to_sql()
-        assert "DEFERRABLE" not in sql
+        assert "DEFERRABLE" in sql
         assert "READ COMMITTED" in sql
+        assert params == ()
 
     @pytest.mark.parametrize("level,expected_name", [
         (IsolationLevel.READ_UNCOMMITTED, "READ UNCOMMITTED"),
@@ -152,6 +158,7 @@ class TestPostgreSQLSetTransaction:
         sql, params = expr.to_sql()
         assert "SET TRANSACTION" in sql
         assert "ISOLATION LEVEL SERIALIZABLE" in sql
+        assert "DEFERRABLE" not in sql
         assert params == ()
 
     def test_set_transaction_read_only(self, postgres_dialect):
@@ -180,6 +187,14 @@ class TestPostgreSQLSetTransaction:
         sql, params = expr.to_sql()
         assert "ISOLATION LEVEL SERIALIZABLE" in sql
         assert "DEFERRABLE" in sql
+        assert params == ()
+
+    def test_set_transaction_not_deferrable(self, postgres_dialect):
+        """Test SET TRANSACTION NOT DEFERRABLE reaches its own spelling."""
+        expr = SetTransactionExpression(postgres_dialect)
+        expr.not_deferrable()
+        sql, params = expr.to_sql()
+        assert sql == "SET TRANSACTION NOT DEFERRABLE"
         assert params == ()
 
 

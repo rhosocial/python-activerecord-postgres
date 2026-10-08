@@ -27,9 +27,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -66,14 +66,14 @@ def uuid_ossp_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_uuid_ossp", "test_uuid_explicit"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_uuid_ossp table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_ossp",
+        table=Table(dialect, 'test_uuid_ossp'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -96,7 +96,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Insert data into test_uuid_ossp (id auto-generated)
     insert_ossp = InsertExpression(
         dialect=dialect,
-        into="test_uuid_ossp",
+        into=Table(dialect, 'test_uuid_ossp'),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -109,7 +109,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Setup: create test_uuid_explicit table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_explicit",
+        table=Table(dialect, 'test_uuid_explicit'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -138,7 +138,7 @@ def uuid_ossp_env(postgres_backend_single):
     # Insert with the generated UUID
     insert_explicit = InsertExpression(
         dialect=dialect,
-        into="test_uuid_explicit",
+        into=Table(dialect, 'test_uuid_explicit'),
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
@@ -154,7 +154,7 @@ def uuid_ossp_env(postgres_backend_single):
     for table in ["test_uuid_ossp", "test_uuid_explicit"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -205,7 +205,7 @@ class TestUuidOsspIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
-            from_=TableExpression(dialect, "test_uuid_ossp"),
+            from_=Table(dialect, "test_uuid_ossp"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
@@ -245,7 +245,7 @@ class TestUuidOsspIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "label")],
-            from_=TableExpression(dialect, "test_uuid_explicit"),
+            from_=Table(dialect, "test_uuid_explicit"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "label"),
@@ -271,14 +271,14 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_uuid_ossp_async table (with DEFAULT uuid_generate_v4())
     create_ossp = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_ossp_async",
+        table=Table(dialect, 'test_uuid_ossp_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -301,7 +301,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Insert data into test_uuid_ossp_async (id auto-generated)
     insert_ossp = InsertExpression(
         dialect=dialect,
-        into="test_uuid_ossp_async",
+        into=Table(dialect, 'test_uuid_ossp_async'),
         columns=["name"],
         source=ValuesSource(
             dialect,
@@ -314,7 +314,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Setup: create test_uuid_explicit_async table (no DEFAULT)
     create_explicit = CreateTableExpression(
         dialect=dialect,
-        table="test_uuid_explicit_async",
+        table=Table(dialect, 'test_uuid_explicit_async'),
         columns=[
             ColumnDefinition(
                 dialect, name="id",
@@ -343,7 +343,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     # Insert with the generated UUID
     insert_explicit = InsertExpression(
         dialect=dialect,
-        into="test_uuid_explicit_async",
+        into=Table(dialect, 'test_uuid_explicit_async'),
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
@@ -359,7 +359,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
     for table in ["test_uuid_ossp_async", "test_uuid_explicit_async"]:
         drop_expr = DropTableExpression(
             dialect=dialect,
-            table=table,
+            table=Table(dialect, table),
             if_exists=True,
         )
         sql, params = drop_expr.to_sql()
@@ -413,7 +413,7 @@ class TestAsyncUuidOsspIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
-            from_=TableExpression(dialect, "test_uuid_ossp_async"),
+            from_=Table(dialect, "test_uuid_ossp_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
@@ -455,7 +455,7 @@ class TestAsyncUuidOsspIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "label")],
-            from_=TableExpression(dialect, "test_uuid_explicit_async"),
+            from_=Table(dialect, "test_uuid_explicit_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "label"),

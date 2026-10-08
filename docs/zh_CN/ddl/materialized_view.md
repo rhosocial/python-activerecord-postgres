@@ -23,7 +23,8 @@
 ## 创建物化视图
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
@@ -36,7 +37,7 @@ summary = QueryExpression(
         FunctionCall(dialect, "COUNT", Column(dialect, "id")),
         FunctionCall(dialect, "SUM", Column(dialect, "amount")),
     ],
-    from_=TableExpression(dialect, "sales"),
+    from_=Table(dialect, "sales"),
     group_by_having=GroupByHavingClause(dialect, group_by=[Column(dialect, "product_id")]),
 )
 

@@ -31,9 +31,9 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
 )
@@ -75,7 +75,7 @@ def btree_gist_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_btree_gist",
+        table=Table(dialect, 'test_btree_gist'),
         columns=columns,
         if_not_exists=True,
     )
@@ -91,7 +91,7 @@ def btree_gist_env(postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gist",
+        into=Table(dialect, 'test_btree_gist'),
         columns=["name", "created_at", "value"],
         source=ValuesSource(dialect, rows),
     )
@@ -103,7 +103,7 @@ def btree_gist_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_btree_gist",
+        table=Table(dialect, 'test_btree_gist'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -121,8 +121,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            index=Index(dialect, "idx_btree_gist_created_at"),
+            table=Table(dialect, "test_btree_gist"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -135,7 +135,7 @@ class TestBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist"),
         )
         sql, params = query.to_sql()
@@ -152,8 +152,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_value",
-            table_name="test_btree_gist",
+            index=Index(dialect, "idx_btree_gist_value"),
+            table=Table(dialect, "test_btree_gist"),
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -166,7 +166,7 @@ class TestBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist"),
         )
         sql, params = query.to_sql()
@@ -183,8 +183,8 @@ class TestBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at",
-            table_name="test_btree_gist",
+            index=Index(dialect, "idx_btree_gist_created_at"),
+            table=Table(dialect, "test_btree_gist"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -198,7 +198,7 @@ class TestBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name"), Column(dialect, "created_at")],
-            from_=TableExpression(dialect, "test_btree_gist"),
+            from_=Table(dialect, "test_btree_gist"),
             where=ComparisonPredicate(
                 dialect,
                 ">",
@@ -239,7 +239,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_btree_gist_async",
+        table=Table(dialect, 'test_btree_gist_async'),
         columns=columns,
         if_not_exists=True,
     )
@@ -255,7 +255,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_btree_gist_async",
+        into=Table(dialect, 'test_btree_gist_async'),
         columns=["name", "created_at", "value"],
         source=ValuesSource(dialect, rows),
     )
@@ -267,7 +267,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_btree_gist_async",
+        table=Table(dialect, 'test_btree_gist_async'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -286,8 +286,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            index=Index(dialect, "idx_btree_gist_created_at_async"),
+            table=Table(dialect, "test_btree_gist_async"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -300,7 +300,7 @@ class TestAsyncBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist_async"),
         )
         sql, params = query.to_sql()
@@ -318,8 +318,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on INTEGER column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_value_async",
-            table_name="test_btree_gist_async",
+            index=Index(dialect, "idx_btree_gist_value_async"),
+            table=Table(dialect, "test_btree_gist_async"),
             columns=["value"],
             index_type="GIST",
             if_not_exists=True,
@@ -332,7 +332,7 @@ class TestAsyncBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
-            from_=TableExpression(dialect, "pg_indexes"),
+            from_=Table(dialect, "pg_indexes"),
             where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist_async"),
         )
         sql, params = query.to_sql()
@@ -350,8 +350,8 @@ class TestAsyncBtreeGistIntegration:
         # Create a GiST index with btree_gist operator class on TIMESTAMP column
         create_idx = PostgresCreateIndexExpression(
             dialect=dialect,
-            index_name="idx_btree_gist_created_at_async",
-            table_name="test_btree_gist_async",
+            index=Index(dialect, "idx_btree_gist_created_at_async"),
+            table=Table(dialect, "test_btree_gist_async"),
             columns=["created_at"],
             index_type="GIST",
             if_not_exists=True,
@@ -365,7 +365,7 @@ class TestAsyncBtreeGistIntegration:
         query = QueryExpression(
             dialect=dialect,
             select=[Column(dialect, "name"), Column(dialect, "created_at")],
-            from_=TableExpression(dialect, "test_btree_gist_async"),
+            from_=Table(dialect, "test_btree_gist_async"),
             where=ComparisonPredicate(
                 dialect,
                 ">",

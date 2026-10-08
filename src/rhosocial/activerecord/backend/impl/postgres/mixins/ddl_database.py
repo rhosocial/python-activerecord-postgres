@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import Database
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements.ddl_database import (
@@ -72,8 +73,24 @@ class PostgresDatabaseMixin:
     def format_create_database_statement(
         self, expr: CreateDatabaseExpression
     ) -> Tuple[str, tuple]:
+        """Render ``CREATE DATABASE``, with the PostgreSQL-only options.
+
+        Overrides core's version to add ENCODING / LC_COLLATE / TEMPLATE /
+        OWNER / CONNECTION LIMIT / TABLESPACE. Overriding means overriding the
+        kind check too: this body is the one that runs, so the check core's body
+        carries is not reached. Without it, a statement handed a ``Table`` renders
+        ``CREATE DATABASE users`` -- well-formed, and naming a table.
+
+        Raises:
+            TypeError: ``expr.database`` is not a :class:`Database`.
+        """
+        if not isinstance(expr.database, Database):
+            raise TypeError(
+                f"CreateDatabaseExpression.database must be a Database, "
+                f"got {type(expr.database).__name__}"
+            )
         parts = ["CREATE DATABASE"]
-        parts.append(self.format_identifier(expr.database_name))
+        parts.append(expr.database.to_sql()[0])
         if expr.encoding:
             parts.append(f"ENCODING = '{expr.encoding}'")
         if expr.collation:
@@ -91,10 +108,20 @@ class PostgresDatabaseMixin:
     def format_drop_database_statement(
         self, expr: DropDatabaseExpression
     ) -> Tuple[str, tuple]:
+        """Render ``DROP DATABASE``, with the PostgreSQL-only options.
+
+        Raises:
+            TypeError: ``expr.database`` is not a :class:`Database`.
+        """
+        if not isinstance(expr.database, Database):
+            raise TypeError(
+                f"DropDatabaseExpression.database must be a Database, "
+                f"got {type(expr.database).__name__}"
+            )
         parts = ["DROP DATABASE"]
         if expr.if_exists and self.supports_database_if_exists():
             parts.append("IF EXISTS")
-        parts.append(self.format_identifier(expr.database_name))
+        parts.append(expr.database.to_sql()[0])
         if expr.force and self.supports_database_force_drop():
             parts.append("WITH (FORCE)")
         return " ".join(parts), ()
@@ -102,9 +129,19 @@ class PostgresDatabaseMixin:
     def format_alter_database_statement(
         self, expr: AlterDatabaseExpression
     ) -> Tuple[str, tuple]:
+        """Render ``ALTER DATABASE``.
+
+        Raises:
+            TypeError: ``expr.database`` is not a :class:`Database`.
+        """
+        if not isinstance(expr.database, Database):
+            raise TypeError(
+                f"AlterDatabaseExpression.database must be a Database, "
+                f"got {type(expr.database).__name__}"
+            )
         from rhosocial.activerecord.backend.expression.statements.ddl_database import AlterDatabaseAction
         parts = ["ALTER DATABASE"]
-        parts.append(self.format_identifier(expr.database_name))
+        parts.append(expr.database.to_sql()[0])
         if expr.action == AlterDatabaseAction.RENAME_TO:
             parts.append(f"RENAME TO {self.format_identifier(expr.target)}")
         elif expr.action == AlterDatabaseAction.OWNER_TO:

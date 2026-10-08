@@ -14,11 +14,11 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     Column,
     OrderByClause,
     LimitOffsetClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import (
     Literal,
     WildcardExpression,
@@ -45,7 +45,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table=Table(dialect, 'articles'),
     if_exists=True,
     cascade=True,
 )
@@ -54,7 +54,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table=Table(dialect, 'articles'),
     columns=[
         ColumnDefinition(
             'id',
@@ -79,7 +79,7 @@ backend.execute(sql, params)
 
 insert = InsertExpression(
     dialect=dialect,
-    into='articles',
+    into=Table(dialect, 'articles'),
     columns=['title', 'author', 'published_at'],
     source=ValuesSource(
         dialect,
@@ -118,7 +118,7 @@ page1_query = QueryExpression(
         Column(dialect, 'author'),
         Column(dialect, 'published_at'),
     ],
-    from_=TableExpression(dialect, 'articles'),
+    from_=Table(dialect, 'articles'),
     order_by=OrderByClause(
         dialect,
         expressions=[(Column(dialect, 'id'), 'ASC')],
@@ -135,7 +135,7 @@ print(f"Params: {params}")
 count_query = QueryExpression(
     dialect=dialect,
     select=[FunctionCall(dialect, 'COUNT', WildcardExpression(dialect)).as_('total')],
-    from_=TableExpression(dialect, 'articles'),
+    from_=Table(dialect, 'articles'),
 )
 
 count_sql, count_params = count_query.to_sql()
@@ -174,7 +174,7 @@ for page_num in range(2, total_pages + 1):
             Column(dialect, 'author'),
             Column(dialect, 'published_at'),
         ],
-        from_=TableExpression(dialect, 'articles'),
+        from_=Table(dialect, 'articles'),
         order_by=OrderByClause(
             dialect,
             expressions=[(Column(dialect, 'id'), 'ASC')],

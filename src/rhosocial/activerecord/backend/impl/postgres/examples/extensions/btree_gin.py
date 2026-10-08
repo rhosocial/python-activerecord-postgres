@@ -33,7 +33,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="employees", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -42,6 +42,7 @@ backend.execute(sql, params)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
+    PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
@@ -50,10 +51,10 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
     CreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -95,7 +96,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="employees",
+        table=Table(dialect, 'employees'),
         columns=columns,
         if_not_exists=True,
     )
@@ -114,7 +115,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="employees",
+        into=Table(dialect, 'employees'),
         columns=["name", "department"],
         source=ValuesSource(dialect, rows),
     )
@@ -125,10 +126,10 @@ if installed:
 
     # Example 3: Create GIN index with btree_gin operator class
     # btree_gin allows GIN indexes to support equality checks on scalar types
-    create_idx = CreateIndexExpression(
+    create_idx = PostgresCreateIndexExpression(
         dialect=dialect,
-        index_name="idx_employees_name_gin",
-        table_name="employees",
+        index=Index(dialect, 'idx_employees_name_gin'),
+        table=Table(dialect, 'employees'),
         columns=["name"],
         index_type="GIN",
         if_not_exists=True,
@@ -145,7 +146,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "department")],
-        from_=TableExpression(dialect, "employees"),
+        from_=Table(dialect, "employees"),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)
@@ -160,7 +161,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="employees", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

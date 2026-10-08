@@ -20,9 +20,9 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     DeleteExpression,
     ReturningClause,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -44,7 +44,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -53,7 +53,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -72,7 +72,7 @@ backend.execute(sql, params)
 # Insert sample data
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['name', 'email'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')],
@@ -90,7 +90,7 @@ backend.execute(sql, params)
 # 1. Simple DELETE with WHERE
 delete_expr = DeleteExpression(
     dialect=dialect,
-    table=TableExpression(dialect, 'users'),
+    tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
         dialect,
         '=',
@@ -112,7 +112,7 @@ print(f"Affected rows: {result.affected_rows}")
 # 2. DELETE with RETURNING clause
 delete_returning = DeleteExpression(
     dialect=dialect,
-    table=TableExpression(dialect, 'users'),
+    tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
         dialect,
         '=',
@@ -133,7 +133,7 @@ print(f"Affected rows: {result.affected_rows}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )

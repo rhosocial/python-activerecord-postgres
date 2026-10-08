@@ -1,6 +1,8 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
 from typing import Tuple
 
+from rhosocial.activerecord.backend.expression.objects import Table, Trigger
+
 
 class PostgresTriggerMixin:
     """PostgreSQL trigger DDL implementation.
@@ -49,15 +51,16 @@ class PostgresTriggerMixin:
         Supported expression attributes:
 
         - ``expr.if_not_exists`` — add ``IF NOT EXISTS`` (PG 9.5+).
-        - ``expr.trigger_name`` — trigger name (identifier).
+        - ``expr.trigger`` — the trigger being created, which renders its own name.
         - ``expr.timing`` — ``BEFORE``, ``AFTER``, or ``INSTEAD OF``.
         - ``expr.events`` — list of event types (``INSERT``, ``UPDATE``, ``DELETE``, ``TRUNCATE``).
         - ``expr.update_columns`` — column list for ``UPDATE OF``.
-        - ``expr.table_name`` — target table (identifier).
+        - ``expr.table`` — the target table, which renders its own name.
         - ``expr.referencing`` — ``REFERENCING`` clause string (PG 10+).
         - ``expr.level`` — ``FOR EACH ROW`` or ``FOR EACH STATEMENT``.
         - ``expr.condition`` — ``WHEN`` predicate expression.
-        - ``expr.function_name`` — function to execute.
+        - ``expr.function`` — the function to execute, which renders its own
+          name.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -71,7 +74,7 @@ class PostgresTriggerMixin:
         if expr.if_not_exists and self.supports_trigger_if_not_exists():
             parts.append("IF NOT EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(expr.trigger.to_sql()[0])
 
         parts.append(expr.timing.value)
 
@@ -83,7 +86,7 @@ class PostgresTriggerMixin:
         parts.append(events_str)
 
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(expr.table.to_sql()[0])
 
         if expr.referencing and self.supports_trigger_referencing():
             parts.append(expr.referencing)
@@ -98,7 +101,7 @@ class PostgresTriggerMixin:
             all_params.extend(cond_params)
 
         parts.append("EXECUTE FUNCTION")
-        parts.append(f"{self.format_identifier(expr.function_name)}()")
+        parts.append(f"{expr.function.to_sql()[0]}()")
 
         return " ".join(parts), tuple(all_params)
 
@@ -106,8 +109,8 @@ class PostgresTriggerMixin:
         """Format DROP TRIGGER statement (PostgreSQL syntax).
 
         - ``expr.if_exists`` — add ``IF EXISTS``.
-        - ``expr.trigger_name`` — trigger name (identifier).
-        - ``expr.table_name`` — optional ``ON table_name`` clause.
+        - ``expr.trigger`` — the trigger being dropped, which renders its own name.
+        - ``expr.table`` — optional ``ON <table>`` clause.
 
         Args:
             expr: Expression instance with trigger attributes
@@ -115,16 +118,31 @@ class PostgresTriggerMixin:
         Returns:
             Tuple of (SQL string, empty params tuple)
 
+        Raises:
+            TypeError: ``expr.trigger`` is not a :class:`Trigger`, or
+                ``expr.table`` is set and is not a :class:`Table`. The table slot
+                is optional -- PostgreSQL's ``DROP TRIGGER`` can name the trigger
+                alone -- so its check is on kind, not on presence.
         """
+        if not isinstance(expr.trigger, Trigger):
+            raise TypeError(
+                f"DropTriggerExpression.trigger must be a Trigger, "
+                f"got {type(expr.trigger).__name__}"
+            )
+        if expr.table is not None and not isinstance(expr.table, Table):
+            raise TypeError(
+                f"DropTriggerExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
         parts = ["DROP TRIGGER"]
 
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.trigger_name))
+        parts.append(expr.trigger.to_sql()[0])
 
-        if expr.table_name:
+        if expr.table is not None:
             parts.append("ON")
-            parts.append(self.format_identifier(expr.table_name))
+            parts.append(expr.table.to_sql()[0])
 
         return " ".join(parts), ()

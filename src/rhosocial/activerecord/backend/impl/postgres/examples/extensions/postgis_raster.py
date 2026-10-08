@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="terrain_data", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'terrain_data'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -51,9 +51,9 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     InsertExpression,
     QueryExpression,
-    TableExpression,
     Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -112,7 +112,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="terrain_data",
+        table=Table(dialect, 'terrain_data'),
         columns=columns,
         if_not_exists=True,
     )
@@ -126,7 +126,7 @@ if installed:
     hex_wkb = "01000001000000000000000000000000000000000000F03F000000000000F03F000000000000000000000000000000000000000000000000E6100000010001004400010101"
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="terrain_data",
+        into=Table(dialect, 'terrain_data'),
         columns=["name", "rast"],
         source=ValuesSource(
             dialect,
@@ -148,7 +148,7 @@ if installed:
     summary_query = QueryExpression(
         dialect=dialect,
         select=[st_summary(dialect, Column(dialect, "rast")).as_("summary")],
-        from_=TableExpression(dialect, "terrain_data"),
+        from_=Table(dialect, "terrain_data"),
     )
     sql, params = summary_query.to_sql()
     print("\n--- ST_Summary query ---")
@@ -168,7 +168,7 @@ if installed:
                 Literal(dialect, 1),
             ).as_("pixel_value"),
         ],
-        from_=TableExpression(dialect, "terrain_data"),
+        from_=Table(dialect, "terrain_data"),
     )
     sql, params = value_query.to_sql()
     print("\n--- ST_Value query (pixel at 1,1) ---")
@@ -184,7 +184,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="terrain_data", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'terrain_data'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

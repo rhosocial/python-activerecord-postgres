@@ -36,7 +36,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table=Table(dialect, 'articles'),
     if_exists=True,
     cascade=True,
 )
@@ -45,7 +45,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='articles',
+    table=Table(dialect, 'articles'),
     columns=[
         ColumnDefinition(
             'id',
@@ -63,7 +63,7 @@ backend.execute(*create_table.to_sql())
 
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='articles',
+    into=Table(dialect, 'articles'),
     columns=['title', 'content'],
     source=ValuesSource(
         dialect,
@@ -82,10 +82,9 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    Column,
+    QueryExpression, Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
@@ -104,7 +103,7 @@ query = QueryExpression(
         Column(dialect, 'id'),
         Column(dialect, 'title'),
     ],
-    from_=TableExpression(dialect, 'articles'),
+    from_=Table(dialect, 'articles'),
     where=match_pred,
 )
 

@@ -113,13 +113,13 @@ class TestLtreeFunctions:
         """Test ltree index statement (DDL, still on mixin)."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path')
-        assert "CREATE INDEX idx_path ON categories USING gist (path)" in sql
+        assert 'CREATE INDEX idx_path ON "categories" USING gist (path)' in sql
 
     def test_ltree_index_statement_with_schema(self):
         """Test ltree index statement with schema."""
         dialect = PostgresDialect((14, 0, 0))
         sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path', schema='public')
-        assert "ON public.categories" in sql
+        assert 'ON "public"."categories"' in sql
 
     def test_ltree_index_statement_btree(self):
         """Test ltree index statement with btree."""

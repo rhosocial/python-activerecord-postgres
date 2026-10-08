@@ -8,6 +8,7 @@ PostgreSQL-specific index features and operations.
 from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
@@ -141,7 +142,7 @@ class PostgresIndexMixin:
         return self.version >= (18, 0, 0)
 
     # =========================================================================
-    # IndexSupport Protocol Overrides (all supported by PostgreSQL)
+    # IndexObjectSupport Protocol Overrides (all supported by PostgreSQL)
     # =========================================================================
 
     def supports_create_index(self) -> bool:
@@ -291,14 +292,32 @@ class PostgresIndexMixin:
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
+        Raises:
+            TypeError: ``expr.index`` is not an :class:`Index`, or ``expr.table``
+                is not a :class:`Table`. PostgreSQL spells a full-text index as a
+                GIN index, but the two objects still have to be an index and a
+                table -- without the check, a statement handed a ``View`` here
+                rendered ``CREATE INDEX ... ON <view> USING GIN``, which is a
+                well-formed statement naming the wrong kind of object.
         """
+        if not isinstance(expr.index, Index):
+            raise TypeError(
+                f"CreateFulltextIndexExpression.index must be an Index, "
+                f"got {type(expr.index).__name__}"
+            )
+        if not isinstance(expr.table, Table):
+            raise TypeError(
+                f"CreateFulltextIndexExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
         config = self._FT_DEFAULT_CONFIG
         parts = ["CREATE INDEX"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(expr.index.to_sql()[0])
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(expr.table.to_sql()[0])
         parts.append("USING GIN")
 
         if len(expr.columns) == 1:
@@ -321,11 +340,27 @@ class PostgresIndexMixin:
 
         Returns:
             Tuple of (SQL string, parameters tuple)
+
+        Raises:
+            TypeError: ``expr.index`` is not an :class:`Index`.
         """
+        if not isinstance(expr.index, Index):
+            raise TypeError(
+                f"DropFulltextIndexExpression.index must be an Index, "
+                f"got {type(expr.index).__name__}"
+            )
         parts = ["DROP INDEX"]
         if expr.if_exists:
             parts.append("IF EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(expr.index.to_sql()[0])
+        # ``expr.table`` is deliberately not rendered -- PostgreSQL's DROP INDEX
+        # names the index alone, and a GIN full-text index is no exception. It is
+        # still checked, because a caller who set it meant something by it.
+        if expr.table is not None and not isinstance(expr.table, Table):
+            raise TypeError(
+                f"DropFulltextIndexExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
         return " ".join(parts), ()
 
     def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
@@ -337,7 +372,23 @@ class PostgresIndexMixin:
         - INCLUDE clause with version checks
         - NULLS NOT DISTINCT via the typed ``nulls_not_distinct`` field
         - WITH storage parameters via the typed ``with_options`` field
+
+        Raises:
+            TypeError: ``expr.index`` is not an :class:`Index`, or ``expr.table``
+                is not a :class:`Table`. Either would have had its own name
+                rendered through its own ``format_method``, producing a
+                well-formed CREATE INDEX naming the wrong kind of object.
         """
+        if not isinstance(expr.index, Index):
+            raise TypeError(
+                f"CreateIndexExpression.index must be an Index, "
+                f"got {type(expr.index).__name__}"
+            )
+        if not isinstance(expr.table, Table):
+            raise TypeError(
+                f"CreateIndexExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
         all_params = []
         parts = ["CREATE"]
 
@@ -353,9 +404,9 @@ class PostgresIndexMixin:
 
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(expr.index.to_sql()[0])
         parts.append("ON")
-        parts.append(self.format_identifier(expr.table_name))
+        parts.append(expr.table.to_sql()[0])
 
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")
@@ -421,7 +472,16 @@ class PostgresIndexMixin:
 
         Extends the generic format_drop_index_statement to support:
         - CONCURRENTLY clause (PG 18+) via the typed ``concurrent`` field
+
+        Raises:
+            TypeError: ``expr.index`` is not an :class:`Index`. Another object
+                kind would have had its own name rendered as the index's.
         """
+        if not isinstance(expr.index, Index):
+            raise TypeError(
+                f"DropIndexExpression.index must be an Index, "
+                f"got {type(expr.index).__name__}"
+            )
         parts = ["DROP INDEX"]
 
         if getattr(expr, "concurrent", False):
@@ -432,9 +492,17 @@ class PostgresIndexMixin:
         if expr.if_exists:
             parts.append("IF EXISTS")
 
-        parts.append(self.format_identifier(expr.index_name))
+        parts.append(expr.index.to_sql()[0])
 
-        # table_name is ignored for PostgreSQL (unlike MySQL)
+        # ``expr.table`` is optional and deliberately ignored for PostgreSQL:
+        # ``DROP INDEX`` names the index alone, and no ON clause exists. It is
+        # still checked, because a caller who set it means something by it -- but
+        # the check is on kind, not on presence, so leaving it unset is fine.
+        if expr.table is not None and not isinstance(expr.table, Table):
+            raise TypeError(
+                f"DropIndexExpression.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
         return " ".join(parts), ()
 
     def format_alter_index_statement(
@@ -563,12 +631,23 @@ class PostgresIndexMixin:
 
         parts.append(target_type)
 
-        # Add schema qualifier for INDEX and TABLE
-        if target_type in ("INDEX", "TABLE") and expr.schema:
-            parts.append(f"{self.format_identifier(expr.schema)}.")
-
-        # Add name (format as identifier)
-        parts.append(self.format_identifier(expr.name))
+        # INDEX and TABLE take a schema qualifier; the other target types
+        # (SCHEMA, DATABASE, SYSTEM) are not objects inside a schema and
+        # must not be qualified with one.
+        if target_type == "INDEX":
+            parts.append(
+                self.format_index_object(
+                    Index(self, expr.name, schema_name=expr.schema)
+                )[0]
+            )
+        elif target_type == "TABLE":
+            parts.append(
+                self.format_table_object(
+                    Table(self, expr.name, schema_name=expr.schema)
+                )[0]
+            )
+        else:
+            parts.append(self.format_identifier(expr.name))
 
         # TABLESPACE option (PG 14+)
         if expr.tablespace:
@@ -624,18 +703,17 @@ class PostgresIndexMixin:
         if if_not_exists:
             parts.append("IF NOT EXISTS")
 
-        # Index name with optional schema
-        if schema:
-            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(index_name)}")
-        else:
-            parts.append(self.format_identifier(index_name))
+        # Index name and its target table, each through the shared renderer so
+        # the two agree on qualification and quoting.
+        parts.append(
+            self.format_index_object(Index(self, index_name, schema_name=schema))[0]
+        )
 
         # ON table
         parts.append("ON")
-        if schema:
-            parts.append(f"{self.format_identifier(schema)}.{self.format_identifier(table_name)}")
-        else:
-            parts.append(self.format_identifier(table_name))
+        parts.append(
+            self.format_table_object(Table(self, table_name, schema_name=schema))[0]
+        )
 
         # Index type
         index_type = index_type.lower()

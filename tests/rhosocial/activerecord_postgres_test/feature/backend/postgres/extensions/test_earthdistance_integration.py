@@ -33,6 +33,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresPointType,
     PostgresSerialType,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 
 
 TABLE_NAME = "test_earth"
@@ -48,7 +49,7 @@ def earthdistance_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -65,7 +66,7 @@ def earthdistance_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -75,7 +76,7 @@ def earthdistance_env(postgres_backend_single):
     # Setup: insert test data using expression
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=TABLE_NAME,
+        into=Table(dialect, TABLE_NAME),
         columns=["loc"],
         source=ValuesSource(
             dialect,
@@ -93,7 +94,7 @@ def earthdistance_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=TABLE_NAME,
+        table=Table(dialect, TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -160,7 +161,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=table, if_exists=True)
+        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -177,7 +178,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
         if_not_exists=True,
     )
@@ -187,7 +188,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     # Setup: insert test data using expression
     insert_expr = InsertExpression(
         dialect=dialect,
-        into=ASYNC_TABLE_NAME,
+        into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["loc"],
         source=ValuesSource(
             dialect,
@@ -205,7 +206,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table=ASYNC_TABLE_NAME,
+        table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

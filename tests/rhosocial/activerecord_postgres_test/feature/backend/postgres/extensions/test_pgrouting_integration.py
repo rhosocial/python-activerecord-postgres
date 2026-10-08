@@ -9,6 +9,7 @@ All database operations use expression objects, not raw SQL strings.
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
     async_ensure_extension_installed,
@@ -66,7 +67,7 @@ def pgrouting_env(postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_route_edges",
+        table=Table(dialect, 'test_route_edges'),
         columns=columns,
         if_not_exists=True,
     )
@@ -78,7 +79,7 @@ def pgrouting_env(postgres_backend_single):
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_route_edges",
+        into=Table(dialect, 'test_route_edges'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,
@@ -115,7 +116,7 @@ def pgrouting_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_route_edges",
+        table=Table(dialect, 'test_route_edges'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -195,7 +196,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="test_route_edges_async",
+        table=Table(dialect, 'test_route_edges_async'),
         columns=columns,
         if_not_exists=True,
     )
@@ -207,7 +208,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     #             1 --(cost=4)--> 3
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="test_route_edges_async",
+        into=Table(dialect, 'test_route_edges_async'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
         source=ValuesSource(
             dialect,
@@ -244,7 +245,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableExpression(
         dialect=dialect,
-        table="test_route_edges_async",
+        table=Table(dialect, 'test_route_edges_async'),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()

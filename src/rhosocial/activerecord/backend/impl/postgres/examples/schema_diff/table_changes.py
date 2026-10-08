@@ -20,6 +20,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType, DecimalType,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
@@ -36,8 +37,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_users = DropTableExpression(dialect, "users", if_exists=True, cascade=True)
-drop_orders = DropTableExpression(dialect, "orders", if_exists=True, cascade=True)
+drop_users = DropTableExpression(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
+drop_orders = DropTableExpression(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_users.to_sql()
 backend.execute(sql, params)
 sql, params = drop_orders.to_sql()
@@ -57,7 +58,7 @@ builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 snapshot_before = builder.build(schema="public")
 
 users_table = CreateTableExpression(
-    dialect=dialect, table="users", columns=[
+    dialect=dialect, table=Table(dialect, 'users'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
@@ -68,7 +69,7 @@ sql, params = users_table.to_sql()
 backend.execute(sql, params)
 
 orders_table = CreateTableExpression(
-    dialect=dialect, table="orders", columns=[
+    dialect=dialect, table=Table(dialect, 'orders'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
@@ -76,9 +77,10 @@ orders_table = CreateTableExpression(
     ],
     table_constraints=[
         TableConstraint(
+            dialect,
             constraint_type=TableConstraintType.FOREIGN_KEY,
             columns=["user_id"],
-            foreign_key_table="users",
+            foreign_key_table=Table(dialect, "users"),
             foreign_key_columns=["id"],
         )
     ]

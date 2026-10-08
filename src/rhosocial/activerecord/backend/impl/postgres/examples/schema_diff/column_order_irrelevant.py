@@ -14,6 +14,7 @@ Supported versions: PostgreSQL 9+
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
     CreateTableExpression, DropTableExpression, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
@@ -40,12 +41,12 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_demo = DropTableExpression(dialect, "demo", if_exists=True, cascade=True)
+drop_demo = DropTableExpression(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
 sql, params = drop_demo.to_sql()
 backend.execute(sql, params)
 
 demo_table = CreateTableExpression(
-    dialect=dialect, table="demo", columns=[
+    dialect=dialect, table=Table(dialect, 'demo'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
@@ -70,14 +71,14 @@ snapshot_before = builder.build(schema="public")
 
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableExpression(dialect, "demo", [
+add_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
     AddColumn(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
 ])
 sql, params = add_age.to_sql()
 backend.execute(sql, params)
 
 # Now drop it — column set is identical
-drop_age = AlterTableExpression(dialect, "demo", [
+drop_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
     DropColumn(dialect, "age")
 ])
 sql, params = drop_age.to_sql()

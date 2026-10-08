@@ -10,6 +10,7 @@ Version Requirements:
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.objects import ForeignTable
 
 if TYPE_CHECKING:
     from ...expression.ddl.foreign_table import (
@@ -34,13 +35,14 @@ class PostgresForeignTableMixin:
     def _format_foreign_table_ref(
         self, schema: Optional[str], name: str
     ) -> str:
-        """Format ``name`` (optionally schema-qualified) as identifier(s)."""
-        if schema:
-            return (
-                f"{self.format_identifier(schema)}."
-                f"{self.format_identifier(name)}"
-            )
-        return self.format_identifier(name)
+        """Render the foreign table a FOREIGN TABLE statement names.
+
+        The name is a :class:`ForeignTable` schema object rendered by the
+        dialect, so the qualification and quoting follow the shared rules
+        instead of a second copy of them.
+        """
+        sql, _ = self.format_foreign_table_object(ForeignTable(self, name, schema_name=schema))
+        return sql
 
     # ------------------------------------------------------------------ #
     # CREATE FOREIGN TABLE

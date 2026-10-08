@@ -7,6 +7,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     CreateTableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl_table import PostgresTableMixin
@@ -73,7 +74,7 @@ class TestPostgresTableDDLDeclarations:
     def _expression(dialect, table="child", *, inherits=None, tablespace=None):
         return CreateTableExpression(
             dialect,
-            table,
+            Table(dialect, table),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
             inherits=inherits,
             tablespace=tablespace,

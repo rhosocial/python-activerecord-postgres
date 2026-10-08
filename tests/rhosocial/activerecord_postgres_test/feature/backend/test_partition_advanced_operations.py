@@ -20,10 +20,10 @@ from rhosocial.activerecord.backend.expression import (
     LogicalPredicate,
     QueryExpression,
     RawSQLExpression,
-    TableExpression,
     UpdateExpression,
     ValuesSource,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause, PartitionStrategy
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
@@ -55,14 +55,14 @@ SCHEMA_CHILD = "partition_events_p2026"
 
 
 def _drop_table_expression(dialect, table_name: str, *, schema: str | None = None):
-    table = TableExpression(dialect, table_name, schema_name=schema) if schema else table_name
+    table = Table(dialect, table_name, schema_name=schema)
     return DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
 
 
 def _create_list_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=LIST_PARENT,
+        table=Table(dialect, LIST_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -90,7 +90,7 @@ def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[st
 def _create_hash_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=HASH_PARENT,
+        table=Table(dialect, HASH_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "bucket", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -118,7 +118,7 @@ def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
 def _create_range_parent_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=RANGE_PARENT,
+        table=Table(dialect, RANGE_PARENT),
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -146,7 +146,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
 def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: list[list[Any]]):
     return InsertExpression(
         dialect=dialect,
-        into=table_name,
+        into=Table(dialect, table_name),
         columns=columns,
         source=ValuesSource(
             dialect,
@@ -162,7 +162,7 @@ def _select_tableoid_payload_expression(dialect, table_name: str):
             RawSQLExpression(dialect, "tableoid::regclass::text AS partition_name"),
             Column(dialect, "payload"),
         ],
-        from_=TableExpression(dialect, table_name),
+        from_=Table(dialect, table_name),
     )
 
 
@@ -320,7 +320,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         # Create a table with matching structure for DEFAULT attachment
         create_default = CreateTableExpression(
             dialect=dialect,
-            table=default_partition_name,
+            table=Table(dialect, default_partition_name),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -380,7 +380,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             for schema in (SCHEMA_A, SCHEMA_B):
                 parent = CreateTableExpression(
                     dialect=dialect,
-                    table=TableExpression(dialect, SCHEMA_PARENT, schema_name=schema),
+                    table=Table(dialect, SCHEMA_PARENT, schema_name=schema),
                     columns=[
                         ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
                         ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -434,7 +434,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         )
         update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )
@@ -447,7 +447,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
 
         invalid_update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-03-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )
@@ -472,7 +472,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         query = QueryExpression(
             dialect,
             select=[Column(dialect, "payload")],
-            from_=TableExpression(dialect, RANGE_PARENT),
+            from_=Table(dialect, RANGE_PARENT),
             where=LogicalPredicate(
                 dialect,
                 "AND",
@@ -559,7 +559,7 @@ class TestAsyncPostgreSQLAdvancedPartitionOperations:
         )
         update = UpdateExpression(
             dialect=dialect,
-            table=RANGE_PARENT,
+            table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
             where=Column(dialect, "id") == Literal(dialect, 1),
         )

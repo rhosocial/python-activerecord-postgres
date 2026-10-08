@@ -34,7 +34,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -51,11 +51,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     CreateIndexExpression,
     QueryExpression,
-    TableExpression,
     Column,
     OrderByClause,
     LimitOffsetClause,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, Subquery
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
@@ -117,7 +117,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="products",
+        table=Table(dialect, 'products'),
         columns=columns,
         if_not_exists=True,
     )
@@ -131,7 +131,7 @@ if installed:
     # Ranges: '(x1,x2),(y1,y2)' represents a hypercube
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=Table(dialect, 'products'),
         columns=["name", "feature_vector"],
         source=ValuesSource(
             dialect,
@@ -158,7 +158,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "@>",
             Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube"),
@@ -177,7 +177,7 @@ if installed:
     query = QueryExpression(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "<@",
             Column(dialect, "feature_vector"),
@@ -229,7 +229,7 @@ if installed:
             Column(dialect, "feature_vector"),
             dist_for_select,
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         where=ComparisonPredicate(
             dialect, "<",
             dist_for_where,
@@ -268,7 +268,7 @@ if installed:
             Column(dialect, "feature_vector"),
             nn_dist_for_select,
         ],
-        from_=TableExpression(dialect, "products"),
+        from_=Table(dialect, "products"),
         order_by=OrderByClause(dialect, expressions=[nn_dist_for_order]),
         limit_offset=LimitOffsetClause(dialect, limit=3),
     )
@@ -282,8 +282,8 @@ if installed:
     # Example 7: Create GiST index for fast cube queries
     create_idx = CreateIndexExpression(
         dialect=dialect,
-        index_name="idx_products_feature_vector",
-        table_name="products",
+        index=Index(dialect, 'idx_products_feature_vector'),
+        table=Table(dialect, 'products'),
         columns=["feature_vector"],
         index_type="GIST",
         if_not_exists=True,
@@ -301,7 +301,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

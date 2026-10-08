@@ -16,6 +16,7 @@ This example demonstrates:
 # ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
@@ -35,7 +36,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -101,7 +102,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="products",
+        table=Table(dialect, 'products'),
         columns=columns,
         if_not_exists=True,
     )
@@ -120,7 +121,7 @@ if installed:
     ]
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="products",
+        into=Table(dialect, 'products'),
         columns=["name", "category", "price"],
         source=ValuesSource(dialect, rows),
     )
@@ -191,7 +192,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="products", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

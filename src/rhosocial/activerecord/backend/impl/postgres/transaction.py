@@ -64,16 +64,23 @@ class PostgresTransactionMixin:
         if self._transaction_mode == TransactionMode.READ_ONLY:
             expr.read_only()
 
-        # DEFERRABLE is handled by the Expression/Dialect system
-        if self._isolation_level == IsolationLevel.SERIALIZABLE and self._is_deferrable is not None:
-            expr.deferrable(self._is_deferrable)
+        # [NOT] DEFERRABLE is an independent transaction mode in the grammar;
+        # it is rendered whenever the caller requested it, not only alongside
+        # SERIALIZABLE (``BEGIN DEFERRABLE`` alone is accepted by PostgreSQL).
+        if self._is_deferrable is not None:
+            if self._is_deferrable:
+                expr.deferrable()
+            else:
+                expr.not_deferrable()
 
         return expr.to_sql()
 
     def set_deferrable(self, deferrable: bool = True) -> None:
         """Set transaction deferrable mode.
 
-        In PostgreSQL, DEFERRABLE only affects SERIALIZABLE transactions.
+        ``[NOT] DEFERRABLE`` is an independent transaction mode: ``True``
+        requests ``DEFERRABLE``, ``False`` requests ``NOT DEFERRABLE``, and
+        leaving it unset renders neither.
 
         Args:
             deferrable: Whether constraints should be deferrable

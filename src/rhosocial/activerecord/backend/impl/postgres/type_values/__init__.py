@@ -372,13 +372,7 @@ __all__ = [
     # pg_lsn Type
     "PG_LSN",
     # pgvector Types
-    "VECTOR",
-    "HALFVEC",
-    "BITVEC",
-    "SPARSEVEC",
     # PostGIS Types
-    "GEOMETRY",
-    "GEOGRAPHY",
     # hstore Types
     "HSTORE",
 ]

@@ -11,6 +11,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import DropTableExpression
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.objects import Table
 
 
 @pytest.fixture
@@ -24,28 +25,36 @@ class TestPostgresDropTableCascade:
         assert dialect.supports_drop_table_restrict() is True
 
     def test_cascade_renders_standard_token(self, dialect):
-        expr = DropTableExpression(dialect, table="users", cascade=True)
+        expr = DropTableExpression(dialect, table=Table(dialect, 'users'), cascade=True)
         sql, params = expr.to_sql()
         assert sql.endswith(" CASCADE")
         assert "CASCADE CONSTRAINTS" not in sql
         assert params == ()
 
     def test_restrict_renders_standard_token(self, dialect):
-        expr = DropTableExpression(dialect, table="users", cascade=False)
+        expr = DropTableExpression(dialect, table=Table(dialect, 'users'), restrict=True)
         sql, params = expr.to_sql()
         assert sql.endswith(" RESTRICT")
         assert params == ()
 
-    def test_cascade_none_omits_token(self, dialect):
-        expr = DropTableExpression(dialect, table="users", cascade=None)
+    def test_neither_cascade_nor_restrict_omits_token(self, dialect):
+        expr = DropTableExpression(dialect, table=Table(dialect, 'users'))
         sql, params = expr.to_sql()
         assert "CASCADE" not in sql
         assert "RESTRICT" not in sql
         assert params == ()
 
+    def test_both_cascade_and_restrict_refused(self, dialect):
+        with pytest.raises(
+            ValueError, match="cascade and restrict are mutually exclusive options"
+        ):
+            DropTableExpression(
+                dialect, table=Table(dialect, 'users'), cascade=True, restrict=True
+            )
+
     def test_if_exists_combined_with_cascade(self, dialect):
         expr = DropTableExpression(
-            dialect, table="users", if_exists=True, cascade=True
+            dialect, table=Table(dialect, 'users'), if_exists=True, cascade=True
         )
         sql, params = expr.to_sql()
         assert sql.startswith("DROP TABLE IF EXISTS")

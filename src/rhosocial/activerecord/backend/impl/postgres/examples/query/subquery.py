@@ -37,7 +37,7 @@ dialect = backend.dialect
 for table in ['employees', 'departments']:
     drop_table = DropTableExpression(
         dialect=dialect,
-        table_name=table,
+        table=Table(dialect, table),
         if_exists=True,
         cascade=True,
     )
@@ -46,7 +46,7 @@ for table in ['employees', 'departments']:
 
 create_departments = CreateTableExpression(
     dialect=dialect,
-    table_name='departments',
+    table=Table(dialect, 'departments'),
     columns=[
         ColumnDefinition(
             'id',
@@ -64,7 +64,7 @@ backend.execute(*create_departments.to_sql())
 
 create_employees = CreateTableExpression(
     dialect=dialect,
-    table_name='employees',
+    table=Table(dialect, 'employees'),
     columns=[
         ColumnDefinition(
             'id',
@@ -83,7 +83,7 @@ backend.execute(*create_employees.to_sql())
 
 insert_departments = InsertExpression(
     dialect=dialect,
-    into='departments',
+    into=Table(dialect, 'departments'),
     columns=['name', 'budget'],
     source=ValuesSource(
         dialect,
@@ -97,7 +97,7 @@ backend.execute(*insert_departments.to_sql())
 
 insert_employees = InsertExpression(
     dialect=dialect,
-    into='employees',
+    into=Table(dialect, 'employees'),
     columns=['name', 'salary', 'department_id'],
     source=ValuesSource(
         dialect,
@@ -115,19 +115,16 @@ backend.execute(*insert_employees.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    Column,
-    WhereClause,
-    Subquery,
+    QueryExpression, Column, WhereClause, Subquery,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 subquery_query = QueryExpression(
     dialect=dialect,
     select=[FunctionCall(dialect, 'AVG', Column(dialect, 'salary'))],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
 )
 sql, params = subquery_query.to_sql()
 subquery = Subquery(dialect, sql, params)
@@ -138,7 +135,7 @@ query = QueryExpression(
         Column(dialect, 'name'),
         Column(dialect, 'salary'),
     ],
-    from_=TableExpression(dialect, 'employees'),
+    from_=Table(dialect, 'employees'),
     where=WhereClause(
         dialect,
         condition=ComparisonPredicate(

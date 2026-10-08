@@ -33,14 +33,77 @@ The PostgreSQL dialect implements numerous protocols from the `rhosocial.activer
 
 ### DDL-Related Protocols
 
+> The DDL protocols were split per statement: one protocol per statement
+> expression. The umbrella names `TableSupport`, `ViewSupport`, `SchemaSupport`,
+> `IndexSupport` and `SequenceSupport` no longer exist — use the rows below.
+
 | Protocol | Support Status | Version Requirements | Notes |
 |----------|---------------|---------------------|-------|
-| **TableSupport** | ✅ Full | All versions | CREATE TABLE, DROP TABLE, ALTER TABLE with all features |
-| **ViewSupport** | ✅ Full | All versions | CREATE VIEW, DROP VIEW with all options |
+| **CreateTableSupport** | ✅ Full | All versions | CREATE TABLE with all features |
+| **DropTableSupport** | ✅ Full | All versions | DROP TABLE; IF EXISTS, CASCADE |
+| **AlterTableSupport** | ✅ Full | All versions | ALTER TABLE and its actions |
+| **CreateViewSupport** | ✅ Full | All versions | CREATE VIEW; OR REPLACE, TEMPORARY |
+| **DropViewSupport** | ✅ Full | All versions | DROP VIEW; IF EXISTS, CASCADE |
+| **MaterializedViewSupport** | ✅ Full | ≥ 9.3 | Materialized views; CONCURRENTLY / IF NOT EXISTS ≥ 9.4 |
 | **TruncateSupport** | ✅ Full | All versions | TRUNCATE TABLE; RESTART IDENTITY ≥ 8.4; CASCADE |
-| **SchemaSupport** | ✅ Full | All versions | CREATE SCHEMA, DROP SCHEMA with all options |
-| **IndexSupport** | ✅ Full | All versions | CREATE INDEX, DROP INDEX with all features |
-| **SequenceSupport** | ✅ Full | All versions | CREATE SEQUENCE, DROP SEQUENCE |
+| **CreateSchemaSupport** | ✅ Full | All versions | CREATE SCHEMA with all options |
+| **DropSchemaSupport** | ✅ Full | All versions | DROP SCHEMA with all options |
+| **CreateIndexSupport** | ✅ Full | All versions | CREATE INDEX; INCLUDE ≥ 11; NULLS NOT DISTINCT ≥ 15 |
+| **DropIndexSupport** | ✅ Full | All versions | DROP INDEX |
+| **FulltextIndexSupport** | ✅ Full | ≥ 9.6 | Full-text search as GIN + to_tsvector |
+| **CreateSequenceSupport** | ✅ Full | All versions | CREATE SEQUENCE with all options |
+| **DropSequenceSupport** | ✅ Full | All versions | DROP SEQUENCE |
+| **AlterSequenceSupport** | ✅ Full | All versions | ALTER SEQUENCE |
+| **CreateTriggerSupport** | ✅ Full | All versions | CREATE TRIGGER; EXECUTE FUNCTION |
+| **DropTriggerSupport** | ✅ Full | All versions | DROP TRIGGER |
+| **CreateTypeSupport** | ✅ Full | ≥ 9.6 | CREATE TYPE; COMPOSITE / RANGE / BASE / SHELL |
+| **AlterTypeSupport** | ✅ Full | ≥ 9.6 | ALTER TYPE actions |
+| **DropTypeSupport** | ✅ Full | ≥ 9.6 | DROP TYPE |
+| **CreateDomainSupport** | ✅ Full | All versions | CREATE DOMAIN |
+| **AlterDomainSupport** | ✅ Full | All versions | ALTER DOMAIN |
+| **DropDomainSupport** | ✅ Full | All versions | DROP DOMAIN |
+| **CreateRoutineSupport** | ✅ Full | ≥ 9.6 | CREATE FUNCTION |
+| **DropRoutineSupport** | ✅ Full | ≥ 9.6 | DROP FUNCTION |
+| **CreateDatabaseSupport** | ✅ Full | All versions | CREATE DATABASE with all options |
+| **DropDatabaseSupport** | ✅ Full | All versions | DROP DATABASE; WITH (FORCE) ≥ 13 |
+| **AlterDatabaseSupport** | ✅ Full | All versions | ALTER DATABASE |
+| **CommentSupport** | ✅ Full | All versions | COMMENT ON |
+| **ConstraintSupport** | ✅ Full | All versions | Constraint declaration and alteration |
+| **PartitionSupport** | ✅ Full | ≥ 10.0 | Declarative partitioning |
+
+### Namespace Protocols (separate from DDL)
+
+Naming and DDL are two questions with two owners, so they have two sets of
+protocols. "Does the engine have schemas" is answered by `CreateSchemaSupport` /
+`DropSchemaSupport` above. "May a *name* be qualified" is answered by
+`NamespaceSupport`. PostgreSQL answers both — which is exactly why they cannot be
+one switch: an engine can offer `CREATE SCHEMA` and still refuse to qualify
+names, and reading the wrong one gives no clue which case you are in.
+
+| Protocol | Support Status | Notes |
+|----------|---------------|-------|
+| **NamespaceSupport** | ✅ Full | PostgreSQL is two-level: an outer database and an inner schema, joined with `.` |
+| **TableObjectSupport** | ✅ Full | Renders a `Table` |
+| **ViewObjectSupport** | ✅ Full | Renders a `View` |
+| **MaterializedViewObjectSupport** | ✅ Full | Renders a `MaterializedView` |
+| **ForeignTableObjectSupport** | ✅ Full | Renders a `ForeignTable` |
+| **IndexObjectSupport** | ✅ Full | Renders an `Index` |
+| **SequenceObjectSupport** | ✅ Full | Renders a `Sequence` |
+| **TriggerObjectSupport** | ✅ Full | Renders a `Trigger` |
+| **TypeObjectSupport** | ✅ Full | Renders a `Type` |
+| **RoutineObjectSupport** | ✅ Full | Renders a `Function` / `Procedure` |
+
+`NamespaceSupport` now separates two things that used to be one method:
+
+- `validate_namespace(expr)` -- the check. Returns `None` or raises
+  `UnsupportedFeatureError`. It is called while *rendering*, not while
+  constructing, because at construction the dialect may not be settled and the
+  object's slots may not be complete.
+- `format_qualified_name(expr)` -- the spelling. Joins the levels with
+  `self.separator` (a class attribute, `"."` by default).
+
+To check ahead of time, use `isinstance(dialect, NamespaceSupport)`: these
+protocols are `runtime_checkable`, so the runtime check still works.
 
 ## Detailed Feature Support by Protocol
 
@@ -210,15 +273,15 @@ In addition to standard protocols, PostgreSQL provides database-specific protoco
 | Protocol | Description | Min Version | Documentation |
 |----------|-------------|-------------|---------------|
 | **PostgresPartitionSupport** | Advanced partitioning features | PG 10+ | [Partitioning Docs](https://www.postgresql.org/docs/current/ddl-partitioning.html) |
-| **PostgresPropertyGraphQueryMixin** | SQL/PGQ compatibility gates | Explicit override | [SQL/PGQ Availability](property_graph_query.md) |
+| `PostgresPropertyGraphQueryMixin` (a mixin, not a protocol) | SQL/PGQ compatibility gates | Explicit override | [SQL/PGQ Availability](property_graph_query.md) |
 | **PostgresPgPartmanSupport** | pg_partman auto-partitioning | PG 10+ | [Partitioning](partition.md) |
-| **PostgresXMLMixin** | SQL/XML standard expressions | PG 8.3+ | [Dialect](dialect.md) |
-| **PostgresCollationMixin** | Expression-level COLLATE | All | [Dialect](dialect.md) |
+| **PostgresXMLSupport** | SQL/XML standard expressions | PG 8.3+ | [Dialect](dialect.md) |
+| **PostgresCollationSupport** | Expression-level COLLATE | All | [Dialect](dialect.md) |
 | **PostgresIndexSupport** | Index enhancements | PG 10+ | [Index Docs](https://www.postgresql.org/docs/current/indexes.html) |
 | **PostgresVacuumSupport** | VACUUM improvements | PG 13+ | [VACUUM Docs](https://www.postgresql.org/docs/current/sql-vacuum.html) |
 | **PostgresQueryOptimizationSupport** | Query optimization features | PG 11+ | [Query Docs](https://www.postgresql.org/docs/current/runtime-config-query.html) |
 | **PostgresDataTypeSupport** | Data type enhancements | PG 11+ | [Data Types Docs](https://www.postgresql.org/docs/current/datatype.html) |
-| **PostgresSQLSyntaxSupport** | SQL syntax enhancements | PG 12+ | [SQL Syntax Docs](https://www.postgresql.org/docs/current/sql-syntax.html) |
+| **PostgresFeaturesSupport** | Generated columns, CTE SEARCH/CYCLE, FETCH WITH TIES | Generated columns PG 12+ | [SQL Syntax Docs](https://www.postgresql.org/docs/current/sql-syntax.html) |
 | **PostgresLogicalReplicationSupport** | Logical replication features | PG 10+ | [Replication Docs](https://www.postgresql.org/docs/current/logical-replication.html) |
 | **PostgresMaterializedViewSupport** | Materialized views (CREATE/REFRESH/ALTER/DROP, IF NOT EXISTS, CONCURRENTLY, TABLESPACE, storage parameters) | PG 9.3+ (CONCURRENTLY / IF NOT EXISTS: 9.4+) | [MV DDL Docs](https://www.postgresql.org/docs/current/sql-creatematerializedview.html) · [guide](../../ddl/materialized_view.md) |
 | **PostgresTableSupport** | Table-specific features | All | [Table Docs](https://www.postgresql.org/docs/current/ddl.html) |
@@ -303,9 +366,12 @@ PostgreSQL index features beyond standard SQL:
 
 **Official Documentation**: https://www.postgresql.org/docs/current/datatype.html
 
-### PostgresSQLSyntaxSupport
+### PostgresFeaturesSupport
 
 **Feature Source**: Native support (no extension required)
+
+SQL-syntax-level enhancements live here. They belong to no single DDL/DML
+statement, which is why there is no umbrella protocol for them.
 
 | Feature | Support | Version | Description |
 |---------|---------|---------|-------------|

@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression, SQLPredicate
+from rhosocial.activerecord.backend.expression.objects import Domain
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
     AlterDomainExpression,
@@ -200,6 +201,7 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
             raise ValueError("schema and schema_name must match when both are provided")
+        domain = Domain(dialect, name, schema_name=resolved_schema)
         constraint_items: List[Any]
         if constraints is not None and checks is not None:
             raise ValueError("constraints and checks are mutually exclusive")
@@ -245,7 +247,7 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
             normalized_default = _LegacySqlExpression(dialect, default, "default")
         super().__init__(
             dialect,
-            name,
+            domain,
             normalized_type,
             default=normalized_default,
             nullability=nullability,
@@ -270,7 +272,7 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
 
     @property
     def name(self) -> str:
-        return self.domain_name
+        return self.domain.name
 
 
 class PostgresAlterDomainExpression(AlterDomainExpression):
@@ -314,7 +316,7 @@ class PostgresAlterDomainExpression(AlterDomainExpression):
                 actions = [RenameDomainAction(dialect, new_name)]
         else:
             actions = [_UnsupportedDomainAction(dialect, action)]
-        super().__init__(dialect, name, actions)
+        super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema), actions)
         self.schema = resolved_schema
         self.schema_name = resolved_schema
         self.action = action
@@ -323,7 +325,7 @@ class PostgresAlterDomainExpression(AlterDomainExpression):
 
     @property
     def name(self) -> str:
-        return self.domain_name
+        return self.domain.name
 
 
 class PostgresDropDomainExpression(DropDomainExpression):
@@ -341,7 +343,7 @@ class PostgresDropDomainExpression(DropDomainExpression):
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
             raise ValueError("schema and schema_name must match when both are provided")
-        super().__init__(dialect, name)
+        super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema))
         self.schema = resolved_schema
         self.schema_name = resolved_schema
         self.if_exists = if_exists
@@ -350,4 +352,4 @@ class PostgresDropDomainExpression(DropDomainExpression):
 
     @property
     def name(self) -> str:
-        return self.domain_name
+        return self.domain.name

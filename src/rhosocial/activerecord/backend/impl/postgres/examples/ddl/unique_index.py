@@ -17,11 +17,11 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableExpression,
     DropTableExpression,
     QueryExpression,
-    TableExpression,
     InsertExpression,
     ValuesSource,
     CreateIndexExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -42,7 +42,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )
@@ -51,7 +51,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
             ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
@@ -76,8 +76,8 @@ backend.execute(sql, params)
 # 1. CREATE UNIQUE INDEX on a single column
 create_email_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_email',
-    table_name='users',
+    index=Index(dialect, 'idx_users_email'),
+    table=Table(dialect, 'users'),
     columns=['email'],
     unique=True,
     if_not_exists=True,
@@ -89,8 +89,8 @@ print(f"Params: {params}")
 # 2. CREATE UNIQUE INDEX on multiple columns (composite unique)
 create_composite_idx = CreateIndexExpression(
     dialect=dialect,
-    index_name='idx_users_username_email',
-    table_name='users',
+    index=Index(dialect, 'idx_users_username_email'),
+    table=Table(dialect, 'users'),
     columns=['username', 'email'],
     unique=True,
     if_not_exists=True,
@@ -115,7 +115,7 @@ print("Index created: idx_users_username_email (UNIQUE on username, email)")
 # Insert initial row
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='users',
+    into=Table(dialect, 'users'),
     columns=['email', 'username'],
     source=ValuesSource(dialect, [
         [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice')],
@@ -129,7 +129,7 @@ print("Inserted: alice@example.com / alice")
 try:
     duplicate_insert = InsertExpression(
         dialect=dialect,
-        into='users',
+        into=Table(dialect, 'users'),
         columns=['email', 'username'],
         source=ValuesSource(dialect, [
             [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice2')],
@@ -145,7 +145,7 @@ except Exception as e:
 verify_query = QueryExpression(
     dialect=dialect,
     select=[WildcardExpression(dialect)],
-    from_=TableExpression(dialect, 'users'),
+    from_=Table(dialect, 'users'),
 )
 sql, params = verify_query.to_sql()
 result = backend.execute(sql, params)
@@ -156,7 +156,7 @@ print(f"Rows in users table: {result.data}")
 # ============================================================
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='users',
+    table=Table(dialect, 'users'),
     if_exists=True,
     cascade=True,
 )

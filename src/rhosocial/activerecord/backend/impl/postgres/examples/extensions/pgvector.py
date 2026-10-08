@@ -16,6 +16,7 @@ This example demonstrates:
 # ============================================================
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
@@ -35,7 +36,7 @@ dialect = backend.dialect
 # Clean up for demo
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table="documents", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -112,7 +113,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table="documents",
+        table=Table(dialect, 'documents'),
         columns=columns,
         if_not_exists=True,
     )
@@ -125,7 +126,7 @@ if installed:
     # Use Literal with .cast("vector") for type-safe vector insertion.
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="documents",
+        into=Table(dialect, 'documents'),
         columns=["content", "embedding"],
         source=ValuesSource(
             dialect,
@@ -220,7 +221,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table="documents", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

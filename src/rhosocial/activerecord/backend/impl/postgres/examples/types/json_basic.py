@@ -36,7 +36,7 @@ dialect = backend.dialect
 
 drop_table = DropTableExpression(
     dialect=dialect,
-    table_name='documents',
+    table=Table(dialect, 'documents'),
     if_exists=True,
     cascade=True,
 )
@@ -45,7 +45,7 @@ backend.execute(sql, params)
 
 create_table = CreateTableExpression(
     dialect=dialect,
-    table_name='documents',
+    table=Table(dialect, 'documents'),
     columns=[
         ColumnDefinition(
             'id',
@@ -63,7 +63,7 @@ backend.execute(*create_table.to_sql())
 import json
 insert_expr = InsertExpression(
     dialect=dialect,
-    into='documents',
+    into=Table(dialect, 'documents'),
     columns=['data'],
     source=ValuesSource(
         dialect,
@@ -79,10 +79,9 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
-    TableExpression,
-    Column,
+    QueryExpression, Column,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.functions.json import (
     jsonb_path_query,
     json_path_root,
@@ -103,7 +102,7 @@ query = QueryExpression(
         Column(dialect, 'id'),
         Column(dialect, 'data'),
     ],
-    from_=TableExpression(dialect, 'documents'),
+    from_=Table(dialect, 'documents'),
 )
 
 sql, params = query.to_sql()

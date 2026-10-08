@@ -35,6 +35,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 
 from .scenarios import get_enabled_scenarios, get_scenario
+from rhosocial.activerecord.backend.expression.objects import Table
 
 
 class PartitionProvider(IPartitionProvider):
@@ -297,13 +298,13 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _truncate_partition_sql(self, dialect, partition_name: str):
-        expr = TruncateExpression(dialect=dialect, table_name=partition_name)
+        expr = TruncateExpression(dialect=dialect, table=Table(dialect, partition_name))
         return expr.to_sql()
 
     def _drop_partition_sql(self, dialect, table_name: str):
         expr = DropTableExpression(
             dialect=dialect,
-            table=table_name,
+            table=Table(dialect, table_name),
             if_exists=True,
             cascade=True,
         )

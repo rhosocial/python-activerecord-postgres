@@ -3,6 +3,8 @@
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.expression.objects import View
+
 if TYPE_CHECKING:
     from ....expression.statements.ddl_view import CreateViewExpression
 
@@ -32,12 +34,21 @@ class PostgresViewMixin:
     def supports_cascade_view(self) -> bool:
         return True
 
+    def supports_restrict_view(self) -> bool:
+        """``DROP VIEW ... RESTRICT`` is in the synopsis.
+
+        PostgreSQL accepts ``DROP VIEW name [ CASCADE | RESTRICT ]`` (measured
+        on PostgreSQL 16); RESTRICT is the default behavior but the token
+        itself is legal.
+        """
+        return True
+
     def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
 
         - ``expr.temporary`` — add ``TEMPORARY``.
         - ``expr.replace`` — add ``OR REPLACE``.
-        - ``expr.view_name`` — view name (identifier).
+        - ``expr.view`` — the view being created, which renders its own name.
         - ``expr.column_aliases`` — optional list of column aliases.
         - ``expr.query`` — source SELECT expression.
         - ``expr.options.check_option`` — ``WITH {LOCAL|CASCADED} CHECK OPTION``.
@@ -48,7 +59,17 @@ class PostgresViewMixin:
         Returns:
             Tuple of (SQL string, params tuple)
 
+        Raises:
+            TypeError: ``expr.view`` is not a :class:`~...expression.objects.View`.
+                Another object kind would have had its own name rendered as the
+                view's, because ``to_sql`` dispatches on the object's own
+                ``format_method``.
         """
+        if not isinstance(expr.view, View):
+            raise TypeError(
+                f"CreateViewExpression.view must be a View, "
+                f"got {type(expr.view).__name__}"
+            )
         parts = ["CREATE"]
 
         if expr.temporary:
@@ -58,7 +79,7 @@ class PostgresViewMixin:
             parts.append("OR REPLACE")
 
         parts.append("VIEW")
-        parts.append(self.format_identifier(expr.view_name))
+        parts.append(expr.view.to_sql()[0])
 
         if expr.column_aliases:
             cols = ", ".join(self.format_identifier(c) for c in expr.column_aliases)

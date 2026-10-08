@@ -11,6 +11,7 @@ This package organizes PostgreSQL-specific mixins by category:
 - extensions: Extension mixins (pgvector, postgis, hstore, etc.)
 """
 
+from .object_name import PostgresObjectNameMixin
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
 from .ddl_table import PostgresTableMixin
@@ -18,6 +19,8 @@ from .datetime import PostgresDateTimeMixin
 from .dql import PostgresDQLMixin
 from .json import PostgresJSONMixin
 from .generated_column import PostgresGeneratedColumnMixin
+from .identity_column import PostgresIdentityColumnMixin
+from .auto_increment import PostgresAutoIncrementMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
 
@@ -112,6 +115,11 @@ from .join import PostgresJoinMixin
 from .truncate import PostgresTruncateMixin
 from .ddl_database import PostgresDatabaseMixin
 from .schema import PostgresSchemaMixin
+from .namespace import PostgresNamespaceMixin
+
+# Deprecated alias of PostgresNamespaceMixin; kept importable so an out-of-tree
+# dialect that inherited the old name keeps working.
+from .catalog import PostgresCatalogMixin
 from .sequence import PostgresSequenceMixin
 from .transaction import PostgresTransactionMixin
 from .ddl_view import PostgresViewMixin
@@ -132,6 +140,8 @@ __all__ = [
     "PostgresDQLMixin",
     "PostgresJSONMixin",
     "PostgresGeneratedColumnMixin",
+    "PostgresIdentityColumnMixin",
+    "PostgresAutoIncrementMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
     # DDL mixins
@@ -219,6 +229,8 @@ __all__ = [
     "PostgresJoinMixin",
     "PostgresTruncateMixin",
     "PostgresSchemaMixin",
+    "PostgresNamespaceMixin",
+    "PostgresCatalogMixin",  # deprecated alias of PostgresNamespaceMixin
     "PostgresDatabaseMixin",
     "PostgresSequenceMixin",
     "PostgresTransactionMixin",

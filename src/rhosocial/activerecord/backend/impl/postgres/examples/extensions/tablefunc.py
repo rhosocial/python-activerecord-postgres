@@ -36,7 +36,7 @@ dialect = backend.dialect
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
@@ -63,6 +63,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.objects import Table
 
 # Check if tablefunc extension is available
 available = dialect.is_extension_available("tablefunc")
@@ -102,7 +103,7 @@ if installed:
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="monthly_sales",
+        table=Table(dialect, 'monthly_sales'),
         columns=columns,
         if_not_exists=True,
     )
@@ -113,7 +114,7 @@ if installed:
     # Insert sales data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="monthly_sales",
+        into=Table(dialect, 'monthly_sales'),
         columns=["month", "category", "amount"],
         source=ValuesSource(
             dialect,
@@ -146,7 +147,7 @@ if installed:
     ]
     create_tree = CreateTableExpression(
         dialect=dialect,
-        table_name="org_tree",
+        table=Table(dialect, 'org_tree'),
         columns=tree_columns,
         if_not_exists=True,
     )
@@ -157,7 +158,7 @@ if installed:
     # Insert hierarchical data (CEO -> VP Engineering, VP Sales -> Engineers)
     insert_tree = InsertExpression(
         dialect=dialect,
-        into="org_tree",
+        into=Table(dialect, 'org_tree'),
         columns=["name", "parent_id"],
         source=ValuesSource(
             dialect,
@@ -281,7 +282,7 @@ else:
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table_name=table_name, if_exists=True)
+    drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 backend.disconnect()

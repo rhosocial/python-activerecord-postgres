@@ -19,10 +19,10 @@ from rhosocial.activerecord.backend.expression import (
     InsertExpression,
     Literal,
     QueryExpression,
-    TableExpression,
     ValuesSource,
     WildcardExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     ExplainExpression,
     ExplainFormat,
@@ -59,13 +59,13 @@ def _iter_partitions():
 
 
 def _drop_table_sql(dialect, table_name: str):
-    return DropTableExpression(dialect=dialect, table=table_name, if_exists=True).to_sql()
+    return DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True).to_sql()
 
 
 def _create_parent_table_expression(dialect):
     return CreateTableExpression(
         dialect=dialect,
-        table=PARTITION_EXPLAIN_TABLE,
+        table=Table(dialect, PARTITION_EXPLAIN_TABLE),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect),
@@ -109,7 +109,7 @@ def _seed_rows_expression(dialect):
     ]
     return InsertExpression(
         dialect=dialect,
-        into=PARTITION_EXPLAIN_TABLE,
+        into=Table(dialect, PARTITION_EXPLAIN_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
         source=ValuesSource(
             dialect,
@@ -122,7 +122,7 @@ def _range_query_expression(dialect, start, end):
     return QueryExpression(
         dialect,
         select=[WildcardExpression(dialect)],
-        from_=TableExpression(dialect, PARTITION_EXPLAIN_TABLE),
+        from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
         where=(Column(dialect, "created_at") >= Literal(dialect, start))
         & (Column(dialect, "created_at") < Literal(dialect, end)),
     )
@@ -132,7 +132,7 @@ def _full_scan_query_expression(dialect):
     return QueryExpression(
         dialect,
         select=[WildcardExpression(dialect)],
-        from_=TableExpression(dialect, PARTITION_EXPLAIN_TABLE),
+        from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
     )
 
 

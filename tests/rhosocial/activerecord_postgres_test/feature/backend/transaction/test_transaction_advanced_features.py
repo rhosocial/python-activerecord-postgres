@@ -93,14 +93,15 @@ class TestSyncDeferrableTransaction:
         rows = postgres_backend.fetch_all("SELECT * FROM test_deferred_parent")
         assert len(rows) == 1
 
-    def test_deferrable_requires_serializable(self, postgres_backend, test_tables):
-        """Test that DEFERRABLE setting is only meaningful for SERIALIZABLE isolation.
+    def test_deferrable_renders_for_non_serializable_too(self, postgres_backend, test_tables):
+        """``[NOT] DEFERRABLE`` is an independent transaction mode.
 
-        The dialect should ignore DEFERRABLE for non-SERIALIZABLE isolation levels.
+        The clause is rendered whenever requested, not only for SERIALIZABLE
+        isolation; PostgreSQL accepts ``BEGIN READ COMMITTED DEFERRABLE``.
         """
         tx_manager = postgres_backend.transaction_manager
 
-        # Set READ COMMITTED with DEFERRABLE (should be ignored)
+        # Set READ COMMITTED with DEFERRABLE (a legal transaction mode pair)
         tx_manager.isolation_level = IsolationLevel.READ_COMMITTED
         tx_manager.set_deferrable(True)
 

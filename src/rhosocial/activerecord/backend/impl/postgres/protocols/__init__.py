@@ -85,6 +85,10 @@ from .query_optimization import PostgresQueryOptimizationSupport
 from .logical_replication import PostgresLogicalReplicationSupport
 from .parallel_query import PostgresParallelQuerySupport
 
+# Identity / auto-increment mechanism protocols
+from .identity_column import PostgresIdentitySupport
+from .auto_increment import PostgresAutoIncrementSupport
+
 # Per-feature protocol imports
 from .cte import PostgresCTESupport
 from .window import PostgresWindowSupport
@@ -100,6 +104,7 @@ from .ilike import PostgresILIKESupport
 from .join import PostgresJoinSupport
 from .truncate import PostgresTruncateSupport
 from .schema import PostgresSchemaSupport
+from .catalog import PostgresCatalogSupport, PostgresNamespaceSupport
 from .sequence import PostgresSequenceSupport
 from .transaction import PostgresTransactionSupport
 from .view import PostgresViewSupport
@@ -181,6 +186,9 @@ __all__ = [
     "PostgresQueryOptimizationSupport",
     "PostgresLogicalReplicationSupport",
     "PostgresParallelQuerySupport",
+    # Identity / auto-increment mechanism protocols
+    "PostgresIdentitySupport",
+    "PostgresAutoIncrementSupport",
     # Per-feature protocols
     "PostgresCTESupport",
     "PostgresWindowSupport",
@@ -196,6 +204,8 @@ __all__ = [
     "PostgresJoinSupport",
     "PostgresTruncateSupport",
     "PostgresSchemaSupport",
+    "PostgresCatalogSupport",  # deprecated alias of PostgresNamespaceSupport
+    "PostgresNamespaceSupport",
     "PostgresSequenceSupport",
     "PostgresTransactionSupport",
     "PostgresViewSupport",

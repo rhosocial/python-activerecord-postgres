@@ -86,7 +86,10 @@ def repack_version(
         >>> repack_version(dialect)
         # Generates: repack.repack_version()
     """
-    return core.FunctionCall(dialect, "repack.repack_version")
+    return core.FunctionCall(
+        dialect,
+        dialect.pg_repack_function_name("repack_version"),
+    )
 
 
 __all__ = [

@@ -33,7 +33,7 @@ dialect = backend.dialect
 # Clean up for demo using DropTableExpression
 from rhosocial.activerecord.backend.expression import DropTableExpression
 
-drop_expr = DropTableExpression(dialect=dialect, table_name="cities", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -50,8 +50,8 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
     QueryExpression,
     Column,
-    TableExpression,
 )
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal, Subquery
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -139,7 +139,7 @@ if installed:
 
     create_expr = CreateTableExpression(
         dialect=dialect,
-        table_name="cities",
+        table=Table(dialect, 'cities'),
         columns=columns,
         if_not_exists=True,
     )
@@ -151,7 +151,7 @@ if installed:
     # Example 2: Insert city coordinate data
     insert_expr = InsertExpression(
         dialect=dialect,
-        into="cities",
+        into=Table(dialect, 'cities'),
         columns=["name", "latitude", "longitude"],
         source=ValuesSource(
             dialect,
@@ -230,7 +230,7 @@ if installed:
             Column(dialect, "name"),
             distance_km_aliased,
         ],
-        from_=TableExpression(dialect, "cities"),
+        from_=Table(dialect, "cities"),
         where=contains_pred,
         order_by=OrderByClause(
             dialect,
@@ -273,7 +273,7 @@ if installed:
             Column(dialect, "name"),
             round_distance.as_("distance_km"),
         ],
-        from_=TableExpression(dialect, "cities"),
+        from_=Table(dialect, "cities"),
         where=within_radius_pred,
         order_by=OrderByClause(
             dialect,
@@ -296,7 +296,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table_name="cities", if_exists=True)
+drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()
