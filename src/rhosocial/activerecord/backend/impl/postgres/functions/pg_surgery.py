@@ -46,34 +46,11 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, int, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, integers, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Heap Surgery Functions ==============
 
 def heap_force_freeze(
     dialect: "SQLDialectBase",
-    reloid: Union[str, "bases.BaseExpression"],
+    reloid: str,
     tids: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """Force-freeze tuples on a heap relation.
@@ -107,14 +84,14 @@ def heap_force_freeze(
     """
     return core.FunctionCall(
         dialect, "heap_force_freeze",
-        _convert_to_expression(dialect, reloid),
-        _convert_to_expression(dialect, tids),
+        reloid if isinstance(reloid, bases.BaseExpression) else core.Literal(dialect, reloid),
+        tids if isinstance(tids, bases.BaseExpression) else core.Literal(dialect, tids),
     )
 
 
 def heap_force_kill(
     dialect: "SQLDialectBase",
-    reloid: Union[str, "bases.BaseExpression"],
+    reloid: str,
     tids: Union[str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """Force-kill tuples on a heap relation.
@@ -148,8 +125,8 @@ def heap_force_kill(
     """
     return core.FunctionCall(
         dialect, "heap_force_kill",
-        _convert_to_expression(dialect, reloid),
-        _convert_to_expression(dialect, tids),
+        reloid if isinstance(reloid, bases.BaseExpression) else core.Literal(dialect, reloid),
+        tids if isinstance(tids, bases.BaseExpression) else core.Literal(dialect, tids),
     )
 
 

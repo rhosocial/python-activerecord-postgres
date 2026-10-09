@@ -25,7 +25,7 @@ All functions follow the expression-dialect separation architecture:
 - They do not concatenate SQL strings directly
 """
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -33,39 +33,13 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Job Scheduling ==============
 
 def cron_schedule(
     dialect: "SQLDialectBase",
-    schedule: Union[str, "bases.BaseExpression"],
-    command: Union[str, "bases.BaseExpression"],
-    comment: Optional[Union[str, "bases.BaseExpression"]] = None,
+    schedule: str,
+    command: str,
+    comment: Optional[str] = None,
 ) -> core.FunctionCall:
     """Schedule a new cron job.
 
@@ -98,20 +72,20 @@ def cron_schedule(
     if comment is not None:
         return core.FunctionCall(
             dialect, "cron.schedule",
-            _convert_to_expression(dialect, schedule),
-            _convert_to_expression(dialect, command),
-            _convert_to_expression(dialect, comment),
+            schedule if isinstance(schedule, bases.BaseExpression) else core.Literal(dialect, schedule),
+            command if isinstance(command, bases.BaseExpression) else core.Literal(dialect, command),
+            comment if isinstance(comment, bases.BaseExpression) else core.Literal(dialect, comment),
         )
     return core.FunctionCall(
         dialect, "cron.schedule",
-        _convert_to_expression(dialect, schedule),
-        _convert_to_expression(dialect, command),
+        schedule if isinstance(schedule, bases.BaseExpression) else core.Literal(dialect, schedule),
+        command if isinstance(command, bases.BaseExpression) else core.Literal(dialect, command),
     )
 
 
 def cron_unschedule(
     dialect: "SQLDialectBase",
-    job_id: Union[int, "bases.BaseExpression"],
+    job_id: int,
 ) -> core.FunctionCall:
     """Remove a scheduled cron job.
 
@@ -131,13 +105,13 @@ def cron_unschedule(
     """
     return core.FunctionCall(
         dialect, "cron.unschedule",
-        _convert_to_expression(dialect, job_id),
+        job_id if isinstance(job_id, bases.BaseExpression) else core.Literal(dialect, job_id),
     )
 
 
 def cron_run(
     dialect: "SQLDialectBase",
-    job_id: Union[int, "bases.BaseExpression"],
+    job_id: int,
 ) -> core.FunctionCall:
     """Run a scheduled cron job immediately.
 
@@ -158,7 +132,7 @@ def cron_run(
     """
     return core.FunctionCall(
         dialect, "cron.run",
-        _convert_to_expression(dialect, job_id),
+        job_id if isinstance(job_id, bases.BaseExpression) else core.Literal(dialect, job_id),
     )
 
 

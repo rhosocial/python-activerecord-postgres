@@ -790,7 +790,7 @@ class TestPostGISIntegration:
         geog_point = FunctionCall(
             dialect, "ST_GeomFromText",
             Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
-        ).cast("geography")
+        ).cast(PostgresGeographyType(self.dialect))
         query = QueryExpression(
             dialect=dialect,
             select=[
@@ -1128,7 +1128,7 @@ class TestAsyncPostGISIntegration:
         geog_point = FunctionCall(
             dialect, "ST_GeomFromText",
             Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
-        ).cast("geography")
+        ).cast(PostgresGeographyType(self.dialect))
         query = QueryExpression(
             dialect=dialect,
             select=[

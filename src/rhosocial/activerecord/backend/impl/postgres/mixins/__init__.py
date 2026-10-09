@@ -78,6 +78,7 @@ from .extensions.pgcrypto import PostgresPgcryptoMixin
 from .extensions.fuzzystrmatch import PostgresFuzzystrmatchMixin
 from .extensions.cube import PostgresCubeMixin
 from .extensions.uuid_ossp import PostgresUuidOssMixin
+from .uuid import PostgresUUIDMixin
 from .extensions.bloom import PostgresBloomMixin
 from .extensions.btree_gin import PostgresBtreeGinMixin
 from .extensions.btree_gist import PostgresBtreeGistMixin
@@ -95,6 +96,7 @@ from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 # Additional mixins
 from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
+from .column_suggestion import PostgresColumnSuggestionMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 from .parallel_query import PostgresParallelQueryMixin
 from .property_graph_query import PostgresPropertyGraphQueryMixin
@@ -195,6 +197,7 @@ __all__ = [
     "PostgresFuzzystrmatchMixin",
     "PostgresCubeMixin",
     "PostgresUuidOssMixin",
+    "PostgresUUIDMixin",
     "PostgresBloomMixin",
     "PostgresBtreeGinMixin",
     "PostgresBtreeGistMixin",
@@ -211,6 +214,7 @@ __all__ = [
     # Additional mixins
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",
+    "PostgresColumnSuggestionMixin",
     "PostgresLogicalReplicationMixin",
     "PostgresParallelQueryMixin",
     "PostgresPropertyGraphQueryMixin",

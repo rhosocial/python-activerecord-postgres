@@ -67,6 +67,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import IntegerType
 
 # Check if intarray extension is available
 available = dialect.is_extension_available("intarray")
@@ -156,7 +157,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,3}").cast("integer[]"),
+            Literal(dialect, "{1,3}").cast(IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()
@@ -175,7 +176,7 @@ if installed:
         where=BinaryExpression(
             dialect, "&&",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,6}").cast("integer[]"),
+            Literal(dialect, "{1,6}").cast(IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()

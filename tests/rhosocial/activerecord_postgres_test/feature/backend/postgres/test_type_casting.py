@@ -11,6 +11,7 @@ import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
+from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
     MONEY, NUMERIC, FLOAT8, INTEGER, VARCHAR, TEXT,
@@ -23,6 +24,23 @@ from rhosocial.activerecord.backend.impl.postgres.type_compatibility import (
     WARNED_CASTS,  # noqa: F401
     DIRECT_COMPATIBLE_CASTS,  # noqa: F401
 )
+from rhosocial.activerecord.backend.expression.types import (
+    FloatType,
+    VarCharType,
+)
+
+
+
+def _t(dialect, spelling):
+    """The type these tests name as a bare string, as a DataType.
+
+    cast() takes a DataType. Naming a type as text puts it in the one position
+    in a statement that cannot be a parameter -- the type goes into the SQL
+    itself -- which is why a plain string is refused there and why a test that
+    asserts the rendered SQL has to hand over an object that knows its own name.
+    CustomType keeps the spelling, so the expected SQL is unchanged.
+    """
+    return CustomType(dialect, raw=spelling)
 
 
 class TestTypeCastingMixin:
@@ -34,7 +52,7 @@ class TestTypeCastingMixin:
     def test_column_cast_basic(self):
         """Test basic type cast on Column."""
         col = Column(self.dialect, "price")
-        expr = col.cast(INTEGER)
+        expr = col.cast(_t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         # PostgreSQL dialect adds quotes to identifiers
         assert sql == '"price"::integer'
@@ -43,7 +61,7 @@ class TestTypeCastingMixin:
     def test_column_cast_with_varchar_length(self):
         """Test type cast with VARCHAR length modifier."""
         col = Column(self.dialect, "name")
-        expr = col.cast("VARCHAR(100)")
+        expr = col.cast(VarCharType(self.dialect, length=100))
         sql, params = expr.to_sql()
         assert sql == '"name"::VARCHAR(100)'
         assert params == ()
@@ -51,7 +69,7 @@ class TestTypeCastingMixin:
     def test_literal_cast(self):
         """Test type cast on Literal."""
         lit = Literal(self.dialect, "123")
-        expr = lit.cast(INTEGER)
+        expr = lit.cast(_t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         assert sql == "%s::integer"
         assert params == ("123",)
@@ -59,7 +77,7 @@ class TestTypeCastingMixin:
     def test_chained_type_cast(self):
         """Test chained type conversions."""
         col = Column(self.dialect, "amount")
-        expr = col.cast(MONEY).cast(NUMERIC).cast(FLOAT8)
+        expr = col.cast(_t(self.dialect, MONEY)).cast(_t(self.dialect, NUMERIC)).cast(_t(self.dialect, FLOAT8))
         sql, params = expr.to_sql()
         # PostgreSQL uses float8 alias for double precision
         assert sql == '"amount"::money::numeric::float8'
@@ -68,7 +86,7 @@ class TestTypeCastingMixin:
     def test_cast_with_alias(self):
         """Test type cast with alias."""
         col = Column(self.dialect, "value")
-        expr = col.cast(INTEGER).as_("int_value")
+        expr = col.cast(_t(self.dialect, INTEGER)).as_("int_value")
         sql, params = expr.to_sql()
         assert sql == '"value"::integer AS "int_value"'
         assert params == ()
@@ -83,7 +101,7 @@ class TestCastExpression:
     def test_cast_expression_creation(self):
         """Test cast via Column.cast() method."""
         col = Column(self.dialect, "price")
-        expr = col.cast(NUMERIC)
+        expr = col.cast(_t(self.dialect, NUMERIC))
         sql, params = expr.to_sql()
         assert sql == '"price"::numeric'
         assert params == ()
@@ -91,7 +109,7 @@ class TestCastExpression:
     def test_cast_expression_chained(self):
         """Test chained type conversions."""
         col = Column(self.dialect, "value")
-        expr = col.cast(MONEY).cast(NUMERIC)
+        expr = col.cast(_t(self.dialect, MONEY)).cast(_t(self.dialect, NUMERIC))
         sql, params = expr.to_sql()
         assert sql == '"value"::money::numeric'
         assert params == ()
@@ -99,7 +117,7 @@ class TestCastExpression:
     def test_cast_expression_supports_comparison(self):
         """Test cast expression supports comparison operators."""
         col = Column(self.dialect, "amount")
-        expr = col.cast(INTEGER)
+        expr = col.cast(_t(self.dialect, INTEGER))
         predicate = expr > 0
         sql, params = predicate.to_sql()
         assert sql == '"amount"::integer > %s'
@@ -108,7 +126,7 @@ class TestCastExpression:
     def test_cast_expression_supports_arithmetic(self):
         """Test cast expression supports arithmetic operators."""
         col = Column(self.dialect, "price")
-        expr = col.cast(NUMERIC)
+        expr = col.cast(_t(self.dialect, NUMERIC))
         result = expr * 1.1
         sql, params = result.to_sql()
         assert sql == '"price"::numeric * %s'
@@ -123,14 +141,16 @@ class TestPostgresDialectFormatCast:
 
     def test_format_cast_basic(self):
         """Test basic type cast formatting."""
-        expr = CastExpression(self.dialect, Column(self.dialect, "col"), INTEGER)
+        expr = CastExpression(self.dialect, Column(self.dialect, "col"),
+                               _t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         assert sql == '"col"::integer'
         assert params == ()
 
     def test_format_cast_with_type_modifier(self):
         """Test type cast with type modifiers."""
-        expr = CastExpression(self.dialect, Column(self.dialect, "name"), "VARCHAR(100)")
+        expr = CastExpression(self.dialect, Column(self.dialect, "name"),
+                         _t(self.dialect, "VARCHAR(100)"))
         sql, params = expr.to_sql()
         assert sql == '"name"::VARCHAR(100)'
         assert params == ()
@@ -138,7 +158,8 @@ class TestPostgresDialectFormatCast:
     def test_format_cast_with_alias(self):
         """Test type cast with alias."""
         expr = CastExpression(
-            self.dialect, Column(self.dialect, "value"), INTEGER, alias="int_val"
+            self.dialect, Column(self.dialect, "value"),
+            _t(self.dialect, INTEGER), alias="int_val"
         )
         sql, params = expr.to_sql()
         assert sql == '"value"::integer AS "int_val"'
@@ -147,7 +168,7 @@ class TestPostgresDialectFormatCast:
     def test_format_cast_preserves_params(self):
         """Test that parameters are preserved."""
         params_in = ("test_value",)
-        expr = Literal(self.dialect, "test_value").cast(TEXT)
+        expr = Literal(self.dialect, "test_value").cast(_t(self.dialect, TEXT))
         sql, params = expr.to_sql()
         assert sql == "%s::text"
         assert params == params_in
@@ -255,7 +276,7 @@ class TestComplexCastScenarios:
         # This should trigger a warning
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            expr = col.cast("float8")  # noqa: F841
+            expr = col.cast(FloatType(self.dialect))  # noqa: F841
             # The warning should suggest using numeric as intermediate
             if len(w) > 0:
                 assert "numeric" in str(w[0].message)
@@ -263,7 +284,7 @@ class TestComplexCastScenarios:
     def test_cast_in_where_clause(self):
         """Test type cast in WHERE clause predicate."""
         col = Column(self.dialect, "amount")
-        predicate = col.cast(NUMERIC) > 100
+        predicate = col.cast(_t(self.dialect, NUMERIC)) > 100
         sql, params = predicate.to_sql()
         assert sql == '"amount"::numeric > %s'
         assert params == (100,)
@@ -272,7 +293,7 @@ class TestComplexCastScenarios:
         """Test multiple different cast chains in one expression."""
         col1 = Column(self.dialect, "price1")
         col2 = Column(self.dialect, "price2")
-        expr = col1.cast(NUMERIC) + col2.cast(NUMERIC)
+        expr = col1.cast(_t(self.dialect, NUMERIC)) + col2.cast(_t(self.dialect, NUMERIC))
         sql, params = expr.to_sql()
         assert sql == '"price1"::numeric + "price2"::numeric'
         assert params == ()
@@ -280,7 +301,7 @@ class TestComplexCastScenarios:
     def test_cast_with_table_prefix(self):
         """Test type cast on column with table prefix."""
         col = Column(self.dialect, "amount", table="orders")
-        expr = col.cast(INTEGER)
+        expr = col.cast(_t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         assert sql == '"orders"."amount"::integer'
         assert params == ()
@@ -288,7 +309,7 @@ class TestComplexCastScenarios:
     def test_nested_cast_with_alias(self):
         """Test nested cast expressions with aliases."""
         col = Column(self.dialect, "value")
-        expr = col.cast(MONEY).as_("m").cast(NUMERIC).as_("n")
+        expr = col.cast(_t(self.dialect, MONEY)).as_("m").cast(_t(self.dialect, NUMERIC)).as_("n")
         sql, params = expr.to_sql()
         # Note: Each .as_() creates an alias for that expression
         # The final expression is: (value::money AS "m")::numeric AS "n"

@@ -196,7 +196,12 @@ class TestPostgresDomainExpression:
         )
         assert params == ()
 
-    def test_create_domain_params_emit_one_constraint_key(self, dialect):
+    def test_create_domain_params_name_the_supplied_constraint_spelling(self, dialect):
+        # The generic get_params() emits every __init__ parameter; the spelling
+        # the caller did *not* use carries None ("not supplied"), which is what
+        # keeps `constraints` and `checks` mutually exclusive across a round
+        # trip without a get_params() override. See
+        # test_domain_expression_roundtrip.py for the full round-trip proof.
         value = DomainValueExpression(dialect)
         condition = value > Literal(dialect, 0, inline_literals=True)
         legacy = PostgresCreateDomainExpression(
@@ -213,10 +218,10 @@ class TestPostgresDomainExpression:
         )
         legacy_params = legacy.get_params()
         typed_params = typed.get_params()
-        assert "constraints" in legacy_params
-        assert "checks" not in legacy_params
-        assert "checks" in typed_params
-        assert "constraints" not in typed_params
+        assert legacy_params["constraints"] == ["CHECK (VALUE > 0)"]
+        assert legacy_params["checks"] is None
+        assert [type(c) for c in typed_params["checks"]] == [DomainCheckConstraint]
+        assert typed_params["constraints"] is None
 
     def test_new_core_expression_rejects_raw_data_type(self, dialect):
         with pytest.raises(TypeError, match="DataType"):

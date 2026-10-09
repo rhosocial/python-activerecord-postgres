@@ -41,6 +41,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import UUIDType
 
 
 UUID_V4_PATTERN = re.compile(
@@ -142,7 +143,7 @@ def uuid_ossp_env(postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, str(uuid_val)).cast("uuid"), Literal(dialect, "explicit")]],
+            [[Literal(dialect, str(uuid_val)).cast(UUIDType(dialect)), Literal(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()
@@ -347,7 +348,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, str(uuid_val)).cast("uuid"), Literal(dialect, "explicit")]],
+            [[Literal(dialect, str(uuid_val)).cast(UUIDType(dialect)), Literal(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()

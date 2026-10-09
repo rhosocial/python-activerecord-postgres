@@ -242,6 +242,18 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.values import (
+    HstoreValueExpression,
+    LtreeValueExpression,
+    NetworkValueExpression,
+    RangeValueExpression,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions import (
+    hstore as pg_hstore,
+    ltree as pg_ltree,
+    network as pg_network,
+    range as pg_range,
+)
 from rhosocial.activerecord.testsuite.utils.expression import (
     collect_expression_classes,
     make_instance,
@@ -872,6 +884,42 @@ def register_specials():
         "types.enum_.EnumType", lambda d: EnumType(d, values=["sad", "ok"])
     )
 
+    # -- the four value wrappers --------------------------------------------
+    # Each wraps a FunctionCall and renders it verbatim, so the introspective
+    # guess must hand it a real call: a string left in ``call`` reaches
+    # ``to_sql`` as a string and raises AttributeError there instead of being
+    # refused at the door. The factories below are the ones the classes own.
+    register_special_constructor(
+        "values.NetworkValueExpression",
+        lambda d: NetworkValueExpression(d, pg_network.inet_client_addr(d)),
+    )
+    register_special_constructor(
+        "values.RangeValueExpression",
+        lambda d: RangeValueExpression(
+            d,
+            pg_range.range_contains(d, Column(d, "v"), Literal(d, 3)),
+            element_type=None,
+        ),
+    )
+    register_special_constructor(
+        "values.HstoreValueExpression",
+        lambda d: HstoreValueExpression(
+            d,
+            pg_hstore.hstore_akeys(
+                d, pg_hstore.hstore_literal(d, Literal(d, "a=>1"))
+            ),
+        ),
+    )
+    register_special_constructor(
+        "values.LtreeValueExpression",
+        lambda d: LtreeValueExpression(
+            d,
+            pg_ltree.ltree_ancestor(
+                d, Column(d, "v"), pg_ltree.ltree_literal(d, "a.b")
+            ),
+        ),
+    )
+
 
 register_specials()
 
@@ -901,6 +949,19 @@ UNCONSTRUCTIBLE = (
     # There are none left. That is not a claim about the classes -- it is what
     # ``test_unconstructible_list_is_exact`` observes right now, and it is pinned
     # in both directions so the first class that needs an exemption fails CI.
+    #
+    # Three are exempt, each for the same underlying reason: a required value
+    # sits behind a defaulted parameter, and the filler skips defaulted ones.
+    # CUSTOM type. `raw` names the SQL type string and defaults to the empty
+    # string, so the filler builds a type with no spelling at all.
+    "rhosocial.activerecord.backend.expression.types.custom.CustomType",
+    # UUID constant. `which` is required, but the filler's "x" is refused at
+    # construction because __init__ accepts only 'nil' and 'max'.
+    "rhosocial.activerecord.backend.expression.uuid.UUIDConstantExpression",
+    # POSTGRES ENUM COLUMN. type_name, schema and values all default to None, so
+    # the filler supplies none of them and the type declares neither its name nor
+    # its members.
+    "rhosocial.activerecord.backend.impl.postgres.expression.types.PostgresEnumColumnType",
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own

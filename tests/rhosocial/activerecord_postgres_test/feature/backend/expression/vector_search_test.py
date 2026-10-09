@@ -115,13 +115,13 @@ class TestVectorDistance:
         sql, params = expr.to_sql()
         # Column name must render as identifier, not a string literal parameter.
         assert 'AS' not in sql
-        assert '"embedding" <=> %s::vector(3)' in sql
+        assert '"embedding" <=> %s::VECTOR(3)' in sql
         assert "embedding" not in params
 
     def test_l2_column(self, postgres_dialect):
         expr = vector_distance(postgres_dialect, "embedding", [1.0], metric="l2")
         sql, params = expr.to_sql()
-        assert '"embedding" <-> %s::vector(1)' in sql
+        assert '"embedding" <-> %s::VECTOR(1)' in sql
 
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):

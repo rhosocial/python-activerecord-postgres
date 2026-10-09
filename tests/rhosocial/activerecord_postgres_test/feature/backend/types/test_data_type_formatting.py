@@ -21,7 +21,6 @@ from rhosocial.activerecord.backend.expression.types import (
     DoubleType,
     FloatType,
     IntegerType,
-    IntType,
     IntervalType,
     JsonBType,
     JsonType,
@@ -43,7 +42,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBoxType,
     PostgresByteaType,
     PostgresCIDType,
-    PostgresCharacterVaryingType,
     PostgresCidrType,
     PostgresCircleType,
     PostgresCitextType,
@@ -160,8 +158,9 @@ FORMAT_CASES = [
     (PostgresCubeType(), "CUBE"),
     (PostgresLtreeType(), "LTREE"),
     (PostgresRasterType(), "RASTER"),
-    (PostgresCharacterVaryingType(), "CHARACTER VARYING"),
-    (PostgresCharacterVaryingType(length=100), "CHARACTER VARYING(100)"),
+    (VarCharType(spelling="character varying"), "CHARACTER VARYING"),
+    (VarCharType(length=100, spelling="character varying"),
+     "CHARACTER VARYING(100)"),
 ]
 
 
@@ -179,7 +178,8 @@ def test_format_postgres_specific_types(dialect, data_type, expected):
 CORE_FORMAT_CASES = [
     (TinyIntType(), "SMALLINT"),
     (SmallIntType(), "SMALLINT"),
-    (IntType(), "INTEGER"),
+    (IntegerType(), "INTEGER"),
+    (IntegerType(spelling="int"), "INT"),
     (IntegerType(), "INTEGER"),
     (BigIntType(), "BIGINT"),
     (FloatType(), "REAL"),
@@ -310,6 +310,11 @@ PARSE_CASES = [
     ("BIT(8)", PostgresBitType, {"n": 8}),
     ("VARBIT", PostgresVarBitType, {}),
     ("VARBIT(16)", PostgresVarBitType, {"n": 16}),
+    # ``bit varying`` is the spelling live ``pg_catalog.format_type`` returns
+    # for a varbit column (report appendix F1); it must answer the same class
+    # as the renderer's ``VARBIT`` word, not the fixed-length ``BIT`` one.
+    ("BIT VARYING", PostgresVarBitType, {}),
+    ("BIT VARYING(16)", PostgresVarBitType, {"n": 16}),
     ("INET", PostgresInetType, {}),
     ("CIDR", PostgresCidrType, {}),
     ("MACADDR", PostgresMacAddrType, {}),
@@ -385,9 +390,18 @@ def test_parse_type_array_with_dimension_bracket(dialect):
     assert result.element_type.length == 10
 
 
-def test_parse_type_malformed_bracket_suffix_falls_back(dialect):
-    result = dialect.parse_type("FOO[abc]")
-    assert type(result) is CustomType
+def test_parse_type_malformed_bracket_suffix_is_rejected(dialect):
+    """A malformed array marker is refused, not quietly dropped.
+
+    Falling back to CustomType would put "FOO[abc]" into the statement as-is,
+    and the type position cannot take a bound parameter -- so a name that does
+    not parse is a name that has to be reported rather than passed through."""
+    from rhosocial.activerecord.backend.expression.type_name import (
+        InvalidTypeNameError,
+    )
+
+    with pytest.raises(InvalidTypeNameError):
+        dialect.parse_type("FOO[abc]")
 
 
 def test_parse_type_array_keyword(dialect):
@@ -449,23 +463,23 @@ def test_parse_vector_allowed_when_extension_installed(dialect):
 
 
 def test_vector_types_equality_and_hash():
-    assert PostgresVectorType(3) == PostgresVectorType(3)
-    assert PostgresVectorType(3) != PostgresVectorType(4)
-    assert PostgresVectorType(3) != PostgresHalfvecType(3)
-    assert PostgresVectorType(3) != object()
-    assert hash(PostgresVectorType(3)) == hash(PostgresVectorType(3))
+    assert PostgresVectorType(dim=3) == PostgresVectorType(dim=3)
+    assert PostgresVectorType(dim=3) != PostgresVectorType(dim=4)
+    assert PostgresVectorType(dim=3) != PostgresHalfvecType(dim=3)
+    assert PostgresVectorType(dim=3) != object()
+    assert hash(PostgresVectorType(dim=3)) == hash(PostgresVectorType(dim=3))
 
-    assert PostgresHalfvecType(3) == PostgresHalfvecType(3)
-    assert PostgresHalfvecType(3) != PostgresHalfvecType(4)
-    assert PostgresHalfvecType(3) != PostgresSparsevecType(3)
-    assert PostgresHalfvecType(3) != object()
-    assert hash(PostgresHalfvecType(3)) == hash(PostgresHalfvecType(3))
+    assert PostgresHalfvecType(dim=3) == PostgresHalfvecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != PostgresHalfvecType(dim=4)
+    assert PostgresHalfvecType(dim=3) != PostgresSparsevecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != object()
+    assert hash(PostgresHalfvecType(dim=3)) == hash(PostgresHalfvecType(dim=3))
 
-    assert PostgresSparsevecType(5) == PostgresSparsevecType(5)
-    assert PostgresSparsevecType(5) != PostgresSparsevecType(6)
-    assert PostgresSparsevecType(5) != PostgresVectorType(5)
-    assert PostgresSparsevecType(5) != object()
-    assert hash(PostgresSparsevecType(5)) == hash(PostgresSparsevecType(5))
+    assert PostgresSparsevecType(dim=5) == PostgresSparsevecType(dim=5)
+    assert PostgresSparsevecType(dim=5) != PostgresSparsevecType(dim=6)
+    assert PostgresSparsevecType(dim=5) != PostgresVectorType(dim=5)
+    assert PostgresSparsevecType(dim=5) != object()
+    assert hash(PostgresSparsevecType(dim=5)) == hash(PostgresSparsevecType(dim=5))
 
 
 # ---------------------------------------------------------------------------
@@ -489,3 +503,144 @@ def test_supports_data_types_registers_all_postgres_types(dialect):
         IntegerType,
     ):
         assert expected in classes
+
+
+class TestVersionGatesAreNotEmpty:
+    """A gate with no lower bound is not a gate.
+
+    ``supports_data_type_x`` returning True unconditionally tells the dialect it
+    can render a type on any server, and the server disagrees at execution. That
+    is the expensive way to find out: the DDL is built, sent, and rejected.
+
+    These boundaries were measured against the scenario servers rather than
+    read off the release notes, because the release notes and the servers
+    disagreed about jsonpath -- the notes say 13, and 12 has it.
+    """
+
+    @pytest.mark.parametrize("version", [(9, 0, 0), (10, 0, 0), (11, 0, 0)])
+    def test_jsonpath_is_refused_below_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is False
+
+    @pytest.mark.parametrize("version", [(12, 0, 0), (13, 0, 0), (14, 0, 0)])
+    def test_jsonpath_is_available_from_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is True
+
+    @pytest.mark.parametrize(
+        "name", ["postgres_int4multirange", "postgres_int8multirange",
+                 "postgres_nummultirange", "postgres_datemultirange",
+                 "postgres_tsmultirange", "postgres_tstzmultirange"],
+    )
+    def test_multiranges_need_14(self, name):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(11, 0, 0), (12, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is False, (
+                name, version)
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is True
+
+    @pytest.mark.parametrize(
+        "name", ["text", "varchar", "boolean", "integer", "bigint",
+                 "postgres_int4range", "postgres_int8range"],
+    )
+    def test_base_types_are_unconditionally_available(self, name):
+        """The distinction that matters: most of these gates are True on
+        purpose, because the type has existed since before the oldest server
+        this backend supports. They are not a to-do list."""
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(9, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is True, (
+                name, version)
+
+
+#: Every version boundary this backend gates on, and the server it was read
+#: off. Recorded so the next empty gate is a deliberate omission rather than an
+#: oversight -- four of these were found by CI, one at a time: jsonpath (12),
+#: xid8 (13), the multiranges (14) and macaddr8 (10).
+KNOWN_VERSIONED_TYPES = {
+    "postgres_macaddr8": (10, 0, 0),
+    "postgres_jsonpath": (12, 0, 0),
+    "postgres_xid8": (13, 0, 0),
+    "postgres_int4multirange": (14, 0, 0),
+    "postgres_int8multirange": (14, 0, 0),
+    "postgres_nummultirange": (14, 0, 0),
+    "postgres_datemultirange": (14, 0, 0),
+    "postgres_tsmultirange": (14, 0, 0),
+    "postgres_tstzmultirange": (14, 0, 0),
+}
+
+
+class TestEveryVersionedTypeIsGated:
+    """A gate that says yes to a server that says no costs a round trip.
+
+    Each of these was an unconditional True. The dialect rendered the type, the
+    DDL went out, and the server answered "type X does not exist" -- so the
+    failure arrived at execution, naming a table rather than the version gap
+    that caused it.
+    """
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_refused_below_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        below = floor[0] - 1
+        dialect = PostgresDialect(version=(below, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is False, name
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_available_from_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=floor)
+        assert getattr(dialect, f"supports_data_type_{name}")() is True, name
+
+    def test_no_unconditional_gate_left_on_a_versioned_type(self):
+        """A versioned type must not answer yes unconditionally.
+
+        The reverse is fine and common: text, integer and varchar have been in
+        PostgreSQL since before the oldest server this backend supports, so
+        their gates say yes on purpose. What must not happen is the opposite --
+        a type that arrived later carrying a gate that cannot say no. That is
+        the whole of what went wrong here four times.
+        """
+        import inspect
+
+        from rhosocial.activerecord.backend.impl.postgres.mixins.types import (
+            PostgresTypeFormatSupportMixin,
+        )
+
+        unconditional = set()
+        for attr in dir(PostgresTypeFormatSupportMixin):
+            if not attr.startswith("supports_data_type_"):
+                continue
+            fn = getattr(PostgresTypeFormatSupportMixin, attr)
+            try:
+                body = inspect.getsource(fn)
+            except (OSError, TypeError):  # pragma: no cover
+                continue
+            if "return True" in body and "version" not in body:
+                unconditional.add(attr[len("supports_data_type_"):])
+        # The versioned ones must not be in that set.
+        assert not (unconditional & set(KNOWN_VERSIONED_TYPES)), (
+            unconditional & set(KNOWN_VERSIONED_TYPES))

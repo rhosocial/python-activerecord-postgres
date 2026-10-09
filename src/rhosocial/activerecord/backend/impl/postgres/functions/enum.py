@@ -22,36 +22,16 @@ Supported comparison operators:
 - enum_ge(e1, e2): Greater than or equal (>=)
 """
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresRegTypeType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-
-
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
 
 
 # ============== Functions ==============
@@ -59,10 +39,10 @@ def _convert_to_expression(
 
 def enum_range(
     dialect: "SQLDialectBase",
-    enum_type: Optional[Union[str, "bases.BaseExpression"]] = None,
-    enum_value: Optional[Union[str, "bases.BaseExpression"]] = None,
-    start_value: Optional[Union[str, "bases.BaseExpression"]] = None,
-    end_value: Optional[Union[str, "bases.BaseExpression"]] = None,
+    enum_type: Optional[str] = None,
+    enum_value: Optional[str] = None,
+    start_value: Optional[str] = None,
+    end_value: Optional[str] = None,
 ) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL enum_range function.
 
@@ -98,21 +78,25 @@ def enum_range(
         ('enum_range(%s, %s)', ('pending', 'ready'))
     """
     if start_value is not None and end_value is not None:
-        start_expr = _convert_to_expression(dialect, start_value)
-        end_expr = _convert_to_expression(dialect, end_value)
+        start_expr = start_value if isinstance(start_value, bases.BaseExpression) \
+            else core.Literal(dialect, start_value)
+        end_expr = end_value if isinstance(end_value, bases.BaseExpression) \
+            else core.Literal(dialect, end_value)
         return core.FunctionCall(dialect, "enum_range", start_expr, end_expr)
     if enum_type is not None:
-        type_expr = _convert_to_expression(dialect, enum_type)
-        return core.FunctionCall(dialect, "enum_range", type_expr.cast("regtype"))
+        type_expr = enum_type if isinstance(enum_type, bases.BaseExpression) \
+            else core.Literal(dialect, enum_type)
+        return core.FunctionCall(dialect, "enum_range", type_expr.cast(PostgresRegTypeType(dialect)))
     if enum_value is not None:
-        value_expr = _convert_to_expression(dialect, enum_value)
+        value_expr = enum_value if isinstance(enum_value, bases.BaseExpression) \
+            else core.Literal(dialect, enum_value)
         return core.FunctionCall(dialect, "enum_range", value_expr)
     raise ValueError("Must provide enum_type, enum_value, or both start_value and end_value")
 
 
 def enum_first(
     dialect: "SQLDialectBase",
-    enum_type_or_value: Union[str, "bases.BaseExpression"],
+    enum_type_or_value: str,
 ) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL enum_first function.
 
@@ -131,13 +115,14 @@ def enum_first(
         >>> func.to_sql()
         ("enum_first(CAST(%s AS regtype))", ('status',))
     """
-    type_expr = _convert_to_expression(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_first", type_expr.cast("regtype"))
+    type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
+        else core.Literal(dialect, enum_type_or_value)
+    return core.FunctionCall(dialect, "enum_first", type_expr.cast(PostgresRegTypeType(dialect)))
 
 
 def enum_last(
     dialect: "SQLDialectBase",
-    enum_type_or_value: Union[str, "bases.BaseExpression"],
+    enum_type_or_value: str,
 ) -> core.FunctionCall:
     """Generate SQL expression for PostgreSQL enum_last function.
 
@@ -156,8 +141,9 @@ def enum_last(
         >>> func.to_sql()
         ("enum_last(CAST(%s AS regtype))", ('status',))
     """
-    type_expr = _convert_to_expression(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_last", type_expr.cast("regtype"))
+    type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
+        else core.Literal(dialect, enum_type_or_value)
+    return core.FunctionCall(dialect, "enum_last", type_expr.cast(PostgresRegTypeType(dialect)))
 
 
 # ============== Comparison Operators ==============
@@ -165,8 +151,8 @@ def enum_last(
 
 def enum_lt(
     dialect: "SQLDialectBase",
-    e1: Union[str, "bases.BaseExpression"],
-    e2: Union[str, "bases.BaseExpression"],
+    e1: bases.BaseExpression,
+    e2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for enum less-than comparison.
 
@@ -183,15 +169,15 @@ def enum_lt(
         >>> expr.to_sql()
         ('%s < %s', ('pending', 'active'))
     """
-    left = _convert_to_expression(dialect, e1)
-    right = _convert_to_expression(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
     return BinaryExpression(dialect, "<", left, right)
 
 
 def enum_le(
     dialect: "SQLDialectBase",
-    e1: Union[str, "bases.BaseExpression"],
-    e2: Union[str, "bases.BaseExpression"],
+    e1: bases.BaseExpression,
+    e2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for enum less-than-or-equal comparison.
 
@@ -208,15 +194,15 @@ def enum_le(
         >>> expr.to_sql()
         ('%s <= %s', ('pending', 'active'))
     """
-    left = _convert_to_expression(dialect, e1)
-    right = _convert_to_expression(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
     return BinaryExpression(dialect, "<=", left, right)
 
 
 def enum_gt(
     dialect: "SQLDialectBase",
-    e1: Union[str, "bases.BaseExpression"],
-    e2: Union[str, "bases.BaseExpression"],
+    e1: bases.BaseExpression,
+    e2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for enum greater-than comparison.
 
@@ -233,15 +219,15 @@ def enum_gt(
         >>> expr.to_sql()
         ('%s > %s', ('pending', 'active'))
     """
-    left = _convert_to_expression(dialect, e1)
-    right = _convert_to_expression(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
     return BinaryExpression(dialect, ">", left, right)
 
 
 def enum_ge(
     dialect: "SQLDialectBase",
-    e1: Union[str, "bases.BaseExpression"],
-    e2: Union[str, "bases.BaseExpression"],
+    e1: bases.BaseExpression,
+    e2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for enum greater-than-or-equal comparison.
 
@@ -258,8 +244,8 @@ def enum_ge(
         >>> expr.to_sql()
         ('%s >= %s', ('pending', 'active'))
     """
-    left = _convert_to_expression(dialect, e1)
-    right = _convert_to_expression(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
     return BinaryExpression(dialect, ">=", left, right)
 
 

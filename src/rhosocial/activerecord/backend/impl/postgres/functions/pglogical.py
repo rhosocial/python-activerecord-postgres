@@ -35,38 +35,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Node Management ==============
 
 def pglogical_create_node(
     dialect: "SQLDialectBase",
-    node_name: Union[str, "bases.BaseExpression"],
-    dsn: Union[str, "bases.BaseExpression"],
+    node_name: str,
+    dsn: str,
 ) -> core.FunctionCall:
     """Create a pglogical node for logical replication.
 
@@ -88,8 +62,8 @@ def pglogical_create_node(
     """
     return core.FunctionCall(
         dialect, "pglogical.create_node",
-        _convert_to_expression(dialect, node_name),
-        _convert_to_expression(dialect, dsn),
+        node_name if isinstance(node_name, bases.BaseExpression) else core.Literal(dialect, node_name),
+        dsn if isinstance(dsn, bases.BaseExpression) else core.Literal(dialect, dsn),
     )
 
 
@@ -97,7 +71,7 @@ def pglogical_create_node(
 
 def pglogical_create_publication(
     dialect: "SQLDialectBase",
-    pub_name: Union[str, "bases.BaseExpression"],
+    pub_name: str,
     tables: Union[str, List[str], "bases.BaseExpression"],
     replication_sets: Optional[Union[List[str], "bases.BaseExpression"]] = None,
 ) -> core.FunctionCall:
@@ -124,11 +98,13 @@ def pglogical_create_publication(
         >>> pglogical_create_publication(dialect, 'my_pub', '{users, orders}', '{default}')
     """
     args = [
-        _convert_to_expression(dialect, pub_name),
-        _convert_to_expression(dialect, tables),
+        pub_name if isinstance(pub_name, bases.BaseExpression) else core.Literal(dialect, pub_name),
+        tables if isinstance(tables, bases.BaseExpression) else core.Literal(dialect, tables),
     ]
     if replication_sets is not None:
-        args.append(_convert_to_expression(dialect, replication_sets))
+        args.append(
+            replication_sets if isinstance(replication_sets, bases.BaseExpression)
+            else core.Literal(dialect, replication_sets))
     return core.FunctionCall(dialect, "pglogical.create_publication", *args)
 
 
@@ -136,8 +112,8 @@ def pglogical_create_publication(
 
 def pglogical_create_subscription(
     dialect: "SQLDialectBase",
-    sub_name: Union[str, "bases.BaseExpression"],
-    provider_dsn: Union[str, "bases.BaseExpression"],
+    sub_name: str,
+    provider_dsn: str,
     publication_names: Union[str, List[str], "bases.BaseExpression"],
     replication_sets: Optional[Union[List[str], "bases.BaseExpression"]] = None,
 ) -> core.FunctionCall:
@@ -165,18 +141,21 @@ def pglogical_create_subscription(
         ...     dialect, 'my_sub', 'host=provider.db dbname=mydb', '{my_pub}', '{default}')
     """
     args = [
-        _convert_to_expression(dialect, sub_name),
-        _convert_to_expression(dialect, provider_dsn),
-        _convert_to_expression(dialect, publication_names),
+        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
+        provider_dsn if isinstance(provider_dsn, bases.BaseExpression) else core.Literal(dialect, provider_dsn),
+        publication_names if isinstance(publication_names, bases.BaseExpression)
+        else core.Literal(dialect, publication_names),
     ]
     if replication_sets is not None:
-        args.append(_convert_to_expression(dialect, replication_sets))
+        args.append(
+            replication_sets if isinstance(replication_sets, bases.BaseExpression)
+            else core.Literal(dialect, replication_sets))
     return core.FunctionCall(dialect, "pglogical.create_subscription", *args)
 
 
 def pglogical_show_subscription_status(
     dialect: "SQLDialectBase",
-    sub_name: Optional[Union[str, "bases.BaseExpression"]] = None,
+    sub_name: Optional[str] = None,
 ) -> core.FunctionCall:
     """Show the status of pglogical subscriptions.
 
@@ -199,7 +178,7 @@ def pglogical_show_subscription_status(
     if sub_name is not None:
         return core.FunctionCall(
             dialect, "pglogical.show_subscription_status",
-            _convert_to_expression(dialect, sub_name),
+            sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
         )
     return core.FunctionCall(
         dialect, "pglogical.show_subscription_status",
@@ -208,8 +187,8 @@ def pglogical_show_subscription_status(
 
 def pglogical_alter_subscription_synchronize(
     dialect: "SQLDialectBase",
-    sub_name: Union[str, "bases.BaseExpression"],
-    truncate: Optional[Union[bool, "bases.BaseExpression"]] = None,
+    sub_name: str,
+    truncate: Optional[bool] = None,
 ) -> core.FunctionCall:
     """Synchronize a pglogical subscription.
 
@@ -231,10 +210,10 @@ def pglogical_alter_subscription_synchronize(
         >>> pglogical_alter_subscription_synchronize(dialect, 'my_sub', truncate=True)
     """
     args = [
-        _convert_to_expression(dialect, sub_name),
+        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
     ]
     if truncate is not None:
-        args.append(_convert_to_expression(dialect, truncate))
+        args.append(truncate if isinstance(truncate, bases.BaseExpression) else core.Literal(dialect, truncate))
     return core.FunctionCall(
         dialect, "pglogical.alter_subscription_synchronize", *args,
     )

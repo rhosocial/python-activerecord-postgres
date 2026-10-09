@@ -41,9 +41,16 @@ class TestCoreTypeMappings:
         from rhosocial.activerecord.backend.expression.types import DateTimeType
         assert DateTimeType(dialect=dialect).to_sql() == ("TIMESTAMP", ())
 
-    def test_int_to_integer(self, dialect):
-        from rhosocial.activerecord.backend.expression.types import IntType
-        assert IntType(dialect=dialect).to_sql() == ("INTEGER", ())
+    def test_int_spelling_to_integer(self, dialect):
+        """``INT`` and ``INTEGER`` are two spellings of one concept, and
+        PostgreSQL writes both — so the spelling is honoured rather than
+        normalised away, and a spelling this backend does not write is refused
+        rather than quietly replaced."""
+        from rhosocial.activerecord.backend.expression.types import IntegerType
+        assert IntegerType(dialect=dialect).to_sql() == ("INTEGER", ())
+        assert IntegerType(dialect=dialect, spelling="int").to_sql() == ("INT", ())
+        with pytest.raises(TypeError, match="does not spell this type"):
+            IntegerType(dialect=dialect, spelling="int4").to_sql()
 
     # Standard integer family
     def test_smallint(self, dialect):
@@ -140,9 +147,11 @@ class TestArrayType:
         assert a1 == a2
         assert a1 != a3
         assert hash(a1) == hash(a2)
-        # PostgresArrayType.is_equivalent ignores dimensions
+        # is_element_type_equivalent answers "same kind of thing" and ignores
+        # dimensions; == answers "same declaration" and does not.
         a4 = PostgresArrayType(element_type=IntegerType(dialect=dialect), dimensions=1, dialect=dialect)
-        assert a1.is_equivalent(a4)
+        assert a1.is_element_type_equivalent(a4)
+        assert a1 != a4
 
     def test_parse_array_bracket_suffix(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (

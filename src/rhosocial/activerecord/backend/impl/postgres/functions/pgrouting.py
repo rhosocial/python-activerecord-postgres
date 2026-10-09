@@ -25,7 +25,7 @@ All functions follow the expression-dialect separation architecture:
 - They do not concatenate SQL strings directly
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -33,40 +33,14 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Routing Functions ==============
 
 def pgr_dijkstra(
     dialect: "SQLDialectBase",
-    edges_sql: Union[str, "bases.BaseExpression"],
-    start_vid: Union[int, "bases.BaseExpression"],
-    end_vid: Union[int, "bases.BaseExpression"],
-    directed: Union[bool, "bases.BaseExpression"] = True,
+    edges_sql: str,
+    start_vid: int,
+    end_vid: int,
+    directed: bool = True,
 ) -> core.FunctionCall:
     """Calculate the shortest path using Dijkstra's algorithm.
 
@@ -102,19 +76,19 @@ def pgr_dijkstra(
     """
     return core.FunctionCall(
         dialect, "pgr_dijkstra",
-        _convert_to_expression(dialect, edges_sql),
-        _convert_to_expression(dialect, start_vid),
-        _convert_to_expression(dialect, end_vid),
-        _convert_to_expression(dialect, directed),
+        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Literal(dialect, edges_sql),
+        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Literal(dialect, start_vid),
+        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Literal(dialect, end_vid),
+        directed if isinstance(directed, bases.BaseExpression) else core.Literal(dialect, directed),
     )
 
 
 def pgr_astar(
     dialect: "SQLDialectBase",
-    edges_sql: Union[str, "bases.BaseExpression"],
-    start_vid: Union[int, "bases.BaseExpression"],
-    end_vid: Union[int, "bases.BaseExpression"],
-    directed: Union[bool, "bases.BaseExpression"] = True,
+    edges_sql: str,
+    start_vid: int,
+    end_vid: int,
+    directed: bool = True,
 ) -> core.FunctionCall:
     """Calculate the shortest path using A* algorithm.
 
@@ -153,10 +127,10 @@ def pgr_astar(
     """
     return core.FunctionCall(
         dialect, "pgr_astar",
-        _convert_to_expression(dialect, edges_sql),
-        _convert_to_expression(dialect, start_vid),
-        _convert_to_expression(dialect, end_vid),
-        _convert_to_expression(dialect, directed),
+        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Literal(dialect, edges_sql),
+        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Literal(dialect, start_vid),
+        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Literal(dialect, end_vid),
+        directed if isinstance(directed, bases.BaseExpression) else core.Literal(dialect, directed),
     )
 
 
