@@ -50,13 +50,41 @@ Each outcome is now named and asserted:
 
 * **renders** -- all three encodings must restore byte-identical SQL *and*
   byte-identical bind parameters.
-* ``UnsupportedFeatureError`` -- this dialect does not model the feature.
-  Asserted as exactly that type, so a different error cannot hide behind it.
+* ``UnsupportedFeatureError`` from a probe inside a formatter -- this dialect
+  does not model the feature. Asserted as exactly that type, so a different
+  error cannot hide behind it.
+* ``UnsupportedFeatureError`` from the dispatch -- the dialect declares no
+  ``format_*`` method for the class at all. The method it names must be a row
+  in :data:`UNMODELLED_FORMATTERS`, so the gap is a decision with a reason
+  rather than an omission; see the next section.
 * a member of :data:`LEGITIMATE_NON_RENDERS` -- a class that cannot render for a
   reason belonging to its own tree or to PostgreSQL's feature set. Each entry
   pins the exception type *and* a message fragment, so a class that started
   failing for a different reason fails here instead of staying quietly green.
 * **anything else** -- a failure naming the class and the exception.
+
+Why one ``UnsupportedFeatureError`` became two answers
+======================================================
+
+Core reports a missing formatter and a declined feature through the same
+exception type, and this matrix allowed both identically -- which let one of
+them hide. A class whose formatter this dialect never mixed in read as
+"PostgreSQL lacks the feature" and passed. Core turning ``trim``/``lpad``/
+``rpad``/``repeat`` into dedicated nodes made the hole load-bearing: a backend
+that shipped no ``format_lpad_expression`` answered every ``.lpad(...)`` with
+that refusal, and nothing here could tell it apart from a genuine "not on
+this engine".
+
+The two are told apart by *who* is refusing, and the exception itself records
+that: a probe inside a formatter names the feature it lacks, while the
+dispatch names the formatting method it could not find, framed
+``the '<method>' statement`` -- see :func:`_dispatched_formatter`. Only the
+second is a wiring fact about this backend, so only the second has to be
+accounted for: the method it names must be in
+:data:`UNMODELLED_FORMATTERS` with the reason the feature is absent, and
+:meth:`TestMatrixIntegrity.test_unmodelled_formatter_list_is_exact` pins that
+table in both directions. A method no class needs any more retires; a method
+nobody listed fails the run.
 
 Why some pins are themselves ``UnsupportedFeatureError``
 =========================================================
@@ -1130,6 +1158,77 @@ LEGITIMATE_NON_RENDERS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# The dispatch gap: a missing formatter is a decision, not an omission
+# ---------------------------------------------------------------------------
+#
+# ``to_sql()`` reports a dialect that names no formatter for a class through
+# the same ``UnsupportedFeatureError`` a capability probe uses, so the type
+# alone cannot say "this backend never wired the feature in". The frame the
+# dispatch puts around the method name can, and it is the only place in the
+# tree that opens it -- see :func:`_dispatched_formatter`.
+
+#: The two ends of the frame ``to_sql()`` puts around a formatting method name
+#: in the ``feature_name`` of the ``UnsupportedFeatureError`` it raises for a
+#: dialect that has no such formatter.
+_DISPATCH_FEATURE_PREFIX = "the '"
+_DISPATCH_FEATURE_SUFFIX = "' statement"
+
+
+def _dispatched_formatter(exc):
+    """The formatting method *exc* says the dialect does not have, or ``None``.
+
+    ``None`` means *exc* is not the dispatch reporting a missing formatter --
+    it is a probe inside a formatter that refused a feature, which is the
+    ``"unsupported"`` branch and needs no row anywhere.
+
+    Args:
+        exc: An :class:`UnsupportedFeatureError` raised out of ``to_sql()``.
+
+    Returns:
+        The method name out of the ``feature_name`` frame, or ``None`` when
+        *exc* came from a probe rather than from the dispatch.
+    """
+    feature = exc.feature_name
+    if not feature.startswith(_DISPATCH_FEATURE_PREFIX):
+        return None
+    if not feature.endswith(_DISPATCH_FEATURE_SUFFIX):
+        return None
+    method = feature[len(_DISPATCH_FEATURE_PREFIX) : len(feature) - len(_DISPATCH_FEATURE_SUFFIX)]
+    return method if method else None
+
+
+#: Formatters PostgreSQL declares no implementation of, grouped by the feature
+#: that is absent, each group naming every method the matrix's classes need.
+#:
+#: A class needing one of these fails with ``UnsupportedFeatureError`` naming
+#: the method it wanted, and :func:`assert_sql_roundtrip_classified` asserts
+#: that method is a row here. :meth:`TestMatrixIntegrity.\
+#: test_unmodelled_formatter_list_is_exact` pins the table in both directions:
+#: a formatter that starts existing moves its classes out of the table and the
+#: pin fails until the entry goes, and a class that starts needing a method
+#: outside the table fails outright instead of passing as "unsupported".
+#:
+#: These are not defects: they are features PostgreSQL does not have, which
+#: the shared renderer reports by naming the method it could not find. The
+#: grouping is the point -- "N methods" says nothing, "no PIVOT keyword, and
+#: the row-source root is never rendered" says what the dialect is.
+UNMODELLED_FORMATTERS = {
+    "SQL:2003 PIVOT / UNPIVOT (PostgreSQL has no PIVOT keyword; pivoting is "
+    "spelled as CASE + GROUP BY, or crosstab from the tablefunc extension)": (
+        "format_pivot_expression",
+        "format_unpivot_expression",
+    ),
+    "the TableSource root (every concrete row source overrides its formatter; "
+    "the root carries nothing but an alias and is never rendered)": ("format_table_source",),
+}
+
+
+def _unmodelled_methods():
+    """The flat set of formatter names in :data:`UNMODELLED_FORMATTERS`."""
+    return {method for methods in UNMODELLED_FORMATTERS.values() for method in methods}
+
+
 def _channels_that_lose_params(fqn, instance, dialect):
     """The encodings whose round-trip does not restore ``get_params()``.
 
@@ -1169,6 +1268,10 @@ def assert_sql_roundtrip_classified(fqn, instance, dialect):
       before :data:`LEGITIMATE_NON_RENDERS`, so a class pinned with that same
       type is classified here and its fragment is enforced by
       ``test_pinned_non_render_really_does_not_render`` instead.
+    * ``UnsupportedFeatureError`` naming a formatting method -- the dispatch
+      found nothing, which is a wiring fact about PostgreSQL rather than a
+      capability answer. The method must be in
+      :data:`UNMODELLED_FORMATTERS`; the table entry is the reason.
     * a member of :data:`LEGITIMATE_NON_RENDERS` -- unrenderable by design,
       asserted as its exact type *and* message fragment.
     * **anything else** -- a failure naming the class and the exception.
@@ -1183,6 +1286,17 @@ def assert_sql_roundtrip_classified(fqn, instance, dialect):
         expected_sql, expected_params = instance.to_sql()
     except UnsupportedFeatureError as exc:
         assert type(exc) is UnsupportedFeatureError, fqn
+        method = _dispatched_formatter(exc)
+        if method is not None:
+            assert method in _unmodelled_methods(), (
+                f"{fqn}: to_sql() reported that {exc.dialect_name} declares no "
+                f"{method!r}, which is not in UNMODELLED_FORMATTERS.\n"
+                f"  Either PostgreSQL now needs that formatter -- in which case "
+                f"the class should render and this entry should go -- or the "
+                f"feature is absent and the method belongs in that table with "
+                f"its reason."
+            )
+            return "unmodelled"
         return "unsupported"
     except Exception as exc:
         if fqn not in LEGITIMATE_NON_RENDERS:
@@ -1335,6 +1449,60 @@ class TestMatrixIntegrity:
                 f"{exc_info.value}"
             )
 
+    def test_unmodelled_formatter_list_is_exact(self, postgres_dialect):
+        """Pin the unmodelled-formatter table against what the dialect lacks.
+
+        Observed rather than assumed: for each class the matrix covers, either
+        it renders or it fails, and every dispatch refusal is attributed to the
+        method it named. Then the table is compared with the set observed, in
+        both directions, so:
+
+        * a method in the table that PostgreSQL now implements fails here,
+          because its classes render and are no longer attributed to it --
+          which is the moment to delete the entry rather than leave a lie in
+          the table;
+        * a class that starts needing a method outside the table fails the
+          per-class assertion in :func:`assert_sql_roundtrip_classified`
+          instead of being absorbed into "unsupported".
+
+        This is the regression test for the pad/trim incident. Core turned
+        ``trim``/``lpad``/``rpad``/``repeat`` into dedicated nodes, and a
+        backend that mixed in no formatter for one of them would have shipped
+        a silent ``UnsupportedFeatureError`` on every ``.lpad(...)`` while this
+        matrix stayed green, because the blanket ``unsupported`` branch
+        allowed the dispatch's refusal exactly as it allows a probe's. The
+        dispatch names the method it wanted; this test makes that name
+        load-bearing on both sides of the table.
+        """
+        observed = set()
+        for fqn in sorted(REGISTERED):
+            instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
+            if instance is None:
+                continue
+            try:
+                instance.to_sql()
+            except UnsupportedFeatureError as exc:
+                method = _dispatched_formatter(exc)
+                if method is not None:
+                    observed.add(method)
+                continue
+            except Exception:
+                continue
+
+        declared = _unmodelled_methods()
+        assert not (observed - declared), (
+            "classes need formatters that are not in UNMODELLED_FORMATTERS: "
+            f"{sorted(observed - declared)}. Add each with the feature that is "
+            f"absent and why -- or mix the formatter in, in which case the "
+            f"classes render and the entry is not needed."
+        )
+        assert not (declared - observed), (
+            "UNMODELLED_FORMATTERS names formatters no class actually needs: "
+            f"{sorted(declared - observed)}. PostgreSQL may have gained one of "
+            f"these, in which case the classes needing it now render and the "
+            f"entry should go."
+        )
+
     def test_matrix_covers_both_packages_completely(self):
         """The matrix covers every concrete class both packages define.
 
@@ -1389,16 +1557,24 @@ class TestMatrixIntegrity:
     def test_coverage_report(self, postgres_dialect):
         """Surface what the matrix covers, so coverage stays transparent."""
         ExpressionRegistry._auto_register_builtins()
-        constructible = [
-            fqn
-            for fqn in REGISTERED
-            if make_instance(REGISTERED[fqn], postgres_dialect)[0] is not None
-        ]
+        census: Dict[str, int] = {}
+        constructible = []
+        for fqn in sorted(REGISTERED):
+            instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
+            if instance is None:
+                census["pinned-unconstructible"] = census.get("pinned-unconstructible", 0) + 1
+                continue
+            constructible.append(fqn)
+            branch = assert_sql_roundtrip_classified(fqn, instance, postgres_dialect)
+            census[branch] = census.get(branch, 0) + 1
         assert constructible
+        summary = ", ".join(f"{count} {name}" for name, count in sorted(census.items()))
         print(
             f"\nexpression matrix: {len(constructible)} constructible, "
             f"{len(UNCONSTRUCTIBLE)} pinned-unconstructible, "
-            f"{len(REGISTERED)} registered"
+            f"{len(REGISTERED)} registered; {summary}"
         )
         for fqn in UNCONSTRUCTIBLE:
             print(f"  not constructible: {fqn}")
+        for feature, methods in sorted(UNMODELLED_FORMATTERS.items()):
+            print(f"  not modelled: {feature} ({len(methods)} formatters)")
