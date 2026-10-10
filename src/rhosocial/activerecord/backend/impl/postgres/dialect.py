@@ -61,6 +61,15 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ILIKEMixin,
     ConstraintMixin,
     PartitionMixin,
+    # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
+    # spells all four natively -- ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
+    # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)`` -- so
+    # the shared defaults are the answer here and no override is needed.
+    LpadMixin,
+    RepeatMixin,
+    RpadMixin,
+    TrimMixin,
+
     # New Mixins
     PredicateMixin,
     ExpressionMixin,
@@ -420,6 +429,15 @@ class PostgresDialect(
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
+    # spells all four natively: ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
+    # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)``
+    # (functions-string.html; ``TRIM(BOTH 'xy' FROM 'xyxab')`` live-verified
+    # 2026-10-09 as the set form). No override is needed for any of them.
+    LpadMixin,
+    RepeatMixin,
+    RpadMixin,
+    TrimMixin,
     SQLXMLMixin,
     CollationMixin,
     SetOperationMixin,
