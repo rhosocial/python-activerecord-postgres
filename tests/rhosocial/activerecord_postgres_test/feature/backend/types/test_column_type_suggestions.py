@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
     BinaryColumn,
     BooleanColumn,
     ColumnBase,
-    DateTimeColumn,
+    TimestampColumn,
     IntegerColumn,
     JSONColumn,
     NumericColumn,
@@ -141,9 +141,9 @@ def test_resolution_is_the_baseline_for_the_scalar_and_value_families(dialect):
     assert resolve(dialect, bytearray) is BinaryColumn
     assert resolve(dialect, uuid.UUID) is UUIDColumn
     assert resolve(dialect, dict) is JSONColumn
-    assert resolve(dialect, datetime.date) is DateTimeColumn
-    assert resolve(dialect, datetime.time) is DateTimeColumn
-    assert resolve(dialect, datetime.datetime) is DateTimeColumn
+    assert resolve(dialect, datetime.date) is TimestampColumn
+    assert resolve(dialect, datetime.time) is TimestampColumn
+    assert resolve(dialect, datetime.datetime) is TimestampColumn
     assert resolve(dialect, enum.Enum) is StringColumn
 
 
@@ -318,7 +318,7 @@ def test_the_operation_names_the_contract_uses_are_real_attributes(dialect):
         "StringColumn": ("like", "ilike"),
         "JSONColumn": ("json_path", "json_value"),
         "ArrayColumn": ("array_length", "unnest"),
-        "DateTimeColumn": ("date_trunc", "extract"),
+        "TimestampColumn": ("date_trunc", "extract"),
         "BooleanColumn": ("is_true", "is_false"),
         "NumericColumn": ("__add__", "__mul__"),
     }

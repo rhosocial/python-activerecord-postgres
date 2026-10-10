@@ -57,7 +57,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
     BinaryColumn,
     BooleanColumn,
     ColumnBase,
-    DateTimeColumn,
+    TimestampColumn,
     IntegerColumn,
     JSONColumn,
     NumericColumn,
@@ -97,9 +97,9 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     # lands on the same class and is where this backend is strongest:
     # `AT TIME ZONE` is native and named zones work (only the *read-back*
     # follows the session time zone -- §8.1 `datetime tz` row).
-    datetime.date: DateTimeColumn,
-    datetime.time: DateTimeColumn,
-    datetime.datetime: DateTimeColumn,
+    datetime.date: TimestampColumn,
+    datetime.time: TimestampColumn,
+    datetime.datetime: TimestampColumn,
     # THE ONE DELIBERATE `None`. PostgreSQL has a real `interval` type -- §1
     # spells it `INTERVAL` where eight backends have no answer at all -- and no
     # core column class answers for it (`IntervalColumn` is a core gap,
