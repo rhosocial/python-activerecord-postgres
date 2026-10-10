@@ -35,7 +35,8 @@ from rhosocial.activerecord.backend.expression.types import (
     DecimalType,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate
+from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate, ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
@@ -150,7 +151,10 @@ class TestSocialNetworkTraversal:
                 Literal(dialect, 0).as_("depth"),
             ],
             from_=Table(dialect, "users"),
-            where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, "=", Column(dialect, "name"), Literal(dialect, "Alice")),
+            ),
         )
 
         recursive_join = JoinClause(
@@ -158,10 +162,14 @@ class TestSocialNetworkTraversal:
             left_table=NamedRelationRef(dialect, Table(dialect, "traversal"), alias="t"),
             right_table=NamedRelationRef(dialect, Table(dialect, "follows"), alias="f"),
             join_type="INNER JOIN",
-            condition=Column(dialect, "id", table="t") == Column(dialect, "follower_id", table="f"),
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "id", table="t"), Column(dialect, "follower_id", table="f")
+            ),
         ).inner_join(
             right_table=NamedRelationRef(dialect, Table(dialect, "users"), alias="u"),
-            condition=Column(dialect, "followed_id", table="f") == Column(dialect, "id", table="u"),
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "followed_id", table="f"), Column(dialect, "id", table="u")
+            ),
         )
 
         recursive = QueryExpression(
@@ -169,10 +177,15 @@ class TestSocialNetworkTraversal:
             select=[
                 Column(dialect, "id", table="u"),
                 Column(dialect, "name", table="u"),
-                (Column(dialect, "depth", table="t") + Literal(dialect, 1)).as_("depth"),
+                BinaryArithmeticExpression(
+                    dialect, "+", Column(dialect, "depth", table="t"), Literal(dialect, 1)
+                ).as_("depth"),
             ],
             from_=recursive_join,
-            where=WhereClause(dialect, condition=Column(dialect, "depth", table="t") < Literal(dialect, 4)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, "<", Column(dialect, "depth", table="t"), Literal(dialect, 4)),
+            ),
         )
 
         union = SetOperationExpression(
@@ -237,7 +250,10 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "depth"),
             ],
             from_=Table(dialect, "traversal"),
-            where=WhereClause(dialect, condition=Column(dialect, "depth") == Literal(dialect, 2)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, "=", Column(dialect, "depth"), Literal(dialect, 2)),
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "name")]),
         )
 
@@ -267,7 +283,10 @@ class TestSocialNetworkTraversal:
                 Column(dialect, "depth"),
             ],
             from_=Table(dialect, "traversal"),
-            where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 1)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, ">=", Column(dialect, "depth"), Literal(dialect, 1)),
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "name")]),
         )
 
@@ -295,7 +314,9 @@ class TestAMLFundTracing:
             left_table=NamedRelationRef(dialect, Table(dialect, "transactions"), alias="tx"),
             right_table=NamedRelationRef(dialect, Table(dialect, "accounts"), alias="a"),
             join_type="INNER JOIN",
-            condition=Column(dialect, "source_account_id", table="tx") == Column(dialect, "id", table="a"),
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "source_account_id", table="tx"), Column(dialect, "id", table="a")
+            ),
         )
 
         base = QueryExpression(
@@ -310,8 +331,9 @@ class TestAMLFundTracing:
             from_=base_join,
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "target_account_id", table="tx")
-                          == Literal(dialect, 1),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "target_account_id", table="tx"), Literal(dialect, 1)
+                ),
             ),
         )
 
@@ -320,10 +342,14 @@ class TestAMLFundTracing:
             left_table=NamedRelationRef(dialect, Table(dialect, "fund_trace"), alias="tr"),
             right_table=NamedRelationRef(dialect, Table(dialect, "transactions"), alias="tx"),
             join_type="INNER JOIN",
-            condition=Column(dialect, "target_account_id", table="tx") == Column(dialect, "id", table="tr"),
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "target_account_id", table="tx"), Column(dialect, "id", table="tr")
+            ),
         ).inner_join(
             right_table=NamedRelationRef(dialect, Table(dialect, "accounts"), alias="a"),
-            condition=Column(dialect, "source_account_id", table="tx") == Column(dialect, "id", table="a"),
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "source_account_id", table="tx"), Column(dialect, "id", table="a")
+            ),
         )
 
         recursive = QueryExpression(
@@ -333,10 +359,15 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder", table="a"),
                 Column(dialect, "account_type", table="a"),
                 Column(dialect, "amount", table="tx"),
-                (Column(dialect, "depth", table="tr") + Literal(dialect, 1)).as_("depth"),
+                BinaryArithmeticExpression(
+                    dialect, "+", Column(dialect, "depth", table="tr"), Literal(dialect, 1)
+                ).as_("depth"),
             ],
             from_=recursive_join,
-            where=WhereClause(dialect, condition=Column(dialect, "depth", table="tr") < Literal(dialect, 5)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, "<", Column(dialect, "depth", table="tr"), Literal(dialect, 5)),
+            ),
         )
 
         union = SetOperationExpression(
@@ -366,7 +397,10 @@ class TestAMLFundTracing:
                 Column(dialect, "depth"),
             ],
             from_=Table(dialect, "fund_trace"),
-            where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 1)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, ">=", Column(dialect, "depth"), Literal(dialect, 1)),
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "id")]),
         )
 
@@ -400,7 +434,10 @@ class TestAMLFundTracing:
                 Column(dialect, "depth"),
             ],
             from_=Table(dialect, "fund_trace"),
-            where=WhereClause(dialect, condition=Column(dialect, "depth") >= Literal(dialect, 2)),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, ">=", Column(dialect, "depth"), Literal(dialect, 2)),
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "depth"), Column(dialect, "id")]),
         )
 
@@ -502,7 +539,10 @@ class TestAsyncRecursiveCTEGraph:
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Literal(dialect, 0).as_("depth")],
             from_=Table(dialect, "users"),
-            where=WhereClause(dialect, condition=Column(dialect, "name") == Literal(dialect, "Alice")),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(dialect, "=", Column(dialect, "name"), Literal(dialect, "Alice")),
+            ),
         )
         result = base.to_sql()
         sql, params = result

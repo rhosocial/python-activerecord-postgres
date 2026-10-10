@@ -14,6 +14,7 @@ import pytest_asyncio
 from rhosocial.activerecord.backend.errors import IntegrityError
 from rhosocial.activerecord.backend.expression import (
     Column,
+    ComparisonPredicate,
     CreateIndexExpression,
     DeleteExpression,
     FunctionCall,
@@ -136,8 +137,16 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
     return DeleteExpression(
         dialect=dialect,
         tables=Table(dialect, 'ar_partition_events'),
-        where=(Column(dialect, "created_at") >= Literal(dialect, start))
-        & (Column(dialect, "created_at") < Literal(dialect, end)),
+        where=LogicalPredicate(
+            dialect,
+            "AND",
+            ComparisonPredicate(
+                dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)
+            ),
+            ComparisonPredicate(
+                dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)
+            ),
+        ),
     )
 
 
@@ -324,14 +333,19 @@ def _insert_production_events_expression(dialect, rows):
 
 
 def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Optional[int] = None):
-    predicate = (Column(dialect, "created_at") >= Literal(dialect, start)) & (
-        Column(dialect, "created_at") < Literal(dialect, end)
+    predicate = LogicalPredicate(
+        dialect,
+        "AND",
+        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
+        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
     )
     if tenant_id is not None:
         predicate = LogicalPredicate(
             dialect,
             "AND",
-            Column(dialect, "tenant_id") == Literal(dialect, tenant_id),
+            ComparisonPredicate(
+                dialect, "=", Column(dialect, "tenant_id"), Literal(dialect, tenant_id)
+            ),
             predicate,
         )
     return QueryExpression(
@@ -351,9 +365,19 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
         where=LogicalPredicate(
             dialect,
             "AND",
-            Column(dialect, "tenant_id") == Literal(dialect, tenant_id),
-            (Column(dialect, "created_at") >= Literal(dialect, start))
-            & (Column(dialect, "created_at") < Literal(dialect, end)),
+            ComparisonPredicate(
+                dialect, "=", Column(dialect, "tenant_id"), Literal(dialect, tenant_id)
+            ),
+            LogicalPredicate(
+                dialect,
+                "AND",
+                ComparisonPredicate(
+                    dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)
+                ),
+                ComparisonPredicate(
+                    dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)
+                ),
+            ),
         ),
     )
 

@@ -216,8 +216,9 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_with_condition(self):
         """Test CREATE TRIGGER with WHEN condition expression."""
         from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         dialect = PostgresDialect((14, 0, 0))
-        condition = Column(dialect, "status") == Literal(dialect, "ACTIVE")
+        condition = ComparisonPredicate(dialect, "=", Column(dialect, "status"), Literal(dialect, "ACTIVE"))
         expr = CreateTriggerExpression(
             dialect,
             trigger=Trigger(dialect, 'check_status'),

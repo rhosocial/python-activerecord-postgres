@@ -205,8 +205,11 @@ def test_exclude_constraint_rejects_empty_elements(dialect):
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
     from rhosocial.activerecord.backend.expression import Column, Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-    where = Column(dialect, "active") == Literal(dialect, True, inline_literals=True)
+    where = ComparisonPredicate(
+        dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+    )
     constraint = PostgresExcludeConstraint(
         dialect,
         elements=[("range", "&&")],

@@ -86,12 +86,13 @@ print("Index created: idx_category_price")
 from rhosocial.activerecord.backend.expression import QueryExpression
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Column, Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 verify_expr = QueryExpression(
     dialect=dialect,
     select=[Column(dialect, 'indexname')],
     from_=Table(dialect, 'pg_indexes'),
-    where=Column(dialect, 'indexname') == Literal(dialect, 'idx_category_price'),
+    where=ComparisonPredicate(dialect, "=", Column(dialect, 'indexname'), Literal(dialect, 'idx_category_price')),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)
 verify_result = backend.execute(*verify_expr.to_sql(), options=options)

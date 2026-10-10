@@ -321,7 +321,7 @@ class TestCubeIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_cube_idx"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_cube_idx")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -594,7 +594,9 @@ class TestAsyncCubeIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_cube_idx_async"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_cube_idx_async")
+            ),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.expression import (
     OnConflictClause,
     ValuesSource,
 )
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.objects import Table
 
@@ -97,7 +98,9 @@ class TestPostgresOnConflictRendering:
             dialect,
             conflict_target=["id"],
             update_assignments={"qty": Column(dialect, "qty", "EXCLUDED")},
-            update_where=Column(dialect, "qty", "users") > Column(dialect, "qty", "EXCLUDED"),
+            update_where=ComparisonPredicate(
+                dialect, ">", Column(dialect, "qty", "users"), Column(dialect, "qty", "EXCLUDED")
+            ),
         )
         expr = InsertExpression(
             dialect, into=Table(dialect, 'users'), columns=["id", "qty"], source=source, on_conflict=clause

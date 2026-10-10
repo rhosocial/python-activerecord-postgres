@@ -38,6 +38,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -133,7 +134,7 @@ class TestBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -164,7 +165,7 @@ class TestBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -289,7 +290,9 @@ class TestAsyncBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin_async"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin_async")
+            ),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -321,7 +324,9 @@ class TestAsyncBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gin_async"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin_async")
+            ),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

@@ -34,6 +34,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -411,7 +412,7 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 table=Table(dialect, "test_vector_update"),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast(PostgresVectorType(dialect))},
-                where=Column(dialect, "id") == Literal(dialect, 1),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
             )
             sql, params = update_expr.to_sql()
             backend.execute(sql, params)
@@ -422,7 +423,7 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
                 from_=Table(dialect, "test_vector_update"),
-                where=Column(dialect, "id") == Literal(dialect, 1),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -478,7 +479,9 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_vector_ivfflat"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_ivfflat")
+                ),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -539,7 +542,9 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_vector_hnsw"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_hnsw")
+                ),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -913,7 +918,7 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 table=Table(dialect, "test_vector_update_async"),
                 assignments={"embedding": Literal(dialect, "[4.0, 5.0, 6.0]").cast(PostgresVectorType(dialect))},
-                where=Column(dialect, "id") == Literal(dialect, 1),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
             )
             sql, params = update_expr.to_sql()
             await backend.execute(sql, params)
@@ -923,7 +928,7 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
                 from_=Table(dialect, "test_vector_update_async"),
-                where=Column(dialect, "id") == Literal(dialect, 1),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)
@@ -977,7 +982,9 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_vector_ivfflat_async"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_ivfflat_async")
+                ),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)
@@ -1035,7 +1042,9 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_vector_hnsw_async"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_hnsw_async")
+                ),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)

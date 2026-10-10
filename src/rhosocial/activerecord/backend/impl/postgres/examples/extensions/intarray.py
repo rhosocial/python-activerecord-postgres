@@ -56,6 +56,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
 )
@@ -218,7 +219,7 @@ if installed:
             unique_sorted_func,
         ],
         from_=Table(dialect, "tags"),
-        where=Column(dialect, "id") == Literal(dialect, 4),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 4)),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)

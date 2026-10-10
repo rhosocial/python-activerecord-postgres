@@ -32,6 +32,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause, OrderByClause, GroupByHavingClause, LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, TextType,
@@ -206,7 +207,9 @@ class TestSocialGraph:
             NodeTable(dialect, 'person'),
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                ),
             ),
         )
         f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
@@ -234,7 +237,9 @@ class TestSocialGraph:
             NodeTable(dialect, 'person'),
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                ),
             ),
         )
         f1 = GraphEdge(dialect, "f1", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
@@ -248,7 +253,12 @@ class TestSocialGraph:
         query = QueryExpression(dialect,
             select=[Column(dialect, "c_name")],
             from_=gt,
-            where=WhereClause(dialect, condition=Column(dialect, "c_name") != Literal(dialect, "Alice")),
+            where=WhereClause(
+                dialect,
+                condition=ComparisonPredicate(
+                    dialect, "!=", Column(dialect, "c_name"), Literal(dialect, "Alice")
+                ),
+            ),
             order_by=OrderByClause(dialect, [Column(dialect, "c_name")]))
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
@@ -264,7 +274,9 @@ class TestSocialGraph:
             NodeTable(dialect, 'person'),
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                ),
             ),
         )
         p = GraphEdge(dialect, "p", EdgeTable(dialect, EdgeTableObject(dialect, 'authored')), GraphEdgeDirection.RIGHT)
@@ -333,7 +345,9 @@ class TestCommerceGraph:
             left_table=gt,
             right_table=NamedRelationRef(dialect, Table(dialect, "people"), alias="p"),
             join_type="INNER JOIN",
-            condition=Column(dialect, "follower", "g") == Column(dialect, "name", "p"))
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "follower", "g"), Column(dialect, "name", "p")
+            ))
 
         query = QueryExpression(dialect,
             select=[WildcardExpression(dialect)],
@@ -354,7 +368,9 @@ class TestCommerceGraph:
             NodeTable(dialect, 'person'),
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                ),
             ),
         )
         f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
@@ -441,7 +457,9 @@ class TestAsyncSocialGraph:
             NodeTable(dialect, 'person'),
             where=WhereClause(
                 dialect,
-                condition=Column(dialect, "name", table="a") == Literal(dialect, "Alice"),
+                condition=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                ),
             ),
         )
         f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
