@@ -160,6 +160,13 @@ def get_postgres_protocols():
         dialect_protocols.AutoIncrementColumnSupport,
         dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,
+        # The column-type table: `PostgresColumnTypeMixin` answers
+        # `suggested_column_types()` for all eighteen common Python types and
+        # `suggested_extra_column_types()` with nothing of its own, and the
+        # dialect composes the mixin. The table is the model layer's source for
+        # which column class a field's annotation resolves to, so PostgreSQL
+        # declares it rather than leaving it for another dialect to answer.
+        dialect_protocols.ColumnTypeSupport,
         # Statement forms PostgreSQL implements through its mixins, so the
         # partition test below can classify them rather than leaving them
         # unclassified.

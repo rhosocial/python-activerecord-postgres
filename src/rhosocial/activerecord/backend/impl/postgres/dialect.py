@@ -160,7 +160,7 @@ from .mixins import (
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
-    PostgresColumnSuggestionMixin,
+    PostgresColumnTypeMixin,
     # Per-feature mixins
     PostgresCTEMixin,
     PostgresWindowMixin,
@@ -485,12 +485,12 @@ class PostgresDialect(
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
-    # Column-type suggestions. After the DataType mixin above because that is the
+    # Column types. After the DataType mixin above because that is the
     # sibling decision -- this one says which operations a value carries, the
     # other says how it is spelled. Nothing else in the list can answer for a
     # common Python type, so the MRO leaves the placement free; putting the two
     # side by side is what makes the separation legible to the next reader.
-    PostgresColumnSuggestionMixin,
+    PostgresColumnTypeMixin,
     # Extension feature mixins
     PostgresLtreeMixin,
     PostgresIntarrayMixin,

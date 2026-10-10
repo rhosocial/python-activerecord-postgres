@@ -172,9 +172,10 @@ class NetworkValueExpression(
     and can be masked or merged -- the chain does not stop at the first call.
 
     No family is declared, and that is deliberate rather than missing.
-    ``value_type_of`` reports a family the core lattice knows, and an inet
-    address is not one of them, so declaring "network" here would be a claim
-    nothing reports. The range, hstore and ltree expressions below take the same
+    The core's type casting re-types by class -- ``as_text``, ``as_number``
+    and friends -- and an inet address is not among the classes it names,
+    so declaring "network" here would be a claim nothing reports. The range,
+    hstore and ltree expressions below take the same
     view. What identifies an address is its class and the operations on it, not
     a tag the core would drop.
     """
