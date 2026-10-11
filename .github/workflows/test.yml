@@ -219,20 +219,17 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  test-experimental-python-315:
-    # Temporarily disabled until Python 3.15 toolchain compatibility stabilizes.
-    if: ${{ false }}
-    name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }} (experimental)
+  test-python-315:
+    name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: true }
+          - { python-version: '3.15', postgres-version: '18', freethreaded: false }
+          - { python-version: '3.15', postgres-version: '18', freethreaded: true }
 
     services:
       postgres:
