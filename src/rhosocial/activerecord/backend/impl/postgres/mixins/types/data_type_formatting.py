@@ -32,6 +32,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeTzType,
     TimestampType,
     TimestampTzType,
+    UUIDType,
     TinyIntType,
     VarCharType,
     XmlType,
@@ -63,10 +64,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         the CREATE TYPE ... AS ENUM is a separate DDL operation.
         """
         return data_type.name, ()
-
-    def format_data_type_postgres_bytea(self, data_type) -> Tuple[str, tuple]:
-        return "BYTEA", ()
-
     def format_data_type_postgres_smallserial(self, data_type) -> Tuple[str, tuple]:
         return "SMALLSERIAL", ()
 
@@ -75,13 +72,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def format_data_type_postgres_bigserial(self, data_type) -> Tuple[str, tuple]:
         return "BIGSERIAL", ()
-
-    def format_data_type_postgres_uuid(self, data_type) -> Tuple[str, tuple]:
-        return "UUID", ()
-
-    def format_data_type_postgres_xml(self, data_type) -> Tuple[str, tuple]:
-        return "XML", ()
-
     def format_data_type_postgres_tsvector(self, data_type) -> Tuple[str, tuple]:
         return "TSVECTOR", ()
 
@@ -685,10 +675,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def supports_data_type_postgres_enum(self) -> bool:
         return True
-
-    def supports_data_type_postgres_bytea(self) -> bool:
-        return True
-
     def supports_data_type_postgres_smallserial(self) -> bool:
         return True
 
@@ -697,13 +683,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def supports_data_type_postgres_bigserial(self) -> bool:
         return True
-
-    def supports_data_type_postgres_uuid(self) -> bool:
-        return True
-
-    def supports_data_type_postgres_xml(self) -> bool:
-        return True
-
     def supports_data_type_postgres_tsvector(self) -> bool:
         return True
 
@@ -1033,9 +1012,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         The type may be validated against an XML Schema registered for it, but
         the schema is a column/domain attribute rather than part of the type's
-        identity, so it does not appear here. ``PostgresXMLType`` renders the
-        same SQL under its own namespaced name — both are the XML concept, one
-        reached through the core type and one through the backend's.
+        identity, so it does not appear here.
         """
         return "XML", ()
 
@@ -1221,8 +1198,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Binary
         if self._PG_BINARY_TYPES.match(upper):
-            from ...expression.types import PostgresByteaType
-            return PostgresByteaType(self)
+            return BlobType(dialect=self)
 
         # Date/time
         if self._PG_DATE_TYPES.match(upper):
@@ -1258,8 +1234,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # UUID
         if self._PG_UUID_TYPES.match(upper):
-            from ...expression.types import PostgresUUIDType
-            return PostgresUUIDType(dialect=self)
+            return UUIDType(dialect=self)
 
         # Boolean
         if upper.startswith("BOOLEAN") or upper.startswith("BOOL"):
@@ -1411,12 +1386,11 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresHstoreType,
                 PostgresMoneyType,
                 PostgresPgLSNType,
-                PostgresXMLType,
             )
             if upper.startswith("MONEY"):
                 return PostgresMoneyType(self)
             if upper.startswith("XML"):
-                return PostgresXMLType(self)
+                return XmlType(dialect=self)
             if upper.startswith("PG_LSN"):
                 return PostgresPgLSNType(self)
             if upper.startswith("HSTORE"):

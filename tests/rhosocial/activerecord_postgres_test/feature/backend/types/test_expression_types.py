@@ -25,17 +25,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
     PostgresBigSerialType,
     PostgresBitType,
-    PostgresByteaType,
     PostgresCitextType,
     PostgresHalfvecType,
     PostgresMoneyType,
     PostgresSerialType,
     PostgresSmallSerialType,
     PostgresSparsevecType,
-    PostgresUUIDType,
     PostgresVarBitType,
     PostgresVectorType,
-    PostgresXMLType,
 )
 
 
@@ -50,9 +47,9 @@ class TestPostgresTypesAreAnchoredToCoreConcepts:
         (PostgresSmallSerialType, SmallIntType),
         (PostgresSerialType, IntegerType),
         (PostgresBigSerialType, BigIntType),
-        (PostgresByteaType, BlobType),
-        (PostgresUUIDType, UUIDType),
-        (PostgresXMLType, XmlType),
+        (BlobType, BlobType),
+        (UUIDType, UUIDType),
+        (XmlType, XmlType),
         (PostgresCitextType, TextType),
         (PostgresArrayType, ArrayType),
     ])

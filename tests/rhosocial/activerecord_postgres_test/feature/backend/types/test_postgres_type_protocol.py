@@ -29,11 +29,11 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeType,
     TimestampType,
     VarCharType,
+    UUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBitType,
-    PostgresByteaType,
     PostgresHalfvecType,
     PostgresInetType,
     PostgresJsonPathType,
@@ -41,7 +41,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
     PostgresSparsevecType,
     PostgresTsRangeType,
-    PostgresUUIDType,
     PostgresVarBitType,
     PostgresVectorType,
 )
@@ -155,9 +154,7 @@ def test_supports_data_types_includes_postgres_types(dialect):
 
     # Verify a representative sample of postgres-specific types
     postgres_expected = {
-        "postgres_bytea": PostgresByteaType,
         "postgres_serial": PostgresSerialType,
-        "postgres_uuid": PostgresUUIDType,
         "postgres_vector": PostgresVectorType,
         "postgres_tsrange": PostgresTsRangeType,
         "postgres_inet": PostgresInetType,
@@ -657,16 +654,17 @@ class TestParseRoundTripSweep:
     #: formatter names; bare ``FLOAT`` renders ``REAL``, which is the
     #: RealType concept; the ``datetime`` concept renders ``TIMESTAMP``,
     #: which is the storage both it and the timestamp concept share; and
-    #: the bytea/uuid/xml/array renderings are the backend's own classes
-    #: for those storages.
+    #: the array rendering is the backend's own class for that storage.
+    #: ``BlobType``/``UUIDType``/``XmlType`` are absent because they no longer
+    #: need an answer: each had a second class rendering the identical SQL,
+    #: which parse_type returned instead of the concept -- so a declaration and
+    #: the catalog row it produced compared unequal. With one class each they
+    #: come back to themselves.
     WIDENING_ANSWERS = {
         "ArrayType": "PostgresArrayType",
-        "BlobType": "PostgresByteaType",
         "DateTimeType": "TimestampType",
         "TinyIntType": "SmallIntType",
         "FloatType": "RealType",
-        "UUIDType": "PostgresUUIDType",
-        "XmlType": "PostgresXMLType",
     }
 
     @pytest.fixture(scope="class")

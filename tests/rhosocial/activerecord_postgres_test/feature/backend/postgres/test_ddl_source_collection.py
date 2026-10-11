@@ -22,11 +22,11 @@ from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.types import UUIDType
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresColumnOptions,
     PostgresColumnStorage,
     PostgresPartitionClause,
-    PostgresUUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateTableOptions,
@@ -50,7 +50,7 @@ from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 
 
 DIALECT = PostgresDialect((16, 2, 0))
-SQL_TYPE = PostgresUUIDType()
+SQL_TYPE = UUIDType()
 FALLBACK_SQL_TYPE = TextType()
 SQL_TYPE_MARKER = UseSqlType(SQL_TYPE, FALLBACK_SQL_TYPE)
 DEFAULT_VALUE = Literal(DIALECT, "new", inline_literals=True)
@@ -230,7 +230,7 @@ class AsyncDDLSource(DDLDeclarations, AsyncActiveRecord):
     pass
 
 
-SINGLE_SQL_TYPE = PostgresUUIDType()
+SINGLE_SQL_TYPE = UUIDType()
 SINGLE_SQL_TYPE_MARKER = UseSqlType(SINGLE_SQL_TYPE)
 
 
@@ -310,7 +310,7 @@ def test_field_markers_preserve_declared_objects_and_order():
 def test_backend_types_and_column_options_are_collected_without_dialect_selection():
     sql_type = SyncDDLSource.column_data_type("tenant_id")
     assert isinstance(sql_type, UseSqlType)
-    assert isinstance(sql_type.data_type, PostgresUUIDType)
+    assert isinstance(sql_type.data_type, UUIDType)
     assert sql_type.data_types[1] is FALLBACK_SQL_TYPE
 
     option = SyncDDLSource.column_options("option_one")

@@ -37,12 +37,12 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeTzType,
     TimestampTzType,
     VarCharType,
+    BlobType,
+    UUIDType,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresSerialType,
-    PostgresUUIDType,
-    PostgresByteaType,
 )
 
 _CASCADE = ReferentialAction.CASCADE
@@ -87,7 +87,7 @@ def create_type_cases_table(dialect, table_name: str = "type_cases") -> CreateTa
         table=Table(dialect, table_name),
         if_not_exists=False,
         columns=[
-            ColumnDefinition(dialect, "id", PostgresUUIDType(dialect=dialect),
+            ColumnDefinition(dialect, "id", UUIDType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "username", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
@@ -105,7 +105,7 @@ def create_type_cases_table(dialect, table_name: str = "type_cases") -> CreateTa
             ColumnDefinition(dialect, "date_val", DateType(dialect=dialect)),
             ColumnDefinition(dialect, "time_val", TimeTzType(dialect=dialect)),
             ColumnDefinition(dialect, "timestamp_val", TimestampTzType(dialect=dialect)),
-            ColumnDefinition(dialect, "blob_val", PostgresByteaType(dialect=dialect)),
+            ColumnDefinition(dialect, "blob_val", BlobType(dialect=dialect)),
             ColumnDefinition(dialect, "json_val", JsonBType(dialect=dialect)),
             ColumnDefinition(dialect, "array_val", ArrayType(element_type=IntegerType(dialect=dialect), dialect=dialect)),
             ColumnDefinition(dialect, "is_active", BooleanType(dialect=dialect),
@@ -129,7 +129,7 @@ def create_type_tests_table(dialect, table_name: str = "type_tests") -> CreateTa
         table=Table(dialect, table_name),
         if_not_exists=False,
         columns=[
-            ColumnDefinition(dialect, "id", PostgresUUIDType(dialect=dialect),
+            ColumnDefinition(dialect, "id", UUIDType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
             ColumnDefinition(dialect, "string_field", VarCharType(length=255, dialect=dialect),
                 constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),

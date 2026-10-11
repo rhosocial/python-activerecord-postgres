@@ -42,10 +42,10 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
+from rhosocial.activerecord.backend.expression.types import BlobType, XmlType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBitType,
     PostgresBoxType,
-    PostgresByteaType,
     PostgresCIDType,
     PostgresCidrType,
     PostgresCircleType,
@@ -93,7 +93,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresVectorType,
     PostgresXID8Type,
     PostgresXIDType,
-    PostgresXMLType,
 )
 from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -189,7 +188,7 @@ CASES = [
     Case("character_varying",
          lambda d: _core("VarCharType")(d, length=32, spelling="character varying"),
          "hello", "hello"),
-    Case("bytea", lambda d: PostgresByteaType(d), "abc", r"\x616263"),
+    Case("bytea", lambda d: BlobType(d), "abc", r"\x616263"),
     Case("bit", lambda d: PostgresBitType(n=3, dialect=d), "101", "101"),
     Case("varbit", lambda d: PostgresVarBitType(n=3, dialect=d), "101", "101"),
     Case("cidr", lambda d: PostgresCidrType(d), "192.168.0.0/24", "192.168.0.0/24"),
@@ -218,7 +217,7 @@ CASES = [
          type_name="postgres_jsonpath"),
     Case("regtype", lambda d: PostgresRegTypeType(d), "integer", "integer"),
     Case("regclass", lambda d: PostgresRegClassType(d), "pg_class", "pg_class"),
-    Case("xml", lambda d: PostgresXMLType(d), "<a/>", "<a/>"),
+    Case("xml", lambda d: XmlType(d), "<a/>", "<a/>"),
     Case("tsvector", lambda d: PostgresTSVectorType(d), "cat", "'cat'"),
     Case("tsquery", lambda d: PostgresTSQueryType(d), "cat", "'cat'"),
 

@@ -38,10 +38,10 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
+    BlobType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
-    PostgresByteaType,
 )
 
 
@@ -105,7 +105,7 @@ def _setup_encrypt_table(backend, dialect, table):
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(dialect, name="secret_data", data_type=PostgresByteaType(dialect=dialect)),
+        ColumnDefinition(dialect, name="secret_data", data_type=BlobType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,
@@ -197,7 +197,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
                 ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
             ],
         ),
-        ColumnDefinition(dialect, name="secret_data", data_type=PostgresByteaType(dialect=dialect)),
+        ColumnDefinition(dialect, name="secret_data", data_type=BlobType(dialect=dialect)),
     ]
     create_expr = CreateTableExpression(
         dialect=dialect,

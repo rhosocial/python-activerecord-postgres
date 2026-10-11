@@ -23,13 +23,10 @@ from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
     EnumType,
     BigIntType,
-    BlobType,
     DataType,
     IntegerType,
     SmallIntType,
     TextType,
-    UUIDType,
-    XmlType,
 )
 
 if TYPE_CHECKING:
@@ -40,20 +37,7 @@ if TYPE_CHECKING:
 # Binary data: BYTEA
 # ---------------------------------------------------------------------------
 
-class PostgresByteaType(BlobType):
-    """PostgreSQL ``BYTEA`` — variable-length binary string.
 
-    PostgreSQL's own name for the concept core calls ``BlobType``; ``BYTEA`` is
-    in that concept's ``SPELLINGS`` list, so the storage is identical and only
-    the written form differs.
-    """
-
-    name = "postgres_bytea"
-
-
-# ---------------------------------------------------------------------------
-# Serial (auto-increment) types
-# ---------------------------------------------------------------------------
 
 class PostgresSmallSerialType(SmallIntType):
     """PostgreSQL ``SMALLSERIAL`` — auto-incrementing SMALLINT (2 bytes).
@@ -183,40 +167,9 @@ class PostgresEnumColumnType(EnumType):
     PARAMETERS = ("type_name", "schema", "values",)
 
 
-class PostgresUUIDType(UUIDType):
-    """PostgreSQL ``UUID`` — universally unique identifier.
-
-    PostgreSQL is the reference implementation for this concept: 128 random
-    bits, stored in the order PostgreSQL documents. Deriving from
-    :class:`UUIDType` is what lets code written against the core concept work
-    on this backend unchanged, and what makes "is this a UUID column?" one
-    question instead of nine.
-    """
-
-    name = "postgres_uuid"
 
 
-# ---------------------------------------------------------------------------
-# XML
-# ---------------------------------------------------------------------------
 
-class PostgresXMLType(XmlType):
-    """PostgreSQL ``XML`` — an XML document.
-
-    PostgreSQL's ``xml`` stores a document that may be validated against an XML
-    Schema registered for it, and offers XPath over it — which is why it is the
-    XML concept and not text that happens to hold tags. The associated schema
-    is a column attribute, so it does not enter the type's identity.
-
-    :class:`PostgresCitextType` is the interesting contrast: it *is* text, and
-    deriving from :class:`TextType` says so, which this deliberately does not.
-    """
-
-    name = "postgres_xml"
-
-# ---------------------------------------------------------------------------
-# Text search
-# ---------------------------------------------------------------------------
 
 class PostgresTSVectorType(DataType):
     """PostgreSQL ``TSVECTOR`` — a text search document.
@@ -985,7 +938,7 @@ class PostgresCitextType(TextType):
     therefore the same *data* concept — character data of unbounded length —
     and derives from :class:`TextType`.
 
-    The distinction from :class:`PostgresXMLType` is the point of this pair:
+    The distinction from :class:`XmlType` is the point of this pair:
     both are "some kind of text" to a reader, only one of them is honestly a
     text column, and the hierarchy now says which.
     """

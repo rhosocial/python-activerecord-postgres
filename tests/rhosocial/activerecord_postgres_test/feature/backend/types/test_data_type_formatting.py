@@ -33,6 +33,8 @@ from rhosocial.activerecord.backend.expression.types import (
     TimestampTzType,
     TinyIntType,
     VarCharType,
+    UUIDType,
+    XmlType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
@@ -40,7 +42,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBigSerialType,
     PostgresBitType,
     PostgresBoxType,
-    PostgresByteaType,
     PostgresCIDType,
     PostgresCidrType,
     PostgresCircleType,
@@ -82,14 +83,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresTsRangeType,
     PostgresTsTzMultirangeType,
     PostgresTsTzRangeType,
-    PostgresUUIDType,
     PostgresVarBitType,
     PostgresHalfvecType,
     PostgresSparsevecType,
     PostgresVectorType,
     PostgresXID8Type,
     PostgresXIDType,
-    PostgresXMLType,
 )
 
 
@@ -103,12 +102,12 @@ def dialect():
 # ---------------------------------------------------------------------------
 
 FORMAT_CASES = [
-    (PostgresByteaType(), "BYTEA"),
+    (BlobType(), "BYTEA"),
     (PostgresSmallSerialType(), "SMALLSERIAL"),
     (PostgresSerialType(), "SERIAL"),
     (PostgresBigSerialType(), "BIGSERIAL"),
-    (PostgresUUIDType(), "UUID"),
-    (PostgresXMLType(), "XML"),
+    (UUIDType(), "UUID"),
+    (XmlType(), "XML"),
     (PostgresTSVectorType(), "TSVECTOR"),
     (PostgresTSQueryType(), "TSQUERY"),
     (PostgresJsonPathType(), "JSONPATH"),
@@ -234,7 +233,7 @@ def test_format_array_type_multidimensional(dialect):
 
 
 def test_format_array_type_with_postgres_element(dialect):
-    sql, _ = dialect.format_data_type(ArrayType(element_type=PostgresUUIDType(), dimensions=1))
+    sql, _ = dialect.format_data_type(ArrayType(element_type=UUIDType(), dimensions=1))
     assert sql == "UUID[]"
 
 
@@ -286,8 +285,8 @@ PARSE_CASES = [
     ("CHARACTER VARYING", VarCharType, {}),
     ("CHARACTER VARYING(100)", VarCharType, {"length": 100}),
     ("TEXT", TextType, {}),
-    ("BYTEA", PostgresByteaType, {}),
-    ("BLOB", PostgresByteaType, {}),
+    ("BYTEA", BlobType, {}),
+    ("BLOB", BlobType, {}),
     ("DATE", DateType, {}),
     ("DATETIME", DateTimeType, {}),
     ("TIMESTAMP", TimestampType, {}),
@@ -303,7 +302,7 @@ PARSE_CASES = [
     ("JSON", JsonType, {}),
     ("JSONB", JsonBType, {}),
     ("JSONPATH", PostgresJsonPathType, {}),
-    ("UUID", PostgresUUIDType, {}),
+    ("UUID", UUIDType, {}),
     ("BOOLEAN", BooleanType, {}),
     ("BOOL", BooleanType, {}),
     ("BIT", PostgresBitType, {}),
@@ -348,7 +347,7 @@ PARSE_CASES = [
     ("TSVECTOR", PostgresTSVectorType, {}),
     ("TSQUERY", PostgresTSQueryType, {}),
     ("MONEY", PostgresMoneyType, {}),
-    ("XML", PostgresXMLType, {}),
+    ("XML", XmlType, {}),
     ("PG_LSN", PostgresPgLSNType, {}),
     ("HSTORE", PostgresHstoreType, {}),
     ("GEOGRAPHY", PostgresGeographyType, {}),
@@ -419,7 +418,7 @@ def test_parse_type_array_keyword_with_dimension(dialect):
 def test_parse_type_array_nested_element(dialect):
     result = dialect.parse_type("UUID[]")
     assert type(result) is PostgresArrayType
-    assert type(result.element_type) is PostgresUUIDType
+    assert type(result.element_type) is UUIDType
 
 
 def test_parse_type_unknown_falls_back_to_custom(dialect):
@@ -494,8 +493,6 @@ def test_supports_data_types_registers_all_postgres_types(dialect):
     classes = set(supported.values())
     for expected in (
         PostgresSerialType,
-        PostgresByteaType,
-        PostgresUUIDType,
         PostgresVectorType,
         PostgresTsRangeType,
         ArrayType,
