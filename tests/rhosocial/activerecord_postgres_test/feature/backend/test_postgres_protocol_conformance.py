@@ -174,7 +174,7 @@ def get_postgres_protocols():
         dialect_protocols.CreateTableCloneSupport,
         dialect_protocols.CreateTableLikeSupport,
         dialect_protocols.CreateTableUsingTemplateSupport,
-        dialect_protocols.DateTimeSupport,
+        dialect_protocols.TimestampSupport,
         dialect_protocols.DqlOrderSupport,
         dialect_protocols.FulltextIndexSupport,
         dialect_protocols.SynonymObjectSupport,
