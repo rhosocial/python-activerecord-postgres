@@ -277,7 +277,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         dropping the *concept* here; what would be lost is the caller's
         statement that this column holds no negative value, and that belongs in
         a ``CHECK`` constraint.
+
+        The shape of ``unsigned`` is checked here, at the rendering end, rather
+        than in the expression's constructor: an expression collects its
+        parameters without judging them, because only the formatter knows which
+        backend will have to honour this flag.  A non-boolean therefore arrives
+        here instead of being turned away at construction, and is named here --
+        testing its truth instead would let ``unsigned="yes"`` through the same
+        branch as ``True``, render a signed ``INTEGER``, and report success,
+        which is the failure this whole refusal exists to prevent.
         """
+        if not isinstance(expr.unsigned, bool):
+            raise TypeError(
+                f"unsigned must be a bool, got "
+                f"{type(expr.unsigned).__name__}; it "
+                f"becomes a type modifier in the rendered DDL."
+            )
         if not expr.unsigned:
             return
         raise UnsupportedFeatureError(
@@ -341,8 +356,23 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         ``UnsupportedFeatureError``, not ``ValueError``: this is a declaration
         the grammar cannot express at all rather than a wrong value, and the two
         exceptions do not share a base class.
+
+        The shape of ``unsigned`` is checked here rather than in the expression's
+        constructor, for the reason given on :meth:`_refuse_unsigned_integer`:
+        the expression collects the value, the formatter judges it.  The
+        attribute is read **directly** rather than with ``getattr``: the
+        expression classes are the protocol, so whether ``unsigned`` exists is
+        statically settled -- ``DecimalType``, ``FloatType``, ``RealType`` and
+        ``DoubleType`` all declare it in ``PARAMETERS`` -- and a probe would
+        turn "the caller passed the wrong class" into a silent signed rendering.
         """
-        if not getattr(expr, "unsigned", False):
+        if not isinstance(expr.unsigned, bool):
+            raise TypeError(
+                f"unsigned must be a bool, got "
+                f"{type(expr.unsigned).__name__}; it "
+                f"becomes a type modifier in the rendered DDL."
+            )
+        if not expr.unsigned:
             return
         raise UnsupportedFeatureError(
             self.name,
