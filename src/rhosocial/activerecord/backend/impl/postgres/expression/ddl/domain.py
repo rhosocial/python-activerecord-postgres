@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import warnings
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
+from typing import Any, List, Optional, Sequence, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression, SQLPredicate
 from rhosocial.activerecord.backend.expression.objects import Domain
@@ -183,6 +183,21 @@ class PostgresSetDomainSchemaAction(DomainAlterAction):
 
 
 class PostgresCreateDomainExpression(CreateDomainExpression):
+    """CREATE DOMAIN with PostgreSQL's two mutually exclusive check spellings.
+
+    ``constraints`` is the historical spelling and still accepts the
+    deprecated raw-SQL form; ``checks`` is the typed spelling and accepts only
+    ``DomainCheckConstraint`` / ``SQLPredicate``. Supplying both is an error.
+
+    Both spellings reach the *same* rendering state, so the generic
+    introspection-based ``get_params()`` is the whole serialization story:
+    ``__init__`` stores the merged item list under the slot belonging to the
+    parameter the caller actually used and leaves the other slot ``None``, so
+    ``get_params()`` emits ``constraints=[...], checks=None`` (or the reverse)
+    and the reconstruction takes the same branch as the original. Rendering
+    reads :attr:`_constraint_clauses`, never one particular spelling's slot.
+    """
+
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -206,13 +221,10 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
         if constraints is not None and checks is not None:
             raise ValueError("constraints and checks are mutually exclusive")
         if checks is not None:
-            check_parameter = "checks"
             constraint_items = list(checks)
         elif constraints is not None:
-            check_parameter = "constraints"
             constraint_items = list(constraints)
         else:
-            check_parameter = None
             constraint_items = []
         clauses: List[BaseExpression] = []
         normalized_checks: List[DomainCheckConstraint] = []
@@ -256,19 +268,31 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
         )
         self.schema = resolved_schema
         self.schema_name = resolved_schema
-        self.constraints = list(constraint_items)
+        # Fold the merged item list into the slot named by the parameter the
+        # caller used, and leave the unused spelling at None ("not supplied").
+        # Both spellings are mutually exclusive in __init__, so this is what
+        # makes the generic get_params() round trip without an override.
+        if checks is not None:
+            # self.checks already holds the normalized list assigned by super().
+            self.constraints = None
+        else:
+            self.constraints = list(constraint_items) if constraints is not None else None
+            self.checks = None
         self._constraint_clauses = clauses
-        self._check_parameter = check_parameter
 
-    def get_params(self) -> Dict[str, Any]:
-        params = super().get_params()
-        params.pop("constraints", None)
-        params.pop("checks", None)
-        if self._check_parameter == "constraints":
-            params["constraints"] = list(self.constraints)
-        elif self._check_parameter == "checks":
-            params["checks"] = list(self.checks)
-        return params
+    @property
+    def check_constraints(self) -> List[DomainCheckConstraint]:
+        """The declared checks, whichever spelling the caller used.
+
+        ``constraints`` and ``checks`` are two names for one list of clauses;
+        only the spelling that was passed owns the corresponding attribute.
+        Use this to read them back without caring which one that was.
+        """
+        return [
+            clause
+            for clause in self._constraint_clauses
+            if isinstance(clause, DomainCheckConstraint)
+        ]
 
     @property
     def name(self) -> str:

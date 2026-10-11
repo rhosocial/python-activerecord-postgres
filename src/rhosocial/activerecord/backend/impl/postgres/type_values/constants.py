@@ -8,8 +8,8 @@ PostgreSQL Documentation: https://www.postgresql.org/docs/current/datatype.html
 
 Example:
     >>> from rhosocial.activerecord.backend.impl.postgres.type_values.constants import MONEY, NUMERIC
-    >>> col.cast(MONEY)  # Equivalent to col.cast("money")
-    >>> col.cast("money")  # Also valid
+    >>> col.cast(MONEY)  # Equivalent to col.cast(PostgresMoneyType(self.dialect))
+    >>> col.cast(PostgresMoneyType(self.dialect))  # Also valid
 
 Note:
     These constants are provided for convenience and code clarity.

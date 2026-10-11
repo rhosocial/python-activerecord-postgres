@@ -49,6 +49,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements.dml import (
     InsertExpression,
 )
@@ -145,8 +146,9 @@ if available:
             Column(dialect, "email"),
         ],
         from_=Table(dialect, "users"),
-        where=Column(dialect, "email", table="users")
-        == Literal(dialect, "test@example.com"),
+        where=ComparisonPredicate(
+            dialect, "=", Column(dialect, "email", table="users"), Literal(dialect, "test@example.com")
+        ),
     )
     sql, params = query.to_sql()
     print("\n--- SELECT (case-insensitive) ---")

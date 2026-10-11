@@ -10,6 +10,7 @@ import pytest_asyncio
 from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnDefinition,
+    ComparisonPredicate,
     CreateTableExpression,
     DropTableExpression,
     ExplainExpression,
@@ -436,7 +437,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
-            where=Column(dialect, "id") == Literal(dialect, 1),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
         )
         postgres_backend.execute(*update.to_sql())
         row = postgres_backend.fetch_one(
@@ -449,7 +450,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-03-15")},
-            where=Column(dialect, "id") == Literal(dialect, 1),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
         )
         with pytest.raises(Exception):
             postgres_backend.execute(*invalid_update.to_sql())
@@ -476,8 +477,8 @@ class TestPostgreSQLAdvancedPartitionOperations:
             where=LogicalPredicate(
                 dialect,
                 "AND",
-                Column(dialect, "created_at") >= Literal(dialect, "2026-02-01"),
-                Column(dialect, "created_at") < Literal(dialect, "2026-03-01"),
+                ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, "2026-02-01")),
+                ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, "2026-03-01")),
             ),
         )
         rows = postgres_backend.fetch_all(*_json_explain_sql(dialect, query))
@@ -561,7 +562,7 @@ class TestAsyncPostgreSQLAdvancedPartitionOperations:
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
-            where=Column(dialect, "id") == Literal(dialect, 1),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
         )
         await async_postgres_backend.execute(*update.to_sql())
         row = await async_postgres_backend.fetch_one(

@@ -38,6 +38,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
 
     WindowFunctionMixin,
     JSONMixin,
+    UUIDMixin,
 
     ArrayMixin,
     ExplainMixin,
@@ -60,6 +61,15 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     ILIKEMixin,
     ConstraintMixin,
     PartitionMixin,
+    # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
+    # spells all four natively -- ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
+    # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)`` -- so
+    # the shared defaults are the answer here and no override is needed.
+    LpadMixin,
+    RepeatMixin,
+    RpadMixin,
+    TrimMixin,
+
     # New Mixins
     PredicateMixin,
     ExpressionMixin,
@@ -116,7 +126,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     CTESupport,
     FilterClauseSupport,
     WindowFunctionSupport,
-    JSONSupport,
     ReturningSupport,
     AdvancedGroupingSupport,
     ArraySupport,
@@ -160,6 +169,7 @@ from .mixins import (
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
+    PostgresColumnTypeMixin,
     # Per-feature mixins
     PostgresCTEMixin,
     PostgresWindowMixin,
@@ -230,6 +240,7 @@ from .mixins import (
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
     PostgresJSONBEnhancedMixin,
+    PostgresUUIDMixin,
     PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
     # DDL/DML operation mixins (new)
@@ -418,6 +429,15 @@ class PostgresDialect(
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
+    # spells all four natively: ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
+    # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)``
+    # (functions-string.html; ``TRIM(BOTH 'xy' FROM 'xyxab')`` live-verified
+    # 2026-10-09 as the set form). No override is needed for any of them.
+    LpadMixin,
+    RepeatMixin,
+    RpadMixin,
+    TrimMixin,
     SQLXMLMixin,
     CollationMixin,
     SetOperationMixin,
@@ -428,7 +448,15 @@ class PostgresDialect(
     WindowFunctionMixin,
     PostgresJSONBEnhancedMixin,
     JSONMixin,
+    # PG's UUID answer (version 13+ built-in, or uuid-ossp) must win over
+    # the core UUIDMixin table, which has a single fixed spelling per operation.
+    PostgresUUIDMixin,
+    UUIDMixin,
 
+    # Before ArrayMixin: this answers True where the core answers False, and
+    # it was listed in the backend block further down, so the core default
+    # was what every caller actually saw.
+    PostgresArrayEnhancedMixin,
     ArrayMixin,
     ExplainMixin,
     # Must precede GraphMixin/GraphTableMixin so that the explicit-override
@@ -475,6 +503,12 @@ class PostgresDialect(
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
+    # Column types. After the DataType mixin above because that is the
+    # sibling decision -- this one says which operations a value carries, the
+    # other says how it is spelled. Nothing else in the list can answer for a
+    # common Python type, so the MRO leaves the placement free; putting the two
+    # side by side is what makes the separation legible to the next reader.
+    PostgresColumnTypeMixin,
     # Extension feature mixins
     PostgresLtreeMixin,
     PostgresIntarrayMixin,
@@ -516,7 +550,6 @@ class PostgresDialect(
     MultirangeMixin,
     PostgresFullTextSearchMixin,
     PostgresRangeTypeMixin,
-    PostgresArrayEnhancedMixin,
     PostgresTypeFormatSupportMixin,
     # DDL/DML operation mixins (new)
     PostgresExtendedStatisticsMixin,
@@ -544,7 +577,14 @@ class PostgresDialect(
     CTESupport,
     FilterClauseSupport,
     WindowFunctionSupport,
-    JSONSupport,
+    # JSONSupport is not listed: PostgresJSONBEnhancedSupport derives from it
+    # below, and listing a base ahead of its own subclass is not a consistent
+    # MRO. This is the shape every other derived protocol uses here --
+    # PostgresTableSupport(TableSupport), PostgresIndexSupport(IndexSupport) --
+    # and JSONSupport still reaches the MRO, so isinstance(dialect, JSONSupport)
+    # is unchanged. Listing both, while each was standalone, also put
+    # supports_json_type in the MRO four times: two abstract protocol
+    # declarations, the core mixin default, and the one implementation.
     ReturningSupport,
     AdvancedGroupingSupport,
     ArraySupport,

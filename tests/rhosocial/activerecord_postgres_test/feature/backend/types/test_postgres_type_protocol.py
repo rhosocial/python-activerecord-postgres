@@ -10,12 +10,16 @@ Verifies:
 
 import pytest
 
+from rhosocial.activerecord.backend.dialect.exceptions import (
+    UnsupportedFeatureError,
+)
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
     BlobType,
     BooleanType,
     DataType,
     DecimalType,
+    DoubleType,
     FloatType,
     IntegerType,
     JsonBType,
@@ -38,6 +42,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSparsevecType,
     PostgresTsRangeType,
     PostgresUUIDType,
+    PostgresVarBitType,
     PostgresVectorType,
 )
 
@@ -249,11 +254,11 @@ def test_type_constructor_rejects_dialect_options():
 
 
 # ---------------------------------------------------------------------------
-# W1: _type_params() based equality replaces hand-written __eq__/__hash__
+# W1: PARAMETERS-based equality replaces hand-written __eq__/__hash__
 # ---------------------------------------------------------------------------
 
 
-def test_bit_type_type_params():
+def test_bit_type_identity():
     t1 = PostgresBitType(n=8)
     t2 = PostgresBitType(n=8)
     t3 = PostgresBitType(n=16)
@@ -266,7 +271,31 @@ def test_bit_type_type_params():
     assert hash(t1) != hash(t3)
 
 
-def test_vector_type_type_params():
+def test_catalog_bit_varying_spelling_parses_as_varbit(dialect):
+    """``bit varying(n)`` -- the live catalog word -- is the varbit class.
+
+    Live evidence (report appendix F1, measured 2026-10-08 on PostgreSQL
+    9.6/13/16/19beta4): ``pg_catalog.format_type(atttypid, atttypmod)`` for a
+    ``bit varying(16)`` column is exactly ``bit varying(16)``.  Parsing used to
+    answer ``PostgresBitType`` because the fixed-length prefix test ran first,
+    so introspection turned every varbit column into a bit column of the same
+    width.  The rendered-string sweep cannot see this: it only feeds back the
+    renderer's own ``VARBIT(16)`` spelling.
+    """
+    varying = dialect.parse_type("bit varying(16)")
+    assert varying == PostgresVarBitType(dialect, n=16)
+    assert varying != PostgresBitType(dialect, n=16)
+
+    bare = dialect.parse_type("bit varying")
+    assert bare == PostgresVarBitType(dialect)
+    assert bare != PostgresBitType(dialect)
+
+    # Keep-pins for the words the renderer emits.
+    assert dialect.parse_type("BIT(8)") == PostgresBitType(dialect, n=8)
+    assert dialect.parse_type("VARBIT(16)") == PostgresVarBitType(dialect, n=16)
+
+
+def test_vector_type_identity():
     t1 = PostgresVectorType(dim=384)
     t2 = PostgresVectorType(dim=384)
     t3 = PostgresVectorType(dim=768)
@@ -279,9 +308,9 @@ def test_vector_type_type_params():
 
 def test_vector_types_cross_class_inequality():
     """Different vector types with same dim are not equal."""
-    assert PostgresVectorType(3) != PostgresHalfvecType(3)
-    assert PostgresVectorType(3) != PostgresSparsevecType(3)
-    assert PostgresHalfvecType(3) != PostgresSparsevecType(3)
+    assert PostgresVectorType(dim=3) != PostgresHalfvecType(dim=3)
+    assert PostgresVectorType(dim=3) != PostgresSparsevecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != PostgresSparsevecType(dim=3)
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +375,173 @@ def test_time_precision_validation(dialect):
 
 
 # ---------------------------------------------------------------------------
+# Signedness on the floating-point and exact fixed-point concepts
+# ---------------------------------------------------------------------------
+
+#: The three concepts that carry ``unsigned`` besides the four integer widths,
+#: with the PostgreSQL type each renders when the flag is left alone and the
+#: constructor arguments each needs to reach its precision-bearing form.
+#:
+#: ``DECIMAL`` and ``FLOAT`` are here with their precision/scale because those are
+#: fields too, and the point of the table is that refusing ``unsigned`` does not
+#: disturb them: every signed rendering below is byte-for-byte what it was.
+NUMERIC_SIGNEDNESS = [
+    (DecimalType, {}, "DECIMAL"),
+    (DecimalType, {"precision": 10, "scale": 2}, "DECIMAL(10,2)"),
+    (FloatType, {}, "REAL"),
+    (FloatType, {"precision": 24}, "FLOAT(24)"),
+    (DoubleType, {}, "DOUBLE PRECISION"),
+    (DoubleType, {"spelling": "double precision"}, "DOUBLE PRECISION"),
+]
+
+NUMERIC_SIGNEDNESS_IDS = [
+    f"{k.__name__}{''.join(sorted(kw)) or '-bare'}" for k, kw, _s
+    in NUMERIC_SIGNEDNESS
+]
+
+
+@pytest.mark.parametrize("klass,kwargs,signed_sql", NUMERIC_SIGNEDNESS,
+                         ids=NUMERIC_SIGNEDNESS_IDS)
+def test_the_signed_rendering_is_unchanged(dialect, klass, kwargs, signed_sql):
+    """The refusal is not paid for by moving a signed rendering."""
+    assert dialect.format_data_type(klass(dialect, **kwargs)) == (signed_sql, ())
+    assert dialect.format_data_type(
+        klass(dialect, unsigned=False, **kwargs)) == (signed_sql, ())
+
+
+@pytest.mark.parametrize("klass,kwargs,signed_sql", NUMERIC_SIGNEDNESS,
+                         ids=NUMERIC_SIGNEDNESS_IDS)
+def test_unsigned_is_refused_not_rendered_signed(dialect, klass, kwargs,
+                                                 signed_sql):
+    """The defect this answers: flipping the field used to change nothing.
+
+    ``DecimalType(unsigned=True)``, ``FloatType(unsigned=True)`` and
+    ``DoubleType(unsigned=True)`` each rendered byte-identical SQL to the signed
+    declaration, so a caller got a column that accepts the negatives it declared
+    it would not, and the call reported success.
+
+    PostgreSQL's answer is a refusal. Its Table 8.2 lists ``decimal``/``numeric``,
+    ``real`` and ``double precision`` with no unsigned variant; ``real`` and
+    ``double precision`` are IEEE 754 binary formats whose documented ranges are
+    signed on both sides; ``numeric``'s own special values include
+    ``-Infinity``; and ``CREATE TABLE`` has no attribute slot after the type name
+    in which ``UNSIGNED`` could go.
+    https://www.postgresql.org/docs/current/datatype-numeric.html
+    """
+    with pytest.raises(UnsupportedFeatureError) as excinfo:
+        dialect.format_data_type(klass(dialect, unsigned=True, **kwargs))
+    message = str(excinfo.value)
+    assert "unsigned" in message, message
+    assert excinfo.value.suggestion, "the refusal must carry a route forward"
+    assert "CHECK" in excinfo.value.suggestion
+
+
+@pytest.mark.parametrize("klass,kwargs,signed_sql", NUMERIC_SIGNEDNESS,
+                         ids=NUMERIC_SIGNEDNESS_IDS)
+def test_signedness_is_part_of_identity(dialect, klass, kwargs, signed_sql):
+    """Why refusing is right: the two are different columns to the differ.
+
+    Refusing at render time must not flatten the model to make the refusal
+    easier -- the flag is in ``PARAMETERS`` and reaches ``identity()``.
+    """
+    assert "unsigned" in klass.PARAMETERS, klass.__name__
+    signed = klass(dialect, **kwargs)
+    unsigned = klass(dialect, unsigned=True, **kwargs)
+    assert signed != unsigned
+    assert hash(signed) != hash(unsigned)
+    assert klass(dialect, **kwargs) == signed
+
+
+def test_unsigned_is_type_checked(dialect):
+    """It becomes a type modifier in the rendered DDL, so ``1`` is not a
+    truthy ``True`` and ``"yes"`` is not a spelling of one."""
+    for klass, kwargs in ((DecimalType, {}), (FloatType, {}), (DoubleType, {})):
+        with pytest.raises(TypeError, match="unsigned must be a bool"):
+            klass(dialect, unsigned=1, **kwargs)
+        with pytest.raises(TypeError, match="unsigned must be a bool"):
+            klass(dialect, unsigned="yes", **kwargs)
+
+
+def test_the_scale_and_precision_checks_are_untouched_by_the_new_refusal(
+        dialect):
+    """A new failure path must not have swallowed the old answers.
+
+    ``DECIMAL`` still refuses a bare scale with ``UnsupportedFeatureError`` and
+    still raises ``ValueError`` for an out-of-range precision, and ``FLOAT``
+    still raises ``ValueError`` for an out-of-range precision. The unsigned
+    refusal is checked first, so it is what a request that got *both* wrong is
+    told about -- but a signed request is unaffected.
+    """
+    with pytest.raises(UnsupportedFeatureError) as bare_scale:
+        dialect.format_data_type(DecimalType(dialect, scale=2))
+    assert "scale" in str(bare_scale.value)
+
+    with pytest.raises(ValueError) as precision:
+        dialect.format_data_type(DecimalType(dialect, precision=1001))
+    assert not isinstance(precision.value, UnsupportedFeatureError)
+
+    with pytest.raises(ValueError) as float_precision:
+        dialect.format_data_type(FloatType(dialect, precision=54))
+    assert not isinstance(float_precision.value, UnsupportedFeatureError)
+
+    # Both faults at once: the flag is named, because it is checked first.
+    with pytest.raises(UnsupportedFeatureError) as both:
+        dialect.format_data_type(
+            DecimalType(dialect, scale=2, unsigned=True))
+    assert "unsigned" in str(both.value)
+
+
+def test_an_unsigned_request_is_answered_the_same_way_for_every_concept(
+        dialect):
+    """One exception type for one refusal, so portable code can catch it.
+
+    ``UnsupportedFeatureError`` does not subclass ``ValueError``. The project's
+    rule is that a *wrong value* raises ``ValueError`` and a declaration the
+    grammar cannot express at all raises ``UnsupportedFeatureError``, and every
+    backend answers this identical refusal the same way -- which is what lets a
+    caller write one ``except`` clause for it.
+    """
+    seen = 0
+    for klass, kwargs, _sql in NUMERIC_SIGNEDNESS:
+        try:
+            dialect.format_data_type(klass(dialect, unsigned=True, **kwargs))
+        except UnsupportedFeatureError:
+            seen += 1
+        except ValueError as exc:                     # pragma: no cover
+            pytest.fail(
+                f"refused an unsigned {klass.__name__} with ValueError; every "
+                f"other backend raises UnsupportedFeatureError for the same "
+                f"refusal, and the two do not share a base class: {exc}"
+            )
+    assert seen == len(NUMERIC_SIGNEDNESS)
+
+
+def test_the_catalog_can_never_report_the_attribute_so_parse_type_needs_nothing(
+        dialect):
+    """Why ``parse_type`` is untouched here, unlike MySQL's and MariaDB's.
+
+    On those two the catalog hands ``parse_type`` a ``COLUMN_TYPE`` that really
+    can contain ``unsigned``, so it has to be read or a changed column compares
+    equal to its own declaration. PostgreSQL's grammar has no such attribute, so
+    the word cannot appear in a ``format_type`` result and there is nothing to
+    read: inventing a branch for a string this backend never produces would be a
+    guess dressed as a fix. The rendering is still canonical, which is the half
+    of D8 that does apply.
+    """
+    assert dialect.format_data_type(DecimalType(dialect, 10, 2)) == (
+        "DECIMAL(10,2)", ())
+    assert "UNSIGNED" not in dialect.format_data_type(
+        DecimalType(dialect, 10, 2))[0]
+    # ...and what it does render, it parses back to the same value.
+    for klass, kwargs, sql in NUMERIC_SIGNEDNESS:
+        if klass is FloatType and not kwargs:
+            # Bare FLOAT renders REAL on this backend, which is RealType's word:
+            # a pre-existing spelling asymmetry, not an unsigned one.
+            continue
+        assert dialect.parse_type(sql) == klass(dialect, **kwargs), sql
+
+
+# ---------------------------------------------------------------------------
 # PostgresEnumType not a DataType — protocol boundary
 # ---------------------------------------------------------------------------
 
@@ -357,3 +553,77 @@ def test_postgres_enum_type_is_not_data_type():
 
     assert not issubclass(PostgresEnumType, DataType)
     assert issubclass(PostgresEnumType, BaseExpression)
+
+
+# ---------------------------------------------------------------------------
+# parse_type: the shared round-trip sweep over the whole declared surface
+
+
+class TestParseRoundTripSweep:
+    """Every rendered type parses back coherently, in one assertion each way.
+
+    The render-parse-re-render sweep over this backend's own registry found
+    six words it wrote and could not read back -- CITEXT, CUBE, LTREE,
+    LQUERY, LTXTQUERY and RASTER, all extension types this dialect renders
+    under its own ``format_data_type_postgres_*`` formatters -- and each
+    answered ``CustomType``, so a column of one of them introspected as a
+    type the backend does not model. The branches now sit where HSTORE and
+    GEOMETRY already sat, ungated for the same reason: the word can only
+    have come from a server where the extension exists.
+
+    The sweep asserts the two invariants everywhere: **string stability** --
+    parsing a rendering and re-rendering the answer produces the identical
+    string -- and **class honesty** -- the answer is the declared
+    instance, or the documented widening answer recorded below with its
+    reason.
+    """
+
+    #: The documented widening answers. ``tinyint`` has no 1-byte storage
+    #: here, so the concept is widened to the 2-byte one the tinyint
+    #: formatter names; bare ``FLOAT`` renders ``REAL``, which is the
+    #: RealType concept; the ``datetime`` concept renders ``TIMESTAMP``,
+    #: which is the storage both it and the timestamp concept share; and
+    #: the bytea/uuid/xml/array renderings are the backend's own classes
+    #: for those storages.
+    WIDENING_ANSWERS = {
+        "ArrayType": "PostgresArrayType",
+        "BlobType": "PostgresByteaType",
+        "DateTimeType": "TimestampType",
+        "TinyIntType": "SmallIntType",
+        "FloatType": "RealType",
+        "UUIDType": "PostgresUUIDType",
+        "XmlType": "PostgresXMLType",
+    }
+
+    @pytest.fixture(scope="class")
+    def registry(self):
+        """The round-trip module's registry, loaded from this directory's
+        parent. Executing it also registers its special constructors, which
+        the sweep's ``make_instance`` consults -- the same registrations the
+        full suite performs at collection time, repeated here so the sweep
+        also holds when this file runs alone.
+        """
+        import importlib.util
+        from pathlib import Path
+
+        path = Path(__file__).resolve().parent.parent / (
+            "test_expression_roundtrip_all.py"
+        )
+        spec = importlib.util.spec_from_file_location("postgres_rt_registry", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        registry = getattr(module, "ALL_CLASSES", None) or module.REGISTERED
+        assert registry, "the round-trip module exposes no registry"
+        return registry
+
+    def test_every_rendered_type_parses_back_coherently(self, dialect, registry):
+        from rhosocial.activerecord.testsuite.utils.parse_contract import (
+            parse_roundtrip_failures,
+        )
+
+        failures = parse_roundtrip_failures(
+            dialect,
+            registry,
+            widening=self.WIDENING_ANSWERS,
+        )
+        assert failures == [], "\n".join(failures)

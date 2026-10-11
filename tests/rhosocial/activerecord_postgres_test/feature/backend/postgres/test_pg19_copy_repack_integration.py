@@ -4,6 +4,7 @@
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal, QueryExpression
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromExpression,
@@ -41,7 +42,7 @@ def test_live_copy_round_trip_and_native_repack(postgres_backend):
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),
-            where=Column(dialect, "id") > Literal(dialect, 1),
+            where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 1)),
         )
         assert postgres_backend.copy_to(PostgresCopyToExpression(dialect, query=query)) == b"2\tBob\n"
 
@@ -105,7 +106,7 @@ async def test_live_async_copy_round_trip_and_native_repack(async_postgres_backe
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),
-            where=Column(dialect, "id") > Literal(dialect, 1),
+            where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 1)),
         )
         copied_query = await async_postgres_backend.copy_to(PostgresCopyToExpression(dialect, query=query))
         assert copied_query == b"2\tBob\n"

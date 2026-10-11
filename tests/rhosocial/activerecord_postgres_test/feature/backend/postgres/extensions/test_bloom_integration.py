@@ -30,6 +30,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -132,7 +133,7 @@ class TestBloomIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, TABLE_NAME),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, TABLE_NAME)),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -148,7 +149,7 @@ class TestBloomIntegration:
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, TABLE_NAME),
-            where=Column(dialect, "name") == Literal(dialect, "user25"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "name"), Literal(dialect, "user25")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -206,7 +207,9 @@ class TestBloomIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_bloom_opts"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_bloom_opts")
+                ),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -309,7 +312,7 @@ class TestAsyncBloomIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, ASYNC_TABLE_NAME),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, ASYNC_TABLE_NAME)),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -326,7 +329,7 @@ class TestAsyncBloomIntegration:
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, ASYNC_TABLE_NAME),
-            where=Column(dialect, "name") == Literal(dialect, "user25"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "name"), Literal(dialect, "user25")),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -381,7 +384,9 @@ class TestAsyncBloomIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
-                where=Column(dialect, "tablename") == Literal(dialect, "test_bloom_opts_async"),
+                where=ComparisonPredicate(
+                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_bloom_opts_async")
+                ),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)

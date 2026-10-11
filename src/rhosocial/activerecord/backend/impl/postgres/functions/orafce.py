@@ -40,36 +40,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
     from ..mixins.extensions.orafce import PostgresOrafceMixin
 
-
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, int, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, integers, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Date Functions ==============
 
 def add_months(
     dialect: "SQLDialectBase",
-    date_expr: Union[str, "bases.BaseExpression"],
-    months: Union[int, "bases.BaseExpression"],
+    date_expr: bases.BaseExpression,
+    months: int,
 ) -> core.FunctionCall:
     """Add months to a date.
 
@@ -92,14 +68,14 @@ def add_months(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("ADD_MONTHS"),
-        _convert_to_expression(dialect, date_expr),
-        _convert_to_expression(dialect, months),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
+        months if isinstance(months, bases.BaseExpression) else core.Literal(dialect, months),
     )
 
 
 def last_day(
     dialect: "SQLDialectBase",
-    date_expr: Union[str, "bases.BaseExpression"],
+    date_expr: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Return the last day of the month for a given date.
 
@@ -120,7 +96,7 @@ def last_day(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("LAST_DAY"),
-        _convert_to_expression(dialect, date_expr),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
     )
 
 
@@ -151,15 +127,15 @@ def months_between(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("MONTHS_BETWEEN"),
-        _convert_to_expression(dialect, date1),
-        _convert_to_expression(dialect, date2),
+        date1 if isinstance(date1, bases.BaseExpression) else core.Literal(dialect, date1),
+        date2 if isinstance(date2, bases.BaseExpression) else core.Literal(dialect, date2),
     )
 
 
 def next_day(
     dialect: "SQLDialectBase",
-    date_expr: Union[str, "bases.BaseExpression"],
-    day: Union[str, "bases.BaseExpression"],
+    date_expr: bases.BaseExpression,
+    day: str,
 ) -> core.FunctionCall:
     """Return the date of the next specified day of the week after a given date.
 
@@ -181,8 +157,8 @@ def next_day(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NEXT_DAY"),
-        _convert_to_expression(dialect, date_expr),
-        _convert_to_expression(dialect, day),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
+        day if isinstance(day, bases.BaseExpression) else core.Literal(dialect, day),
     )
 
 
@@ -190,8 +166,8 @@ def next_day(
 
 def nvl(
     dialect: "SQLDialectBase",
-    expr1: Union[str, "bases.BaseExpression"],
-    expr2: Union[str, "bases.BaseExpression"],
+    expr1: bases.BaseExpression,
+    expr2: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Return expr2 if expr1 is NULL, otherwise return expr1.
 
@@ -213,16 +189,16 @@ def nvl(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NVL"),
-        _convert_to_expression(dialect, expr1),
-        _convert_to_expression(dialect, expr2),
+        expr1 if isinstance(expr1, bases.BaseExpression) else core.Literal(dialect, expr1),
+        expr2 if isinstance(expr2, bases.BaseExpression) else core.Literal(dialect, expr2),
     )
 
 
 def nvl2(
     dialect: "SQLDialectBase",
-    expr1: Union[str, "bases.BaseExpression"],
-    expr2: Union[str, "bases.BaseExpression"],
-    expr3: Union[str, "bases.BaseExpression"],
+    expr1: bases.BaseExpression,
+    expr2: bases.BaseExpression,
+    expr3: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Return expr2 if expr1 is NOT NULL, otherwise return expr3.
 
@@ -245,9 +221,9 @@ def nvl2(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NVL2"),
-        _convert_to_expression(dialect, expr1),
-        _convert_to_expression(dialect, expr2),
-        _convert_to_expression(dialect, expr3),
+        expr1 if isinstance(expr1, bases.BaseExpression) else core.Literal(dialect, expr1),
+        expr2 if isinstance(expr2, bases.BaseExpression) else core.Literal(dialect, expr2),
+        expr3 if isinstance(expr3, bases.BaseExpression) else core.Literal(dialect, expr3),
     )
 
 
@@ -255,9 +231,9 @@ def nvl2(
 
 def decode(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-    *matches: Union[str, "bases.BaseExpression"],
-    default: Optional[Union[str, "bases.BaseExpression"]] = None,
+    expr: bases.BaseExpression,
+    *matches: bases.BaseExpression,
+    default: Optional[bases.BaseExpression] = None,
 ) -> core.FunctionCall:
     """Oracle-compatible DECODE conditional expression.
 
@@ -283,11 +259,11 @@ def decode(
         >>> decode(dialect, 'status', "'active'", '1', "'inactive'", '0', default='-1')
         >>> decode(dialect, 'color', "'red'", "'R'", "'blue'", "'B'")
     """
-    args = [_convert_to_expression(dialect, expr)]
+    args = [expr if isinstance(expr, bases.BaseExpression) else core.Literal(dialect, expr)]
     for m in matches:
-        args.append(_convert_to_expression(dialect, m))
+        args.append(m if isinstance(m, bases.BaseExpression) else core.Literal(dialect, m))
     if default is not None:
-        args.append(_convert_to_expression(dialect, default))
+        args.append(default if isinstance(default, bases.BaseExpression) else core.Literal(dialect, default))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("DECODE"),
@@ -299,8 +275,8 @@ def decode(
 
 def orafce_trunc(
     dialect: "SQLDialectBase",
-    value: Union[str, "bases.BaseExpression"],
-    format: Optional[Union[str, "bases.BaseExpression"]] = None,
+    value: bases.BaseExpression,
+    format: Optional[str] = None,
 ) -> core.FunctionCall:
     """Truncate a date or number to the specified precision.
 
@@ -323,9 +299,9 @@ def orafce_trunc(
         >>> trunc(dialect, 'created_at', "'MONTH'")
         >>> trunc(dialect, '123.456')
     """
-    args = [_convert_to_expression(dialect, value)]
+    args = [value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)]
     if format is not None:
-        args.append(_convert_to_expression(dialect, format))
+        args.append(format if isinstance(format, bases.BaseExpression) else core.Literal(dialect, format))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("TRUNC"),
@@ -335,8 +311,8 @@ def orafce_trunc(
 
 def orafce_round(
     dialect: "SQLDialectBase",
-    value: Union[str, "bases.BaseExpression"],
-    format: Optional[Union[str, "bases.BaseExpression"]] = None,
+    value: bases.BaseExpression,
+    format: Optional[str] = None,
 ) -> core.FunctionCall:
     """Round a date or number to the specified precision.
 
@@ -359,9 +335,9 @@ def orafce_round(
         >>> round(dialect, 'created_at', "'MONTH'")
         >>> round(dialect, '123.456')
     """
-    args = [_convert_to_expression(dialect, value)]
+    args = [value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)]
     if format is not None:
-        args.append(_convert_to_expression(dialect, format))
+        args.append(format if isinstance(format, bases.BaseExpression) else core.Literal(dialect, format))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("ROUND"),
@@ -373,10 +349,10 @@ def orafce_round(
 
 def instr(
     dialect: "SQLDialectBase",
-    string_expr: Union[str, "bases.BaseExpression"],
-    substring_expr: Union[str, "bases.BaseExpression"],
-    position: Union[int, "bases.BaseExpression"] = 1,
-    occurrence: Union[int, "bases.BaseExpression"] = 1,
+    string_expr: bases.BaseExpression,
+    substring_expr: bases.BaseExpression,
+    position: int = 1,
+    occurrence: int = 1,
 ) -> core.FunctionCall:
     """Find the position of a substring within a string.
 
@@ -401,18 +377,18 @@ def instr(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("INSTR"),
-        _convert_to_expression(dialect, string_expr),
-        _convert_to_expression(dialect, substring_expr),
-        _convert_to_expression(dialect, position),
-        _convert_to_expression(dialect, occurrence),
+        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Literal(dialect, string_expr),
+        substring_expr if isinstance(substring_expr, bases.BaseExpression) else core.Literal(dialect, substring_expr),
+        position if isinstance(position, bases.BaseExpression) else core.Literal(dialect, position),
+        occurrence if isinstance(occurrence, bases.BaseExpression) else core.Literal(dialect, occurrence),
     )
 
 
 def substr(
     dialect: "SQLDialectBase",
-    string_expr: Union[str, "bases.BaseExpression"],
-    position: Union[int, "bases.BaseExpression"],
-    length: Optional[Union[int, "bases.BaseExpression"]] = None,
+    string_expr: bases.BaseExpression,
+    position: int,
+    length: Optional[int] = None,
 ) -> core.FunctionCall:
     """Extract a substring from a string.
 
@@ -436,11 +412,11 @@ def substr(
         >>> substr(dialect, 'description', '10')
     """
     args = [
-        _convert_to_expression(dialect, string_expr),
-        _convert_to_expression(dialect, position),
+        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Literal(dialect, string_expr),
+        position if isinstance(position, bases.BaseExpression) else core.Literal(dialect, position),
     ]
     if length is not None:
-        args.append(_convert_to_expression(dialect, length))
+        args.append(length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("SUBSTR"),

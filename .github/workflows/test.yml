@@ -18,8 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  benchmark-python-314-postgres-18:
-    name: Run benchmarks with Python 3.14 / postgres 18
+  benchmark-python-315-postgres-18:
+    name: Run benchmarks with Python 3.15 / postgres 18
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,10 +56,10 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v6
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.15
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: |
@@ -69,7 +69,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/expression-schema-object-refactor"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@test/typed-column-contracts"
 
       - name: Create postgres scenario config
         run: |
@@ -181,9 +181,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Python 3.14 / postgres 18 Benchmark Conclusion"
+            echo "## Python 3.15 / postgres 18 Benchmark Conclusion"
             echo
-            echo "- Python: 3.14"
+            echo "- Python: 3.15"
             echo "- postgres: 18"
             echo "- Scope: testsuite generic benchmarks + ActiveRecord bulk benchmarks + PostgreSQL backend direct benchmarks"
             echo "- Size: small"
@@ -202,9 +202,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Python 3.14 / postgres 18 FastAPI Benchmark Conclusion"
+            echo "## Python 3.15 / postgres 18 FastAPI Benchmark Conclusion"
             echo
-            echo "- Python: 3.14"
+            echo "- Python: 3.15"
             echo "- postgres: 18"
             echo "- Scope: testsuite FastAPI database benchmarks"
             echo "- Size: small"
@@ -219,20 +219,24 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  test-experimental-python-315:
-    # Temporarily disabled until Python 3.15 toolchain compatibility stabilizes.
-    if: ${{ false }}
-    name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }} (experimental)
+  test-python-315:
+    name: Python ${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }} / postgres ${{ matrix.postgres-version }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15.0-rc.2', postgres-version: '18', freethreaded: true }
+          # The free-threaded marker is in the job name even though there is
+          # currently no free-threaded leg, because two legs named alike is how
+          # a GIL pass and a free-threaded failure came to look like one job
+          # that both passed and failed.
+          #
+          # psycopg does not support free-threaded builds -- tracked as
+          # psycopg/psycopg#1095 -- so the GIL leg is the only one this backend
+          # has, on 3.15 as on every other interpreter.
+          - { python-version: '3.15', postgres-version: '18', freethreaded: false }
 
     services:
       postgres:
@@ -280,7 +284,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/expression-schema-object-refactor"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@test/typed-column-contracts"
 
       - name: Create postgres scenario config
         run: |
@@ -392,7 +396,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/expression-schema-object-refactor"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@test/typed-column-contracts"
 
       - name: Create postgres scenario config
         run: |
@@ -490,7 +494,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/expression-schema-object-refactor"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@test/typed-column-contracts"
 
       - name: Create postgres scenario config
         run: |

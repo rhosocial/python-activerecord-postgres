@@ -32,7 +32,7 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, etc.)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -40,35 +40,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, int, bool, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, integers, booleans, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== WAL Inspection Functions ==============
 
 def pg_get_wal_records_info(
     dialect: "SQLDialectBase",
-    start_lsn: Union[str, "bases.BaseExpression"],
-    end_lsn: Union[str, "bases.BaseExpression"],
+    start_lsn: str,
+    end_lsn: str,
 ) -> core.FunctionCall:
     """Get information about WAL records in a LSN range.
 
@@ -94,15 +71,15 @@ def pg_get_wal_records_info(
     """
     return core.FunctionCall(
         dialect, "pg_get_wal_records_info",
-        _convert_to_expression(dialect, start_lsn),
-        _convert_to_expression(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Literal(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Literal(dialect, end_lsn),
     )
 
 
 def pg_get_wal_blocks_info(
     dialect: "SQLDialectBase",
-    start_lsn: Union[str, "bases.BaseExpression"],
-    end_lsn: Union[str, "bases.BaseExpression"],
+    start_lsn: str,
+    end_lsn: str,
 ) -> core.FunctionCall:
     """Get information about WAL block references in a LSN range.
 
@@ -128,8 +105,8 @@ def pg_get_wal_blocks_info(
     """
     return core.FunctionCall(
         dialect, "pg_get_wal_blocks_info",
-        _convert_to_expression(dialect, start_lsn),
-        _convert_to_expression(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Literal(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Literal(dialect, end_lsn),
     )
 
 

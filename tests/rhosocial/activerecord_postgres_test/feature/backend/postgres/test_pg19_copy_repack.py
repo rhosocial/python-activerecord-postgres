@@ -14,6 +14,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
     RawSQLExpression,
 )
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.serialization import deserialize, serialize
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
@@ -136,7 +137,7 @@ def select_query(dialect):
         dialect,
         select=[Column(dialect, "id")],
         from_=Table(dialect, "users"),
-        where=Column(dialect, "id") > Literal(dialect, 3),
+        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 3)),
     )
 
 
@@ -483,7 +484,7 @@ def test_copy_from_where_returns_parameters():
     expression = PostgresCopyFromExpression(
         dialect,
         "users",
-        where=Column(dialect, "id") > Literal(dialect, 7),
+        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 7)),
     )
 
     sql, params = expression.to_sql()

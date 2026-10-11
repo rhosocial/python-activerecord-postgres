@@ -24,35 +24,31 @@ if TYPE_CHECKING:
 from ..type_values.xml import PostgresXML
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[PostgresXML, str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression."""
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    if isinstance(expr, PostgresXML):
-        return core.Literal(dialect, expr.content)
-    return core.Literal(dialect, expr)
-
-
 def _namespaces_to_expression(
     dialect: "SQLDialectBase",
     namespaces: Dict[str, str],
-) -> "bases.BaseExpression":
+) -> bases.BaseExpression:
     namespace_pairs = [[prefix, uri] for prefix, uri in namespaces.items()]
     return core.Literal(dialect, namespace_pairs)
 
 
 def xpath_query(
     dialect: "SQLDialectBase",
-    xpath: Union[str, "bases.BaseExpression"],
+    xpath: str,
     xml_value: Union[PostgresXML, str, "bases.BaseExpression"],
     namespaces: Optional[Dict[str, str]] = None,
 ) -> core.FunctionCall:
     """Generate PostgreSQL xpath expression."""
-    xpath_expr = _convert_to_expression(dialect, xpath)
-    xml_expr = _convert_to_expression(dialect, xml_value)
+    xpath_expr = (
+        xpath if isinstance(xpath, bases.BaseExpression)
+        else core.Literal(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else core.Literal(dialect, xpath)
+    )
+    xml_expr = (
+        xml_value if isinstance(xml_value, bases.BaseExpression)
+        else core.Literal(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else core.Literal(dialect, xml_value)
+    )
 
     args = [xpath_expr, xml_expr]
     if namespaces:
@@ -63,13 +59,21 @@ def xpath_query(
 
 def xpath_exists(
     dialect: "SQLDialectBase",
-    xpath: Union[str, "bases.BaseExpression"],
+    xpath: str,
     xml_value: Union[PostgresXML, str, "bases.BaseExpression"],
     namespaces: Optional[Dict[str, str]] = None,
 ) -> core.FunctionCall:
     """Generate PostgreSQL xpath_exists expression."""
-    xpath_expr = _convert_to_expression(dialect, xpath)
-    xml_expr = _convert_to_expression(dialect, xml_value)
+    xpath_expr = (
+        xpath if isinstance(xpath, bases.BaseExpression)
+        else core.Literal(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else core.Literal(dialect, xpath)
+    )
+    xml_expr = (
+        xml_value if isinstance(xml_value, bases.BaseExpression)
+        else core.Literal(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else core.Literal(dialect, xml_value)
+    )
 
     args = [xpath_expr, xml_expr]
     if namespaces:
@@ -83,7 +87,11 @@ def xml_is_well_formed(
     content: Union[PostgresXML, str, "bases.BaseExpression"],
 ) -> core.FunctionCall:
     """Generate PostgreSQL xml_is_well_formed expression."""
-    content_expr = _convert_to_expression(dialect, content)
+    content_expr = (
+        content if isinstance(content, bases.BaseExpression)
+        else core.Literal(dialect, content.content) if isinstance(content, PostgresXML)
+        else core.Literal(dialect, content)
+    )
     return core.FunctionCall(dialect, "xml_is_well_formed", content_expr)
 
 

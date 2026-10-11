@@ -12,7 +12,7 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, BinaryExpression, etc.)
 """
 
-from typing import Any, Union, TYPE_CHECKING
+from typing import Any, List, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
@@ -22,41 +22,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[PostgresRange, str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports PostgresRange objects, strings, and existing
-    BaseExpression objects.
-
-    For PostgresRange inputs, generates a literal expression from
-    the PostgreSQL range string representation.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, PostgresRange):
-        return core.Literal(dialect, expr.to_postgres_string())
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Range Operators ==============
 
 def range_contains(
     dialect: "SQLDialectBase",
-    range_value: Any,
-    element: Any,
+    range_value: bases.BaseExpression,
+    element: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range contains element operator.
 
@@ -75,15 +46,21 @@ def range_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        _convert_to_expression(dialect, range_value),
-        _convert_to_expression(dialect, element),
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value),
+        element if isinstance(element, bases.BaseExpression)
+        else core.Literal(dialect, element.to_postgres_string())
+        if isinstance(element, PostgresRange)
+        else core.Literal(dialect, element),
     )
 
 
 def range_contained_by(
     dialect: "SQLDialectBase",
-    element: Any,
-    range_value: Any,
+    element: bases.BaseExpression,
+    range_value: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for element contained by range operator.
 
@@ -100,15 +77,21 @@ def range_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        _convert_to_expression(dialect, element),
-        _convert_to_expression(dialect, range_value),
+        element if isinstance(element, bases.BaseExpression)
+        else core.Literal(dialect, element.to_postgres_string())
+        if isinstance(element, PostgresRange)
+        else core.Literal(dialect, element),
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value),
     )
 
 
 def range_contains_range(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range contains range operator.
 
@@ -125,15 +108,21 @@ def range_contains_range(
     """
     return BinaryExpression(
         dialect, "@>",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_overlaps(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range overlaps operator.
 
@@ -147,15 +136,21 @@ def range_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_adjacent(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range adjacent operator.
 
@@ -169,15 +164,21 @@ def range_adjacent(
     """
     return BinaryExpression(
         dialect, "-|-",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_strictly_left_of(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range strictly left of operator.
 
@@ -191,15 +192,21 @@ def range_strictly_left_of(
     """
     return BinaryExpression(
         dialect, "<<",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_strictly_right_of(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range strictly right of operator.
 
@@ -213,15 +220,21 @@ def range_strictly_right_of(
     """
     return BinaryExpression(
         dialect, ">>",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_not_extend_right(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range does not extend to the right operator.
 
@@ -235,15 +248,21 @@ def range_not_extend_right(
     """
     return BinaryExpression(
         dialect, "&<",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_not_extend_left(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range does not extend to the left operator.
 
@@ -257,15 +276,21 @@ def range_not_extend_left(
     """
     return BinaryExpression(
         dialect, "&>",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_union(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range union operator.
 
@@ -279,15 +304,21 @@ def range_union(
     """
     return BinaryExpression(
         dialect, "+",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_intersection(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range intersection operator.
 
@@ -301,15 +332,21 @@ def range_intersection(
     """
     return BinaryExpression(
         dialect, "*",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
 def range_difference(
     dialect: "SQLDialectBase",
-    range1: Any,
-    range2: Any,
+    range1: bases.BaseExpression,
+    range2: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for range difference operator.
 
@@ -323,8 +360,14 @@ def range_difference(
     """
     return BinaryExpression(
         dialect, "-",
-        _convert_to_expression(dialect, range1),
-        _convert_to_expression(dialect, range2),
+        range1 if isinstance(range1, bases.BaseExpression)
+        else core.Literal(dialect, range1.to_postgres_string())
+        if isinstance(range1, PostgresRange)
+        else core.Literal(dialect, range1),
+        range2 if isinstance(range2, bases.BaseExpression)
+        else core.Literal(dialect, range2.to_postgres_string())
+        if isinstance(range2, PostgresRange)
+        else core.Literal(dialect, range2),
     )
 
 
@@ -332,7 +375,7 @@ def range_difference(
 
 def range_lower(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range lower bound function.
 
@@ -343,12 +386,17 @@ def range_lower(
     Returns:
         FunctionCall for lower(range)
     """
-    return core.FunctionCall(dialect, "lower", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "lower",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_upper(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range upper bound function.
 
@@ -359,12 +407,17 @@ def range_upper(
     Returns:
         FunctionCall for upper(range)
     """
-    return core.FunctionCall(dialect, "upper", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "upper",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_is_empty(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range isempty function.
 
@@ -375,12 +428,17 @@ def range_is_empty(
     Returns:
         FunctionCall for isempty(range)
     """
-    return core.FunctionCall(dialect, "isempty", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "isempty",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_lower_inc(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range lower_inc function.
 
@@ -391,12 +449,17 @@ def range_lower_inc(
     Returns:
         FunctionCall for lower_inc(range)
     """
-    return core.FunctionCall(dialect, "lower_inc", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "lower_inc",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_upper_inc(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range upper_inc function.
 
@@ -407,12 +470,17 @@ def range_upper_inc(
     Returns:
         FunctionCall for upper_inc(range)
     """
-    return core.FunctionCall(dialect, "upper_inc", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "upper_inc",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_lower_inf(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range lower_inf function.
 
@@ -423,12 +491,17 @@ def range_lower_inf(
     Returns:
         FunctionCall for lower_inf(range)
     """
-    return core.FunctionCall(dialect, "lower_inf", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "lower_inf",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 def range_upper_inf(
     dialect: "SQLDialectBase",
-    range_value: Any,
+    range_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range upper_inf function.
 
@@ -439,15 +512,20 @@ def range_upper_inf(
     Returns:
         FunctionCall for upper_inf(range)
     """
-    return core.FunctionCall(dialect, "upper_inf", _convert_to_expression(dialect, range_value))
+    return core.FunctionCall(
+        dialect, "upper_inf",
+        range_value if isinstance(range_value, bases.BaseExpression)
+        else core.Literal(dialect, range_value.to_postgres_string())
+        if isinstance(range_value, PostgresRange)
+        else core.Literal(dialect, range_value))
 
 
 # ============== Multirange Operators ==============
 
 def multirange_contains(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    element: Any,
+    multirange_value: bases.BaseExpression,
+    element: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange contains element operator.
 
@@ -464,15 +542,21 @@ def multirange_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, element),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        element if isinstance(element, bases.BaseExpression)
+        else core.Literal(dialect, element.to_postgres_string())
+        if isinstance(element, PostgresRange)
+        else core.Literal(dialect, element),
     )
 
 
 def multirange_is_contained_by(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    element: Any,
+    multirange_value: bases.BaseExpression,
+    element: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange is contained by operator.
 
@@ -489,15 +573,21 @@ def multirange_is_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, element),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        element if isinstance(element, bases.BaseExpression)
+        else core.Literal(dialect, element.to_postgres_string())
+        if isinstance(element, PostgresRange)
+        else core.Literal(dialect, element),
     )
 
 
 def multirange_overlaps(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    other: Any,
+    multirange_value: bases.BaseExpression,
+    other: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange overlaps operator.
 
@@ -514,15 +604,21 @@ def multirange_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, other),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        other if isinstance(other, bases.BaseExpression)
+        else core.Literal(dialect, other.to_postgres_string())
+        if isinstance(other, PostgresRange)
+        else core.Literal(dialect, other),
     )
 
 
 def multirange_union(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    other: Any,
+    multirange_value: bases.BaseExpression,
+    other: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange union operator.
 
@@ -539,15 +635,21 @@ def multirange_union(
     """
     return BinaryExpression(
         dialect, "+",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, other),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        other if isinstance(other, bases.BaseExpression)
+        else core.Literal(dialect, other.to_postgres_string())
+        if isinstance(other, PostgresRange)
+        else core.Literal(dialect, other),
     )
 
 
 def multirange_intersection(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    other: Any,
+    multirange_value: bases.BaseExpression,
+    other: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange intersection operator.
 
@@ -564,15 +666,21 @@ def multirange_intersection(
     """
     return BinaryExpression(
         dialect, "*",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, other),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        other if isinstance(other, bases.BaseExpression)
+        else core.Literal(dialect, other.to_postgres_string())
+        if isinstance(other, PostgresRange)
+        else core.Literal(dialect, other),
     )
 
 
 def multirange_difference(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
-    other: Any,
+    multirange_value: bases.BaseExpression,
+    other: bases.BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for multirange difference operator.
 
@@ -589,8 +697,14 @@ def multirange_difference(
     """
     return BinaryExpression(
         dialect, "-",
-        _convert_to_expression(dialect, multirange_value),
-        _convert_to_expression(dialect, other),
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value),
+        other if isinstance(other, bases.BaseExpression)
+        else core.Literal(dialect, other.to_postgres_string())
+        if isinstance(other, PostgresRange)
+        else core.Literal(dialect, other),
     )
 
 
@@ -598,7 +712,7 @@ def multirange_difference(
 
 def range_merge(
     dialect: "SQLDialectBase",
-    multirange_value: Any,
+    multirange_value: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for range_merge function.
 
@@ -615,12 +729,17 @@ def range_merge(
     Example:
         >>> range_merge(dialect, 'my_multirange')
     """
-    return core.FunctionCall(dialect, "range_merge", _convert_to_expression(dialect, multirange_value))
+    return core.FunctionCall(
+        dialect, "range_merge",
+        multirange_value if isinstance(multirange_value, bases.BaseExpression)
+        else core.Literal(dialect, multirange_value.to_postgres_string())
+        if isinstance(multirange_value, PostgresRange)
+        else core.Literal(dialect, multirange_value))
 
 
 def multirange_literal(
     dialect: "SQLDialectBase",
-    ranges: list,
+    ranges: List[str],
     multirange_type: str,
 ) -> core.FunctionCall:
     """Construct a multirange literal expression.
@@ -636,7 +755,13 @@ def multirange_literal(
     Example:
         >>> multirange_literal(dialect, ['[1,5)', '[10,20)'], 'int4multirange')
     """
-    args = [_convert_to_expression(dialect, r) for r in ranges]
+    args = [
+        r if isinstance(r, bases.BaseExpression)
+        else core.Literal(dialect, r.to_postgres_string())
+        if isinstance(r, PostgresRange)
+        else core.Literal(dialect, r)
+        for r in ranges
+    ]
     return core.FunctionCall(dialect, multirange_type, *args)
 
 
@@ -658,7 +783,13 @@ def multirange_constructor(
     Example:
         >>> multirange_constructor(dialect, 'int4multirange', '[1,5)', '[10,20)')
     """
-    args = [_convert_to_expression(dialect, r) for r in range_values]
+    args = [
+        r if isinstance(r, bases.BaseExpression)
+        else core.Literal(dialect, r.to_postgres_string())
+        if isinstance(r, PostgresRange)
+        else core.Literal(dialect, r)
+        for r in range_values
+    ]
     return core.FunctionCall(dialect, multirange_type, *args)
 
 
@@ -852,13 +983,19 @@ def _build_range_constructor_args(
     if lower is None:
         args.append(core.Literal(dialect, "NULL"))
     else:
-        args.append(_convert_to_expression(dialect, lower))
+        args.append(lower if isinstance(lower, bases.BaseExpression)
+        else core.Literal(dialect, lower.to_postgres_string())
+        if isinstance(lower, PostgresRange)
+        else core.Literal(dialect, lower))
 
     # Upper bound: NULL if None, otherwise convert to expression
     if upper is None:
         args.append(core.Literal(dialect, "NULL"))
     else:
-        args.append(_convert_to_expression(dialect, upper))
+        args.append(upper if isinstance(upper, bases.BaseExpression)
+        else core.Literal(dialect, upper.to_postgres_string())
+        if isinstance(upper, PostgresRange)
+        else core.Literal(dialect, upper))
 
     # Optional bounds argument
     if bounds is not _BOUNDS_UNSET:

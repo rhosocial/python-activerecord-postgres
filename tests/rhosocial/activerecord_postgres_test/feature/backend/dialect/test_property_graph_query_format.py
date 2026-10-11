@@ -28,6 +28,7 @@ from rhosocial.activerecord.backend.expression import (
     VertexTable,
 )
 from rhosocial.activerecord.backend.expression.core import Column, Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import WhereClause
 from rhosocial.activerecord.backend.expression.objects import (
     EdgeTable as EdgeTableObject,
@@ -147,7 +148,9 @@ class TestPGQGraphVertexFormat:
     def test_with_where(self, pg19_dialect: PostgresDialect):
         where = WhereClause(
             pg19_dialect,
-            condition=Column(pg19_dialect, "age") > Literal(pg19_dialect, 18),
+            condition=ComparisonPredicate(
+                pg19_dialect, ">", Column(pg19_dialect, "age"), Literal(pg19_dialect, 18)
+            ),
         )
         vertex = GraphVertex(pg19_dialect, "p", NodeTable(pg19_dialect, 'person'), where=where)
         sql, params = vertex.to_sql()
@@ -257,8 +260,12 @@ class TestPGQGraphTableFormat:
         assert "COLUMNS" in sql
 
     def test_with_where(self, pg19_dialect: PostgresDialect):
-        where = WhereClause(pg19_dialect,
-                            condition=Column(pg19_dialect, "age") > Literal(pg19_dialect, 18))
+        where = WhereClause(
+            pg19_dialect,
+            condition=ComparisonPredicate(
+                pg19_dialect, ">", Column(pg19_dialect, "age"), Literal(pg19_dialect, 18)
+            ),
+        )
         v = GraphVertex(pg19_dialect, "p", NodeTable(pg19_dialect, 'person'), where=where)
         e = GraphEdge(pg19_dialect, "e", EdgeTableObject(pg19_dialect, 'knows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(pg19_dialect, "b", NodeTable(pg19_dialect, 'person'))

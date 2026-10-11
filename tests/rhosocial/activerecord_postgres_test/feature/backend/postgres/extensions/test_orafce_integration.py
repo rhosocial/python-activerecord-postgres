@@ -230,7 +230,7 @@ class TestOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            Literal(dialect, 0.0).cast("NUMERIC"),
+            Literal(dialect, 0.0).cast(DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryExpression(
@@ -495,7 +495,7 @@ class TestAsyncOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            Literal(dialect, 0.0).cast("NUMERIC"),
+            Literal(dialect, 0.0).cast(DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryExpression(

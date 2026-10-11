@@ -33,7 +33,7 @@ All functions follow the expression-dialect separation architecture:
 - They do not concatenate SQL strings directly
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -41,37 +41,11 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression. For
-    BaseExpression inputs, returns them unchanged.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== PostGIS Raster Functions ==============
 
 def st_rast_from_hexwkb(
     dialect: "SQLDialectBase",
-    raster_data: Union[str, "bases.BaseExpression"],
+    raster_data: str,
     srid: int = 4326,
 ) -> core.FunctionCall:
     """Generate SQL expression for constructing a raster from HexWKB data with SRID.
@@ -101,20 +75,20 @@ def st_rast_from_hexwkb(
     """
     inner = core.FunctionCall(
         dialect, "ST_RastFromHexWKB",
-        _convert_to_expression(dialect, raster_data),
+        raster_data if isinstance(raster_data, bases.BaseExpression) else core.Literal(dialect, raster_data),
     )
     return core.FunctionCall(
         dialect, "ST_SetSRID",
         inner,
-        _convert_to_expression(dialect, srid),
+        srid if isinstance(srid, bases.BaseExpression) else core.Literal(dialect, srid),
     )
 
 
 def st_value(
     dialect: "SQLDialectBase",
-    raster_expr: Union[str, "bases.BaseExpression"],
-    x: Union[int, str, "bases.BaseExpression"],
-    y: Union[int, str, "bases.BaseExpression"],
+    raster_expr: bases.BaseExpression,
+    x: int,
+    y: int,
 ) -> core.FunctionCall:
     """Generate SQL expression for the ST_Value function.
 
@@ -139,15 +113,15 @@ def st_value(
     """
     return core.FunctionCall(
         dialect, "ST_Value",
-        _convert_to_expression(dialect, raster_expr),
-        _convert_to_expression(dialect, x),
-        _convert_to_expression(dialect, y),
+        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Literal(dialect, raster_expr),
+        x if isinstance(x, bases.BaseExpression) else core.Literal(dialect, x),
+        y if isinstance(y, bases.BaseExpression) else core.Literal(dialect, y),
     )
 
 
 def st_summary(
     dialect: "SQLDialectBase",
-    raster_expr: Union[str, "bases.BaseExpression"],
+    raster_expr: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Generate SQL expression for the ST_Summary function.
 
@@ -170,7 +144,7 @@ def st_summary(
     """
     return core.FunctionCall(
         dialect, "ST_Summary",
-        _convert_to_expression(dialect, raster_expr),
+        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Literal(dialect, raster_expr),
     )
 
 

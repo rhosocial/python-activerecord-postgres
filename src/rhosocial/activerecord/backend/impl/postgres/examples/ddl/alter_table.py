@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.expression import (
     DropTableExpression,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -161,7 +162,7 @@ verify_expr = QueryExpression(
         Column(dialect, 'is_nullable'),
     ],
     from_=Table(dialect, 'columns', schema_name='information_schema'),
-    where=Column(dialect, 'table_name') == Literal(dialect, 'users'),
+    where=ComparisonPredicate(dialect, "=", Column(dialect, 'table_name'), Literal(dialect, 'users')),
     order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
 )
 options = ExecutionOptions(stmt_type=StatementType.DQL)

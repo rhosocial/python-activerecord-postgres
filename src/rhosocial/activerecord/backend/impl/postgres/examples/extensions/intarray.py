@@ -56,6 +56,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
 )
@@ -67,6 +68,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.expression.types import IntegerType
 
 # Check if intarray extension is available
 available = dialect.is_extension_available("intarray")
@@ -156,7 +158,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,3}").cast("integer[]"),
+            Literal(dialect, "{1,3}").cast(IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()
@@ -175,7 +177,7 @@ if installed:
         where=BinaryExpression(
             dialect, "&&",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,6}").cast("integer[]"),
+            Literal(dialect, "{1,6}").cast(IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()
@@ -217,7 +219,7 @@ if installed:
             unique_sorted_func,
         ],
         from_=Table(dialect, "tags"),
-        where=Column(dialect, "id") == Literal(dialect, 4),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 4)),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=opts)

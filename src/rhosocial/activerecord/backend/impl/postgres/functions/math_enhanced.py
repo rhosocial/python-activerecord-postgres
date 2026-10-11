@@ -16,38 +16,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """
-    Helper function to convert an input value to an appropriate BaseExpression.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: The expression to convert
-
-    Returns:
-        A BaseExpression instance
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, (int, float)):
-        return core.Literal(dialect, expr)
-    elif isinstance(expr, str):
-        # Try to parse as number first
-        try:
-            return core.Literal(dialect, float(expr) if '.' in expr else int(expr))
-        except ValueError:
-            # Not a number, treat as column name
-            return core.Column(dialect, expr)
-    else:
-        return core.Column(dialect, expr)
-
-
 def round_(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
     precision: int = 0,
 ) -> "core.FunctionCall":
     """
@@ -69,15 +40,15 @@ def round_(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     precision_expr = core.Literal(dialect, precision)
     return core.FunctionCall(dialect, "ROUND", target_expr, precision_expr)
 
 
 def pow(
     dialect: "SQLDialectBase",
-    base: Union[str, "bases.BaseExpression"],
-    exponent: Union[str, "bases.BaseExpression"],
+    base: "bases.BaseExpression",
+    exponent: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a POW function call.
@@ -98,15 +69,15 @@ def pow(
 
     Version: All PostgreSQL versions
     """
-    base_expr = _convert_to_expression(dialect, base)
-    exp_expr = _convert_to_expression(dialect, exponent)
+    base_expr = base
+    exp_expr = exponent
     return core.FunctionCall(dialect, "POW", base_expr, exp_expr)
 
 
 def power(
     dialect: "SQLDialectBase",
-    base: Union[str, "bases.BaseExpression"],
-    exponent: Union[str, "bases.BaseExpression"],
+    base: "bases.BaseExpression",
+    exponent: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a POWER function call (alias for POW).
@@ -127,14 +98,14 @@ def power(
 
     Version: All PostgreSQL versions
     """
-    base_expr = _convert_to_expression(dialect, base)
-    exp_expr = _convert_to_expression(dialect, exponent)
+    base_expr = base
+    exp_expr = exponent
     return core.FunctionCall(dialect, "POWER", base_expr, exp_expr)
 
 
 def sqrt(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a SQRT function call.
@@ -154,14 +125,14 @@ def sqrt(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     return core.FunctionCall(dialect, "SQRT", target_expr)
 
 
 def mod(
     dialect: "SQLDialectBase",
-    dividend: Union[str, "bases.BaseExpression"],
-    divisor: Union[str, "bases.BaseExpression"],
+    dividend: "bases.BaseExpression",
+    divisor: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a MOD function call.
@@ -182,14 +153,14 @@ def mod(
 
     Version: All PostgreSQL versions
     """
-    dividend_expr = _convert_to_expression(dialect, dividend)
-    divisor_expr = _convert_to_expression(dialect, divisor)
+    dividend_expr = dividend
+    divisor_expr = divisor
     return core.FunctionCall(dialect, "MOD", dividend_expr, divisor_expr)
 
 
 def ceil(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a CEIL function call.
@@ -209,13 +180,13 @@ def ceil(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     return core.FunctionCall(dialect, "CEIL", target_expr)
 
 
 def floor(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a FLOOR function call.
@@ -235,13 +206,13 @@ def floor(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     return core.FunctionCall(dialect, "FLOOR", target_expr)
 
 
 def trunc(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
     precision: int = 0,
 ) -> "core.FunctionCall":
     """
@@ -264,16 +235,16 @@ def trunc(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     precision_expr = core.Literal(dialect, precision)
     return core.FunctionCall(dialect, "TRUNC", target_expr, precision_expr)
 
 
 def max_(
     dialect: "SQLDialectBase",
-    expr1: Union[str, "bases.BaseExpression"],
-    expr2: Union[str, "bases.BaseExpression"],
-    *more: Union[str, "bases.BaseExpression"],
+    expr1: "bases.BaseExpression",
+    expr2: "bases.BaseExpression",
+    *more: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a GREATEST or MAX function call.
@@ -299,17 +270,17 @@ def max_(
 
     Version: All PostgreSQL versions
     """
-    exprs = [_convert_to_expression(dialect, expr1), _convert_to_expression(dialect, expr2)]
+    exprs = [expr1, expr2]
     for m in more:
-        exprs.append(_convert_to_expression(dialect, m))
+        exprs.append(m)
     return core.FunctionCall(dialect, "GREATEST", *exprs)
 
 
 def min_(
     dialect: "SQLDialectBase",
-    expr1: Union[str, "bases.BaseExpression"],
-    expr2: Union[str, "bases.BaseExpression"],
-    *more: Union[str, "bases.BaseExpression"],
+    expr1: "bases.BaseExpression",
+    expr2: "bases.BaseExpression",
+    *more: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates a LEAST or MIN function call.
@@ -335,15 +306,15 @@ def min_(
 
     Version: All PostgreSQL versions
     """
-    exprs = [_convert_to_expression(dialect, expr1), _convert_to_expression(dialect, expr2)]
+    exprs = [expr1, expr2]
     for m in more:
-        exprs.append(_convert_to_expression(dialect, m))
+        exprs.append(m)
     return core.FunctionCall(dialect, "LEAST", *exprs)
 
 
 def avg(
     dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
+    expr: "bases.BaseExpression",
 ) -> "core.FunctionCall":
     """
     Creates an AVG aggregate function call.
@@ -362,7 +333,7 @@ def avg(
 
     Version: All PostgreSQL versions
     """
-    target_expr = _convert_to_expression(dialect, expr)
+    target_expr = expr
     return core.FunctionCall(dialect, "AVG", target_expr)
 
 

@@ -7,7 +7,12 @@ including materialized view refresh, comment, and partition expressions.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import (
+    BinaryArithmeticExpression,
+    Column,
+    ComparisonPredicate,
+    Literal,
+)
 from rhosocial.activerecord.backend.expression.statements import (
     AddColumn,
     ColumnDefinition,
@@ -205,7 +210,7 @@ class TestPostgresAlterColumnUsingExpression:
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=Column(dialect, "price") + Literal(dialect, 1),
+            using=BinaryArithmeticExpression(dialect, "+", Column(dialect, "price"), Literal(dialect, 1)),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -385,6 +390,7 @@ class TestPostgresConstraintEnforcement:
             ColumnConstraint,
             ColumnConstraintType,
             ColumnDefinition,
+            ComparisonPredicate,
             ForeignKeyConstraint,
             Literal,
             TableConstraint,
@@ -393,7 +399,7 @@ class TestPostgresConstraintEnforcement:
         from rhosocial.activerecord.backend.expression.types import IntegerType
 
         dialect = PostgresDialect((18, 0, 0))
-        condition = Column(dialect, "age") > Literal(dialect, 0, inline_literals=True)
+        condition = ComparisonPredicate(dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True))
         check = TableConstraint(
             dialect,
             TableConstraintType.CHECK,
@@ -448,7 +454,9 @@ class TestPostgresConstraintEnforcement:
         string_constraint = TableConstraint(
             dialect,
             " check ",
-            check_condition=Column(dialect, "age") > Literal(dialect, 0, inline_literals=True),
+            check_condition=ComparisonPredicate(
+                dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True)
+            ),
             validation=" not valid ",
         )
         assert AddTableConstraint(dialect, string_constraint).to_sql()[0].endswith("NOT VALID")
@@ -553,7 +561,7 @@ class TestPostgresConstraintEnforcement:
         not_valid_check = TableConstraint(
             dialect,
             TableConstraintType.CHECK,
-            check_condition=Column(dialect, "id") > 0,
+            check_condition=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 0)),
             validation=ConstraintValidation.NOVALIDATE,
         )
         invalid_create = CreateTableExpression(
@@ -568,6 +576,7 @@ class TestPostgresConstraintEnforcement:
     def test_exclude_expression_parentheses_and_recursive_binding(self):
         from rhosocial.activerecord.backend.expression import (
             Column,
+            ComparisonPredicate,
             FunctionCall,
             Literal,
             RawSQLExpression,
@@ -585,8 +594,9 @@ class TestPostgresConstraintEnforcement:
                     "=",
                 )
             ],
-            where=Column(dialect, "active")
-            == Literal(dialect, True, inline_literals=True),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+            ),
         )
 
         assert declared.to_sql() == (

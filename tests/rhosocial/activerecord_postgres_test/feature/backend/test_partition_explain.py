@@ -14,10 +14,12 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
+    ComparisonPredicate,
     CreateTableExpression,
     DropTableExpression,
     InsertExpression,
     Literal,
+    LogicalPredicate,
     QueryExpression,
     ValuesSource,
     WildcardExpression,
@@ -123,8 +125,12 @@ def _range_query_expression(dialect, start, end):
         dialect,
         select=[WildcardExpression(dialect)],
         from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
-        where=(Column(dialect, "created_at") >= Literal(dialect, start))
-        & (Column(dialect, "created_at") < Literal(dialect, end)),
+        where=LogicalPredicate(
+            dialect,
+            "AND",
+            ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
+            ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
+        ),
     )
 
 

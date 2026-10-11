@@ -17,6 +17,7 @@ These tests are pure SQL-string / params assertions — no active DB.
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.policy import (
@@ -232,7 +233,7 @@ class TestFormatCreatePolicyStatement:
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.SELECT,
-            using=Column(dialect, "user_id") == Literal(dialect, 1),
+            using=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 1)),
         )
         sql, params = expr.to_sql()
         assert "USING (" in sql
@@ -245,7 +246,7 @@ class TestFormatCreatePolicyStatement:
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.UPDATE,
-            with_check=Column(dialect, "status") == Literal(dialect, "active"),
+            with_check=ComparisonPredicate(dialect, "=", Column(dialect, "status"), Literal(dialect, "active")),
         )
         sql, params = expr.to_sql()
         assert "WITH CHECK (" in sql
@@ -257,7 +258,7 @@ class TestFormatCreatePolicyStatement:
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.INSERT,
-            using=Column(dialect, "user_id") == Literal(dialect, 1),
+            using=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 1)),
         )
         with pytest.raises(ValueError, match="INSERT.*USING"):
             expr.to_sql()
@@ -268,7 +269,7 @@ class TestFormatCreatePolicyStatement:
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.SELECT,
-            with_check=Column(dialect, "user_id") == Literal(dialect, 1),
+            with_check=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 1)),
         )
         with pytest.raises(ValueError, match="SELECT.*WITH CHECK"):
             expr.to_sql()
@@ -279,7 +280,7 @@ class TestFormatCreatePolicyStatement:
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.DELETE,
-            with_check=Column(dialect, "user_id") == Literal(dialect, 1),
+            with_check=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 1)),
         )
         with pytest.raises(ValueError, match="DELETE.*WITH CHECK"):
             expr.to_sql()
@@ -294,7 +295,7 @@ class TestFormatCreatePolicyStatement:
             policy_type=PolicyType.RESTRICTIVE,
             command=PolicyCommand.UPDATE,
             roles=["app_user", "PUBLIC"],
-            using=Column(dialect, "owner") == Literal(dialect, "alice"),
+            using=ComparisonPredicate(dialect, "=", Column(dialect, "owner"), Literal(dialect, "alice")),
             with_check=Column(dialect, "owner").is_not_null(),
         )
         sql, params = expr.to_sql()
@@ -367,7 +368,7 @@ class TestFormatAlterPolicyStatement:
         """Form 2: only USING clause replaced."""
         expr = PostgresAlterPolicyExpression(
             dialect, name="p1", table_name="t1",
-            using=Column(dialect, "user_id") == Literal(dialect, 42),
+            using=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 42)),
         )
         sql, params = expr.to_sql()
         assert "USING (" in sql
@@ -377,7 +378,7 @@ class TestFormatAlterPolicyStatement:
         """Form 2: only WITH CHECK clause replaced."""
         expr = PostgresAlterPolicyExpression(
             dialect, name="p1", table_name="t1",
-            with_check=Column(dialect, "status") == Literal(dialect, "active"),
+            with_check=ComparisonPredicate(dialect, "=", Column(dialect, "status"), Literal(dialect, "active")),
         )
         sql, params = expr.to_sql()
         assert "WITH CHECK (" in sql
@@ -388,8 +389,8 @@ class TestFormatAlterPolicyStatement:
         expr = PostgresAlterPolicyExpression(
             dialect, name="p1", table_name="t1",
             roles=["app_user"],
-            using=Column(dialect, "a") == Literal(dialect, 1),
-            with_check=Column(dialect, "b") == Literal(dialect, "x"),
+            using=ComparisonPredicate(dialect, "=", Column(dialect, "a"), Literal(dialect, 1)),
+            with_check=ComparisonPredicate(dialect, "=", Column(dialect, "b"), Literal(dialect, "x")),
         )
         sql, params = expr.to_sql()
         assert 'TO "app_user"' in sql

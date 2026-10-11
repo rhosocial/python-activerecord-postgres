@@ -893,9 +893,10 @@ class TestCreateIndexExpressionAllOptions:
         d = PostgresDialect()
         from rhosocial.activerecord.backend.expression import Literal
         from rhosocial.activerecord.backend.expression import Column
+        from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         expr = CreateIndexExpression(
             d, Index(d, 'idx_w'), Table(d, 't'), ["a"],
-            where=Column(d, "status") == Literal(d, 1),
+            where=ComparisonPredicate(d, "=", Column(d, "status"), Literal(d, 1)),
         )
         sql, params = expr.to_sql()
         assert "WHERE" in sql
@@ -928,11 +929,12 @@ class TestFormatCreateIndexPgStatementWhereExpression:
     def test_where_expression(self):
         d = PostgresDialect()
         from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         sql, params = d.format_create_index_pg_statement(
             index_name="idx_active",
             table_name="users",
             columns=["email"],
-            where_clause=Column(d, "status") == Literal(d, 1),
+            where_clause=ComparisonPredicate(d, "=", Column(d, "status"), Literal(d, 1)),
         )
         assert "WHERE" in sql
         assert params == (1,)

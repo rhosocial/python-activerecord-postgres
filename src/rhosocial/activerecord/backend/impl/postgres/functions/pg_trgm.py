@@ -25,7 +25,7 @@ Supported operators:
 - !% : Text is not similar (negated similarity threshold)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
@@ -34,37 +34,12 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    For string inputs, generates a literal expression.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Similarity Functions ==============
 
 def similarity(
     dialect: "SQLDialectBase",
-    text1: Union[str, "bases.BaseExpression"],
-    text2: Union[str, "bases.BaseExpression"],
+    text1: bases.BaseExpression,
+    text2: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Calculate the similarity between two texts.
 
@@ -91,15 +66,15 @@ def similarity(
     """
     return core.FunctionCall(
         dialect, "similarity",
-        _convert_to_expression(dialect, text1),
-        _convert_to_expression(dialect, text2),
+        text1 if isinstance(text1, bases.BaseExpression) else core.Literal(dialect, text1),
+        text2 if isinstance(text2, bases.BaseExpression) else core.Literal(dialect, text2),
     )
 
 
 def word_similarity(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
-    query: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
+    query: str,
 ) -> core.FunctionCall:
     """Calculate the word similarity between a document column and a query.
 
@@ -126,8 +101,8 @@ def word_similarity(
     """
     return core.FunctionCall(
         dialect, "word_similarity",
-        _convert_to_expression(dialect, column),
-        _convert_to_expression(dialect, query),
+        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
+        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
     )
 
 
@@ -135,7 +110,7 @@ def word_similarity(
 
 def show_trgm(
     dialect: "SQLDialectBase",
-    text: Union[str, "bases.BaseExpression"],
+    text: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Show the trigrams of a text string.
 
@@ -158,7 +133,7 @@ def show_trgm(
     """
     return core.FunctionCall(
         dialect, "show_trgm",
-        _convert_to_expression(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
     )
 
 
@@ -166,8 +141,8 @@ def show_trgm(
 
 def similarity_operator(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
-    text: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
+    text: bases.BaseExpression,
     negate: bool = False,
 ) -> BinaryExpression:
     """Generate SQL expression for the similarity operator (%).
@@ -199,8 +174,8 @@ def similarity_operator(
     operator = "!%" if negate else "%"
     return BinaryExpression(
         dialect, operator,
-        _convert_to_expression(dialect, column),
-        _convert_to_expression(dialect, text),
+        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
+        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
     )
 
 

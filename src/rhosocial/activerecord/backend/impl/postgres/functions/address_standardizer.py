@@ -34,7 +34,7 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, etc.)
 """
 
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -42,34 +42,11 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Address Functions ==============
 
 def parse_address(
     dialect: "SQLDialectBase",
-    address: Union[str, "bases.BaseExpression"],
+    address: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Parse an address string into its component parts.
 
@@ -93,16 +70,16 @@ def parse_address(
     """
     return core.FunctionCall(
         dialect, "parse_address",
-        _convert_to_expression(dialect, address),
+        address if isinstance(address, bases.BaseExpression) else core.Literal(dialect, address),
     )
 
 
 def standardize_address(
     dialect: "SQLDialectBase",
-    lextab: Union[str, "bases.BaseExpression"],
-    gaztab: Union[str, "bases.BaseExpression"],
-    rultab: Union[str, "bases.BaseExpression"],
-    address: Union[str, "bases.BaseExpression"],
+    lextab: str,
+    gaztab: str,
+    rultab: str,
+    address: bases.BaseExpression,
 ) -> core.FunctionCall:
     """Standardize an address string using lookup tables.
 
@@ -134,10 +111,10 @@ def standardize_address(
     """
     return core.FunctionCall(
         dialect, "standardize_address",
-        _convert_to_expression(dialect, lextab),
-        _convert_to_expression(dialect, gaztab),
-        _convert_to_expression(dialect, rultab),
-        _convert_to_expression(dialect, address),
+        lextab if isinstance(lextab, bases.BaseExpression) else core.Literal(dialect, lextab),
+        gaztab if isinstance(gaztab, bases.BaseExpression) else core.Literal(dialect, gaztab),
+        rultab if isinstance(rultab, bases.BaseExpression) else core.Literal(dialect, rultab),
+        address if isinstance(address, bases.BaseExpression) else core.Literal(dialect, address),
     )
 
 

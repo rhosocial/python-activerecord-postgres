@@ -26,6 +26,9 @@ from typing import List, Optional, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresVectorType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -36,39 +39,6 @@ _METRIC_OPERATORS = {
     "l2": "<->",
     "ip": "<#>",
 }
-
-
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports PostgresVector objects, List[float], strings, and
-    existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, PostgresVector):
-        literal = core.Literal(dialect, expr.to_postgres_string())
-        if expr.dimensions is not None:
-            return literal.cast(f"vector({expr.dimensions})")
-        return literal.cast("vector")
-    elif isinstance(expr, list):
-        vec = PostgresVector(values=expr)
-        literal = core.Literal(dialect, vec.to_postgres_string())
-        return literal.cast(f"vector({vec.dimensions})")
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
 
 
 # === Distance Operators ===
@@ -94,8 +64,34 @@ def vector_l2_distance(
         >>> d = PostgresDialect()
         >>> expr = vector_l2_distance(d, "embedding", [1.0, 2.0, 3.0])
     """
-    left_expr = _convert_to_expression(dialect, left)
-    right_expr = _convert_to_expression(dialect, right)
+    if isinstance(left, bases.BaseExpression):
+        left_expr = left
+    elif isinstance(left, PostgresVector):
+        literal = core.Literal(dialect, left.to_postgres_string())
+        left_expr = literal.cast(
+            PostgresVectorType(dialect, left.dimensions)
+            if left.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(left, list):
+        vec = PostgresVector(values=left)
+        left_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        left_expr = core.Literal(dialect, left)
+
+    if isinstance(right, bases.BaseExpression):
+        right_expr = right
+    elif isinstance(right, PostgresVector):
+        literal = core.Literal(dialect, right.to_postgres_string())
+        right_expr = literal.cast(
+            PostgresVectorType(dialect, right.dimensions)
+            if right.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(right, list):
+        vec = PostgresVector(values=right)
+        right_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        right_expr = core.Literal(dialect, right)
+
     return BinaryArithmeticExpression(dialect, "<->", left_expr, right_expr)
 
 
@@ -115,8 +111,34 @@ def vector_cosine_distance(
     Returns:
         BinaryArithmeticExpression for the cosine distance
     """
-    left_expr = _convert_to_expression(dialect, left)
-    right_expr = _convert_to_expression(dialect, right)
+    if isinstance(left, bases.BaseExpression):
+        left_expr = left
+    elif isinstance(left, PostgresVector):
+        literal = core.Literal(dialect, left.to_postgres_string())
+        left_expr = literal.cast(
+            PostgresVectorType(dialect, left.dimensions)
+            if left.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(left, list):
+        vec = PostgresVector(values=left)
+        left_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        left_expr = core.Literal(dialect, left)
+
+    if isinstance(right, bases.BaseExpression):
+        right_expr = right
+    elif isinstance(right, PostgresVector):
+        literal = core.Literal(dialect, right.to_postgres_string())
+        right_expr = literal.cast(
+            PostgresVectorType(dialect, right.dimensions)
+            if right.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(right, list):
+        vec = PostgresVector(values=right)
+        right_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        right_expr = core.Literal(dialect, right)
+
     return BinaryArithmeticExpression(dialect, "<=>", left_expr, right_expr)
 
 
@@ -139,8 +161,34 @@ def vector_inner_product(
     Returns:
         BinaryArithmeticExpression for the inner product
     """
-    left_expr = _convert_to_expression(dialect, left)
-    right_expr = _convert_to_expression(dialect, right)
+    if isinstance(left, bases.BaseExpression):
+        left_expr = left
+    elif isinstance(left, PostgresVector):
+        literal = core.Literal(dialect, left.to_postgres_string())
+        left_expr = literal.cast(
+            PostgresVectorType(dialect, left.dimensions)
+            if left.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(left, list):
+        vec = PostgresVector(values=left)
+        left_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        left_expr = core.Literal(dialect, left)
+
+    if isinstance(right, bases.BaseExpression):
+        right_expr = right
+    elif isinstance(right, PostgresVector):
+        literal = core.Literal(dialect, right.to_postgres_string())
+        right_expr = literal.cast(
+            PostgresVectorType(dialect, right.dimensions)
+            if right.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(right, list):
+        vec = PostgresVector(values=right)
+        right_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        right_expr = core.Literal(dialect, right)
+
     return BinaryArithmeticExpression(dialect, "<#>", left_expr, right_expr)
 
 
@@ -173,9 +221,23 @@ def vector_distance(
     column_expr = (
         core.Column(dialect, column) if isinstance(column, str) else column
     )
+    if isinstance(query_vector, bases.BaseExpression):
+        query_expr = query_vector
+    elif isinstance(query_vector, PostgresVector):
+        literal = core.Literal(dialect, query_vector.to_postgres_string())
+        query_expr = literal.cast(
+            PostgresVectorType(dialect, query_vector.dimensions)
+            if query_vector.dimensions is not None else PostgresVectorType(dialect))
+    elif isinstance(query_vector, list):
+        vec = PostgresVector(values=query_vector)
+        query_expr = core.Literal(dialect, vec.to_postgres_string()).cast(
+            PostgresVectorType(dialect, vec.dimensions))
+    else:
+        query_expr = core.Literal(dialect, query_vector)
+
     return BinaryArithmeticExpression(
         dialect, _METRIC_OPERATORS[metric],
-        column_expr, _convert_to_expression(dialect, query_vector),
+        column_expr, query_expr,
     )
 
 
@@ -229,7 +291,10 @@ def vector_literal(
         >>> # Produces: '[1.0, 2.0, 3.0]'::vector(3)
     """
     vec = PostgresVector(values=values, dimensions=dimensions)
-    return _convert_to_expression(dialect, vec)
+    literal = core.Literal(dialect, vec.to_postgres_string())
+    if vec.dimensions is not None:
+        return literal.cast(PostgresVectorType(dialect, vec.dimensions))
+    return literal.cast(PostgresVectorType(dialect))
 
 
 __all__ = [

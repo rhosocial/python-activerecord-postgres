@@ -1,9 +1,13 @@
 """
 Schema diff: PostgreSQL array type dimension changes.
 
-PostgresArrayType.is_equivalent() handles dimension comparison
-internally. Column type changes like INTEGER[] → INTEGER[][]
-are detected via parsed_data_type equivalence checks.
+PostgreSQL normalises every array declaration to one dimension on
+storage, so INTEGER[] and INTEGER[][] are the same *column* to the
+server: the difference this example constructs by hand cannot be read
+back out of a live database. The schema differ compares parsed types by
+identity (==), which means a change in declared dimensions IS reported --
+use is_element_type_equivalent() when the question is "do these two array
+columns hold the same kind of thing", ignoring dimensions.
 
 Supported versions: PostgreSQL 8.4+ (arrays available since PG 8.4)
 """

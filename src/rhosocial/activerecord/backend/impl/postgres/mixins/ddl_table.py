@@ -195,10 +195,11 @@ class PostgresTableMixin:
 
         all_params: List[Any] = []
         type_sql, _ = col_def.data_type.to_sql()
-        if not re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", type_sql):
+        if not re.fullmatch(r"[A-Za-z0-9_\s(),\[\]]+", type_sql):
             raise ValueError(
                 f"Invalid data type '{type_sql}': "
-                "must contain only alphanumeric characters, spaces, parentheses, commas, and brackets."
+                "must contain only alphanumeric characters, underscores, spaces, "
+                "parentheses, commas, and brackets."
             )
         col_sql = f"{self.format_identifier(col_def.name)} {type_sql}"
 

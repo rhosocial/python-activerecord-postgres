@@ -50,7 +50,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate
+from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate, ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
     OrderByClause,
@@ -157,7 +157,7 @@ base_query = QueryExpression(
         Literal(dialect, 0).as_('depth'),
     ],
     from_=Table(dialect, 'users'),
-    where=WhereClause(dialect, condition=Column(dialect, 'name') == Literal(dialect, 'Alice')),
+    where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'name'), Literal(dialect, 'Alice'))),
 )
 
 # --- Recursive query: follow edges one hop, depth+1, bound depth<4 ---
@@ -166,10 +166,10 @@ recursive_join = JoinClause(
     left_table=NamedRelationRef(dialect, Table(dialect, 'traversal'), alias='t'),
     right_table=NamedRelationRef(dialect, Table(dialect, 'follows'), alias='f'),
     join_type='INNER JOIN',
-    condition=Column(dialect, 'id', table='t') == Column(dialect, 'follower_id', table='f'),
+    condition=ComparisonPredicate(dialect, "=", Column(dialect, 'id', table='t'), Column(dialect, 'follower_id', table='f')),
 ).inner_join(
     right_table=NamedRelationRef(dialect, Table(dialect, 'users'), alias='u'),
-    condition=Column(dialect, 'followed_id', table='f') == Column(dialect, 'id', table='u'),
+    condition=ComparisonPredicate(dialect, "=", Column(dialect, 'followed_id', table='f'), Column(dialect, 'id', table='u')),
 )
 
 recursive_query = QueryExpression(
@@ -180,7 +180,7 @@ recursive_query = QueryExpression(
         FunctionCall(dialect, '+', Column(dialect, 'depth', table='t'), Literal(dialect, 1)).as_('depth'),
     ],
     from_=recursive_join,
-    where=WhereClause(dialect, condition=Column(dialect, 'depth', table='t') < Literal(dialect, 4)),
+    where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='t'), Literal(dialect, 4))),
 )
 
 # --- Combine with UNION ALL ---
@@ -245,7 +245,7 @@ aml_base_join = JoinClause(
     left_table=NamedRelationRef(dialect, Table(dialect, 'transactions'), alias='tx'),
     right_table=NamedRelationRef(dialect, Table(dialect, 'accounts'), alias='a'),
     join_type='INNER JOIN',
-    condition=Column(dialect, 'source_account_id', table='tx') == Column(dialect, 'id', table='a'),
+    condition=ComparisonPredicate(dialect, "=", Column(dialect, 'source_account_id', table='tx'), Column(dialect, 'id', table='a')),
 )
 
 aml_base = QueryExpression(
@@ -258,7 +258,7 @@ aml_base = QueryExpression(
         Literal(dialect, 1).as_('depth'),
     ],
     from_=aml_base_join,
-    where=WhereClause(dialect, condition=Column(dialect, 'target_account_id', table='tx') == Literal(dialect, 1)),
+    where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'target_account_id', table='tx'), Literal(dialect, 1))),
 )
 
 # --- Recursive query: trace upstream along the transaction chain ---
@@ -267,10 +267,10 @@ aml_recursive_join = JoinClause(
     left_table=NamedRelationRef(dialect, Table(dialect, 'fund_trace'), alias='tr'),
     right_table=NamedRelationRef(dialect, Table(dialect, 'transactions'), alias='tx'),
     join_type='INNER JOIN',
-    condition=Column(dialect, 'target_account_id', table='tx') == Column(dialect, 'id', table='tr'),
+    condition=ComparisonPredicate(dialect, "=", Column(dialect, 'target_account_id', table='tx'), Column(dialect, 'id', table='tr')),
 ).inner_join(
     right_table=NamedRelationRef(dialect, Table(dialect, 'accounts'), alias='a'),
-    condition=Column(dialect, 'source_account_id', table='tx') == Column(dialect, 'id', table='a'),
+    condition=ComparisonPredicate(dialect, "=", Column(dialect, 'source_account_id', table='tx'), Column(dialect, 'id', table='a')),
 )
 
 aml_recursive = QueryExpression(
@@ -283,7 +283,7 @@ aml_recursive = QueryExpression(
         FunctionCall(dialect, '+', Column(dialect, 'depth', table='tr'), Literal(dialect, 1)).as_('depth'),
     ],
     from_=aml_recursive_join,
-    where=WhereClause(dialect, condition=Column(dialect, 'depth', table='tr') < Literal(dialect, 5)),
+    where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='tr'), Literal(dialect, 5))),
 )
 
 # --- Combine with UNION ALL ---
@@ -313,7 +313,7 @@ aml_query = QueryExpression(
         Column(dialect, 'depth'),
     ],
     from_=Table(dialect, 'fund_trace'),
-    where=WhereClause(dialect, condition=Column(dialect, 'depth') >= Literal(dialect, 1)),
+    where=WhereClause(dialect, condition=ComparisonPredicate(dialect, ">=", Column(dialect, 'depth'), Literal(dialect, 1))),
     order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'id')]),
 )
 

@@ -114,6 +114,7 @@ class PostgresBackendMixin:
         from ..adapters.monetary import PostgresMoneyAdapter
         from ..adapters.network_address import PostgresMacaddrAdapter, PostgresMacaddr8Adapter
         from ..adapters.object_identifier import PostgresOidAdapter, PostgresXidAdapter, PostgresTidAdapter
+        from ..adapters.uuid import PostgresUUIDAdapter
         from ..adapters.pg_lsn import PostgresLsnAdapter
         from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
         from ..config import RangeAdapterMode
@@ -133,6 +134,11 @@ class PostgresBackendMixin:
             PostgresOidAdapter(),
             PostgresXidAdapter(),
             PostgresTidAdapter(),
+            # Same {uuid.UUID: {str}} pair the core UUIDAdapter registers, so
+            # this needs allow_override (see the loop below). Unlike
+            # PostgresJsonPathAdapter it claims no str->str mapping, so it
+            # cannot shadow the default string handling.
+            PostgresUUIDAdapter(),
             # PostgresJsonPathAdapter(), # Not registered: str->str conflict
             # PostgresXMLAdapter is NOT registered by default
             # due to str->str type pair conflict
@@ -141,7 +147,9 @@ class PostgresBackendMixin:
         for adapter in pg_adapters:
             for py_type, db_types in adapter.supported_types.items():
                 for db_type in db_types:
-                    self.adapter_registry.register(adapter, py_type, db_type)
+                    self.adapter_registry.register(
+                        adapter, py_type, db_type, allow_override=True
+                    )
 
         # Register Range adapters based on configuration
         range_mode = getattr(self.config, "range_adapter_mode", RangeAdapterMode.NATIVE)

@@ -26,21 +26,6 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[_uuid.UUID, str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression."""
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, _uuid.UUID):
-        return core.Literal(dialect, str(expr))
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 def uuid_generate_v1(dialect: "SQLDialectBase") -> core.FunctionCall:
     """
     Generate a version 1 (time-based) UUID.
@@ -78,7 +63,7 @@ def uuid_generate_v1mc(dialect: "SQLDialectBase") -> core.FunctionCall:
 def uuid_generate_v3(
     dialect: "SQLDialectBase",
     namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
-    name: Union[str, "bases.BaseExpression"],
+    name: str,
 ) -> core.FunctionCall:
     """
     Generate a version 3 (MD5 hash-based) UUID in the given namespace.
@@ -98,8 +83,16 @@ def uuid_generate_v3(
         >>> func.to_sql()
         ('uuid_generate_v3(%s, %s)', ('dns', 'example.com'))
     """
-    ns_expr = _convert_to_expression(dialect, namespace)
-    name_expr = _convert_to_expression(dialect, name)
+    ns_expr = (
+        namespace if isinstance(namespace, bases.BaseExpression)
+        else core.Literal(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else core.Literal(dialect, namespace)
+    )
+    name_expr = (
+        name if isinstance(name, bases.BaseExpression)
+        else core.Literal(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else core.Literal(dialect, name)
+    )
     return core.FunctionCall(dialect, "uuid_generate_v3", ns_expr, name_expr)
 
 
@@ -123,7 +116,7 @@ def uuid_generate_v4(dialect: "SQLDialectBase") -> core.FunctionCall:
 def uuid_generate_v5(
     dialect: "SQLDialectBase",
     namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
-    name: Union[str, "bases.BaseExpression"],
+    name: str,
 ) -> core.FunctionCall:
     """
     Generate a version 5 (SHA-1 hash-based) UUID in the given namespace.
@@ -143,8 +136,16 @@ def uuid_generate_v5(
         >>> func.to_sql()
         ('uuid_generate_v5(%s, %s)', ('dns', 'example.com'))
     """
-    ns_expr = _convert_to_expression(dialect, namespace)
-    name_expr = _convert_to_expression(dialect, name)
+    ns_expr = (
+        namespace if isinstance(namespace, bases.BaseExpression)
+        else core.Literal(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else core.Literal(dialect, namespace)
+    )
+    name_expr = (
+        name if isinstance(name, bases.BaseExpression)
+        else core.Literal(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else core.Literal(dialect, name)
+    )
     return core.FunctionCall(dialect, "uuid_generate_v5", ns_expr, name_expr)
 
 

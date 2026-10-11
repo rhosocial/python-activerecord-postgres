@@ -136,7 +136,7 @@ class TestBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -167,7 +167,7 @@ class TestBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -301,7 +301,9 @@ class TestAsyncBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist_async"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist_async")
+            ),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -333,7 +335,9 @@ class TestAsyncBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=Column(dialect, "tablename") == Literal(dialect, "test_btree_gist_async"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist_async")
+            ),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)

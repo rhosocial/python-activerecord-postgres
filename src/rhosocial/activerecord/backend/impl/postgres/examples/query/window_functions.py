@@ -27,18 +27,17 @@ from rhosocial.activerecord.backend.expression import (
     QueryExpression,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.core import Column, FunctionCall
 from rhosocial.activerecord.backend.expression.advanced_functions import (
-    WindowFunctionCall,
     WindowSpecification,
     WindowFrameSpecification,
 )
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 # ROW_NUMBER() - sequential rank without gaps
-row_number = WindowFunctionCall(
+row_number = FunctionCall(
     dialect=dialect,
-    function_name='ROW_NUMBER',
+    func_name='ROW_NUMBER',
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],
@@ -54,9 +53,9 @@ row_number = WindowFunctionCall(
 )
 
 # RANK() - rank with gaps (same values get same rank, skip ranks)
-rank = WindowFunctionCall(
+rank = FunctionCall(
     dialect=dialect,
-    function_name='RANK',
+    func_name='RANK',
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],
@@ -66,9 +65,9 @@ rank = WindowFunctionCall(
 )
 
 # DENSE_RANK() - rank without gaps
-dense_rank = WindowFunctionCall(
+dense_rank = FunctionCall(
     dialect=dialect,
-    function_name='DENSE_RANK',
+    func_name='DENSE_RANK',
     window_spec=WindowSpecification(
         dialect=dialect,
         partition_by=[Column(dialect, 'department')],

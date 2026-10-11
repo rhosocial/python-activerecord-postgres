@@ -32,7 +32,7 @@ All functions follow the expression-dialect separation architecture:
 - They return Expression objects (FunctionCall, etc.)
 """
 
-from typing import Union, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 
@@ -40,38 +40,15 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, int, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings, integers, and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 # ============== Partition Management Functions ==============
 
 def create_parent(
     dialect: "SQLDialectBase",
-    parent_table: Union[str, "bases.BaseExpression"],
-    control: Union[str, "bases.BaseExpression"],
-    interval: Union[str, "bases.BaseExpression"],
-    partition_type: Union[str, "bases.BaseExpression"] = "native",
-    premake: Union[int, "bases.BaseExpression"] = 4,
+    parent_table: str,
+    control: str,
+    interval: str,
+    partition_type: str = "native",
+    premake: int = 4,
 ) -> core.FunctionCall:
     """Create a partition set for a parent table.
 
@@ -107,17 +84,17 @@ def create_parent(
     """
     return core.FunctionCall(
         dialect, "create_parent",
-        _convert_to_expression(dialect, parent_table),
-        _convert_to_expression(dialect, control),
-        _convert_to_expression(dialect, interval),
-        _convert_to_expression(dialect, partition_type),
-        _convert_to_expression(dialect, premake),
+        parent_table if isinstance(parent_table, bases.BaseExpression) else core.Literal(dialect, parent_table),
+        control if isinstance(control, bases.BaseExpression) else core.Literal(dialect, control),
+        interval if isinstance(interval, bases.BaseExpression) else core.Literal(dialect, interval),
+        partition_type if isinstance(partition_type, bases.BaseExpression) else core.Literal(dialect, partition_type),
+        premake if isinstance(premake, bases.BaseExpression) else core.Literal(dialect, premake),
     )
 
 
 def run_maintenance(
     dialect: "SQLDialectBase",
-    parent_table: Optional[Union[str, "bases.BaseExpression"]] = None,
+    parent_table: Optional[str] = None,
 ) -> core.FunctionCall:
     """Run partition maintenance to create new partitions and drop old ones.
 
@@ -146,7 +123,9 @@ def run_maintenance(
     """
     args = []
     if parent_table is not None:
-        args.append(_convert_to_expression(dialect, parent_table))
+        args.append(
+            parent_table if isinstance(parent_table, bases.BaseExpression)
+            else core.Literal(dialect, parent_table))
     return core.FunctionCall(dialect, "run_maintenance", *args)
 
 

@@ -94,8 +94,11 @@ def test_postgres_format_storage_options_string_escaping(dialect):
 
 
 def test_postgres_format_cast_expression_valid(dialect):
-    """Test that CAST expression renders the target type (:: syntax)."""
-    expr = CastExpression(dialect, RawSQLExpression(dialect, "column"), "INTEGER")
+    """The target type is a DataType, and the :: syntax renders what it says."""
+    from rhosocial.activerecord.backend.expression.types import CustomType
+
+    expr = CastExpression(dialect, RawSQLExpression(dialect, "column"),
+                          CustomType(dialect, raw="INTEGER"))
     sql, params = expr.to_sql()
     assert "INTEGER" in sql
 
@@ -202,8 +205,11 @@ def test_exclude_constraint_rejects_empty_elements(dialect):
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
     from rhosocial.activerecord.backend.expression import Column, Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-    where = Column(dialect, "active") == Literal(dialect, True, inline_literals=True)
+    where = ComparisonPredicate(
+        dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+    )
     constraint = PostgresExcludeConstraint(
         dialect,
         elements=[("range", "&&")],

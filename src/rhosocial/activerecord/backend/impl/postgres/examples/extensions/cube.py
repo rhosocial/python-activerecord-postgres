@@ -69,6 +69,9 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresCubeType,
+)
 
 # Check if cube extension is available
 available = dialect.is_extension_available("cube")
@@ -136,12 +139,12 @@ if installed:
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Widget A"), Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube")],
-                [Literal(dialect, "Widget B"), Literal(dialect, "(0.3, 0.6, 0.9)").cast("cube")],
-                [Literal(dialect, "Widget C"), Literal(dialect, "(0.7, 0.4, 0.1)").cast("cube")],
-                [Literal(dialect, "Widget D"), Literal(dialect, "(0.2, 0.3, 0.7)").cast("cube")],
+                [Literal(dialect, "Widget A"), Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget B"), Literal(dialect, "(0.3, 0.6, 0.9)").cast(PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget C"), Literal(dialect, "(0.7, 0.4, 0.1)").cast(PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget D"), Literal(dialect, "(0.2, 0.3, 0.7)").cast(PostgresCubeType(dialect))],
                 # A range entry (min corner, max corner in each dimension)
-                [Literal(dialect, "Category X"), Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube")],
+                [Literal(dialect, "Category X"), Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -161,7 +164,7 @@ if installed:
         from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "@>",
-            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube"),
+            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect)),
             Column(dialect, "feature_vector"),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
@@ -181,7 +184,7 @@ if installed:
         where=BinaryExpression(
             dialect, "<@",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast("cube"),
+            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect)),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
@@ -201,7 +204,7 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
+            Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
         ),
     ).as_("distance")
 
@@ -212,14 +215,14 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
+            Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
         ),
     )
 
     dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        Literal(dialect, "(0.5, 0.8, 0.2)").cast("cube"),
+        Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
     )
 
     query = QueryExpression(
@@ -251,14 +254,14 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.4, 0.5, 0.6)").cast("cube"),
+            Literal(dialect, "(0.4, 0.5, 0.6)").cast(PostgresCubeType(dialect)),
         ),
     ).as_("distance")
 
     nn_dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        Literal(dialect, "(0.4, 0.5, 0.6)").cast("cube"),
+        Literal(dialect, "(0.4, 0.5, 0.6)").cast(PostgresCubeType(dialect)),
     )
 
     query = QueryExpression(

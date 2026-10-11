@@ -25,29 +25,6 @@ if TYPE_CHECKING:
     from ..type_values.json import PostgresJsonPath
 
 
-def _convert_to_expression(
-    dialect: "SQLDialectBase",
-    expr: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
-    """Convert an input value to an appropriate BaseExpression.
-
-    Supports strings and existing BaseExpression objects.
-
-    Args:
-        dialect: The SQL dialect instance
-        expr: Value to convert
-
-    Returns:
-        BaseExpression representing the value
-    """
-    if isinstance(expr, bases.BaseExpression):
-        return expr
-    elif isinstance(expr, str):
-        return core.Literal(dialect, expr)
-    else:
-        return core.Literal(dialect, expr)
-
-
 def _convert_jsonpath(
     dialect: "SQLDialectBase",
     path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
@@ -197,7 +174,7 @@ def json_path_filter(path: Union["PostgresJsonPath", str], condition: str) -> "P
 
 def jsonb_path_query(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
     path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
@@ -230,7 +207,7 @@ def jsonb_path_query(
         >>> func.to_sql()
         ('jsonb_path_query(%s, %s, %s)', ('data', '$.items[*]', True))
     """
-    col_expr = _convert_to_expression(dialect, column)
+    col_expr = column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
@@ -243,7 +220,7 @@ def jsonb_path_query(
 
 def jsonb_path_query_first(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
     path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
@@ -272,7 +249,7 @@ def jsonb_path_query_first(
         >>> func.to_sql()
         ('jsonb_path_query_first(%s, %s, %s)', ('data', '$.name', '{"lang": "en"}'))
     """
-    col_expr = _convert_to_expression(dialect, column)
+    col_expr = column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
@@ -285,7 +262,7 @@ def jsonb_path_query_first(
 
 def jsonb_path_exists(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
     path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
@@ -314,7 +291,7 @@ def jsonb_path_exists(
         >>> func.to_sql()
         ('jsonb_path_exists(%s, %s, %s)', ('data', '$.items[*]', '{"min": 5}'))
     """
-    col_expr = _convert_to_expression(dialect, column)
+    col_expr = column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
@@ -327,7 +304,7 @@ def jsonb_path_exists(
 
 def jsonb_path_match(
     dialect: "SQLDialectBase",
-    column: Union[str, "bases.BaseExpression"],
+    column: bases.BaseExpression,
     path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
@@ -359,7 +336,7 @@ def jsonb_path_match(
         >>> func.to_sql()
         ('jsonb_path_match(%s, %s, %s)', ('data', '$.count > $threshold', '{"threshold": 5}'))
     """
-    col_expr = _convert_to_expression(dialect, column)
+    col_expr = column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:

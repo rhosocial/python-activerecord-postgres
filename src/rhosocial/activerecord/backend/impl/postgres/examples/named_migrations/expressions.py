@@ -14,10 +14,21 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraintType,
     DropTableExpression,
 )
+from rhosocial.activerecord.backend.expression.types import VarCharType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
-    PostgresCharacterVaryingType,
 )
+
+def _character_varying(dialect, length: int = 255) -> VarCharType:
+    """A ``CHARACTER VARYING(length)`` column type.
+
+    SQL:2016 defines ``VARCHAR`` as the abbreviation of ``CHARACTER VARYING``, so
+    the two are one type written two ways — the core ``VarCharType`` with its
+    ``character varying`` spelling, not a PostgreSQL-only class. Drop the
+    ``spelling=`` argument for plain ``VARCHAR(length)``; both render, and both
+    compare as the same concept with the same length.
+    """
+    return VarCharType(dialect, length=length, spelling="character varying")
 
 
 def create_users_table(dialect):
@@ -32,8 +43,8 @@ def create_users_table(dialect):
                 PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition(dialect, "name", PostgresCharacterVaryingType(dialect, length=255)),
-            ColumnDefinition(dialect, "email", PostgresCharacterVaryingType(dialect, length=255)),
+            ColumnDefinition(dialect, "name", _character_varying(dialect)),
+            ColumnDefinition(dialect, "email", _character_varying(dialect)),
         ],
     )
 
@@ -55,8 +66,8 @@ def create_posts_table(dialect):
                 PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition(dialect, "title", PostgresCharacterVaryingType(dialect, length=255)),
-            ColumnDefinition(dialect, "user_id", PostgresCharacterVaryingType(dialect, length=255)),
+            ColumnDefinition(dialect, "title", _character_varying(dialect)),
+            ColumnDefinition(dialect, "user_id", _character_varying(dialect)),
         ],
     )
 
@@ -82,7 +93,7 @@ def create_custom_table(dialect, table_name: str = "custom_table"):
                 PostgresSerialType(dialect),
                 constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
             ),
-            ColumnDefinition(dialect, "value", PostgresCharacterVaryingType(dialect, length=255)),
+            ColumnDefinition(dialect, "value", _character_varying(dialect)),
         ],
     )
 
