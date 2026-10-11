@@ -220,7 +220,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   test-python-315:
-    name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
+    name: Python ${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }} / postgres ${{ matrix.postgres-version }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -228,8 +228,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # The free-threaded marker is in the job name even though there is
+          # currently no free-threaded leg, because two legs named alike is how
+          # a GIL pass and a free-threaded failure came to look like one job
+          # that both passed and failed.
+          #
+          # psycopg does not support free-threaded builds -- tracked as
+          # psycopg/psycopg#1095 -- so the GIL leg is the only one this backend
+          # has, on 3.15 as on every other interpreter.
           - { python-version: '3.15', postgres-version: '18', freethreaded: false }
-          - { python-version: '3.15', postgres-version: '18', freethreaded: true }
 
     services:
       postgres:
