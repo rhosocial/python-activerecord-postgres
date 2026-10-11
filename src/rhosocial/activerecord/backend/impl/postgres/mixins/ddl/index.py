@@ -484,7 +484,7 @@ class PostgresIndexMixin:
             )
         parts = ["DROP INDEX"]
 
-        if getattr(expr, "concurrent", False):
+        if expr.concurrent:
             if not self.supports_streaming_btree_index_build():
                 raise ValueError("DROP INDEX CONCURRENTLY requires PostgreSQL 18+")
             parts.append("CONCURRENTLY")

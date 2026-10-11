@@ -99,7 +99,7 @@ class PostgresUUIDMixin:
                 "`field/uuid.py` (`UUIDMixin`), which needs no extension.",
             )
 
-        if getattr(expr, "alias", None):
+        if expr.alias:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, ()
 

@@ -121,7 +121,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         from rhosocial.activerecord.backend.expression.statements import TableConstraintType
 
         constraint_type = normalize_table_constraint_type(expr.constraint_type)
-        if getattr(expr, "enforced", False) or getattr(expr, "not_enforced", False):
+        if expr.enforced or expr.not_enforced:
             self._require_constraint_enforced(constraint_type)
         if constraint_type == TableConstraintType.EXCLUDE:
             return self._format_exclude_constraint(expr)
@@ -260,13 +260,13 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             params.extend(where_params)
             parts.append(f"WHERE ({where_sql})")
 
-        if getattr(constraint, "deferrable", False):
+        if constraint.deferrable:
             parts.append("DEFERRABLE")
-        elif getattr(constraint, "not_deferrable", False):
+        elif constraint.not_deferrable:
             parts.append("NOT DEFERRABLE")
-        if getattr(constraint, "initially_deferred", False):
+        if constraint.initially_deferred:
             parts.append("INITIALLY DEFERRED")
-        elif getattr(constraint, "initially_immediate", False):
+        elif constraint.initially_immediate:
             parts.append("INITIALLY IMMEDIATE")
 
         return " ".join(parts), tuple(params)
