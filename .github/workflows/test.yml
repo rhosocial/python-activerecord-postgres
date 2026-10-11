@@ -18,8 +18,8 @@ permissions:
   contents: read
 
 jobs:
-  benchmark-python-314-postgres-18:
-    name: Run benchmarks with Python 3.14 / postgres 18
+  benchmark-python-315-postgres-18:
+    name: Run benchmarks with Python 3.15 / postgres 18
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -56,10 +56,10 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v6
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.15
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: |
@@ -181,9 +181,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Python 3.14 / postgres 18 Benchmark Conclusion"
+            echo "## Python 3.15 / postgres 18 Benchmark Conclusion"
             echo
-            echo "- Python: 3.14"
+            echo "- Python: 3.15"
             echo "- postgres: 18"
             echo "- Scope: testsuite generic benchmarks + ActiveRecord bulk benchmarks + PostgreSQL backend direct benchmarks"
             echo "- Size: small"
@@ -202,9 +202,9 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Python 3.14 / postgres 18 FastAPI Benchmark Conclusion"
+            echo "## Python 3.15 / postgres 18 FastAPI Benchmark Conclusion"
             echo
-            echo "- Python: 3.14"
+            echo "- Python: 3.15"
             echo "- postgres: 18"
             echo "- Scope: testsuite FastAPI database benchmarks"
             echo "- Size: small"
