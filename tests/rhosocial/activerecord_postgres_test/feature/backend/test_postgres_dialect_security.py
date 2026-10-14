@@ -23,7 +23,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
     RawSQLExpression,
 )
-from rhosocial.activerecord.backend.expression.core import CastExpression
+from rhosocial.activerecord.backend.expression.core import CastFunction
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
 from typing import Tuple, Any  # noqa: F401
 from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
@@ -97,7 +97,7 @@ def test_postgres_format_cast_expression_valid(dialect):
     """The target type is a DataType, and the :: syntax renders what it says."""
     from rhosocial.activerecord.backend.expression.types import CustomType
 
-    expr = CastExpression(dialect, RawSQLExpression(dialect, "column"),
+    expr = CastFunction(dialect, RawSQLExpression(dialect, "column"),
                           CustomType(dialect, raw="INTEGER"))
     sql, params = expr.to_sql()
     assert "INTEGER" in sql
@@ -366,12 +366,12 @@ class TestPostgresTriggerFunctionNameSecurity:
     def test_trigger_function_name_quoted(self, dialect):
         """Test trigger function name is properly quoted with double quotes."""
         from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
-            CreateTriggerExpression,
+            CreateTriggerStatement,
             TriggerTiming,
             TriggerEvent,
         )
 
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect=dialect,
             trigger=Trigger(dialect, 'my_trigger'),
             table=Table(dialect, 'users'),
@@ -387,12 +387,12 @@ class TestPostgresTriggerFunctionNameSecurity:
     def test_trigger_function_name_special_chars_quoted(self, dialect):
         """Test trigger function name with special characters is quoted."""
         from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
-            CreateTriggerExpression,
+            CreateTriggerStatement,
             TriggerTiming,
             TriggerEvent,
         )
 
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect=dialect,
             trigger=Trigger(dialect, 'trigger'),
             table=Table(dialect, 'users'),

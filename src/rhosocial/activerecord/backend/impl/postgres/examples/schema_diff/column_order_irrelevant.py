@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
+    CreateTableStatement, DropTableStatement, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
@@ -26,7 +26,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterTableExpression, AddColumn, DropColumn,
+    AlterTableStatement, AddColumn, DropColumn,
 )
 
 config = PostgresConnectionConfig(
@@ -41,11 +41,11 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_demo = DropTableExpression(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
+drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
 sql, params = drop_demo.to_sql()
 backend.execute(sql, params)
 
-demo_table = CreateTableExpression(
+demo_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'demo'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
@@ -71,14 +71,14 @@ snapshot_before = builder.build(schema="public")
 
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
+add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
     AddColumn(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
 ])
 sql, params = add_age.to_sql()
 backend.execute(sql, params)
 
 # Now drop it — column set is identical
-drop_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
+drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
     DropColumn(dialect, "age")
 ])
 sql, params = drop_age.to_sql()

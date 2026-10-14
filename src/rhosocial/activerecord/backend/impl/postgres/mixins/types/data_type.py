@@ -15,7 +15,7 @@ Methods retained in this mixin:
 
 from typing import Tuple, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression.statements.ddl_type import CreateTypeExpression
+from rhosocial.activerecord.backend.expression.statements.ddl_type import CreateTypeStatement
 
 class PostgresDataTypeMixin:
     """Mixin providing PostgreSQL data type support methods.
@@ -29,7 +29,7 @@ class PostgresDataTypeMixin:
 
         def format_create_type_statement(
             self,
-            expr: CreateTypeExpression,
+            expr: CreateTypeStatement,
         ) -> Tuple[str, tuple]: ...
 
     def supports_multirange_type(self) -> bool:
@@ -90,6 +90,6 @@ class PostgresDataTypeMixin:
 
     def format_create_range_type(
         self,
-        expr: CreateTypeExpression,
+        expr: CreateTypeStatement,
     ) -> Tuple[str, tuple]:
         return self.format_create_type_statement(expr)

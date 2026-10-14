@@ -34,9 +34,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -47,13 +47,13 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -112,7 +112,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'documents'),
         columns=columns,
@@ -125,7 +125,7 @@ if installed:
 
     # Example 2: Insert vector data
     # Use Literal with .cast(PostgresVectorType(self.dialect)) for type-safe vector insertion.
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'documents'),
         columns=["content", "embedding"],
@@ -222,7 +222,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

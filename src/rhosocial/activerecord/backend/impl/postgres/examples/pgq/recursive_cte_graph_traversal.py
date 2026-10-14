@@ -3,16 +3,16 @@ Recursive CTE graph traversal
 =============================
 
 PostgreSQL 19 Beta 4 withdrew SQL/PGQ. This example demonstrates recursive CTE
-+ SetOperationExpression + UNION ALL as an alternative for graph traversal.
++ SetOperationStatement + UNION ALL as an alternative for graph traversal.
 
 Common use cases:
   1. Social network N-degree friend recommendations (replaces MATCH (a)-[e]->+(b))
   2. AML fund source tracing (replaces MATCH (s)-[t*1..5]->(d))
 
 Key components:
-  - CTEExpression: defines a CTE (WITH ... AS ...)
-  - SetOperationExpression: combines base + recursive queries (UNION ALL)
-  - WithQueryExpression(recursive=True): generates WITH RECURSIVE ... SELECT ...
+  - CTEClause: defines a CTE (WITH ... AS ...)
+  - SetOperationStatement: combines base + recursive queries (UNION ALL)
+  - WithStatement(recursive=True): generates WITH RECURSIVE ... SELECT ...
 """
 
 # ============================================================
@@ -34,14 +34,14 @@ backend.connect()
 dialect = backend.dialect
 
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    QueryExpression,
-    CTEExpression,
-    WithQueryExpression,
-    SetOperationExpression,
+    DropTableStatement,
+    QueryStatement,
+    CTEClause,
+    WithStatement,
+    SetOperationStatement,
     FunctionCall,
     ColumnDefinition,
     ColumnConstraint,
@@ -62,7 +62,7 @@ from rhosocial.activerecord.backend.schema import StatementType
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 for t in ("transactions", "accounts", "follows", "users"):
-    sql, params = DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql()
+    sql, params = DropTableStatement(dialect, t, if_exists=True, cascade=True).to_sql()
     backend.execute(sql, params)
 
 # ---- Social network tables ----
@@ -72,7 +72,7 @@ users_cols = [
     ColumnDefinition('name', 'VARCHAR(100)'),
     ColumnDefinition('city', 'VARCHAR(50)'),
 ]
-backend.execute(*CreateTableExpression(dialect, Table(dialect, 'users'), users_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableStatement(dialect, Table(dialect, 'users'), users_cols, if_not_exists=True).to_sql())
 
 follows_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -80,7 +80,7 @@ follows_cols = [
     ColumnDefinition('follower_id', 'INTEGER'),
     ColumnDefinition('followed_id', 'INTEGER'),
 ]
-backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), follows_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols, if_not_exists=True).to_sql())
 
 users_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice'), Literal(dialect, 'NYC')],
@@ -89,7 +89,7 @@ users_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 'Diana'), Literal(dialect, 'NYC')],
     [Literal(dialect, 5), Literal(dialect, 'Eve'), Literal(dialect, 'LA')],
 ])
-backend.execute(*InsertExpression(dialect, 'users', columns=['id', 'name', 'city'], source=users_data).to_sql())
+backend.execute(*InsertStatement(dialect, 'users', columns=['id', 'name', 'city'], source=users_data).to_sql())
 
 follows_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
@@ -98,7 +98,7 @@ follows_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 1)],
     [Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 5)],
 ])
-backend.execute(*InsertExpression(dialect, 'follows', columns=['id', 'follower_id', 'followed_id'], source=follows_data).to_sql())
+backend.execute(*InsertStatement(dialect, 'follows', columns=['id', 'follower_id', 'followed_id'], source=follows_data).to_sql())
 
 # ---- AML tables ----
 accounts_cols = [
@@ -107,7 +107,7 @@ accounts_cols = [
     ColumnDefinition('account_holder', 'VARCHAR(100)'),
     ColumnDefinition('account_type', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, Table(dialect, 'accounts'), accounts_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableStatement(dialect, Table(dialect, 'accounts'), accounts_cols, if_not_exists=True).to_sql())
 
 txn_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
@@ -117,7 +117,7 @@ txn_cols = [
     ColumnDefinition('amount', 'NUMERIC(12,2)'),
     ColumnDefinition('ts', 'VARCHAR(20)'),
 ]
-backend.execute(*CreateTableExpression(dialect, Table(dialect, 'transactions'), txn_cols, if_not_exists=True).to_sql())
+backend.execute(*CreateTableStatement(dialect, Table(dialect, 'transactions'), txn_cols, if_not_exists=True).to_sql())
 
 accounts_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 'Alice Smith'), Literal(dialect, 'checking')],
@@ -127,7 +127,7 @@ accounts_data = ValuesSource(dialect, [
     [Literal(dialect, 5), Literal(dialect, 'Eve Holding'), Literal(dialect, 'offshore')],
     [Literal(dialect, 6), Literal(dialect, 'Foreign Entity'), Literal(dialect, 'offshore')],
 ])
-backend.execute(*InsertExpression(dialect, 'accounts', columns=['id', 'account_holder', 'account_type'], source=accounts_data).to_sql())
+backend.execute(*InsertStatement(dialect, 'accounts', columns=['id', 'account_holder', 'account_type'], source=accounts_data).to_sql())
 
 txn_data = ValuesSource(dialect, [
     [Literal(dialect, 1), Literal(dialect, 4), Literal(dialect, 3), Literal(dialect, 500000), Literal(dialect, '2024-01-15')],
@@ -136,7 +136,7 @@ txn_data = ValuesSource(dialect, [
     [Literal(dialect, 4), Literal(dialect, 2), Literal(dialect, 1), Literal(dialect, 450000), Literal(dialect, '2024-04-01')],
     [Literal(dialect, 5), Literal(dialect, 6), Literal(dialect, 5), Literal(dialect, 1000000), Literal(dialect, '2024-05-01')],
 ])
-backend.execute(*InsertExpression(dialect, 'transactions', columns=['id', 'source_account_id', 'target_account_id', 'amount', 'ts'], source=txn_data).to_sql())
+backend.execute(*InsertStatement(dialect, 'transactions', columns=['id', 'source_account_id', 'target_account_id', 'amount', 'ts'], source=txn_data).to_sql())
 
 # ============================================================
 # SECTION: Scenario 1 — Social Network N-degree Recommendation
@@ -149,7 +149,7 @@ print("Technique:  Recursive CTE + UNION ALL + depth filter ({1,3})")
 print("=" * 72)
 
 # --- Base query: start vertex Alice, depth=0 ---
-base_query = QueryExpression(
+base_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -172,7 +172,7 @@ recursive_join = JoinClause(
     condition=ComparisonPredicate(dialect, "=", Column(dialect, 'followed_id', table='f'), Column(dialect, 'id', table='u')),
 )
 
-recursive_query = QueryExpression(
+recursive_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id', table='u'),
@@ -184,7 +184,7 @@ recursive_query = QueryExpression(
 )
 
 # --- Combine with UNION ALL ---
-union_expr = SetOperationExpression(
+union_expr = SetOperationStatement(
     dialect=dialect,
     left=base_query,
     right=recursive_query,
@@ -192,7 +192,7 @@ union_expr = SetOperationExpression(
 )
 
 # --- Define CTE ---
-traversal_cte = CTEExpression(
+traversal_cte = CTEClause(
     dialect=dialect,
     name='traversal',
     query=union_expr,
@@ -200,7 +200,7 @@ traversal_cte = CTEExpression(
 )
 
 # --- Main query: filter depth 1~3 (simulating quantified path {1,3}) ---
-friend_query = QueryExpression(
+friend_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -214,10 +214,10 @@ friend_query = QueryExpression(
     order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'name')]),
 )
 
-with_query = WithQueryExpression(
+with_query = WithStatement(
     dialect=dialect,
     ctes=[traversal_cte],
-    main_query=friend_query,
+    query=friend_query,
     recursive=True,
 )
 
@@ -248,7 +248,7 @@ aml_base_join = JoinClause(
     condition=ComparisonPredicate(dialect, "=", Column(dialect, 'source_account_id', table='tx'), Column(dialect, 'id', table='a')),
 )
 
-aml_base = QueryExpression(
+aml_base = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id', table='a'),
@@ -273,7 +273,7 @@ aml_recursive_join = JoinClause(
     condition=ComparisonPredicate(dialect, "=", Column(dialect, 'source_account_id', table='tx'), Column(dialect, 'id', table='a')),
 )
 
-aml_recursive = QueryExpression(
+aml_recursive = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id', table='a'),
@@ -287,7 +287,7 @@ aml_recursive = QueryExpression(
 )
 
 # --- Combine with UNION ALL ---
-aml_union = SetOperationExpression(
+aml_union = SetOperationStatement(
     dialect=dialect,
     left=aml_base,
     right=aml_recursive,
@@ -295,7 +295,7 @@ aml_union = SetOperationExpression(
 )
 
 # --- Define CTE ---
-fund_trace_cte = CTEExpression(
+fund_trace_cte = CTEClause(
     dialect=dialect,
     name='fund_trace',
     query=aml_union,
@@ -303,7 +303,7 @@ fund_trace_cte = CTEExpression(
 )
 
 # --- Main query: list the full fund chain ---
-aml_query = QueryExpression(
+aml_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -317,10 +317,10 @@ aml_query = QueryExpression(
     order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'id')]),
 )
 
-aml_with = WithQueryExpression(
+aml_with = WithStatement(
     dialect=dialect,
     ctes=[fund_trace_cte],
-    main_query=aml_query,
+    query=aml_query,
     recursive=True,
 )
 
@@ -334,7 +334,7 @@ for row in result.data or []:
     print(f"  {row['depth']:<4} {row['account_holder']:<20} {row['account_type']:<12} {float(row['amount']):>10,.0f}")
 
 # --- Aggregation query: total suspicious amount per depth level ---
-agg_query = QueryExpression(
+agg_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'depth'),
@@ -345,10 +345,10 @@ agg_query = QueryExpression(
     order_by=OrderByClause(dialect, [Column(dialect, 'depth')]),
 )
 
-agg_with = WithQueryExpression(
+agg_with = WithStatement(
     dialect=dialect,
     ctes=[fund_trace_cte],
-    main_query=agg_query,
+    query=agg_query,
     recursive=True,
 )
 
@@ -368,9 +368,9 @@ print("=" * 72)
 print("Summary / Key Technical Points")
 print("=" * 72)
 print("""
-1. SetOperationExpression(operation='UNION ALL') combines base + recursive queries
-2. CTEExpression(name=..., query=..., columns=...) defines the CTE column signature
-3. WithQueryExpression(recursive=True) generates WITH RECURSIVE
+1. SetOperationStatement(operation='UNION ALL') combines base + recursive queries
+2. CTEClause(name=..., query=..., columns=...) defines the CTE column signature
+3. WithStatement(recursive=True) generates WITH RECURSIVE
 4. Recursive query joins the CTE reference with physical tables via chained JoinClause
 5. depth field simulates the hop count of quantified path patterns
 6. WHERE depth BETWEEN x AND y simulates {x,y} range constraint
@@ -381,6 +381,6 @@ print("""
 # SECTION: Teardown (reference only — cleanup resources)
 # ============================================================
 for t in ("transactions", "accounts", "follows", "users"):
-    sql, params = DropTableExpression(dialect, t, if_exists=True, cascade=True).to_sql()
+    sql, params = DropTableStatement(dialect, t, if_exists=True, cascade=True).to_sql()
     backend.execute(sql, params)
 backend.disconnect()

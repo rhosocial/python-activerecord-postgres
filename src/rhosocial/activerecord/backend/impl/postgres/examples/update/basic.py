@@ -1,5 +1,5 @@
 """
-UPDATE using UpdateExpression - PostgreSQL.
+UPDATE using UpdateStatement - PostgreSQL.
 
 This example demonstrates:
 1. UPDATE single row
@@ -29,11 +29,11 @@ dialect = backend.dialect
 
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    UpdateExpression,
+    DropTableStatement,
+    UpdateStatement,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -41,7 +41,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
 )
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -49,7 +49,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -63,7 +63,7 @@ sql, params = create_table.to_sql()
 print(f"Create table SQL: {sql}")
 backend.execute(sql, params)
 
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['name', 'age'],
@@ -77,9 +77,9 @@ print(f"Insert SQL: {sql}")
 backend.execute(sql, params)
 
 # ============================================================
-# SECTION: UPDATE (using UpdateExpression)
+# SECTION: UPDATE (using UpdateStatement)
 # ============================================================
-update_expr = UpdateExpression(
+update_expr = UpdateStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     assignments={'age': Literal(dialect, 26)},
@@ -96,7 +96,7 @@ print(f"Updated rows: {result.affected_rows}")
 # ============================================================
 # SECTION: UPDATE all rows
 # ============================================================
-update_all = UpdateExpression(
+update_all = UpdateStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     assignments={'age': Literal(dialect, 99)},
@@ -109,7 +109,7 @@ print(f"Updated rows: {result.affected_rows}")
 # ============================================================
 # SECTION: Teardown
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()
@@ -118,6 +118,6 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use UpdateExpression with assignments dict for SET clause
+# 1. Use UpdateStatement with assignments dict for SET clause
 # 2. Use ComparisonPredicate for WHERE
 # 3. Omit where to update all rows

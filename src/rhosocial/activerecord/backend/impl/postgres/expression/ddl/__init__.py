@@ -24,7 +24,7 @@ Directory structure:
 
 PostgreSQL index expressions
 ============================
-The generic ``CreateIndexExpression`` / ``DropIndexExpression`` (from
+The generic ``CreateIndexStatement`` / ``DropIndexStatement`` (from
 ``rhosocial.activerecord.backend.expression.statements.ddl_index``) carry all
 common parameters.
 

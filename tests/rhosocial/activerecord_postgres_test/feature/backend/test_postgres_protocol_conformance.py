@@ -722,7 +722,7 @@ class TestProtocolMethodSignatureConformance:
         # ExplainSupport: Mixin uses different signature
         ('ExplainSupport', 'format_explain_statement'),
         # ILIKESupport: Mixin uses expr-based signature instead of named params
-        ('ILIKESupport', 'format_ilike_expression'),
+        ('ILIKESupport', 'format_ilike_predicate'),
     }
 
     @pytest.fixture

@@ -9,8 +9,8 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -31,7 +31,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'logs'),
     if_exists=True,
@@ -40,7 +40,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'logs'),
     columns=[
@@ -63,13 +63,13 @@ backend.execute(*create_table.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    InsertExpression, ValuesSource, QueryExpression,
+    InsertStatement, ValuesSource, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
+from rhosocial.activerecord.backend.expression.core import Literal, Wildcard, Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'logs'),
     columns=['level', 'message'],
@@ -95,9 +95,9 @@ backend.execute(sql, params)
 print("Batch insert completed")
 
 # Verify
-verify_query = QueryExpression(
+verify_query = QueryStatement(
     dialect=dialect,
-    select=[WildcardExpression(dialect)],
+    select=[Wildcard(dialect)],
     from_=Table(dialect, 'logs'),
     order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )

@@ -21,13 +21,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -62,7 +62,7 @@ def _setup_lev_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="word", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -77,7 +77,7 @@ def _setup_lev_table(backend, dialect, table):
         [Literal(dialect, "sunday")],
         [Literal(dialect, "saturday")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["word"],
@@ -99,7 +99,7 @@ def _setup_diff_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -113,7 +113,7 @@ def _setup_diff_table(backend, dialect, table):
         [Literal(dialect, "Smythe")],
         [Literal(dialect, "Johnson")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -125,7 +125,7 @@ def _setup_diff_table(backend, dialect, table):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -146,7 +146,7 @@ async def _async_setup_lev_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="word", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -161,7 +161,7 @@ async def _async_setup_lev_table(backend, dialect, table):
         [Literal(dialect, "sunday")],
         [Literal(dialect, "saturday")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["word"],
@@ -183,7 +183,7 @@ async def _async_setup_diff_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -197,7 +197,7 @@ async def _async_setup_diff_table(backend, dialect, table):
         [Literal(dialect, "Smythe")],
         [Literal(dialect, "Johnson")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -209,7 +209,7 @@ async def _async_setup_diff_table(backend, dialect, table):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -252,7 +252,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "kitten"),
             Literal(dialect, "sitting"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 3
@@ -263,7 +263,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "sunday"),
             Literal(dialect, "saturday"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 3
@@ -274,7 +274,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "hello"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 0
@@ -290,7 +290,7 @@ class TestFuzzystrmatchIntegration:
             lev_func,
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "word")],
             from_=Table(dialect, TABLE_NAME),
@@ -309,31 +309,31 @@ class TestFuzzystrmatchIntegration:
 
         # Homophones should have the same soundex code
         func1 = FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = backend.execute(sql, params, options=opts)
 
         func2 = FunctionCall(dialect, "soundex", Literal(dialect, "Rupert")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         assert result1.data[0]["code"] == result2.data[0]["code"]
 
         # Note: Ashcraft and Ashcroft have the same soundex
         func3 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcraft")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func3])
+        query = QueryStatement(dialect=dialect, select=[func3])
         sql, params = query.to_sql()
         result3 = backend.execute(sql, params, options=opts)
 
         func4 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcroft")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func4])
+        query = QueryStatement(dialect=dialect, select=[func4])
         sql, params = query.to_sql()
         result4 = backend.execute(sql, params, options=opts)
         assert result3.data[0]["code"] == result4.data[0]["code"]
 
         # soundex code is 4 characters: letter + 3 digits
         func = FunctionCall(dialect, "soundex", Literal(dialect, "Hello")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         code = result.data[0]["code"]
@@ -352,7 +352,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "Smith"),
             Literal(dialect, "Smythe"),
         ).as_("diff")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["diff"] >= 3  # High similarity
@@ -363,7 +363,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "Smith"),
             Literal(dialect, "Johnson"),
         ).as_("diff")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["diff"] <= 2  # Low similarity
@@ -379,7 +379,7 @@ class TestFuzzystrmatchIntegration:
             diff_func,
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME_DIFF),
@@ -401,7 +401,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["meta"] is not None
@@ -413,7 +413,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "phone"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = backend.execute(sql, params, options=opts)
 
@@ -422,7 +422,7 @@ class TestFuzzystrmatchIntegration:
             Literal(dialect, "fone"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         assert result1.data[0]["meta"] == result2.data[0]["meta"]
@@ -436,7 +436,7 @@ class TestFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "hello"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]["dmeta"] is not None
@@ -446,7 +446,7 @@ class TestFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "Phillip"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = backend.execute(sql, params, options=opts)
 
@@ -454,7 +454,7 @@ class TestFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "Filip"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         # Both should produce similar (or same) dmetaphone codes
@@ -497,7 +497,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "kitten"),
             Literal(dialect, "sitting"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 3
@@ -508,7 +508,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "sunday"),
             Literal(dialect, "saturday"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 3
@@ -519,7 +519,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "hello"),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["dist"] == 0
@@ -535,7 +535,7 @@ class TestAsyncFuzzystrmatchIntegration:
             lev_func,
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "word")],
             from_=Table(dialect, TABLE_NAME_ASYNC),
@@ -555,31 +555,31 @@ class TestAsyncFuzzystrmatchIntegration:
 
         # Homophones should have the same soundex code
         func1 = FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
 
         func2 = FunctionCall(dialect, "soundex", Literal(dialect, "Rupert")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         assert result1.data[0]["code"] == result2.data[0]["code"]
 
         # Note: Ashcraft and Ashcroft have the same soundex
         func3 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcraft")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func3])
+        query = QueryStatement(dialect=dialect, select=[func3])
         sql, params = query.to_sql()
         result3 = await backend.execute(sql, params, options=opts)
 
         func4 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcroft")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func4])
+        query = QueryStatement(dialect=dialect, select=[func4])
         sql, params = query.to_sql()
         result4 = await backend.execute(sql, params, options=opts)
         assert result3.data[0]["code"] == result4.data[0]["code"]
 
         # soundex code is 4 characters: letter + 3 digits
         func = FunctionCall(dialect, "soundex", Literal(dialect, "Hello")).as_("code")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         code = result.data[0]["code"]
@@ -599,7 +599,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "Smith"),
             Literal(dialect, "Smythe"),
         ).as_("diff")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["diff"] >= 3  # High similarity
@@ -610,7 +610,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "Smith"),
             Literal(dialect, "Johnson"),
         ).as_("diff")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["diff"] <= 2  # Low similarity
@@ -626,7 +626,7 @@ class TestAsyncFuzzystrmatchIntegration:
             diff_func,
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME_DIFF_ASYNC),
@@ -649,7 +649,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["meta"] is not None
@@ -661,7 +661,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "phone"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
 
@@ -670,7 +670,7 @@ class TestAsyncFuzzystrmatchIntegration:
             Literal(dialect, "fone"),
             Literal(dialect, 6),
         ).as_("meta")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         assert result1.data[0]["meta"] == result2.data[0]["meta"]
@@ -685,7 +685,7 @@ class TestAsyncFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "hello"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]["dmeta"] is not None
@@ -695,7 +695,7 @@ class TestAsyncFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "Phillip"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func1])
+        query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
 
@@ -703,7 +703,7 @@ class TestAsyncFuzzystrmatchIntegration:
             dialect, "dmetaphone",
             Literal(dialect, "Filip"),
         ).as_("dmeta")
-        query = QueryExpression(dialect=dialect, select=[func2])
+        query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         # Both should produce similar (or same) dmetaphone codes

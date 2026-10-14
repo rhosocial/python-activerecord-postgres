@@ -16,15 +16,15 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
-    CreateIndexExpression,
+    CreateIndexStatement,
     OrderByClause,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
@@ -55,7 +55,7 @@ def _setup_geo_points_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -64,7 +64,7 @@ def _setup_geo_points_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -92,7 +92,7 @@ def _setup_geo_distance_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -101,7 +101,7 @@ def _setup_geo_distance_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -129,7 +129,7 @@ def _setup_geo_contains_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -138,7 +138,7 @@ def _setup_geo_contains_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -172,7 +172,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -181,7 +181,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -195,7 +195,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     sql, params = insert_expr.to_sql()
     backend.execute(sql, params)
 
-    create_index = CreateIndexExpression(
+    create_index = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, index_name),
         table=Table(dialect, table),
@@ -219,7 +219,7 @@ def _setup_geog_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geog", data_type=PostgresGeographyType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -228,7 +228,7 @@ def _setup_geog_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geog"],
@@ -245,7 +245,7 @@ def _setup_geog_table(backend, dialect, table):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -266,7 +266,7 @@ async def _async_setup_geo_points_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -275,7 +275,7 @@ async def _async_setup_geo_points_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -303,7 +303,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -312,7 +312,7 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -340,7 +340,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -349,7 +349,7 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -383,7 +383,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
         ),
         ColumnDefinition(dialect, name="geom", data_type=PostgresGeometryType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -392,7 +392,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geom"],
@@ -406,7 +406,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     sql, params = insert_expr.to_sql()
     await backend.execute(sql, params)
 
-    create_index = CreateIndexExpression(
+    create_index = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, index_name),
         table=Table(dialect, table),
@@ -430,7 +430,7 @@ async def _async_setup_geog_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="geog", data_type=PostgresGeographyType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -439,7 +439,7 @@ async def _async_setup_geog_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["geog"],
@@ -456,7 +456,7 @@ async def _async_setup_geog_table(backend, dialect, table):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -516,7 +516,7 @@ class TestPostGISIntegration:
         backend, dialect = postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geom")).as_("wkt"),
@@ -537,7 +537,7 @@ class TestPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Distance from (0,0) to (3,4) = 5 (Pythagorean theorem in 2D plane)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -559,7 +559,7 @@ class TestPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Point inside the polygon
-        query_inside = QueryExpression(
+        query_inside = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -581,7 +581,7 @@ class TestPostGISIntegration:
         assert result_inside.data[0]["contains"] is True
 
         # Point outside the polygon
-        query_outside = QueryExpression(
+        query_outside = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -608,7 +608,7 @@ class TestPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Two polygons that share an area
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -635,7 +635,7 @@ class TestPostGISIntegration:
         assert result.data[0]["intersects"] is True
 
         # Two polygons that don't intersect
-        query_no = QueryExpression(
+        query_no = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -666,7 +666,7 @@ class TestPostGISIntegration:
         backend, dialect = postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -693,7 +693,7 @@ class TestPostGISIntegration:
         backend, dialect = postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -715,7 +715,7 @@ class TestPostGISIntegration:
         backend, dialect = postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geog")).as_("wkt"),
@@ -734,7 +734,7 @@ class TestPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Transform a point from WGS84 (4326) to Web Mercator (3857)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -762,7 +762,7 @@ class TestPostGISIntegration:
         backend, dialect = postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -791,7 +791,7 @@ class TestPostGISIntegration:
             dialect, "ST_GeomFromText",
             Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
         ).cast(PostgresGeographyType(self.dialect))
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -848,7 +848,7 @@ class TestAsyncPostGISIntegration:
         backend, dialect = async_postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geom")).as_("wkt"),
@@ -870,7 +870,7 @@ class TestAsyncPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Distance from (0,0) to (3,4) = 5 (Pythagorean theorem in 2D plane)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -893,7 +893,7 @@ class TestAsyncPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Point inside the polygon
-        query_inside = QueryExpression(
+        query_inside = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -915,7 +915,7 @@ class TestAsyncPostGISIntegration:
         assert result_inside.data[0]["contains"] is True
 
         # Point outside the polygon
-        query_outside = QueryExpression(
+        query_outside = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -943,7 +943,7 @@ class TestAsyncPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Two polygons that share an area
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -970,7 +970,7 @@ class TestAsyncPostGISIntegration:
         assert result.data[0]["intersects"] is True
 
         # Two polygons that don't intersect
-        query_no = QueryExpression(
+        query_no = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -1002,7 +1002,7 @@ class TestAsyncPostGISIntegration:
         backend, dialect = async_postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -1028,7 +1028,7 @@ class TestAsyncPostGISIntegration:
         backend, dialect = async_postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -1051,7 +1051,7 @@ class TestAsyncPostGISIntegration:
         backend, dialect = async_postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(dialect, "ST_AsText", Column(dialect, "geog")).as_("wkt"),
@@ -1071,7 +1071,7 @@ class TestAsyncPostGISIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Transform a point from WGS84 (4326) to Web Mercator (3857)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -1099,7 +1099,7 @@ class TestAsyncPostGISIntegration:
         backend, dialect = async_postgis_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(
@@ -1129,7 +1129,7 @@ class TestAsyncPostGISIntegration:
             dialect, "ST_GeomFromText",
             Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
         ).cast(PostgresGeographyType(self.dialect))
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 FunctionCall(

@@ -11,9 +11,9 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
-    DropTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
+    DropTypeStatement,
     TypeAlterAction,
     TypeDefinition,
 )
@@ -489,7 +489,7 @@ class PostgresSetTypePropertiesAction(TypeAlterAction):
         self.properties = normalized
 
 
-class PostgresDropTypeExpression(DropTypeExpression):
+class PostgresDropTypeExpression(DropTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -504,7 +504,7 @@ class PostgresDropTypeExpression(DropTypeExpression):
         self.restrict = restrict
 
 
-class PostgresCreateEnumTypeExpression(CreateTypeExpression):
+class PostgresCreateEnumTypeExpression(CreateTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -546,7 +546,7 @@ class PostgresDropEnumTypeExpression(PostgresDropTypeExpression):
         self.schema = schema
 
 
-class PostgresAlterEnumAddValueExpression(AlterTypeExpression):
+class PostgresAlterEnumAddValueExpression(AlterTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -587,7 +587,7 @@ class PostgresAlterEnumTypeAddValueExpression(PostgresAlterEnumAddValueExpressio
     pass
 
 
-class PostgresAlterEnumTypeRenameValueExpression(AlterTypeExpression):
+class PostgresAlterEnumTypeRenameValueExpression(AlterTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -617,7 +617,7 @@ class PostgresAlterEnumTypeRenameValueExpression(AlterTypeExpression):
         self.schema = schema
 
 
-class PostgresCreateRangeTypeExpression(CreateTypeExpression):
+class PostgresCreateRangeTypeExpression(CreateTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",

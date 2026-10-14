@@ -6,9 +6,9 @@ High-level helpers built on top of the pgvector operator factories in
 ``functions/pgvector.py``:
 
 - ``vector_search``: assemble a complete similarity-search
-  ``QueryExpression`` (SELECT distance/similarity, WHERE filters,
+  ``QueryStatement`` (SELECT distance/similarity, WHERE filters,
   ORDER BY distance, LIMIT top_k).
-- ``create_vector_index``: assemble a ``CreateIndexExpression`` for
+- ``create_vector_index``: assemble a ``CreateIndexStatement`` for
   HNSW/IVFFlat with metric-to-operator-class mapping.
 
 They target the RAG knowledge-base pattern:
@@ -22,12 +22,12 @@ from typing import List, Optional, Union, Dict, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression import (
     Column,
     Literal,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import (
     BaseExpression,
-    WildcardExpression,
+    Wildcard,
 )
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.expression.query_parts import (
@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-    CreateIndexExpression,
+    CreateIndexStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index_definition import (
     PostgresCreateIndexExpression,
@@ -101,7 +101,7 @@ def vector_search(
     where: Optional[Union[SQLPredicate, WhereClause]] = None,
     include_distance: bool = True,
     include_similarity: bool = False,
-) -> QueryExpression:
+) -> QueryStatement:
     """Build a pgvector similarity-search query.
 
     Args:
@@ -119,7 +119,7 @@ def vector_search(
         include_similarity: Include ``1 - distance`` for cosine/l2 in SELECT
 
     Returns:
-        A ready-to-execute ``QueryExpression``.
+        A ready-to-execute ``QueryStatement``.
     """
     _validate_metric(metric)
     if top_k <= 0:
@@ -129,7 +129,7 @@ def vector_search(
     distance_expr = _METRIC_DISTANCE_FN[metric](dialect, vector_col, query_vector)
 
     if columns is None:
-        select: List[BaseExpression] = [WildcardExpression(dialect)]
+        select: List[BaseExpression] = [Wildcard(dialect)]
     else:
         select = [
             Column(dialect, c) if isinstance(c, str) else c for c in columns
@@ -143,7 +143,7 @@ def vector_search(
         )
         select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
 
-    return QueryExpression(
+    return QueryStatement(
         dialect=dialect,
         select=select,
         from_=Table(dialect, table),
@@ -165,7 +165,7 @@ def create_vector_index(
     ef_construction: Optional[int] = None,
     lists: Optional[int] = None,
     if_not_exists: bool = True,
-) -> CreateIndexExpression:
+) -> CreateIndexStatement:
     """Build a pgvector index creation expression.
 
     Args:
@@ -181,7 +181,7 @@ def create_vector_index(
         if_not_exists: Add IF NOT EXISTS
 
     Returns:
-        A ready-to-execute ``CreateIndexExpression``.
+        A ready-to-execute ``CreateIndexStatement``.
 
     Note:
         IVFFlat requires the table to contain data before the index can be

@@ -5,7 +5,7 @@ from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-        ILIKEExpression,
+        ILikePredicate,
     )
 
 
@@ -18,11 +18,11 @@ class PostgresILIKEMixin:
     def supports_ilike(self) -> bool:
         return True
 
-    def format_ilike_expression(self, expr: "ILIKEExpression") -> Tuple[str, tuple]:
+    def format_ilike_predicate(self, expr: "ILikePredicate") -> Tuple[str, tuple]:
         """Format an ILIKE expression for PostgreSQL.
 
         Args:
-            expr: The :class:`ILIKEExpression` node to render. The node stores
+            expr: The :class:`ILikePredicate` node to render. The node stores
                 its own ``column``, ``pattern`` and ``negate`` data; the
                 formatter takes no extra arguments so it can be dispatched
                 uniformly as ``formatter(expr)``.

@@ -4,7 +4,7 @@
 PostgreSQL is a full-support sequence dialect. Its ``CREATE SEQUENCE`` synopsis
 takes ``IF NOT EXISTS``, ``INCREMENT BY``, ``MINVALUE``, ``MAXVALUE``,
 ``CYCLE``, ``START WITH``, ``CACHE`` and ``OWNED BY``; the one option core's
-``CreateSequenceExpression`` carries that PostgreSQL has no clause for is
+``CreateSequenceStatement`` carries that PostgreSQL has no clause for is
 ``ORDER``, which is Oracle/SQL Server syntax and is absent from the synopsis.
 The probes below restate that, so the core formatters -- which consult
 :meth:`supports_sequence` first and each option probe before its clause -- can
@@ -21,8 +21,8 @@ from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
-        AlterSequenceExpression,
-        CreateSequenceExpression,
+        AlterSequenceStatement,
+        CreateSequenceStatement,
     )
 
 
@@ -123,7 +123,7 @@ class PostgresSequenceMixin:
             f"form. The CACHE option itself is supported.",
         )
 
-    def format_create_sequence_statement(self, expr: "CreateSequenceExpression") -> Tuple[str, tuple]:
+    def format_create_sequence_statement(self, expr: "CreateSequenceStatement") -> Tuple[str, tuple]:
         """Render ``CREATE SEQUENCE``, refusing the unspellable negative.
 
         Delegates to the core formatter for everything else so the option
@@ -134,7 +134,7 @@ class PostgresSequenceMixin:
             self._refuse_no_cache("SEQUENCE NO CACHE")
         return super().format_create_sequence_statement(expr)
 
-    def format_alter_sequence_statement(self, expr: "AlterSequenceExpression") -> Tuple[str, tuple]:
+    def format_alter_sequence_statement(self, expr: "AlterSequenceStatement") -> Tuple[str, tuple]:
         """Render ``ALTER SEQUENCE``, refusing the unspellable negative.
 
         See :meth:`format_create_sequence_statement`.

@@ -16,11 +16,11 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresReindexExpression,
     )
     from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-        CreateIndexExpression,
-        DropIndexExpression,
+        CreateIndexStatement,
+        DropIndexStatement,
     )
     from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
-        FulltextMatchExpression,
+        FulltextMatch,
     )
 
 
@@ -244,14 +244,14 @@ class PostgresIndexMixin:
         return False
 
     def format_fulltext_match(
-        self, expr: "FulltextMatchExpression"
+        self, expr: "FulltextMatch"
     ) -> Tuple[str, Tuple]:
         """Format tsvector @@ tsquery expression for PostgreSQL full-text search.
 
         Produces: to_tsvector('config', col1 || ' ' || col2) @@ tsquery_func(search_term)
 
         Args:
-            expr: FulltextMatchExpression node carrying columns, search_term, and mode.
+            expr: FulltextMatch node carrying columns, search_term, and mode.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -288,7 +288,7 @@ class PostgresIndexMixin:
         PostgreSQL GIN index on to_tsvector().
 
         Args:
-            expr: CreateFulltextIndexExpression object
+            expr: CreateFulltextIndexStatement object
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -303,12 +303,12 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"CreateFulltextIndexExpression.index must be an Index, "
+                f"CreateFulltextIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateFulltextIndexExpression.table must be a Table, "
+                f"CreateFulltextIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         config = self._FT_DEFAULT_CONFIG
@@ -336,7 +336,7 @@ class PostgresIndexMixin:
         including GIN indexes used for full-text search.
 
         Args:
-            expr: DropFulltextIndexExpression object
+            expr: DropFulltextIndexStatement object
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -346,7 +346,7 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"DropFulltextIndexExpression.index must be an Index, "
+                f"DropFulltextIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         parts = ["DROP INDEX"]
@@ -358,12 +358,12 @@ class PostgresIndexMixin:
         # still checked, because a caller who set it meant something by it.
         if expr.table is not None and not isinstance(expr.table, Table):
             raise TypeError(
-                f"DropFulltextIndexExpression.table must be a Table, "
+                f"DropFulltextIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         return " ".join(parts), ()
 
-    def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
+    def format_create_index_statement(self, expr: "CreateIndexStatement") -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_create_index_statement to support:
@@ -381,12 +381,12 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"CreateIndexExpression.index must be an Index, "
+                f"CreateIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateIndexExpression.table must be a Table, "
+                f"CreateIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         all_params = []
@@ -467,7 +467,7 @@ class PostgresIndexMixin:
 
         return " ".join(parts), tuple(all_params)
 
-    def format_drop_index_statement(self, expr: "DropIndexExpression") -> Tuple[str, tuple]:
+    def format_drop_index_statement(self, expr: "DropIndexStatement") -> Tuple[str, tuple]:
         """Format DROP INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_drop_index_statement to support:
@@ -479,7 +479,7 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"DropIndexExpression.index must be an Index, "
+                f"DropIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         parts = ["DROP INDEX"]
@@ -500,7 +500,7 @@ class PostgresIndexMixin:
         # the check is on kind, not on presence, so leaving it unset is fine.
         if expr.table is not None and not isinstance(expr.table, Table):
             raise TypeError(
-                f"DropIndexExpression.table must be a Table, "
+                f"DropIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         return " ".join(parts), ()

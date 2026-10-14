@@ -128,7 +128,7 @@ EXAMPLES_META = {
         'max_version': '18',
     },
     'update/basic.py': {
-        'title': 'UPDATE using UpdateExpression',
+        'title': 'UPDATE using UpdateStatement',
         'dialect_protocols': [],
         'priority': 10,
         'min_version': '9',
@@ -163,7 +163,7 @@ EXAMPLES_META = {
         'max_version': '18',
     },
     'query/union.py': {
-        'title': 'UNION using SetOperationExpression',
+        'title': 'UNION using SetOperationStatement',
         'dialect_protocols': [],
         'priority': 10,
         'min_version': '9',

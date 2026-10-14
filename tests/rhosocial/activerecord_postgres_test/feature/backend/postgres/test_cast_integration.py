@@ -33,11 +33,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     Literal,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
@@ -338,7 +338,7 @@ def _table(case):
 
 
 def _drop(backend, dialect, table):
-    sql, params = DropTableExpression(
+    sql, params = DropTableStatement(
         dialect=dialect, table=Table(dialect, table), if_exists=True
     ).to_sql()
     backend.execute(sql, params)
@@ -346,7 +346,7 @@ def _drop(backend, dialect, table):
 
 def _select_as_text(backend, dialect, table):
     """Read the stored value as text, so the assertion is on PostgreSQL's value."""
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "v").cast(_core("TextType")(dialect))],
         from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -370,7 +370,7 @@ class TestEveryTypeCanBeDeclared:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -402,7 +402,7 @@ class TestInsertThroughACast:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -421,7 +421,7 @@ class TestInsertThroughACast:
             sql, params = create.to_sql()
             backend.execute(sql, params)
 
-            insert = InsertExpression(
+            insert = InsertStatement(
                 dialect=dialect,
                 into=Table(dialect, table),
                 columns=["v"],
@@ -440,7 +440,7 @@ class TestInsertThroughACast:
                 # The text form is the server's to choose, but the value still
                 # has to parse back into the type it came from.
                 assert result.data[0]["v"]
-                check = QueryExpression(
+                check = QueryStatement(
                     dialect=dialect,
                     select=[Column(dialect, "v")],
                     from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -478,7 +478,7 @@ class TestChainedCasts:
         table = "cast_t_chain"
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -505,7 +505,7 @@ class TestChainedCasts:
             expression = Literal(dialect, _CHAIN_INPUT[chain[1]])
             for name in chain:
                 expression = expression.cast(_type_by_label(dialect, name))
-            sql, params = InsertExpression(
+            sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[expression]]),
             ).to_sql()
@@ -559,7 +559,7 @@ class TestRejectedConversions:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            sql, params = CreateTableExpression(
+            sql, params = CreateTableStatement(
                 dialect=dialect, table=Table(dialect, table),
                 columns=[
                     ColumnDefinition(dialect, name="v",
@@ -568,7 +568,7 @@ class TestRejectedConversions:
             ).to_sql()
             backend.execute(sql, params)
 
-            sql, params = InsertExpression(
+            sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[
                     Literal(dialect, literal).cast(case.factory(dialect))]]),

@@ -18,13 +18,13 @@ from typing import Any, Dict, List, Optional
 from rhosocial.activerecord.backend.expression.bases import SQLPredicate
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-    CreateIndexExpression,
-    DropIndexExpression,
+    CreateIndexStatement,
+    DropIndexStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import IndexDefinition
 
 
-class PostgresCreateIndexExpression(CreateIndexExpression):
+class PostgresCreateIndexExpression(CreateIndexStatement):
     """A PostgreSQL ``CREATE INDEX`` statement extending the generic one.
 
     Adds the PostgreSQL-only typed options consumed by
@@ -106,11 +106,11 @@ class PostgresIndexDefinition(IndexDefinition):
         self.with_options = with_options or {}
 
 
-class PostgresDropIndexExpression(DropIndexExpression):
+class PostgresDropIndexExpression(DropIndexStatement):
     """A PostgreSQL DROP INDEX statement extending the generic one.
 
     Adds the PostgreSQL-only ``concurrent`` flag (``DROP INDEX CONCURRENTLY``,
-    PG 18+); the generic ``DropIndexExpression`` already carries ``concurrent``,
+    PG 18+); the generic ``DropIndexStatement`` already carries ``concurrent``,
     so this subclass mainly marks PostgreSQL ownership for the DDL gates.
     """
 

@@ -14,11 +14,11 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -54,7 +54,7 @@ print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
 # Clean up
 for table in ['events_v13', 'events_legacy']:
-    drop = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True, cascade=True)
+    drop = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
@@ -66,7 +66,7 @@ for table in ['events_v13', 'events_legacy']:
 # uuid_default_generator(dialect) automatically picks the right function:
 #   PostgreSQL 13+: gen_random_uuid() (built-in, no extension)
 #   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'events'),
     columns=[
@@ -96,7 +96,7 @@ backend.execute(sql, params)
 print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
 
 # 2. INSERT with auto-generated UUID (using DEFAULT)
-insert_default = InsertExpression(
+insert_default = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'events'),
     columns=['name'],
@@ -110,7 +110,7 @@ backend.execute(sql, params)
 print("Inserted rows with auto-generated UUIDs")
 
 # 3. INSERT with explicit UUID value
-insert_explicit = InsertExpression(
+insert_explicit = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'events'),
     columns=['id', 'name'],
@@ -123,7 +123,7 @@ backend.execute(sql, params)
 print("Inserted row with explicit UUID")
 
 # 4. Verify data
-verify_query = QueryExpression(
+verify_query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'name')],
     from_=Table(dialect, 'events'),
@@ -135,7 +135,7 @@ print(f"Events: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'events'),
     if_exists=True,

@@ -5,7 +5,7 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.transaction import (
-        BeginTransactionExpression,
+        BeginTransactionStatement,
         SetTransactionExpression,
     )
 
@@ -26,8 +26,8 @@ class PostgresTransactionSupport(Protocol):
 
     def supports_savepoint(self)-> bool: ...
 
-    def format_begin_transaction(
-        self, expr: "BeginTransactionExpression"
+    def format_begin_transaction_statement(
+        self, expr: "BeginTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format BEGIN TRANSACTION with PostgreSQL inline options.
 
@@ -37,7 +37,7 @@ class PostgresTransactionSupport(Protocol):
                   [ { NOT DEFERRABLE | DEFERRABLE } ]
 
         Args:
-            expr: BeginTransactionExpression carrying isolation level and mode.
+            expr: BeginTransactionStatement carrying isolation level and mode.
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

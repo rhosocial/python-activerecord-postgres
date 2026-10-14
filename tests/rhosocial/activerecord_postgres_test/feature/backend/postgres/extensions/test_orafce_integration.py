@@ -19,13 +19,13 @@ from rhosocial.activerecord.backend.impl.postgres.functions.orafce import (
     instr,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -74,7 +74,7 @@ def orafce_backend(postgres_backend_single):
         ColumnDefinition(dialect, name="discount", data_type=DecimalType(dialect=dialect)),
         ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         columns=columns,
@@ -84,7 +84,7 @@ def orafce_backend(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert seed data with NULL values for testing nvl
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
@@ -121,7 +121,7 @@ def orafce_backend(postgres_backend_single):
     yield backend
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         if_exists=True,
@@ -145,7 +145,7 @@ class TestOrafceIntegration:
             Literal(dialect, 3),
         ).as_("result_dt")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -173,7 +173,7 @@ class TestOrafceIntegration:
             Column(dialect, "dt"),
         ).as_("month_end")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -203,7 +203,7 @@ class TestOrafceIntegration:
             Column(dialect, "dt"),
         ).as_("month_diff")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -233,7 +233,7 @@ class TestOrafceIntegration:
             Literal(dialect, 0.0).cast(DecimalType(dialect)),
         ).as_("safe_discount")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -264,7 +264,7 @@ class TestOrafceIntegration:
             default=Literal(dialect, "Other"),
         ).as_("decoded_name")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -293,7 +293,7 @@ class TestOrafceIntegration:
             Literal(dialect, "test"),
         ).as_("pos")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, TABLE_NAME),
@@ -335,7 +335,7 @@ async def async_orafce_backend(async_postgres_backend_single):
         ColumnDefinition(dialect, name="discount", data_type=DecimalType(dialect=dialect)),
         ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
@@ -345,7 +345,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert seed data with NULL values for testing nvl
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["dt", "ref_dt", "name", "discount", "description"],
@@ -382,7 +382,7 @@ async def async_orafce_backend(async_postgres_backend_single):
     yield backend
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
@@ -407,7 +407,7 @@ class TestAsyncOrafceIntegration:
             Literal(dialect, 3),
         ).as_("result_dt")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -436,7 +436,7 @@ class TestAsyncOrafceIntegration:
             Column(dialect, "dt"),
         ).as_("month_end")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -467,7 +467,7 @@ class TestAsyncOrafceIntegration:
             Column(dialect, "dt"),
         ).as_("month_diff")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -498,7 +498,7 @@ class TestAsyncOrafceIntegration:
             Literal(dialect, 0.0).cast(DecimalType(dialect)),
         ).as_("safe_discount")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -530,7 +530,7 @@ class TestAsyncOrafceIntegration:
             default=Literal(dialect, "Other"),
         ).as_("decoded_name")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -560,7 +560,7 @@ class TestAsyncOrafceIntegration:
             Literal(dialect, "test"),
         ).as_("pos")
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), func],
             from_=Table(dialect, ASYNC_TABLE_NAME),

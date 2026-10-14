@@ -11,15 +11,15 @@ from rhosocial.activerecord.backend.expression.bases import BaseExpression, SQLP
 from rhosocial.activerecord.backend.expression.objects import Domain
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
-    AlterDomainExpression,
-    CreateDomainExpression,
+    AlterDomainStatement,
+    CreateDomainStatement,
     DomainAlterAction,
     DomainCheckConstraint,
     DomainNullability,
     DomainValueExpression,
     DropDomainCheckAction,
     DropDomainDefaultAction,
-    DropDomainExpression,
+    DropDomainStatement,
     DropDomainNotNullAction,
     RenameDomainAction,
     SetDomainDefaultAction,
@@ -182,7 +182,7 @@ class PostgresSetDomainSchemaAction(DomainAlterAction):
         self.new_schema = new_schema
 
 
-class PostgresCreateDomainExpression(CreateDomainExpression):
+class PostgresCreateDomainExpression(CreateDomainStatement):
     """CREATE DOMAIN with PostgreSQL's two mutually exclusive check spellings.
 
     ``constraints`` is the historical spelling and still accepts the
@@ -299,7 +299,7 @@ class PostgresCreateDomainExpression(CreateDomainExpression):
         return self.domain.name
 
 
-class PostgresAlterDomainExpression(AlterDomainExpression):
+class PostgresAlterDomainExpression(AlterDomainStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -352,7 +352,7 @@ class PostgresAlterDomainExpression(AlterDomainExpression):
         return self.domain.name
 
 
-class PostgresDropDomainExpression(DropDomainExpression):
+class PostgresDropDomainExpression(DropDomainStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",

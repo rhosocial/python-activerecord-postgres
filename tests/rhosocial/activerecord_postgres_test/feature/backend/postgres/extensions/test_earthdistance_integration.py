@@ -16,13 +16,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
@@ -49,7 +49,7 @@ def earthdistance_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -64,7 +64,7 @@ def earthdistance_env(postgres_backend_single):
         ),
         ColumnDefinition(dialect, name="loc", data_type=PostgresPointType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         columns=columns,
@@ -74,7 +74,7 @@ def earthdistance_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Setup: insert test data using expression
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, TABLE_NAME),
         columns=["loc"],
@@ -92,7 +92,7 @@ def earthdistance_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         if_exists=True,
@@ -115,7 +115,7 @@ class TestEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 1)),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[dist_func])
+        query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         # 1 degree of latitude ≈ 111320 meters
@@ -131,7 +131,7 @@ class TestEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
             Literal(dialect, 100.0),
         ).as_("bbox")
-        query = QueryExpression(dialect=dialect, select=[box_func])
+        query = QueryStatement(dialect=dialect, select=[box_func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data[0]['bbox'] is not None
@@ -146,7 +146,7 @@ class TestEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[dist_func])
+        query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert float(result.data[0]['dist']) == pytest.approx(0.0, abs=0.01)
@@ -161,7 +161,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -176,7 +176,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
         ),
         ColumnDefinition(dialect, name="loc", data_type=PostgresPointType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
@@ -186,7 +186,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Setup: insert test data using expression
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["loc"],
@@ -204,7 +204,7 @@ async def async_earthdistance_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
@@ -227,7 +227,7 @@ class TestAsyncEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 1)),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[dist_func])
+        query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         # 1 degree of latitude ≈ 111320 meters
@@ -244,7 +244,7 @@ class TestAsyncEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
             Literal(dialect, 100.0),
         ).as_("bbox")
-        query = QueryExpression(dialect=dialect, select=[box_func])
+        query = QueryStatement(dialect=dialect, select=[box_func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data[0]['bbox'] is not None
@@ -260,7 +260,7 @@ class TestAsyncEarthdistanceIntegration:
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
             FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
         ).as_("dist")
-        query = QueryExpression(dialect=dialect, select=[dist_func])
+        query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert float(result.data[0]['dist']) == pytest.approx(0.0, abs=0.01)

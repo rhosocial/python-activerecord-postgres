@@ -40,7 +40,7 @@ from ..expression.ddl.mv import (
 from ..storage_parameters import resolve_storage_parameter
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateMaterializedViewExpression
+    from ....expression.statements.ddl_view import CreateMaterializedViewStatement
     from ..expression.ddl.mv import (
         PostgresAlterMaterializedViewExpression,
         PostgresRefreshMaterializedViewExpression,
@@ -167,7 +167,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
     # Formatters
     # ------------------------------------------------------------------
 
-    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewExpression") -> Tuple[str, tuple]:
+    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewStatement") -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 
         Follows the PostgreSQL grammar order:
@@ -187,7 +187,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
           construction).
 
         Args:
-            expr: CreateMaterializedViewExpression instance
+            expr: CreateMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL string, params tuple)
@@ -203,7 +203,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """
         if not isinstance(expr.view, MaterializedView):
             raise TypeError(
-                f"CreateMaterializedViewExpression.view must be a MaterializedView, "
+                f"CreateMaterializedViewStatement.view must be a MaterializedView, "
                 f"got {type(expr.view).__name__}"
             )
         if not self.supports_materialized_view():
@@ -284,7 +284,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
     def format_refresh_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW, gating CONCURRENTLY on PG 9.4+.
 
-        The generic ``RefreshMaterializedViewExpression`` routes here, so the
+        The generic ``RefreshMaterializedViewStatement`` routes here, so the
         version gate also protects callers that do not use the PostgreSQL
         specific expression.
         """

@@ -9,8 +9,8 @@ implementation have to agree, so the mode now decides.
 
 Core also split what used to be one ``JSONExpression`` class in two -- one per
 operator -- so the tests below name the class their operator means: ``->>``
-yields text and is a ``JSONTextExpression``, ``->`` yields a document and is a
-``JSONDocumentExpression``. PostgreSQL renders both from the same code path and
+yields text and is a ``JSONTextValue``, ``->`` yields a document and is a
+``JSONDocumentValue``. PostgreSQL renders both from the same code path and
 still branches on ``expr.operation``, so this is where the class is chosen, not
 what changes the SQL.
 
@@ -45,8 +45,8 @@ from rhosocial.activerecord.backend.dialect.mixins.json import JSONMixin
 from rhosocial.activerecord.backend.dialect.protocols import JSONSupport
 from rhosocial.activerecord.backend.expression import (
     Column,
-    JSONDocumentExpression,
-    JSONTextExpression,
+    JSONDocumentValue,
+    JSONTextValue,
 )
 from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -78,13 +78,13 @@ def _dialect(version=(16, 2, 1)):
 
 
 def _text_expr(dialect, mode=None, path="$.a"):
-    """A ``->>`` access, which yields text and so is a JSONTextExpression."""
-    return JSONTextExpression(dialect, Column(dialect, "data", table="t"), path, "->>", mode=mode)
+    """A ``->>`` access, which yields text and so is a JSONTextValue."""
+    return JSONTextValue(dialect, Column(dialect, "data", table="t"), path, "->>", mode=mode)
 
 
 def _document_expr(dialect, mode=None, path="$.a"):
-    """A ``->`` access, which yields a document and so is a JSONDocumentExpression."""
-    return JSONDocumentExpression(dialect, Column(dialect, "data", table="t"), path, "->", mode=mode)
+    """A ``->`` access, which yields a document and so is a JSONDocumentValue."""
+    return JSONDocumentValue(dialect, Column(dialect, "data", table="t"), path, "->", mode=mode)
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ def test_path_is_bound_not_inlined():
 
 def test_alias_is_appended():
     dialect = _dialect()
-    expr = JSONTextExpression(
+    expr = JSONTextValue(
         dialect, Column(dialect, "data", table="t"), "$.a", "->>", alias="v", mode="arrow"
     )
     assert expr.to_sql()[0] == """"t"."data"->>'$.a' AS "v\""""
@@ -589,7 +589,7 @@ def test_a_text_column_reads_through_both_spellings(live_json_scenario):
             ("language", "zh-CN"),
             ("$.tags[0]", "first"),
         ):
-            expr = JSONTextExpression(
+            expr = JSONTextValue(
                 dialect,
                 Column(dialect, "data", table=table),
                 path,

@@ -24,7 +24,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_walinspect import (
@@ -43,7 +43,7 @@ def _get_current_wal_lsn(backend, dialect):
     """
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
     lsn_func = FunctionCall(dialect, "pg_current_wal_lsn").as_("current_lsn")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[lsn_func],
     )
@@ -59,7 +59,7 @@ async def _async_get_current_wal_lsn(backend, dialect):
     """
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
     lsn_func = FunctionCall(dialect, "pg_current_wal_lsn").as_("current_lsn")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[lsn_func],
     )
@@ -131,7 +131,7 @@ class TestPgWalinspectIntegration:
                 start_lsn,
                 end_lsn,
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[wal_func.as_("wal_records")],
             )
@@ -217,7 +217,7 @@ class TestAsyncPgWalinspectIntegration:
                 start_lsn,
                 end_lsn,
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[wal_func.as_("wal_records")],
             )

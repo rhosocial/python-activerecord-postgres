@@ -2,29 +2,29 @@
 """Tests for PostgreSQL transaction expression classes."""
 import pytest
 from rhosocial.activerecord.backend.expression.transaction import (
-    BeginTransactionExpression,
-    CommitTransactionExpression,
-    RollbackTransactionExpression,
-    SavepointExpression,
-    ReleaseSavepointExpression,
+    BeginTransactionStatement,
+    CommitStatement,
+    RollbackStatement,
+    SavepointStatement,
+    ReleaseSavepointStatement,
     SetTransactionExpression,
 )
 from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode  # noqa: F401
 
 
 class TestPostgreSQLBeginTransactionExpression:
-    """Tests for PostgreSQL BeginTransactionExpression."""
+    """Tests for PostgreSQL BeginTransactionStatement."""
 
     def test_basic_begin(self, postgres_dialect):
         """Test basic BEGIN statement."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         sql, params = expr.to_sql()
         assert sql == "BEGIN"
         assert params == ()
 
     def test_begin_with_isolation_level(self, postgres_dialect):
         """Test BEGIN with isolation level."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         assert sql == "BEGIN ISOLATION LEVEL SERIALIZABLE"
@@ -32,7 +32,7 @@ class TestPostgreSQLBeginTransactionExpression:
 
     def test_begin_read_only(self, postgres_dialect):
         """Test BEGIN READ ONLY."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.read_only()
         sql, params = expr.to_sql()
         assert sql == "BEGIN READ ONLY"
@@ -40,7 +40,7 @@ class TestPostgreSQLBeginTransactionExpression:
 
     def test_begin_read_write(self, postgres_dialect):
         """Test BEGIN READ WRITE."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.read_write()
         sql, params = expr.to_sql()
         assert sql == "BEGIN READ WRITE"
@@ -48,7 +48,7 @@ class TestPostgreSQLBeginTransactionExpression:
 
     def test_begin_with_isolation_and_read_only(self, postgres_dialect):
         """Test BEGIN with isolation level and READ ONLY."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(IsolationLevel.REPEATABLE_READ).read_only()
         sql, params = expr.to_sql()
         assert "ISOLATION LEVEL REPEATABLE READ" in sql
@@ -57,7 +57,7 @@ class TestPostgreSQLBeginTransactionExpression:
 
     def test_begin_deferrable(self, postgres_dialect):
         """Test BEGIN with DEFERRABLE (only for SERIALIZABLE)."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(IsolationLevel.SERIALIZABLE).deferrable()
         sql, params = expr.to_sql()
         assert "ISOLATION LEVEL SERIALIZABLE" in sql
@@ -66,7 +66,7 @@ class TestPostgreSQLBeginTransactionExpression:
 
     def test_begin_not_deferrable(self, postgres_dialect):
         """Test BEGIN with NOT DEFERRABLE."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(IsolationLevel.SERIALIZABLE).not_deferrable()
         sql, params = expr.to_sql()
         assert "NOT DEFERRABLE" in sql
@@ -79,7 +79,7 @@ class TestPostgreSQLBeginTransactionExpression:
         SERIALIZABLE isolation (``BEGIN READ COMMITTED DEFERRABLE`` is accepted
         by the server).
         """
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(IsolationLevel.READ_COMMITTED).deferrable()
         sql, params = expr.to_sql()
         assert "DEFERRABLE" in sql
@@ -94,7 +94,7 @@ class TestPostgreSQLBeginTransactionExpression:
     ])
     def test_all_isolation_levels(self, postgres_dialect, level, expected_name):
         """Test all isolation levels."""
-        expr = BeginTransactionExpression(postgres_dialect)
+        expr = BeginTransactionStatement(postgres_dialect)
         expr.isolation_level(level)
         sql, params = expr.to_sql()
         assert expected_name in sql
@@ -106,21 +106,21 @@ class TestPostgreSQLCommitRollback:
 
     def test_commit(self, postgres_dialect):
         """Test COMMIT statement."""
-        expr = CommitTransactionExpression(postgres_dialect)
+        expr = CommitStatement(postgres_dialect)
         sql, params = expr.to_sql()
         assert sql == "COMMIT"
         assert params == ()
 
     def test_rollback(self, postgres_dialect):
         """Test ROLLBACK statement."""
-        expr = RollbackTransactionExpression(postgres_dialect)
+        expr = RollbackStatement(postgres_dialect)
         sql, params = expr.to_sql()
         assert sql == "ROLLBACK"
         assert params == ()
 
     def test_rollback_to_savepoint(self, postgres_dialect):
         """Test ROLLBACK TO SAVEPOINT statement."""
-        expr = RollbackTransactionExpression(postgres_dialect)
+        expr = RollbackStatement(postgres_dialect)
         expr.to_savepoint("my_savepoint")
         sql, params = expr.to_sql()
         assert "ROLLBACK" in sql
@@ -133,7 +133,7 @@ class TestPostgreSQLSavepoint:
 
     def test_savepoint(self, postgres_dialect):
         """Test SAVEPOINT statement."""
-        expr = SavepointExpression(postgres_dialect, "my_savepoint")
+        expr = SavepointStatement(postgres_dialect, "my_savepoint")
         sql, params = expr.to_sql()
         assert "SAVEPOINT" in sql
         assert "my_savepoint" in sql
@@ -141,7 +141,7 @@ class TestPostgreSQLSavepoint:
 
     def test_release_savepoint(self, postgres_dialect):
         """Test RELEASE SAVEPOINT statement."""
-        expr = ReleaseSavepointExpression(postgres_dialect, "my_savepoint")
+        expr = ReleaseSavepointStatement(postgres_dialect, "my_savepoint")
         sql, params = expr.to_sql()
         assert "RELEASE SAVEPOINT" in sql
         assert "my_savepoint" in sql

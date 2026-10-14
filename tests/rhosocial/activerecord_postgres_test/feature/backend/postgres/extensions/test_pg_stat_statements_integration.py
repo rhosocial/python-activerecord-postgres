@@ -20,7 +20,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -45,13 +45,13 @@ class TestPgStatStatementsIntegration:
     """Integration tests for pg_stat_statements extension."""
 
     def test_pg_stat_statements_query(self, pg_stat_statements_env):
-        """Test querying the pg_stat_statements view using QueryExpression."""
+        """Test querying the pg_stat_statements view using QueryStatement."""
         backend, dialect = pg_stat_statements_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         try:
-            # Query the pg_stat_statements view using QueryExpression
-            query = QueryExpression(
+            # Query the pg_stat_statements view using QueryStatement
+            query = QueryStatement(
                 dialect=dialect,
                 select=[
                     Column(dialect, "query"),
@@ -79,7 +79,7 @@ class TestPgStatStatementsIntegration:
         try:
             # Use pg_stat_statements_reset function factory to reset statistics
             reset_func = pg_stat_statements_reset(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[reset_func],
             )
@@ -110,13 +110,13 @@ class TestAsyncPgStatStatementsIntegration:
 
     @pytest.mark.asyncio
     async def test_async_pg_stat_statements_query(self, async_pg_stat_statements_env):
-        """Test querying the pg_stat_statements view using QueryExpression asynchronously."""
+        """Test querying the pg_stat_statements view using QueryStatement asynchronously."""
         backend, dialect = async_pg_stat_statements_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         try:
-            # Query the pg_stat_statements view using QueryExpression
-            query = QueryExpression(
+            # Query the pg_stat_statements view using QueryStatement
+            query = QueryStatement(
                 dialect=dialect,
                 select=[
                     Column(dialect, "query"),
@@ -145,7 +145,7 @@ class TestAsyncPgStatStatementsIntegration:
         try:
             # Use pg_stat_statements_reset function factory to reset statistics
             reset_func = pg_stat_statements_reset(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[reset_func],
             )

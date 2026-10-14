@@ -137,12 +137,12 @@ class PostgresTableMixin:
 
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateTableLikeExpression.table must be a Table, "
+                f"CreateTableLikeStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         if not isinstance(expr.like_table, Table):
             raise TypeError(
-                f"CreateTableLikeExpression.like_table must be a Table, "
+                f"CreateTableLikeStatement.like_table must be a Table, "
                 f"got {type(expr.like_table).__name__}"
             )
         if not self.supports_create_table_like():

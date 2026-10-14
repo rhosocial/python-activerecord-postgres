@@ -9,7 +9,7 @@ This module tests the core introspection methods:
 
 import pytest  # noqa: F401
 
-from rhosocial.activerecord.backend.introspection.types import DatabaseInfo
+from rhosocial.activerecord.backend.introspection.types import IntrospectionDatabaseInfo
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
 from rhosocial.activerecord.backend.introspection.base import SyncAbstractIntrospector
 
@@ -60,10 +60,10 @@ class TestGetDatabaseInfo:
     """Tests for get_database_info method."""
 
     def test_get_database_info_returns_info(self, postgres_backend_single):
-        """Test that get_database_info returns DatabaseInfo."""
+        """Test that get_database_info returns IntrospectionDatabaseInfo."""
         info = postgres_backend_single.introspector.get_database_info()
 
-        assert isinstance(info, DatabaseInfo)
+        assert isinstance(info, IntrospectionDatabaseInfo)
         assert info.name is not None
         assert info.version is not None
         assert info.vendor == "PostgreSQL"

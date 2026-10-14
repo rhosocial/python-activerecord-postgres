@@ -15,12 +15,12 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    QueryExpression,
-    UpdateExpression,
+    DropTableStatement,
+    QueryStatement,
+    UpdateStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -48,7 +48,7 @@ dialect = backend.dialect
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     if_exists=True,
@@ -57,7 +57,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     columns=[
@@ -79,7 +79,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'accounts'),
     columns=['name', 'balance'],
@@ -101,7 +101,7 @@ backend.execute(sql, params)
 
 with backend.transaction():
     # Lock Alice's row using ForUpdateClause
-    lock_query = QueryExpression(
+    lock_query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -113,7 +113,7 @@ with backend.transaction():
     print(f"Locked row: {result.data}")
 
     # Update the balance
-    update_expr = UpdateExpression(
+    update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 900)},
@@ -130,7 +130,7 @@ with backend.transaction():
 # Lock specific rows based on conditions
 
 with backend.transaction():
-    lock_query = QueryExpression(
+    lock_query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -146,7 +146,7 @@ with backend.transaction():
 # ============================================================
 # Skip locked rows instead of waiting
 
-skip_query = QueryExpression(
+skip_query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=Table(dialect, 'accounts'),
@@ -163,7 +163,7 @@ print(f"SKIP LOCKED result: {result.data}")
 # Fail immediately if rows are locked
 
 try:
-    nowait_query = QueryExpression(
+    nowait_query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -192,7 +192,7 @@ from rhosocial.activerecord.backend.expression import (  # noqa: E402
 
 with backend.transaction():
     # Shared lock - allows other transactions to also read
-    share_query = QueryExpression(
+    share_query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -205,7 +205,7 @@ with backend.transaction():
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     if_exists=True,
@@ -219,7 +219,7 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use ForUpdateClause with QueryExpression for SELECT ... FOR UPDATE
+# 1. Use ForUpdateClause with QueryStatement for SELECT ... FOR UPDATE
 # 2. ForUpdateClause(dialect, skip_locked=True) for SKIP LOCKED
 # 3. ForUpdateClause(dialect, nowait=True) for NOWAIT
 # 4. Use ForUpdateClause with LockStrength.SHARE for FOR SHARE

@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements import (
-        CreateTableLikeExpression,
+        CreateTableLikeStatement,
     )
 
 
@@ -58,7 +58,7 @@ class PostgresTableSupport(
 
         UNLOGGED tables skip WAL writes (9.6+), trading crash safety for
         speed; callers opt in via ``PostgresCreateTableOptions(unlogged=True)``
-        on ``CreateTableExpression``.
+        on ``CreateTableStatement``.
         """
         ...
 
@@ -70,7 +70,7 @@ class PostgresTableSupport(
         """
         ...
 
-    def format_create_table_like_statement(self, expr: "CreateTableLikeExpression") -> tuple:
+    def format_create_table_like_statement(self, expr: "CreateTableLikeStatement") -> tuple:
         """Format CREATE TABLE (LIKE ...) statement."""
 
     def format_column_definition(self, col_def) -> tuple:

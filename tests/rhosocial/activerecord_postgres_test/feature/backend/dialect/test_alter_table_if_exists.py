@@ -16,7 +16,7 @@ import pytest
 from rhosocial.activerecord.backend.expression.statements import ColumnDefinition
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AddColumn,
-    AlterTableExpression,
+    AlterTableStatement,
     DropColumn,
     DropTableConstraint,
 )
@@ -61,7 +61,7 @@ class TestPostgresAddColumnIfNotExists:
             ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
-        expr = AlterTableExpression(
+        expr = AlterTableStatement(
             dialect, table=Table(dialect, 'users'), actions=[action]
         )
         sql, params = expr.to_sql()
@@ -193,7 +193,7 @@ class TestPostgresRenameColumnAndTable:
             RenameObject,
         )
 
-        expr = AlterTableExpression(
+        expr = AlterTableStatement(
             dialect,
             table=Table(dialect, 'orders'),
             actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
@@ -220,7 +220,7 @@ class TestPostgresRenameColumnAndTable:
 
 
 class TestPostgresCreateUnloggedTable:
-    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableExpression."""
+    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableStatement."""
 
     @staticmethod
     def _options(dialect):
@@ -231,10 +231,10 @@ class TestPostgresCreateUnloggedTable:
 
     def test_unlogged_renders_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -246,10 +246,10 @@ class TestPostgresCreateUnloggedTable:
 
     def test_plain_omits_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -263,10 +263,10 @@ class TestPostgresCreateUnloggedTable:
             UnsupportedFeatureError,
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -281,14 +281,14 @@ class TestPostgresCreateUnloggedTable:
             UnsupportedFeatureError,
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
             PostgresCreateTableOptions,
         )
 
         low = PostgresDialect(version=(9, 4, 0))
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             low,
             table=Table(low, 'audit'),
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],

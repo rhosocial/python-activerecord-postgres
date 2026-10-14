@@ -4,7 +4,7 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal, QueryExpression
+from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
 from rhosocial.activerecord.backend.expression.functions import (
     date_add,
     date_diff,
@@ -199,7 +199,7 @@ class TestPostgresDateTimeIntervalExpressions:
         shifted = date_add(
             postgres_dialect, Column(postgres_dialect, "created_at"), 1, "day"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             postgres_dialect,
             select=[
                 extract(postgres_dialect, "year", Column(postgres_dialect, "created_at"))

@@ -22,7 +22,7 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
+    CreateTableStatement, DropTableStatement, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
@@ -44,15 +44,15 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_pg9 = DropTableExpression(dialect, Table(dialect, 'pg9_style'), if_exists=True, cascade=True)
-drop_pg10 = DropTableExpression(dialect, Table(dialect, 'pg10_style'), if_exists=True, cascade=True)
+drop_pg9 = DropTableStatement(dialect, Table(dialect, 'pg9_style'), if_exists=True, cascade=True)
+drop_pg10 = DropTableStatement(dialect, Table(dialect, 'pg10_style'), if_exists=True, cascade=True)
 sql, params = drop_pg9.to_sql()
 backend.execute(sql, params)
 sql, params = drop_pg10.to_sql()
 backend.execute(sql, params)
 
 # PostgreSQL 9-compatible: SERIAL shorthand
-pg9_table = CreateTableExpression(
+pg9_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'pg9_style'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
@@ -68,7 +68,7 @@ backend.execute(sql, params)
 # on PostgreSQL 9 that formatter refuses instead of rendering a clause the
 # server rejects, and the SERIAL path above stays the PG9-compatible one.
 try:
-    pg10_table = CreateTableExpression(
+    pg10_table = CreateTableStatement(
         dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect),
                 constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],

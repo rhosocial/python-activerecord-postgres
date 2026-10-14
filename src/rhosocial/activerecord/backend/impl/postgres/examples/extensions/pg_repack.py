@@ -44,7 +44,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -77,7 +77,7 @@ if installed:
 
     # Example 1: Query pg_repack version
     version_func = repack_version(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[version_func.as_("version")],
     )

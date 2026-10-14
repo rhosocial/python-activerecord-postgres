@@ -30,10 +30,10 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up for demo using DropTableExpression
-from rhosocial.activerecord.backend.expression import DropTableExpression
+# Clean up for demo using DropTableStatement
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -44,11 +44,11 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    QueryExpression,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -56,7 +56,7 @@ from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -137,7 +137,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'cities'),
         columns=columns,
@@ -149,7 +149,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert city coordinate data
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'cities'),
         columns=["name", "latitude", "longitude"],
@@ -183,7 +183,7 @@ if installed:
     )
     distance_func = FunctionCall(dialect, "earth_distance", ny_point, la_point)
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[distance_func.as_("distance_meters")],
     )
@@ -224,7 +224,7 @@ if installed:
     # WHERE: box @> city_point (the @> is the contains operator for cube type)
     contains_pred = BinaryExpression(dialect, "@>", box_func, city_point)
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -267,7 +267,7 @@ if installed:
         dialect, "<", distance_func, Literal(dialect, 1500000),
     )
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -296,7 +296,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

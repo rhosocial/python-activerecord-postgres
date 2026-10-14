@@ -15,28 +15,28 @@ from rhosocial.activerecord.backend.errors import IntegrityError
 from rhosocial.activerecord.backend.expression import (
     Column,
     ComparisonPredicate,
-    CreateIndexExpression,
-    DeleteExpression,
+    CreateIndexStatement,
+    DeleteStatement,
     FunctionCall,
-    InsertExpression,
+    InsertStatement,
     Literal,
     LogicalPredicate,
     OrderByClause,
-    QualifiedIdentifierExpression,
-    QueryExpression,
+    QualifiedIdentifier,
+    QueryStatement,
     ValuesSource,
-    WildcardExpression,
+    Wildcard,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
     PartitionClause,
     PartitionStrategy,
     TableConstraint,
     TableConstraintType,
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionExpression,
@@ -80,7 +80,7 @@ def _qualified(table_name: str) -> str:
 
 
 def _create_partitioned_parent_sql(dialect, table_name: str):
-    expr = CreateTableExpression(
+    expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         columns=[
@@ -134,7 +134,7 @@ def _create_default_partition_sql(dialect, partition_name: str):
 
 
 def _delete_partition_events_for_range_expression(dialect, start, end):
-    return DeleteExpression(
+    return DeleteStatement(
         dialect=dialect,
         tables=Table(dialect, 'ar_partition_events'),
         where=LogicalPredicate(
@@ -151,7 +151,7 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
 
 
 def _insert_partition_events_expression(dialect, rows):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'ar_partition_events'),
         columns=["id", "created_at", "payload"],
@@ -183,7 +183,7 @@ def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_valu
 
 
 def _drop_table_sql(dialect, table_name: str):
-    expr = DropTableExpression(
+    expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         if_exists=True,
@@ -193,7 +193,7 @@ def _drop_table_sql(dialect, table_name: str):
 
 
 def _truncate_table_sql(dialect, table_name: str):
-    expr = TruncateExpression(
+    expr = TruncateStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
     )
@@ -226,7 +226,7 @@ PRODUCTION_PARTITIONS = (
 
 
 def _create_production_parent_sql(dialect):
-    expr = CreateTableExpression(
+    expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=[
@@ -310,7 +310,7 @@ def _attach_production_partition_sql(dialect, partition_name: str, from_value: s
 
 
 def _create_production_index_sql(dialect, table_name: str):
-    expr = CreateIndexExpression(
+    expr = CreateIndexStatement(
         dialect,
         Index(dialect, f'idx_{table_name}_tenant_created_at'),
         Table(dialect, table_name),
@@ -321,7 +321,7 @@ def _create_production_index_sql(dialect, table_name: str):
 
 
 def _insert_production_events_expression(dialect, rows):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
@@ -348,7 +348,7 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
             ),
             predicate,
         )
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[Column(dialect, "payload")],
         from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
@@ -358,9 +358,9 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
 
 
 def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[WildcardExpression(dialect)],
+        select=[Wildcard(dialect)],
         from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
         where=LogicalPredicate(
             dialect,
@@ -383,9 +383,9 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
 
 
 def _select_count_expression(dialect, table_name: str):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[FunctionCall(dialect, "COUNT", WildcardExpression(dialect)).as_("count")],
+        select=[FunctionCall(dialect, "COUNT", Wildcard(dialect)).as_("count")],
         from_=Table(dialect, table_name),
     )
 
@@ -553,7 +553,7 @@ def _pg_partman_delete_config_sql(dialect, partman_schema: str):
 
 
 def _pg_partman_config_table_sql(dialect, partman_schema: str) -> str:
-    sql, _ = QualifiedIdentifierExpression(
+    sql, _ = QualifiedIdentifier(
         dialect=dialect,
         schema=partman_schema,
         name="part_config",
@@ -1264,7 +1264,7 @@ class TestPostgreSQLProductionTimePartitionOperations:
         
                 Steps: insert rows across yearly, quarterly, monthly, and weekly
                 partitions, query `[2027-02-01, 2027-05-08)` for `tenant_id=10`, and run
-                EXPLAIN for the same QueryExpression.
+                EXPLAIN for the same QueryStatement.
         
                 Assertions: the query returns only target-tenant rows in the continuous
                 range; the plan includes target partitions and excludes the 2026 cold
@@ -1500,7 +1500,7 @@ class TestAsyncPostgreSQLProductionTimePartitionOperations:
         
                 Steps: insert rows across yearly, quarterly, monthly, and weekly
                 partitions, query `[2027-02-01, 2027-05-08)` for `tenant_id=10`, and run
-                EXPLAIN for the same QueryExpression.
+                EXPLAIN for the same QueryStatement.
         
                 Assertions: the query returns only target-tenant rows in the continuous
                 range; the plan includes target partitions and excludes the 2026 cold

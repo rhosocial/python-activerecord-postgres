@@ -21,13 +21,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 )
 from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -67,7 +67,7 @@ def _setup_users_table(backend, dialect, table):
         ColumnDefinition(dialect, name="username", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="password_hash", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -85,7 +85,7 @@ def _setup_users_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "alice"), crypt_func],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["username", "password_hash"],
@@ -107,7 +107,7 @@ def _setup_encrypt_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="secret_data", data_type=BlobType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -125,7 +125,7 @@ def _setup_encrypt_table(backend, dialect, table):
     rows = [
         [encrypt_func],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["secret_data"],
@@ -137,7 +137,7 @@ def _setup_encrypt_table(backend, dialect, table):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -159,7 +159,7 @@ async def _async_setup_users_table(backend, dialect, table):
         ColumnDefinition(dialect, name="username", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="password_hash", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -177,7 +177,7 @@ async def _async_setup_users_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "alice"), crypt_func],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["username", "password_hash"],
@@ -199,7 +199,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
         ),
         ColumnDefinition(dialect, name="secret_data", data_type=BlobType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -217,7 +217,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     rows = [
         [encrypt_func],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["secret_data"],
@@ -229,7 +229,7 @@ async def _async_setup_encrypt_table(backend, dialect, table):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -287,7 +287,7 @@ class TestPgcryptoIntegration:
             Column(dialect, "username"),
             Literal(dialect, "alice"),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[match_expr],
             from_=Table(dialect, TABLE_USERS),
@@ -309,7 +309,7 @@ class TestPgcryptoIntegration:
             Column(dialect, "password_hash"),
             crypt_func_wrong,
         ), alias="is_match")
-        query_wrong = QueryExpression(
+        query_wrong = QueryStatement(
             dialect=dialect,
             select=[match_expr_wrong],
             from_=Table(dialect, TABLE_USERS),
@@ -329,7 +329,7 @@ class TestPgcryptoIntegration:
             dialect, "gen_salt",
             Literal(dialect, "bf"),
         ).as_("salt")
-        query1 = QueryExpression(dialect=dialect, select=[salt_func1])
+        query1 = QueryStatement(dialect=dialect, select=[salt_func1])
         sql, params = query1.to_sql()
         result1 = backend.execute(sql, params, options=opts)
 
@@ -337,7 +337,7 @@ class TestPgcryptoIntegration:
             dialect, "gen_salt",
             Literal(dialect, "bf"),
         ).as_("salt")
-        query2 = QueryExpression(dialect=dialect, select=[salt_func2])
+        query2 = QueryStatement(dialect=dialect, select=[salt_func2])
         sql, params = query2.to_sql()
         result2 = backend.execute(sql, params, options=opts)
 
@@ -358,7 +358,7 @@ class TestPgcryptoIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "sha256"),
         ).as_("hash")
-        query = QueryExpression(dialect=dialect, select=[digest_func])
+        query = QueryStatement(dialect=dialect, select=[digest_func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -375,7 +375,7 @@ class TestPgcryptoIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "sha256"),
         ).as_("hash")
-        query2 = QueryExpression(dialect=dialect, select=[digest_func2])
+        query2 = QueryStatement(dialect=dialect, select=[digest_func2])
         sql, params = query2.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         hash_bytes2 = result2.data[0]["hash"]
@@ -398,7 +398,7 @@ class TestPgcryptoIntegration:
             ),
             Literal(dialect, "hex"),
         ).as_("hash_hex")
-        query = QueryExpression(dialect=dialect, select=[encode_func])
+        query = QueryStatement(dialect=dialect, select=[encode_func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -418,7 +418,7 @@ class TestPgcryptoIntegration:
             Literal(dialect, "secret_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query1 = QueryExpression(dialect=dialect, select=[hmac_func1])
+        query1 = QueryStatement(dialect=dialect, select=[hmac_func1])
         sql, params = query1.to_sql()
         result1 = backend.execute(sql, params, options=opts)
         assert result1.data is not None
@@ -431,7 +431,7 @@ class TestPgcryptoIntegration:
             Literal(dialect, "secret_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query2 = QueryExpression(dialect=dialect, select=[hmac_func2])
+        query2 = QueryStatement(dialect=dialect, select=[hmac_func2])
         sql, params = query2.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         mac1 = result1.data[0]["mac"]
@@ -449,7 +449,7 @@ class TestPgcryptoIntegration:
             Literal(dialect, "other_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query3 = QueryExpression(dialect=dialect, select=[hmac_func3])
+        query3 = QueryStatement(dialect=dialect, select=[hmac_func3])
         sql, params = query3.to_sql()
         result3 = backend.execute(sql, params, options=opts)
         mac3 = result3.data[0]["mac"]
@@ -473,7 +473,7 @@ class TestPgcryptoIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[decrypt_func],
             from_=Table(dialect, TABLE_ENCRYPT),
@@ -489,7 +489,7 @@ class TestPgcryptoIntegration:
             Column(dialect, "secret_data"),
             Literal(dialect, "wrong_key"),
         ).as_("decrypted")
-        query_wrong = QueryExpression(
+        query_wrong = QueryStatement(
             dialect=dialect,
             select=[decrypt_func_wrong],
             from_=Table(dialect, TABLE_ENCRYPT),
@@ -550,7 +550,7 @@ class TestAsyncPgcryptoIntegration:
             Column(dialect, "username"),
             Literal(dialect, "alice"),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[match_expr],
             from_=Table(dialect, TABLE_USERS_ASYNC),
@@ -572,7 +572,7 @@ class TestAsyncPgcryptoIntegration:
             Column(dialect, "password_hash"),
             crypt_func_wrong,
         ), alias="is_match")
-        query_wrong = QueryExpression(
+        query_wrong = QueryStatement(
             dialect=dialect,
             select=[match_expr_wrong],
             from_=Table(dialect, TABLE_USERS_ASYNC),
@@ -593,7 +593,7 @@ class TestAsyncPgcryptoIntegration:
             dialect, "gen_salt",
             Literal(dialect, "bf"),
         ).as_("salt")
-        query1 = QueryExpression(dialect=dialect, select=[salt_func1])
+        query1 = QueryStatement(dialect=dialect, select=[salt_func1])
         sql, params = query1.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
 
@@ -601,7 +601,7 @@ class TestAsyncPgcryptoIntegration:
             dialect, "gen_salt",
             Literal(dialect, "bf"),
         ).as_("salt")
-        query2 = QueryExpression(dialect=dialect, select=[salt_func2])
+        query2 = QueryStatement(dialect=dialect, select=[salt_func2])
         sql, params = query2.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
 
@@ -623,7 +623,7 @@ class TestAsyncPgcryptoIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "sha256"),
         ).as_("hash")
-        query = QueryExpression(dialect=dialect, select=[digest_func])
+        query = QueryStatement(dialect=dialect, select=[digest_func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -640,7 +640,7 @@ class TestAsyncPgcryptoIntegration:
             Literal(dialect, "hello"),
             Literal(dialect, "sha256"),
         ).as_("hash")
-        query2 = QueryExpression(dialect=dialect, select=[digest_func2])
+        query2 = QueryStatement(dialect=dialect, select=[digest_func2])
         sql, params = query2.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         hash_bytes2 = result2.data[0]["hash"]
@@ -664,7 +664,7 @@ class TestAsyncPgcryptoIntegration:
             ),
             Literal(dialect, "hex"),
         ).as_("hash_hex")
-        query = QueryExpression(dialect=dialect, select=[encode_func])
+        query = QueryStatement(dialect=dialect, select=[encode_func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -685,7 +685,7 @@ class TestAsyncPgcryptoIntegration:
             Literal(dialect, "secret_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query1 = QueryExpression(dialect=dialect, select=[hmac_func1])
+        query1 = QueryStatement(dialect=dialect, select=[hmac_func1])
         sql, params = query1.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
         assert result1.data is not None
@@ -698,7 +698,7 @@ class TestAsyncPgcryptoIntegration:
             Literal(dialect, "secret_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query2 = QueryExpression(dialect=dialect, select=[hmac_func2])
+        query2 = QueryStatement(dialect=dialect, select=[hmac_func2])
         sql, params = query2.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         mac1 = result1.data[0]["mac"]
@@ -716,7 +716,7 @@ class TestAsyncPgcryptoIntegration:
             Literal(dialect, "other_key"),
             Literal(dialect, "sha256"),
         ).as_("mac")
-        query3 = QueryExpression(dialect=dialect, select=[hmac_func3])
+        query3 = QueryStatement(dialect=dialect, select=[hmac_func3])
         sql, params = query3.to_sql()
         result3 = await backend.execute(sql, params, options=opts)
         mac3 = result3.data[0]["mac"]
@@ -741,7 +741,7 @@ class TestAsyncPgcryptoIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[decrypt_func],
             from_=Table(dialect, TABLE_ENCRYPT_ASYNC),
@@ -757,7 +757,7 @@ class TestAsyncPgcryptoIntegration:
             Column(dialect, "secret_data"),
             Literal(dialect, "wrong_key"),
         ).as_("decrypted")
-        query_wrong = QueryExpression(
+        query_wrong = QueryStatement(
             dialect=dialect,
             select=[decrypt_func_wrong],
             from_=Table(dialect, TABLE_ENCRYPT_ASYNC),

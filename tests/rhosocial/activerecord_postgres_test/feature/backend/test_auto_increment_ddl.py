@@ -20,7 +20,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, ColumnDefinition, ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement, ColumnDefinition, ColumnConstraint, ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
     BooleanType, IntegerType, TextType, TimestampType, VarCharType,
@@ -41,7 +41,7 @@ def _pk(dialect):
 
 
 def _build_table(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect, table=Table(dialect, 'test_tbl'),
         columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
@@ -69,7 +69,7 @@ class TestAutoIncrementDDL:
         assert isinstance(params, tuple)
 
     def test_boolean_default_true(self, dialect):
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect, table=Table(dialect, 'bool_test'),
             columns=[
                 ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
@@ -82,7 +82,7 @@ class TestAutoIncrementDDL:
         assert "BOOLEAN" in sql.upper()
 
     def test_timestamp_type(self, dialect):
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect, table=Table(dialect, 'ts_test'),
             columns=[
                 ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
@@ -118,7 +118,7 @@ class TestAutoIncrementVersionGate:
         from rhosocial.activerecord.backend.impl.postgres.expression.types import (
             PostgresSerialType,
         )
-        serial = CreateTableExpression(
+        serial = CreateTableStatement(
             dialect=dialect, table=Table(dialect, 'serial_tbl'),
             columns=[ColumnDefinition(dialect, "id", PostgresSerialType(dialect=dialect))],
         )

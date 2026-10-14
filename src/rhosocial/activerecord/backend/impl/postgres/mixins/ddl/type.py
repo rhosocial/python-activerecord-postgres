@@ -8,9 +8,9 @@ from typing import List, Optional, Sequence, Tuple, Type, Union, cast, TYPE_CHEC
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.user_defined_type import UserDefinedTypeMixin
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
-    DropTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
+    DropTypeStatement,
     TypeAlterAction,
     TypeDefinition,
 )
@@ -266,7 +266,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         schema: Optional[str] = None,
     ) -> Tuple[str, tuple]:
         dialect = self._as_dialect()
-        expr = CreateTypeExpression(
+        expr = CreateTypeStatement(
             dialect,
             Type(dialect, name, schema_name=schema),
             PostgresEnumTypeDefinition(dialect, values),
@@ -275,7 +275,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
 
     def format_create_type_statement(
         self,
-        expr: CreateTypeExpression,
+        expr: CreateTypeStatement,
     ) -> Tuple[str, tuple]:
         """Render ``CREATE TYPE`` for a PostgreSQL type definition.
 
@@ -285,7 +285,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         """
         if not isinstance(expr.type, Type):
             raise TypeError(
-                f"CreateTypeExpression.type must be a Type, "
+                f"CreateTypeStatement.type must be a Type, "
                 f"got {type(expr.type).__name__}"
             )
         if not self.supports_type_objects() or not self.supports_create_type():
@@ -327,7 +327,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
 
     def format_alter_type_statement(
         self,
-        expr: AlterTypeExpression,
+        expr: AlterTypeStatement,
     ) -> Tuple[str, tuple]:
         """Render ``ALTER TYPE`` for the PostgreSQL type-alter actions.
 
@@ -336,7 +336,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         """
         if not isinstance(expr.type, Type):
             raise TypeError(
-                f"AlterTypeExpression.type must be a Type, "
+                f"AlterTypeStatement.type must be a Type, "
                 f"got {type(expr.type).__name__}"
             )
         if not self.supports_type_objects() or not self.supports_alter_type():
@@ -375,7 +375,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
 
     def format_drop_type_statement(
         self,
-        expr: Optional[Union[DropTypeExpression, str]] = None,
+        expr: Optional[Union[DropTypeStatement, str]] = None,
         schema_name: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,

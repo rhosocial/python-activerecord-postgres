@@ -14,11 +14,11 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -44,11 +44,11 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True, cascade=True)
+drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True, cascade=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     columns=[
@@ -66,7 +66,7 @@ sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
 # Insert initial data
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'accounts'),
     source=ValuesSource(dialect, [
@@ -85,11 +85,11 @@ backend.execute(sql, params)
 # 1. Transaction with commit
 print("--- Transaction with commit ---")
 with backend.transaction():
-    from rhosocial.activerecord.backend.expression import UpdateExpression
+    from rhosocial.activerecord.backend.expression import UpdateStatement
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.expression.core import Column
 
-    update = UpdateExpression(
+    update = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1500.00)},
@@ -104,7 +104,7 @@ with backend.transaction():
     print("Updated Alice's balance within transaction")
 
 # Verify after commit
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=Table(dialect, 'accounts'),
@@ -122,7 +122,7 @@ print(f"After commit: {result.data}")
 print("\n--- Transaction with rollback ---")
 try:
     with backend.transaction():
-        update = UpdateExpression(
+        update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, 'accounts'),
             assignments={'balance': Literal(dialect, 0)},
@@ -140,7 +140,7 @@ except ValueError:
     print("Transaction rolled back due to error")
 
 # Verify rollback
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=Table(dialect, 'accounts'),
@@ -158,7 +158,7 @@ print(f"After rollback: {result.data}")
 print("\n--- Savepoints (nested transactions) ---")
 with backend.transaction():
     # First operation
-    update = UpdateExpression(
+    update = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 2000.00)},
@@ -176,7 +176,7 @@ with backend.transaction():
     print(f"Savepoint created: {sp}")
 
     # Second operation (within savepoint)
-    update = UpdateExpression(
+    update = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 9999.00)},
@@ -194,7 +194,7 @@ with backend.transaction():
     print("Rolled back to savepoint (Bob's update undone)")
 
 # Verify - Alice updated, Bob unchanged
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=Table(dialect, 'accounts'),
@@ -207,7 +207,7 @@ print(f"Final state: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True)
+drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

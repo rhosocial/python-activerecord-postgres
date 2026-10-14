@@ -7,7 +7,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_truncate import TruncateExpression
+    from ....expression.statements.ddl_truncate import TruncateStatement
 
 
 class PostgresTruncateMixin:
@@ -42,7 +42,7 @@ class PostgresTruncateMixin:
         """
         return True
 
-    def format_truncate_statement(self, expr: "TruncateExpression") -> Tuple[str, tuple]:
+    def format_truncate_statement(self, expr: "TruncateStatement") -> Tuple[str, tuple]:
         """Format TRUNCATE statement for PostgreSQL.
 
         - ``expr.table`` — the table being truncated, which renders its own
@@ -62,7 +62,7 @@ class PostgresTruncateMixin:
         """
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"TruncateExpression.table must be a Table, "
+                f"TruncateStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         if not self.supports_truncate():

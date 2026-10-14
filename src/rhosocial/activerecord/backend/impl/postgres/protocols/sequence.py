@@ -20,8 +20,8 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 
 if TYPE_CHECKING:
     from ...expression.statements.ddl_sequence import (
-        AlterSequenceExpression,
-        CreateSequenceExpression,
+        AlterSequenceStatement,
+        CreateSequenceStatement,
     )
 
 
@@ -73,9 +73,9 @@ class PostgresSequenceSupport(
     def supports_sequence_owned_by(self) -> bool: ...
 
     def format_create_sequence_statement(
-        self, expr: "CreateSequenceExpression"
+        self, expr: "CreateSequenceStatement"
     ) -> Tuple[str, tuple]: ...
 
     def format_alter_sequence_statement(
-        self, expr: "AlterSequenceExpression"
+        self, expr: "AlterSequenceStatement"
     ) -> Tuple[str, tuple]: ...

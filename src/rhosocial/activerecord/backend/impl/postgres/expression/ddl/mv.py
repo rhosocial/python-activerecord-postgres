@@ -22,9 +22,9 @@ from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    RefreshMaterializedViewStatement,
 )
 
 from ...storage_parameters import validate_storage_parameters
@@ -54,7 +54,7 @@ def _validate_name(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} must be a non-empty string")
 
 
-class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression):
+class PostgresCreateMaterializedViewExpression(CreateMaterializedViewStatement):
     """PostgreSQL CREATE MATERIALIZED VIEW with schema and IF NOT EXISTS support.
 
     Extends the generic expression with the PostgreSQL-specific ``IF NOT EXISTS``
@@ -120,7 +120,7 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
+class PostgresDropMaterializedViewExpression(DropMaterializedViewStatement):
     """PostgreSQL DROP MATERIALIZED VIEW.
 
     Example:
@@ -150,7 +150,7 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
         )
 
 
-class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpression):
+class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewStatement):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
 
     Replaces the contents of a materialized view by recalculating its query.

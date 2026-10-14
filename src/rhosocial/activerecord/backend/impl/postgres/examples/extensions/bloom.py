@@ -32,9 +32,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -46,13 +46,13 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    CreateIndexExpression,
-    InsertExpression,
-    QueryExpression,
+    CreateIndexStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
@@ -97,7 +97,7 @@ if installed:
         ColumnDefinition(name="city", data_type="TEXT"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'customers'),
         columns=columns,
@@ -116,7 +116,7 @@ if installed:
         [Literal(dialect, "Diana"), Literal(dialect, "diana@example.com"), Literal(dialect, "New York")],
         [Literal(dialect, "Eve"), Literal(dialect, "eve@example.com"), Literal(dialect, "Boston")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'customers'),
         columns=["name", "email", "city"],
@@ -144,7 +144,7 @@ if installed:
     print("Bloom index created: idx_customers_bloom")
 
     # Example 4: Query using equality condition (bloom index can help)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "email"), Column(dialect, "city")],
         from_=Table(dialect, "customers"),
@@ -185,7 +185,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

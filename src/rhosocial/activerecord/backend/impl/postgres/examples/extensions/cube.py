@@ -32,9 +32,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -45,12 +45,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    CreateIndexExpression,
-    QueryExpression,
+    CreateIndexStatement,
+    QueryStatement,
     Column,
     OrderByClause,
     LimitOffsetClause,
@@ -62,7 +62,7 @@ from rhosocial.activerecord.backend.expression.operators import (
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -118,7 +118,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'products'),
         columns=columns,
@@ -132,7 +132,7 @@ if installed:
     # Example 2: Insert cube data
     # Points: '(x, y, z)' represents a single point
     # Ranges: '(x1,x2),(y1,y2)' represents a hypercube
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'products'),
         columns=["name", "feature_vector"],
@@ -158,7 +158,7 @@ if installed:
 
     # Example 3: Contains operator (@>)
     # Check if a range cube contains a point cube
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
         from_=Table(dialect, "products"),
@@ -177,7 +177,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 4: Contained by operator (<@)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "feature_vector")],
         from_=Table(dialect, "products"),
@@ -225,7 +225,7 @@ if installed:
         Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
     )
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -264,7 +264,7 @@ if installed:
         Literal(dialect, "(0.4, 0.5, 0.6)").cast(PostgresCubeType(dialect)),
     )
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -283,7 +283,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 7: Create GiST index for fast cube queries
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_products_feature_vector'),
         table=Table(dialect, 'products'),
@@ -304,7 +304,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

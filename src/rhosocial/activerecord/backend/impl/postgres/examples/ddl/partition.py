@@ -15,13 +15,13 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    DropTableExpression,
-    InsertExpression,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
+from rhosocial.activerecord.backend.expression.core import Literal, Wildcard, Column
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -40,11 +40,11 @@ dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop partitions first, then parent table
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
+    drop = DropTableStatement(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
+drop_parent = DropTableStatement(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 
@@ -86,7 +86,7 @@ for part_name, start_val, end_val in partitions:
 # ============================================================
 
 # 3. Insert data (PostgreSQL routes to correct partition automatically)
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'orders'),
     columns=['order_date', 'customer_name', 'amount'],
@@ -102,9 +102,9 @@ backend.execute(sql, params)
 print("Inserted 4 orders across all partitions")
 
 # 4. Query all data (transparent across partitions)
-query_all = QueryExpression(
+query_all = QueryStatement(
     dialect=dialect,
-    select=[WildcardExpression(dialect)],
+    select=[Wildcard(dialect)],
     from_=Table(dialect, 'orders'),
 )
 sql, params = query_all.to_sql()
@@ -112,7 +112,7 @@ result = backend.execute(sql, params, options=dql_options)
 print(f"All orders: {result.data}")
 
 # 5. Query specific partition directly
-query_q1 = QueryExpression(
+query_q1 = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'customer_name'), Column(dialect, 'amount')],
     from_=Table(dialect, 'orders_2024_q1'),
@@ -125,11 +125,11 @@ print(f"Q1 orders: {result.data}")
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for partition in ['orders_2024_q1', 'orders_2024_q2', 'orders_2024_q3', 'orders_2024_q4']:
-    drop = DropTableExpression(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
+    drop = DropTableStatement(dialect=dialect, table=Table(dialect, partition), if_exists=True, cascade=True)
     sql, params = drop.to_sql()
     backend.execute(sql, params)
 
-drop_parent = DropTableExpression(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
+drop_parent = DropTableStatement(dialect=dialect, table=Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_parent.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

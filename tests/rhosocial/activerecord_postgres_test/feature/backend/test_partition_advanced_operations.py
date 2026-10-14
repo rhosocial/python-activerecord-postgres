@@ -11,17 +11,17 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnDefinition,
     ComparisonPredicate,
-    CreateTableExpression,
-    DropTableExpression,
-    ExplainExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    ExplainStatement,
     ExplainFormat,
     ExplainOptions,
-    InsertExpression,
+    InsertStatement,
     Literal,
     LogicalPredicate,
-    QueryExpression,
+    QueryStatement,
     RawSQLExpression,
-    UpdateExpression,
+    UpdateStatement,
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -57,11 +57,11 @@ SCHEMA_CHILD = "partition_events_p2026"
 
 def _drop_table_expression(dialect, table_name: str, *, schema: str | None = None):
     table = Table(dialect, table_name, schema_name=schema)
-    return DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
+    return DropTableStatement(dialect=dialect, table=table, if_exists=True, cascade=True)
 
 
 def _create_list_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, LIST_PARENT),
         columns=[
@@ -89,7 +89,7 @@ def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[st
 
 
 def _create_hash_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, HASH_PARENT),
         columns=[
@@ -117,7 +117,7 @@ def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
 
 
 def _create_range_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, RANGE_PARENT),
         columns=[
@@ -145,7 +145,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
 
 
 def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: list[list[Any]]):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, table_name),
         columns=columns,
@@ -157,7 +157,7 @@ def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: 
 
 
 def _select_tableoid_payload_expression(dialect, table_name: str):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[
             RawSQLExpression(dialect, "tableoid::regclass::text AS partition_name"),
@@ -178,7 +178,7 @@ def _metadata_sql(dialect, parent_table: str, *, schema: str | None = None, incl
 
 
 def _json_explain_sql(dialect, query):
-    expr = ExplainExpression(
+    expr = ExplainStatement(
         dialect,
         statement=query,
         options=ExplainOptions(format=ExplainFormat.JSON),
@@ -319,7 +319,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         default_partition_name = "ar_partition_adv_default"
 
         # Create a table with matching structure for DEFAULT attachment
-        create_default = CreateTableExpression(
+        create_default = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, default_partition_name),
             columns=[
@@ -379,7 +379,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             postgres_backend.execute(f'CREATE SCHEMA "{schema}"')
         try:
             for schema in (SCHEMA_A, SCHEMA_B):
-                parent = CreateTableExpression(
+                parent = CreateTableStatement(
                     dialect=dialect,
                     table=Table(dialect, SCHEMA_PARENT, schema_name=schema),
                     columns=[
@@ -433,7 +433,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"]],
             ).to_sql()
         )
-        update = UpdateExpression(
+        update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
@@ -446,7 +446,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         )
         assert row["partition_name"] == RANGE_FEB
 
-        invalid_update = UpdateExpression(
+        invalid_update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-03-15")},
@@ -470,7 +470,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"], [2, "2026-02-15", "feb"]],
             ).to_sql()
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "payload")],
             from_=Table(dialect, RANGE_PARENT),
@@ -558,7 +558,7 @@ class TestAsyncPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"]],
             ).to_sql()
         )
-        update = UpdateExpression(
+        update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},

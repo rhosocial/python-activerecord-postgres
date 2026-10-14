@@ -18,7 +18,7 @@ from .advisory import (
     PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
-from .ilike import ILIKEExpression
+from .ilike import ILikePredicate
 from .copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
@@ -169,7 +169,7 @@ __all__ = [
     "AdvisoryLockType",
     # locking
     # ilike
-    "ILIKEExpression",
+    "ILikePredicate",
     "PostgresCopyFormat",
     "PostgresCopyOnError",
     "PostgresCopyLogVerbosity",

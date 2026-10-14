@@ -23,7 +23,7 @@ and the call site still matches the function.
 
 from typing import Callable, TypeVar
 
-from rhosocial.activerecord.backend.expression.core import SQLValueExpression
+from rhosocial.activerecord.backend.expression.core import SQLValue
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.mixins import (
     AliasableMixin,
@@ -164,7 +164,7 @@ class NetworkValueExpression(
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``inet`` or ``cidr`` address.
 
@@ -239,7 +239,7 @@ class NetworkValueExpression(
         return NetworkValueExpression(
             self._dialect, self._network_op(_network.inet_netmask))
 
-    def masklen(self) -> "SQLValueExpression":
+    def masklen(self) -> "SQLValue":
         """The netmask length in bits. ``MASKLEN(addr)`` -> integer"""
         return self._network_op(_network.inet_masklen)
 
@@ -270,7 +270,7 @@ class NetworkValueExpression(
         return NetworkValueExpression(
             self._dialect, self._network_op(_network.inetnot))
 
-    def abbrev(self) -> "SQLValueExpression":
+    def abbrev(self) -> "SQLValue":
         """The abbreviated first-octet form. ``ABBREV(addr)``"""
         return self._network_op(_network.inet_show)
 
@@ -281,7 +281,7 @@ class RangeValueExpression(
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """A range or multirange value.
 
@@ -367,7 +367,7 @@ class RangeValueExpression(
         """Entirely above *other*. ``range_strictly_right_of(r1, r2)``"""
         return self._range_op(_range.range_strictly_right_of, other)
 
-    def merge(self) -> "SQLValueExpression":
+    def merge(self) -> "SQLValue":
         """The smallest range covering every range in a multirange.
 
         ``range_merge(mr)`` collapses a multirange to one range; it is not a
@@ -378,7 +378,7 @@ class RangeValueExpression(
         """
         return self._range_op(_range.range_merge)
 
-    def union(self, other) -> "SQLValueExpression":
+    def union(self, other) -> "SQLValue":
         """The union of two ranges. ``range_union(r1, r2)``"""
         return self._range_op(_range.range_union, other)
 
@@ -420,7 +420,7 @@ class HstoreValueExpression(
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``hstore`` key/value document.
 
@@ -472,7 +472,7 @@ class HstoreValueExpression(
         """
         return factory(self._dialect, self, *args)
 
-    def keys(self) -> "SQLValueExpression":
+    def keys(self) -> "SQLValue":
         """The keys, as an array. ``akeys(h)``
 
         An array of text rather than a document: nothing can be looked up in it,
@@ -480,19 +480,19 @@ class HstoreValueExpression(
         """
         return self._hstore_op(_hstore.hstore_akeys)
 
-    def values(self) -> "SQLValueExpression":
+    def values(self) -> "SQLValue":
         """The values, as an array. ``avals(h)``"""
         return self._hstore_op(_hstore.hstore_avals)
 
-    def get(self, key: str) -> "SQLValueExpression":
+    def get(self, key: str) -> "SQLValue":
         """The value at *key*, or NULL. ``hstore_get_value(h, k)``"""
         return self._hstore_op(_hstore.hstore_get_value, key)
 
-    def get_as_text(self, key: str) -> "SQLValueExpression":
+    def get_as_text(self, key: str) -> "SQLValue":
         """The value at *key*, as text. ``->(h, k)``"""
         return self._hstore_op(_hstore.hstore_get_value_as_text, key)
 
-    def subscript(self, key: str) -> "SQLValueExpression":
+    def subscript(self, key: str) -> "SQLValue":
         """The value at *key*. ``h -> k``"""
         return self._hstore_op(_hstore.hstore_subscript_get, key)
 
@@ -508,7 +508,7 @@ class HstoreValueExpression(
         """Whether *key* is present and non-NULL. ``hstore_key_exists(h, k)``"""
         return self._hstore_op(_hstore.hstore_key_exists, key)
 
-    def to_json(self) -> "SQLValueExpression":
+    def to_json(self) -> "SQLValue":
         """The document as json. ``hstore_to_json(h)``"""
         return self._hstore_op(_hstore.hstore_to_json)
 
@@ -519,7 +519,7 @@ class LtreeValueExpression(
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``ltree`` label path, or the pattern types that match one.
 
@@ -595,7 +595,7 @@ class LtreeValueExpression(
         """This path matches an ``ltxtquery``. ``ltree_text_search(l, q)``"""
         return self._ltree_op(_ltree.ltree_text_search, query)
 
-    def nlevel(self) -> "SQLValueExpression":
+    def nlevel(self) -> "SQLValue":
         """The number of labels. ``nlevel(l)`` -> integer"""
         return self._ltree_op(_ltree.ltree_nlevel)
 
@@ -609,7 +609,7 @@ class LtreeValueExpression(
         return LtreeValueExpression(
             self._dialect, self._ltree_op(_ltree.ltree_concat, other))
 
-    def lca(self, paths) -> "SQLValueExpression":
+    def lca(self, paths) -> "SQLValue":
         """The longest common ancestor of the given paths."""
         return self._ltree_op(_ltree.ltree_lca, paths)
 

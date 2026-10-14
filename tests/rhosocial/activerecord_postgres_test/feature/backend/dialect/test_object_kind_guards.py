@@ -7,7 +7,7 @@ Why this file exists
 
 A statement now holds the object it acts on, and ``to_sql()`` dispatches through
 *that object's* ``format_method``. So
-``CreateIndexExpression(dialect, Index(dialect, "i"), View(dialect, "v"))``
+``CreateIndexStatement(dialect, Index(dialect, "i"), View(dialect, "v"))``
 rendered ``CREATE INDEX i ON v (...)`` -- well-formed SQL naming the wrong kind of
 object, with no error and no warning. Before objects carried names as strings,
 ``format_identifier`` accepted anything and a wrong type raised; switching to
@@ -171,7 +171,7 @@ def _build_probes(dialect):
 
     Only statements whose *unmodified* instance renders are probed. A statement
     that already fails for an unrelated reason -- the property-graph statements,
-    which PostgreSQL does not support at all, and ``CreateTriggerExpression``,
+    which PostgreSQL does not support at all, and ``CreateTriggerStatement``,
     whose introspective construction supplies a string where an enum belongs --
     cannot demonstrate anything about a slot: it raises either way. Including them
     would make the table look broader while proving less, which is exactly the

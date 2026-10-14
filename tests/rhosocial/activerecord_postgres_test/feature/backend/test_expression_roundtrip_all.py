@@ -15,7 +15,7 @@ Why this matrix collects two packages, not one
 ``rhosocial.activerecord.backend.impl.postgres.expression`` holds the classes this
 backend defines. ``rhosocial.activerecord.backend.expression`` holds core's, and
 core's statements are exactly the ones a backend override consumes: when a
-PostgreSQL statement formats a core ``Table`` or a core ``CommentOnExpression``,
+PostgreSQL statement formats a core ``Table`` or a core ``CommentOnStatement``,
 the defect that matters is in *this* dialect's reading of a core object. That is
 why ``mixins/ddl/comment.py`` could read a field core had removed and stay green:
 core's own classes were outside the only matrix in this repository, so a
@@ -116,13 +116,13 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
-    CaseExpression,
+    CaseFunction,
     WindowClause,
     WindowDefinition,
     WindowSpecification,
 )
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.collation import CollateExpression
+from rhosocial.activerecord.backend.expression.collation import CollateFunction
 from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression.datetime import (
     TemporalOptionsExpression,
@@ -139,7 +139,7 @@ from rhosocial.activerecord.backend.expression.objects import (
 )
 from rhosocial.activerecord.backend.expression.predicates import (
     ComparisonPredicate,
-    ILIKEExpression as CoreILIKEExpression,
+    ILikePredicate as CoreILIKEExpression,
 )
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.serialization import (
@@ -158,7 +158,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_database import (
     AlterDatabaseAction,
-    AlterDatabaseExpression,
+    AlterDatabaseStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
@@ -178,14 +178,14 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
-    CreateTriggerExpression,
+    CreateTriggerStatement,
     TriggerEvent,
     TriggerTiming,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
     MergeAction,
     MergeActionType,
-    MergeExpression,
+    MergeStatement,
 )
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -265,7 +265,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import (
     PostgresEnumType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-    ILIKEExpression as PostgresILIKEExpression,
+    ILikePredicate as PostgresILIKEExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
@@ -521,8 +521,8 @@ def register_specials():
         lambda d: ReferencesClause(d, Table(d, "other"), ["b"]),
     )
     register_special_constructor(
-        "statements.ddl_database.AlterDatabaseExpression",
-        lambda d: AlterDatabaseExpression(
+        "statements.ddl_database.AlterDatabaseStatement",
+        lambda d: AlterDatabaseStatement(
             d,
             Database(d, "db"),
             action=AlterDatabaseAction.RENAME_TO,
@@ -530,8 +530,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "statements.ddl_trigger.CreateTriggerExpression",
-        lambda d: CreateTriggerExpression(
+        "statements.ddl_trigger.CreateTriggerStatement",
+        lambda d: CreateTriggerStatement(
             d,
             trigger=Trigger(d, "trg"),
             table=_table_obj(d),
@@ -737,8 +737,8 @@ def register_specials():
 
     # -- expressions that need at least one member --------------------------
     register_special_constructor(
-        "advanced_functions.CaseExpression",
-        lambda d: CaseExpression(
+        "advanced_functions.CaseFunction",
+        lambda d: CaseFunction(
             d,
             cases=[(_column_predicate(d), Literal(d, 1))],
             else_result=Literal(d, 0),
@@ -771,11 +771,11 @@ def register_specials():
     # ``.to_sql()`` on it. Core and PostgreSQL spell ILIKE as two classes with the
     # same parameter shape, so both need the answer.
     register_special_constructor(
-        "predicates.ILIKEExpression",
+        "predicates.ILikePredicate",
         lambda d: CoreILIKEExpression(d, Column(d, "a"), "x%"),
     )
     register_special_constructor(
-        "ilike.ILIKEExpression",
+        "ilike.ILikePredicate",
         lambda d: PostgresILIKEExpression(d, Column(d, "a"), "x%"),
     )
 
@@ -784,8 +784,8 @@ def register_specials():
     # guess's ``"x"`` is not on it. ``und-x-icu`` needs PostgreSQL 10+, so ``C`` is
     # the one that is legal at every version.
     register_special_constructor(
-        "collation.CollateExpression",
-        lambda d: CollateExpression(d, Column(d, "a"), "C"),
+        "collation.CollateFunction",
+        lambda d: CollateFunction(d, Column(d, "a"), "C"),
     )
 
     # -- MERGE --------------------------------------------------------------
@@ -794,8 +794,8 @@ def register_specials():
         lambda d: _merge_action(d),
     )
     register_special_constructor(
-        "statements.dml.MergeExpression",
-        lambda d: MergeExpression(
+        "statements.dml.MergeStatement",
+        lambda d: MergeStatement(
             d,
             target_table=_table_obj(d),
             source=NamedRelationRef(d, Table(d, "src")),
@@ -876,8 +876,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "graph.CreatePropertyGraphExpression",
-        lambda d: graph_mod.CreatePropertyGraphExpression(
+        "graph.CreatePropertyGraphStatement",
+        lambda d: graph_mod.CreatePropertyGraphStatement(
             d, graph=PropertyGraph(d, "g"),
             vertex_tables=[graph_mod.VertexTable(d, node_table(d))],
         ),
@@ -885,8 +885,8 @@ def register_specials():
     # The formatter accepts "add"/"drop" against "vertex tables"/"edge tables"/
     # "tables"; anything else is refused.
     register_special_constructor(
-        "graph.AlterPropertyGraphExpression",
-        lambda d: graph_mod.AlterPropertyGraphExpression(
+        "graph.AlterPropertyGraphStatement",
+        lambda d: graph_mod.AlterPropertyGraphStatement(
             d,
             graph=PropertyGraph(d, "g"),
             action="add",
@@ -895,8 +895,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "graph.DropPropertyGraphExpression",
-        lambda d: graph_mod.DropPropertyGraphExpression(d, graph=PropertyGraph(d, "g")),
+        "graph.DropPropertyGraphStatement",
+        lambda d: graph_mod.DropPropertyGraphStatement(d, graph=PropertyGraph(d, "g")),
     )
 
     # -- types --------------------------------------------------------------
@@ -1054,7 +1054,7 @@ LEGITIMATE_NON_RENDERS = {
         NotImplementedError,
         _NO_FORMATTER,
     ),
-    "rhosocial.activerecord.backend.expression.bases.SQLValueExpression": (
+    "rhosocial.activerecord.backend.expression.bases.SQLValue": (
         NotImplementedError,
         _NO_FORMATTER,
     ),

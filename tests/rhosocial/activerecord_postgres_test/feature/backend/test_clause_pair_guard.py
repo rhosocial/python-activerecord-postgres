@@ -51,43 +51,43 @@ from rhosocial.activerecord.backend.expression.objects import (
 )
 from rhosocial.activerecord.backend.expression.pivot import UnpivotExpression
 from rhosocial.activerecord.backend.expression.query_sources import (
-    CTEExpression,
-    SetOperationExpression,
+    CTEClause,
+    SetOperationStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AlterConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_function import (
-    DropFunctionExpression,
+    DropFunctionStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
-    DropSchemaExpression,
+    DropSchemaStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
-    AlterSequenceExpression,
-    CreateSequenceExpression,
+    AlterSequenceStatement,
+    CreateSequenceStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraint,
     ColumnConstraintType,
-    CreateTableAsExpression,
-    DropTableExpression,
+    CreateTableAsStatement,
+    DropTableStatement,
     IdentityClause,
     TableConstraint,
     TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    DropViewExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    DropViewStatement,
+    RefreshMaterializedViewStatement,
 )
-from rhosocial.activerecord.backend.expression.statements.dql import QueryExpression
+from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 from rhosocial.activerecord.backend.expression.transaction import (
-    BeginTransactionExpression,
+    BeginTransactionStatement,
     SetTransactionExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -123,7 +123,7 @@ def _table(d, name="t"):
 
 
 def _query(d):
-    return QueryExpression(d, select=[Column(d, "id")], from_=_table(d))
+    return QueryStatement(d, select=[Column(d, "id")], from_=_table(d))
 
 
 def _fk(d, **kw):
@@ -237,16 +237,16 @@ class PairCase:
 
 PAIR_CASES = (
     PairCase(
-        "CreateSequenceExpression.cycle",
-        lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+        "CreateSequenceStatement.cycle",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
         "cycle",
         "no_cycle",
         r"(?<!NO )CYCLE\b",
         r"NO CYCLE\b",
     ),
     PairCase(
-        "CreateSequenceExpression.cache",
-        lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+        "CreateSequenceStatement.cache",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
         "cache",
         "no_cache",
         r"CACHE 10\b",
@@ -255,16 +255,16 @@ PAIR_CASES = (
         b_refusal="SEQUENCE NO CACHE",
     ),
     PairCase(
-        "AlterSequenceExpression.cycle",
-        lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+        "AlterSequenceStatement.cycle",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
         "cycle",
         "no_cycle",
         r"(?<!NO )CYCLE\b",
         r"NO CYCLE\b",
     ),
     PairCase(
-        "AlterSequenceExpression.cache",
-        lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+        "AlterSequenceStatement.cache",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
         "cache",
         "no_cache",
         r"CACHE 10\b",
@@ -291,64 +291,64 @@ PAIR_CASES = (
         b_refusal="IDENTITY NO CACHE",
     ),
     PairCase(
-        "DropSchemaExpression.cascade",
-        lambda d, **kw: DropSchemaExpression(d, Schema(d, "s"), **kw),
+        "DropSchemaStatement.cascade",
+        lambda d, **kw: DropSchemaStatement(d, Schema(d, "s"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropViewExpression.cascade",
-        lambda d, **kw: DropViewExpression(d, View(d, "v"), **kw),
+        "DropViewStatement.cascade",
+        lambda d, **kw: DropViewStatement(d, View(d, "v"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropMaterializedViewExpression.cascade",
-        lambda d, **kw: DropMaterializedViewExpression(d, MaterializedView(d, "mv"), **kw),
+        "DropMaterializedViewStatement.cascade",
+        lambda d, **kw: DropMaterializedViewStatement(d, MaterializedView(d, "mv"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropFunctionExpression.cascade",
-        lambda d, **kw: DropFunctionExpression(d, Function(d, "f"), **kw),
+        "DropFunctionStatement.cascade",
+        lambda d, **kw: DropFunctionStatement(d, Function(d, "f"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropTableExpression.cascade",
-        lambda d, **kw: DropTableExpression(d, _table(d), **kw),
+        "DropTableStatement.cascade",
+        lambda d, **kw: DropTableStatement(d, _table(d), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "TruncateExpression.cascade",
-        lambda d, **kw: TruncateExpression(d, _table(d), **kw),
+        "TruncateStatement.cascade",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "TruncateExpression.restart_identity",
-        lambda d, **kw: TruncateExpression(d, _table(d), **kw),
+        "TruncateStatement.restart_identity",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
         "restart_identity",
         "continue_identity",
         r"RESTART IDENTITY\b",
         r"CONTINUE IDENTITY\b",
     ),
     PairCase(
-        "CreateMaterializedViewExpression.with_data",
-        lambda d, **kw: CreateMaterializedViewExpression(
+        "CreateMaterializedViewStatement.with_data",
+        lambda d, **kw: CreateMaterializedViewStatement(
             d, MaterializedView(d, "mv"), _query(d), **kw
         ),
         "with_data",
@@ -357,8 +357,8 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "RefreshMaterializedViewExpression.with_data",
-        lambda d, **kw: RefreshMaterializedViewExpression(
+        "RefreshMaterializedViewStatement.with_data",
+        lambda d, **kw: RefreshMaterializedViewStatement(
             d, MaterializedView(d, "mv"), **kw
         ),
         "with_data",
@@ -377,16 +377,16 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "CreateTableAsExpression.with_data",
-        lambda d, **kw: CreateTableAsExpression(d, _table(d), _query(d), **kw),
+        "CreateTableAsStatement.with_data",
+        lambda d, **kw: CreateTableAsStatement(d, _table(d), _query(d), **kw),
         "with_data",
         "no_data",
         r"WITH DATA\b",
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "CTEExpression.materialized",
-        lambda d, **kw: CTEExpression(d, "c", _query(d), **kw),
+        "CTEClause.materialized",
+        lambda d, **kw: CTEClause(d, "c", _query(d), **kw),
         "materialized",
         "not_materialized",
         r"(?<!NOT )MATERIALIZED\b",
@@ -459,11 +459,11 @@ PAIR_CASES = (
         r"INITIALLY IMMEDIATE\b",
     ),
     PairCase(
-        "SetOperationExpression.all_",
-        lambda d, **kw: SetOperationExpression(
+        "SetOperationStatement.all_",
+        lambda d, **kw: SetOperationStatement(
             d,
-            left=QueryExpression(d, select=[Column(d, "a")], from_=_table(d, "t1")),
-            right=QueryExpression(d, select=[Column(d, "a")], from_=_table(d, "t2")),
+            left=QueryStatement(d, select=[Column(d, "a")], from_=_table(d, "t1")),
+            right=QueryStatement(d, select=[Column(d, "a")], from_=_table(d, "t2")),
             operation="UNION",
             **kw,
         ),
@@ -473,8 +473,8 @@ PAIR_CASES = (
         r"\bDISTINCT\b",
     ),
     PairCase(
-        "BeginTransactionExpression.deferrable",
-        lambda d, **kw: BeginTransactionExpression(d, **kw),
+        "BeginTransactionStatement.deferrable",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
         "deferrable",
         "not_deferrable",
         r"(?<!NOT )DEFERRABLE\b",
@@ -492,8 +492,8 @@ PAIR_CASES = (
     # must refuse by name through supports_transaction_wait() rather than be
     # silently dropped; both spellings are refused here.
     PairCase(
-        "BeginTransactionExpression.wait",
-        lambda d, **kw: BeginTransactionExpression(d, **kw),
+        "BeginTransactionStatement.wait",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
         "wait",
         "no_wait",
         r"(?<!NO )WAIT\b",
@@ -608,13 +608,13 @@ class TestRefusedSpellingsFailClosed:
         "case_id,builder,feature",
         [
             (
-                "CreateSequenceExpression.order",
-                lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+                "CreateSequenceStatement.order",
+                lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
                 "SEQUENCE ORDER",
             ),
             (
-                "AlterSequenceExpression.order",
-                lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+                "AlterSequenceStatement.order",
+                lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
                 "ALTER SEQUENCE ORDER",
             ),
             (
@@ -654,24 +654,24 @@ class TestGuardIsNotVacuous:
 
     def test_expected_pairs_are_covered(self):
         expected = {
-            "CreateSequenceExpression.cycle",
-            "CreateSequenceExpression.cache",
-            "AlterSequenceExpression.cycle",
-            "AlterSequenceExpression.cache",
+            "CreateSequenceStatement.cycle",
+            "CreateSequenceStatement.cache",
+            "AlterSequenceStatement.cycle",
+            "AlterSequenceStatement.cache",
             "IdentityClause.cycle",
             "IdentityClause.cache",
-            "DropSchemaExpression.cascade",
-            "DropViewExpression.cascade",
-            "DropMaterializedViewExpression.cascade",
-            "DropFunctionExpression.cascade",
-            "DropTableExpression.cascade",
-            "TruncateExpression.cascade",
-            "TruncateExpression.restart_identity",
-            "CreateMaterializedViewExpression.with_data",
-            "RefreshMaterializedViewExpression.with_data",
+            "DropSchemaStatement.cascade",
+            "DropViewStatement.cascade",
+            "DropMaterializedViewStatement.cascade",
+            "DropFunctionStatement.cascade",
+            "DropTableStatement.cascade",
+            "TruncateStatement.cascade",
+            "TruncateStatement.restart_identity",
+            "CreateMaterializedViewStatement.with_data",
+            "RefreshMaterializedViewStatement.with_data",
             "PostgresRefreshMaterializedViewExpression.with_data",
-            "CreateTableAsExpression.with_data",
-            "CTEExpression.materialized",
+            "CreateTableAsStatement.with_data",
+            "CTEClause.materialized",
             "TableConstraint.deferrable",
             "TableConstraint.initially_deferred",
             "TableConstraint.enforced",
@@ -680,9 +680,9 @@ class TestGuardIsNotVacuous:
             "ColumnConstraint.enforced",
             "PostgresExcludeConstraint.deferrable",
             "PostgresExcludeConstraint.initially_deferred",
-            "SetOperationExpression.all_",
-            "BeginTransactionExpression.deferrable",
-            "BeginTransactionExpression.wait",
+            "SetOperationStatement.all_",
+            "BeginTransactionStatement.deferrable",
+            "BeginTransactionStatement.wait",
             "SetTransactionExpression.deferrable",
             "SetTransactionExpression.wait",
             "AlterConstraint.enforced",
@@ -726,17 +726,17 @@ class TestMasterProbesAreDeclared:
     def test_materialized_cte_refuses_before_pg12(self):
         dialect = _dialect((11, 0, 0))
         with pytest.raises(UnsupportedFeatureError, match="MATERIALIZED CTE"):
-            CTEExpression(dialect, "c", _query(dialect), materialized=True).to_sql()
+            CTEClause(dialect, "c", _query(dialect), materialized=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NOT MATERIALIZED CTE"):
-            CTEExpression(dialect, "c", _query(dialect), not_materialized=True).to_sql()
+            CTEClause(dialect, "c", _query(dialect), not_materialized=True).to_sql()
 
     def test_materialized_cte_renders_from_pg12(self):
         dialect = _dialect((12, 0, 0))
-        sql, _params = CTEExpression(
+        sql, _params = CTEClause(
             dialect, "c", _query(dialect), materialized=True
         ).to_sql()
         assert "AS MATERIALIZED " in sql, sql
-        sql, _params = CTEExpression(
+        sql, _params = CTEClause(
             dialect, "c", _query(dialect), not_materialized=True
         ).to_sql()
         assert "AS NOT MATERIALIZED " in sql, sql
@@ -777,38 +777,38 @@ class TestMasterProbesGateTheirConsumers:
         assert d.supports_with_data_clause() is False
         cases = (
             (
-                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
                 {"no_data": True},
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: CreateMaterializedViewExpression(
+                lambda dd, **kw: CreateMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), _query(dd), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: CreateMaterializedViewExpression(
+                lambda dd, **kw: CreateMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), _query(dd), **kw
                 ),
                 {"no_data": True},
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: RefreshMaterializedViewExpression(
+                lambda dd, **kw: RefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: RefreshMaterializedViewExpression(
+                lambda dd, **kw: RefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"no_data": True},
@@ -837,14 +837,14 @@ class TestMasterProbesGateTheirConsumers:
         d = self._NoTruncate(version=PG16)
         assert d.supports_truncate() is False
         with pytest.raises(UnsupportedFeatureError, match="TRUNCATE"):
-            TruncateExpression(d, _table(d)).to_sql()
+            TruncateStatement(d, _table(d)).to_sql()
 
     def test_wait_pair_refuses_by_name_on_postgres(self):
         d = _dialect(PG16)
         with pytest.raises(UnsupportedFeatureError, match="WAIT"):
-            BeginTransactionExpression(d, wait=True).to_sql()
+            BeginTransactionStatement(d, wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
-            BeginTransactionExpression(d, no_wait=True).to_sql()
+            BeginTransactionStatement(d, no_wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="WAIT"):
             SetTransactionExpression(d, wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):

@@ -8,7 +8,7 @@ This module tests the list_foreign_keys and get_foreign_key_info methods for ret
 import pytest
 
 from rhosocial.activerecord.backend.introspection.types import (
-    ForeignKeyInfo,
+    IntrospectionForeignKeyInfo,
     ReferentialAction,
 )
 
@@ -64,7 +64,7 @@ class TestGetForeignKeyInfo:
         )
 
         assert fk is not None
-        assert isinstance(fk, ForeignKeyInfo)
+        assert isinstance(fk, IntrospectionForeignKeyInfo)
         assert fk.name == "fk_posts_user"
         assert fk.table_name == "posts"
 

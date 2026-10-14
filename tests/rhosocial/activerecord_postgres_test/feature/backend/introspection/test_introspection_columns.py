@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio  # noqa: F401
 
 from rhosocial.activerecord.backend.introspection.types import (
-    ColumnInfo,
+    IntrospectionColumnInfo,
     ColumnNullable,
 )
 
@@ -67,7 +67,7 @@ class TestGetColumnInfo:
         column = backend_with_tables.introspector.get_column_info("users", "id")
 
         assert column is not None
-        assert isinstance(column, ColumnInfo)
+        assert isinstance(column, IntrospectionColumnInfo)
         assert column.name == "id"
         assert column.table_name == "users"
 

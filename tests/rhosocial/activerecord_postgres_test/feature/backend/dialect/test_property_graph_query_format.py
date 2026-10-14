@@ -13,10 +13,10 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.dialect.protocols import GraphSupport, GraphTableSupport
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import (
-    AlterPropertyGraphExpression,
+    AlterPropertyGraphStatement,
     ColumnsClause,
-    CreatePropertyGraphExpression,
-    DropPropertyGraphExpression,
+    CreatePropertyGraphStatement,
+    DropPropertyGraphStatement,
     EdgeTable,
     GraphColumn,
     GraphEdge,
@@ -305,7 +305,7 @@ class TestPGQDDLFormat:
                        references_destination=("people", ["id"]),
                        labels=["knows"],
                        properties=TablePropertiesClause(pg19_dialect, columns=["since"]))
-        expr = CreatePropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), [vt], [et])
+        expr = CreatePropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), [vt], [et])
         sql, params = expr.to_sql()
         assert "CREATE PROPERTY GRAPH" in sql
         assert '"people"' in sql
@@ -315,14 +315,14 @@ class TestPGQDDLFormat:
 
     def test_create_property_graph_if_not_exists(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'person'))
-        expr = CreatePropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'my_graph'), [vt],
+        expr = CreatePropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'my_graph'), [vt],
                                               if_not_exists=True)
         sql, params = expr.to_sql()
         assert "CREATE PROPERTY GRAPH IF NOT EXISTS" in sql
 
     def test_create_property_graph_no_edges(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'person'))
-        expr = CreatePropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'my_graph'), [vt])
+        expr = CreatePropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'my_graph'), [vt])
         sql, params = expr.to_sql()
         assert "EDGE TABLES" not in sql
         assert 'VERTEX TABLES ("person"' in sql
@@ -359,12 +359,12 @@ class TestPGQDDLFormat:
         assert params == ()
 
     def test_drop_property_graph(self, pg19_dialect: PostgresDialect):
-        expr = DropPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), if_exists=True)
+        expr = DropPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), if_exists=True)
         sql, params = expr.to_sql()
         assert 'DROP PROPERTY GRAPH IF EXISTS "test_graph"' in sql
 
     def test_drop_cascade(self, pg19_dialect: PostgresDialect):
-        expr = DropPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), cascade=True)
+        expr = DropPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'test_graph'), cascade=True)
         sql, params = expr.to_sql()
         assert "CASCADE" in sql
 
@@ -385,7 +385,7 @@ class TestPGQDDLFormat:
 
     def test_alter_add_vertex(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'new_table'), labels=["NewLabel"])
-        expr = AlterPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "ADD", "VERTEX TABLES",
+        expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "ADD", "VERTEX TABLES",
                                             vertex_tables=[vt])
         sql, params = expr.to_sql()
         assert "ALTER PROPERTY GRAPH" in sql
@@ -393,7 +393,7 @@ class TestPGQDDLFormat:
 
     def test_alter_drop_vertex_tables(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'old_table'))
-        expr = AlterPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "DROP", "VERTEX TABLES",
+        expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "DROP", "VERTEX TABLES",
                                             vertex_tables=[vt])
         sql, params = expr.to_sql()
         assert "DROP" in sql
@@ -402,7 +402,7 @@ class TestPGQDDLFormat:
 
     def test_alter_with_edge_tables(self, pg19_dialect: PostgresDialect):
         et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
-        expr = AlterPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "DROP", "EDGE TABLES",
+        expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "DROP", "EDGE TABLES",
                                             edge_tables=[et])
         sql, params = expr.to_sql()
         assert "DROP" in sql
@@ -411,7 +411,7 @@ class TestPGQDDLFormat:
     def test_alter_with_both_tables(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'person'))
         et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
-        expr = AlterPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "ADD", "TABLES",
+        expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "ADD", "TABLES",
                                             vertex_tables=[vt], edge_tables=[et])
         sql, params = expr.to_sql()
         assert '"person"' in sql
@@ -429,7 +429,7 @@ class TestPGQDDLFormat:
     def test_alter_rejects_non_whitelisted_keywords(
         self, pg19_dialect, action, target, message
     ):
-        expr = AlterPropertyGraphExpression(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), action, target)
+        expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), action, target)
 
         with pytest.raises(ValueError, match=f"Invalid ALTER PROPERTY GRAPH {message}"):
             expr.to_sql()
@@ -483,17 +483,17 @@ class TestPGQUnsupportedFormat:
 
     def test_create_property_graph_unsupported(self, withdrawn_dialect: PostgresDialect):
         vertex_table = VertexTable(withdrawn_dialect, NodeTable(withdrawn_dialect, 'person'))
-        expression = CreatePropertyGraphExpression(withdrawn_dialect, PropertyGraph(withdrawn_dialect, 'g'), [vertex_table])
+        expression = CreatePropertyGraphStatement(withdrawn_dialect, PropertyGraph(withdrawn_dialect, 'g'), [vertex_table])
         with pytest.raises(UnsupportedFeatureError):
             expression.to_sql()
 
     def test_drop_property_graph_unsupported(self, withdrawn_dialect: PostgresDialect):
-        expression = DropPropertyGraphExpression(withdrawn_dialect, PropertyGraph(withdrawn_dialect, 'g'))
+        expression = DropPropertyGraphStatement(withdrawn_dialect, PropertyGraph(withdrawn_dialect, 'g'))
         with pytest.raises(UnsupportedFeatureError):
             expression.to_sql()
 
     def test_alter_property_graph_unsupported(self, withdrawn_dialect: PostgresDialect):
-        expression = AlterPropertyGraphExpression(
+        expression = AlterPropertyGraphStatement(
             withdrawn_dialect,
             PropertyGraph(withdrawn_dialect, 'g'),
             "ADD",

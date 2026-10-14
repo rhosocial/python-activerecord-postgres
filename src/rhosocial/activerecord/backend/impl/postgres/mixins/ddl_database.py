@@ -9,9 +9,9 @@ from rhosocial.activerecord.backend.expression.objects import Database
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements.ddl_database import (
-        AlterDatabaseExpression,
-        CreateDatabaseExpression,
-        DropDatabaseExpression,
+        AlterDatabaseStatement,
+        CreateDatabaseStatement,
+        DropDatabaseStatement,
     )
 
 
@@ -71,7 +71,7 @@ class PostgresDatabaseMixin:
         return True
 
     def format_create_database_statement(
-        self, expr: CreateDatabaseExpression
+        self, expr: CreateDatabaseStatement
     ) -> Tuple[str, tuple]:
         """Render ``CREATE DATABASE``, with the PostgreSQL-only options.
 
@@ -86,7 +86,7 @@ class PostgresDatabaseMixin:
         """
         if not isinstance(expr.database, Database):
             raise TypeError(
-                f"CreateDatabaseExpression.database must be a Database, "
+                f"CreateDatabaseStatement.database must be a Database, "
                 f"got {type(expr.database).__name__}"
             )
         parts = ["CREATE DATABASE"]
@@ -106,7 +106,7 @@ class PostgresDatabaseMixin:
         return " ".join(parts), ()
 
     def format_drop_database_statement(
-        self, expr: DropDatabaseExpression
+        self, expr: DropDatabaseStatement
     ) -> Tuple[str, tuple]:
         """Render ``DROP DATABASE``, with the PostgreSQL-only options.
 
@@ -115,7 +115,7 @@ class PostgresDatabaseMixin:
         """
         if not isinstance(expr.database, Database):
             raise TypeError(
-                f"DropDatabaseExpression.database must be a Database, "
+                f"DropDatabaseStatement.database must be a Database, "
                 f"got {type(expr.database).__name__}"
             )
         parts = ["DROP DATABASE"]
@@ -127,7 +127,7 @@ class PostgresDatabaseMixin:
         return " ".join(parts), ()
 
     def format_alter_database_statement(
-        self, expr: AlterDatabaseExpression
+        self, expr: AlterDatabaseStatement
     ) -> Tuple[str, tuple]:
         """Render ``ALTER DATABASE``.
 
@@ -136,7 +136,7 @@ class PostgresDatabaseMixin:
         """
         if not isinstance(expr.database, Database):
             raise TypeError(
-                f"AlterDatabaseExpression.database must be a Database, "
+                f"AlterDatabaseStatement.database must be a Database, "
                 f"got {type(expr.database).__name__}"
             )
         from rhosocial.activerecord.backend.expression.statements.ddl_database import AlterDatabaseAction

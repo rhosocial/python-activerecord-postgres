@@ -6,7 +6,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import View
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateViewExpression
+    from ....expression.statements.ddl_view import CreateViewStatement
 
 
 class PostgresViewMixin:
@@ -43,7 +43,7 @@ class PostgresViewMixin:
         """
         return True
 
-    def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
+    def format_create_view_statement(self, expr: "CreateViewStatement") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
 
         - ``expr.temporary`` — add ``TEMPORARY``.
@@ -54,7 +54,7 @@ class PostgresViewMixin:
         - ``expr.options.check_option`` — ``WITH {LOCAL|CASCADED} CHECK OPTION``.
 
         Args:
-            expr: CreateViewExpression instance
+            expr: CreateViewStatement instance
 
         Returns:
             Tuple of (SQL string, params tuple)
@@ -67,7 +67,7 @@ class PostgresViewMixin:
         """
         if not isinstance(expr.view, View):
             raise TypeError(
-                f"CreateViewExpression.view must be a View, "
+                f"CreateViewStatement.view must be a View, "
                 f"got {type(expr.view).__name__}"
             )
         parts = ["CREATE"]

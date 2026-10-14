@@ -30,11 +30,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
     ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     Literal,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
@@ -85,7 +85,7 @@ class _Aliased:
 def read(backend, expression, table):
     """Return the single value *expression* produces for the row in *table*."""
     dialect = backend.dialect
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[_Aliased(dialect, expression)],
         from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -99,7 +99,7 @@ def make_table(backend, table, columns):
     """Create *table*; each column is ``(name, DataType)``."""
     dialect = backend.dialect
     drop(backend, table)
-    backend.execute(*CreateTableExpression(
+    backend.execute(*CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=[
@@ -118,7 +118,7 @@ def make_table(backend, table, columns):
 def insert(backend, table, name, value, data_type):
     """Insert *value* into *name* as *data_type*, through a cast."""
     dialect = backend.dialect
-    backend.execute(*InsertExpression(
+    backend.execute(*InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=[name],
@@ -128,7 +128,7 @@ def insert(backend, table, name, value, data_type):
 
 
 def drop(backend, table):
-    backend.execute(*DropTableExpression(
+    backend.execute(*DropTableStatement(
         dialect=backend.dialect, table=Table(backend.dialect, table), if_exists=True).to_sql())
 
 

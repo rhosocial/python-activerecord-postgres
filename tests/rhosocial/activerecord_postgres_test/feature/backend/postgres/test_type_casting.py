@@ -10,7 +10,7 @@ Tests for:
 import pytest  # noqa: F401
 import warnings
 
-from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
+from rhosocial.activerecord.backend.expression.core import Column, Literal, CastFunction
 from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
@@ -141,7 +141,7 @@ class TestPostgresDialectFormatCast:
 
     def test_format_cast_basic(self):
         """Test basic type cast formatting."""
-        expr = CastExpression(self.dialect, Column(self.dialect, "col"),
+        expr = CastFunction(self.dialect, Column(self.dialect, "col"),
                                _t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         assert sql == '"col"::integer'
@@ -149,7 +149,7 @@ class TestPostgresDialectFormatCast:
 
     def test_format_cast_with_type_modifier(self):
         """Test type cast with type modifiers."""
-        expr = CastExpression(self.dialect, Column(self.dialect, "name"),
+        expr = CastFunction(self.dialect, Column(self.dialect, "name"),
                          _t(self.dialect, "VARCHAR(100)"))
         sql, params = expr.to_sql()
         assert sql == '"name"::VARCHAR(100)'
@@ -157,7 +157,7 @@ class TestPostgresDialectFormatCast:
 
     def test_format_cast_with_alias(self):
         """Test type cast with alias."""
-        expr = CastExpression(
+        expr = CastFunction(
             self.dialect, Column(self.dialect, "value"),
             _t(self.dialect, INTEGER), alias="int_val"
         )
@@ -313,6 +313,6 @@ class TestComplexCastScenarios:
         sql, params = expr.to_sql()
         # Note: Each .as_() creates an alias for that expression
         # The final expression is: (value::money AS "m")::numeric AS "n"
-        # But due to how CastExpression handles alias, it should be:
+        # But due to how CastFunction handles alias, it should be:
         # value::money::numeric AS "n" (last alias wins)
         assert '::' in sql  # Contains PostgreSQL cast syntax

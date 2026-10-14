@@ -38,9 +38,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -51,11 +51,11 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -99,7 +99,7 @@ if installed:
         ColumnDefinition(name="message", data_type="TEXT"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'log_entries'),
         columns=columns,
@@ -118,7 +118,7 @@ if installed:
         "created_at",
         "1 day",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[part_func.as_("partition_result")],
     )
@@ -134,7 +134,7 @@ if installed:
 
     # Example 3: Run partition maintenance
     maint_func = run_maintenance(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[maint_func],
     )
@@ -154,7 +154,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'log_entries'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

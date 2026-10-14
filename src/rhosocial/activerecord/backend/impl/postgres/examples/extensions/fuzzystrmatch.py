@@ -41,7 +41,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -74,7 +74,7 @@ if installed:
     # Example 1: Levenshtein distance
     # levenshtein(s1, s2) returns the minimum number of single-character
     # edits needed to change s1 into s2
-    lev_query = QueryExpression(
+    lev_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -92,7 +92,7 @@ if installed:
     print(f"Levenshtein('hello', 'hallo') = {result.data}")
 
     # More Levenshtein examples
-    lev_query2 = QueryExpression(
+    lev_query2 = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -116,7 +116,7 @@ if installed:
     # Example 2: Soundex encoding
     # soundex(text) returns a Soundex code (4-character string)
     # Names with similar sounds have the same Soundex code
-    soundex_query = QueryExpression(
+    soundex_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("soundex_robert"),
@@ -139,7 +139,7 @@ if installed:
     # Example 3: Difference function
     # difference(s1, s2) returns an integer (0-4) indicating how similar
     # the Soundex codes of two strings are (4 = identical codes)
-    diff_query = QueryExpression(
+    diff_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -171,7 +171,7 @@ if installed:
 
     # Example 4: Metaphone encoding
     # metaphone(text, max_output_length) returns a Metaphone code
-    meta_query = QueryExpression(
+    meta_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -204,7 +204,7 @@ if installed:
     # Example 5: Double Metaphone encoding
     # dmetaphone(text) returns the primary Double Metaphone code
     # dmetaphone_alt(text) returns the alternate Double Metaphone code
-    dmeta_query = QueryExpression(
+    dmeta_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -232,7 +232,7 @@ if installed:
         print(f"Dmetaphone('Schmidt') = {result.data[0]['dmeta_schmidt']}")
 
     # Example 6: Double Metaphone alternate codes
-    dmeta_alt_query = QueryExpression(
+    dmeta_alt_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(

@@ -8,7 +8,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     CreateDomainSupport,
     DropDomainSupport,
 )
-from rhosocial.activerecord.backend.expression.statements.ddl_domain import AlterDomainExpression
+from rhosocial.activerecord.backend.expression.statements.ddl_domain import AlterDomainStatement
 
 
 __all__ = ["PostgresDomainSupport"]
@@ -23,6 +23,6 @@ class PostgresDomainSupport(
 ):
     def format_postgres_alter_domain_statement(
         self,
-        expr: AlterDomainExpression,
+        expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
         ...

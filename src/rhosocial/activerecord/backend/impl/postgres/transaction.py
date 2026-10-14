@@ -47,16 +47,16 @@ class PostgresTransactionMixin:
     def _build_begin_sql(self) -> Tuple[str, tuple]:
         """Build BEGIN TRANSACTION SQL with PostgreSQL-specific options.
 
-        This method creates a BeginTransactionExpression and delegates
+        This method creates a BeginTransactionStatement and delegates
         SQL generation to the backend's dialect. All options including
         DEFERRABLE are handled by the Expression/Dialect system.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
-        from rhosocial.activerecord.backend.expression.transaction import BeginTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import BeginTransactionStatement
 
-        expr = BeginTransactionExpression(self._backend.dialect)
+        expr = BeginTransactionStatement(self._backend.dialect)
 
         if self._isolation_level is not None:
             expr.isolation_level(self._isolation_level)

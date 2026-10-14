@@ -15,11 +15,11 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    QueryExpression,
+    DropTableStatement,
+    QueryStatement,
     WhereClause,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -50,7 +50,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'employees'),
     if_exists=True,
@@ -59,7 +59,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'employees'),
     columns=[
@@ -85,7 +85,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'employees'),
     columns=['name', 'department', 'salary', 'manager_id'],
@@ -139,7 +139,7 @@ backend.execute(sql, params)
 # ============================================================
 
 # 1. LIKE predicate - find employees whose name starts with 'A'
-like_query = QueryExpression(
+like_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -162,7 +162,7 @@ print(f"LIKE SQL: {sql}")
 print(f"Params: {params}")
 
 # 2. IN predicate - find employees in specific departments
-in_query = QueryExpression(
+in_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -184,7 +184,7 @@ print(f"IN SQL: {sql}")
 print(f"Params: {params}")
 
 # 3. BETWEEN predicate - find employees with salary in a range
-between_query = QueryExpression(
+between_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -207,7 +207,7 @@ print(f"BETWEEN SQL: {sql}")
 print(f"Params: {params}")
 
 # 4. IS NULL / IS NOT NULL predicates - find employees with/without managers
-is_null_query = QueryExpression(
+is_null_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -228,7 +228,7 @@ sql, params = is_null_query.to_sql()
 print(f"IS NULL SQL: {sql}")
 print(f"Params: {params}")
 
-is_not_null_query = QueryExpression(
+is_not_null_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -250,7 +250,7 @@ print(f"IS NOT NULL SQL: {sql}")
 print(f"Params: {params}")
 
 # 5. Combined predicates - AND with LIKE and BETWEEN
-combined_query = QueryExpression(
+combined_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),

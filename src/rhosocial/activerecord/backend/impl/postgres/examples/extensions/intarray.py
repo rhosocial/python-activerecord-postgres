@@ -32,9 +32,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -45,12 +45,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    CreateIndexExpression,
-    QueryExpression,
+    CreateIndexStatement,
+    QueryStatement,
     Column,
     OrderByClause,
 )
@@ -61,7 +61,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -114,7 +114,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'tags'),
         columns=columns,
@@ -126,7 +126,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert integer array data
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'tags'),
         columns=["name", "tag_ids"],
@@ -151,7 +151,7 @@ if installed:
 
     # Example 3: Contains operator (@>)
     # Find articles that contain ALL of the specified tag IDs
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
         from_=Table(dialect, "tags"),
@@ -170,7 +170,7 @@ if installed:
 
     # Example 4: Overlap operator (&&)
     # Find articles that have ANY of the specified tag IDs
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
         from_=Table(dialect, "tags"),
@@ -191,7 +191,7 @@ if installed:
     # idx(array, element) returns 0 if not found (1-based index)
     idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Literal(dialect, 3)).as_("pos_of_3")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), idx_func],
         from_=Table(dialect, "tags"),
@@ -211,7 +211,7 @@ if installed:
         dialect, "uniq", FunctionCall(dialect, "sort", Column(dialect, "tag_ids"))
     ).as_("unique_sorted")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -229,7 +229,7 @@ if installed:
 
     # Example 7: Create GiST index for fast intarray queries
     # gist__int_ops operator class enables fast @>, &&, = queries
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_tags_tag_ids'),
         table=Table(dialect, 'tags'),
@@ -250,7 +250,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

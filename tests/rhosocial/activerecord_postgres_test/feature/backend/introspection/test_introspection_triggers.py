@@ -7,7 +7,7 @@ This module tests the list_triggers and get_trigger_info methods for retrieving 
 
 import pytest
 
-from rhosocial.activerecord.backend.introspection.types import TriggerInfo
+from rhosocial.activerecord.backend.introspection.types import IntrospectionTriggerInfo
 
 # SQL statements for trigger tests (individual statements, no executescript)
 _TRIGGER_SQL = [
@@ -234,7 +234,7 @@ class TestGetTriggerInfo:
                 "update_user_timestamp"
             )
             assert trigger is not None
-            assert isinstance(trigger, TriggerInfo)
+            assert isinstance(trigger, IntrospectionTriggerInfo)
             assert trigger.name == "update_user_timestamp"
             assert trigger.table_name == "users"
         finally:
@@ -256,7 +256,7 @@ class TestGetTriggerInfo:
 
 
 class TestTriggerInfoDetails:
-    """Tests for TriggerInfo detail properties."""
+    """Tests for IntrospectionTriggerInfo detail properties."""
 
     def test_trigger_timing(self, postgres_backend_single):
         """Test that trigger timing is correctly identified."""

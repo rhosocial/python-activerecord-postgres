@@ -92,7 +92,7 @@ class PostgresMaterializedViewSupport(Protocol):
         WITH (storage_options), TABLESPACE, and WITH DATA / WITH NO DATA.
 
         Args:
-            expr: CreateMaterializedViewExpression instance
+            expr: CreateMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -105,7 +105,7 @@ class PostgresMaterializedViewSupport(Protocol):
         Supports schema qualification, IF EXISTS and CASCADE.
 
         Args:
-            expr: DropMaterializedViewExpression instance
+            expr: DropMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -116,7 +116,7 @@ class PostgresMaterializedViewSupport(Protocol):
         """Format REFRESH MATERIALIZED VIEW statement, gating CONCURRENTLY on PG 9.4+.
 
         Args:
-            expr: RefreshMaterializedViewExpression instance
+            expr: RefreshMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

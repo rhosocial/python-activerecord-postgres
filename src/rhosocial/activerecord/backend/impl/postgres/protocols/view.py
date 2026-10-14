@@ -24,7 +24,7 @@ class PostgresViewSupport(Protocol):
         WITH {LOCAL|CASCADED} CHECK OPTION.
 
         Args:
-            expr: CreateViewExpression instance
+            expr: CreateViewStatement instance
 
         Returns:
             Tuple of (SQL string, parameters tuple)

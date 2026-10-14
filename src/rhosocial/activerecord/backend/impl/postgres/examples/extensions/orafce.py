@@ -31,9 +31,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -44,20 +44,20 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression import (
-    Column, QueryExpression,
+    Column, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -107,7 +107,7 @@ if installed:
         ColumnDefinition(name="description", data_type="TEXT"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'employees'),
         columns=columns,
@@ -119,7 +119,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert data with NULL values
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'employees'),
         columns=["name", "hire_date", "bonus", "description"],
@@ -162,7 +162,7 @@ if installed:
         Literal(dialect, 6),
     ).as_("review_date")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), add_months_expr],
         from_=Table(dialect, "employees"),
@@ -180,7 +180,7 @@ if installed:
         Column(dialect, "hire_date"),
     ).as_("month_end")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), last_day_expr],
         from_=Table(dialect, "employees"),
@@ -199,7 +199,7 @@ if installed:
         Literal(dialect, 0.0),
     ).as_("safe_bonus")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), nvl_expr],
         from_=Table(dialect, "employees"),
@@ -222,7 +222,7 @@ if installed:
         default=Literal(dialect, "Other"),
     ).as_("category")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), decode_expr],
         from_=Table(dialect, "employees"),
@@ -241,7 +241,7 @@ if installed:
         Literal(dialect, "engineer"),
     ).as_("pos")
 
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -264,7 +264,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

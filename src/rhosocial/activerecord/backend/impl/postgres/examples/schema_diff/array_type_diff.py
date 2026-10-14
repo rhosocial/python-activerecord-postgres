@@ -19,7 +19,7 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
+    CreateTableStatement, DropTableStatement, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
@@ -41,15 +41,15 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_v1 = DropTableExpression(dialect, Table(dialect, 'scores_v1'), if_exists=True, cascade=True)
-drop_v2 = DropTableExpression(dialect, Table(dialect, 'scores_v2'), if_exists=True, cascade=True)
+drop_v1 = DropTableStatement(dialect, Table(dialect, 'scores_v1'), if_exists=True, cascade=True)
+drop_v2 = DropTableStatement(dialect, Table(dialect, 'scores_v2'), if_exists=True, cascade=True)
 sql, params = drop_v1.to_sql()
 backend.execute(sql, params)
 sql, params = drop_v2.to_sql()
 backend.execute(sql, params)
 
 # One-dimensional array column
-scores_v1_table = CreateTableExpression(
+scores_v1_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'scores_v1'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
@@ -60,7 +60,7 @@ sql, params = scores_v1_table.to_sql()
 backend.execute(sql, params)
 
 # Two-dimensional array column
-scores_v2_table = CreateTableExpression(
+scores_v2_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'scores_v2'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
@@ -96,16 +96,16 @@ for tbl_name in ("scores_v1", "scores_v2"):
 
 # Manually construct two snapshots that differ only in array dimensions
 from rhosocial.activerecord.backend.introspection.types import (  # noqa: E402
-    TableInfo, ColumnInfo, ColumnNullable, TableType, DatabaseInfo,
+    IntrospectionTableInfo, IntrospectionColumnInfo, ColumnNullable, TableType, IntrospectionDatabaseInfo,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType, ArrayType  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
 from rhosocial.activerecord.backend.expression.objects import Table
 
-db_info = DatabaseInfo(name="test", version="16", version_tuple=(16, 0, 0), vendor="postgresql")
+db_info = IntrospectionDatabaseInfo(name="test", version="16", version_tuple=(16, 0, 0), vendor="postgresql")
 
 # V1: 1-d array
-col1d = ColumnInfo(
+col1d = IntrospectionColumnInfo(
     name="values", table_name="t", ordinal_position=1,
     data_type="INTEGER[]", parsed_data_type=ArrayType(element_type=IntegerType(), dimensions=1),
     nullable=ColumnNullable.NULLABLE,
@@ -114,11 +114,11 @@ snap1d = snapshot.__class__(
     dialect_class=snapshot.dialect_class,
     captured_at=datetime.now(tz=timezone.utc),
     database_info=db_info,
-    tables={"t": TableInfo(name="t", columns=[col1d], table_type=TableType.BASE_TABLE)},
+    tables={"t": IntrospectionTableInfo(name="t", columns=[col1d], table_type=TableType.BASE_TABLE)},
 )
 
 # V2: 2-d array
-col2d = ColumnInfo(
+col2d = IntrospectionColumnInfo(
     name="values", table_name="t", ordinal_position=1,
     data_type="INTEGER[][]", parsed_data_type=ArrayType(element_type=IntegerType(), dimensions=2),
     nullable=ColumnNullable.NULLABLE,
@@ -127,7 +127,7 @@ snap2d = snapshot.__class__(
     dialect_class=snapshot.dialect_class,
     captured_at=datetime.now(tz=timezone.utc),
     database_info=db_info,
-    tables={"t": TableInfo(name="t", columns=[col2d], table_type=TableType.BASE_TABLE)},
+    tables={"t": IntrospectionTableInfo(name="t", columns=[col2d], table_type=TableType.BASE_TABLE)},
 )
 
 differ = PostgresSchemaDiffer()

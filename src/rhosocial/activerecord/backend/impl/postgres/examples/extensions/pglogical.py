@@ -37,7 +37,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -75,7 +75,7 @@ if installed:
         "provider_node",
         "host=localhost dbname=test",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[node_func.as_("node_result")],
     )
@@ -90,7 +90,7 @@ if installed:
 
     # Example 2: Show subscription status
     status_func = pglogical_show_subscription_status(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[status_func.as_("subscription_status")],
     )

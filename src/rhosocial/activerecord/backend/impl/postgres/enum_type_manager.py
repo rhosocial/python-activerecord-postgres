@@ -18,8 +18,8 @@ from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
 )
 
 from .expression.ddl import (
@@ -63,7 +63,7 @@ class EnumTypeManager:
             enum_type: PostgresEnumType instance
             if_not_exists: Use IF NOT EXISTS clause
         """
-        expr = CreateTypeExpression(
+        expr = CreateTypeStatement(
             dialect=self._backend.dialect,
             type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             definition=PostgresEnumTypeDefinition(
@@ -118,7 +118,7 @@ class EnumTypeManager:
             before=before,
             after=after,
         )
-        expr = AlterTypeExpression(
+        expr = AlterTypeStatement(
             dialect=self._backend.dialect,
             type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             actions=[action],
@@ -145,7 +145,7 @@ class EnumTypeManager:
             old_value,
             new_value,
         )
-        expr = AlterTypeExpression(
+        expr = AlterTypeStatement(
             dialect=self._backend.dialect,
             type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
             actions=[action],

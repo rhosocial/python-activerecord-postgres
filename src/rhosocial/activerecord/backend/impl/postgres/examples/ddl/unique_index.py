@@ -14,15 +14,15 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    QueryExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    QueryStatement,
+    InsertStatement,
     ValuesSource,
-    CreateIndexExpression,
+    CreateIndexStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression
+from rhosocial.activerecord.backend.expression.core import Literal, Wildcard
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -40,7 +40,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -49,7 +49,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -74,7 +74,7 @@ backend.execute(sql, params)
 # ============================================================
 
 # 1. CREATE UNIQUE INDEX on a single column
-create_email_idx = CreateIndexExpression(
+create_email_idx = CreateIndexStatement(
     dialect=dialect,
     index=Index(dialect, 'idx_users_email'),
     table=Table(dialect, 'users'),
@@ -87,7 +87,7 @@ print(f"SQL: {sql}")
 print(f"Params: {params}")
 
 # 2. CREATE UNIQUE INDEX on multiple columns (composite unique)
-create_composite_idx = CreateIndexExpression(
+create_composite_idx = CreateIndexStatement(
     dialect=dialect,
     index=Index(dialect, 'idx_users_username_email'),
     table=Table(dialect, 'users'),
@@ -113,7 +113,7 @@ backend.execute(sql, params)
 print("Index created: idx_users_username_email (UNIQUE on username, email)")
 
 # Insert initial row
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['email', 'username'],
@@ -127,7 +127,7 @@ print("Inserted: alice@example.com / alice")
 
 # 3. Verify uniqueness: attempt duplicate email (should fail)
 try:
-    duplicate_insert = InsertExpression(
+    duplicate_insert = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'users'),
         columns=['email', 'username'],
@@ -142,9 +142,9 @@ except Exception as e:
     print(f"Uniqueness constraint enforced: {e}")
 
 # Verify data after failed insert
-verify_query = QueryExpression(
+verify_query = QueryStatement(
     dialect=dialect,
-    select=[WildcardExpression(dialect)],
+    select=[Wildcard(dialect)],
     from_=Table(dialect, 'users'),
 )
 sql, params = verify_query.to_sql()
@@ -154,7 +154,7 @@ print(f"Rows in users table: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -168,7 +168,7 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use CreateIndexExpression with unique=True for UNIQUE indexes
+# 1. Use CreateIndexStatement with unique=True for UNIQUE indexes
 # 2. Single-column unique index ensures no duplicates in that column
 # 3. Composite unique index ensures no duplicate combination across columns
 # 4. if_not_exists=True prevents errors if index already exists

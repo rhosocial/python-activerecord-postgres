@@ -126,12 +126,12 @@ class PostgresTriggerMixin:
         """
         if not isinstance(expr.trigger, Trigger):
             raise TypeError(
-                f"DropTriggerExpression.trigger must be a Trigger, "
+                f"DropTriggerStatement.trigger must be a Trigger, "
                 f"got {type(expr.trigger).__name__}"
             )
         if expr.table is not None and not isinstance(expr.table, Table):
             raise TypeError(
-                f"DropTriggerExpression.table must be a Table, "
+                f"DropTriggerStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         parts = ["DROP TRIGGER"]

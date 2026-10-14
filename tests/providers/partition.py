@@ -10,11 +10,11 @@ from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
     PartitionClause,
     PartitionStrategy,
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -251,7 +251,7 @@ class PartitionProvider(IPartitionProvider):
         return self.PARTITIONS[partition_key][0]
 
     def _create_parent_sql(self, dialect):
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
@@ -298,11 +298,11 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _truncate_partition_sql(self, dialect, partition_name: str):
-        expr = TruncateExpression(dialect=dialect, table=Table(dialect, partition_name))
+        expr = TruncateStatement(dialect=dialect, table=Table(dialect, partition_name))
         return expr.to_sql()
 
     def _drop_partition_sql(self, dialect, table_name: str):
-        expr = DropTableExpression(
+        expr = DropTableStatement(
             dialect=dialect,
             table=Table(dialect, table_name),
             if_exists=True,

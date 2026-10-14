@@ -25,22 +25,22 @@ from rhosocial.activerecord.backend.expression.objects import (
     Table,
 )
 from rhosocial.activerecord.backend.expression.query_sources import (
-    CTEExpression,
-    WithQueryExpression,
+    CTEClause,
+    WithStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-    CreateTableAsExpression,
-    DropTableExpression,
+    CreateTableAsStatement,
+    DropTableStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    RefreshMaterializedViewStatement,
 )
-from rhosocial.activerecord.backend.expression.statements.dql import QueryExpression
+from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
     PostgresRefreshMaterializedViewExpression,
@@ -57,22 +57,22 @@ def _literal(d, value=1):
 
 
 def _query(d):
-    return QueryExpression(d, select=[_literal(d)])
+    return QueryStatement(d, select=[_literal(d)])
 
 
 def _cte_query(d, cte_name, **kwargs):
     """A WITH query whose main query selects from the single CTE it defines."""
-    return WithQueryExpression(
+    return WithStatement(
         d,
         ctes=[
-            CTEExpression(
+            CTEClause(
                 d,
                 cte_name,
-                QueryExpression(d, select=[_literal(d)]),
+                QueryStatement(d, select=[_literal(d)]),
                 **kwargs,
             )
         ],
-        main_query=QueryExpression(
+        query=QueryStatement(
             d, select=[_literal(d)], from_=_table(d, cte_name)
         ),
     )
@@ -106,11 +106,11 @@ class TestMasterProbeExecutionConfirmation:
         dialect = postgres_backend.dialect
         outcome = confirm_expression_execution(
             postgres_backend,
-            CreateTableAsExpression(
+            CreateTableAsStatement(
                 dialect, _table(dialect, table_name), _query(dialect), **kwargs
             ),
             teardown=[
-                DropTableExpression(
+                DropTableStatement(
                     dialect, _table(dialect, table_name), if_exists=True
                 )
             ],
@@ -135,9 +135,9 @@ class TestMasterProbeExecutionConfirmation:
         view = MaterializedView(dialect, view_name)
         outcome = confirm_expression_execution(
             postgres_backend,
-            CreateMaterializedViewExpression(dialect, view, _query(dialect), **kwargs),
+            CreateMaterializedViewStatement(dialect, view, _query(dialect), **kwargs),
             teardown=[
-                DropMaterializedViewExpression(dialect, view, if_exists=True)
+                DropMaterializedViewStatement(dialect, view, if_exists=True)
             ],
         )
         if dialect.supports_materialized_view() and dialect.supports_with_data_clause():
@@ -148,8 +148,8 @@ class TestMasterProbeExecutionConfirmation:
     @pytest.mark.parametrize(
         "expression_cls,side,kwargs",
         [
-            (RefreshMaterializedViewExpression, "with_data", {"with_data": True}),
-            (RefreshMaterializedViewExpression, "no_data", {"no_data": True}),
+            (RefreshMaterializedViewStatement, "with_data", {"with_data": True}),
+            (RefreshMaterializedViewStatement, "no_data", {"no_data": True}),
             (
                 PostgresRefreshMaterializedViewExpression,
                 "with_data",
@@ -175,13 +175,13 @@ class TestMasterProbeExecutionConfirmation:
         view_name = "master_probe_mv_refresh"
         view = MaterializedView(dialect, view_name)
         teardown = [
-            DropMaterializedViewExpression(dialect, view, if_exists=True)
+            DropMaterializedViewStatement(dialect, view, if_exists=True)
         ]
 
         if dialect.supports_materialized_view():
             # Build an unpopulated MV so the refresh has something to target.
             prepare = [
-                CreateMaterializedViewExpression(
+                CreateMaterializedViewStatement(
                     dialect, view, _query(dialect), no_data=True
                 )
             ]
@@ -228,14 +228,14 @@ class TestMasterProbeExecutionConfirmation:
         table_name = "master_probe_truncate"
         outcome = confirm_expression_execution(
             postgres_backend,
-            TruncateExpression(dialect, _table(dialect, table_name)),
+            TruncateStatement(dialect, _table(dialect, table_name)),
             prepare=[
-                CreateTableAsExpression(
+                CreateTableAsStatement(
                     dialect, _table(dialect, table_name), _query(dialect)
                 )
             ],
             teardown=[
-                DropTableExpression(
+                DropTableStatement(
                     dialect, _table(dialect, table_name), if_exists=True
                 )
             ],

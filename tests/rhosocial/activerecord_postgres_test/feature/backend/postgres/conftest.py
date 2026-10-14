@@ -8,7 +8,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     FunctionCall,
     GroupByHavingClause,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -57,7 +57,7 @@ def summary_query(mv_backend):
     """Aggregation over the mv_sales fixture table."""
     def _build():
         dialect = mv_backend.dialect
-        return QueryExpression(
+        return QueryStatement(
             dialect=dialect,
             select=[
                 Column(dialect, "product_id"),
@@ -78,7 +78,7 @@ def daily_query(mv_backend):
     """Per-day aggregation over the mv_sales fixture table."""
     def _build():
         dialect = mv_backend.dialect
-        return QueryExpression(
+        return QueryStatement(
             dialect=dialect,
             select=[
                 Column(dialect, "sale_date"),

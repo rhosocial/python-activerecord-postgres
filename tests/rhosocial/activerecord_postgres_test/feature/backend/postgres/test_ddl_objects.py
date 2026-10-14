@@ -22,8 +22,8 @@ from rhosocial.activerecord.backend.expression.serialization import (
     serialize_xml,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
-    AlterDomainExpression,
-    CreateDomainExpression,
+    AlterDomainStatement,
+    CreateDomainStatement,
     DomainCheckConstraint,
     DomainNullability,
     DomainValueExpression,
@@ -34,8 +34,8 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     SetDomainNotNullAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType, TextType
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -225,7 +225,7 @@ class TestPostgresDomainExpression:
 
     def test_new_core_expression_rejects_raw_data_type(self, dialect):
         with pytest.raises(TypeError, match="DataType"):
-            CreateDomainExpression(dialect, Domain(dialect, 'raw_domain'), "INTEGER")
+            CreateDomainStatement(dialect, Domain(dialect, 'raw_domain'), "INTEGER")
 
     def test_all_domain_actions(self, dialect):
         value = DomainValueExpression(dialect)
@@ -279,7 +279,7 @@ class TestPostgresDomainExpression:
             assert params == ()
 
     def test_domain_actions_are_not_combinable(self, dialect):
-        expression = AlterDomainExpression(
+        expression = AlterDomainStatement(
             dialect,
             Domain(dialect, 'amount'),
             [DropDomainDefaultAction(dialect), SetDomainNotNullAction(dialect)],
@@ -370,7 +370,7 @@ class TestPostgresTypeDDLExpressions:
                 ),
             ],
         )
-        sql, params = CreateTypeExpression(
+        sql, params = CreateTypeStatement(
             dialect,
             Type(dialect, 'address', schema_name='app'),
             definition,
@@ -386,7 +386,7 @@ class TestPostgresTypeDDLExpressions:
             dialect,
             ["ready", "O'Reilly", ""],
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'status'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'status'), definition).to_sql()
         assert sql == "CREATE TYPE \"status\" AS ENUM ('ready', 'O''Reilly', '')"
         assert params == ()
 
@@ -398,7 +398,7 @@ class TestPostgresTypeDDLExpressions:
             canonical_function="public.canonical",
             multirange_type_name="app.span_multirange",
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'span', schema_name='app'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'span', schema_name='app'), definition).to_sql()
         assert sql == (
             'CREATE TYPE "app"."span" AS RANGE (SUBTYPE = INTEGER, '
             'SUBTYPE_OPCLASS = "public"."int_ops", CANONICAL = "public"."canonical", '
@@ -417,7 +417,7 @@ class TestPostgresTypeDDLExpressions:
             UnsupportedFeatureError,
             match="CREATE TYPE MULTIRANGE_TYPE_NAME",
         ):
-            CreateTypeExpression(dialect, Type(dialect, 'span'), definition).to_sql()
+            CreateTypeStatement(dialect, Type(dialect, 'span'), definition).to_sql()
 
     def test_base_definition(self, dialect):
         definition = PostgresBaseTypeDefinition(
@@ -430,7 +430,7 @@ class TestPostgresTypeDDLExpressions:
             default=0,
             element=IntegerType(dialect),
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
         assert sql == (
             'CREATE TYPE "box" (INPUT = "public"."box_in", '
             'OUTPUT = "public"."box_out", INTERNALLENGTH = 16, PASSEDBYVALUE, '
@@ -446,7 +446,7 @@ class TestPostgresTypeDDLExpressions:
             )
 
     def test_shell_definition(self, dialect):
-        sql, params = CreateTypeExpression(
+        sql, params = CreateTypeStatement(
             dialect,
             Type(dialect, 'pending_box', schema_name='public'),
             PostgresShellTypeDefinition(dialect),
@@ -457,14 +457,14 @@ class TestPostgresTypeDDLExpressions:
     def test_create_type_unsupported_clauses_fail_fast(self, dialect):
         enum = PostgresEnumTypeDefinition(dialect, ["active"])
         with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE IF NOT EXISTS"):
-            CreateTypeExpression(
+            CreateTypeStatement(
                 dialect,
                 Type(dialect, 'status'),
                 enum,
                 if_not_exists=True,
             ).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="CREATE OR REPLACE TYPE"):
-            CreateTypeExpression(
+            CreateTypeStatement(
                 dialect,
                 Type(dialect, 'status'),
                 enum,
@@ -561,7 +561,7 @@ class TestPostgresTypeDDLExpressions:
             ),
         ]
         for action, expected in cases:
-            sql, params = AlterTypeExpression(
+            sql, params = AlterTypeStatement(
                 dialect,
                 Type(dialect, 'status', schema_name='app'),
                 [action],
@@ -574,7 +574,7 @@ class TestPostgresTypeDDLExpressions:
             PostgresAddTypeAttributeAction(dialect, "active", IntegerType(dialect)),
             PostgresDropTypeAttributeAction(dialect, "legacy"),
         ]
-        sql, params = AlterTypeExpression(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
+        sql, params = AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
         assert sql == (
             'ALTER TYPE "app"."address" ADD ATTRIBUTE "active" INTEGER, '
             'DROP ATTRIBUTE "legacy"'
@@ -587,7 +587,7 @@ class TestPostgresTypeDDLExpressions:
             PostgresRenameTypeAction(dialect, "new_address"),
         ]
         with pytest.raises(UnsupportedFeatureError, match="multiple ALTER TYPE actions"):
-            AlterTypeExpression(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
+            AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
 
     def test_type_version_boundaries(self):
         enum = PostgresEnumTypeDefinition(PostgresDialect(version=(9, 6, 0)), ["a"])
@@ -597,12 +597,12 @@ class TestPostgresTypeDDLExpressions:
             "b",
         )
         with pytest.raises(UnsupportedFeatureError, match="RENAME VALUE"):
-            AlterTypeExpression(
+            AlterTypeStatement(
                 PostgresDialect(version=(9, 6, 0)),
                 Type(PostgresDialect(version=(9, 6, 0)), 'status'),
                 [rename],
             ).to_sql()
-        sql, _ = AlterTypeExpression(
+        sql, _ = AlterTypeStatement(
             PostgresDialect(version=(10, 0, 0)),
             Type(PostgresDialect(version=(10, 0, 0)), 'status'),
             [PostgresRenameEnumValueAction(
@@ -613,7 +613,7 @@ class TestPostgresTypeDDLExpressions:
         ).to_sql()
         assert sql == 'ALTER TYPE "status" RENAME VALUE \'a\' TO \'b\''
         with pytest.raises(UnsupportedFeatureError, match="SET properties"):
-            AlterTypeExpression(
+            AlterTypeStatement(
                 PostgresDialect(version=(12, 0, 0)),
                 Type(PostgresDialect(version=(12, 0, 0)), 'box'),
                 [PostgresSetTypePropertiesAction(
@@ -634,9 +634,9 @@ class TestPostgresTypeDDLExpressions:
             )
             if version < (14, 0, 0):
                 with pytest.raises(UnsupportedFeatureError, match="SUBSCRIPT"):
-                    CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+                    CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
             else:
-                sql, _ = CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+                sql, _ = CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
                 assert 'SUBSCRIPT = "box_subscript"' in sql
 
 

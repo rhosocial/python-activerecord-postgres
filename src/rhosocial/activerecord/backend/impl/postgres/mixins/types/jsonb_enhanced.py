@@ -12,21 +12,21 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression import (
-        JSONDocumentExpression,
-        JSONTextExpression,
+        JSONDocumentValue,
+        JSONTextValue,
     )
 
     #: What both formatters below accept. Core used to have one class for both
     #: JSON access operators; it now has two, one per operator, and this dialect
     #: renders either from the same code path -- so the parameter is a union.
     #:
-    #: The union is spelled out even though ``JSONTextExpression`` subclasses
-    #: ``JSONDocumentExpression`` and a checker would collapse it. That
+    #: The union is spelled out even though ``JSONTextValue`` subclasses
+    #: ``JSONDocumentValue`` and a checker would collapse it. That
     #: inheritance exists so ``->>`` keeps the accessors that let a path chain
     #: continue; it is not a claim that ``->>`` yields a document. Annotating
     #: only the document class would type a text node as a document, which is
     #: the confusion the split was made to remove.
-    JSONPathNode = Union["JSONDocumentExpression", "JSONTextExpression"]
+    JSONPathNode = Union["JSONDocumentValue", "JSONTextValue"]
 
 
 # ---------------------------------------------------------------------------
@@ -353,9 +353,9 @@ class PostgresJSONBEnhancedMixin:
 
         Args:
             expr: The JSON path node -- a
-                :class:`~rhosocial.activerecord.backend.expression.JSONDocumentExpression`
+                :class:`~rhosocial.activerecord.backend.expression.JSONDocumentValue`
                 for ``->`` or a
-                :class:`~rhosocial.activerecord.backend.expression.JSONTextExpression`
+                :class:`~rhosocial.activerecord.backend.expression.JSONTextValue`
                 for ``->>``. Either is accepted; see ``JSONPathNode``.
 
         Returns:

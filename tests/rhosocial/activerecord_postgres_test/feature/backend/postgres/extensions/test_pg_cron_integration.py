@@ -17,7 +17,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_cron import (
@@ -53,7 +53,7 @@ class TestPgCronIntegration:
                 "0 * * * *",
                 Literal(dialect, "SELECT 1"),
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[schedule_func.as_("job_id")],
             )
@@ -67,7 +67,7 @@ class TestPgCronIntegration:
 
             # Cleanup: unschedule the job
             unschedule_func = cron_unschedule(dialect, job_id)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[unschedule_func],
             )
@@ -91,7 +91,7 @@ class TestPgCronIntegration:
                 "0 * * * *",
                 Literal(dialect, "SELECT 1"),
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[schedule_func.as_("job_id")],
             )
@@ -101,7 +101,7 @@ class TestPgCronIntegration:
 
             # Then, unschedule the job
             unschedule_func = cron_unschedule(dialect, job_id)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[unschedule_func.as_("unschedule_result")],
             )
@@ -141,7 +141,7 @@ class TestAsyncPgCronIntegration:
                 "0 * * * *",
                 Literal(dialect, "SELECT 1"),
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[schedule_func.as_("job_id")],
             )
@@ -155,7 +155,7 @@ class TestAsyncPgCronIntegration:
 
             # Cleanup: unschedule the job
             unschedule_func = cron_unschedule(dialect, job_id)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[unschedule_func],
             )
@@ -180,7 +180,7 @@ class TestAsyncPgCronIntegration:
                 "0 * * * *",
                 Literal(dialect, "SELECT 1"),
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[schedule_func.as_("job_id")],
             )
@@ -190,7 +190,7 @@ class TestAsyncPgCronIntegration:
 
             # Then, unschedule the job
             unschedule_func = cron_unschedule(dialect, job_id)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[unschedule_func.as_("unschedule_result")],
             )

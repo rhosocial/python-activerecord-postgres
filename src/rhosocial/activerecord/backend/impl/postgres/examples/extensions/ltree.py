@@ -33,9 +33,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -46,12 +46,12 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    CreateIndexExpression,
-    QueryExpression,
+    CreateIndexStatement,
+    QueryStatement,
     Column,
     OrderByClause,
 )
@@ -59,7 +59,7 @@ from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -114,7 +114,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'categories'),
         columns=columns,
@@ -127,7 +127,7 @@ if installed:
 
     # Example 2: Insert hierarchical path data
     # ltree paths use dot-separated labels (only alphanumeric and underscore)
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'categories'),
         columns=["name", "path"],
@@ -156,7 +156,7 @@ if installed:
 
     # Example 3: Ancestor query - find all descendants of 'electronics.computers'
     # @> means "is ancestor of" (left is ancestor of right)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
         from_=Table(dialect, "categories"),
@@ -176,7 +176,7 @@ if installed:
 
     # Example 4: Descendant query - find all ancestors of 'electronics.computers.laptops'
     # <@ means "is descendant of" (left is descendant of right)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
         from_=Table(dialect, "categories"),
@@ -197,7 +197,7 @@ if installed:
     # Example 5: Pattern matching query (~)
     # Find categories matching a lquery pattern
     # '*' matches any single label, '*{,2}' matches up to 2 labels
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
         from_=Table(dialect, "categories"),
@@ -216,7 +216,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 6: Search for any path under electronics at any depth
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "path")],
         from_=Table(dialect, "categories"),
@@ -235,7 +235,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 7: Create GiST index for fast path queries
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_categories_path'),
         table=Table(dialect, 'categories'),
@@ -256,7 +256,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

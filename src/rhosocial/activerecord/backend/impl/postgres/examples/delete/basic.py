@@ -14,11 +14,11 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    DeleteExpression,
+    DeleteStatement,
     ReturningClause,
     Column,
 )
@@ -42,7 +42,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -51,7 +51,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -70,7 +70,7 @@ sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
 # Insert sample data
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['name', 'email'],
@@ -88,7 +88,7 @@ backend.execute(sql, params)
 # ============================================================
 
 # 1. Simple DELETE with WHERE
-delete_expr = DeleteExpression(
+delete_expr = DeleteStatement(
     dialect=dialect,
     tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
@@ -110,7 +110,7 @@ result = backend.execute(sql, params)
 print(f"Affected rows: {result.affected_rows}")
 
 # 2. DELETE with RETURNING clause
-delete_returning = DeleteExpression(
+delete_returning = DeleteStatement(
     dialect=dialect,
     tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
@@ -131,7 +131,7 @@ print(f"Affected rows: {result.affected_rows}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,

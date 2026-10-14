@@ -37,19 +37,19 @@ from rhosocial.activerecord.backend.introspection.executor import (
     AsyncIntrospectorExecutor,
 )
 from rhosocial.activerecord.backend.introspection.types import (
-    ColumnInfo,
+    IntrospectionColumnInfo,
     ColumnNullable,
-    DatabaseInfo,
-    ForeignKeyInfo,
+    IntrospectionDatabaseInfo,
+    IntrospectionForeignKeyInfo,
     IndexColumnInfo,
     IndexInfo,
     IndexType,
     IntrospectionScope,
     ReferentialAction,
-    TableInfo,
+    IntrospectionTableInfo,
     TableType,
-    TriggerInfo,
-    ViewInfo,
+    IntrospectionTriggerInfo,
+    IntrospectionViewInfo,
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
@@ -100,7 +100,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # Parse methods — pure Python, no I/O
     # ------------------------------------------------------------------ #
 
-    def _parse_database_info(self, rows: List[Dict[str, Any]]) -> DatabaseInfo:
+    def _parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
         db_row = rows[0] if rows else {}
         db_name = self._get_database_name()
         # Dialect returns 'version' column from format_database_info_query()
@@ -116,7 +116,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             else (11, 0, 0)
         )
 
-        return DatabaseInfo(
+        return IntrospectionDatabaseInfo(
             name=db_name,
             version=version_str,
             version_tuple=version_tuple,
@@ -126,7 +126,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             size_bytes=db_row.get("size"),
         )
 
-    def _parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[TableInfo]:
+    def _parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:
         target_schema = schema if schema is not None else self._get_default_schema()
         table_type_map = {
             "BASE TABLE": TableType.BASE_TABLE,
@@ -136,7 +136,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             "PARTITIONED TABLE": TableType.BASE_TABLE,
         }
         return [
-            TableInfo(
+            IntrospectionTableInfo(
                 name=row["table_name"],
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
@@ -148,7 +148,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ColumnInfo]:
+    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []
         for row in rows:
             data_type = row.get("data_type", "")
@@ -156,7 +156,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             base_type = data_type.split("[")[0].split("(")[0].strip()
             parsed = DataType.parse_data_type_str(self._backend.dialect, data_type)
             columns.append(
-                ColumnInfo(
+                IntrospectionColumnInfo(
                     name=row["column_name"],
                     table_name=table_name,
                     schema=schema,
@@ -204,7 +204,9 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return list(index_map.values())
 
-    def _parse_foreign_keys(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ForeignKeyInfo]:
+    def _parse_foreign_keys(
+        self, rows: List[Dict[str, Any]], table_name: str, schema: str
+    ) -> List[IntrospectionForeignKeyInfo]:
         # PostgreSQL uses single-char codes for referential actions
         action_map = {
             "a": ReferentialAction.NO_ACTION,
@@ -213,11 +215,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             "n": ReferentialAction.SET_NULL,
             "d": ReferentialAction.SET_DEFAULT,
         }
-        fk_map: Dict[str, ForeignKeyInfo] = {}
+        fk_map: Dict[str, IntrospectionForeignKeyInfo] = {}
         for row in rows:
             fk_name = row["constraint_name"]
             if fk_name not in fk_map:
-                fk_map[fk_name] = ForeignKeyInfo(
+                fk_map[fk_name] = IntrospectionForeignKeyInfo(
                     name=fk_name,
                     table_name=table_name,
                     schema=schema,
@@ -232,9 +234,9 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             fk_map[fk_name].referenced_columns.append(row.get("referenced_column", ""))
         return list(fk_map.values())
 
-    def _parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[ViewInfo]:
+    def _parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionViewInfo]:
         return [
-            ViewInfo(
+            IntrospectionViewInfo(
                 name=row.get("view_name", ""),
                 schema=schema,
                 definition=row.get("definition"),
@@ -243,11 +245,13 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_view_info(self, rows: List[Dict[str, Any]], view_name: str, schema: str) -> Optional[ViewInfo]:
+    def _parse_view_info(
+        self, rows: List[Dict[str, Any]], view_name: str, schema: str
+    ) -> Optional[IntrospectionViewInfo]:
         if not rows:
             return None
         row = rows[0]
-        return ViewInfo(
+        return IntrospectionViewInfo(
             name=row.get("view_name", view_name),
             schema=schema,
             definition=row.get("definition"),
@@ -255,14 +259,16 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_materialized_view(row: Dict[str, Any], default_schema: str, default_name: str = "") -> ViewInfo:
-        """Build a ViewInfo for a materialized view.
+    def _parse_materialized_view(
+        row: Dict[str, Any], default_schema: str, default_name: str = ""
+    ) -> IntrospectionViewInfo:
+        """Build a IntrospectionViewInfo for a materialized view.
 
         Materialized views are never updatable/insertable; ``extra`` carries the
         PostgreSQL specific state: ``is_materialized``, ``is_populated`` and
         ``has_unique_index`` (the prerequisite for a CONCURRENTLY refresh).
         """
-        return ViewInfo(
+        return IntrospectionViewInfo(
             name=row.get("view_name") or default_name,
             schema=row.get("schema_name") or default_schema,
             definition=row.get("definition"),
@@ -279,7 +285,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     @staticmethod
     def _parse_materialized_views(
         rows: List[Dict[str, Any]], schema: str
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         return [
             PostgreSQLIntrospectorMixin._parse_materialized_view(row, schema) for row in rows
         ]
@@ -287,7 +293,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     @staticmethod
     def _parse_materialized_view_info(
         rows: List[Dict[str, Any]], view_name: str, schema: str
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         if not rows:
             return None
         return PostgreSQLIntrospectorMixin._parse_materialized_view(
@@ -331,7 +337,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             extra=f"matviews:{include_system}",
         )
 
-    def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[TriggerInfo]:
+    def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionTriggerInfo]:
         triggers = []
         for row in rows:
             # Dialect returns 'timing' column already decoded
@@ -346,7 +352,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             function_name = row.get("function_name")
 
             triggers.append(
-                TriggerInfo(
+                IntrospectionTriggerInfo(
                     name=row["trigger_name"],
                     table_name=row["table_name"],
                     schema=schema,
@@ -426,7 +432,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         self,
         schema: Optional[str] = None,
         include_system: bool = False,
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         """List materialized views in the given schema.
 
         Each entry carries ``extra['is_populated']`` (false for a view created
@@ -438,7 +444,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             include_system: Whether to include system objects.
 
         Returns:
-            List of ViewInfo describing each materialized view.
+            List of IntrospectionViewInfo describing each materialized view.
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, include_system=include_system)
@@ -452,7 +458,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
 
     def get_materialized_view_info(
         self, view_name: str, schema: Optional[str] = None
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         """Return information for a single materialized view, or None if absent.
 
         Args:
@@ -460,7 +466,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             schema: Schema to inspect. Defaults to the connection default schema.
 
         Returns:
-            ViewInfo, or None when the materialized view does not exist.
+            IntrospectionViewInfo, or None when the materialized view does not exist.
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, view_name=view_name)
@@ -511,7 +517,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         self,
         schema: Optional[str] = None,
         include_system: bool = False,
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         """List materialized views in the given schema (async counterpart).
 
         Args:
@@ -519,7 +525,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
             include_system: Whether to include system objects.
 
         Returns:
-            List of ViewInfo describing each materialized view.
+            List of IntrospectionViewInfo describing each materialized view.
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, include_system=include_system)
@@ -534,7 +540,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
 
     async def get_materialized_view_info(
         self, view_name: str, schema: Optional[str] = None
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         """Return information for a single materialized view, or None (async).
 
         Args:
@@ -542,7 +548,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
             schema: Schema to inspect. Defaults to the connection default schema.
 
         Returns:
-            ViewInfo, or None when the materialized view does not exist.
+            IntrospectionViewInfo, or None when the materialized view does not exist.
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, view_name=view_name)

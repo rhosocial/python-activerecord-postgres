@@ -37,7 +37,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -76,7 +76,7 @@ if installed:
         "0 * * * *",
         Literal(dialect, "SELECT 1"),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[schedule_func.as_("job_id")],
     )
@@ -92,7 +92,7 @@ if installed:
 
             # Example 2: Unschedule the cron job
             unschedule_func = cron_unschedule(dialect, job_id)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[unschedule_func.as_("unschedule_result")],
             )

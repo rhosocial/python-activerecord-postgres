@@ -24,8 +24,8 @@ if TYPE_CHECKING:
         PostgresDropFunctionExpression,
     )
     from rhosocial.activerecord.backend.expression.statements import (
-        CreateFunctionExpression,
-        DropFunctionExpression,
+        CreateFunctionStatement,
+        DropFunctionStatement,
     )
 
 
@@ -37,13 +37,13 @@ class PostgresRoutineMixin:
     ``PostgresDropFunctionExpression`` are the PostgreSQL-owned ones, with the
     richer option set (``SECURITY``, ``COST``, ``ROWS``, ``STRICT``) rendered by
     :meth:`format_create_function_ddl_statement` below. Core's own
-    ``CreateFunctionExpression`` / ``DropFunctionExpression`` carry the portable
+    ``CreateFunctionStatement`` / ``DropFunctionStatement`` carry the portable
     SQL/PSM subset, and are rendered by delegating to core's ``FunctionMixin``.
 
     Both are needed: :class:`PostgresDialect` declares ``CreateRoutineSupport``
     and ``DropRoutineSupport`` in its base list, and a ``runtime_checkable``
     protocol is satisfied by its own ``...`` bodies. With no implementation
-    anywhere, ``CreateFunctionExpression(...).to_sql()`` called the stub and
+    anywhere, ``CreateFunctionStatement(...).to_sql()`` called the stub and
     returned ``None``, and ``supports_function()`` returned ``None`` too -- both
     read as falsy to every caller, and neither raised. The switches and the two
     delegating formatters below are what make that declaration true.
@@ -112,16 +112,16 @@ class PostgresRoutineMixin:
     # Core's portable CREATE/DROP FUNCTION
     # ------------------------------------------------------------------ #
     def format_create_function_statement(
-        self, expr: "CreateFunctionExpression"
+        self, expr: "CreateFunctionStatement"
     ) -> Tuple[str, tuple]:
-        """Render core's ``CreateFunctionExpression``.
+        """Render core's ``CreateFunctionStatement``.
 
         Delegates to core's renderer instead of restating it, so the object-kind
         check and the parameter validation stay in one place -- core is where
         that logic lives, and a second copy here would be free to drift.
 
         Args:
-            expr: Core's :class:`CreateFunctionExpression`, holding a
+            expr: Core's :class:`CreateFunctionStatement`, holding a
                 :class:`~...expression.objects.Function` rather than a bare name.
 
         Returns:
@@ -135,15 +135,15 @@ class PostgresRoutineMixin:
         """
         if not isinstance(expr.function, Function):
             raise TypeError(
-                f"CreateFunctionExpression.function must be a Function, "
+                f"CreateFunctionStatement.function must be a Function, "
                 f"got {type(expr.function).__name__}"
             )
         return FunctionMixin.format_create_function_statement(self, expr)
 
     def format_drop_function_statement(
-        self, expr: "DropFunctionExpression"
+        self, expr: "DropFunctionStatement"
     ) -> Tuple[str, tuple]:
-        """Render core's ``DropFunctionExpression``.
+        """Render core's ``DropFunctionStatement``.
 
         Delegates to core's renderer for the reason given on
         :meth:`format_create_function_statement`.
@@ -155,7 +155,7 @@ class PostgresRoutineMixin:
         """
         if not isinstance(expr.function, Function):
             raise TypeError(
-                f"DropFunctionExpression.function must be a Function, "
+                f"DropFunctionStatement.function must be a Function, "
                 f"got {type(expr.function).__name__}"
             )
         return FunctionMixin.format_drop_function_statement(self, expr)

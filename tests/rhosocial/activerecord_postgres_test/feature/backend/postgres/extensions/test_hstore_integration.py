@@ -8,7 +8,7 @@ and test:
 - hstore operators (@>, ?, ||) using BinaryExpression
 - hstore key access (->) using BinaryExpression
 - hstore functions (each(), akeys(), avals()) using FunctionCall
-- hstore key deletion using delete() function in UpdateExpression
+- hstore key deletion using delete() function in UpdateStatement
 
 All database operations use expression objects, not raw SQL strings.
 """
@@ -21,15 +21,15 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
-    UpdateExpression,
+    UpdateStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -63,7 +63,7 @@ def _make_hstore_columns(dialect):
 
 def _setup_hstore_table(backend, dialect, table, hstore_value):
     """Create and populate an hstore test table using expressions."""
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=_make_hstore_columns(dialect),
@@ -72,7 +72,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["data"],
@@ -87,7 +87,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -98,7 +98,7 @@ def _teardown_table(backend, dialect, table):
 
 async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
     """Async: create and populate an hstore test table using expressions."""
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=_make_hstore_columns(dialect),
@@ -107,7 +107,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["data"],
@@ -122,7 +122,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -194,7 +194,7 @@ class TestHstoreIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Query back the data
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "data")],
             from_=Table(dialect, T_HSTORE),
@@ -216,7 +216,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "a"),
         )).as_("val_a")
-        query_a = QueryExpression(
+        query_a = QueryStatement(
             dialect=dialect,
             select=[val_a_expr],
             from_=Table(dialect, T_HSTORE),
@@ -237,7 +237,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "b"),
         )).as_("val_b")
-        query_b = QueryExpression(
+        query_b = QueryStatement(
             dialect=dialect,
             select=[val_b_expr],
             from_=Table(dialect, T_HSTORE),
@@ -263,7 +263,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "color=>red").cast(PostgresHstoreType(dialect)),
         )).as_("contains")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_HSTORE_OPS),
@@ -284,7 +284,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "color=>blue").cast(PostgresHstoreType(dialect)),
         )).as_("contains")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr2],
             from_=Table(dialect, T_HSTORE_OPS),
@@ -310,7 +310,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "name"),
         )).as_("has_name")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), has_name_expr],
             from_=Table(dialect, T_HSTORE_KEY),
@@ -331,7 +331,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "email"),
         )).as_("has_email")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), has_email_expr],
             from_=Table(dialect, T_HSTORE_KEY),
@@ -357,7 +357,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "b=>2").cast(PostgresHstoreType(dialect)),
         )).as_("merged")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), merged_expr],
             from_=Table(dialect, T_HSTORE_CONCAT),
@@ -382,7 +382,7 @@ class TestHstoreIntegration:
             dialect, "each",
             Column(dialect, "data"),
         ).as_("kv_pair")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[each_func],
             from_=Table(dialect, T_HSTORE_EACH),
@@ -407,7 +407,7 @@ class TestHstoreIntegration:
             dialect, "akeys",
             Column(dialect, "data"),
         ).as_("keys")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[akeys_func],
             from_=Table(dialect, T_HSTORE_KEYS_VALS),
@@ -428,7 +428,7 @@ class TestHstoreIntegration:
             dialect, "avals",
             Column(dialect, "data"),
         ).as_("vals")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[avals_func],
             from_=Table(dialect, T_HSTORE_KEYS_VALS),
@@ -450,9 +450,9 @@ class TestHstoreIntegration:
         dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
         dql_opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Update a key value using || operator in UpdateExpression
+        # Update a key value using || operator in UpdateStatement
         # SET data = data || 'status=>inactive'::hstore
-        update_expr = UpdateExpression(
+        update_expr = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, T_HSTORE_UPDATE),
             assignments={
@@ -477,7 +477,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "status"),
         )).as_("status")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[status_expr],
             from_=Table(dialect, T_HSTORE_UPDATE),
@@ -498,9 +498,9 @@ class TestHstoreIntegration:
         dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
         dql_opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Delete a key using delete() function in UpdateExpression
+        # Delete a key using delete() function in UpdateStatement
         # SET data = delete(data, 'remove')
-        update_expr = UpdateExpression(
+        update_expr = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, T_HSTORE_DELETE),
             assignments={
@@ -530,7 +530,7 @@ class TestHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "keep"),
         )).as_("has_keep")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[has_remove_expr, has_keep_expr],
             from_=Table(dialect, T_HSTORE_DELETE),
@@ -592,7 +592,7 @@ class TestAsyncHstoreIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Query back the data
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "data")],
             from_=Table(dialect, T_HSTORE_ASYNC),
@@ -613,7 +613,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "a"),
         )).as_("val_a")
-        query_a = QueryExpression(
+        query_a = QueryStatement(
             dialect=dialect,
             select=[val_a_expr],
             from_=Table(dialect, T_HSTORE_ASYNC),
@@ -634,7 +634,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "b"),
         )).as_("val_b")
-        query_b = QueryExpression(
+        query_b = QueryStatement(
             dialect=dialect,
             select=[val_b_expr],
             from_=Table(dialect, T_HSTORE_ASYNC),
@@ -661,7 +661,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "color=>red").cast(PostgresHstoreType(dialect)),
         )).as_("contains")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_HSTORE_OPS_ASYNC),
@@ -682,7 +682,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "color=>blue").cast(PostgresHstoreType(dialect)),
         )).as_("contains")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr2],
             from_=Table(dialect, T_HSTORE_OPS_ASYNC),
@@ -709,7 +709,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "name"),
         )).as_("has_name")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), has_name_expr],
             from_=Table(dialect, T_HSTORE_KEY_ASYNC),
@@ -730,7 +730,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "email"),
         )).as_("has_email")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), has_email_expr],
             from_=Table(dialect, T_HSTORE_KEY_ASYNC),
@@ -757,7 +757,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "b=>2").cast(PostgresHstoreType(dialect)),
         )).as_("merged")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), merged_expr],
             from_=Table(dialect, T_HSTORE_CONCAT_ASYNC),
@@ -783,7 +783,7 @@ class TestAsyncHstoreIntegration:
             dialect, "each",
             Column(dialect, "data"),
         ).as_("kv_pair")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[each_func],
             from_=Table(dialect, T_HSTORE_EACH_ASYNC),
@@ -809,7 +809,7 @@ class TestAsyncHstoreIntegration:
             dialect, "akeys",
             Column(dialect, "data"),
         ).as_("keys")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[akeys_func],
             from_=Table(dialect, T_HSTORE_KEYS_VALS_ASYNC),
@@ -830,7 +830,7 @@ class TestAsyncHstoreIntegration:
             dialect, "avals",
             Column(dialect, "data"),
         ).as_("vals")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[avals_func],
             from_=Table(dialect, T_HSTORE_KEYS_VALS_ASYNC),
@@ -853,9 +853,9 @@ class TestAsyncHstoreIntegration:
         dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
         dql_opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Update a key value using || operator in UpdateExpression
+        # Update a key value using || operator in UpdateStatement
         # SET data = data || 'status=>inactive'::hstore
-        update_expr = UpdateExpression(
+        update_expr = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, T_HSTORE_UPDATE_ASYNC),
             assignments={
@@ -880,7 +880,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "status"),
         )).as_("status")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[status_expr],
             from_=Table(dialect, T_HSTORE_UPDATE_ASYNC),
@@ -902,9 +902,9 @@ class TestAsyncHstoreIntegration:
         dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
         dql_opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Delete a key using delete() function in UpdateExpression
+        # Delete a key using delete() function in UpdateStatement
         # SET data = delete(data, 'remove')
-        update_expr = UpdateExpression(
+        update_expr = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, T_HSTORE_DELETE_ASYNC),
             assignments={
@@ -934,7 +934,7 @@ class TestAsyncHstoreIntegration:
             Column(dialect, "data"),
             Literal(dialect, "keep"),
         )).as_("has_keep")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[has_remove_expr, has_keep_expr],
             from_=Table(dialect, T_HSTORE_DELETE_ASYNC),

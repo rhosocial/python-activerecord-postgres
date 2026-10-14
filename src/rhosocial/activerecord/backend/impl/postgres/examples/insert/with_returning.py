@@ -14,9 +14,9 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
     ReturningClause,
     Column,
@@ -40,7 +40,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -49,7 +49,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -72,7 +72,7 @@ backend.execute(sql, params)
 # ============================================================
 
 # 1. INSERT with RETURNING id
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [[Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')]]),
@@ -92,7 +92,7 @@ print(f"Affected rows: {result.affected_rows}")
 print(f"Returned data: {result.data}")
 
 # 2. INSERT with multiple RETURNING columns
-insert_multi = InsertExpression(
+insert_multi = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [[Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')]]),
@@ -105,7 +105,7 @@ result = backend.execute(sql, params)
 print(f"Multi-column RETURNING: {result.data}")
 
 # 3. Batch INSERT with RETURNING
-batch_insert = InsertExpression(
+batch_insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     source=ValuesSource(dialect, [
@@ -123,7 +123,7 @@ print(f"Batch RETURNING: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,

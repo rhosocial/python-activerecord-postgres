@@ -17,13 +17,13 @@ import pytest_asyncio
 
 from rhosocial.activerecord.backend.dialect.protocols import GraphTableSupport
 from rhosocial.activerecord.backend.expression import (
-    AlterPropertyGraphExpression, ColumnsClause, ColumnConstraint,
-    ColumnConstraintType, ColumnDefinition, CreatePropertyGraphExpression,
-    CreateTableExpression, DropPropertyGraphExpression, DropTableExpression,
-    ExplainExpression, ExplainOptions, FunctionCall, GraphColumn, GraphEdge,
-    GraphEdgeDirection, GraphTableExpression, GraphVertex, InsertExpression,
-    Literal, MatchClause, QueryExpression, TablePropertiesClause,
-    ValuesSource, VertexTable, EdgeTable, WildcardExpression,
+    AlterPropertyGraphStatement, ColumnsClause, ColumnConstraint,
+    ColumnConstraintType, ColumnDefinition, CreatePropertyGraphStatement,
+    CreateTableStatement, DropPropertyGraphStatement, DropTableStatement,
+    ExplainStatement, ExplainOptions, FunctionCall, GraphColumn, GraphEdge,
+    GraphEdgeDirection, GraphTableExpression, GraphVertex, InsertStatement,
+    Literal, MatchClause, QueryStatement, TablePropertiesClause,
+    ValuesSource, VertexTable, EdgeTable, Wildcard,
 )
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.objects import EdgeTable as EdgeTableObject
@@ -50,7 +50,7 @@ def social_data(postgres_backend):
         pytest.skip("PGQ not supported in this PostgreSQL version")
 
     for t in ("likes", "posts", "follows", "people"):
-        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
     people_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -59,7 +59,7 @@ def social_data(postgres_backend):
         ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'people'), people_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'people'), people_cols).to_sql())
 
     follows_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -72,7 +72,7 @@ def social_data(postgres_backend):
                                           foreign_key_reference=("people", ["id"]))]),
         ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
 
     posts_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -83,7 +83,7 @@ def social_data(postgres_backend):
         ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'posts'), posts_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'posts'), posts_cols).to_sql())
 
     likes_cols = [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -96,7 +96,7 @@ def social_data(postgres_backend):
                                           foreign_key_reference=("posts", ["id"]))]),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableExpression(dialect, Table(dialect, 'likes'), likes_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'likes'), likes_cols).to_sql())
 
     people_data = ValuesSource(dialect, [
         [
@@ -130,7 +130,7 @@ def social_data(postgres_backend):
             Literal(dialect, "LA"),
         ],
     ])
-    backend.execute(*InsertExpression(dialect, Table(dialect, "people"), source=people_data).to_sql())
+    backend.execute(*InsertStatement(dialect, Table(dialect, "people"), source=people_data).to_sql())
 
     follows_data = ValuesSource(dialect, [
         [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "2024-01-01")],
@@ -139,7 +139,7 @@ def social_data(postgres_backend):
         [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 1), Literal(dialect, "2024-04-01")],
         [Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 5), Literal(dialect, "2024-05-01")],
     ])
-    backend.execute(*InsertExpression(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
+    backend.execute(*InsertStatement(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
 
     posts_data = ValuesSource(dialect, [
         [Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "Hello world"), Literal(dialect, "2024-06-01")],
@@ -147,7 +147,7 @@ def social_data(postgres_backend):
         [Literal(dialect, 3), Literal(dialect, 3), Literal(dialect, "Graph databases"), Literal(dialect, "2024-06-03")],
         [Literal(dialect, 4), Literal(dialect, 1), Literal(dialect, "My first post"), Literal(dialect, "2024-06-04")],
     ])
-    backend.execute(*InsertExpression(dialect, Table(dialect, "posts"), source=posts_data).to_sql())
+    backend.execute(*InsertStatement(dialect, Table(dialect, "posts"), source=posts_data).to_sql())
 
     likes_data = ValuesSource(dialect, [
         [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, "2024-06-02")],
@@ -156,7 +156,7 @@ def social_data(postgres_backend):
         [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, "2024-06-05")],
         [Literal(dialect, 5), Literal(dialect, 5), Literal(dialect, 1), Literal(dialect, "2024-06-06")],
     ])
-    backend.execute(*InsertExpression(dialect, Table(dialect, "likes"), source=likes_data).to_sql())
+    backend.execute(*InsertStatement(dialect, Table(dialect, "likes"), source=likes_data).to_sql())
 
     vt_people = VertexTable(dialect, NodeTable(dialect, 'people'),
                             labels=["person"],
@@ -177,21 +177,21 @@ def social_data(postgres_backend):
                          references_source=("people", ["id"]),
                          references_destination=("posts", ["id"]),
                          labels=["likes"])
-    create_expr = CreatePropertyGraphExpression(
+    create_expr = CreatePropertyGraphStatement(
         dialect, GRAPH_NAME, [vt_people, vt_posts], [et_follows, et_posts, et_likes]
     )
     try:
         backend.execute(*create_expr.to_sql())
     except Exception as e:
         for t in ("likes", "posts", "follows", "people"):
-            backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+            backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
         raise e
 
     yield GRAPH_NAME
 
-    backend.execute(*DropPropertyGraphExpression(dialect, GRAPH_NAME, if_exists=True).to_sql())
+    backend.execute(*DropPropertyGraphStatement(dialect, GRAPH_NAME, if_exists=True).to_sql())
     for t in ("likes", "posts", "follows", "people"):
-        backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+        backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
 
 class TestSocialGraph:
@@ -218,7 +218,7 @@ class TestSocialGraph:
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "b_name")],
             from_=gt,
             order_by=OrderByClause(dialect, [Column(dialect, "b_name")]))
@@ -250,7 +250,7 @@ class TestSocialGraph:
         cols = ColumnsClause(dialect, GraphColumn("c", "name", "c_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "c_name")],
             from_=gt,
             where=WhereClause(
@@ -287,7 +287,7 @@ class TestSocialGraph:
         cols = ColumnsClause(dialect, GraphColumn("liker", "name", "liker_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "liker_name")],
             from_=gt,
             order_by=OrderByClause(dialect, [Column(dialect, "liker_name")]))
@@ -310,7 +310,7 @@ class TestSocialGraph:
                              GraphColumn("liker", "name", "liker_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[
                 Column(dialect, "author"),
                 FunctionCall(dialect, "COUNT", Column(dialect, "liker_name"), alias="like_count"),
@@ -349,8 +349,8 @@ class TestCommerceGraph:
                 dialect, "=", Column(dialect, "follower", "g"), Column(dialect, "name", "p")
             ))
 
-        query = QueryExpression(dialect,
-            select=[WildcardExpression(dialect)],
+        query = QueryStatement(dialect,
+            select=[Wildcard(dialect)],
             from_=join,
             order_by=OrderByClause(dialect, [Column(dialect, "follower", "g")]),
             limit_offset=LimitOffsetClause(dialect, limit=10))
@@ -379,7 +379,7 @@ class TestCommerceGraph:
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "b_name")],
             from_=gt,
             order_by=OrderByClause(dialect, [Column(dialect, "b_name")]))
@@ -400,7 +400,7 @@ class TestAsyncSocialGraph:
             pytest.skip("PGQ not supported")
 
         for t in ("likes", "posts", "follows", "people"):
-            await backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
         people_cols = [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -409,7 +409,7 @@ class TestAsyncSocialGraph:
             ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
             ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableExpression(dialect, Table(dialect, 'people'), people_cols).to_sql())
+        await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'people'), people_cols).to_sql())
 
         follows_cols = [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
@@ -422,30 +422,30 @@ class TestAsyncSocialGraph:
                                               foreign_key_reference=("people", ["id"]))]),
             ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableExpression(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
+        await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
 
         people_data = ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, "Alice"), Literal(dialect, "a@x.com"), Literal(dialect, "NYC")],
             [Literal(dialect, 2), Literal(dialect, "Bob"), Literal(dialect, "b@x.com"), Literal(dialect, "NYC")],
         ])
-        await backend.execute(*InsertExpression(dialect, Table(dialect, "people"), source=people_data).to_sql())
+        await backend.execute(*InsertStatement(dialect, Table(dialect, "people"), source=people_data).to_sql())
 
         follows_data = ValuesSource(dialect, [
             [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "2024-01-01")],
         ])
-        await backend.execute(*InsertExpression(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
+        await backend.execute(*InsertStatement(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
 
         vt = VertexTable(dialect, NodeTable(dialect, 'people'), labels=["person"])
         et = EdgeTable(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
                        references_source=("people", ["id"]),
                        references_destination=("people", ["id"]),
                        labels=["follows"])
-        create_expr = CreatePropertyGraphExpression(dialect, GRAPH_NAME, [vt], [et])
+        create_expr = CreatePropertyGraphStatement(dialect, GRAPH_NAME, [vt], [et])
         await backend.execute(*create_expr.to_sql())
         yield GRAPH_NAME
-        await backend.execute(*DropPropertyGraphExpression(dialect, GRAPH_NAME, if_exists=True).to_sql())
+        await backend.execute(*DropPropertyGraphStatement(dialect, GRAPH_NAME, if_exists=True).to_sql())
         for t in ("follows", "people"):
-            await backend.execute(*DropTableExpression(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+            await backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
     @pytest.mark.requires_protocol((GraphTableSupport, "supports_graph_table"))
     @pytest.mark.asyncio
@@ -468,7 +468,7 @@ class TestAsyncSocialGraph:
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "b_name")],
             from_=gt)
         sql, params = query.to_sql()
@@ -490,10 +490,10 @@ class TestPGQExplain:
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryExpression(dialect,
+        query = QueryStatement(dialect,
             select=[Column(dialect, "b_name")],
             from_=gt)
-        explain = ExplainExpression(dialect, statement=query,
+        explain = ExplainStatement(dialect, statement=query,
             options=ExplainOptions(costs=False))
         sql, params = explain.to_sql()
         rows = postgres_backend.fetch_all(sql, params)

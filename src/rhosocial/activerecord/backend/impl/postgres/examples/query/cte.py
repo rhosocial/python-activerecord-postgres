@@ -26,13 +26,13 @@ backend.connect()
 dialect = backend.dialect
 
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    QueryExpression,
-    CTEExpression,
-    WithQueryExpression,
+    DropTableStatement,
+    QueryStatement,
+    CTEClause,
+    WithStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -48,11 +48,11 @@ from rhosocial.activerecord.backend.schema import StatementType
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # Drop table first for clean setup
-drop = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
+drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'employees'),
     columns=[
@@ -68,7 +68,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'employees'),
     columns=['name', 'manager_id'],
@@ -88,10 +88,10 @@ backend.execute(sql, params)
 # ============================================================
 # CTE simplifies complex queries by defining temporary named result sets
 
-high_earners_cte = CTEExpression(
+high_earners_cte = CTEClause(
     dialect=dialect,
     name='high_earners',
-    query=QueryExpression(
+    query=QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name')],
         from_=Table(dialect, 'employees'),
@@ -99,10 +99,10 @@ high_earners_cte = CTEExpression(
     ),
 )
 
-cte_query = WithQueryExpression(
+cte_query = WithStatement(
     dialect=dialect,
     ctes=[high_earners_cte],
-    main_query=QueryExpression(
+    query=QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name')],
         from_=Table(dialect, 'high_earners'),
@@ -119,7 +119,7 @@ print(f"Basic CTE result: {result.data}")
 # Recursive CTE for hierarchical data (organizational chart)
 
 # Base case: top-level employees
-base_query = QueryExpression(
+base_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -131,17 +131,17 @@ base_query = QueryExpression(
     where=IsNullPredicate(dialect, Column(dialect, 'manager_id')),
 )
 
-org_cte = CTEExpression(
+org_cte = CTEClause(
     dialect=dialect,
     name='org_chart',
     query=base_query,
     columns=['id', 'name', 'manager_id', 'level'],
 )
 
-recursive_query = WithQueryExpression(
+recursive_query = WithStatement(
     dialect=dialect,
     ctes=[org_cte],
-    main_query=QueryExpression(
+    query=QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'manager_id')],
         from_=Table(dialect, 'org_chart'),
@@ -160,10 +160,10 @@ for row in result.data or []:
 # ============================================================
 # Control whether CTE is inlined or materialized
 
-materialized_cte = CTEExpression(
+materialized_cte = CTEClause(
     dialect=dialect,
     name='dept_stats',
-    query=QueryExpression(
+    query=QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
         from_=Table(dialect, 'employees'),
@@ -171,10 +171,10 @@ materialized_cte = CTEExpression(
     materialized=False,  # NOT MATERIALIZED - allows inlining
 )
 
-materialized_query = WithQueryExpression(
+materialized_query = WithStatement(
     dialect=dialect,
     ctes=[materialized_cte],
-    main_query=QueryExpression(
+    query=QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
         from_=Table(dialect, 'dept_stats'),
@@ -186,7 +186,7 @@ print(f"MATERIALIZED hint CTE SQL: {sql}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
+drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()
@@ -195,7 +195,7 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use CTEExpression to define CTEs
-# 2. Use WithQueryExpression to combine CTEs with a main query
+# 1. Use CTEClause to define CTEs
+# 2. Use WithStatement to combine CTEs with a main query
 # 3. Set recursive=True for recursive CTEs (hierarchical queries)
-# 4. PostgreSQL 12+ supports materialized hint (CTEExpression(materialized=False))
+# 4. PostgreSQL 12+ supports materialized hint (CTEClause(materialized=False))

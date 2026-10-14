@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-class ILIKEExpression(BaseExpression):
+class ILikePredicate(BaseExpression):
     """PostgreSQL ILIKE expression for case-insensitive pattern matching.
 
     Attributes:
@@ -18,7 +18,7 @@ class ILIKEExpression(BaseExpression):
         negate: If True, produces ``NOT ILIKE`` instead of ``ILIKE``.
 
     Example:
-        >>> expr = ILIKEExpression(dialect, column="name", pattern="%foo%")
+        >>> expr = ILikePredicate(dialect, column="name", pattern="%foo%")
         >>> sql, params = expr.to_sql()
         >>> sql
         '"name" ILIKE %s'
@@ -45,4 +45,4 @@ class ILIKEExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_ilike_expression"
+        return "format_ilike_predicate"

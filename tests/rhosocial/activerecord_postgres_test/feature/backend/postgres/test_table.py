@@ -5,7 +5,7 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
-    CreateTableExpression,
+    CreateTableStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.types import IntegerType
@@ -72,7 +72,7 @@ class TestPostgresTableMixinDirect:
 class TestPostgresTableDDLDeclarations:
     @staticmethod
     def _expression(dialect, table="child", *, inherits=None, tablespace=None):
-        return CreateTableExpression(
+        return CreateTableStatement(
             dialect,
             Table(dialect, table),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],

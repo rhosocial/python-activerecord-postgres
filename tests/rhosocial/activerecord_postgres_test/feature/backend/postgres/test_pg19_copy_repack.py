@@ -11,7 +11,7 @@ from rhosocial.activerecord.backend.errors import QueryError
 from rhosocial.activerecord.backend.expression import (
     Column,
     Literal,
-    QueryExpression,
+    QueryStatement,
     RawSQLExpression,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -133,7 +133,7 @@ def make_async_backend(cursor):
 
 
 def select_query(dialect):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[Column(dialect, "id")],
         from_=Table(dialect, "users"),

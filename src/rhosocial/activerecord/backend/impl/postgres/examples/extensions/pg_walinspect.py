@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -71,7 +71,7 @@ if installed:
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
     # Example 1: Get current WAL LSN position
-    current_lsn_query = QueryExpression(
+    current_lsn_query = QueryStatement(
         dialect=dialect,
         select=[dialect.parse_expression("pg_current_wal_lsn()").as_("current_lsn")],
     )
@@ -93,7 +93,7 @@ if installed:
             current_lsn,
             current_lsn,
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[wal_func.as_("wal_records")],
         )

@@ -32,9 +32,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -45,11 +45,11 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    CreateIndexExpression,
+    CreateIndexStatement,
 )
 from rhosocial.activerecord.backend.expression.core import (
     Literal,
@@ -57,13 +57,13 @@ from rhosocial.activerecord.backend.expression.core import (
     Subquery,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression import (
-    Column, QueryExpression,
+    Column, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -117,7 +117,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'locations'),
         columns=columns,
@@ -130,7 +130,7 @@ if installed:
 
     # Example 2: Insert spatial data (point)
     # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'locations'),
         columns=["name", "geom"],
@@ -187,7 +187,7 @@ if installed:
     # Build subqueries for each city's geom
     ny_geom = Subquery(
         dialect,
-        QueryExpression(
+        QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "geom")],
             from_=Table(dialect, "locations"),
@@ -201,7 +201,7 @@ if installed:
 
     la_geom = Subquery(
         dialect,
-        QueryExpression(
+        QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "geom")],
             from_=Table(dialect, "locations"),
@@ -213,7 +213,7 @@ if installed:
         ),
     )
 
-    distance_query = QueryExpression(
+    distance_query = QueryStatement(
         dialect=dialect,
         select=[
             FunctionCall(
@@ -231,7 +231,7 @@ if installed:
 
     # Example 4: Spatial query - ST_DWithin
     # Find locations within a bounding area
-    dwithin_query = QueryExpression(
+    dwithin_query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -263,7 +263,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 5: Create GIST spatial index
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_locations_geom'),
         table=Table(dialect, 'locations'),
@@ -284,7 +284,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

@@ -40,13 +40,13 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -87,7 +87,7 @@ if installed:
     # Example 1: Query pg_stat_statements view for top queries by total execution time
     # This requires superuser or pg_read_all_stats role
     try:
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 Column(dialect, "query"),
@@ -113,7 +113,7 @@ if installed:
     # Example 2: Reset statistics using pg_stat_statements_reset function
     try:
         reset_func = pg_stat_statements_reset(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[reset_func],
         )
@@ -138,7 +138,7 @@ if installed:
         ColumnDefinition(name="value", data_type="INTEGER"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'stats_demo'),
         columns=columns,
@@ -151,7 +151,7 @@ if installed:
 
     # Insert data
     rows = [[Literal(dialect, f"item{i}"), Literal(dialect, i * 10)] for i in range(5)]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'stats_demo'),
         columns=["name", "value"],
@@ -161,7 +161,7 @@ if installed:
     backend.execute(sql, params)
 
     # Run a query to generate a statistic entry
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "value")],
         from_=Table(dialect, "stats_demo"),
@@ -179,7 +179,7 @@ if installed:
 
     # Check statistics again
     try:
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[
                 Column(dialect, "query"),
@@ -195,7 +195,7 @@ if installed:
         print(f"Could not check statistics: {e}")
 
     # Cleanup demo table
-    drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'stats_demo'), if_exists=True)
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'stats_demo'), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 

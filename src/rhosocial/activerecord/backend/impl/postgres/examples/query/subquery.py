@@ -9,10 +9,10 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
+    DropTableStatement,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements import (
@@ -35,7 +35,7 @@ backend.connect()
 dialect = backend.dialect
 
 for table in ['employees', 'departments']:
-    drop_table = DropTableExpression(
+    drop_table = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -44,7 +44,7 @@ for table in ['employees', 'departments']:
     sql, params = drop_table.to_sql()
     backend.execute(sql, params)
 
-create_departments = CreateTableExpression(
+create_departments = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'departments'),
     columns=[
@@ -62,7 +62,7 @@ create_departments = CreateTableExpression(
 )
 backend.execute(*create_departments.to_sql())
 
-create_employees = CreateTableExpression(
+create_employees = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'employees'),
     columns=[
@@ -81,7 +81,7 @@ create_employees = CreateTableExpression(
 )
 backend.execute(*create_employees.to_sql())
 
-insert_departments = InsertExpression(
+insert_departments = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'departments'),
     columns=['name', 'budget'],
@@ -95,7 +95,7 @@ insert_departments = InsertExpression(
 )
 backend.execute(*insert_departments.to_sql())
 
-insert_employees = InsertExpression(
+insert_employees = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'employees'),
     columns=['name', 'salary', 'department_id'],
@@ -115,13 +115,13 @@ backend.execute(*insert_employees.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression, Column, WhereClause, Subquery,
+    QueryStatement, Column, WhereClause, Subquery,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-subquery_query = QueryExpression(
+subquery_query = QueryStatement(
     dialect=dialect,
     select=[FunctionCall(dialect, 'AVG', Column(dialect, 'salary'))],
     from_=Table(dialect, 'employees'),
@@ -129,7 +129,7 @@ subquery_query = QueryExpression(
 sql, params = subquery_query.to_sql()
 subquery = Subquery(dialect, sql, params)
 
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'name'),

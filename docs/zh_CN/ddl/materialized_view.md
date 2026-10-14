@@ -16,21 +16,21 @@
 | `PostgresAlterMaterializedViewExpression` | `ALTER MATERIALIZED VIEW` | `schema`、动作列表 |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`、`if_exists`、`cascade` |
 
-核心库通用表达式（`CreateMaterializedViewExpression`、
-`RefreshMaterializedViewExpression`、`DropMaterializedViewExpression`）仍可使用，
+核心库通用表达式（`CreateMaterializedViewStatement`、
+`RefreshMaterializedViewStatement`、`DropMaterializedViewStatement`）仍可使用，
 只是不携带 `schema` / `if_not_exists`。
 
 ## 创建物化视图
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression
+from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
 )
 
-summary = QueryExpression(
+summary = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, "product_id"),
@@ -204,7 +204,7 @@ info = backend.introspector.get_materialized_view_info("sales_summary")
 exists = backend.introspector.materialized_view_exists("sales_summary")
 ```
 
-每个 `ViewInfo` 携带：
+每个 `IntrospectionViewInfo` 携带：
 
 | 字段 | 含义 |
 |---|---|

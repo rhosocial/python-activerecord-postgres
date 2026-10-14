@@ -38,7 +38,7 @@ dialect = backend.dialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -90,7 +90,7 @@ if addr_installed:
         dialect,
         Literal(dialect, "123 Main St, Springfield, IL 62701"),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[std_func.as_("std_addr")],
     )
@@ -107,7 +107,7 @@ if addr_installed:
         dialect,
         Literal(dialect, "123 Main St, Springfield, IL 62701"),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[parse_func.as_("parsed_addr")],
     )

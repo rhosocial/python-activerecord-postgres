@@ -15,13 +15,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -65,7 +65,7 @@ def pgrouting_env(postgres_backend_single):
         ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
         ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_route_edges'),
         columns=columns,
@@ -77,7 +77,7 @@ def pgrouting_env(postgres_backend_single):
     # Setup: insert edge data for a simple graph (3 edges)
     # Graph: 1 --(cost=1)--> 2 --(cost=2)--> 3
     #             1 --(cost=4)--> 3
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_route_edges'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
@@ -114,7 +114,7 @@ def pgrouting_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_route_edges'),
         if_exists=True,
@@ -136,7 +136,7 @@ class TestPgroutingIntegration:
             Literal(dialect, 1),
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[dijkstra_func.as_("route")],
         )
@@ -157,7 +157,7 @@ class TestPgroutingIntegration:
             Literal(dialect, 1),
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[astar_func.as_("route")],
         )
@@ -194,7 +194,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
         ColumnDefinition(dialect, name="x2", data_type=FloatType(dialect=dialect)),
         ColumnDefinition(dialect, name="y2", data_type=FloatType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_route_edges_async'),
         columns=columns,
@@ -206,7 +206,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     # Setup: insert edge data for a simple graph (3 edges)
     # Graph: 1 --(cost=1)--> 2 --(cost=2)--> 3
     #             1 --(cost=4)--> 3
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_route_edges_async'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
@@ -243,7 +243,7 @@ async def async_pgrouting_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_route_edges_async'),
         if_exists=True,
@@ -266,7 +266,7 @@ class TestAsyncPgroutingIntegration:
             Literal(dialect, 1),
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[dijkstra_func.as_("route")],
         )
@@ -288,7 +288,7 @@ class TestAsyncPgroutingIntegration:
             Literal(dialect, 1),
             Literal(dialect, 3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[astar_func.as_("route")],
         )

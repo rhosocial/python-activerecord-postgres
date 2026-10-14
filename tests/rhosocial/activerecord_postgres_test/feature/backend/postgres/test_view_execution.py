@@ -10,10 +10,10 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect  # noqa: F401
 from rhosocial.activerecord.backend.expression import (
     Column, ColumnConstraint, ColumnConstraintType, ColumnDefinition,
-    CreateMaterializedViewExpression, CreateTableExpression, CreateViewExpression,
-    DropMaterializedViewExpression, DropTableExpression, DropViewExpression,
-    ForeignKeyConstraint, FunctionCall, InsertExpression, Literal,
-    QueryExpression, RefreshMaterializedViewExpression, TableConstraint,
+    CreateMaterializedViewStatement, CreateTableStatement, CreateViewStatement,
+    DropMaterializedViewStatement, DropTableStatement, DropViewStatement,
+    ForeignKeyConstraint, FunctionCall, InsertStatement, Literal,
+    QueryStatement, RefreshMaterializedViewStatement, TableConstraint,
     TableConstraintType, ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table, View
@@ -122,13 +122,13 @@ class TestPostgresViewExecution:
         """Test basic CREATE VIEW executes successfully."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, "users")
         )
 
-        create_view = CreateViewExpression(
+        create_view = CreateViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             query=query
@@ -157,14 +157,14 @@ class TestPostgresViewExecution:
         # Using RawSQLPredicate to inline the condition value
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users"),
             where=WhereClause(dialect, condition=RawSQLPredicate(dialect, '"status" = \'active\''))
         )
 
-        create_view = CreateViewExpression(
+        create_view = CreateViewStatement(
             dialect,
             view=View(dialect, 'active_users'),
             query=query
@@ -190,13 +190,13 @@ class TestPostgresViewExecution:
         """Test CREATE OR REPLACE VIEW."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, "users")
         )
 
-        create_view = CreateViewExpression(
+        create_view = CreateViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             query=query
@@ -207,13 +207,13 @@ class TestPostgresViewExecution:
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
         # Create again with OR REPLACE
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_view2 = CreateViewExpression(
+        create_view2 = CreateViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             query=query2,
@@ -229,13 +229,13 @@ class TestPostgresViewExecution:
         """Test DROP VIEW."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, "users")
         )
 
-        create_view = CreateViewExpression(
+        create_view = CreateViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             query=query
@@ -245,7 +245,7 @@ class TestPostgresViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        drop_view = DropViewExpression(
+        drop_view = DropViewStatement(
             dialect,
             view=View(dialect, 'user_view')
         )
@@ -259,7 +259,7 @@ class TestPostgresViewExecution:
         """Test DROP VIEW IF EXISTS."""
         dialect = postgres_view_backend.dialect
 
-        drop_view = DropViewExpression(
+        drop_view = DropViewStatement(
             dialect,
             view=View(dialect, 'nonexistent_view'),
             if_exists=True
@@ -274,13 +274,13 @@ class TestPostgresViewExecution:
         """Test DROP VIEW CASCADE."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_view = CreateViewExpression(
+        create_view = CreateViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             query=query
@@ -290,7 +290,7 @@ class TestPostgresViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        drop_view = DropViewExpression(
+        drop_view = DropViewStatement(
             dialect,
             view=View(dialect, 'user_view'),
             cascade=True
@@ -309,13 +309,13 @@ class TestPostgresMaterializedViewExecution:
         """Test basic CREATE MATERIALIZED VIEW executes successfully."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query
@@ -342,13 +342,13 @@ class TestPostgresMaterializedViewExecution:
         """Test CREATE MATERIALIZED VIEW WITH DATA."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query,
@@ -372,13 +372,13 @@ class TestPostgresMaterializedViewExecution:
         """Test CREATE MATERIALIZED VIEW WITH NO DATA."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query,
@@ -394,13 +394,13 @@ class TestPostgresMaterializedViewExecution:
         """Test DROP MATERIALIZED VIEW."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query
@@ -410,7 +410,7 @@ class TestPostgresMaterializedViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        drop_mv = DropMaterializedViewExpression(
+        drop_mv = DropMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv')
         )
@@ -424,7 +424,7 @@ class TestPostgresMaterializedViewExecution:
         """Test DROP MATERIALIZED VIEW IF EXISTS."""
         dialect = postgres_view_backend.dialect
 
-        drop_mv = DropMaterializedViewExpression(
+        drop_mv = DropMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'nonexistent_mv'),
             if_exists=True
@@ -439,13 +439,13 @@ class TestPostgresMaterializedViewExecution:
         """Test DROP MATERIALIZED VIEW CASCADE."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query
@@ -455,7 +455,7 @@ class TestPostgresMaterializedViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        drop_mv = DropMaterializedViewExpression(
+        drop_mv = DropMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             cascade=True
@@ -470,13 +470,13 @@ class TestPostgresMaterializedViewExecution:
         """Test REFRESH MATERIALIZED VIEW."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query
@@ -486,7 +486,7 @@ class TestPostgresMaterializedViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        refresh_mv = RefreshMaterializedViewExpression(
+        refresh_mv = RefreshMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv')
         )
@@ -500,13 +500,13 @@ class TestPostgresMaterializedViewExecution:
         """Test REFRESH MATERIALIZED VIEW CONCURRENTLY."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query
@@ -523,7 +523,7 @@ class TestPostgresMaterializedViewExecution:
             options=ExecutionOptions(stmt_type=StatementType.DDL)
         )
 
-        refresh_mv = RefreshMaterializedViewExpression(
+        refresh_mv = RefreshMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             concurrent=True
@@ -538,13 +538,13 @@ class TestPostgresMaterializedViewExecution:
         """Test REFRESH MATERIALIZED VIEW WITH DATA."""
         dialect = postgres_view_backend.dialect
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, "users")
         )
 
-        create_mv = CreateMaterializedViewExpression(
+        create_mv = CreateMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             query=query,
@@ -555,7 +555,7 @@ class TestPostgresMaterializedViewExecution:
         postgres_view_backend.execute(sql, params,
                                       options=ExecutionOptions(stmt_type=StatementType.DDL))
 
-        refresh_mv = RefreshMaterializedViewExpression(
+        refresh_mv = RefreshMaterializedViewStatement(
             dialect,
             view=MaterializedView(dialect, 'test_mv'),
             with_data=True

@@ -14,7 +14,7 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
+    CreateTableStatement, DropTableStatement, ColumnDefinition,
     ColumnConstraint, ColumnConstraintType, TableConstraint, TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import (
@@ -37,8 +37,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_users = DropTableExpression(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
-drop_orders = DropTableExpression(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
+drop_users = DropTableStatement(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
+drop_orders = DropTableStatement(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_users.to_sql()
 backend.execute(sql, params)
 sql, params = drop_orders.to_sql()
@@ -57,7 +57,7 @@ from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa
 builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 snapshot_before = builder.build(schema="public")
 
-users_table = CreateTableExpression(
+users_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'users'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
@@ -68,7 +68,7 @@ users_table = CreateTableExpression(
 sql, params = users_table.to_sql()
 backend.execute(sql, params)
 
-orders_table = CreateTableExpression(
+orders_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'orders'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
             constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),

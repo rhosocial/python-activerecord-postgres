@@ -9,7 +9,7 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-    ILIKEExpression,
+    ILikePredicate,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     EnumTypeNameExpression,
@@ -25,10 +25,10 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange impo
 
 
 class TestILIKEExpression:
-    """Tests for ILIKEExpression."""
+    """Tests for ILikePredicate."""
 
     def test_basic_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "name"),
             pattern="%foo%",
@@ -38,7 +38,7 @@ class TestILIKEExpression:
         assert params == ('%foo%',)
 
     def test_negated_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "name"),
             pattern="%bar%",
@@ -49,8 +49,8 @@ class TestILIKEExpression:
         assert params == ('%bar%',)
 
     def test_ilike_dispatches_to_postgres_format(self, postgres_dialect):
-        """Verify ILIKEExpression.to_sql() dispatches to format_ilike_expression."""
-        expr = ILIKEExpression(
+        """Verify ILikePredicate.to_sql() dispatches to format_ilike_predicate."""
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "col"),
             pattern="pat",
@@ -61,7 +61,7 @@ class TestILIKEExpression:
 
     def test_ilike_generates_native_ilike_not_lower(self, postgres_dialect):
         """Verify generated SQL uses native ILIKE, not LOWER() LIKE LOWER()."""
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "c"),
             pattern="%x%",

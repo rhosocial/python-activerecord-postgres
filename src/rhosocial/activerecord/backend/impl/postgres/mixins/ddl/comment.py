@@ -29,7 +29,7 @@ class PostgresCommentMixin:
         (clears the comment).
 
         Args:
-            expr: ``CommentOnExpression`` carrying ``object_type``, ``object``,
+            expr: ``CommentOnStatement`` carrying ``object_type``, ``object``,
                 ``comment`` and an optional ``column``.
 
         Returns:

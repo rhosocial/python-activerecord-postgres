@@ -140,14 +140,14 @@ sql, params = expr.to_sql()
 PostgreSQL supports copying table structure using the `LIKE` clause with fine-grained control over what gets copied via INCLUDING/EXCLUDING options.
 
 PostgreSQL renders the clause form `CREATE TABLE t (LIKE src [INCLUDING ...])`,
-modelled by `CreateTableLikeExpression`.
+modelled by `CreateTableLikeStatement`.
 
 ```python
-from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
+from rhosocial.activerecord.backend.expression import CreateTableLikeStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # Basic usage - copy table structure
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -155,7 +155,7 @@ expr = CreateTableLikeExpression(
 # Generates: CREATE TABLE "users_copy" (LIKE "users")
 
 # With INCLUDING options (dictionary format - recommended)
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -168,7 +168,7 @@ expr = CreateTableLikeExpression(
 #            INCLUDING CONSTRAINTS INCLUDING INDEXES EXCLUDING COMMENTS)
 
 # With schema-qualified source table
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table=('public', 'users'),
@@ -176,7 +176,7 @@ expr = CreateTableLikeExpression(
 # Generates: CREATE TABLE "users_copy" (LIKE "public"."users")
 
 # With TEMPORARY and IF NOT EXISTS
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="temp_users",
     like_table="users",
@@ -186,7 +186,7 @@ expr = CreateTableLikeExpression(
 # Generates: CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users" (LIKE "users")
 
 # Including everything
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -207,7 +207,7 @@ expr = CreateTableLikeExpression(
 - `ALL` - Copy everything
 
 **Important Notes:**
-- `CreateTableLikeExpression` carries only the target table and source `like_table`
+- `CreateTableLikeStatement` carries only the target table and source `like_table`
 - `like_options` accepts a dict (`including`/`excluding`), a list of feature
   strings (treated as `INCLUDING`), or a list of `(action, feature)` tuples
 - Only `temporary` and `if_not_exists` flags are considered

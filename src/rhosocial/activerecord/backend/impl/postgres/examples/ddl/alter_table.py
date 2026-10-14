@@ -11,10 +11,10 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
+    DropTableStatement,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -37,7 +37,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -46,7 +46,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -63,7 +63,7 @@ create_table = CreateTableExpression(
 )
 backend.execute(*create_table.to_sql())
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['name'],
@@ -78,7 +78,7 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    AlterTableExpression,
+    AlterTableStatement,
     ColumnDefinition,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
@@ -95,7 +95,7 @@ add_email_action = AddColumn(
     ),
 )
 
-add_email_expr = AlterTableExpression(
+add_email_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[add_email_action],
@@ -120,7 +120,7 @@ add_age_action = AddColumn(
     ),
 )
 
-add_age_expr = AlterTableExpression(
+add_age_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[add_age_action],
@@ -137,7 +137,7 @@ rename_action = RenameObject(
     new_name='full_name',
 )
 
-rename_expr = AlterTableExpression(
+rename_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[rename_action],
@@ -149,12 +149,12 @@ backend.execute(sql, params)
 print("Column renamed successfully")
 
 # Verify table structure
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-verify_expr = QueryExpression(
+verify_expr = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'column_name'),

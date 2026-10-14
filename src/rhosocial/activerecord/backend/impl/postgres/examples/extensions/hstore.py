@@ -6,9 +6,9 @@ This example demonstrates:
 1. Check if hstore extension is available
 2. Create extension using PostgresCreateExtensionExpression
 3. Create table with HSTORE column
-4. Insert hstore data using InsertExpression + ValuesSource
-5. Query hstore data using QueryExpression with hstore operators and functions
-6. Update hstore data using UpdateExpression
+4. Insert hstore data using InsertStatement + ValuesSource
+5. Query hstore data using QueryStatement with hstore operators and functions
+6. Update hstore data using UpdateStatement
 """
 
 # ============================================================
@@ -32,10 +32,10 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up using DropTableExpression
-from rhosocial.activerecord.backend.expression import DropTableExpression
+# Clean up using DropTableStatement
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -46,14 +46,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    InsertExpression,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
-    UpdateExpression,
+    QueryStatement,
+    UpdateStatement,
 )
 from rhosocial.activerecord.backend.expression import (
     Column, Literal, FunctionCall, Subquery,
@@ -110,7 +110,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'products'),
         columns=columns,
@@ -120,9 +120,9 @@ if installed:
     print(f"SQL: {sql}")
     backend.execute(sql, params)
 
-    # Example 2: Insert hstore data using InsertExpression + ValuesSource
+    # Example 2: Insert hstore data using InsertStatement + ValuesSource
     # Use Literal with .cast(PostgresHstoreType(self.dialect)) for type-safe hstore insertion
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'products'),
         columns=["name", "attributes"],
@@ -154,7 +154,7 @@ if installed:
 
     # Example 3: Get value by key using -> operator
     # attributes -> 'color' retrieves the value for key 'color'
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -175,7 +175,7 @@ if installed:
 
     # Example 4: Check if key exists using ? operator
     # attributes ? 'weight' checks whether the key 'weight' exists
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "attributes")],
         from_=Table(dialect, "products"),
@@ -194,7 +194,7 @@ if installed:
 
     # Example 5: Contains operator @>
     # attributes @> 'color=>silver' checks if hstore contains the given key-value pair
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "attributes")],
         from_=Table(dialect, "products"),
@@ -212,7 +212,7 @@ if installed:
 
     # Example 6: Concatenation operator ||
     # attributes || 'brand=>Acme' merges new key-value pairs into the hstore
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -232,7 +232,7 @@ if installed:
 
     # Example 7: Get all keys using akeys() function
     # akeys(attributes) returns all keys as an array
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -251,7 +251,7 @@ if installed:
 
     # Example 8: Get all values using avals() function
     # avals(attributes) returns all values as an array
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -270,7 +270,7 @@ if installed:
 
     # Example 9: Get keys as set using skeys() function
     # skeys(attributes) returns all keys as a set (one per row)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -289,7 +289,7 @@ if installed:
 
     # Example 10: Delete a key using delete() function
     # delete(attributes, 'weight') removes the key 'weight' from the hstore
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -308,10 +308,10 @@ if installed:
     result = backend.execute(sql, params, options=opts)
     print(f"Results: {result.data}")
 
-    # Example 11: Update hstore data using UpdateExpression
+    # Example 11: Update hstore data using UpdateStatement
     # Add/update a key using || operator in UPDATE
     dml_opts = ExecutionOptions(stmt_type=StatementType.DML)
-    update_expr = UpdateExpression(
+    update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'products'),
         assignments={
@@ -339,7 +339,7 @@ if installed:
     print(f"Updated rows: {result.affected_rows}")
 
     # Verify the update
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "name"),
@@ -371,7 +371,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

@@ -3,7 +3,7 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal, QueryExpression
+from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -38,7 +38,7 @@ def test_live_copy_round_trip_and_native_repack(postgres_backend):
         )
         assert copied == 2
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),
@@ -102,7 +102,7 @@ async def test_live_async_copy_round_trip_and_native_repack(async_postgres_backe
         )
         assert copied == 2
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),

@@ -9,7 +9,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     DropTypeSupport,
     TypeObjectSupport,
 )
-from rhosocial.activerecord.backend.expression.statements.ddl_type import DropTypeExpression
+from rhosocial.activerecord.backend.expression.statements.ddl_type import DropTypeStatement
 
 
 __all__ = ["PostgresTypeSupport"]
@@ -48,7 +48,7 @@ class PostgresTypeSupport(
 
     def format_drop_type_statement(
         self,
-        expr: Optional[Union[DropTypeExpression, str]] = None,
+        expr: Optional[Union[DropTypeStatement, str]] = None,
         schema_name: Optional[str] = None,
         if_exists: bool = False,
         cascade: bool = False,

@@ -5,7 +5,7 @@ btree_gist extension - B-tree equivalence for GiST indexes.
 This example demonstrates:
 1. Check if btree_gist extension is available
 2. CREATE EXTENSION and create table with timestamp column
-3. Create GiST index with btree_gist operator class using CreateIndexExpression
+3. Create GiST index with btree_gist operator class using CreateIndexStatement
 4. Query with range condition using ComparisonPredicate
 """
 
@@ -31,9 +31,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -45,14 +45,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
     ColumnConstraintType,
-    InsertExpression,
-    QueryExpression,
+    InsertStatement,
+    QueryStatement,
     Column,
-    CreateIndexExpression,
+    CreateIndexStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -95,7 +95,7 @@ if installed:
         ColumnDefinition(name="created_at", data_type="TIMESTAMP"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'events'),
         columns=columns,
@@ -113,7 +113,7 @@ if installed:
         [Literal(dialect, "Meetup"), Literal(dialect, "2024-06-10 09:00:00")],
         [Literal(dialect, "Hackathon"), Literal(dialect, "2024-09-05 16:45:00")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'events'),
         columns=["name", "created_at"],
@@ -145,7 +145,7 @@ if installed:
     # Example 4: Query with range condition using ComparisonPredicate
     # Find events after March 1, 2024
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "name"), Column(dialect, "created_at")],
         from_=Table(dialect, "events"),
@@ -169,7 +169,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'events'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

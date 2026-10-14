@@ -10,15 +10,15 @@ from rhosocial.activerecord.backend.dialect.mixins.ddl_domain import DomainMixin
 from rhosocial.activerecord.backend.expression.objects import Domain
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
-    AlterDomainExpression,
-    CreateDomainExpression,
+    AlterDomainStatement,
+    CreateDomainStatement,
     DomainAlterAction,
     DomainCheckConstraint,
     DomainNullability,
     DomainValueExpression,
     DropDomainCheckAction,
     DropDomainDefaultAction,
-    DropDomainExpression,
+    DropDomainStatement,
     DropDomainNotNullAction,
     RenameDomainAction,
     SetDomainDefaultAction,
@@ -141,7 +141,7 @@ class PostgresDomainMixin(DomainMixin):
 
     def format_create_domain_statement(
         self,
-        expr: CreateDomainExpression,
+        expr: CreateDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``CREATE DOMAIN``, with the PostgreSQL-only options.
 
@@ -151,7 +151,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"CreateDomainExpression.domain must be a Domain, "
+                f"CreateDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_create_domain():
@@ -209,7 +209,7 @@ class PostgresDomainMixin(DomainMixin):
 
     def format_alter_domain_statement(
         self,
-        expr: AlterDomainExpression,
+        expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``ALTER DOMAIN``.
 
@@ -218,7 +218,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"AlterDomainExpression.domain must be a Domain, "
+                f"AlterDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_alter_domain():
@@ -249,13 +249,13 @@ class PostgresDomainMixin(DomainMixin):
 
     def format_postgres_alter_domain_statement(
         self,
-        expr: AlterDomainExpression,
+        expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
         return self.format_alter_domain_statement(expr)
 
     def format_drop_domain_statement(
         self,
-        expr: DropDomainExpression,
+        expr: DropDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``DROP DOMAIN``, with the PostgreSQL-only options.
 
@@ -264,7 +264,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"DropDomainExpression.domain must be a Domain, "
+                f"DropDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_drop_domain():
