@@ -9,12 +9,23 @@ import pytest
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend  # noqa: F401
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect  # noqa: F401
 from rhosocial.activerecord.backend.expression import (
-    Column, ColumnConstraint, ColumnConstraintType, ColumnDefinition,
-    CreateMaterializedViewStatement, CreateTableStatement, CreateViewStatement,
-    DropMaterializedViewStatement, DropTableStatement, DropViewStatement,
-    ForeignKeyConstraint, FunctionCall, InsertStatement, Literal,
-    QueryStatement, RefreshMaterializedViewStatement, TableConstraint,
-    TableConstraintType, ValuesSource,
+    Column,
+    ColumnConstraint,
+    ColumnDefinition,
+    CreateMaterializedViewStatement,
+    CreateTableStatement,
+    CreateViewStatement,
+    DropMaterializedViewStatement,
+    DropTableStatement,
+    DropViewStatement,
+    ForeignKeyConstraint,
+    FunctionCall,
+    InsertStatement,
+    Literal,
+    QueryStatement,
+    RefreshMaterializedViewStatement,
+    TableConstraint,
+    ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table, View
 from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate, RawSQLExpression  # noqa: F401

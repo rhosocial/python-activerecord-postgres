@@ -26,6 +26,8 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     ValuesSource,
     Wildcard,
+    ColumnNotNullConstraint,
+    TablePrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import (
@@ -35,7 +37,6 @@ from rhosocial.activerecord.backend.expression.statements import (
     PartitionClause,
     PartitionStrategy,
     TableConstraint,
-    TableConstraintType,
     TruncateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -57,7 +58,7 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 
 
@@ -89,7 +90,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
                 "id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -97,7 +98,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
                 "created_at",
                 TimestampType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
@@ -235,7 +236,7 @@ def _create_production_parent_sql(dialect):
                 "id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -243,7 +244,7 @@ def _create_production_parent_sql(dialect):
                 "created_at",
                 TimestampType(precision=6, dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -251,7 +252,7 @@ def _create_production_parent_sql(dialect):
                 "tenant_id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -259,15 +260,12 @@ def _create_production_parent_sql(dialect):
                 "payload",
                 TextType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
         ],
         table_constraints=[
-            TableConstraint(
-                dialect, TableConstraintType.PRIMARY_KEY,
-                columns=["id", "created_at"],
-            ),
+            TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
         partition=PartitionClause(
             dialect=dialect,

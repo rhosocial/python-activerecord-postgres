@@ -19,13 +19,15 @@ from rhosocial.activerecord.backend.expression import (
     InsertStatement,
     ValuesSource,
     QueryStatement,
+    ColumnDefaultConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.uuid import uuid_default_generator
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -71,14 +73,11 @@ create_table = CreateTableStatement(
     table=Table(dialect, 'events'),
     columns=[
         ColumnDefinition('id', 'UUID', constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-            ColumnConstraint(
-                ColumnConstraintType.DEFAULT,
-                default_value=uuid_func,
-            ),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, uuid_func)),
         ]),
         ColumnDefinition('name', 'VARCHAR(200)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('payload', 'JSONB'),
     ],

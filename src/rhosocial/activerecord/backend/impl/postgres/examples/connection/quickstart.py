@@ -20,13 +20,14 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     ValuesSource,
     WhereClause,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
 )
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
@@ -68,13 +69,13 @@ def create_demo_tables():
                 'id',
                 'SERIAL',
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(
                 'name',
                 'VARCHAR(100)',
-                constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
             ),
             ColumnDefinition('status', 'VARCHAR(20)'),
         ],
@@ -90,13 +91,13 @@ def create_demo_tables():
                 'id',
                 'SERIAL',
                 constraints=[
-                    ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(
                 'message',
                 'VARCHAR(255)',
-                constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
             ),
         ],
         if_not_exists=True,

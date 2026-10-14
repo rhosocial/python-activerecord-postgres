@@ -50,9 +50,9 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     InsertStatement,
     QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -95,7 +95,7 @@ if installed:
         ColumnDefinition(
             name="id",
             data_type="SERIAL",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
         ),
         ColumnDefinition(name="month", data_type="TEXT"),
         ColumnDefinition(name="category", data_type="TEXT"),
@@ -140,7 +140,7 @@ if installed:
         ColumnDefinition(
             name="id",
             data_type="SERIAL",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
         ),
         ColumnDefinition(name="name", data_type="TEXT"),
         ColumnDefinition(name="parent_id", data_type="INT"),

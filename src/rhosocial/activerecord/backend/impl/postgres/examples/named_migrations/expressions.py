@@ -11,8 +11,8 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     DropTableStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import VarCharType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
@@ -41,7 +41,7 @@ def create_users_table(dialect):
                 dialect,
                 "id",
                 PostgresSerialType(dialect),
-                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
             ),
             ColumnDefinition(dialect, "name", _character_varying(dialect)),
             ColumnDefinition(dialect, "email", _character_varying(dialect)),
@@ -64,7 +64,7 @@ def create_posts_table(dialect):
                 dialect,
                 "id",
                 PostgresSerialType(dialect),
-                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
             ),
             ColumnDefinition(dialect, "title", _character_varying(dialect)),
             ColumnDefinition(dialect, "user_id", _character_varying(dialect)),
@@ -91,7 +91,7 @@ def create_custom_table(dialect, table_name: str = "custom_table"):
                 dialect,
                 "id",
                 PostgresSerialType(dialect),
-                constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
             ),
             ColumnDefinition(dialect, "value", _character_varying(dialect)),
         ],

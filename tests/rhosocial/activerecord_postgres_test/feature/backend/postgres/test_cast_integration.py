@@ -31,13 +31,13 @@ import pytest
 from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
     Literal,
     QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
@@ -378,8 +378,7 @@ class TestEveryTypeCanBeDeclared:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(
@@ -410,8 +409,7 @@ class TestInsertThroughACast:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(
@@ -486,8 +484,7 @@ class TestChainedCasts:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(

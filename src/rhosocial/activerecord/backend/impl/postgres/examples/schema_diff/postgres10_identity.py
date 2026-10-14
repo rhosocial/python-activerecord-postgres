@@ -22,8 +22,11 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement, DropTableStatement, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType,
@@ -55,7 +58,7 @@ backend.execute(sql, params)
 pg9_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'pg9_style'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
     ]
 )
@@ -71,7 +74,7 @@ try:
     pg10_table = CreateTableStatement(
         dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
             ColumnDefinition(dialect, "id", IntegerType(dialect),
-                constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)],
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())],
                 attributes=[IdentityAttribute(generation="ALWAYS")]),
             ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ]

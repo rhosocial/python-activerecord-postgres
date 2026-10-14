@@ -16,6 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     FunctionCall,
     Literal,
     RawSQLExpression,
+    ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -44,7 +45,7 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
@@ -260,7 +261,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
             ],
             partition=PartitionClause(
@@ -282,7 +283,7 @@ class TestPostgresPartitionedTableCreation:
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
-                ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -305,7 +306,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -328,7 +329,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -352,7 +353,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -403,7 +404,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PostgresPartitionClause(
@@ -449,12 +450,12 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
             ],

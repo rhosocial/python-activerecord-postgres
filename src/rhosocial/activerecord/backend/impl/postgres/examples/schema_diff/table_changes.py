@@ -14,8 +14,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement, DropTableStatement, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType, TableConstraint, TableConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    TableConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
+    TableForeignKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType, DecimalType,
@@ -60,9 +66,9 @@ snapshot_before = builder.build(schema="public")
 users_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'users'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.NOT_NULL)]),
+            constraints=[ColumnConstraint(branch=ColumnNotNullConstraint())]),
     ]
 )
 sql, params = users_table.to_sql()
@@ -71,17 +77,14 @@ backend.execute(sql, params)
 orders_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'orders'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
         ColumnDefinition(dialect, "amount", DecimalType(dialect, precision=10, scale=2)),
     ],
     table_constraints=[
         TableConstraint(
             dialect,
-            constraint_type=TableConstraintType.FOREIGN_KEY,
-            columns=["user_id"],
-            foreign_key_table=Table(dialect, "users"),
-            foreign_key_columns=["id"],
+            branch=TableForeignKeyConstraint(dialect, ["user_id"], (Table(dialect, "users"), ["id"])),
         )
     ]
 )

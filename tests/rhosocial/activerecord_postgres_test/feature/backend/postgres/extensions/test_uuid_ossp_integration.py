@@ -23,11 +23,12 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     DropTableStatement,
     InsertStatement,
     QueryStatement,
     Column,
+    ColumnDefaultConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -78,10 +79,10 @@ def uuid_ossp_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=UUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                     ColumnConstraint(
-                        dialect, ColumnConstraintType.DEFAULT,
-                        default_value=FunctionCall(dialect, "uuid_generate_v4"),
+                        dialect,
+                        branch=ColumnDefaultConstraint(dialect, FunctionCall(dialect, "uuid_generate_v4")),
                     ),
                 ],
             ),
@@ -114,7 +115,7 @@ def uuid_ossp_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=UUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),
@@ -283,10 +284,10 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=UUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                     ColumnConstraint(
-                        dialect, ColumnConstraintType.DEFAULT,
-                        default_value=FunctionCall(dialect, "uuid_generate_v4"),
+                        dialect,
+                        branch=ColumnDefaultConstraint(dialect, FunctionCall(dialect, "uuid_generate_v4")),
                     ),
                 ],
             ),
@@ -319,7 +320,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=UUIDType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="label", data_type=TextType(dialect=dialect)),

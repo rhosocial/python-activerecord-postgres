@@ -26,8 +26,8 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import (
+    AllColumnsWildcard,
     BaseExpression,
-    Wildcard,
 )
 from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
 from rhosocial.activerecord.backend.expression.query_parts import (
@@ -129,7 +129,7 @@ def vector_search(
     distance_expr = _METRIC_DISTANCE_FN[metric](dialect, vector_col, query_vector)
 
     if columns is None:
-        select: List[BaseExpression] = [Wildcard(dialect)]
+        select: List[BaseExpression] = [AllColumnsWildcard(dialect)]
     else:
         select = [
             Column(dialect, c) if isinstance(c, str) else c for c in columns

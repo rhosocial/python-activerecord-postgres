@@ -140,6 +140,7 @@ from rhosocial.activerecord.backend.expression.objects import (
 from rhosocial.activerecord.backend.expression.predicates import (
     ComparisonPredicate,
     ILikePredicate as CoreILIKEExpression,
+    LikePredicate,
 )
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.serialization import (
@@ -170,12 +171,14 @@ from rhosocial.activerecord.backend.expression.statements.ddl_partition import (
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
     ForeignKeyConstraint,
     ReferencesClause,
+    TableCheckConstraint,
     TableConstraint,
-    TableConstraintType,
+    ColumnNotNullConstraint,
+    TableExcludeConstraint,
+    TablePrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
     CreateTriggerStatement,
@@ -217,6 +220,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.domain import (
     PostgresAlterDomainExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
+    PostgresExcludeBranch,
     PostgresExcludeConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
@@ -386,9 +390,7 @@ def _integer_column(dialect, name="col"):
 
 def _primary_key_constraint(dialect):
     """A table-level PRIMARY KEY, shared by three guesses that need one."""
-    return TableConstraint(
-        dialect, TableConstraintType.PRIMARY_KEY, name="c", columns=["a"]
-    )
+    return TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["a"]), name="c")
 
 
 def _domain_check(dialect):
@@ -412,12 +414,11 @@ def _merge_action(dialect):
 
 
 def _alter_constraint(dialect):
-    """An ALTER CONSTRAINT action carrying the one required enum member.
+    """An ALTER CONSTRAINT action carrying the one kind it accepts.
 
-    ``constraint_type`` is typed ``ColumnConstraintType | TableConstraintType |
-    str``, so the introspective constructor cannot know which member is legal --
-    and only CHECK and FOREIGN KEY are accepted for this statement, so most
-    guesses are refused by name. The enforcement keyword is mandatory in the
+    ``constraint_kind`` names the **branch** the keyword rides on -- a branch
+    class or its spelling -- and only CHECK and FOREIGN KEY are legal here, so
+    most guesses are refused by name. The enforcement keyword is mandatory in the
     action's grammar, so the pair is set explicitly (``enforced=True``) as well.
     PostgreSQL's own four subclasses and core's three share this shape, so one
     constructor is registered under each name: ``make_instance`` picks by
@@ -428,7 +429,7 @@ def _alter_constraint(dialect):
         dialect,
         constraint_name="c",
         name="c",
-        constraint_type=TableConstraintType.CHECK,
+        constraint_kind=TableCheckConstraint,
         enforced=True,
     )
 
@@ -444,7 +445,7 @@ def _validate_constraint(dialect):
     )
 
 
-#: The ``constraint_type`` family: PostgreSQL's four ALTER CONSTRAINT classes and
+#: The ``constraint_kind`` family: PostgreSQL's four ALTER CONSTRAINT classes and
 #: core's three. All seven need ``_alter_constraint``.
 ALTER_CONSTRAINT_SUFFIXES = (
     "ddl.constraint.PostgresAlterConstraint",
@@ -500,7 +501,7 @@ def register_specials():
     )
     register_special_constructor(
         "statements.ddl_table.ColumnConstraint",
-        lambda d: ColumnConstraint(d, ColumnConstraintType.NOT_NULL, name="c"),
+        lambda d: ColumnConstraint(d, branch=ColumnNotNullConstraint(d), name="c"),
     )
     register_special_constructor(
         "statements.ddl_table.TableConstraint",
@@ -555,8 +556,8 @@ def register_specials():
     )
 
     # -- the constraint families --------------------------------------------
-    # ``constraint_type`` is a union of an enum class and ``str``, so the guess
-    # cannot know which member is legal; the VALIDATE family needs only a name.
+    # ``constraint_kind`` is a union of a branch class and ``str``, so the guess
+    # cannot know which one is legal; the VALIDATE family needs only a name.
     for suffix in ALTER_CONSTRAINT_SUFFIXES:
         register_special_constructor(suffix, lambda d: _alter_constraint(d))
     for suffix in VALIDATE_CONSTRAINT_SUFFIXES:
@@ -624,6 +625,16 @@ def register_specials():
     register_special_constructor(
         "ddl.exclude_constraint.PostgresExcludeConstraint",
         lambda d: PostgresExcludeConstraint(d, name="ex", elements=[(Column(d, "a"), "=")]),
+    )
+    # The EXCLUDE *branches* need the same non-empty member list the sugar does,
+    # and there are two of them: core's and PostgreSQL's.
+    register_special_constructor(
+        "ddl_table.TableExcludeConstraint",
+        lambda d: TableExcludeConstraint(d, ["a"], "="),
+    )
+    register_special_constructor(
+        "ddl.exclude_constraint.PostgresExcludeBranch",
+        lambda d: PostgresExcludeBranch(d, [(Column(d, "a"), "=")]),
     )
     register_special_constructor(
         "ddl.pg_partman.PostgresPgPartmanUpdateConfigExpression",
@@ -777,6 +788,12 @@ def register_specials():
     register_special_constructor(
         "ilike.ILikePredicate",
         lambda d: PostgresILIKEExpression(d, Column(d, "a"), "x%"),
+    )
+    # LIKE carries the operator as a parameter, so the guess's ``"x"`` would
+    # become the operator rather than the operand.
+    register_special_constructor(
+        "predicates.LikePredicate",
+        lambda d: LikePredicate(d, "LIKE", Column(d, "a"), Literal(d, "x%", inline_literals=True)),
     )
 
     # -- COLLATE needs a collation PostgreSQL actually has -------------------
@@ -1092,7 +1109,21 @@ LEGITIMATE_NON_RENDERS = {
         NotImplementedError,
         _NO_FORMATTER,
     ),
-    "rhosocial.activerecord.backend.expression.datetime._TemporalValueExpression": (
+    "rhosocial.activerecord.backend.expression.datetime._TemporalValue": (
+        NotImplementedError,
+        _NO_FORMATTER,
+    ),
+    "rhosocial.activerecord.backend.expression.statements.ddl_table.ColumnClause": (
+        NotImplementedError,
+        _NO_FORMATTER,
+    ),
+    "rhosocial.activerecord.backend.expression.statements.ddl_table."
+    "ColumnConstraintBranch": (
+        NotImplementedError,
+        _NO_FORMATTER,
+    ),
+    "rhosocial.activerecord.backend.expression.statements.ddl_table."
+    "TableConstraintBranch": (
         NotImplementedError,
         _NO_FORMATTER,
     ),

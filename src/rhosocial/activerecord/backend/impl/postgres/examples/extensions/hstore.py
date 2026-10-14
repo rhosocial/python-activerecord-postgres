@@ -49,11 +49,12 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     InsertStatement,
     ValuesSource,
     QueryStatement,
     UpdateStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression import (
     Column, Literal, FunctionCall, Subquery,
@@ -97,12 +98,12 @@ if installed:
         ColumnDefinition(
             name="id",
             data_type="SERIAL",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
         ),
         ColumnDefinition(
             name="name",
             data_type="VARCHAR(100)",
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
         ),
         ColumnDefinition(
             name="attributes",

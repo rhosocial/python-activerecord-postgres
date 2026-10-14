@@ -1,11 +1,19 @@
 # src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/exclude_constraint.py
 """PostgreSQL EXCLUDE constraint definition.
 
-PostgreSQL adds the ``EXCLUDE`` table constraint with no generic equivalent.
-The excluded elements (expression/operator pairs), the index access method and
-the optional partial predicate live on ``PostgresExcludeConstraint`` (deriving
-the generic ``TableConstraint``) and are rendered by the PostgreSQL
-``_format_exclude_constraint``.
+PostgreSQL's ``EXCLUDE`` table constraint has no generic equivalent, and its
+grammar is richer than the core branch's three fields: the excluded elements
+are ``(expression, operator)`` pairs rather than one shared operator over a
+column list, and the whole thing may carry a partial-exclusion predicate.
+
+So the branch is :class:`PostgresExcludeBranch` -- core's
+:class:`TableExcludeConstraint` with those two PostgreSQL additions -- and
+:class:`PostgresExcludeConstraint` is the production-level sugar that puts
+``CONSTRAINT <name>`` and the traits where the grammar puts them. It mirrors
+core's own ``ForeignKeyConstraint``, which is sugar over
+``TableForeignKeyConstraint`` in exactly the same way, so callers keep writing
+``PostgresExcludeConstraint(dialect, name=..., elements=[...])`` instead of
+assembling the production themselves.
 """
 
 from typing import Any, List, Optional, Tuple, TYPE_CHECKING
@@ -13,25 +21,56 @@ from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import SQLPredicate
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     TableConstraint,
-    TableConstraintType,
+    TableExcludeConstraint,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-class PostgresExcludeConstraint(TableConstraint):
-    """A PostgreSQL EXCLUDE constraint extending the generic one.
+class PostgresExcludeBranch(TableExcludeConstraint):
+    """The EXCLUDE branch as PostgreSQL spells it.
 
     ``elements`` is a list of ``(expression, operator)`` pairs where the
     expression is either a column name (``str``) or a ``BaseExpression``;
-    ``using`` selects the index access method (default ``gist``) and ``where``
-    is an optional partial-exclusion predicate.
+    ``using`` is the index access method and ``where`` the optional
+    partial-exclusion predicate. ``columns`` and ``operator`` are still filled
+    in from the first element so the inherited accessors keep answering.
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        elements: Optional[List[Tuple[Any, str]]] = None,
+        *,
+        using: str = "gist",
+        where: Optional[SQLPredicate] = None,
+    ):
+        elements = list(elements or [])
+        columns = [element[0] for element in elements if isinstance(element[0], str)]
+        operator = elements[0][1] if elements else "="
+        super().__init__(dialect, columns, operator, using or None)
+        self.elements = elements
+        self.using = using
+        self.where = where
+
+
+class PostgresExcludeConstraint(TableConstraint):
+    """A PostgreSQL EXCLUDE constraint: the production plus PostgreSQL's branch.
+
+    ``name`` and the two-spelling traits are the production's, as the grammar
+    has it; ``elements`` / ``using`` / ``where`` are the branch's, and are
+    exposed here as views rather than stored twice.
 
     The deferrability and enforcement options follow the round's two-parameter
     shape (``deferrable`` / ``not_deferrable``, ``initially_deferred`` /
     ``initially_immediate``, ``enforced`` / ``not_enforced``); setting both of a
-    pair raises ``ValueError`` at construction through the generic base.
+    pair raises ``ValueError`` at construction through the generic base. What
+    the EXCLUDE branch cannot carry is refused there too: it is neither an
+    ENFORCABLE nor a DEFERRABLE branch in SQL:2016's list, so
+    ``PostgresExcludeConstraint(dialect, elements=[...], enforced=True)`` is a
+    ``ValueError`` at construction rather than a clause the server would answer
+    with ``0A000`` at execution time.
     """
 
     def __init__(
@@ -47,21 +86,29 @@ class PostgresExcludeConstraint(TableConstraint):
         initially_deferred: bool = False,
         initially_immediate: bool = False,
         validation: Any = None,
-        enforced: bool = False,
-        not_enforced: bool = False,
     ):
         super().__init__(
             dialect,
-            TableConstraintType.EXCLUDE,
+            branch=PostgresExcludeBranch(dialect, elements, using=using, where=where),
             name=name,
             deferrable=deferrable,
             not_deferrable=not_deferrable,
             initially_deferred=initially_deferred,
             initially_immediate=initially_immediate,
             validation=validation,
-            enforced=enforced,
-            not_enforced=not_enforced,
         )
-        self.elements = elements or []
-        self.using = using
-        self.where = where
+
+    @property
+    def elements(self) -> List[Tuple[Any, str]]:
+        """The ``(expression, operator)`` pairs, as the branch records them."""
+        return self.branch.elements
+
+    @property
+    def using(self) -> str:
+        """The index access method, as the branch records it."""
+        return self.branch.using
+
+    @property
+    def where(self) -> Optional[SQLPredicate]:
+        """The partial-exclusion predicate, as the branch records it."""
+        return self.branch.where

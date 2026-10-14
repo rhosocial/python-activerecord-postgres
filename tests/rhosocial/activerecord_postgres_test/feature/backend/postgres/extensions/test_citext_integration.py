@@ -25,11 +25,12 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     DropTableStatement,
     InsertStatement,
     QueryStatement,
     Column,
+    ColumnPrimaryKeyConstraint,
+    ColumnUniqueConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -57,7 +58,7 @@ def _setup_citext_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
@@ -91,14 +92,14 @@ def _setup_citext_unique_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="email",
             data_type=PostgresCitextType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.UNIQUE),
+                ColumnConstraint(dialect, branch=ColumnUniqueConstraint(dialect)),
             ],
         ),
     ]
@@ -131,7 +132,7 @@ def _setup_citext_like_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
@@ -168,7 +169,7 @@ def _setup_citext_users_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
@@ -202,7 +203,7 @@ def _setup_citext_roles_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
@@ -248,7 +249,7 @@ async def _async_setup_citext_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
@@ -282,14 +283,14 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="email",
             data_type=PostgresCitextType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.UNIQUE),
+                ColumnConstraint(dialect, branch=ColumnUniqueConstraint(dialect)),
             ],
         ),
     ]
@@ -322,7 +323,7 @@ async def _async_setup_citext_like_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=PostgresCitextType(dialect=dialect)),
@@ -359,7 +360,7 @@ async def _async_setup_citext_users_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),
@@ -393,7 +394,7 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="username", data_type=PostgresCitextType(dialect=dialect)),

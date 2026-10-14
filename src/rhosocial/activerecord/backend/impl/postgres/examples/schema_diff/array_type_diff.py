@@ -19,8 +19,11 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement, DropTableStatement, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, ArrayType,
@@ -52,7 +55,7 @@ backend.execute(sql, params)
 scores_v1_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'scores_v1'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=1)),
     ]
 )
@@ -63,7 +66,7 @@ backend.execute(sql, params)
 scores_v2_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'scores_v2'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "values", ArrayType(dialect, element_type=IntegerType(dialect), dimensions=2)),
     ]
 )

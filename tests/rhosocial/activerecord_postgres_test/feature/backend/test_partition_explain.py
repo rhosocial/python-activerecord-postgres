@@ -13,7 +13,6 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     ComparisonPredicate,
     CreateTableStatement,
     DropTableStatement,
@@ -23,6 +22,8 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     ValuesSource,
     Wildcard,
+    ColumnNotNullConstraint,
+    TablePrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
@@ -32,7 +33,6 @@ from rhosocial.activerecord.backend.expression.statements import (
     PartitionClause,
     PartitionStrategy,
     TableConstraint,
-    TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import BigIntType, TextType, TimestampType
 from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
@@ -71,18 +71,15 @@ def _create_parent_table_expression(dialect):
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
         table_constraints=[
-            TableConstraint(
-                dialect, TableConstraintType.PRIMARY_KEY,
-                columns=["id", "created_at"],
-            ),
+            TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
         partition=PartitionClause(
             dialect=dialect,

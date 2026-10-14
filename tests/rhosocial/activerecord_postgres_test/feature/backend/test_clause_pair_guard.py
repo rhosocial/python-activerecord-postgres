@@ -69,12 +69,14 @@ from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraint,
-    ColumnConstraintType,
     CreateTableAsStatement,
     DropTableStatement,
     IdentityClause,
     TableConstraint,
-    TableConstraintType,
+    ColumnCheckConstraint,
+    ColumnForeignKeyConstraint,
+    TableCheckConstraint,
+    TableForeignKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
     TruncateStatement,
@@ -111,6 +113,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
 )
 
 PG16 = (16, 0, 0)
+PG18 = (18, 0, 0)
 PG19 = (19, 0, 0)
 
 
@@ -127,15 +130,7 @@ def _query(d):
 
 
 def _fk(d, **kw):
-    return TableConstraint(
-        d,
-        TableConstraintType.FOREIGN_KEY,
-        name="fk",
-        columns=["a"],
-        foreign_key_table=_table(d, "t2"),
-        foreign_key_columns=["b"],
-        **kw,
-    )
+    return TableConstraint(d, branch=TableForeignKeyConstraint(d, ["a"], (_table(d, "t2"), ["b"])), name="fk", **kw)
 
 
 def _check(d, **kw):
@@ -144,22 +139,15 @@ def _check(d, **kw):
     )
 
     return TableConstraint(
-        d,
-        TableConstraintType.CHECK,
-        name="ck",
-        check_condition=ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b")),
-        **kw,
-    )
+               d,
+               branch=TableCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
 
 
 def _column_fk(d, **kw):
-    return ColumnConstraint(
-        d,
-        ColumnConstraintType.FOREIGN_KEY,
-        name="fk",
-        foreign_key_reference=(_table(d, "t2"), ["b"]),
-        **kw,
-    )
+    return ColumnConstraint(d, branch=ColumnForeignKeyConstraint(d, (_table(d, "t2"), ["b"])), name="fk", **kw)
 
 
 def _column_check(d, **kw):
@@ -168,12 +156,11 @@ def _column_check(d, **kw):
     )
 
     return ColumnConstraint(
-        d,
-        ColumnConstraintType.CHECK,
-        name="ck",
-        check_condition=ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b")),
-        **kw,
-    )
+               d,
+               branch=ColumnCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
 
 
 def _exclude(d, **kw):
@@ -434,31 +421,6 @@ PAIR_CASES = (
         r"INITIALLY IMMEDIATE\b",
     ),
     PairCase(
-        "ColumnConstraint.enforced",
-        _column_check,
-        "enforced",
-        "not_enforced",
-        r"(?<!NOT )ENFORCED\b",
-        r"NOT ENFORCED\b",
-        version=PG19,
-    ),
-    PairCase(
-        "PostgresExcludeConstraint.deferrable",
-        _exclude,
-        "deferrable",
-        "not_deferrable",
-        r"(?<!NOT )DEFERRABLE\b",
-        r"NOT DEFERRABLE\b",
-    ),
-    PairCase(
-        "PostgresExcludeConstraint.initially_deferred",
-        _exclude,
-        "initially_deferred",
-        "initially_immediate",
-        r"INITIALLY DEFERRED\b",
-        r"INITIALLY IMMEDIATE\b",
-    ),
-    PairCase(
         "SetOperationStatement.all_",
         lambda d, **kw: SetOperationStatement(
             d,
@@ -514,7 +476,7 @@ PAIR_CASES = (
     PairCase(
         "AlterConstraint.enforced",
         lambda d, **kw: AlterConstraint(
-            d, "c", constraint_type=TableConstraintType.CHECK, **kw
+            d, "c", constraint_kind=TableCheckConstraint, **kw
         ),
         "enforced",
         "not_enforced",
@@ -601,6 +563,68 @@ class TestFourStatesArePairwiseDistinguishable:
             case.render(**{case.a: case.a_value, case.b: case.b_value})
 
 
+class TestColumnEnforcementTraitIsRefusedAtEveryVersion:
+    """``[NOT] ENFORCED`` has no column-level form on PostgreSQL at all.
+
+    Measured on all three instances: at column level the clause is a parse
+    error for every kind -- ``42601: misplaced NOT ENFORCED clause`` on 18 and
+    19, and ``42601: syntax error at or near "ENFORCED"`` on 17, where it is
+    not in the grammar at all.  So neither spelling of the pair can be
+    rendered, at any version, for any branch: there is no pair to distinguish
+    and the answer is a refusal that names the clause.
+    """
+
+    @pytest.mark.parametrize(
+        "version", [PG16, PG18, PG19], ids=["pg16", "pg18", "pg19"]
+    )
+    @pytest.mark.parametrize(
+        "kwargs", [{"enforced": True}, {"not_enforced": True}], ids=["enforced", "not_enforced"]
+    )
+    def test_both_spellings_are_refused(self, version, kwargs):
+        with pytest.raises(
+            UnsupportedFeatureError, match="CHECK NOT ENFORCED on a column constraint"
+        ):
+            _column_check(_dialect(version), **kwargs).to_sql()
+
+
+class TestExcludeConstraintTraitsAreRefusedAtConstruction:
+    """EXCLUDE carries neither the deferral nor the enforcement trait.
+
+    PostgreSQL 19beta4 accepts ``EXCLUDE ... DEFERRABLE``
+    (:meth:`supports_deferrable_exclude_constraint` records the measurement)
+    and refuses ``NOT ENFORCED`` with ``0A000: EXCLUDE constraints cannot be
+    marked NOT ENFORCED``.  The core branch whitelist -- an expression-layer
+    contract a backend does not get to widen -- says the same thing from the
+    other end: ``DEFERRABLE``/``INITIALLY`` ride PRIMARY KEY, UNIQUE and
+    FOREIGN KEY, and ``ENFORCED`` rides those plus CHECK.  EXCLUDE is in
+    neither list, so the request cannot be written at all and is a
+    ``ValueError`` at construction rather than SQL the server would answer at
+    execution time.  These two cases are therefore not pair guards -- there is
+    no pair to distinguish, because neither spelling is reachable.
+    """
+
+    @pytest.mark.parametrize(
+        "kwargs,message",
+        [
+            ({"deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"not_deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_deferred": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_immediate": True}, "DEFERRABLE / INITIALLY cannot ride"),
+        ],
+        ids=["deferrable", "not_deferrable", "initially_deferred", "initially_immediate"],
+    )
+    def test_deferral_trait_is_refused(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            _exclude(_dialect(), **kwargs)
+
+    def test_enforcement_trait_is_not_even_a_parameter(self):
+        """``enforced=`` is a TypeError, not a silently dropped keyword."""
+        with pytest.raises(TypeError):
+            PostgresExcludeConstraint(
+                _dialect(), elements=[("range", "&&")], enforced=True
+            )
+
+
 class TestRefusedSpellingsFailClosed:
     """Spellings PostgreSQL cannot express refuse by name, never drop."""
 
@@ -677,9 +701,6 @@ class TestGuardIsNotVacuous:
             "TableConstraint.enforced",
             "ColumnConstraint.deferrable",
             "ColumnConstraint.initially_deferred",
-            "ColumnConstraint.enforced",
-            "PostgresExcludeConstraint.deferrable",
-            "PostgresExcludeConstraint.initially_deferred",
             "SetOperationStatement.all_",
             "BeginTransactionStatement.deferrable",
             "BeginTransactionStatement.wait",

@@ -28,13 +28,12 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     Column,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    Literal,
     QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
@@ -106,7 +105,7 @@ def make_table(backend, table, columns):
             ColumnDefinition(
                 dialect, name="id", data_type=PostgresSerialType(dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)],
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
             ),
         ] + [
             ColumnDefinition(dialect, name=name, data_type=data_type)

@@ -16,8 +16,11 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement, DropTableStatement, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     VarCharType, ArrayType, TextType,
@@ -48,7 +51,7 @@ backend.execute(sql, params)
 demo_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'demo'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=200)),
         ColumnDefinition(dialect, "tags", ArrayType(dialect, element_type=TextType(dialect), dimensions=1)),
     ]

@@ -16,7 +16,6 @@ from typing import Iterable, Optional, Tuple, Union
 from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
     CreateTableStatement,
     DropTableStatement,
@@ -39,6 +38,8 @@ from rhosocial.activerecord.backend.expression import (
     xmlroot,
     xmlserialize,
     xmltable,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
@@ -252,12 +253,12 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
                 ColumnDefinition(
                     "id",
                     "INTEGER",
-                    [ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+                    [ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
                 ),
                 ColumnDefinition(
                     "payload",
                     "XML",
-                    [ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    [ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
             ],
         ),

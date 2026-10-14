@@ -12,8 +12,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F401
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    ColumnConstraint,
-    ColumnConstraintType,
+    ColumnDefaultConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresExcludeConstraint,
@@ -72,14 +71,15 @@ def test_postgres_column_definition_rejects_string_data_type(dialect):
 
 
 def test_postgres_format_default_constraint_string_escaping(dialect):
-    """Test DEFAULT constraint string is escaped."""
-    constraint = ColumnConstraint(
-        dialect,
-        constraint_type=ColumnConstraintType.DEFAULT,
-        default_value="test's value",
-    )
+    """Test DEFAULT constraint string is escaped.
 
-    sql, params = dialect.format_default_constraint(constraint)
+    The formatter named here is the *branch* formatter: under core's two-level
+    node the value rides on ``ColumnDefaultConstraint`` and the production
+    (``CONSTRAINT <name>`` plus the traits) is a separate level.
+    """
+    branch = ColumnDefaultConstraint(dialect, "test's value")
+
+    sql, params = dialect.format_column_default_constraint(branch)
     assert "test''s value" in sql
     assert "'; DROP" not in sql
 
@@ -112,7 +112,7 @@ def test_exclude_constraint_valid_using_methods(dialect):
         using="gist",
     )
 
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
     assert "EXCLUDE USING gist" in sql
 
 
@@ -132,7 +132,7 @@ def test_exclude_constraint_valid_operators(dialect):
         elements=[(elem, op)],
     )
 
-        sql, params = dialect._format_exclude_constraint(constraint)
+        sql, params = dialect.format_table_exclude_constraint(constraint.branch)
         assert f"WITH {op}" in sql
 
 
@@ -143,7 +143,7 @@ def test_exclude_constraint_rejects_gin(dialect):
         using="gin",
     )
     with pytest.raises(ValueError, match="Invalid index access method"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_table_exclude_constraint(constraint.branch)
 
 
 def test_exclude_constraint_accepts_symbol_operator(dialect):
@@ -151,7 +151,7 @@ def test_exclude_constraint_accepts_symbol_operator(dialect):
         dialect,
         elements=[("box", "|>>")],
     )
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
     assert 'WITH |>>' in sql
     assert params == ()
 
@@ -166,7 +166,7 @@ def test_exclude_constraint_rejects_invalid_using(dialect):
     )
 
     with pytest.raises(ValueError, match="Invalid index access method"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_table_exclude_constraint(constraint.branch)
 
 
 def test_exclude_constraint_rejects_invalid_operator(dialect):
@@ -178,7 +178,7 @@ def test_exclude_constraint_rejects_invalid_operator(dialect):
     )
 
     with pytest.raises(ValueError, match="Invalid exclude operator"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_table_exclude_constraint(constraint.branch)
 
 
 def test_exclude_constraint_sql_injection_prevention(dialect):
@@ -190,7 +190,7 @@ def test_exclude_constraint_sql_injection_prevention(dialect):
         using="gist",
     )
 
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
 
     assert "; DROP" not in sql
     assert "--" not in sql
@@ -200,7 +200,7 @@ def test_exclude_constraint_sql_injection_prevention(dialect):
 def test_exclude_constraint_rejects_empty_elements(dialect):
     constraint = PostgresExcludeConstraint(dialect, name="empty_exclude")
     with pytest.raises(ValueError, match="at least one element"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_table_exclude_constraint(constraint.branch)
 
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
@@ -216,7 +216,7 @@ def test_exclude_constraint_formats_expression_and_where(dialect):
         where=where,
     )
 
-    sql, params = dialect._format_exclude_constraint(constraint)
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
 
     assert sql == 'EXCLUDE USING gist ("range" WITH &&) WHERE ("active" = TRUE)'
     assert params == ()
@@ -229,7 +229,7 @@ def test_exclude_constraint_rejects_raw_where(dialect):
         where="active = TRUE; DROP TABLE people",
     )
     with pytest.raises(TypeError, match="where must be a SQL expression"):
-        dialect._format_exclude_constraint(constraint)
+        dialect.format_table_exclude_constraint(constraint.branch)
 
 
 class TestPostgresEnumSecurity:

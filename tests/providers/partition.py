@@ -15,6 +15,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     PartitionClause,
     PartitionStrategy,
     TruncateStatement,
+    ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -31,7 +32,7 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType, IntegerType, TextType, TimestampType, DecimalType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 
 from .scenarios import get_enabled_scenarios, get_scenario
@@ -256,8 +257,8 @@ class PartitionProvider(IPartitionProvider):
             table=self.TABLE_NAME,
             columns=[
                 PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), attributes=[IdentityAttribute(generation="BY DEFAULT")]),
-                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
                 ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
             ],

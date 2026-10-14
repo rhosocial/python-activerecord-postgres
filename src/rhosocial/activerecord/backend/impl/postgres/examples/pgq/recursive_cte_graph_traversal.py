@@ -45,7 +45,7 @@ from rhosocial.activerecord.backend.expression import (
     FunctionCall,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -68,7 +68,7 @@ for t in ("transactions", "accounts", "follows", "users"):
 # ---- Social network tables ----
 users_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
-        ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
     ColumnDefinition('name', 'VARCHAR(100)'),
     ColumnDefinition('city', 'VARCHAR(50)'),
 ]
@@ -76,7 +76,7 @@ backend.execute(*CreateTableStatement(dialect, Table(dialect, 'users'), users_co
 
 follows_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
-        ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
     ColumnDefinition('follower_id', 'INTEGER'),
     ColumnDefinition('followed_id', 'INTEGER'),
 ]
@@ -103,7 +103,7 @@ backend.execute(*InsertStatement(dialect, 'follows', columns=['id', 'follower_id
 # ---- AML tables ----
 accounts_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
-        ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
     ColumnDefinition('account_holder', 'VARCHAR(100)'),
     ColumnDefinition('account_type', 'VARCHAR(20)'),
 ]
@@ -111,7 +111,7 @@ backend.execute(*CreateTableStatement(dialect, Table(dialect, 'accounts'), accou
 
 txn_cols = [
     ColumnDefinition('id', 'INTEGER', constraints=[
-        ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]),
+        ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
     ColumnDefinition('source_account_id', 'INTEGER'),
     ColumnDefinition('target_account_id', 'INTEGER'),
     ColumnDefinition('amount', 'NUMERIC(12,2)'),

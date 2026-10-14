@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     FunctionCall,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -56,13 +56,13 @@ def social_network_data(postgres_backend):
 
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'users'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
         ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
         ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
     ]).to_sql())
@@ -101,14 +101,14 @@ def aml_data(postgres_backend):
 
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'accounts'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
         ColumnDefinition(dialect, "account_holder", VarCharType(length=100, dialect=dialect)),
         ColumnDefinition(dialect, "account_type", VarCharType(length=20, dialect=dialect)),
     ]).to_sql())
 
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'transactions'), [
         ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-            ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
         ColumnDefinition(dialect, "source_account_id", IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, "target_account_id", IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
@@ -504,13 +504,13 @@ class TestAsyncRecursiveCTEGraph:
 
         await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'users'), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
             ColumnDefinition(dialect, "name", VarCharType(length=100, dialect=dialect)),
         ]).to_sql())
 
         await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), [
             ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)]),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
             ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect)),
             ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect)),
         ]).to_sql())

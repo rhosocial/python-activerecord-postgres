@@ -18,10 +18,11 @@ from rhosocial.activerecord.backend.expression import (
     AlterTableStatement,
     AddColumn,
     DropColumn,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
-    ColumnConstraintType,
 )
 
 
@@ -66,17 +67,17 @@ def main():
         ColumnDefinition(
             "id",
             "INTEGER",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]
         ),
         ColumnDefinition(
             "name",
             "VARCHAR(100)",
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]
         ),
         ColumnDefinition(
             "email",
             "VARCHAR(255)",
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]
         ),
     ]
 

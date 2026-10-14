@@ -22,7 +22,6 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     DropTableStatement,
     InsertStatement,
     QueryStatement,
@@ -30,6 +29,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateIndexStatement,
     OrderByClause,
     RawSQLExpression,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -72,7 +72,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -110,7 +110,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -149,7 +149,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -181,7 +181,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -229,7 +229,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -578,7 +578,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -616,7 +616,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -655,7 +655,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -687,7 +687,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -735,7 +735,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),

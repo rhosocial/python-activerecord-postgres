@@ -33,11 +33,11 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     AutoIncrementClause,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
     CreateTableStatement,
     DropTableStatement,
     IdentityClause,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -143,11 +143,7 @@ def _auto_increment_table(dialect, table_name):
                 "id",
                 IntegerType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(
-                        dialect,
-                        ColumnConstraintType.PRIMARY_KEY,
-                        is_auto_increment=True,
-                    )
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect), is_auto_increment=True)
                 ],
             )
         ],

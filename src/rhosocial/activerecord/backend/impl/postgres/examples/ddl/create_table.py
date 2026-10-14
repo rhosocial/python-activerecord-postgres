@@ -19,11 +19,13 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
+    ColumnDefaultConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.functions.datetime import current_timestamp
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
@@ -55,21 +57,21 @@ columns = [
         name='id',
         data_type=dialect.parse_type('SERIAL'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='name',
         data_type=dialect.parse_type('VARCHAR(200)'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='price',
         data_type=dialect.parse_type('NUMERIC(10,2)'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
@@ -80,17 +82,14 @@ columns = [
         name='is_active',
         data_type=dialect.parse_type('BOOLEAN'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=True),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True)),
         ],
     ),
     ColumnDefinition(
         name='created_at',
         data_type=dialect.parse_type('TIMESTAMP'),
         constraints=[
-            ColumnConstraint(
-                ColumnConstraintType.DEFAULT,
-                default_value=current_timestamp(dialect),
-            ),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, current_timestamp(dialect))),
         ],
     ),
 ]
