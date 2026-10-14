@@ -42,7 +42,12 @@ def dialect():
 
 
 def _pk(dialect):
-    return [ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect), is_auto_increment=True)]
+    return [
+        ColumnConstraint(
+            dialect,
+            branch=ColumnPrimaryKeyConstraint(dialect, is_auto_increment=True),
+        )
+    ]
 
 
 def _build_table(dialect):

@@ -3,7 +3,7 @@ import re
 from typing import Any, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements.ddl_table import IdentityClause
+from rhosocial.activerecord.backend.expression.statements.ddl_table import ColumnPrimaryKeyConstraint, IdentityClause
 
 
 class PostgresTableMixin:
@@ -208,13 +208,19 @@ class PostgresTableMixin:
         all_params.extend(attr_params)
         auto_identity_added = False
         for constraint in col_def.constraints:
-            if not auto_identity_added and getattr(constraint, 'is_auto_increment', False):
+            if (
+                not auto_identity_added
+                and isinstance(constraint.branch, ColumnPrimaryKeyConstraint)
+                and constraint.branch.is_auto_increment
+            ):
                 # An auto-increment constraint on PostgreSQL is the standard
                 # identity clause in its default generation mode. Routing it
                 # through the gated formatter keeps the version boundary in
                 # one place: PostgreSQL 9 refuses here instead of rendering
                 # a GENERATED clause its server rejects, and no silent
-                # fallback to SERIAL is attempted.
+                # fallback to SERIAL is attempted. The flag lives on the
+                # PRIMARY KEY branch since the two-level split, so it is read
+                # there rather than probed off the clause.
                 identity_sql, identity_params = self.format_identity_clause(
                     IdentityClause(self, "BY DEFAULT")
                 )

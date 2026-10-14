@@ -143,7 +143,10 @@ def _auto_increment_table(dialect, table_name):
                 "id",
                 IntegerType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect), is_auto_increment=True)
+                    ColumnConstraint(
+                        dialect,
+                        branch=ColumnPrimaryKeyConstraint(dialect, is_auto_increment=True),
+                    )
                 ],
             )
         ],
