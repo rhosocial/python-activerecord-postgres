@@ -167,8 +167,9 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         that do have it.  Left on a shared core default, a change made for a
         backend without the clause would silently start rendering it here.
 
-        The clause name is not affected by core S3; only the per-kind
-        constraint switches are.
+        The clause name is unaffected by core's two-level constraint nodes:
+        ``supports_foreign_key_on_update`` is about the REFERENCES clause, not
+        about which node spells the constraint.
         """
         return True
 
@@ -672,8 +673,9 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         Name note: this switch is **not in the core mixin at all** -- it is
         declared here (and, with the opposite value, in the SQL Server
         backend) because the core ``AlterTableConstraintSupport`` protocol
-        that owns it has not landed.  Core S3 may rename it; the measured
-        value is what matters and is asserted either way.
+        that owns it has not landed.  It survived core's S3 unchanged because
+        S3 moved constraint *nodes*, not this verb; the measured value is what
+        matters and is asserted either way.
         """
         return True
 

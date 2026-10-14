@@ -35,6 +35,8 @@ asserted in ``test_ddl_alter_config.py`` (``TestPostgresConstraintDeferral`` and
 have no argument and the declaration-locality guard for all of them.
 """
 
+import re
+
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
@@ -91,6 +93,23 @@ MEASURED_SWITCHES = (
 )
 
 
+#: The two enforcement probes, whose value is a version gate rather than a
+#: fixed answer -- so they are pinned with their boundary, not with a single
+#: value, and they are the switches that converged onto the ``(self)``
+#: signature this round.
+VERSION_GATED_SWITCHES = (
+    # 170011: 42601, the clause is not in the grammar for any kind.
+    ("supports_constraint_enforced", (PG_17, False), (PG_18, True), (PG_19, True)),
+    ("supports_alter_constraint_enforced", (PG_17, False), (PG_18, True), (PG_19, True)),
+)
+
+#: Every switch this backend relies on must be declared in this package,
+#: whichever of the two tables it is in.
+ALL_SWITCHES = tuple(s for s, _ in MEASURED_SWITCHES) + tuple(
+    s for s, _, _, _ in VERSION_GATED_SWITCHES
+)
+
+
 def _dialect(version=PG_19):
     return PostgresDialect(version)
 
@@ -101,6 +120,105 @@ def _declaring_class(switch_name):
         if switch_name in cls.__dict__:
             return cls
     raise AssertionError(f"no class in the MRO declares {switch_name}()")
+
+
+class TestSwitchResolutionIsOwnedByThisBackend:
+    """The resolved answer is this backend's, not a core default reached past it.
+
+    ``_declaring_class`` walks the MRO from the dialect outwards, so the first
+    class that has the name in ``__dict__`` is the one that answers.  That is
+    the whole point of declaring locally: a later mixin in the same MRO cannot
+    quietly take a switch back.  These guards fail the moment that happens,
+    rather than leaving it to be noticed in a rendering difference.
+    """
+
+    @pytest.mark.parametrize("switch_name", ALL_SWITCHES)
+    def test_resolved_switch_is_owned_by_this_backend(self, switch_name):
+        declaring = _declaring_class(switch_name)
+        assert declaring.__module__.startswith(BACKEND_PACKAGE), (
+            f"{switch_name} resolves to {declaring.__module__}.{declaring.__qualname__}; "
+            f"a core default answers first, so this backend's measured value is "
+            f"never consulted."
+        )
+
+    @pytest.mark.parametrize("switch_name", ALL_SWITCHES)
+    def test_the_declaring_class_is_a_postgres_mixin(self, switch_name):
+        """The class that answers lives in this backend, whatever mixin owns it.
+
+        Not every switch belongs to ``PostgresConstraintMixin`` -- ``supports_
+        drop_constraint_if_exists`` is declared by the ALTER COLUMN modifier,
+        which reaches the MRO first.  What matters is that the answer is a
+        PostgreSQL one and that the class it comes from is findable, so a
+        reader tracing the contract knows where to look.
+        """
+        declaring = _declaring_class(switch_name)
+        assert declaring.__module__.startswith(BACKEND_PACKAGE), (
+            f"{switch_name} is declared by {declaring.__module__}; the class that "
+            f"answers must be part of this backend."
+        )
+
+    @pytest.mark.parametrize(
+        "switch_name,_v17,_v18,_v19", VERSION_GATED_SWITCHES,
+        ids=[s for s, _, _, _ in VERSION_GATED_SWITCHES],
+    )
+    def test_probes_take_no_argument(self, switch_name, _v17, _v18, _v19):
+        """A probe answers one question and takes no kind.
+
+        The signature is the contract: core calls ``supports_*()`` with no
+        arguments, so a parameterised probe is either never consulted or
+        consulted with a guess.  ``(self)`` and nothing else.
+        """
+        import inspect
+
+        bound = getattr(_dialect(), switch_name)
+        assert not [
+            name
+            for name in inspect.signature(bound).parameters.values()
+            if name.default is not inspect.Parameter.empty
+            and name.kind
+            not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        ], f"{switch_name} still takes a parameter; a probe names no kind."
+
+    @pytest.mark.parametrize(
+        "switch_name,at17,at18,at19", VERSION_GATED_SWITCHES,
+        ids=[s for s, _, _, _ in VERSION_GATED_SWITCHES],
+    )
+    def test_version_gate_matches_the_measurement(self, switch_name, at17, at18, at19):
+        for version, expected in (at17, at18, at19):
+            assert _dialect(version).__getattribute__(switch_name)() is expected, (
+                f"{switch_name} moved at {version}; the boundary is measured on all "
+                f"three instances (170011 / 180006 / 190000), not read off a table."
+            )
+
+
+#: A five-digit SQLSTATE is what a server answers with; the instances in
+#: ``postgres_scenarios.yaml`` are what the answers came from.
+_SQLSTATE = r"\b[0-9A-Z]{5}\b"
+_MEASURED_WITNESS = re.compile(
+    rf"({_SQLSTATE}|PostgreSQL \d|accepted|is not PostgreSQL syntax)", re.IGNORECASE
+)
+
+
+class TestEverySwitchCarriesItsMeasurement:
+    """A switch whose docstring says only ``True`` is a guess with a name.
+
+    The rule this enforces is the one the whole draft was written for: a value
+    is trustworthy when the statement that produced it is next to it.  So each
+    declared switch's docstring has to quote something falsifiable -- a
+    SQLSTATE, a server version, or the server's own "accepted" verdict -- and a
+    switch that starts documenting without one fails here.
+    """
+
+    @pytest.mark.parametrize("switch_name", ALL_SWITCHES)
+    def test_docstring_quotes_the_measurement(self, switch_name):
+        declaring = _declaring_class(switch_name)
+        doc = (declaring.__dict__[switch_name].__doc__ or "").strip()
+        assert doc, f"{switch_name} has no docstring at all."
+        assert _MEASURED_WITNESS.search(doc), (
+            f"{switch_name}()'s docstring quotes no measurement. Either paste the "
+            f"statement the value came from with the server's own answer, or say "
+            f"why there is no statement to quote."
+        )
 
 
 class TestMeasuredConstraintSwitchValues:
