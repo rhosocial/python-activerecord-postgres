@@ -57,3 +57,46 @@ class PostgresExpressionMixin:
         escaped_op = op.replace('%', '%%') if '%' in op else op
         sql = f"{left_sql} {escaped_op} {right_sql}"
         return sql, left_params + right_params
+
+    def format_row_count_wildcard(self, expr) -> Tuple[str, tuple]:
+        """Format ``PostgreSQLRowCountWildcard``: ``*`` or ``t.*``.
+
+        Core's bare ``*`` is right for ``COUNT(*)`` and is left alone; the override
+        exists for the qualified form, which core's ``RowCountWildcard``
+        deliberately does not carry because standard SQL has no use for it.
+
+        The check is a class test, not a missing-attribute probe: core's node
+        has no ``relation`` at all, and asking for one anyway is exactly the
+        reflection rule 9.8 forbids. Anything that is not this backend's
+        qualified form renders the bare asterisk.
+
+        Args:
+            expr: :class:`~...expression.wildcard.PostgreSQLRowCountWildcard`.
+
+        Returns:
+            A ``(sql, params)`` tuple; ``params`` is empty.
+
+        Raises:
+            TypeError: ``relation`` is set but is not a ``NamedRelationRef``.
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.wildcard import (
+            PostgreSQLRowCountWildcard,
+        )
+
+        if not isinstance(expr, PostgreSQLRowCountWildcard):
+            return "*", ()
+        relation = expr.relation
+        if relation is None:
+            return "*", ()
+        from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+        if not isinstance(relation, NamedRelationRef):
+            raise TypeError(
+                f"PostgreSQLRowCountWildcard.relation must be a NamedRelationRef, "
+                f"got {type(relation).__name__}"
+            )
+        if relation.alias:
+            qualifier = self.format_identifier(relation.alias, relation.alias_need_quote)
+        else:
+            qualifier, _ = relation.relation.to_sql()
+        return f"{qualifier}.*", ()

@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.expression import (
     LogicalPredicate,
     QueryStatement,
     ValuesSource,
-    Wildcard,
+    AllColumnsWildcard,
     ColumnNotNullConstraint,
     TablePrimaryKeyConstraint,
 )
@@ -120,7 +120,7 @@ def _seed_rows_expression(dialect):
 def _range_query_expression(dialect, start, end):
     return QueryStatement(
         dialect,
-        select=[Wildcard(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
         where=LogicalPredicate(
             dialect,
@@ -134,7 +134,7 @@ def _range_query_expression(dialect, start, end):
 def _full_scan_query_expression(dialect):
     return QueryStatement(
         dialect,
-        select=[Wildcard(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
     )
 

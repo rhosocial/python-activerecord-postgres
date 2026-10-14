@@ -19,6 +19,7 @@ from .advisory import (
     AdvisoryLockType,
 )
 from .ilike import ILikePredicate
+from .wildcard import PostgreSQLRowCountWildcard
 from .copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
@@ -170,6 +171,8 @@ __all__ = [
     # locking
     # ilike
     "ILikePredicate",
+    # wildcard
+    "PostgreSQLRowCountWildcard",
     "PostgresCopyFormat",
     "PostgresCopyOnError",
     "PostgresCopyLogVerbosity",

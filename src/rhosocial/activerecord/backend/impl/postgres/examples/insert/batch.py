@@ -67,7 +67,7 @@ from rhosocial.activerecord.backend.expression import (
     InsertStatement, ValuesSource, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Wildcard, Column
+from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
 insert = InsertStatement(
@@ -98,7 +98,7 @@ print("Batch insert completed")
 # Verify
 verify_query = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'logs'),
     order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )

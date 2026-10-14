@@ -41,7 +41,7 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
     VertexTable,
     EdgeTable,
-    Wildcard,
+    AllColumnsWildcard,
     ColumnForeignKeyConstraint,
     ColumnPrimaryKeyConstraint,
 )
@@ -370,7 +370,7 @@ class TestCommerceGraph:
             ))
 
         query = QueryStatement(dialect,
-            select=[Wildcard(dialect)],
+            select=[AllColumnsWildcard(dialect)],
             from_=join,
             order_by=OrderByClause(dialect, [Column(dialect, "follower", "g")]),
             limit_offset=LimitOffsetClause(dialect, limit=10))

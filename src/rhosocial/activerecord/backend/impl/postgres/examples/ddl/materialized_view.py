@@ -40,7 +40,12 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, MaterializedView, Table
-from rhosocial.activerecord.backend.expression.core import Literal, Column, Wildcard
+from rhosocial.activerecord.backend.expression.core import (
+    Literal,
+    Column,
+    AllColumnsWildcard,
+    RowCountWildcard,
+)
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -152,7 +157,7 @@ summary_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'product_id'),
-        FunctionCall(dialect, 'COUNT', Wildcard(dialect)),
+        FunctionCall(dialect, 'COUNT', RowCountWildcard(dialect)),
         FunctionCall(dialect, 'SUM', Column(dialect, 'amount')),
         FunctionCall(dialect, 'AVG', Column(dialect, 'amount')),
     ],
@@ -184,7 +189,7 @@ backend.execute(sql, params)
 # Verify
 verify_query = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'sales_summary'),
     order_by=OrderByClause(dialect, [Column(dialect, 'product_id')]),
 )
@@ -253,7 +258,7 @@ backend.execute(sql, params)
 # Confirm it's unqueriable
 nodata_query = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'sales_daily'),
 )
 sql, params = nodata_query.to_sql()
@@ -463,7 +468,7 @@ backend.execute(sql, params)
 
 schema_verify = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(
         dialect, 'Order Summary', schema_name='mv_reporting'
     ),

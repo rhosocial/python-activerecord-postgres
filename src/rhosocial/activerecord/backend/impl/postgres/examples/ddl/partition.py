@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Wildcard, Column
+from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -104,7 +104,7 @@ print("Inserted 4 orders across all partitions")
 # 4. Query all data (transparent across partitions)
 query_all = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'orders'),
 )
 sql, params = query_all.to_sql()

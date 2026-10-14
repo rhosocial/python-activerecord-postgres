@@ -25,7 +25,8 @@ from rhosocial.activerecord.backend.expression import (
     QualifiedIdentifier,
     QueryStatement,
     ValuesSource,
-    Wildcard,
+    AllColumnsWildcard,
+    RowCountWildcard,
     ColumnNotNullConstraint,
     TablePrimaryKeyConstraint,
 )
@@ -358,7 +359,7 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
 def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
     return QueryStatement(
         dialect,
-        select=[Wildcard(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
         where=LogicalPredicate(
             dialect,
@@ -383,7 +384,7 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
 def _select_count_expression(dialect, table_name: str):
     return QueryStatement(
         dialect,
-        select=[FunctionCall(dialect, "COUNT", Wildcard(dialect)).as_("count")],
+        select=[FunctionCall(dialect, "COUNT", RowCountWildcard(dialect)).as_("count")],
         from_=Table(dialect, table_name),
     )
 

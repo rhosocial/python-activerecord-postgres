@@ -5,7 +5,7 @@ Tests for PostgreSQL schema namespace support.
 Covers:
   - PostgresDialect schema capability declarations
   - Expression/Dialect layer: CreateSchemaStatement, DropSchemaStatement,
-    Column/Table/Wildcard with schema_name
+    Column/Table and the two wildcards with a schema-qualified relation
   - Backend layer: CREATE/DROP schema, table operations in custom schema,
     introspection with schema
   - Async Backend layer: same operations with async backend
@@ -14,10 +14,13 @@ Covers:
 import pytest
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import (
-    Column, Wildcard,
+    AllColumnsWildcard, Column, RowCountWildcard,
 )
 from rhosocial.activerecord.backend.expression.objects import Schema, Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgreSQLRowCountWildcard,
+)
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
     CreateSchemaStatement,
     DropSchemaStatement,
@@ -72,10 +75,35 @@ class TestSchemaNamespaceDialect:
         assert '"u"' in sql
 
     def test_wildcard_with_schema(self, dialect):
-        wc = Wildcard(dialect, table="users", schema_name="app")
+        """``app.users.*`` -- the qualified form rides the relation object.
+
+        The split made the qualification ride a ``NamedRelationRef`` rather
+        than a ``table=``/``schema_name=`` pair, because the name to render is
+        the name the query uses, and that is what the reference holds.
+        """
+        wc = AllColumnsWildcard(
+            dialect,
+            relation=NamedRelationRef(
+                dialect, Table(dialect, "users", schema_name="app")
+            ),
+        )
         sql, params = wc.to_sql()
         assert '"app"."users".*' == sql
         assert params == ()
+
+    def test_row_count_wildcard_takes_no_qualifier(self, dialect):
+        """``COUNT(*)`` is bare even where the FROM clause qualifies."""
+        assert RowCountWildcard(dialect).to_sql() == ("*", ())
+
+    def test_row_count_wildcard_with_relation_is_the_qualified_form(self, dialect):
+        """``COUNT(t.*)`` is PostgreSQL's own, so it is the backend's own node."""
+        wc = PostgreSQLRowCountWildcard(
+            dialect,
+            relation=NamedRelationRef(
+                dialect, Table(dialect, "users", schema_name="app"), alias="u"
+            ),
+        )
+        assert wc.to_sql() == ('"u".*', ())
 
     def test_create_schema_expression(self, dialect):
         expr = CreateSchemaStatement(dialect, schema=Schema(dialect, 'app'))

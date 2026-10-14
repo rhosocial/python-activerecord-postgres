@@ -47,7 +47,7 @@ backend.execute(sql, params)
 # ============================================================
 from rhosocial.activerecord.backend.expression import InsertStatement, ValuesSource, QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Wildcard
+from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
 
 insert_expr = InsertStatement(
     dialect=dialect,
@@ -64,7 +64,7 @@ backend.execute(sql, params)
 
 verify_query = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'users'),
 )
 sql, params = verify_query.to_sql()

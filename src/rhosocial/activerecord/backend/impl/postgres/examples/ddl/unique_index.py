@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal, Wildcard
+from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -145,7 +145,7 @@ except Exception as e:
 # Verify data after failed insert
 verify_query = QueryStatement(
     dialect=dialect,
-    select=[Wildcard(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'users'),
 )
 sql, params = verify_query.to_sql()
