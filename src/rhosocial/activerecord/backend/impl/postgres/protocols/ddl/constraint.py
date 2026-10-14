@@ -212,7 +212,7 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         """
         ...
 
-    def format_column_constraint(self, expr: "ColumnConstraint") -> Tuple[str, tuple]:
+    def format_column_constraint(self, constraint: "ColumnConstraint") -> Tuple[str, tuple]:
         """Format a column constraint, refusing the enforcement trait outright.
 
         PostgreSQL has no column-level ``[NOT] ENFORCED`` for any kind or any
