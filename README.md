@@ -42,11 +42,11 @@ from uuid import UUID, uuid4
 from rhosocial.activerecord.base import FieldProxy
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
-from rhosocial.activerecord.backend.expression import CreateTableExpression
+from rhosocial.activerecord.backend.expression import CreateTableStatement
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -81,13 +81,15 @@ Article.configure(
 )
 
 dialect = Article.__backend__.dialect
-Article.__backend__.execute(*CreateTableExpression(
+Article.__backend__.execute(*CreateTableStatement(
     dialect,
     "articles",
     columns=[
         ColumnDefinition(
             dialect, "id", UUIDType(dialect),
-            constraints=[ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(
+                dialect, branch=ColumnPrimaryKeyConstraint(dialect),
+            )],
         ),
         ColumnDefinition(dialect, "title", VarCharType(dialect, 200)),
         ColumnDefinition(dialect, "tags", ArrayType(dialect, TextType(dialect))),
@@ -179,7 +181,7 @@ operations.
 - **`RETURNING` is version-gated.** The basic clause works broadly, but
   `returning_old_new` and `update_returning_old` need PostgreSQL 18.
 - Field annotations do not drive DDL. `list[str]`, `dict` and `UUID` columns
-  are described explicitly in the `CreateTableExpression` above.
+  are described explicitly in the `CreateTableStatement` above.
 
 ## Testing
 
