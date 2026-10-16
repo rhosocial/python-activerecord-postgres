@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.pgvector import (
     vector_literal,
 )
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
-from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression import bases
 
 
@@ -27,21 +27,21 @@ class TestPgvectorDistanceFunctions:
     def test_vector_l2_distance_strings(self, postgres_dialect: PostgresDialect):
         """Test L2 distance with string inputs."""
         result = vector_l2_distance(postgres_dialect, "embedding", "[1.0,2.0,3.0]")
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<->" in sql
 
     def test_vector_cosine_distance_strings(self, postgres_dialect: PostgresDialect):
         """Test cosine distance with string inputs."""
         result = vector_cosine_distance(postgres_dialect, "embedding", "[1.0,2.0,3.0]")
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<=>" in sql
 
     def test_vector_inner_product_strings(self, postgres_dialect: PostgresDialect):
         """Test inner product with string inputs."""
         result = vector_inner_product(postgres_dialect, "embedding", "[1.0,2.0,3.0]")
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<#>" in sql
 
@@ -49,7 +49,7 @@ class TestPgvectorDistanceFunctions:
         """Test L2 distance with PostgresVector input."""
         vec = PostgresVector([1.0, 2.0, 3.0])
         result = vector_l2_distance(postgres_dialect, "embedding", vec)
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<->" in sql
         assert "VECTOR(3)" in sql
@@ -57,7 +57,7 @@ class TestPgvectorDistanceFunctions:
     def test_vector_cosine_distance_with_list(self, postgres_dialect: PostgresDialect):
         """Test cosine distance with List[float] input."""
         result = vector_cosine_distance(postgres_dialect, "embedding", [1.0, 2.0, 3.0])
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<=>" in sql
         assert "VECTOR(3)" in sql
@@ -65,7 +65,7 @@ class TestPgvectorDistanceFunctions:
     def test_vector_inner_product_with_list(self, postgres_dialect: PostgresDialect):
         """Test inner product with List[float] input."""
         result = vector_inner_product(postgres_dialect, "embedding", [1.0, 2.0, 3.0])
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<#>" in sql
         assert "VECTOR(3)" in sql
@@ -73,7 +73,7 @@ class TestPgvectorDistanceFunctions:
     def test_vector_cosine_similarity(self, postgres_dialect: PostgresDialect):
         """Test cosine similarity expression (1 - cosine_distance)."""
         result = vector_cosine_similarity(postgres_dialect, "embedding", [1.0, 2.0, 3.0])
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "-" in sql
         assert "<=>" in sql

@@ -20,7 +20,7 @@ from rhosocial.activerecord.backend.expression import (
     Literal,
     LogicalPredicate,
     QueryStatement,
-    RawSQLExpression,
+    RawSQL,
     UpdateStatement,
     ValuesSource,
     ColumnNotNullConstraint,
@@ -161,7 +161,7 @@ def _select_tableoid_payload_expression(dialect, table_name: str):
     return QueryStatement(
         dialect,
         select=[
-            RawSQLExpression(dialect, "tableoid::regclass::text AS partition_name"),
+            RawSQL(dialect, "tableoid::regclass::text AS partition_name"),
             Column(dialect, "payload"),
         ],
         from_=Table(dialect, table_name),

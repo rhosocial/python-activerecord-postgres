@@ -24,6 +24,7 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import (
     Literal,
     RowCountWildcard,
+    CountFunction,
     FunctionCall,
 )
 from rhosocial.activerecord.backend.expression.statements import (
@@ -135,7 +136,7 @@ print(f"Params: {params}")
 # --- 2. Calculate total pages using COUNT ---
 count_query = QueryStatement(
     dialect=dialect,
-    select=[FunctionCall(dialect, 'COUNT', RowCountWildcard(dialect)).as_('total')],
+    select=[CountFunction(dialect, RowCountWildcard(dialect)).as_('total')],
     from_=Table(dialect, 'articles'),
 )
 

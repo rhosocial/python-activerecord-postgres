@@ -119,12 +119,12 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement, Column, WhereClause, Subquery,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression.functions.aggregate import AvgFunction
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 subquery_query = QueryStatement(
     dialect=dialect,
-    select=[FunctionCall(dialect, 'AVG', Column(dialect, 'salary'))],
+    select=[AvgFunction(dialect, Column(dialect, 'salary'))],
     from_=Table(dialect, 'employees'),
 )
 sql, params = subquery_query.to_sql()

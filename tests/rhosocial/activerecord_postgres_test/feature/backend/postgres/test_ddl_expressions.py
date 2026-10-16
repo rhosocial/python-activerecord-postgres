@@ -13,9 +13,10 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.expression import (
     Column,
+    DdlLiteral,
     FunctionCall,
     Literal,
-    RawSQLExpression,
+    RawSQL,
     ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
@@ -542,7 +543,12 @@ class TestPostgresPartitionValue:
         expr = PartitionValue(dialect, value, partition_type="LIST")
         assert expr.to_sql() == (f"'{value}'", ())
 
-    def test_partition_value_renders_function_call_with_inline_literals(self, dialect):
+    def test_partition_value_lifts_data_literals_to_the_ddl_class(self, dialect):
+        """A data-position ``Literal`` inside a partition bound renders inline.
+
+        The bound itself is a DDL position, so the dialect lifts the operand to
+        :class:`DdlLiteral` -- the class that owns inline rendering there.
+        """
         expr = PartitionValue(
             dialect,
             FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
@@ -552,7 +558,7 @@ class TestPostgresPartitionValue:
     def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
         expr = PartitionValue(
             dialect,
-            RawSQLExpression(dialect, "DATE %s", ("2024-01-01",)),
+            RawSQL(dialect, "DATE %s", ("2024-01-01",)),
         )
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             expr.to_sql()
@@ -567,7 +573,7 @@ class TestPostgresPartitionValue:
         lambda dialect: FunctionCall(dialect, "DATE", Column(dialect, "created_at")),
     ])
     def test_partition_value_rejects_unsafe_expression(self, dialect, expression_factory):
-        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQLExpression"):
+        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQL"):
             PartitionValue(dialect, expression_factory(dialect))
 
     def test_default_partition_value_requires_pg11(self):
@@ -799,7 +805,7 @@ class TestPostgresCreatePartitionExpression:
         clause = PartitionClause(
             dialect,
             PartitionStrategy.HASH,
-            [RawSQLExpression(dialect, "bucket %s", (1,))],
+            [RawSQL(dialect, "bucket %s", (1,))],
         )
         expr = PostgresCreatePartitionExpression(
             dialect,
@@ -807,7 +813,7 @@ class TestPostgresCreatePartitionExpression:
             "events",
             "RANGE",
             {
-                "from": RawSQLExpression(dialect, "DATE %s", ("2026-01-01",)),
+                "from": RawSQL(dialect, "DATE %s", ("2026-01-01",)),
                 "to": "MAXVALUE",
             },
             partition_clause=clause,

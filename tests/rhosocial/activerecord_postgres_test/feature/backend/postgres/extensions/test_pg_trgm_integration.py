@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
-from rhosocial.activerecord.backend.expression import RawSQLExpression
+from rhosocial.activerecord.backend.expression import RawSQL
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -544,10 +544,10 @@ class TestPgTrgmIntegration:
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQLExpression because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Literal("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
         # Replace with FunctionCall once expression system supports star args.
-        count_func = RawSQLExpression(
+        count_func = RawSQL(
             dialect, 'COUNT(*) AS "cnt"'
         )
         query = QueryStatement(
@@ -790,9 +790,9 @@ class TestAsyncPgTrgmIntegration:
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQLExpression because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Literal("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
-        count_func = RawSQLExpression(
+        count_func = RawSQL(
             dialect, 'COUNT(*) AS "cnt"'
         )
         query = QueryStatement(

@@ -4,7 +4,9 @@
 from typing import Tuple, Type
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.serialization import ExpressionRegistry
+from rhosocial.activerecord.backend.expression.serialization import (
+    register_expression_class,
+)
 from .ddl.domain import (
     _LegacySqlExpression,
     _UnsupportedDomainAction,
@@ -107,7 +109,7 @@ _POSTGRES_DDL_EXPRESSION_CLASSES: Tuple[Type[BaseExpression], ...] = (
 
 def register_postgres_ddl_expressions() -> None:
     for expression_class in _POSTGRES_DDL_EXPRESSION_CLASSES:
-        ExpressionRegistry.register(expression_class)
+        register_expression_class(expression_class)
 
 
 __all__ = ["register_postgres_ddl_expressions"]

@@ -18,7 +18,7 @@ class PostgresExpressionMixin:
         target is the node's ``target_type`` construction parameter.
 
         Args:
-            expr: :class:`~...expression.core.CastFunction` instance.
+            expr: :class:`~...expression.core.CastExpression` instance.
 
         Returns:
             Tuple of (SQL string, parameters)

@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression.objects import Domain, Type
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
 from rhosocial.activerecord.backend.expression.serialization import (
     deserialize,
     deserialize_json,
@@ -178,7 +178,7 @@ class TestPostgresDomainExpression:
 
     def test_typed_create_with_schema_and_all_clauses(self, dialect):
         value = DomainValueExpression(dialect)
-        condition = value > Literal(dialect, 0, inline_literals=True)
+        condition = value > DdlLiteral(dialect, 0)
         check = DomainCheckConstraint(dialect, condition, name="positive")
         sql, params = PostgresCreateDomainExpression(
             dialect,
@@ -203,7 +203,7 @@ class TestPostgresDomainExpression:
         # trip without a get_params() override. See
         # test_domain_expression_roundtrip.py for the full round-trip proof.
         value = DomainValueExpression(dialect)
-        condition = value > Literal(dialect, 0, inline_literals=True)
+        condition = value > DdlLiteral(dialect, 0)
         legacy = PostgresCreateDomainExpression(
             dialect,
             "legacy",
@@ -231,7 +231,7 @@ class TestPostgresDomainExpression:
         value = DomainValueExpression(dialect)
         check = DomainCheckConstraint(
             dialect,
-            value > Literal(dialect, 0, inline_literals=True),
+            value > DdlLiteral(dialect, 0),
             name="positive",
         )
         cases = [

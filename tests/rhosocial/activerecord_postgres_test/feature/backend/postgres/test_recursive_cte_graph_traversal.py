@@ -2,7 +2,7 @@
 """
 Recursive CTE graph traversal tests — PGQ quantified path alternative.
 
-These tests verify that recursive CTE + SetOperationStatement + UNION ALL
+These tests verify that recursive CTE + SetOperation + UNION ALL
 correctly simulates PGQ quantified path patterns (not natively supported
 in PostgreSQL 19).
 
@@ -21,8 +21,8 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     CTEClause,
     WithStatement,
-    SetOperationStatement,
-    FunctionCall,
+    SetOperation,
+    SumFunction,
     ColumnDefinition,
     ColumnConstraint,
     ColumnPrimaryKeyConstraint,
@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.expression.types import (
     DecimalType,
 )
 from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
 from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate, ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import (
     WhereClause,
@@ -177,8 +177,8 @@ class TestSocialNetworkTraversal:
             select=[
                 Column(dialect, "id", table="u"),
                 Column(dialect, "name", table="u"),
-                BinaryArithmeticExpression(
-                    dialect, "+", Column(dialect, "depth", table="t"), Literal(dialect, 1)
+                ArithmeticOperation(
+                    dialect, "add", Column(dialect, "depth", table="t"), Literal(dialect, 1)
                 ).as_("depth"),
             ],
             from_=recursive_join,
@@ -188,11 +188,11 @@ class TestSocialNetworkTraversal:
             ),
         )
 
-        union = SetOperationStatement(
+        union = SetOperation(
             dialect=dialect,
+            op="union_all",
             left=base,
             right=recursive,
-            operation="UNION ALL",
         )
 
         return CTEClause(
@@ -359,8 +359,8 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder", table="a"),
                 Column(dialect, "account_type", table="a"),
                 Column(dialect, "amount", table="tx"),
-                BinaryArithmeticExpression(
-                    dialect, "+", Column(dialect, "depth", table="tr"), Literal(dialect, 1)
+                ArithmeticOperation(
+                    dialect, "add", Column(dialect, "depth", table="tr"), Literal(dialect, 1)
                 ).as_("depth"),
             ],
             from_=recursive_join,
@@ -370,11 +370,11 @@ class TestAMLFundTracing:
             ),
         )
 
-        union = SetOperationStatement(
+        union = SetOperation(
             dialect=dialect,
+            op="union_all",
             left=base,
             right=recursive,
-            operation="UNION ALL",
         )
 
         return CTEClause(
@@ -464,7 +464,7 @@ class TestAMLFundTracing:
             dialect=dialect,
             select=[
                 Column(dialect, "depth"),
-                FunctionCall(dialect, "SUM", Column(dialect, "amount"), alias="total"),
+                SumFunction(dialect, Column(dialect, "amount")).as_("total"),
             ],
             from_=Table(dialect, "fund_trace"),
             group_by_having=GroupByHavingClause(

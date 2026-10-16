@@ -4,7 +4,7 @@ PostgreSQL cube Extension Functions and Operators.
 
 This module provides SQL expression generators for PostgreSQL cube
 extension functions and operators. All functions return Expression objects
-(FunctionCall, BinaryExpression, BinaryArithmeticExpression) that integrate
+(FunctionCall, BinaryExpression, ArithmeticOperation) that integrate
 with the expression-dialect architecture.
 
 The cube extension provides a data type representing multidimensional cubes,
@@ -29,17 +29,14 @@ Supported functions:
 
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
-- They return Expression objects (FunctionCall, BinaryExpression, etc.)
+- They return Expression objects (FunctionCall, BinaryExpression, ArithmeticOperation, etc.)
 - They do not concatenate SQL strings directly
 """
 
 from typing import List, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
-from rhosocial.activerecord.backend.expression.operators import (
-    BinaryExpression,
-    BinaryArithmeticExpression,
-)
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -243,7 +240,7 @@ def cube_distance(
     dialect: "SQLDialectBase",
     cube_expr: bases.BaseExpression,
     target: bases.BaseExpression,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL expression for the cube distance operator (<->).
 
     Computes the distance between two cubes. For points, this is the
@@ -257,13 +254,13 @@ def cube_distance(
         target: The second cube expression to measure distance to
 
     Returns:
-        BinaryArithmeticExpression for cube_expr <-> target
+        BinaryExpression for cube_expr <-> target
 
     Example:
         >>> cube_distance(dialect, 'location', cube_literal(dialect, [1, 2, 3]))
         # Generates SQL: location <-> cube(ARRAY[1, 2, 3])
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, "<->",
         cube_expr if isinstance(cube_expr, bases.BaseExpression)
         else core.Literal(dialect, cube_expr),

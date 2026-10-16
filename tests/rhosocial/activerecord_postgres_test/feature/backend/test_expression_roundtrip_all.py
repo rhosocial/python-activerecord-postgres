@@ -22,7 +22,7 @@ core's own classes were outside the only matrix in this repository, so a
 PostgreSQL-side formatter misreading them was unobservable.
 
 The matrix therefore walks both packages with ``collect_expression_classes``. It
-deliberately does not read ``ExpressionRegistry._registry``: that dict is
+deliberately does not read the deserialization index: that dict is
 process-global and grows as sibling test modules import other backends, so a
 registry-based matrix covers a different class set depending on import order.
 Walking the packages is deterministic.
@@ -92,7 +92,7 @@ Why some pins are themselves ``UnsupportedFeatureError``
 ``to_sql()`` reports a missing formatter as ``UnsupportedFeatureError``, so the
 two buckets above can overlap: a class can be unrenderable for a reason that is
 about PostgreSQL rather than about its own tree. ``TableSource``,
-``PivotExpression`` and ``UnpivotExpression`` are such classes, and they are
+``Pivot`` and ``Unpivot`` are such classes, and they are
 still named in :data:`LEGITIMATE_NON_RENDERS` on purpose. The bare type is always
 allowed, so the type alone asserts nothing about *which* formatter is missing;
 the entry adds the message fragment, and that fragment names the one formatter
@@ -116,7 +116,7 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
-    CaseFunction,
+    CaseExpression,
     WindowClause,
     WindowDefinition,
     WindowSpecification,
@@ -127,6 +127,9 @@ from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression.datetime import (
     TemporalOptionsExpression,
 )
+from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
+from rhosocial.activerecord.backend.expression.query_sources import SetOperation
+from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 from rhosocial.activerecord.backend.expression.objects import (
     Database,
     EdgeTable as EdgeTableObject,
@@ -144,10 +147,11 @@ from rhosocial.activerecord.backend.expression.predicates import (
 )
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.serialization import (
-    ExpressionRegistry,
+    auto_register_builtins,
     deserialize,
     deserialize_json,
     deserialize_xml,
+    registered_expression_classes,
     serialize,
     serialize_json,
     serialize_xml,
@@ -323,12 +327,12 @@ CORE_EXPR_PKG = "rhosocial.activerecord.backend.expression"
 def _collect_matrix_classes():
     """Every concrete expression class this backend can be asked to render.
 
-    Two packages, walked rather than read out of the registry -- see the module
-    docstring. ``ExpressionRegistry._auto_register_builtins`` is still called
+    Two packages, walked rather than read out of the deserialization class index
+    -- see the module docstring. ``auto_register_builtins`` is still called
     because deserialisation needs the core classes registered; that is a separate
     concern from deciding which classes to test.
     """
-    ExpressionRegistry._auto_register_builtins()
+    auto_register_builtins()
     collected: Dict[str, type] = {}
     for package in (PG_EXPR_PKG, CORE_EXPR_PKG):
         collected.update(collect_expression_classes(package))
@@ -376,6 +380,13 @@ def _table_obj(dialect, name="t"):
 def _column_predicate(dialect):
     """A predicate comparing two columns, so it renders with no bind parameters."""
     return ComparisonPredicate(dialect, "=", Column(dialect, "a"), Column(dialect, "b"))
+
+
+def _one_column_query(dialect, table="t"):
+    """A one-column SELECT over a named table: the smallest valid query side."""
+    return QueryStatement(
+        dialect, select=[Column(dialect, "a")], from_=_table_obj(dialect, table)
+    )
 
 
 def _integer_column(dialect, name="col"):
@@ -471,6 +482,24 @@ VALIDATE_CONSTRAINT_SUFFIXES = (
 
 def register_specials():
     """Replace every introspective guess that would cost a real assertion."""
+    # -- nodes whose ``op`` is a closed word set, not a free string ----------
+    # Both nodes refuse an ``op`` outside their set at construction, so the
+    # introspective guess (which supplies a placeholder string) cannot build
+    # them at all. Naming one real word is what lets the matrix exercise them.
+    register_special_constructor(
+        "operators.ArithmeticOperation",
+        lambda d: ArithmeticOperation(d, "add", Column(d, "a"), Literal(d, 1)),
+    )
+    register_special_constructor(
+        "query_sources.SetOperation",
+        lambda d: SetOperation(
+            d,
+            op="union",
+            left=_one_column_query(d),
+            right=_one_column_query(d, "other"),
+        ),
+    )
+
     # -- the FROM side ------------------------------------------------------
     register_special_constructor(
         "sources.relation.NamedRelationRef",
@@ -748,8 +777,8 @@ def register_specials():
 
     # -- expressions that need at least one member --------------------------
     register_special_constructor(
-        "advanced_functions.CaseFunction",
-        lambda d: CaseFunction(
+        "advanced_functions.CaseExpression",
+        lambda d: CaseExpression(
             d,
             cases=[(_column_predicate(d), Literal(d, 1))],
             else_result=Literal(d, 0),
@@ -793,7 +822,7 @@ def register_specials():
     # become the operator rather than the operand.
     register_special_constructor(
         "predicates.LikePredicate",
-        lambda d: LikePredicate(d, "LIKE", Column(d, "a"), Literal(d, "x%", inline_literals=True)),
+        lambda d: LikePredicate(d, "LIKE", Column(d, "a"), Literal(d, "x%")),
     )
 
     # -- COLLATE needs a collation PostgreSQL actually has -------------------
@@ -1035,7 +1064,7 @@ def _no_such_formatter(formatter_name: str) -> str:
 
     Taking the formatter name as an argument keeps each pin naming the one
     method its class actually dispatches on. A shared fragment would let
-    ``TableSource``, ``PivotExpression`` and ``UnpivotExpression`` start failing
+    ``TableSource``, ``Pivot`` and ``Unpivot`` start failing
     for each other's reason and still pass.
     """
     return f"does not support the '{formatter_name}' statement"
@@ -1174,17 +1203,17 @@ LEGITIMATE_NON_RENDERS = {
     # ---- SQL standard pivot, which is not PostgreSQL syntax --------------
     # Core models the SQL:2003 PIVOT / UNPIVOT for engines that spell it that way.
     # PostgreSQL has no PIVOT keyword, so the dialect declares no
-    # ``format_pivot_expression``. Typing PIVOT is done with a ``CASE`` /
+    # ``format_pivot``. Typing PIVOT is done with a ``CASE`` /
     # ``generate_series`` plan, not with this expression, so the absence is a fact
     # about the engine rather than a gap in this backend. Each entry names its own
     # formatter so the two cannot pass for one another.
-    "rhosocial.activerecord.backend.expression.pivot.PivotExpression": (
+    "rhosocial.activerecord.backend.expression.pivot.Pivot": (
         UnsupportedFeatureError,
-        _no_such_formatter("format_pivot_expression"),
+        _no_such_formatter("format_pivot"),
     ),
-    "rhosocial.activerecord.backend.expression.pivot.UnpivotExpression": (
+    "rhosocial.activerecord.backend.expression.pivot.Unpivot": (
         UnsupportedFeatureError,
-        _no_such_formatter("format_unpivot_expression"),
+        _no_such_formatter("format_unpivot"),
     ),
 }
 
@@ -1247,8 +1276,8 @@ def _dispatched_formatter(exc):
 UNMODELLED_FORMATTERS = {
     "SQL:2003 PIVOT / UNPIVOT (PostgreSQL has no PIVOT keyword; pivoting is "
     "spelled as CASE + GROUP BY, or crosstab from the tablefunc extension)": (
-        "format_pivot_expression",
-        "format_unpivot_expression",
+        "format_pivot",
+        "format_unpivot",
     ),
     "the TableSource root (every concrete row source overrides its formatter; "
     "the root carries nothing but an alias and is never rendered)": ("format_table_source",),
@@ -1539,10 +1568,10 @@ class TestMatrixIntegrity:
 
         Re-walked here rather than trusting the module-level collection, so a class
         that appeared after import is caught. The package walk is used rather than
-        the registry because the registry also holds whatever backends other test
+        the index because the index also holds whatever backends other test
         modules happened to import.
         """
-        ExpressionRegistry._auto_register_builtins()
+        auto_register_builtins()
         expected = set(_collect_matrix_classes())
         stray = [
             fqn
@@ -1576,18 +1605,19 @@ class TestMatrixIntegrity:
         """A class in the matrix can be found again when deserializing.
 
         Deserialisation looks the class up by name, so a class the matrix renders
-        but the registry cannot resolve would round-trip into the wrong thing or
+        but the index cannot resolve would round-trip into the wrong thing or
         nothing at all.
         """
-        ExpressionRegistry._auto_register_builtins()
-        unresolved = sorted(set(REGISTERED) - set(ExpressionRegistry._registry))
+        auto_register_builtins()
+        unresolved = sorted(set(REGISTERED) - set(registered_expression_classes()))
         assert not unresolved, (
-            f"the matrix covers classes the registry cannot resolve: {unresolved}"
+            f"the matrix covers classes the deserialization index cannot "
+            f"resolve: {unresolved}"
         )
 
     def test_coverage_report(self, postgres_dialect):
         """Surface what the matrix covers, so coverage stays transparent."""
-        ExpressionRegistry._auto_register_builtins()
+        auto_register_builtins()
         census: Dict[str, int] = {}
         constructible = []
         for fqn in sorted(REGISTERED):

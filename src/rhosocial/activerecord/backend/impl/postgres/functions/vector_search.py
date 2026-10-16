@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.expression.core import (
     AllColumnsWildcard,
     BaseExpression,
 )
-from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
 from rhosocial.activerecord.backend.expression.query_parts import (
     LimitOffsetClause,
     OrderByClause,
@@ -138,8 +138,8 @@ def vector_search(
     if include_distance:
         select.append(distance_expr.as_(_METRIC_DISTANCE_ALIAS[metric]))
     if include_similarity and metric in _METRIC_SIMILARITY_ALIAS:
-        similarity = BinaryArithmeticExpression(
-            dialect, "-", Literal(dialect, 1), distance_expr
+        similarity = ArithmeticOperation(
+            dialect, "sub", Literal(dialect, 1), distance_expr
         )
         select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
 

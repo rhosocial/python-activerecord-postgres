@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import core
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    BinaryArithmeticExpression,
+    BinaryExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.cube import (
     cube_literal,
@@ -91,9 +91,9 @@ class TestPostgresCubeFunctions:
         assert "@>" in sql
 
     def test_cube_distance(self):
-        """cube_distance should return BinaryArithmeticExpression with <-> operator."""
+        """cube_distance should return BinaryExpression with the <-> operator."""
         dialect = PostgresDialect((14, 0, 0))
         result = cube_distance(dialect, "c1", "c2")
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<->" in sql

@@ -137,7 +137,7 @@ class TestPostgresAlterColumnTypeAndUsing:
     def test_set_data_type_with_using(self, dialect):
         from rhosocial.activerecord.backend.expression import Column, Literal
         from rhosocial.activerecord.backend.expression.operators import (
-            BinaryArithmeticExpression,
+            ArithmeticOperation,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
             PostgresAlterColumn,
@@ -148,8 +148,8 @@ class TestPostgresAlterColumnTypeAndUsing:
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=BinaryArithmeticExpression(
-                dialect, "+", Column(dialect, "price"), Literal(dialect, 1)
+            using=ArithmeticOperation(
+                dialect, "add", Column(dialect, "price"), Literal(dialect, 1)
             ),
         )
         sql, serialized = action.to_sql()

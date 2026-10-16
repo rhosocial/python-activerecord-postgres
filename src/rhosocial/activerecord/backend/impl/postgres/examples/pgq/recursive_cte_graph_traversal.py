@@ -3,7 +3,7 @@ Recursive CTE graph traversal
 =============================
 
 PostgreSQL 19 Beta 4 withdrew SQL/PGQ. This example demonstrates recursive CTE
-+ SetOperationStatement + UNION ALL as an alternative for graph traversal.
++ SetOperation + UNION ALL as an alternative for graph traversal.
 
 Common use cases:
   1. Social network N-degree friend recommendations (replaces MATCH (a)-[e]->+(b))
@@ -11,7 +11,7 @@ Common use cases:
 
 Key components:
   - CTEClause: defines a CTE (WITH ... AS ...)
-  - SetOperationStatement: combines base + recursive queries (UNION ALL)
+  - SetOperation: combines base + recursive queries (UNION ALL)
   - WithStatement(recursive=True): generates WITH RECURSIVE ... SELECT ...
 """
 
@@ -41,8 +41,10 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     CTEClause,
     WithStatement,
-    SetOperationStatement,
-    FunctionCall,
+    SetOperation,
+    ArithmeticOperation,
+    CountFunction,
+    SumFunction,
     ColumnDefinition,
     ColumnConstraint,
     ColumnPrimaryKeyConstraint,
@@ -177,18 +179,18 @@ recursive_query = QueryStatement(
     select=[
         Column(dialect, 'id', table='u'),
         Column(dialect, 'name', table='u'),
-        FunctionCall(dialect, '+', Column(dialect, 'depth', table='t'), Literal(dialect, 1)).as_('depth'),
+        ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='t'), Literal(dialect, 1)).as_('depth'),
     ],
     from_=recursive_join,
     where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='t'), Literal(dialect, 4))),
 )
 
 # --- Combine with UNION ALL ---
-union_expr = SetOperationStatement(
+union_expr = SetOperation(
     dialect=dialect,
+    op='union_all',
     left=base_query,
     right=recursive_query,
-    operation='UNION ALL',
 )
 
 # --- Define CTE ---
@@ -280,18 +282,18 @@ aml_recursive = QueryStatement(
         Column(dialect, 'account_holder', table='a'),
         Column(dialect, 'account_type', table='a'),
         Column(dialect, 'amount', table='tx'),
-        FunctionCall(dialect, '+', Column(dialect, 'depth', table='tr'), Literal(dialect, 1)).as_('depth'),
+        ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='tr'), Literal(dialect, 1)).as_('depth'),
     ],
     from_=aml_recursive_join,
     where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='tr'), Literal(dialect, 5))),
 )
 
 # --- Combine with UNION ALL ---
-aml_union = SetOperationStatement(
+aml_union = SetOperation(
     dialect=dialect,
+    op='union_all',
     left=aml_base,
     right=aml_recursive,
-    operation='UNION ALL',
 )
 
 # --- Define CTE ---
@@ -338,8 +340,8 @@ agg_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'depth'),
-        FunctionCall(dialect, 'COUNT', Column(dialect, 'id'), alias='account_count'),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'amount'), alias='total_amount'),
+        CountFunction(dialect, Column(dialect, 'id')).as_('account_count'),
+        SumFunction(dialect, Column(dialect, 'amount')).as_('total_amount'),
     ],
     from_=Table(dialect, 'fund_trace'),
     order_by=OrderByClause(dialect, [Column(dialect, 'depth')]),
@@ -368,7 +370,7 @@ print("=" * 72)
 print("Summary / Key Technical Points")
 print("=" * 72)
 print("""
-1. SetOperationStatement(operation='UNION ALL') combines base + recursive queries
+1. SetOperation(op='union_all') combines base + recursive queries
 2. CTEClause(name=..., query=..., columns=...) defines the CTE column signature
 3. WithStatement(recursive=True) generates WITH RECURSIVE
 4. Recursive query joins the CTE reference with physical tables via chained JoinClause

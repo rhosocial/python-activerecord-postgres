@@ -49,10 +49,10 @@ from rhosocial.activerecord.backend.expression.objects import (
     Type,
     View,
 )
-from rhosocial.activerecord.backend.expression.pivot import UnpivotExpression
+from rhosocial.activerecord.backend.expression.pivot import Unpivot
 from rhosocial.activerecord.backend.expression.query_sources import (
     CTEClause,
-    SetOperationStatement,
+    SetOperation,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AlterConstraint,
@@ -421,20 +421,6 @@ PAIR_CASES = (
         r"INITIALLY IMMEDIATE\b",
     ),
     PairCase(
-        "SetOperationStatement.all_",
-        lambda d, **kw: SetOperationStatement(
-            d,
-            left=QueryStatement(d, select=[Column(d, "a")], from_=_table(d, "t1")),
-            right=QueryStatement(d, select=[Column(d, "a")], from_=_table(d, "t2")),
-            operation="UNION",
-            **kw,
-        ),
-        "all_",
-        "distinct",
-        r"\bALL\b",
-        r"\bDISTINCT\b",
-    ),
-    PairCase(
         "BeginTransactionStatement.deferrable",
         lambda d, **kw: BeginTransactionStatement(d, **kw),
         "deferrable",
@@ -658,10 +644,59 @@ class TestRefusedSpellingsFailClosed:
     def test_unpivot_is_refused_before_its_pair_is_read(self):
         """PostgreSQL declares no UNPIVOT formatter; the refusal is the answer."""
         dialect = _dialect()
-        with pytest.raises(UnsupportedFeatureError, match="format_unpivot_expression"):
-            UnpivotExpression(
+        with pytest.raises(UnsupportedFeatureError, match="format_unpivot"):
+            Unpivot(
                 dialect, value_column="v", pivot_column="k", columns=["a", "b"]
             ).to_sql()
+
+
+class TestSetOperationWordsAreClosed:
+    """``UNION`` / ``UNION ALL`` are two words of one closed set, not two flags.
+
+    The node no longer carries an ``all_``/``distinct`` parameter pair, so the
+    pair this file used to guard is gone: the alternative is spelled in ``op``
+    itself. That trades the four-state rule for a closed word set, which must
+    hold the same ground — each word renders its own spelling, and anything
+    outside the set is refused **where it is written**, at construction, not at
+    render time where a typo would silently fall back.
+    """
+
+    @staticmethod
+    def _sides(dialect, op):
+        return SetOperation(
+            dialect,
+            op=op,
+            left=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t1")),
+            right=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t2")),
+        )
+
+    @pytest.mark.parametrize(
+        ("op", "expected"),
+        [
+            ("union", "UNION"),
+            ("UNION", "UNION"),
+            ("union_all", "UNION ALL"),
+            ("Union_All", "UNION ALL"),
+            ("intersect", "INTERSECT"),
+            ("except", "EXCEPT"),
+        ],
+        ids=["union", "union-upper", "union_all", "union_all-mixed", "intersect", "except"],
+    )
+    def test_each_word_renders_its_own_spelling(self, op, expected):
+        sql, _params = self._sides(_dialect(), op).to_sql()
+        assert expected in sql, sql
+        other = {"UNION": "UNION ALL", "UNION ALL": "UNION",
+                 "INTERSECT": "EXCEPT", "EXCEPT": "INTERSECT"}[expected]
+        assert other not in sql, sql
+
+    @pytest.mark.parametrize(
+        "op",
+        ["UNION DISTINCT", "union distinct", "minus", "union all", "", "nonsense"],
+        ids=["sql-tokens", "sql-tokens-lower", "oracle-minus", "spaced", "empty", "nonsense"],
+    )
+    def test_a_word_outside_the_set_is_refused_at_construction(self, op):
+        with pytest.raises(ValueError, match="op must be one of"):
+            self._sides(_dialect(), op)
 
 
 class TestGuardIsNotVacuous:
@@ -701,7 +736,6 @@ class TestGuardIsNotVacuous:
             "TableConstraint.enforced",
             "ColumnConstraint.deferrable",
             "ColumnConstraint.initially_deferred",
-            "SetOperationStatement.all_",
             "BeginTransactionStatement.deferrable",
             "BeginTransactionStatement.wait",
             "SetTransactionExpression.deferrable",

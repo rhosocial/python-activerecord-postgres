@@ -35,7 +35,9 @@ from rhosocial.activerecord.backend.expression import (
     RefreshMaterializedViewStatement,
     CreateIndexStatement,
     GroupByHavingClause,
-    FunctionCall,
+    AvgFunction,
+    CountFunction,
+    SumFunction,
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
@@ -157,9 +159,9 @@ summary_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'product_id'),
-        FunctionCall(dialect, 'COUNT', RowCountWildcard(dialect)),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'amount')),
-        FunctionCall(dialect, 'AVG', Column(dialect, 'amount')),
+        CountFunction(dialect, RowCountWildcard(dialect)),
+        SumFunction(dialect, Column(dialect, 'amount')),
+        AvgFunction(dialect, Column(dialect, 'amount')),
     ],
     from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
@@ -235,7 +237,7 @@ daily_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'sale_date'),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'amount')),
+        SumFunction(dialect, Column(dialect, 'amount')),
     ],
     from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(

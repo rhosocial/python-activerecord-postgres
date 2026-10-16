@@ -5,7 +5,7 @@ Tests will be automatically skipped if the extension is not available.
 
 Vector literal values use Literal.cast(PostgresVectorType(self.dialect)) for inline embedding because
 psycopg does not natively support the vector type for bound parameters.
-pgvector distance operators (<->, <=>, <#>) still require RawSQLExpression
+pgvector distance operators (<->, <=>, <#>) still require RawSQL
 because ComparisonPredicate does not yet support .as_() alias.
 """
 
@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     Column,
     UpdateStatement,
-    RawSQLExpression,
+    RawSQL,
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -300,7 +300,7 @@ class TestPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        distance_expr = RawSQLExpression(
+        distance_expr = RawSQL(
             dialect, "embedding <-> '[1.0, 0.0, 0.0]' AS distance"
         )
 
@@ -311,7 +311,7 @@ class TestPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <-> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <-> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()
@@ -329,7 +329,7 @@ class TestPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        distance_expr = RawSQLExpression(
+        distance_expr = RawSQL(
             dialect, "embedding <=> '[1.0, 0.0, 0.0]' AS distance"
         )
 
@@ -340,7 +340,7 @@ class TestPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <=> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <=> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()
@@ -358,7 +358,7 @@ class TestPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ip_expr = RawSQLExpression(
+        ip_expr = RawSQL(
             dialect, "embedding <#> '[1.0, 0.0, 0.0]' AS ip"
         )
 
@@ -369,7 +369,7 @@ class TestPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <#> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <#> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()
@@ -812,7 +812,7 @@ class TestAsyncPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        distance_expr = RawSQLExpression(
+        distance_expr = RawSQL(
             dialect, "embedding <-> '[1.0, 0.0, 0.0]' AS distance"
         )
 
@@ -823,7 +823,7 @@ class TestAsyncPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <-> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <-> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()
@@ -840,7 +840,7 @@ class TestAsyncPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        distance_expr = RawSQLExpression(
+        distance_expr = RawSQL(
             dialect, "embedding <=> '[1.0, 0.0, 0.0]' AS distance"
         )
 
@@ -851,7 +851,7 @@ class TestAsyncPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <=> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <=> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()
@@ -868,7 +868,7 @@ class TestAsyncPgvectorIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ip_expr = RawSQLExpression(
+        ip_expr = RawSQL(
             dialect, "embedding <#> '[1.0, 0.0, 0.0]' AS ip"
         )
 
@@ -879,7 +879,7 @@ class TestAsyncPgvectorIntegration:
             order_by=OrderByClause(
                 dialect,
                 # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-                [RawSQLExpression(dialect, "embedding <#> '[1.0, 0.0, 0.0]'")],
+                [RawSQL(dialect, "embedding <#> '[1.0, 0.0, 0.0]'")],
             ),
         )
         sql, params = query.to_sql()

@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
-from rhosocial.activerecord.backend.expression import RawSQLExpression
+from rhosocial.activerecord.backend.expression import RawSQL
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -524,7 +524,7 @@ class TestAsyncCubeIntegration:
 
         # A point cube is contained by a range cube
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        contains_expr = RawSQLExpression(
+        contains_expr = RawSQL(
             dialect, "'(0,0),(10,10)'::cube @> '(5,5)'::cube AS contains"
         )
         query = QueryStatement(
@@ -538,7 +538,7 @@ class TestAsyncCubeIntegration:
 
         # Point outside the range cube
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        not_contains_expr = RawSQLExpression(
+        not_contains_expr = RawSQL(
             dialect, "'(0,0),(10,10)'::cube @> '(15,15)'::cube AS contains"
         )
         query2 = QueryStatement(
@@ -558,7 +558,7 @@ class TestAsyncCubeIntegration:
 
         # Overlapping cubes
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        overlap_expr = RawSQLExpression(
+        overlap_expr = RawSQL(
             dialect, "'(0,0),(5,5)'::cube && '(3,3),(8,8)'::cube AS overlaps"
         )
         query = QueryStatement(
@@ -572,7 +572,7 @@ class TestAsyncCubeIntegration:
 
         # Non-overlapping cubes
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        no_overlap_expr = RawSQLExpression(
+        no_overlap_expr = RawSQL(
             dialect, "'(0,0),(2,2)'::cube && '(5,5),(8,8)'::cube AS overlaps"
         )
         query2 = QueryStatement(

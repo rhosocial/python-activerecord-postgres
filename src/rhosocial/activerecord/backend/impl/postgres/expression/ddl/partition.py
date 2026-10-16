@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
-from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+from rhosocial.activerecord.backend.expression.operators import RawSQL
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ class PartitionValue(BaseExpression):
     - ``None`` renders as ``NULL``.
     - RANGE ``MINVALUE`` and ``MAXVALUE`` render as keywords.
     - LIST renders those strings as quoted values.
-    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQLExpression`` values
+    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQL`` values
       delegate through their own formatters and retain their parameters.
     - Other scalar values use a whitelist; arbitrary objects are rejected.
 
@@ -121,13 +121,13 @@ class PartitionValue(BaseExpression):
                     if current.alias is not None:
                         raise ValueError("partition value expressions must not have aliases")
                     pending.extend(current.args)
-                elif isinstance(current, (Literal, RawSQLExpression)):
+                elif isinstance(current, (Literal, RawSQL)):
                     if getattr(current, "alias", None) is not None:
                         raise ValueError("partition value expressions must not have aliases")
                 else:
                     raise TypeError(
                         "partition value expressions must be FunctionCall, Literal, "
-                        "or RawSQLExpression"
+                        "or RawSQL"
                     )
         else:
             if isinstance(value, bool):

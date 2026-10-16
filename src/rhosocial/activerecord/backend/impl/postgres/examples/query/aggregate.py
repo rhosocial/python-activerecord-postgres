@@ -88,15 +88,16 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement, Column, GroupByHavingClause,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.functions.aggregate import AvgFunction, SumFunction
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'product'),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')).as_('total_qty'),
-        FunctionCall(dialect, 'AVG', Column(dialect, 'price')).as_('avg_price'),
+        SumFunction(dialect, Column(dialect, 'quantity')).as_('total_qty'),
+        AvgFunction(dialect, Column(dialect, 'price')).as_('avg_price'),
     ],
     from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
@@ -105,7 +106,7 @@ query = QueryStatement(
         having=ComparisonPredicate(
             dialect,
             '>',
-            FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')),
+            SumFunction(dialect, Column(dialect, 'quantity')),
             Literal(dialect, 10),
         ),
     ),

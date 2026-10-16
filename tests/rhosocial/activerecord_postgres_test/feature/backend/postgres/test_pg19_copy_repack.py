@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     Literal,
     QueryStatement,
-    RawSQLExpression,
+    RawSQL,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -178,7 +178,7 @@ def test_copy_to_requires_table_or_base_expression_query():
     with pytest.raises(TypeError, match="BaseExpression"):
         PostgresCopyToExpression(dialect, query="SELECT 1")
     with pytest.raises(ValueError, match="not both"):
-        PostgresCopyToExpression(dialect, table_name="users", query=RawSQLExpression(dialect, "SELECT 1"))
+        PostgresCopyToExpression(dialect, table_name="users", query=RawSQL(dialect, "SELECT 1"))
     with pytest.raises(TypeError):
         PostgresCopyToExpression(dialect, table_name="users", program="cat input")
 
@@ -194,12 +194,12 @@ def test_copy_to_query_returns_parameters_and_rejects_mutations():
     with pytest.raises(ValueError, match="read-only"):
         PostgresCopyToExpression(
             dialect,
-            query=RawSQLExpression(dialect, "SELECT 1; DELETE FROM users"),
+            query=RawSQL(dialect, "SELECT 1; DELETE FROM users"),
         ).to_sql()
     with pytest.raises(ValueError, match="read-only"):
         PostgresCopyToExpression(
             dialect,
-            query=RawSQLExpression(dialect, "WITH gone AS (DELETE FROM users RETURNING id) SELECT * FROM gone"),
+            query=RawSQL(dialect, "WITH gone AS (DELETE FROM users RETURNING id) SELECT * FROM gone"),
         ).to_sql()
 
 
@@ -283,7 +283,7 @@ def test_copy_from_rejects_json_and_direction_options():
     with pytest.raises(TypeError):
         PostgresCopyFromExpression(dialect, "users", stdout=True)
     with pytest.raises(TypeError):
-        PostgresCopyFromExpression(dialect, "users", query=RawSQLExpression(dialect, "SELECT 1"))
+        PostgresCopyFromExpression(dialect, "users", query=RawSQL(dialect, "SELECT 1"))
 
 
 def test_copy_header_version_boundaries():

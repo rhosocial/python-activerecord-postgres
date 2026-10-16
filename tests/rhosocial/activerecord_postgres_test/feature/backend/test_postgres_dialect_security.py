@@ -20,9 +20,9 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
 from rhosocial.activerecord.backend.expression.types import VarCharType
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
-    RawSQLExpression,
+    RawSQL,
 )
-from rhosocial.activerecord.backend.expression.core import CastFunction
+from rhosocial.activerecord.backend.expression.core import CastExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
 from typing import Tuple, Any  # noqa: F401
 from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
@@ -35,8 +35,13 @@ def dialect():
 
 
 def test_postgres_escape_sql_string(dialect):
-    """Test PostgreSQL inherits _escape_sql_string."""
-    result = dialect._escape_sql_string("test's value")
+    """PostgreSQL inherits the public string-escape helper core exposes.
+
+    It is public because the literal-construction protocol (``SQLLiteral``) must
+    escape every string component it embeds, and the protocol's contract names
+    this helper rather than a private one.
+    """
+    result = dialect.escape_sql_string("test's value")
     assert result == "test''s value"
 
 
@@ -97,7 +102,7 @@ def test_postgres_format_cast_expression_valid(dialect):
     """The target type is a DataType, and the :: syntax renders what it says."""
     from rhosocial.activerecord.backend.expression.types import CustomType
 
-    expr = CastFunction(dialect, RawSQLExpression(dialect, "column"),
+    expr = CastExpression(dialect, RawSQL(dialect, "column"),
                           CustomType(dialect, raw="INTEGER"))
     sql, params = expr.to_sql()
     assert "INTEGER" in sql
@@ -204,11 +209,11 @@ def test_exclude_constraint_rejects_empty_elements(dialect):
 
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
-    from rhosocial.activerecord.backend.expression import Column, Literal
+    from rhosocial.activerecord.backend.expression import Column, DdlLiteral
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     where = ComparisonPredicate(
-        dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+        dialect, "=", Column(dialect, "active"), DdlLiteral(dialect, True)
     )
     constraint = PostgresExcludeConstraint(
         dialect,
@@ -569,11 +574,11 @@ def test_format_binary_operator_percent_escaped():
     d = PostgresDialect((16, 0, 0))
 
     def binop(op, left_sql, right_sql, right_params=()):
-        left = RawSQLExpression(d, left_sql)
+        left = RawSQL(d, left_sql)
         if right_params:
             right = Literal(d, right_params[0])
         else:
-            right = RawSQLExpression(d, right_sql)
+            right = RawSQL(d, right_sql)
         return BinaryExpression(d, op, left, right).to_sql()
 
     # % operator → %% (psycopg requires %% for literal %)

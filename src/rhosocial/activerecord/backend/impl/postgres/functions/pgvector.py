@@ -24,7 +24,10 @@ The vector type requires the pgvector extension:
 from typing import List, Optional, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
-from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.operators import (
+    ArithmeticOperation,
+    BinaryExpression,
+)
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresVectorType,
@@ -47,7 +50,7 @@ def vector_l2_distance(
     dialect: "SQLDialectBase",
     left: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
     right: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """L2 (Euclidean) distance operator: left <-> right.
 
     Args:
@@ -57,7 +60,7 @@ def vector_l2_distance(
         right: Right operand (vector literal, or expression)
 
     Returns:
-        BinaryArithmeticExpression for the distance calculation
+        BinaryExpression for the distance calculation
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -92,14 +95,14 @@ def vector_l2_distance(
     else:
         right_expr = core.Literal(dialect, right)
 
-    return BinaryArithmeticExpression(dialect, "<->", left_expr, right_expr)
+    return BinaryExpression(dialect, "<->", left_expr, right_expr)
 
 
 def vector_cosine_distance(
     dialect: "SQLDialectBase",
     left: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
     right: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Cosine distance operator: left <=> right.
 
     Args:
@@ -109,7 +112,7 @@ def vector_cosine_distance(
         right: Right operand (vector literal, or expression)
 
     Returns:
-        BinaryArithmeticExpression for the cosine distance
+        BinaryExpression for the cosine distance
     """
     if isinstance(left, bases.BaseExpression):
         left_expr = left
@@ -139,14 +142,14 @@ def vector_cosine_distance(
     else:
         right_expr = core.Literal(dialect, right)
 
-    return BinaryArithmeticExpression(dialect, "<=>", left_expr, right_expr)
+    return BinaryExpression(dialect, "<=>", left_expr, right_expr)
 
 
 def vector_inner_product(
     dialect: "SQLDialectBase",
     left: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
     right: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Inner product (negative) operator: left <#> right.
 
     Note: pgvector returns the negative inner product, so values are
@@ -159,7 +162,7 @@ def vector_inner_product(
         right: Right operand (vector literal, or expression)
 
     Returns:
-        BinaryArithmeticExpression for the inner product
+        BinaryExpression for the inner product
     """
     if isinstance(left, bases.BaseExpression):
         left_expr = left
@@ -189,7 +192,7 @@ def vector_inner_product(
     else:
         right_expr = core.Literal(dialect, right)
 
-    return BinaryArithmeticExpression(dialect, "<#>", left_expr, right_expr)
+    return BinaryExpression(dialect, "<#>", left_expr, right_expr)
 
 
 def vector_distance(
@@ -197,7 +200,7 @@ def vector_distance(
     column: Union[str, "bases.BaseExpression"],
     query_vector: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
     metric: str = "cosine",
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Distance operator for a vector column, dispatching by metric.
 
     Unlike the raw operator factories, a plain string ``column`` is wrapped in
@@ -211,7 +214,7 @@ def vector_distance(
         metric: Distance metric - 'cosine' | 'l2' | 'ip'
 
     Returns:
-        BinaryArithmeticExpression for the requested distance
+        BinaryExpression for the requested distance
     """
     if metric not in _METRIC_OPERATORS:
         raise ValueError(
@@ -235,7 +238,7 @@ def vector_distance(
     else:
         query_expr = core.Literal(dialect, query_vector)
 
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, _METRIC_OPERATORS[metric],
         column_expr, query_expr,
     )
@@ -247,7 +250,7 @@ def vector_cosine_similarity(
     dialect: "SQLDialectBase",
     column: Union[str, "bases.BaseExpression"],
     query_vector: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
-) -> BinaryArithmeticExpression:
+) -> ArithmeticOperation:
     """Cosine similarity expression: 1 - (column <=> query_vector).
 
     This converts cosine distance to cosine similarity by subtracting
@@ -259,14 +262,14 @@ def vector_cosine_similarity(
         query_vector: The query vector to compare against
 
     Returns:
-        BinaryArithmeticExpression for cosine similarity
+        ArithmeticOperation for cosine similarity
 
     Example:
         >>> expr = vector_cosine_similarity(d, "embedding", [1.0, 2.0, 3.0])
     """
     cosine_dist = vector_cosine_distance(dialect, column, query_vector)
     one = core.Literal(dialect, 1)
-    return BinaryArithmeticExpression(dialect, "-", one, cosine_dist)
+    return ArithmeticOperation(dialect, "sub", one, cosine_dist)
 
 
 # === Type Construction ===

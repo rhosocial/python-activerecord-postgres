@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     CreateIndexStatement,
     OrderByClause,
-    RawSQLExpression,
+    RawSQL,
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
@@ -285,7 +285,7 @@ class TestLtreeIntegration:
 
         # Test @> (ancestor) operator: does 'Top.Science' contain 'Top.Science.Astronomy'?
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "'Top.Science'::ltree @> path AS is_ancestor"
         )
         query = QueryStatement(
@@ -305,7 +305,7 @@ class TestLtreeIntegration:
 
         # 'Top.History' does not contain 'Top.Science.Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        not_ancestor_expr = RawSQLExpression(
+        not_ancestor_expr = RawSQL(
             dialect, "'Top.History'::ltree @> path AS is_ancestor"
         )
         query2 = QueryStatement(
@@ -325,7 +325,7 @@ class TestLtreeIntegration:
 
         # Test <@ (descendant) operator
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'Top.Science'::ltree AS is_descendant"
         )
         query3 = QueryStatement(
@@ -346,7 +346,7 @@ class TestLtreeIntegration:
         # Test ~ (lquery match) operator: find paths matching pattern
         # Use Literal in SELECT to compute the match, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path ~ 'Top.Science.*'::lquery AS matches"
         )
         query4 = QueryStatement(
@@ -372,7 +372,7 @@ class TestLtreeIntegration:
         # Find all ancestors of 'root.level1.level2a'
         # Use @> operator via Literal in SELECT, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "path @> 'root.level1.level2a'::ltree AS is_ancestor"
         )
         query = QueryStatement(
@@ -392,7 +392,7 @@ class TestLtreeIntegration:
 
         # Find all descendants of 'root.level1'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'root.level1'::ltree AS is_descendant"
         )
         query2 = QueryStatement(
@@ -489,7 +489,7 @@ class TestLtreeIntegration:
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         query = QueryStatement(
             dialect=dialect,
-            select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
+            select=[RawSQL(dialect, "COUNT(*) AS cnt")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "AND",
@@ -512,7 +512,7 @@ class TestLtreeIntegration:
 
         # Insert data and query using index - use Literal for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"
         )
         query2 = QueryStatement(
@@ -534,7 +534,7 @@ class TestLtreeIntegration:
 
         # @ operator with ltxtquery: paths matching 'Science & Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path @ 'Science & Astronomy'::ltxtquery AS matches"
         )
         query = QueryStatement(
@@ -792,7 +792,7 @@ class TestAsyncLtreeIntegration:
 
         # Test @> (ancestor) operator: does 'Top.Science' contain 'Top.Science.Astronomy'?
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "'Top.Science'::ltree @> path AS is_ancestor"
         )
         query = QueryStatement(
@@ -812,7 +812,7 @@ class TestAsyncLtreeIntegration:
 
         # 'Top.History' does not contain 'Top.Science.Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        not_ancestor_expr = RawSQLExpression(
+        not_ancestor_expr = RawSQL(
             dialect, "'Top.History'::ltree @> path AS is_ancestor"
         )
         query2 = QueryStatement(
@@ -832,7 +832,7 @@ class TestAsyncLtreeIntegration:
 
         # Test <@ (descendant) operator
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'Top.Science'::ltree AS is_descendant"
         )
         query3 = QueryStatement(
@@ -852,7 +852,7 @@ class TestAsyncLtreeIntegration:
 
         # Test ~ (lquery match) operator: find paths matching pattern
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path ~ 'Top.Science.*'::lquery AS matches"
         )
         query4 = QueryStatement(
@@ -878,7 +878,7 @@ class TestAsyncLtreeIntegration:
 
         # Find all ancestors of 'root.level1.level2a'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "path @> 'root.level1.level2a'::ltree AS is_ancestor"
         )
         query = QueryStatement(
@@ -898,7 +898,7 @@ class TestAsyncLtreeIntegration:
 
         # Find all descendants of 'root.level1'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'root.level1'::ltree AS is_descendant"
         )
         query2 = QueryStatement(
@@ -997,7 +997,7 @@ class TestAsyncLtreeIntegration:
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         query = QueryStatement(
             dialect=dialect,
-            select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
+            select=[RawSQL(dialect, "COUNT(*) AS cnt")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
                 dialect, "AND",
@@ -1020,7 +1020,7 @@ class TestAsyncLtreeIntegration:
 
         # Insert data and query using index - use Literal for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"
         )
         query2 = QueryStatement(
@@ -1043,7 +1043,7 @@ class TestAsyncLtreeIntegration:
 
         # @ operator with ltxtquery: paths matching 'Science & Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path @ 'Science & Astronomy'::ltxtquery AS matches"
         )
         query = QueryStatement(

@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table, View
-from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate, RawSQLExpression  # noqa: F401
+from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate, RawSQL  # noqa: F401
 from rhosocial.activerecord.backend.expression.query_parts import GroupByHavingClause, WhereClause  # noqa: F401
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError  # noqa: F401
 from rhosocial.activerecord.backend.options import ExecutionOptions

@@ -1,5 +1,5 @@
 """
-UNION using SetOperationStatement - PostgreSQL.
+UNION using SetOperation - PostgreSQL.
 
 This example demonstrates:
 1. UNION (distinct)
@@ -75,7 +75,7 @@ backend.execute(sql, params)
 # SECTION: UNION
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryStatement, SetOperationStatement,
+    QueryStatement, SetOperation,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 
@@ -90,10 +90,10 @@ query2 = QueryStatement(
     select=[Literal(dialect, 'Charlie')],
 )
 
-union_expr = SetOperationStatement(
+union_expr = SetOperation(
     dialect=dialect,
+    op='union',
     left=query1,
-    operation='UNION',
     right=query2,
 )
 sql, params = union_expr.to_sql()
@@ -107,11 +107,10 @@ print(f"Result: {result.data}")
 # ============================================================
 # SECTION: UNION ALL
 # ============================================================
-union_all = SetOperationStatement(
+union_all = SetOperation(
     dialect=dialect,
+    op='union_all',
     left=query1,
-    operation='UNION',
-    all_=True,
     right=query2,
 )
 sql, params = union_all.to_sql()
@@ -131,5 +130,5 @@ backend.disconnect()
 # SECTION: Summary
 # ============================================================
 # Key points:
-# 1. Use SetOperationStatement with operation='UNION', all_=True for UNION ALL
+# 1. Use SetOperation with op='union' for UNION and op='union_all' for UNION ALL
 # 2. UNION removes duplicates, UNION ALL keeps all

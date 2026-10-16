@@ -22,7 +22,7 @@ import warnings
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
 from rhosocial.activerecord.backend.expression.serialization import (
     deserialize,
     deserialize_json,
@@ -48,7 +48,7 @@ def dialect():
 
 
 def _condition(dialect):
-    return DomainValueExpression(dialect) > Literal(dialect, 0, inline_literals=True)
+    return DomainValueExpression(dialect) > DdlLiteral(dialect, 0)
 
 
 def _check(dialect, name=None):

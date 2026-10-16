@@ -11,7 +11,7 @@ from typing import Any, List, Optional, Tuple, TYPE_CHECKING  # noqa: F401
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
@@ -311,15 +311,22 @@ class PostgresPartitionMixin:
         value: Any,
         memo: Optional[dict] = None,
     ) -> Any:
+        """Bind ``self`` to a copy of a partition-bound tree and lift its
+        data-position literals to the DDL-position literal class.
+
+        Partition bounds accept no bind parameters, so a value composed from
+        ordinary DQL nodes must be adapted before it renders. Each ``Literal``
+        is swapped for :class:`~...expression.core.DdlLiteral`, the class that
+        owns the DDL position; whether a value inlines stays a decision of its
+        **class**, never a flag on an instance.
+        """
         if memo is None:
             memo = {}
         identity = id(value)
         if identity in memo:
             return memo[identity]
         if isinstance(value, Literal):
-            bound = copy(value)
-            bound.dialect = self
-            bound.inline_literals = True
+            bound = DdlLiteral(self, value.value, alias=value.alias)
             memo[identity] = bound
             return bound
         if isinstance(value, BaseExpression):

@@ -8,9 +8,10 @@ including materialized view refresh, comment, and partition expressions.
 import pytest
 
 from rhosocial.activerecord.backend.expression import (
-    BinaryArithmeticExpression,
+    ArithmeticOperation,
     Column,
     ComparisonPredicate,
+    DdlLiteral,
     Literal,
 )
 from rhosocial.activerecord.backend.expression.statements import (
@@ -210,7 +211,7 @@ class TestPostgresAlterColumnUsingExpression:
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=BinaryArithmeticExpression(dialect, "+", Column(dialect, "price"), Literal(dialect, 1)),
+            using=ArithmeticOperation(dialect, "add", Column(dialect, "price"), Literal(dialect, 1)),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -383,7 +384,7 @@ class TestPostgresConstraintDeferral:
             assert PostgresDialect(version).supports_constraint_enforced() is expected
 
         dialect = PostgresDialect((19, 0, 0))
-        condition = ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline_literals=True))
+        condition = ComparisonPredicate(dialect, ">", Column(dialect, "id"), DdlLiteral(dialect, 0))
         check = TableConstraint(dialect, branch=TableCheckConstraint(dialect, condition), not_enforced=True)
         fk = TableConstraint(
             dialect,
@@ -508,7 +509,7 @@ class TestPostgresConstraintEnforcement:
         from rhosocial.activerecord.backend.expression.types import IntegerType
 
         dialect = PostgresDialect((18, 0, 0))
-        condition = ComparisonPredicate(dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True))
+        condition = ComparisonPredicate(dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0))
         check = TableConstraint(
             dialect,
             branch=TableCheckConstraint(dialect, condition),
@@ -566,7 +567,7 @@ class TestPostgresConstraintEnforcement:
                 dialect,
                 " check ",
                 check_condition=ComparisonPredicate(
-                    dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True)
+                    dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0)
                 ),
                 validation=" not valid ",
             )
@@ -578,7 +579,7 @@ class TestPostgresConstraintEnforcement:
                     branch=TableCheckConstraint(
                         dialect,
                         ComparisonPredicate(
-                            dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True)
+                            dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0)
                         ),
                     ),
                     validation=" not valid ",
@@ -688,7 +689,7 @@ class TestPostgresConstraintEnforcement:
             branch=TableCheckConstraint(
                 dialect,
                 ComparisonPredicate(
-                    dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline_literals=True)
+                    dialect, ">", Column(dialect, "id"), DdlLiteral(dialect, 0)
                 ),
             ),
             validation=ConstraintValidation.NOVALIDATE,
@@ -708,7 +709,7 @@ class TestPostgresConstraintEnforcement:
             ComparisonPredicate,
             FunctionCall,
             Literal,
-            RawSQLExpression,
+            RawSQL,
             RawSQLPredicate,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -724,7 +725,7 @@ class TestPostgresConstraintEnforcement:
                 )
             ],
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+                dialect, "=", Column(dialect, "active"), DdlLiteral(dialect, True)
             ),
         )
 
@@ -747,12 +748,12 @@ class TestPostgresConstraintEnforcement:
         with pytest.raises(ValueError, match="unbalanced"):
             PostgresExcludeConstraint(
                 dialect,
-                elements=[(RawSQLExpression(dialect, "lower(name"), "=")],
+                elements=[(RawSQL(dialect, "lower(name"), "=")],
             ).to_sql()
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             PostgresExcludeConstraint(
                 dialect,
-                elements=[(RawSQLExpression(dialect, "lower(name)", ("x",)), "=")],
+                elements=[(RawSQL(dialect, "lower(name)", ("x",)), "=")],
             ).to_sql()
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             PostgresExcludeConstraint(
