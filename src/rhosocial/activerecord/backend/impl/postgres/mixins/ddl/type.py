@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple, Type, Union, cast, TYPE_CHECKING
+from typing import List, Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.user_defined_type import UserDefinedTypeMixin
@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     TypeAlterAction,
     TypeDefinition,
 )
-from rhosocial.activerecord.backend.expression.objects import SchemaObject, Type
+from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.types import DataType
 from ...expression.ddl.type import (
     PostgresAddEnumValueAction,
@@ -410,13 +410,22 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             )
         if expr.if_exists and not self.supports_drop_type_if_exists():
             raise UnsupportedFeatureError(self.name, "DROP TYPE IF EXISTS")
+        if isinstance(expr, PostgresDropTypeExpression):
+            # The PostgreSQL-only options exist only on the PostgreSQL
+            # subclass; the core node has no such fields and asks for none
+            # of them.
+            cascade = expr.cascade
+            restrict = expr.restrict
+        else:
+            cascade = False
+            restrict = False
         behavior = self._format_type_behavior(
-            getattr(expr, "cascade", False),
-            getattr(expr, "restrict", False),
+            cascade,
+            restrict,
         )
-        if getattr(expr, "cascade", False) and not self.supports_drop_type_cascade():
+        if cascade and not self.supports_drop_type_cascade():
             raise UnsupportedFeatureError(self.name, "DROP TYPE CASCADE")
-        if getattr(expr, "restrict", False) and not self.supports_drop_type_restrict():
+        if restrict and not self.supports_drop_type_restrict():
             raise UnsupportedFeatureError(self.name, "DROP TYPE RESTRICT")
         parts = ["DROP TYPE"]
         if expr.if_exists:
@@ -433,7 +442,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         if not self.supports_type_definition(type(expr)):
             raise UnsupportedFeatureError(
                 self.name,
-                f"TYPE definition {getattr(expr, 'definition_kind', type(expr).__name__)}",
+                f"TYPE definition {expr.definition_kind}",
             )
         if isinstance(expr, PostgresCompositeTypeDefinition):
             attributes = ", ".join(
@@ -471,7 +480,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             return "", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"TYPE definition {getattr(expr, 'definition_kind', type(expr).__name__)}",
+            f"TYPE definition {expr.definition_kind}",
         )
 
     def format_type_alter_action(
@@ -482,7 +491,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         if not self.supports_type_alter_action(type(expr)):
             raise UnsupportedFeatureError(
                 self.name,
-                f"ALTER TYPE action {getattr(expr, 'action_kind', type(expr).__name__)}",
+                f"ALTER TYPE action {expr.action_kind}",
             )
         if isinstance(expr, PostgresRenameTypeAction):
             return f"RENAME TO {self.format_identifier(expr.new_name)}", ()
@@ -579,5 +588,5 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             return f"SET ({', '.join(clauses)})", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"ALTER TYPE action {getattr(expr, 'action_kind', type(expr).__name__)}",
+            f"ALTER TYPE action {expr.action_kind}",
         )

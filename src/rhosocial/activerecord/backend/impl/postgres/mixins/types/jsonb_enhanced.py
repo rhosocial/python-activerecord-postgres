@@ -369,7 +369,7 @@ class PostgresJSONBEnhancedMixin:
         """
         from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
 
-        mode: JSONPathMode = getattr(expr, "mode", JSONPathMode.AUTO)
+        mode: JSONPathMode = expr.mode
 
         if mode is JSONPathMode.ARROW:
             return self.format_json_arrow_expression(expr)

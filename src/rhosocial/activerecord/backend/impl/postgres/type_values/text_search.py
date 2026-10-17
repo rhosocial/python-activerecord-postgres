@@ -368,7 +368,9 @@ class TsQueryOperator(TsQueryNode):
             return ""
         if isinstance(node, TsQueryOperator):
             return f"({node.to_postgres_string()})"
-        if hasattr(node, "to_postgres_string"):
+        if isinstance(node, TsQueryNode):
+            # ``to_postgres_string`` is the base class's declared protocol; a
+            # subclass that has not implemented it fails right here.
             return node.to_postgres_string()
         return str(node)
 

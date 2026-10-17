@@ -84,18 +84,17 @@ class PostgresTableMixin:
         - HASH requires PostgreSQL 11+.
         - MySQL-specific methods (KEY, RANGE COLUMNS) are rejected.
         """
-        if getattr(expr, "partition", None) is not None:
+        if expr.partition is not None:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
             PostgresCreateTableOptions,
         )
-        table_options = getattr(expr, "table_options", None)
         if (
-            isinstance(table_options, PostgresCreateTableOptions)
-            and table_options.unlogged
-            and getattr(expr, "temporary", False)
+            isinstance(expr.table_options, PostgresCreateTableOptions)
+            and expr.table_options.unlogged
+            and expr.temporary
         ):
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,

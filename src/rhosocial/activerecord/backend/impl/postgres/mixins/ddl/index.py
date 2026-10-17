@@ -10,6 +10,8 @@ from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
+from ...expression.ddl import PostgresCreateIndexExpression
+
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
         PostgresAlterIndexExpression,
@@ -411,8 +413,17 @@ class PostgresIndexMixin:
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")
 
-        # Columns with optional operator classes
-        opclasses = getattr(expr, "opclasses", None) or {}
+        # Columns with optional operator classes. The PostgreSQL-only fields
+        # exist only on the PostgreSQL subclass; the core node has no such
+        # fields and asks for none of them.
+        if isinstance(expr, PostgresCreateIndexExpression):
+            opclasses = expr.opclasses
+            nulls_not_distinct = expr.nulls_not_distinct
+            with_options = expr.with_options
+        else:
+            opclasses = {}
+            nulls_not_distinct = False
+            with_options = {}
         col_parts = []
         for col in expr.columns:
             if isinstance(col, ToSQLProtocol):
@@ -440,7 +451,7 @@ class PostgresIndexMixin:
             parts.append(f"INCLUDE ({include_cols})")
 
         # NULLS NOT DISTINCT (PG 15+, requires UNIQUE)
-        if getattr(expr, "nulls_not_distinct", False):
+        if nulls_not_distinct:
             if not expr.unique:
                 raise ValueError("NULLS NOT DISTINCT is only valid for UNIQUE indexes")
             if expr.concurrent and not self.supports_concurrent_unique_nulls_not_distinct():
@@ -452,7 +463,6 @@ class PostgresIndexMixin:
             parts.append("NULLS NOT DISTINCT")
 
         # WITH options via typed fields
-        with_options = getattr(expr, "with_options", None) or {}
         if with_options:
             opts = ", ".join(f"{k} = {v}" for k, v in with_options.items())
             parts.append(f"WITH ({opts})")

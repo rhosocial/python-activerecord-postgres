@@ -30,6 +30,7 @@ from ...expression.ddl.domain import (
     PostgresChangeDomainOwnerAction,
     PostgresCreateDomainExpression,
     PostgresDropDomainCheckAction,
+    PostgresDropDomainExpression,
     PostgresRenameDomainConstraintAction,
     PostgresSetDomainSchemaAction,
     PostgresValidateDomainConstraintAction,
@@ -273,9 +274,16 @@ class PostgresDomainMixin(DomainMixin):
                 "DROP DOMAIN",
                 suggestion="requires PostgreSQL 9.6+",
             )
-        if_exists = getattr(expr, "if_exists", False)
-        cascade = getattr(expr, "cascade", False)
-        restrict = getattr(expr, "restrict", False)
+        # The PostgreSQL-only options exist only on the PostgreSQL subclass;
+        # the core node has no such fields and asks for none of them.
+        if isinstance(expr, PostgresDropDomainExpression):
+            if_exists = expr.if_exists
+            cascade = expr.cascade
+            restrict = expr.restrict
+        else:
+            if_exists = False
+            cascade = False
+            restrict = False
         if if_exists and not self.supports_drop_domain_if_exists():
             raise UnsupportedFeatureError(self.name, "DROP DOMAIN IF EXISTS")
         if cascade and not self.supports_drop_domain_cascade():
@@ -380,7 +388,7 @@ class PostgresDomainMixin(DomainMixin):
             return f"RENAME TO {self.format_identifier(expr.new_name)}", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"ALTER DOMAIN action {getattr(expr, 'action_kind', type(expr).__name__)}",
+            f"ALTER DOMAIN action {expr.action_kind}",
         )
 
     def _format_postgres_legacy_sql_expression(

@@ -32,6 +32,7 @@ from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
     PostgresChangeMaterializedViewOwnerAction,
+    PostgresCreateMaterializedViewExpression,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -212,7 +213,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         parts = ["CREATE MATERIALIZED VIEW"]
 
-        if getattr(expr, "if_not_exists", False):
+        # IF NOT EXISTS exists only on the PostgreSQL subclass; the core
+        # node has no such field and asks for none of it.
+        if isinstance(expr, PostgresCreateMaterializedViewExpression) and expr.if_not_exists:
             if not self.supports_materialized_view_if_not_exists():
                 raise UnsupportedFeatureError(
                     self.name,
@@ -396,7 +399,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
             return f"OWNER TO {self.format_identifier(expr.new_owner)}", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"ALTER MATERIALIZED VIEW action {getattr(expr, 'action_kind', type(expr).__name__)}",
+            f"ALTER MATERIALIZED VIEW action {expr.action_kind}",
         )
 
     # ------------------------------------------------------------------
@@ -405,7 +408,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
     def _check_concurrent_refresh_support(self, expr: Any) -> None:
         """Raise when CONCURRENTLY is requested but unsupported by the server version."""
-        if getattr(expr, "concurrent", False) and not self.supports_materialized_view_concurrent_refresh():
+        if expr.concurrent and not self.supports_materialized_view_concurrent_refresh():
             raise UnsupportedFeatureError(
                 self.name,
                 "REFRESH MATERIALIZED VIEW CONCURRENTLY",

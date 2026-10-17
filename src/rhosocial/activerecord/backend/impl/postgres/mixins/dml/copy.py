@@ -2,6 +2,7 @@
 """PostgreSQL COPY statement formatting and version gates."""
 
 import re
+from enum import Enum
 from typing import Any, List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
@@ -544,7 +545,9 @@ class PostgresCopyMixin:
             options.append("FREEZE")
         on_error = None
         if expr.on_error is not None:
-            on_error = str(getattr(expr.on_error, "value", expr.on_error)).lower()
+            on_error = str(
+                expr.on_error.value if isinstance(expr.on_error, Enum) else expr.on_error
+            ).lower()
             if on_error not in {"stop", "ignore", "set_null"}:
                 raise ValueError("ON_ERROR must be stop, ignore, or set_null")
             self._require_copy_version(
@@ -580,7 +583,11 @@ class PostgresCopyMixin:
                 raise ValueError("encoding must be a PostgreSQL encoding name")
             options.append(f"ENCODING {self._format_copy_string(encoding, 'encoding')}")
         if expr.log_verbosity is not None:
-            verbosity = str(getattr(expr.log_verbosity, "value", expr.log_verbosity)).lower()
+            verbosity = str(
+                expr.log_verbosity.value
+                if isinstance(expr.log_verbosity, Enum)
+                else expr.log_verbosity
+            ).lower()
             if verbosity not in {"default", "verbose", "silent"}:
                 raise ValueError("LOG_VERBOSITY must be default, verbose, or silent")
             self._require_copy_version(
