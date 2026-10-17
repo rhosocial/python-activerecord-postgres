@@ -12,8 +12,9 @@ from rhosocial.activerecord.backend.expression.objects import Domain, Type
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
-from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
+from rhosocial.activerecord.backend.expression.core import DdlLiteral
 from rhosocial.activerecord.backend.expression.serialization import (
+    default_registry,
     deserialize,
     deserialize_json,
     deserialize_xml,
@@ -87,6 +88,26 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
+
+# The kind whitelist is an assembly decision (core commit ee5f4b55): the
+# default registry is populated by walking the core, sqlite and dummy
+# expression packages, so a backend's own kinds are entered by whoever reads
+# them back. These tests deserialize the two TYPE definitions below -- and the
+# composite definition nests the attribute dataclass, while the base definition
+# carries the module-private UNSET sentinel as an enum member -- so exactly
+# those go into the default registry here. Registration is idempotent:
+# registering the same class again is a no-op, and a same-named different
+# class is a hard error either way.
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+    _UnsetValue,
+)
+
+_PG_ROUNDTRIP_REGISTRY = default_registry()
+_PG_ROUNDTRIP_REGISTRY.register_node(PostgresBaseTypeDefinition)
+_PG_ROUNDTRIP_REGISTRY.register_node(PostgresCompositeTypeDefinition)
+_PG_ROUNDTRIP_REGISTRY.register_dataclass(PostgresCompositeTypeAttribute)
+_PG_ROUNDTRIP_REGISTRY.register_enum(_UnsetValue)
+
 
 class TestPostgresDomainExpression:
     """CREATE / ALTER / DROP DOMAIN."""

@@ -157,9 +157,6 @@ from .types import (
     PostgresXIDType,
     PostgresCidrType,
 )
-from .registry import register_postgres_ddl_expressions
-
-register_postgres_ddl_expressions()
 
 __all__ = [
     # advisory
@@ -304,5 +301,4 @@ __all__ = [
     "PostgresXID8Type",
     "PostgresXIDType",
     "PostgresCidrType",
-    "register_postgres_ddl_expressions",
 ]
