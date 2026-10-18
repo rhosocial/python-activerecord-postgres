@@ -32,6 +32,7 @@ dialect = backend.dialect
 
 # Clean up for demo using DropTableStatement
 from rhosocial.activerecord.backend.expression import DropTableStatement
+from rhosocial.activerecord.backend.expression.objects import Table
 
 drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'cities'), if_exists=True)
 sql, params = drop_expr.to_sql()
@@ -52,8 +53,9 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Table  # noqa: F811
 from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal, Subquery
+from rhosocial.activerecord.backend.expression.functions import RoundFunction
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements.dml import (
@@ -261,7 +263,7 @@ if installed:
     distance_km_expr = BinaryExpression(
         dialect, "/", distance_func, Literal(dialect, 1000.0),
     )
-    round_distance = FunctionCall(dialect, "ROUND", distance_km_expr)
+    round_distance = RoundFunction(dialect, distance_km_expr)
 
     # WHERE: earth_distance(...) < 1500000
     within_radius_pred = BinaryExpression(

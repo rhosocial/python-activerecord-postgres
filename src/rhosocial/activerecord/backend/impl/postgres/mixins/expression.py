@@ -100,3 +100,24 @@ class PostgresExpressionMixin:
         else:
             qualifier, _ = relation.relation.to_sql()
         return f"{qualifier}.*", ()
+
+    def format_truncate_function(self, expr) -> Tuple[str, tuple]:
+        """Format ``TRUNC`` -- PostgreSQL's spelling of the core's TRUNCATE node.
+
+        The core's :class:`~...expression.functions.math.TruncateFunction`
+        writes the SQL-standard ``TRUNCATE``; in PostgreSQL that word is the
+        DDL statement that empties a table, and the numeric function is
+        spelled ``TRUNC``. Measured live 2026-10-18 against 17.11 (Debian
+        17.11-1.pgdg13+2): ``SELECT TRUNC(3.716, 2)`` answers ``3.71`` while
+        ``SELECT TRUNCATE(3.716)`` is refused with ``UndefinedFunction:
+        function truncate(numeric) does not exist``. The node and its operand
+        list are unchanged; only the spelled name differs, which is exactly
+        the spelling override the one-to-one rule allows.
+
+        Args:
+            expr: :class:`~...expression.functions.math.TruncateFunction`.
+
+        Returns:
+            A ``(sql, params)`` tuple.
+        """
+        return self._format_function("TRUNC", expr, expr.arguments)
