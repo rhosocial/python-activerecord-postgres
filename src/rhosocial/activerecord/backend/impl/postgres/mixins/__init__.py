@@ -23,6 +23,7 @@ from .identity_column import PostgresIdentityColumnMixin
 from .auto_increment import PostgresAutoIncrementMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
+from .typed_value import PostgresTypedValueMixin
 
 # DDL mixins
 from .ddl.partition import PostgresPartitionMixin
@@ -135,6 +136,7 @@ from .introspection import PostgresIntrospectionCapabilityMixin
 
 __all__ = [
     # Core mixins
+    "PostgresObjectNameMixin",
     "PostgresExtensionMixin",
     "PostgresMaterializedViewMixin",
     "PostgresTableMixin",
@@ -146,6 +148,7 @@ __all__ = [
     "PostgresAutoIncrementMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
+    "PostgresTypedValueMixin",
     # DDL mixins
     "PostgresPartitionMixin",
     "PostgresIndexMixin",

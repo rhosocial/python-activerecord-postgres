@@ -80,6 +80,10 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     TransactionControlMixin,
     UserDefinedTypeMixin,
     DomainMixin,
+    # Value literals: the tier-1 rendering lives on the core mixin; the
+    # tier-2 spellings PostgreSQL differs on live on this backend's mixin,
+    # which the base list composes ahead of this one.
+    TypedValueMixin,
 )
 from rhosocial.activerecord.backend.dialect.protocols import (
     AlterDatabaseSupport,
@@ -260,6 +264,7 @@ from .mixins import (
     PostgresAutoIncrementMixin,
     PostgresExpressionMixin,
     PostgresFunctionMixin,
+    PostgresTypedValueMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -555,6 +560,12 @@ class PostgresDialect(
     PostgresExtendedStatisticsMixin,
     PostgresStoredProcedureMixin,
     PostgresAdvisoryLockMixin,
+    # Value literals: PostgreSQL's tier-2 spellings ahead of the core's
+    # tier-1 rendering. This order is what resolves format_binary_value,
+    # format_uuid_value and format_interval_value; the tier-1 kinds resolve
+    # on the core mixin behind it.
+    PostgresTypedValueMixin,
+    TypedValueMixin,
     # New Mixins
     PredicateMixin,
     ExpressionMixin,
