@@ -3,6 +3,21 @@
 Functional serialization coverage: every registered expression class must
 round-trip losslessly through all three encodings (dict / JSON string / XML).
 
+Reconciled against core at **550ae740** ("check the quoting flags, because
+annotations do not"), where an artifact is a bare ``{kind, params}`` node:
+no envelope, no ``__expr__``/``__tuple__``/``__enum__``/``__dataclass__``/
+``__b64__``/``__dur__`` markers, values as plain JSON scalars, and the kind
+derived from the class name -- ``Literal`` the single exception, naming its
+fourteen value kinds by what they hold. ``test_value_kind_plane`` asserts that
+plane (wire name, payload type, round-trip) because the class matrix sees only
+one row for it whatever the payloads are.
+
+Current census, for the record: 533 registered classes, 531 constructible, 2
+pinned unconstructible, 471 rendered, 37 refused as unsupported, 20 classified
+non-renders, 3 with no formatter declared. The two gap tables
+(``_CODEC_GAPS`` / ``_CODEC_RENDER_GAPS``) are the only places a parameter may
+be lost, each pinned per class *and* channel with its exception type.
+
 For each expression class that can be constructed:
   1. dict round-trip   : deserialize(serialize(e)).get_params() == e.get_params()
   2. JSON round-trip   : deserialize_json(serialize_json(e)).get_params() == ...
