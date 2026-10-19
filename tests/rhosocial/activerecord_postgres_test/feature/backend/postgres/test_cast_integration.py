@@ -30,6 +30,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import (
     Column,
+    cast,
     ColumnConstraint,
     ColumnDefinition,
     CreateTableStatement,
@@ -425,8 +426,7 @@ class TestInsertThroughACast:
                 columns=["v"],
                 source=ValuesSource(
                     dialect,
-                    [[Literal(dialect, case.literal).cast(
-                        case.factory(dialect))]],
+                    [[cast(dialect, Literal(dialect, case.literal), case.factory(dialect))]],
                 ),
             )
             sql, params = insert.to_sql()
@@ -501,7 +501,7 @@ class TestChainedCasts:
             # date or a uuid.
             expression = Literal(dialect, _CHAIN_INPUT[chain[1]])
             for name in chain:
-                expression = expression.cast(_type_by_label(dialect, name))
+                expression = cast(dialect, expression, _type_by_label(dialect, name))
             sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[expression]]),
@@ -568,7 +568,7 @@ class TestRejectedConversions:
             sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[
-                    Literal(dialect, literal).cast(case.factory(dialect))]]),
+                    cast(dialect, Literal(dialect, literal), case.factory(dialect))]]),
             ).to_sql()
             with pytest.raises(DatabaseError):
                 backend.execute(sql, params)
