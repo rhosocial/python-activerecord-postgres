@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnsClause,
     CreatePropertyGraphStatement,
     DropPropertyGraphStatement,
-    EdgeTable,
+    EdgeTableDefinition,
     GraphColumn,
     GraphEdge,
     GraphEdgeDirection,
@@ -300,7 +300,7 @@ class TestPGQDDLFormat:
                          labels=["person"],
                          key_columns=["id"],
                          properties=TablePropertiesClause(pg19_dialect, columns=["id", "name"]))
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["person_a"], ["person_b"],
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["person_a"], ["person_b"],
                        references_source=("people", ["id"]),
                        references_destination=("people", ["id"]),
                        labels=["knows"],
@@ -337,7 +337,7 @@ class TestPGQDDLFormat:
         assert "KEY" in sql
 
     def test_edge_table_with_alias(self, pg19_dialect: PostgresDialect):
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"],
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"],
                        alias="k",
                        labels=["Knows"])
         sql, params = et.to_sql()
@@ -369,14 +369,14 @@ class TestPGQDDLFormat:
         assert "CASCADE" in sql
 
     def test_edge_table_no_references(self, pg19_dialect: PostgresDialect):
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
         sql, params = et.to_sql()
         assert 'SOURCE KEY ("pid")' in sql
         assert 'DESTINATION KEY ("fid")' in sql
         assert "REFERENCES" not in sql
 
     def test_edge_table_with_key_columns(self, pg19_dialect: PostgresDialect):
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"],
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"],
                        key_columns=["id"],
                        references_source=("people", ["id"]),
                        references_destination=("people", ["id"]))
@@ -401,7 +401,7 @@ class TestPGQDDLFormat:
         assert '"old_table"' in sql
 
     def test_alter_with_edge_tables(self, pg19_dialect: PostgresDialect):
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
         expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "DROP", "EDGE TABLES",
                                             edge_tables=[et])
         sql, params = expr.to_sql()
@@ -410,7 +410,7 @@ class TestPGQDDLFormat:
 
     def test_alter_with_both_tables(self, pg19_dialect: PostgresDialect):
         vt = VertexTable(pg19_dialect, NodeTable(pg19_dialect, 'person'))
-        et = EdgeTable(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
+        et = EdgeTableDefinition(pg19_dialect, EdgeTableObject(pg19_dialect, 'knows'), ["pid"], ["fid"])
         expr = AlterPropertyGraphStatement(pg19_dialect, PropertyGraph(pg19_dialect, 'g'), "ADD", "TABLES",
                                             vertex_tables=[vt], edge_tables=[et])
         sql, params = expr.to_sql()
@@ -477,7 +477,7 @@ class TestPGQUnsupportedFormat:
             vertex_table.to_sql()
 
     def test_edge_table_unsupported(self, withdrawn_dialect: PostgresDialect):
-        edge_table = EdgeTable(withdrawn_dialect, EdgeTableObject(withdrawn_dialect, 'knows'), ["pid"], ["fid"])
+        edge_table = EdgeTableDefinition(withdrawn_dialect, EdgeTableObject(withdrawn_dialect, 'knows'), ["pid"], ["fid"])
         with pytest.raises(UnsupportedFeatureError):
             edge_table.to_sql()
 
