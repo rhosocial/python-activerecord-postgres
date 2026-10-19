@@ -199,13 +199,24 @@ class PostgresDomainMixin(DomainMixin):
             clause_sql, clause_params = clause.to_sql()
             parts.append(clause_sql)
             params.extend(clause_params)
-        if expr.nullability is not DomainNullability.UNSPECIFIED:
-            if not self.supports_domain_nullability(expr.nullability):
+        nullability = expr.nullability
+        if not isinstance(nullability, DomainNullability):
+            # An artifact carries the word; resolve it to the member so the
+            # capability probe (which matches members) still answers.
+            try:
+                nullability = DomainNullability(str(nullability))
+            except ValueError:
+                raise ValueError(
+                    f"unknown DOMAIN nullability {expr.nullability!r}; the members "
+                    f"are {[m.value for m in DomainNullability]}"
+                ) from None
+        if nullability is not DomainNullability.UNSPECIFIED:
+            if not self.supports_domain_nullability(nullability):
                 raise UnsupportedFeatureError(
                     self.name,
-                    f"DOMAIN {expr.nullability.value}",
+                    f"DOMAIN {nullability}",
                 )
-            parts.append(expr.nullability.value)
+            parts.append(str(nullability))
         return " ".join(parts), tuple(params)
 
     def format_alter_domain_statement(

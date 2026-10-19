@@ -247,7 +247,7 @@ class PostgresTableMixin:
             if col_def.compression:
                 col_sql += f" COMPRESSION {col_def.compression}"
             if col_def.storage is not None:
-                col_sql += f" STORAGE {col_def.storage.value}"
+                col_sql += f" STORAGE {col_def.storage}"
             if col_def.statistics is not None:
                 col_sql += f" STATISTICS {col_def.statistics}"
         return col_sql, tuple(all_params)

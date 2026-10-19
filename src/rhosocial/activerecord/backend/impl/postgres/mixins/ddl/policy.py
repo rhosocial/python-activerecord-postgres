@@ -185,7 +185,7 @@ class PostgresPolicyMixin:
         if expr.command is not None:
             cmd = expr.command
             cmd_combined_clause_errors(cmd, expr.using, expr.with_check)
-            command_clause = f"FOR {cmd.value}"
+            command_clause = f"FOR {cmd}"
 
         # TO role list
         to_clause = ""
