@@ -8,15 +8,13 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-    ILikePredicate,
-)
+from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
-    EnumTypeNameExpression,
-    EnumValuesExpression,
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumAddValueExpression,
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumAddValueExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
     CreateMultirangeTypeExpression,
@@ -72,42 +70,42 @@ class TestILIKEExpression:
 
 
 class TestEnumTypeNameExpression:
-    """Tests for EnumTypeNameExpression."""
+    """Tests for PostgresEnumTypeNameExpression."""
 
     def test_name_without_schema(self, postgres_dialect):
-        expr = EnumTypeNameExpression(postgres_dialect, name="status")
+        expr = PostgresEnumTypeNameExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
         assert sql == '"status"'
         assert params == ()
 
     def test_name_with_schema(self, postgres_dialect):
-        expr = EnumTypeNameExpression(postgres_dialect, name="status", schema="app")
+        expr = PostgresEnumTypeNameExpression(postgres_dialect, name="status", schema="app")
         sql, params = expr.to_sql()
         assert sql == '"app"."status"'
         assert params == ()
 
 
 class TestEnumValuesExpression:
-    """Tests for EnumValuesExpression."""
+    """Tests for PostgresEnumValuesExpression."""
 
     def test_single_value(self, postgres_dialect):
-        expr = EnumValuesExpression(postgres_dialect, values=["active"])
+        expr = PostgresEnumValuesExpression(postgres_dialect, values=["active"])
         sql, params = expr.to_sql()
         assert sql == "'active'"
         assert params == ()
 
     def test_multiple_values(self, postgres_dialect):
-        expr = EnumValuesExpression(postgres_dialect, values=["a", "b", "c"])
+        expr = PostgresEnumValuesExpression(postgres_dialect, values=["a", "b", "c"])
         sql, params = expr.to_sql()
         assert sql == "'a', 'b', 'c'"
         assert params == ()
 
 
 class TestCreateEnumTypeExpression:
-    """Tests for CreateEnumTypeExpression."""
+    """Tests for PostgresCreateEnumTypeExpression."""
 
     def test_basic_create(self, postgres_dialect):
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             postgres_dialect, name="status", values=["active", "inactive"],
         )
         sql, params = expr.to_sql()
@@ -115,7 +113,7 @@ class TestCreateEnumTypeExpression:
         assert params == ()
 
     def test_create_if_not_exists_fails_fast(self, postgres_dialect):
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             postgres_dialect,
             name="priority",
             values=["low", "high"],
@@ -127,16 +125,16 @@ class TestCreateEnumTypeExpression:
 
 
 class TestDropEnumTypeExpression:
-    """Tests for DropEnumTypeExpression."""
+    """Tests for PostgresDropEnumTypeExpression."""
 
     def test_basic_drop(self, postgres_dialect):
-        expr = DropEnumTypeExpression(postgres_dialect, name="status")
+        expr = PostgresDropEnumTypeExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
         assert sql == "DROP TYPE \"status\""
         assert params == ()
 
     def test_drop_with_if_exists_and_cascade(self, postgres_dialect):
-        expr = DropEnumTypeExpression(
+        expr = PostgresDropEnumTypeExpression(
             postgres_dialect, name="status", schema="app",
             if_exists=True, cascade=True,
         )
@@ -146,10 +144,10 @@ class TestDropEnumTypeExpression:
 
 
 class TestAlterEnumAddValueExpression:
-    """Tests for AlterEnumAddValueExpression."""
+    """Tests for PostgresAlterEnumAddValueExpression."""
 
     def test_basic_add_value(self, postgres_dialect):
-        expr = AlterEnumAddValueExpression(
+        expr = PostgresAlterEnumAddValueExpression(
             postgres_dialect, type_name="status", new_value="archived",
         )
         sql, params = expr.to_sql()
@@ -157,7 +155,7 @@ class TestAlterEnumAddValueExpression:
         assert params == ()
 
     def test_add_value_with_before_after(self, postgres_dialect):
-        expr = AlterEnumAddValueExpression(
+        expr = PostgresAlterEnumAddValueExpression(
             postgres_dialect, type_name="status", new_value="pending",
             schema="app", before="active",
         )

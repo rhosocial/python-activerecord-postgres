@@ -231,11 +231,11 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
         """Format enum type name from expression object."""
         ...
 
-    def format_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
         """Format enum values from expression object."""
         ...
 

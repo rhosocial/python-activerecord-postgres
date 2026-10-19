@@ -283,7 +283,16 @@ class TestPostgresPartitionedTableCreation:
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
-                ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                ColumnDefinition(
+                    dialect,
+                    "status",
+                    TextType(dialect=dialect),
+                    constraints=[
+                        ColumnConstraint(
+                            dialect, branch=ColumnNotNullConstraint(dialect)
+                        )
+                    ],
+                ),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -375,28 +384,19 @@ class TestPostgresPartitionedTableCreation:
                 keys=[Column(dialect, "id")],
             )
 
-    def test_postgres_partition_clause_is_generic_subclass(self, dialect):
-        """PostgresPartitionClause derives from the generic PartitionClause."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresPartitionClause,
-        )
-
-        clause = PostgresPartitionClause(
+    def test_partition_clause_is_the_generic_clause(self, dialect):
+        """PostgreSQL uses core's PartitionClause; it adds no field of its own."""
+        clause = PartitionClause(
             dialect=dialect,
             method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         )
-        assert isinstance(clause, PartitionClause)
         sql, params = clause.to_sql()
         assert sql == ' PARTITION BY RANGE ("created_at")'
         assert params == ()
 
-    def test_postgres_partition_clause_in_create_table(self, dialect):
-        """CreateTableStatement accepts the PostgreSQL-owned clause subclass."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresPartitionClause,
-        )
-
+    def test_partition_clause_in_create_table(self, dialect):
+        """CreateTableStatement accepts core's clause with the PostgreSQL dialect."""
         expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
@@ -407,7 +407,7 @@ class TestPostgresPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PostgresPartitionClause(
+            partition=PartitionClause(
                 dialect=dialect,
                 method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "created_at")],

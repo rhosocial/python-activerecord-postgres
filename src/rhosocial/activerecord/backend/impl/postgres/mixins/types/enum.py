@@ -55,7 +55,7 @@ class EnumTypeMixin:
         """
         return self.format_type_object(Type(self, name, schema_name=schema))
 
-    def format_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
         return self.format_enum_type_name(expr.name, expr.schema)
 
     def format_enum_values(self, values: Sequence[str]) -> Tuple[str, tuple]:
@@ -64,7 +64,7 @@ class EnumTypeMixin:
             raise TypeError("ENUM values must be strings")
         return ", ".join(self.inline_sql_literal(label) for label in labels), ()
 
-    def format_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
         return self.format_enum_values(expr.values)
 
     def format_create_enum_type_raw(

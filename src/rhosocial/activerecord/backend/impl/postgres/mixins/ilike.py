@@ -4,15 +4,19 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-        ILikePredicate,
-    )
+    from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
 
 
 class PostgresILIKEMixin:
     """PostgreSQL ilike override implementation.
 
     All features are native, using version number for detection.
+
+    This is the whole of the PostgreSQL side of ``ILIKE``: the node is the
+    core one, whose ``format_method`` is ``format_ilike_predicate``, and the
+    operator PostgreSQL emits is what the override below writes. A backend
+    that redeclared the node would issue ``i_like_predicate`` twice, and an
+    artifact could then no longer say which class it meant.
     """
 
     def supports_ilike(self) -> bool:

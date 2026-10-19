@@ -30,27 +30,18 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PartitionValue",
-    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
     "PostgresPartitionMetadataExpression",
 ]
 
-
-class PostgresPartitionClause(PartitionClause):
-    """PostgreSQL ``PARTITION BY {RANGE|LIST|HASH} (...)`` clause.
-
-    PostgreSQL's declarative partitioning shares the generic clause shape, so
-    this subclass currently adds no fields; it exists as the PostgreSQL-owned
-    clause type (for capability gating and future PG-only partition parameters)
-    and to distinguish PG-declared candidates during backend selection.
-
-    Concrete partitions are **not** declared inline: PostgreSQL creates them
-    through the separate ``CREATE TABLE ... PARTITION OF`` statement
-    (``PostgresCreatePartitionExpression``). This class therefore remains
-    clause-only and never carries ``PartitionDefinition`` values.
-    """
+# ``PARTITION BY {RANGE|LIST|HASH} (...)`` is core's clause: PostgreSQL's
+# declarative partitioning shares the generic shape and adds no field, so the
+# backend re-exports ``PartitionClause`` instead of declaring an empty subclass
+# under its own kind (rules §3: a backend-prefixed shell with no new field is a
+# distinction the artifact cannot act on, and two kinds for one concept make a
+# reader choose between them for no reason).
 
 
 class PartitionValue(BaseExpression):

@@ -2,9 +2,7 @@
 """Tests for ILIKE protocol support in PostgreSQL dialect."""
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-    ILikePredicate,
-)
+from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
 from rhosocial.activerecord.backend.dialect.protocols import ILIKESupport
 
 

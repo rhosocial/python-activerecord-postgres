@@ -47,11 +47,8 @@ __all__ = [
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
-    "EnumTypeNameExpression",
-    "EnumValuesExpression",
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
+    "PostgresEnumTypeNameExpression",
+    "PostgresEnumValuesExpression",
 ]
 
 
@@ -747,7 +744,7 @@ class PostgresCreateRangeTypeExpression(CreateTypeStatement):
         self.multirange_type_name = multirange_type_name
 
 
-class EnumTypeNameExpression(BaseExpression):
+class PostgresEnumTypeNameExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -760,10 +757,10 @@ class EnumTypeNameExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_enum_type_name_expression"
+        return "format_postgres_enum_type_name_expression"
 
 
-class EnumValuesExpression(BaseExpression):
+class PostgresEnumValuesExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -774,16 +771,5 @@ class EnumValuesExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_enum_values_expression"
+        return "format_postgres_enum_values_expression"
 
-
-class CreateEnumTypeExpression(PostgresCreateEnumTypeExpression):
-    pass
-
-
-class DropEnumTypeExpression(PostgresDropEnumTypeExpression):
-    pass
-
-
-class AlterEnumAddValueExpression(PostgresAlterEnumAddValueExpression):
-    pass

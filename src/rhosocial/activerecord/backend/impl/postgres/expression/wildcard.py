@@ -12,6 +12,11 @@ that have it: ``COUNT(t.*)``, which counts non-NULL rows of ``t`` rather than
 rows of the join.  It is not the same question as ``COUNT(*)`` -- a LEFT JOIN
 with a matching-but-NULL outer row answers differently -- so it is a different
 node rather than a flag, and it belongs here rather than in core.
+
+The class name says ``Postgres``, not ``PostgreSQL``: a run of capitals is one
+word when the kind is derived, so ``PostgreSQLRowCountWildcard`` would produce
+``postgre_sql_row_count_wildcard`` -- a kind that disagrees with the backend
+identifier every other class here uses (rules §3).
 """
 
 from typing import Optional, TYPE_CHECKING
@@ -23,7 +28,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 
 
-class PostgreSQLRowCountWildcard(RowCountWildcard):
+class PostgresRowCountWildcard(RowCountWildcard):
     """``COUNT(t.*)`` -- rows of *relation* that are not NULL, not rows of the join.
 
     Args:
@@ -47,4 +52,4 @@ class PostgreSQLRowCountWildcard(RowCountWildcard):
         self.relation = relation
 
 
-__all__ = ["PostgreSQLRowCountWildcard"]
+__all__ = ["PostgresRowCountWildcard"]

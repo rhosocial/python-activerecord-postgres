@@ -59,7 +59,7 @@ class PostgresExpressionMixin:
         return sql, left_params + right_params
 
     def format_row_count_wildcard(self, expr) -> Tuple[str, tuple]:
-        """Format ``PostgreSQLRowCountWildcard``: ``*`` or ``t.*``.
+        """Format ``PostgresRowCountWildcard``: ``*`` or ``t.*``.
 
         Core's bare ``*`` is right for ``COUNT(*)`` and is left alone; the override
         exists for the qualified form, which core's ``RowCountWildcard``
@@ -71,7 +71,7 @@ class PostgresExpressionMixin:
         qualified form renders the bare asterisk.
 
         Args:
-            expr: :class:`~...expression.wildcard.PostgreSQLRowCountWildcard`.
+            expr: :class:`~...expression.wildcard.PostgresRowCountWildcard`.
 
         Returns:
             A ``(sql, params)`` tuple; ``params`` is empty.
@@ -80,10 +80,10 @@ class PostgresExpressionMixin:
             TypeError: ``relation`` is set but is not a ``NamedRelationRef``.
         """
         from rhosocial.activerecord.backend.impl.postgres.expression.wildcard import (
-            PostgreSQLRowCountWildcard,
+            PostgresRowCountWildcard,
         )
 
-        if not isinstance(expr, PostgreSQLRowCountWildcard):
+        if not isinstance(expr, PostgresRowCountWildcard):
             return "*", ()
         relation = expr.relation
         if relation is None:
@@ -92,7 +92,7 @@ class PostgresExpressionMixin:
 
         if not isinstance(relation, NamedRelationRef):
             raise TypeError(
-                f"PostgreSQLRowCountWildcard.relation must be a NamedRelationRef, "
+                f"PostgresRowCountWildcard.relation must be a NamedRelationRef, "
                 f"got {type(relation).__name__}"
             )
         if relation.alias:

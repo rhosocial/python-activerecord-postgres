@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Schema, Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgreSQLRowCountWildcard,
+    PostgresRowCountWildcard,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
     CreateSchemaStatement,
@@ -97,7 +97,7 @@ class TestSchemaNamespaceDialect:
 
     def test_row_count_wildcard_with_relation_is_the_qualified_form(self, dialect):
         """``COUNT(t.*)`` is PostgreSQL's own, so it is the backend's own node."""
-        wc = PostgreSQLRowCountWildcard(
+        wc = PostgresRowCountWildcard(
             dialect,
             relation=NamedRelationRef(
                 dialect, Table(dialect, "users", schema_name="app"), alias="u"

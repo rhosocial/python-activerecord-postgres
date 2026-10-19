@@ -414,7 +414,7 @@ class TestPostgresConstraintDeferral:
             TableForeignKeyConstraint,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterConstraint,
+            PostgresAlterConstraintAction,
         )
 
         for version, fk_ok, check_ok in (
@@ -425,7 +425,7 @@ class TestPostgresConstraintDeferral:
             dialect = PostgresDialect(version)
             assert dialect.supports_alter_constraint_enforced() is (version >= (18, 0, 0))
             for branch, expected in ((TableForeignKeyConstraint, fk_ok), (TableCheckConstraint, check_ok)):
-                action = PostgresAlterConstraint(
+                action = PostgresAlterConstraintAction(
                     dialect, "c", not_enforced=True, constraint_kind=branch
                 )
                 if expected:
@@ -614,13 +614,15 @@ class TestPostgresConstraintEnforcement:
             TableCheckConstraint,
             TableForeignKeyConstraint,
         )
+        from rhosocial.activerecord.backend.expression.statements import (
+            ValidateConstraintAction,
+        )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterConstraint,
-            PostgresValidateConstraint,
+            PostgresAlterConstraintAction,
         )
 
         pg18 = PostgresDialect((18, 0, 0))
-        fk_action = PostgresAlterConstraint(
+        fk_action = PostgresAlterConstraintAction(
             pg18,
             "parent_fk",
             not_enforced=True,
@@ -632,25 +634,25 @@ class TestPostgresConstraintEnforcement:
         )
         # Measured: CHECK is PG19 on the ALTER path (180006 answers 42809).
         with pytest.raises(UnsupportedFeatureError):
-            PostgresAlterConstraint(
+            PostgresAlterConstraintAction(
                 pg18,
                 "age_check",
                 not_enforced=True,
                 constraint_kind=TableCheckConstraint,
             ).to_sql()
-        assert PostgresValidateConstraint(pg18, "age_check").to_sql()[0] == (
+        assert ValidateConstraintAction(pg18, "age_check").to_sql()[0] == (
             'VALIDATE CONSTRAINT "age_check"'
         )
 
         pg19 = PostgresDialect((19, 0, 0))
-        assert PostgresAlterConstraint(
+        assert PostgresAlterConstraintAction(
             pg19,
             "age_check",
             not_enforced=True,
             constraint_kind=TableCheckConstraint,
         ).to_sql()[0] == 'ALTER CONSTRAINT "age_check" NOT ENFORCED'
         with pytest.raises(TypeError):
-            PostgresAlterConstraint(pg19, "age_check", not_enforced=True)
+            PostgresAlterConstraintAction(pg19, "age_check", not_enforced=True)
 
     def test_exclude_create_and_add(self):
         from rhosocial.activerecord.backend.expression import (

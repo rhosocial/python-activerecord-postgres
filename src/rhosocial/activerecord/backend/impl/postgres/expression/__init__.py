@@ -18,8 +18,7 @@ from .advisory import (
     PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
-from .ilike import ILikePredicate
-from .wildcard import PostgreSQLRowCountWildcard
+from .wildcard import PostgresRowCountWildcard
 from .copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
@@ -35,7 +34,6 @@ from .ddl import (
     PostgresVacuumExpression,
     PostgresAnalyzeExpression,
     PostgresRepackExpression,
-    PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -47,14 +45,7 @@ from .ddl import (
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
     PostgresExcludeConstraint,
-    PostgresAlterConstraint,
-    PostgresValidateConstraint,
     PostgresAlterConstraintAction,
-    PostgresValidateConstraintAction,
-    PostgresAlterConstraintExpression,
-    PostgresValidateConstraintExpression,
-    PostgresAlterTableConstraint,
-    PostgresValidateTableConstraint,
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
     PostgresCommentExpression,
@@ -166,10 +157,11 @@ __all__ = [
     "PostgresTryAdvisoryLockExpression",
     "AdvisoryLockType",
     # locking
-    # ilike
-    "ILikePredicate",
+    # ilike: the core node; PostgreSQL spells it by overriding
+    # ``format_ilike_predicate`` (mixins/ilike.py), not by redeclaring a kind
+    # that core already issues.
     # wildcard
-    "PostgreSQLRowCountWildcard",
+    "PostgresRowCountWildcard",
     "PostgresCopyFormat",
     "PostgresCopyOnError",
     "PostgresCopyLogVerbosity",
@@ -183,7 +175,6 @@ __all__ = [
     "PostgresColumnDefinition",
     "PostgresColumnOptions",
     "PostgresAlterColumn",
-    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
@@ -195,14 +186,7 @@ __all__ = [
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",
-    "PostgresAlterConstraint",
-    "PostgresValidateConstraint",
     "PostgresAlterConstraintAction",
-    "PostgresValidateConstraintAction",
-    "PostgresAlterConstraintExpression",
-    "PostgresValidateConstraintExpression",
-    "PostgresAlterTableConstraint",
-    "PostgresValidateTableConstraint",
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",
     "PostgresCommentExpression",

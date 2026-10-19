@@ -16,6 +16,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     CreateTableStatement,
     GeneratedColumnType,
     IndexDefinition,
+    PartitionClause,
     PartitionStrategy,
     StorageOptionsExpression,
     TableConstraint,
@@ -31,7 +32,6 @@ from rhosocial.activerecord.backend.expression.types import UUIDType
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresColumnOptions,
     PostgresColumnStorage,
-    PostgresPartitionClause,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateTableOptions,
@@ -122,7 +122,7 @@ TABLE_OPTIONS = [
 STORAGE_OPTIONS = [
     StorageOptionsExpression(DIALECT, {"fillfactor": 70}),
 ]
-TABLE_PARTITION = PostgresPartitionClause(
+TABLE_PARTITION = PartitionClause(
     DIALECT,
     PartitionStrategy.RANGE,
     [Column(DIALECT, "display_label")],

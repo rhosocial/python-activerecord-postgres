@@ -75,7 +75,6 @@ from .column import (
 from .alter_column import PostgresAlterColumn
 from .partition import (
     PartitionValue,
-    PostgresPartitionClause,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -92,16 +91,7 @@ from .index_definition import (
     PostgresDropIndexExpression,
 )
 from .exclude_constraint import PostgresExcludeConstraint
-from .constraint import (
-    PostgresAlterConstraint,
-    PostgresValidateConstraint,
-    PostgresAlterConstraintAction,
-    PostgresValidateConstraintAction,
-    PostgresAlterConstraintExpression,
-    PostgresValidateConstraintExpression,
-    PostgresAlterTableConstraint,
-    PostgresValidateTableConstraint,
-)
+from .constraint import PostgresAlterConstraintAction
 from .statistics import (
     PostgresCreateStatisticsExpression,
     PostgresDropStatisticsExpression,
@@ -143,11 +133,8 @@ from .type import (
     PostgresSetTypePropertiesAction,
     PostgresSetTypeSchemaAction,
     PostgresShellTypeDefinition,
-    AlterEnumAddValueExpression,
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    EnumTypeNameExpression,
-    EnumValuesExpression,
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
 )
 from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 from .multirange import (
@@ -234,7 +221,6 @@ __all__ = [
     "PostgresAlterColumn",
     # partition
     "PartitionValue",
-    "PostgresPartitionClause",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
@@ -247,14 +233,7 @@ __all__ = [
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",
-    "PostgresAlterConstraint",
-    "PostgresValidateConstraint",
     "PostgresAlterConstraintAction",
-    "PostgresValidateConstraintAction",
-    "PostgresAlterConstraintExpression",
-    "PostgresValidateConstraintExpression",
-    "PostgresAlterTableConstraint",
-    "PostgresValidateTableConstraint",
     # statistics
     "PostgresCreateStatisticsExpression",
     "PostgresDropStatisticsExpression",
@@ -295,11 +274,8 @@ __all__ = [
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
-    "EnumTypeNameExpression",
-    "EnumValuesExpression",
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
+    "PostgresEnumTypeNameExpression",
+    "PostgresEnumValuesExpression",
     # multirange
     "CreateMultirangeTypeExpression",
     "MultirangeAggFunctionExpression",
