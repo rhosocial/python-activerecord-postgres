@@ -308,7 +308,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         target_schema = schema if schema is not None else self._get_default_schema()
         expr = PostgresMaterializedViewListExpression(self.dialect).schema(
             target_schema
-        ).include_system(include_system)
+        ).with_include_system(include_system)
         return expr.to_sql()
 
     def _build_materialized_view_info_sql(

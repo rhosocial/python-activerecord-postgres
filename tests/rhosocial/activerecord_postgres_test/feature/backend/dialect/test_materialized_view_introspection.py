@@ -59,7 +59,7 @@ class TestMaterializedViewIntrospectionSQL:
     def test_list_query_can_include_system_objects(self):
         sql, _ = PostgresMaterializedViewListExpression(
             _dialect()
-        ).include_system(True).to_sql()
+        ).with_include_system(True).to_sql()
         assert "NOT LIKE 'pg_%'" not in sql
 
     def test_info_query_filters_by_name(self):
