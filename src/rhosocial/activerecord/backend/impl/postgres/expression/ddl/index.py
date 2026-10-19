@@ -67,8 +67,13 @@ __all__ = [
 ]
 
 
-class PostgresAlterIndexActionType(Enum):
+class PostgresAlterIndexActionType(str, Enum):
     """Action types for ALTER INDEX statement."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     RENAME_TO = "RENAME TO"
     SET_TABLESPACE = "SET TABLESPACE"

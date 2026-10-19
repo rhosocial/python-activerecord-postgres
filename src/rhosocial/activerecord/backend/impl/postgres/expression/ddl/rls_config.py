@@ -15,7 +15,7 @@ the complete Row-Level Security ecosystem.
 """
 
 from enum import Enum
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -30,12 +30,17 @@ __all__ = [
 ]
 
 
-class RlsConfigurationMode(Enum):
+class RlsConfigurationMode(str, Enum):
     """The ``ENABLE``/``DISABLE`` forms of row-level security on a table.
 
     PostgreSQL maps these onto ``ALTER TABLE ... ENABLE ROW LEVEL SECURITY``
     / ``ALTER TABLE ... DISABLE ROW LEVEL SECURITY``.
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     ENABLE = "ENABLE"
     DISABLE = "DISABLE"

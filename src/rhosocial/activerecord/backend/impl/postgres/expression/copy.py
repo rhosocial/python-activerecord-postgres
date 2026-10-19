@@ -20,6 +20,11 @@ __all__ = [
 
 
 class PostgresCopyFormat(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     TEXT = "text"
     CSV = "csv"
     JSON = "json"
@@ -27,12 +32,22 @@ class PostgresCopyFormat(str, Enum):
 
 
 class PostgresCopyOnError(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     STOP = "stop"
     IGNORE = "ignore"
     SET_NULL = "set_null"
 
 
 class PostgresCopyLogVerbosity(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     DEFAULT = "default"
     VERBOSE = "verbose"
     SILENT = "silent"

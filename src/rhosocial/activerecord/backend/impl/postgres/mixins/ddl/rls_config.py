@@ -79,12 +79,16 @@ class PostgresRlsConfigMixin:
                 "ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY",
                 suggestion="requires PostgreSQL 9.5+",
             )
-        if expr.always and expr.mode.value == "DISABLE":
+        # Compare and spell the *word*: an artifact carries it (JSON has no
+        # enum) and the constructor keeps what it was handed, so reading
+        # ``.value`` raised on a round-tripped node.
+        mode_word = str(expr.mode)
+        if expr.always and mode_word == "DISABLE":
             raise ValueError(
                 "ENABLE ALWAYS is only valid with ENABLE ROW LEVEL SECURITY"
             )
 
-        mode = "ENABLE ALWAYS" if expr.always else expr.mode.value
+        mode = "ENABLE ALWAYS" if expr.always else mode_word
         parts = [
             "ALTER TABLE",
             self._format_rls_table_ref(expr.schema, expr.table_name),

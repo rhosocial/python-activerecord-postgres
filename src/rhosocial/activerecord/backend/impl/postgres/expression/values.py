@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import hstore as _hs
 from rhosocial.activerecord.backend.impl.postgres.functions import ltree as _ltree
 from rhosocial.activerecord.backend.impl.postgres.functions import network as _network
 from rhosocial.activerecord.backend.impl.postgres.functions import range as _range
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
 from rhosocial.activerecord.backend.expression.types import BigIntType, IntegerType
 
 
@@ -77,10 +77,10 @@ def _typed_element(dialect, element_type, element):
     # "integer" or a PostgreSQL one named "postgres_int4", and both mean the
     # same width. Only the width matters here, not which module declared it.
     if name in ("postgres_int4", "integer", "int4", "int"):
-        return Literal(dialect, element).cast(IntegerType(dialect))
+        return CastExpression(dialect, Literal(dialect, element), IntegerType(dialect))
 
     if name in ("postgres_int8", "bigint", "int8"):
-        return Literal(dialect, element).cast(BigIntType(dialect))
+        return CastExpression(dialect, Literal(dialect, element), BigIntType(dialect))
     return element
 
 
@@ -171,13 +171,13 @@ class NetworkValueExpression(
     Carries the address operations, so ``col.network()`` is still an address
     and can be masked or merged -- the chain does not stop at the first call.
 
-    No family is declared, and that is deliberate rather than missing.
-    The core's type casting re-types by class -- ``as_text``, ``as_number``
-    and friends -- and an inet address is not among the classes it names,
-    so declaring "network" here would be a claim nothing reports. The range,
-    hstore and ltree expressions below take the same
-    view. What identifies an address is its class and the operations on it, not
-    a tag the core would drop.
+    No data-type family is declared, and that is deliberate rather than
+    missing. The core's type casting re-types by class -- ``as_text``,
+    ``as_number`` and friends -- and an inet address is not among the classes it
+    names, so declaring "network" here would be a claim nothing reports. The
+    range, hstore and ltree expressions below take the same view. What
+    identifies an address is its class and the operations on it, not a tag the
+    core would drop.
     """
 
     @property
@@ -190,10 +190,9 @@ class NetworkValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):
@@ -294,10 +293,9 @@ class RangeValueExpression(
     an element comparison has to be typed against.
     """
 
-    def __init__(self, dialect, call, family=None, element_type=None):
+    def __init__(self, dialect, call, element_type=None):
         super().__init__(dialect)
         self.call = call
-        self._family = family
         #: The range's element type. Needed because a Python int binds as
         #: smallint, and ``int4range @> smallint`` does not exist.
         self.element_type = element_type
@@ -440,10 +438,9 @@ class HstoreValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):
@@ -539,10 +536,9 @@ class LtreeValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):

@@ -72,7 +72,7 @@ def hstore_literal(
         text = PostgresHstore(data=data).to_postgres_string()
     else:
         return core.Literal(dialect, data)
-    return core.Literal(dialect, text).cast(PostgresHstoreType(dialect))
+    return core.CastExpression(dialect, core.Literal(dialect, text), PostgresHstoreType(dialect))
 
 
 # ============== Constructors ==============

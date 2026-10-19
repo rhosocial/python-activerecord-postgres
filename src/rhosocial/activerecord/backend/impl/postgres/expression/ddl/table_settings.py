@@ -25,13 +25,18 @@ __all__ = [
 ]
 
 
-class LoggingMode(Enum):
+class LoggingMode(str, Enum):
     """Whether a table is WAL-logged or not.
 
     Switching between these with ``ALTER TABLE ... SET LOGGED`` /
     ``SET UNLOGGED`` is commonly used to prototype with fast UNLOGGED tables
     and migrate to LOGGED for production.
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     LOGGED = "LOGGED"
     UNLOGGED = "UNLOGGED"

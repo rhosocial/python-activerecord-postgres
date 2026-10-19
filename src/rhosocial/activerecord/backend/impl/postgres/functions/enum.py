@@ -86,7 +86,10 @@ def enum_range(
     if enum_type is not None:
         type_expr = enum_type if isinstance(enum_type, bases.BaseExpression) \
             else core.Literal(dialect, enum_type)
-        return core.FunctionCall(dialect, "enum_range", type_expr.cast(PostgresRegTypeType(dialect)))
+        return core.FunctionCall(
+            dialect, "enum_range",
+            core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
+        )
     if enum_value is not None:
         value_expr = enum_value if isinstance(enum_value, bases.BaseExpression) \
             else core.Literal(dialect, enum_value)
@@ -117,7 +120,10 @@ def enum_first(
     """
     type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
         else core.Literal(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_first", type_expr.cast(PostgresRegTypeType(dialect)))
+    return core.FunctionCall(
+        dialect, "enum_first",
+        core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
+    )
 
 
 def enum_last(
@@ -143,7 +149,10 @@ def enum_last(
     """
     type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
         else core.Literal(dialect, enum_type_or_value)
-    return core.FunctionCall(dialect, "enum_last", type_expr.cast(PostgresRegTypeType(dialect)))
+    return core.FunctionCall(
+        dialect, "enum_last",
+        core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
+    )
 
 
 # ============== Comparison Operators ==============

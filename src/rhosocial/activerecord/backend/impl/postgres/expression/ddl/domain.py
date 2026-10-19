@@ -103,10 +103,49 @@ class _UnsupportedDomainAction(DomainAlterAction):
         return "_format_postgres_unsupported_domain_action"
 
 
-class AlterDomainActionType(Enum):
+class AlterDomainActionType(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     SET_DEFAULT = "SET DEFAULT"
     DROP_DEFAULT = "DROP DEFAULT"
     RENAME_TO = "RENAME TO"
+
+
+def _domain_actions_for(
+    action: "AlterDomainActionType",
+    dialect: "SQLDialectBase",
+    new_value: Any,
+    new_name: Optional[str],
+) -> List["DomainAlterAction"]:
+    """The one action *action* names, built from the values it needs.
+
+    Shared by the enum path and the word path so a read artifact -- which
+    carries ``"SET DEFAULT"``, not the member -- resolves to the same node a
+    caller writing the member gets.
+    """
+    if action is AlterDomainActionType.SET_DEFAULT:
+        normalized_default: Any = new_value
+        if isinstance(new_value, str):
+            warnings.warn(
+                "Raw ALTER DOMAIN DEFAULT strings are deprecated; pass a scalar "
+                "or expression",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            normalized_default = _LegacySqlExpression(
+                dialect,
+                new_value,
+                "new_value",
+            )
+        return [SetDomainDefaultAction(dialect, normalized_default)]
+    if action is AlterDomainActionType.DROP_DEFAULT:
+        return [DropDomainDefaultAction(dialect)]
+    if new_name is None:
+        raise ValueError("new_name is required for RENAME TO")
+    return [RenameDomainAction(dialect, new_name)]
 
 
 class PostgresAddDomainCheckAction(AddDomainCheckAction):
@@ -317,27 +356,18 @@ class PostgresAlterDomainExpression(AlterDomainStatement):
         if isinstance(action, DomainAlterAction):
             actions = [action]
         elif isinstance(action, AlterDomainActionType):
-            if action is AlterDomainActionType.SET_DEFAULT:
-                normalized_default: Any = new_value
-                if isinstance(new_value, str):
-                    warnings.warn(
-                        "Raw ALTER DOMAIN DEFAULT strings are deprecated; pass a scalar "
-                        "or expression",
-                        DeprecationWarning,
-                        stacklevel=2,
-                    )
-                    normalized_default = _LegacySqlExpression(
-                        dialect,
-                        new_value,
-                        "new_value",
-                    )
-                actions = [SetDomainDefaultAction(dialect, normalized_default)]
-            elif action is AlterDomainActionType.DROP_DEFAULT:
-                actions = [DropDomainDefaultAction(dialect)]
-            else:
-                if new_name is None:
-                    raise ValueError("new_name is required for RENAME TO")
-                actions = [RenameDomainAction(dialect, new_name)]
+            actions = _domain_actions_for(action, dialect, new_value, new_name)
+        elif isinstance(action, str):
+            # A read artifact carries the word, not the member (§10: the
+            # constructor is where a wide entry is narrowed). Resolve it to the
+            # member it names so the branches below are the only ones that
+            # decide what an action means.
+            try:
+                actions = _domain_actions_for(
+                    AlterDomainActionType(action), dialect, new_value, new_name
+                )
+            except ValueError:
+                actions = [_UnsupportedDomainAction(dialect, action)]
         else:
             actions = [_UnsupportedDomainAction(dialect, action)]
         super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema), actions)

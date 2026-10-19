@@ -22,7 +22,6 @@ from typing import List, Optional, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import (
     BaseExpression,
     SQLPredicate,
-    SQLQueryAndParams,
 )
 
 if TYPE_CHECKING:
@@ -39,15 +38,25 @@ __all__ = [
 ]
 
 
-class PolicyType(Enum):
+class PolicyType(str, Enum):
     """Row-Level Security policy type."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     PERMISSIVE = "PERMISSIVE"
     RESTRICTIVE = "RESTRICTIVE"
 
 
-class PolicyCommand(Enum):
+class PolicyCommand(str, Enum):
     """SQL command a policy applies to."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     ALL = "ALL"
     SELECT = "SELECT"
@@ -56,12 +65,17 @@ class PolicyCommand(Enum):
     DELETE = "DELETE"
 
 
-class AlterPolicyMode(Enum):
+class AlterPolicyMode(str, Enum):
     """The two syntactic forms of ALTER POLICY.
 
     REPLACE: alter roles / USING / WITH CHECK (several may be omitted).
     RENAME: ALTER POLICY name ON table RENAME TO new_name.
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     REPLACE = "REPLACE"
     RENAME = "RENAME"

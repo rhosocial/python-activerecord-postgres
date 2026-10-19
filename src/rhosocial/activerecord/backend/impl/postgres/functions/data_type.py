@@ -45,7 +45,7 @@ def xid8_literal(
         >>> xid8_literal(dialect, 123456789)
         # Produces: 123456789::xid8
     """
-    return core.Literal(dialect, value).cast(PostgresXID8Type(dialect))
+    return core.CastExpression(dialect, core.Literal(dialect, value), PostgresXID8Type(dialect))
 
 
 def array_literal(
@@ -80,8 +80,11 @@ def array_literal(
     """
     if not elements:
         if element_type:
-            return core.Literal(dialect, "{}").cast(
-                CustomType(dialect, raw=f"{element_type}[]"))
+            return core.CastExpression(
+                dialect,
+                core.Literal(dialect, "{}"),
+                CustomType(dialect, raw=f"{element_type}[]"),
+            )
         return core.Literal(dialect, "{}")
 
     formatted = []
@@ -96,7 +99,9 @@ def array_literal(
     array_str = "{" + ",".join(formatted) + "}"
     result = core.Literal(dialect, array_str)
     if element_type:
-        return result.cast(CustomType(dialect, raw=f"{element_type}[]"))
+        return core.CastExpression(
+            dialect, result, CustomType(dialect, raw=f"{element_type}[]")
+        )
     return result
 
 

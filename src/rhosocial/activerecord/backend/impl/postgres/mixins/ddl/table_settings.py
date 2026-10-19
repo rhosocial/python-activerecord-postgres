@@ -93,10 +93,20 @@ class PostgresAlterTableSettingsMixin:
                     "ALTER TABLE SET LOGGED/UNLOGGED",
                     suggestion="requires PostgreSQL 9.6+",
                 )
-            if expr.mode is LoggingMode.LOGGED:
+            # Compare the *word*, not the member: the artifact carries the word
+            # (JSON has no enum) and the constructor keeps whatever it was
+            # handed, so an identity test against the member silently answered
+            # "not LOGGED" for a round-tripped "LOGGED" and rendered the
+            # opposite setting.
+            if str(expr.mode) == LoggingMode.LOGGED:
                 setting = "SET LOGGED"
-            else:
+            elif str(expr.mode) == LoggingMode.UNLOGGED:
                 setting = "SET UNLOGGED"
+            else:
+                raise ValueError(
+                    f"ALTER TABLE settings: unknown mode {expr.mode!r}; "
+                    f"expected LOGGED or UNLOGGED"
+                )
         else:
             if not self.supports_table_set_access_method():
                 raise UnsupportedFeatureError(

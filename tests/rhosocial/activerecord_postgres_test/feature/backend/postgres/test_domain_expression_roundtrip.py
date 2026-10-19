@@ -22,7 +22,7 @@ import warnings
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
+from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.serialization import (
     deserialize,
     deserialize_json,
@@ -39,7 +39,16 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.domain import (
     PostgresCreateDomainExpression,
 )
-from rhosocial.activerecord.testsuite.utils.expression import assert_params_equal
+from expression_roundtrip_harness import assert_params_equal
+
+# Deserialisation resolves a kind through the framework's registry, which ships
+# core and the built-in backends. A PostgreSQL class is registered by the code
+# that ships it, so this module -- the one that reads such an artifact back --
+# is where the class is entered.
+from rhosocial.activerecord.backend.expression.serialization import default_registry
+
+default_registry().register_node(PostgresCreateDomainExpression)
+
 
 
 @pytest.fixture
@@ -48,7 +57,7 @@ def dialect():
 
 
 def _condition(dialect):
-    return DomainValueExpression(dialect) > DdlLiteral(dialect, 0)
+    return DomainValueExpression(dialect) > Literal(dialect, 0, inline=True)
 
 
 def _check(dialect, name=None):

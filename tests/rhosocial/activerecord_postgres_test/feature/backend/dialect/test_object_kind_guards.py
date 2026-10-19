@@ -52,7 +52,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import objects as objects_mod
-from rhosocial.activerecord.testsuite.utils.expression import (
+from expression_roundtrip_harness import (
     collect_expression_classes,
     make_instance,
 )
@@ -252,6 +252,42 @@ def test_skipped_statements_are_still_the_ones_we_think():
 @pytest.mark.parametrize(
     "fqn,slot,required_name,impostor_name", PROBES, ids=_IDS
 )
+def _swapped(instance, cls, dialect, slot, value):
+    """The probe instance with *slot* carrying *value*.
+
+    A declared parameter may be a read-only property over storage that lives on
+    a child node -- ``ForeignKeyConstraint.foreign_key_table`` is a view onto
+    the branch's ``references`` tuple -- and a property has no setter to swap
+    through. Such a slot is filled at construction instead: the signature is
+    walked exactly as the harness's guesser walks it, with the target slot
+    forced, so the only difference from the probed instance is the slot itself.
+    """
+    swapped = copy.copy(instance)
+    try:
+        object.__setattr__(swapped, slot, value)
+        return swapped
+    except AttributeError:
+        pass
+    from expression_roundtrip_harness import _placeholder_for
+
+    sig = inspect.signature(cls.__init__)
+    args, kwargs = [], {}
+    for pname, param in sig.parameters.items():
+        if pname in ("self", "dialect"):
+            continue
+        if param.default is not inspect.Parameter.empty:
+            continue
+        placeholder = value if pname == slot else _placeholder_for(param, dialect)
+        if param.kind is inspect.Parameter.KEYWORD_ONLY:
+            kwargs[pname] = placeholder
+        else:
+            args.append(placeholder)
+    first = next((p for p in sig.parameters if p != "self"), None)
+    if first == "dialect":
+        return cls(dialect, *args, **kwargs)
+    return cls(*args, dialect=dialect, **kwargs)
+
+
 def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
     """A statement handed the wrong object kind must refuse at render time.
 
@@ -269,8 +305,7 @@ def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
     instance, source = make_instance(cls, dialect)
     assert instance is not None, f"{fqn}: could not be constructed ({source})"
     impostor = getattr(objects_mod, impostor_name)
-    swapped = copy.copy(instance)
-    object.__setattr__(swapped, slot, impostor(dialect, "wrongkind"))
+    swapped = _swapped(instance, cls, dialect, slot, impostor(dialect, "wrongkind"))
     try:
         swapped.to_sql()
     except TypeError as exc:
