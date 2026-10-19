@@ -19,6 +19,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -83,12 +84,12 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AddColumn,
-    RenameObject,
+    AddColumnAction,
+    RenameColumnAction,
 )
 
 # Add a new column
-add_email_action = AddColumn(
+add_email_action = AddColumnAction(
     dialect=dialect,
     column=ColumnDefinition(
         name='email',
@@ -113,7 +114,7 @@ backend.execute(sql, params)
 print("Column added successfully")
 
 # Add another column without default (PostgreSQL ALTER TABLE doesn't support parameterized DEFAULT well)
-add_age_action = AddColumn(
+add_age_action = AddColumnAction(
     dialect=dialect,
     column=ColumnDefinition(
         'age',
@@ -132,7 +133,7 @@ backend.execute(sql, params)
 print("Column age added successfully")
 
 # Rename a column
-rename_action = RenameObject(
+rename_action = RenameColumnAction(
     dialect=dialect,
     old_name='name',
     new_name='full_name',

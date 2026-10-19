@@ -53,10 +53,10 @@ from rhosocial.activerecord.backend.expression.statements import (
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect.mixins.ddl_table import ConstraintMixin
     from rhosocial.activerecord.backend.expression.statements import (
-        AlterConstraint,
+        AlterConstraintAction,
         ColumnConstraint,
         TableConstraint,
-        ValidateConstraint,
+        ValidateConstraintAction,
     )
 
     class _ConstraintMixinBase(ConstraintMixin):
@@ -748,7 +748,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             self._require_constraint_enforced(type(expr.branch))
         return cast(Tuple[str, tuple], super().format_table_constraint(expr))
 
-    def format_alter_constraint_action(self, action: "AlterConstraint") -> Tuple[str, tuple]:
+    def format_alter_constraint_action(self, action: "AlterConstraintAction") -> Tuple[str, tuple]:
         """Gate the ``ALTER CONSTRAINT`` verb on the measured per-kind boundary.
 
         Core already refuses a branch that is neither CHECK nor FOREIGN KEY and
@@ -760,7 +760,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         self._require_enforceable_constraint(action.constraint_branch)
         return cast(Tuple[str, tuple], super().format_alter_constraint_action(action))
 
-    def format_validate_constraint_action(self, action: "ValidateConstraint") -> Tuple[str, tuple]:
+    def format_validate_constraint_action(self, action: "ValidateConstraintAction") -> Tuple[str, tuple]:
         return cast(Tuple[str, tuple], super().format_validate_constraint_action(action))
 
     @staticmethod

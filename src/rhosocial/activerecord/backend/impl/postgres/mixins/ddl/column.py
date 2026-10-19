@@ -19,8 +19,8 @@ class PostgresAlterColumnModifierMixin:
 
     The qualifiers are vendor extensions (not in ISO/IEC 9075-2 §11.10);
     applications opt in by passing ``if_not_exists`` / ``if_exists`` on
-    the corresponding ``AddColumn`` / ``DropColumn`` /
-    ``DropTableConstraint`` actions. ``None`` (default) means "no
+    the corresponding ``AddColumnAction`` / ``DropColumnAction`` /
+    ``DropTableConstraintAction`` actions. ``None`` (default) means "no
     qualifier", matching the SQL standard form.
     """
 
@@ -67,7 +67,7 @@ class PostgresAlterColumnModifierMixin:
         from the PostgreSQL ``PostgresAlterColumn`` typed ``using`` field.
 
         Args:
-            action: An ``AlterColumn`` action (core ``ddl_alter`` module).
+            action: An ``AlterColumnAction`` action (core ``ddl_alter`` module).
 
         Returns:
             Tuple of (SQL string, params tuple).

@@ -6,12 +6,10 @@ PostgreSQL table partitioning operations including RANGE, LIST, and HASH
 partitioning with support for various PostgreSQL versions.
 """
 
-from copy import copy
 from typing import Any, List, Optional, Tuple, TYPE_CHECKING  # noqa: F401
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
@@ -215,8 +213,7 @@ class PostgresPartitionMixin:
         for key in expr.keys:
             if key.dialect is not self:
                 raise ValueError("partition key expressions must use the PostgreSQL dialect")
-            bound_key = self._inline_partition_expression(key)
-            key_sql, key_params = bound_key.to_sql()
+            key_sql, key_params = key.to_sql()
             if key_params:
                 raise ValueError("partition key expressions must not contain bind parameters")
             key_parts.append(key_sql)
@@ -306,55 +303,6 @@ class PostgresPartitionMixin:
         """
         return self.version >= (11, 0, 0)
 
-    def _inline_partition_expression(
-        self,
-        value: Any,
-        memo: Optional[dict] = None,
-    ) -> Any:
-        """Bind ``self`` to a copy of a partition-bound tree and lift its
-        data-position literals to the DDL-position literal class.
-
-        Partition bounds accept no bind parameters, so a value composed from
-        ordinary DQL nodes must be adapted before it renders. Each ``Literal``
-        is swapped for :class:`~...expression.core.DdlLiteral`, the class that
-        owns the DDL position; whether a value inlines stays a decision of its
-        **class**, never a flag on an instance.
-        """
-        if memo is None:
-            memo = {}
-        identity = id(value)
-        if identity in memo:
-            return memo[identity]
-        if isinstance(value, Literal):
-            bound = DdlLiteral(self, value.value, alias=value.alias)
-            memo[identity] = bound
-            return bound
-        if isinstance(value, BaseExpression):
-            bound = copy(value)
-            bound.dialect = self
-            memo[identity] = bound
-            for name, child in vars(value).items():
-                if name == "_dialect":
-                    continue
-                setattr(bound, name, self._inline_partition_expression(child, memo))
-            return bound
-        if isinstance(value, list):
-            bound_list = [self._inline_partition_expression(child, memo) for child in value]
-            memo[identity] = bound_list
-            return bound_list
-        if isinstance(value, tuple):
-            bound_tuple = tuple(self._inline_partition_expression(child, memo) for child in value)
-            memo[identity] = bound_tuple
-            return bound_tuple
-        if isinstance(value, dict):
-            bound_dict = {
-                key: self._inline_partition_expression(child, memo)
-                for key, child in value.items()
-            }
-            memo[identity] = bound_dict
-            return bound_dict
-        return value
-
     def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
         """Format a PostgreSQL partition bound value."""
         if not self.supports_table_partitioning():
@@ -376,8 +324,10 @@ class PostgresPartitionMixin:
                     "partition bound expressions",
                     "Partition bound expressions require PostgreSQL 12+.",
                 )
-            bound_value = self._inline_partition_expression(value)
-            value_sql, value_params = bound_value.to_sql()
+            # The tree renders as the caller composed it; a literal inside a
+            # DDL position is the caller's to mark ``inline=True``, and one
+            # that still binds is refused by name here.
+            value_sql, value_params = value.to_sql()
             if value_params:
                 raise ValueError("partition bound expressions must not contain bind parameters")
             return value_sql, ()

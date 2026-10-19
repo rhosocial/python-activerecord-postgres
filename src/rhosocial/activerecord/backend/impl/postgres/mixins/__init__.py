@@ -23,7 +23,7 @@ from .identity_column import PostgresIdentityColumnMixin
 from .auto_increment import PostgresAutoIncrementMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
-from .typed_value import PostgresTypedValueMixin
+from .literal import PostgresLiteralValueMixin
 
 # DDL mixins
 from .ddl.partition import PostgresPartitionMixin
@@ -148,7 +148,7 @@ __all__ = [
     "PostgresAutoIncrementMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
-    "PostgresTypedValueMixin",
+    "PostgresLiteralValueMixin",
     # DDL mixins
     "PostgresPartitionMixin",
     "PostgresIndexMixin",

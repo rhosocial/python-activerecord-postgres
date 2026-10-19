@@ -14,7 +14,7 @@ from the server fails here rather than in the field.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import DdlLiteral
+from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.execution_testing import (
     ExecutionOutcome,
     classify_execution,
@@ -53,7 +53,7 @@ def _table(d, name):
 
 def _literal(d, value=1):
     """An inlined literal: MV/CTAS bodies reject bind parameters on PostgreSQL."""
-    return DdlLiteral(d, value)
+    return Literal(d, value, inline=True)
 
 
 def _query(d):

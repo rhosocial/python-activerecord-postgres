@@ -15,8 +15,8 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AddIndex,
-    DropIndex as DropIndexAction,
+    AddIndexAction,
+    DropIndexAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import IndexDefinition
 
@@ -816,7 +816,7 @@ class TestFormatAddDropIndexAction:
 
     def test_format_add_index_action_raises(self):
         d = PostgresDialect()
-        add = AddIndex(d, index=IndexDefinition(d, name="idx_test", columns=["a"]))
+        add = AddIndexAction(d, index=IndexDefinition(d, name="idx_test", columns=["a"]))
         with pytest.raises(UnsupportedFeatureError, match="ALTER TABLE ADD INDEX"):
             add.to_sql()
 

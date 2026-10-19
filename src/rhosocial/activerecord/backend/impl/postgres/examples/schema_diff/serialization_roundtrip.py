@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterTableStatement, AddColumn,
+    AlterTableStatement, AddColumnAction,
 )
 
 config = PostgresConnectionConfig(
@@ -79,7 +79,7 @@ snapshot_loaded = SchemaSnapshot.from_dict(json.loads(snapshot_json))
 
 # Modify the database
 add_phone = AlterTableStatement(dialect, Table(dialect, 'users'), [
-    AddColumn(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
+    AddColumnAction(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
 ])
 sql, params = add_phone.to_sql()
 backend.execute(sql, params)

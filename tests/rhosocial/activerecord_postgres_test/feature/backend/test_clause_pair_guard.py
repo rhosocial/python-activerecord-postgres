@@ -25,7 +25,7 @@ Two deliberate shapes are pinned separately:
   (``UnsupportedFeatureError``) -- never render a token the server rejects and
   never drop the clause. ``TestRefusedSpellingsFailClosed`` covers these, and
   names the measured server evidence for each.
-* ``AlterConstraint.enforced`` is mandatory in the action's grammar: "neither"
+* ``AlterConstraintAction.enforced`` is mandatory in the action's grammar: "neither"
   is refused as well as "both".
 
 The render evidence in this file is produced offline by the dialect. The
@@ -55,7 +55,7 @@ from rhosocial.activerecord.backend.expression.query_sources import (
     SetOperation,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterConstraint,
+    AlterConstraintAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_function import (
     DropFunctionStatement,
@@ -460,8 +460,8 @@ PAIR_CASES = (
         b_refusal="NO WAIT",
     ),
     PairCase(
-        "AlterConstraint.enforced",
-        lambda d, **kw: AlterConstraint(
+        "AlterConstraintAction.enforced",
+        lambda d, **kw: AlterConstraintAction(
             d, "c", constraint_kind=TableCheckConstraint, **kw
         ),
         "enforced",
@@ -469,7 +469,7 @@ PAIR_CASES = (
         r"(?<!NOT )ENFORCED\b",
         r"NOT ENFORCED\b",
         version=PG19,
-        neither_error="AlterConstraint requires exactly one of",
+        neither_error="AlterConstraintAction requires exactly one of",
     ),
     PairCase(
         "PostgresCopyToExpression.force_array",
@@ -670,6 +670,17 @@ class TestSetOperationWordsAreClosed:
             right=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t2")),
         )
 
+    #: The complement check as operator-aware patterns, not substrings:
+    #: ``UNION`` is contained in ``UNION ALL``, so the bare-UNION test has to
+    #: say "a UNION not followed by ALL", or every ``union_all`` render would
+    #: fail its own assertion.
+    _FORBIDDEN = {
+        "UNION": r"UNION(?! ALL)",
+        "UNION ALL": r"UNION ALL",
+        "INTERSECT": r"INTERSECT",
+        "EXCEPT": r"EXCEPT",
+    }
+
     @pytest.mark.parametrize(
         ("op", "expected"),
         [
@@ -685,9 +696,10 @@ class TestSetOperationWordsAreClosed:
     def test_each_word_renders_its_own_spelling(self, op, expected):
         sql, _params = self._sides(_dialect(), op).to_sql()
         assert expected in sql, sql
-        other = {"UNION": "UNION ALL", "UNION ALL": "UNION",
-                 "INTERSECT": "EXCEPT", "EXCEPT": "INTERSECT"}[expected]
-        assert other not in sql, sql
+        for spelling, pattern in self._FORBIDDEN.items():
+            if spelling == expected:
+                continue
+            assert re.search(pattern, sql) is None, (op, spelling, sql)
 
     @pytest.mark.parametrize(
         "op",
@@ -740,7 +752,7 @@ class TestGuardIsNotVacuous:
             "BeginTransactionStatement.wait",
             "SetTransactionExpression.deferrable",
             "SetTransactionExpression.wait",
-            "AlterConstraint.enforced",
+            "AlterConstraintAction.enforced",
             "PostgresCopyToExpression.force_array",
             "PostgresDropTypeExpression.cascade/restrict",
         }

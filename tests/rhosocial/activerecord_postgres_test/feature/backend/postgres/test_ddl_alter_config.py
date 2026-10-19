@@ -11,14 +11,13 @@ from rhosocial.activerecord.backend.expression import (
     ArithmeticOperation,
     Column,
     ComparisonPredicate,
-    DdlLiteral,
     Literal,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    AddColumn,
+    AddColumnAction,
     ColumnDefinition,
-    DropColumn,
-    DropTableConstraint,
+    DropColumnAction,
+    DropTableConstraintAction,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.exceptions import (
@@ -274,39 +273,39 @@ class TestPostgresAlterColumnModifierMixin:
             "email", TextType(dialect),
             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
         )
-        add = AddColumn(dialect, column)
+        add = AddColumnAction(dialect, column)
         sql, params = add.to_sql()
         assert sql == 'ADD COLUMN "email" TEXT NOT NULL'
         assert params == ()
 
     def test_add_column_if_not_exists(self, dialect):
         column = ColumnDefinition(dialect, "email", TextType(dialect))
-        add = AddColumn(dialect, column, if_not_exists=True)
+        add = AddColumnAction(dialect, column, if_not_exists=True)
         sql, _ = add.to_sql()
         assert sql == 'ADD COLUMN IF NOT EXISTS "email" TEXT'
 
     def test_drop_column(self, dialect):
-        drop = DropColumn(dialect, "email")
+        drop = DropColumnAction(dialect, "email")
         sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN "email"'
 
     def test_drop_column_if_exists(self, dialect):
-        drop = DropColumn(dialect, "email", if_exists=True)
+        drop = DropColumnAction(dialect, "email", if_exists=True)
         sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN IF EXISTS "email"'
 
     def test_drop_constraint(self, dialect):
-        drop = DropTableConstraint(dialect, "user_email_key")
+        drop = DropTableConstraintAction(dialect, "user_email_key")
         sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT "user_email_key"'
 
     def test_drop_constraint_if_exists(self, dialect):
-        drop = DropTableConstraint(dialect, "user_email_key", if_exists=True)
+        drop = DropTableConstraintAction(dialect, "user_email_key", if_exists=True)
         sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "user_email_key"'
 
     def test_drop_constraint_if_exists_cascade(self, dialect):
-        drop = DropTableConstraint(
+        drop = DropTableConstraintAction(
             dialect, "user_email_key", if_exists=True, cascade=True
         )
         sql, _ = drop.to_sql()
@@ -384,7 +383,9 @@ class TestPostgresConstraintDeferral:
             assert PostgresDialect(version).supports_constraint_enforced() is expected
 
         dialect = PostgresDialect((19, 0, 0))
-        condition = ComparisonPredicate(dialect, ">", Column(dialect, "id"), DdlLiteral(dialect, 0))
+        condition = ComparisonPredicate(
+            dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
+        )
         check = TableConstraint(dialect, branch=TableCheckConstraint(dialect, condition), not_enforced=True)
         fk = TableConstraint(
             dialect,
@@ -495,7 +496,7 @@ class TestPostgresConstraintEnforcement:
 
     def test_create_and_add_check_fk_enforcement(self):
         from rhosocial.activerecord.backend.expression import (
-            AddTableConstraint,
+            AddTableConstraintAction,
             Column,
             ColumnCheckConstraint,
             ColumnConstraint,
@@ -509,7 +510,9 @@ class TestPostgresConstraintEnforcement:
         from rhosocial.activerecord.backend.expression.types import IntegerType
 
         dialect = PostgresDialect((18, 0, 0))
-        condition = ComparisonPredicate(dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0))
+        condition = ComparisonPredicate(
+            dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
+        )
         check = TableConstraint(
             dialect,
             branch=TableCheckConstraint(dialect, condition),
@@ -534,12 +537,12 @@ class TestPostgresConstraintEnforcement:
         # column form refuses rather than rendering.
         with pytest.raises(UnsupportedFeatureError, match="CHECK NOT ENFORCED on a column constraint"):
             ColumnDefinition(dialect, "age", IntegerType(dialect), [column_check]).to_sql()
-        assert AddTableConstraint(dialect, check).to_sql()[0] == (
+        assert AddTableConstraintAction(dialect, check).to_sql()[0] == (
             'ADD CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
         )
 
     def test_not_valid_is_limited_to_check_and_fk(self):
-        from rhosocial.activerecord.backend.expression import AddTableConstraint
+        from rhosocial.activerecord.backend.expression import AddTableConstraintAction
         from rhosocial.activerecord.backend.expression.statements import (
             ConstraintValidation,
             ForeignKeyConstraint,
@@ -558,7 +561,7 @@ class TestPostgresConstraintEnforcement:
             foreign_key_columns=["id"],
             validation=ConstraintValidation.NOVALIDATE,
         )
-        assert AddTableConstraint(dialect, constraint).to_sql()[0].endswith("NOT VALID")
+        assert AddTableConstraintAction(dialect, constraint).to_sql()[0].endswith("NOT VALID")
         # The kind is a branch class now, and ``validation`` is a
         # ``ConstraintValidation`` member: a spelling is a type question and is
         # answered with a TypeError, at construction rather than at render.
@@ -567,19 +570,22 @@ class TestPostgresConstraintEnforcement:
                 dialect,
                 " check ",
                 check_condition=ComparisonPredicate(
-                    dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0)
+                    dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
                 ),
                 validation=" not valid ",
             )
         with pytest.raises(TypeError):
-            AddTableConstraint(
+            AddTableConstraintAction(
                 dialect,
                 TableConstraint(
                     dialect,
                     branch=TableCheckConstraint(
                         dialect,
                         ComparisonPredicate(
-                            dialect, ">", Column(dialect, "age"), DdlLiteral(dialect, 0)
+                            dialect,
+                            ">",
+                            Column(dialect, "age"),
+                            Literal(dialect, 0, inline=True),
                         ),
                     ),
                     validation=" not valid ",
@@ -587,7 +593,7 @@ class TestPostgresConstraintEnforcement:
             ).to_sql()
         for branch in (TablePrimaryKeyConstraint, TableUniqueConstraint):
             with pytest.raises(ValueError, match="NOT VALID"):
-                AddTableConstraint(
+                AddTableConstraintAction(
                     dialect,
                     TableConstraint(
                         dialect,
@@ -601,7 +607,7 @@ class TestPostgresConstraintEnforcement:
             validation=ConstraintValidation.NOVALIDATE,
         )
         with pytest.raises(ValueError, match="NOT VALID"):
-            AddTableConstraint(dialect, exclude).to_sql()
+            AddTableConstraintAction(dialect, exclude).to_sql()
 
     def test_alter_and_validate_actions(self):
         from rhosocial.activerecord.backend.expression.statements import (
@@ -648,7 +654,7 @@ class TestPostgresConstraintEnforcement:
 
     def test_exclude_create_and_add(self):
         from rhosocial.activerecord.backend.expression import (
-            AddTableConstraint,
+            AddTableConstraintAction,
             Column,
             ColumnDefinition,
             CreateTableStatement,
@@ -674,7 +680,7 @@ class TestPostgresConstraintEnforcement:
             'CREATE TABLE "ranges" ("range" INTEGER, CONSTRAINT "range_ex" '
             'EXCLUDE USING gist ("range" WITH &&))'
         )
-        assert AddTableConstraint(dialect, exclude).to_sql()[0] == (
+        assert AddTableConstraintAction(dialect, exclude).to_sql()[0] == (
             'ADD CONSTRAINT "range_ex" EXCLUDE USING gist ("range" WITH &&)'
         )
 
@@ -689,7 +695,7 @@ class TestPostgresConstraintEnforcement:
             branch=TableCheckConstraint(
                 dialect,
                 ComparisonPredicate(
-                    dialect, ">", Column(dialect, "id"), DdlLiteral(dialect, 0)
+                    dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
                 ),
             ),
             validation=ConstraintValidation.NOVALIDATE,
@@ -725,7 +731,7 @@ class TestPostgresConstraintEnforcement:
                 )
             ],
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "active"), DdlLiteral(dialect, True)
+                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline=True)
             ),
         )
 

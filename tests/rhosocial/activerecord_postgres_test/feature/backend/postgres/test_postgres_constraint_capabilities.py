@@ -42,8 +42,8 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import Column, ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
-    AddTableConstraint,
-    DropTableConstraint,
+    AddTableConstraintAction,
+    DropTableConstraintAction,
     TableCheckConstraint,
     TableConstraint,
     TableForeignKeyConstraint,
@@ -330,7 +330,7 @@ class TestAddAndDropAndRenameRender:
     def test_add_table_constraint_renders(self):
         d = _dialect()
         predicate = ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))
-        action = AddTableConstraint(
+        action = AddTableConstraintAction(
             d, TableConstraint(d, branch=TableCheckConstraint(d, predicate), name='ck')
         )
         sql, params = action.to_sql()
@@ -339,13 +339,13 @@ class TestAddAndDropAndRenameRender:
 
     def test_drop_constraint_renders(self):
         d = _dialect()
-        sql, params = DropTableConstraint(d, "ck").to_sql()
+        sql, params = DropTableConstraintAction(d, "ck").to_sql()
         assert sql == 'DROP CONSTRAINT "ck"'
         assert params == ()
 
     def test_drop_constraint_if_exists_renders(self):
         """``IF EXISTS`` is the idempotent path: the plain form is 42704."""
         d = _dialect()
-        sql, params = DropTableConstraint(d, "ck", if_exists=True).to_sql()
+        sql, params = DropTableConstraintAction(d, "ck", if_exists=True).to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "ck"'
         assert params == ()

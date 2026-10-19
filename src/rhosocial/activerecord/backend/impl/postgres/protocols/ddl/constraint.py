@@ -19,10 +19,10 @@ from rhosocial.activerecord.backend.dialect.protocols import ConstraintSupport
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.statements import (
-        AlterConstraint,
+        AlterConstraintAction,
         ColumnConstraint,
         TableConstraint,
-        ValidateConstraint,
+        ValidateConstraintAction,
     )
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
         PostgresExcludeBranch,
@@ -220,7 +220,7 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         """
         ...
 
-    def format_alter_constraint_action(self, action: "AlterConstraint") -> Tuple[str, tuple]:
+    def format_alter_constraint_action(self, action: "AlterConstraintAction") -> Tuple[str, tuple]:
         """Format ALTER CONSTRAINT enforcement on the measured per-kind boundary."""
         ...
 
@@ -235,6 +235,6 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         """
         ...
 
-    def format_validate_constraint_action(self, action: "ValidateConstraint") -> Tuple[str, tuple]:
+    def format_validate_constraint_action(self, action: "ValidateConstraintAction") -> Tuple[str, tuple]:
         """Format VALIDATE CONSTRAINT."""
         ...

@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression.objects import Domain, Type
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
-from rhosocial.activerecord.backend.expression.core import DdlLiteral
+from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.serialization import (
     default_registry,
     deserialize,
@@ -92,21 +92,19 @@ from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics
 # The kind whitelist is an assembly decision (core commit ee5f4b55): the
 # default registry is populated by walking the core, sqlite and dummy
 # expression packages, so a backend's own kinds are entered by whoever reads
-# them back. These tests deserialize the two TYPE definitions below -- and the
-# composite definition nests the attribute dataclass, while the base definition
-# carries the module-private UNSET sentinel as an enum member -- so exactly
-# those go into the default registry here. Registration is idempotent:
+# them back. These tests deserialize the two TYPE definitions below, so those
+# two go into the default registry here. Registration is idempotent:
 # registering the same class again is a no-op, and a same-named different
 # class is a hard error either way.
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
-    _UnsetValue,
-)
-
+#
+# Only the two node kinds are registered. The composite definition's attribute
+# dataclass and the base definition's ``UNSET`` sentinel used to be registered
+# through their own tables (``register_dataclass`` / ``register_enum``); core
+# dropped both, because an artifact is plain JSON now and neither carries a
+# class path any more.
 _PG_ROUNDTRIP_REGISTRY = default_registry()
 _PG_ROUNDTRIP_REGISTRY.register_node(PostgresBaseTypeDefinition)
 _PG_ROUNDTRIP_REGISTRY.register_node(PostgresCompositeTypeDefinition)
-_PG_ROUNDTRIP_REGISTRY.register_dataclass(PostgresCompositeTypeAttribute)
-_PG_ROUNDTRIP_REGISTRY.register_enum(_UnsetValue)
 
 
 class TestPostgresDomainExpression:
@@ -199,7 +197,7 @@ class TestPostgresDomainExpression:
 
     def test_typed_create_with_schema_and_all_clauses(self, dialect):
         value = DomainValueExpression(dialect)
-        condition = value > DdlLiteral(dialect, 0)
+        condition = value > Literal(dialect, 0, inline=True)
         check = DomainCheckConstraint(dialect, condition, name="positive")
         sql, params = PostgresCreateDomainExpression(
             dialect,
@@ -224,7 +222,7 @@ class TestPostgresDomainExpression:
         # trip without a get_params() override. See
         # test_domain_expression_roundtrip.py for the full round-trip proof.
         value = DomainValueExpression(dialect)
-        condition = value > DdlLiteral(dialect, 0)
+        condition = value > Literal(dialect, 0, inline=True)
         legacy = PostgresCreateDomainExpression(
             dialect,
             "legacy",
@@ -252,7 +250,7 @@ class TestPostgresDomainExpression:
         value = DomainValueExpression(dialect)
         check = DomainCheckConstraint(
             dialect,
-            value > DdlLiteral(dialect, 0),
+            value > Literal(dialect, 0, inline=True),
             name="positive",
         )
         cases = [
@@ -356,6 +354,62 @@ class TestPostgresTypeDDLExpressions:
             deserialize_xml(serialize_xml(definition), dialect),
         )
         assert all(item.get_params() == definition.get_params() for item in restored)
+
+    def test_composite_attributes_travel_as_plain_mappings(self, dialect):
+        """The attribute record is written, not the dataclass instance.
+
+        An artifact is plain JSON (rules §10), and a dataclass has no
+        language-neutral spelling of its own, so ``get_params`` emits the
+        attribute as a mapping -- and the constructor takes that mapping back,
+        which is what makes the round trip above possible at all. The stored
+        form stays the dataclass either way, so the formatter is untouched.
+        """
+        definition = PostgresCompositeTypeDefinition(
+            dialect,
+            [PostgresCompositeTypeAttribute("id", IntegerType(dialect))],
+        )
+        assert definition.get_params()["attributes"] == [
+            {"name": "id", "data_type": IntegerType(dialect), "collation": None}
+        ]
+        assert serialize(definition)["params"]["attributes"][0]["name"] == "id"
+
+        from_mapping = PostgresCompositeTypeDefinition(
+            dialect,
+            [{"name": "id", "data_type": IntegerType(dialect), "collation": None}],
+        )
+        assert isinstance(from_mapping.attributes[0], PostgresCompositeTypeAttribute)
+        assert from_mapping.get_params() == definition.get_params()
+
+    def test_composite_attribute_mapping_is_validated_by_name(self, dialect):
+        """A mapping with a missing or unknown field fails where it is read."""
+        with pytest.raises(TypeError, match="missing required field"):
+            PostgresCompositeTypeDefinition(dialect, [{"name": "id"}])
+        with pytest.raises(TypeError, match="carries no field"):
+            PostgresCompositeTypeDefinition(
+                dialect,
+                [{"name": "id", "data_type": IntegerType(dialect), "extra": 1}],
+            )
+
+    def test_base_unset_reads_back_as_unset_not_as_a_default(self, dialect):
+        """The sentinel's wire text means "not supplied" again.
+
+        ``_UnsetValue`` is a ``str`` enum precisely so the sentinel travels as
+        ``"UNSET"``; without the constructor normalising it back, a definition
+        that declared no DEFAULT would come back claiming one.
+        """
+        wire = serialize(PostgresBaseTypeDefinition(
+            dialect, input_function="box_in", output_function="box_out"
+        ))
+        assert wire["params"]["default"] == "UNSET"
+
+        restored = deserialize(wire, dialect)
+        assert restored.has_default is False
+        assert PostgresBaseTypeDefinition(
+            dialect,
+            input_function="box_in",
+            output_function="box_out",
+            default="UNSET",
+        ).has_default is False
 
     def test_compatibility_wrapper_params(self, dialect):
         create = PostgresCreateEnumTypeExpression(

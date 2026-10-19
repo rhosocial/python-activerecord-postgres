@@ -6,15 +6,15 @@ conversion expression that has no generic equivalent:
 
 * ``USING (<expression>)`` — how to convert existing values to the new type.
 
-It lives on ``PostgresAlterColumn`` (deriving the generic ``AlterColumn``) and
-is rendered by the PostgreSQL ``format_alter_column_action`` override.
+It lives on ``PostgresAlterColumn`` (deriving the generic ``AlterColumnAction``)
+and is rendered by the PostgreSQL ``format_alter_column_action`` override.
 PostgreSQL does **not** share it with any other backend.
 """
 
 from typing import Any, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.statements import (
-    AlterColumn,
+    AlterColumnAction,
     ColumnAlterOperation,
 )
 
@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-class PostgresAlterColumn(AlterColumn):
+class PostgresAlterColumn(AlterColumnAction):
     """A PostgreSQL ``ALTER COLUMN`` action extending the generic one.
 
     Adds the PostgreSQL-only ``using`` conversion expression for

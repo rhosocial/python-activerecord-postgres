@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 )
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins import DomainMixin, UserDefinedTypeMixin
-from rhosocial.activerecord.backend.expression.core import DdlLiteral, Literal
+from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     DomainCheckConstraint,
     DomainValueExpression,
@@ -753,7 +753,7 @@ class TestPostgresTypeDomainProtocols:
         assert baseline.supports_drop_domain_restrict() is True
         check = DomainCheckConstraint(
             baseline,
-            DomainValueExpression(baseline) > DdlLiteral(baseline, 0),
+            DomainValueExpression(baseline) > Literal(baseline, 0, inline=True),
         )
         assert baseline.supports_alter_domain_action(PostgresAddDomainCheckAction) is True
         assert isinstance(check, DomainCheckConstraint)

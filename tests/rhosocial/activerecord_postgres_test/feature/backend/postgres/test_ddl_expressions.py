@@ -13,7 +13,6 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.expression import (
     Column,
-    DdlLiteral,
     FunctionCall,
     Literal,
     RawSQL,
@@ -543,17 +542,35 @@ class TestPostgresPartitionValue:
         expr = PartitionValue(dialect, value, partition_type="LIST")
         assert expr.to_sql() == (f"'{value}'", ())
 
-    def test_partition_value_lifts_data_literals_to_the_ddl_class(self, dialect):
-        """A data-position ``Literal`` inside a partition bound renders inline.
+    def test_partition_value_renders_the_callers_inline_literal(self, dialect):
+        """An inline literal inside a partition bound renders as text.
 
-        The bound itself is a DDL position, so the dialect lifts the operand to
-        :class:`DdlLiteral` -- the class that owns inline rendering there.
+        The bound is a DDL position, and the literal's owner is the caller:
+        one marked ``inline=True`` renders as text -- core removed the pass
+        that used to lift a tree's literals into the DDL class -- and one left
+        binding is refused by name rather than silently inlined (the next
+        test).
+        """
+        expr = PartitionValue(
+            dialect,
+            FunctionCall(
+                dialect, "DATE_TRUNC", Literal(dialect, "month", inline=True)
+            ),
+        )
+        assert expr.to_sql() == ("DATE_TRUNC('month')", ())
+
+    def test_partition_value_refuses_a_binding_literal(self, dialect):
+        """A literal left binding inside a DDL position fails by name.
+
+        The refusal is the contract: DDL accepts no bind parameters, and the
+        caller who wants inline text says so on the literal itself.
         """
         expr = PartitionValue(
             dialect,
             FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
         )
-        assert expr.to_sql() == ("DATE_TRUNC('month')", ())
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            expr.to_sql()
 
     def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
         expr = PartitionValue(
@@ -825,7 +842,7 @@ class TestPostgresCreatePartitionExpression:
         clause = PartitionClause(
             dialect,
             PartitionStrategy.HASH,
-            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket"))],
+            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket", inline=True))],
         )
         expr = PostgresCreatePartitionExpression(
             dialect,
@@ -833,8 +850,8 @@ class TestPostgresCreatePartitionExpression:
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01"),
-                "to": Literal(dialect, "2027-01-01"),
+                "from": Literal(dialect, "2026-01-01", inline=True),
+                "to": Literal(dialect, "2027-01-01", inline=True),
             },
             partition_clause=clause,
         )
@@ -852,7 +869,13 @@ class TestPostgresCreatePartitionExpression:
             "events_p1",
             "events",
             "LIST",
-            {"values": [FunctionCall(dialect, "LOWER", Literal(dialect, "ACTIVE"))]},
+            {
+                "values": [
+                    FunctionCall(
+                        dialect, "LOWER", Literal(dialect, "ACTIVE", inline=True)
+                    )
+                ]
+            },
         )
 
         sql, params = expr.to_sql()
@@ -1119,8 +1142,10 @@ class TestPostgresAttachPartitionExpression:
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01"),
-                "to": FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "year")),
+                "from": Literal(dialect, "2026-01-01", inline=True),
+                "to": FunctionCall(
+                    dialect, "DATE_TRUNC", Literal(dialect, "year", inline=True)
+                ),
             },
         )
 
