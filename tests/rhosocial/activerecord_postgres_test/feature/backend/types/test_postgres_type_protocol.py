@@ -689,7 +689,7 @@ class TestParseRoundTripSweep:
         return registry
 
     def test_every_rendered_type_parses_back_coherently(self, dialect, registry):
-        from rhosocial.activerecord.testsuite.utils.parse_contract import (
+        from expression_roundtrip_harness import (
             parse_roundtrip_failures,
         )
 

@@ -249,45 +249,60 @@ def test_skipped_statements_are_still_the_ones_we_think():
         )
 
 
-@pytest.mark.parametrize(
-    "fqn,slot,required_name,impostor_name", PROBES, ids=_IDS
-)
 def _swapped(instance, cls, dialect, slot, value):
     """The probe instance with *slot* carrying *value*.
 
     A declared parameter may be a read-only property over storage that lives on
     a child node -- ``ForeignKeyConstraint.foreign_key_table`` is a view onto
     the branch's ``references`` tuple -- and a property has no setter to swap
-    through. Such a slot is filled at construction instead: the signature is
-    walked exactly as the harness's guesser walks it, with the target slot
-    forced, so the only difference from the probed instance is the slot itself.
+    through. The storage is found instead: the holder is the node itself or one
+    of its child nodes, and a value held inside a tuple is rewritten as a new
+    tuple, because a tuple cannot be mutated in place. Everything else about
+    the instance stays exactly as the constructor built it, so the only thing
+    a refusal can be about is the slot under test.
     """
+    original = getattr(instance, slot)
     swapped = copy.copy(instance)
     try:
         object.__setattr__(swapped, slot, value)
         return swapped
     except AttributeError:
         pass
-    from expression_roundtrip_harness import _placeholder_for
+    from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
-    sig = inspect.signature(cls.__init__)
-    args, kwargs = [], {}
-    for pname, param in sig.parameters.items():
-        if pname in ("self", "dialect"):
-            continue
-        if param.default is not inspect.Parameter.empty:
-            continue
-        placeholder = value if pname == slot else _placeholder_for(param, dialect)
-        if param.kind is inspect.Parameter.KEYWORD_ONLY:
-            kwargs[pname] = placeholder
-        else:
-            args.append(placeholder)
-    first = next((p for p in sig.parameters if p != "self"), None)
-    if first == "dialect":
-        return cls(dialect, *args, **kwargs)
-    return cls(*args, dialect=dialect, **kwargs)
+    # The instance was shallow-copied, so a child node found this way is still
+    # the original's: copy the child too before writing to it, and hang the
+    # copy where the original child was found.
+    holders = [(swapped, None, None)] + [
+        (child, name, swapped)
+        for name, child in vars(swapped).items()
+        if isinstance(child, BaseExpression)
+    ]
+    for holder, holder_name, parent in holders:
+        writable = holder if parent is None else copy.copy(holder)
+        for name, current in vars(holder).items():
+            if current is original:
+                object.__setattr__(writable, name, value)
+            elif isinstance(current, tuple) and original in current:
+                object.__setattr__(
+                    writable,
+                    name,
+                    tuple(value if item is original else item for item in current),
+                )
+            else:
+                continue
+            if parent is not None:
+                object.__setattr__(parent, holder_name, writable)
+            return swapped
+    raise AssertionError(
+        f"{cls.__name__}.{slot} is a read-only property whose storage could "
+        f"not be found; the probe needs updating for the new shape"
+    )
 
 
+@pytest.mark.parametrize(
+    "fqn,slot,required_name,impostor_name", PROBES, ids=_IDS
+)
 def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
     """A statement handed the wrong object kind must refuse at render time.
 

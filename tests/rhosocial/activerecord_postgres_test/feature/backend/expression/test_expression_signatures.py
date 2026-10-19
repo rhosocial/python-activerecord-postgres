@@ -17,8 +17,8 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     PostgresAlterEnumAddValueExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
-    CreateMultirangeTypeExpression,
-    MultirangeAggFunctionExpression,
+    PostgresCreateMultirangeTypeExpression,
+    PostgresMultirangeAggFunctionExpression,
 )
 
 
@@ -166,7 +166,7 @@ class TestAlterEnumAddValueExpression:
 
 class TestCreateMultirangeTypeExpression:
     def test_explicit_multirange_ddl_fails_fast(self, postgres_dialect):
-        expr = CreateMultirangeTypeExpression(
+        expr = PostgresCreateMultirangeTypeExpression(
             postgres_dialect,
             name="my_multirange",
             range_type="my_range",
@@ -176,10 +176,10 @@ class TestCreateMultirangeTypeExpression:
 
 
 class TestMultirangeAggFunctionExpression:
-    """Tests for MultirangeAggFunctionExpression."""
+    """Tests for PostgresMultirangeAggFunctionExpression."""
 
     def test_basic_agg(self, postgres_dialect):
-        expr = MultirangeAggFunctionExpression(
+        expr = PostgresMultirangeAggFunctionExpression(
             postgres_dialect, range_column="period", table_name="events",
         )
         sql, params = expr.to_sql()
@@ -187,7 +187,7 @@ class TestMultirangeAggFunctionExpression:
         assert params == ()
 
     def test_agg_with_where_and_schema(self, postgres_dialect):
-        expr = MultirangeAggFunctionExpression(
+        expr = PostgresMultirangeAggFunctionExpression(
             postgres_dialect, range_column="period", table_name="events",
             where_clause="status = 'active'", schema="public",
         )

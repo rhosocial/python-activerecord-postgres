@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresForceRlsExpression,
     PostgresAlterTableSettingsExpression,
     PostgresClusterExpression,
-    PostgresAlterColumn,
+    PostgresAlterColumnAction,
 )
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
@@ -205,7 +205,7 @@ class TestPostgresAlterColumnUsingExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_using_clause(self, dialect):
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -218,7 +218,7 @@ class TestPostgresAlterColumnUsingExpression:
         assert serialized == (1,)
 
     def test_using_clause_with_cascade(self, dialect):
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -233,7 +233,7 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_using_rejected_for_non_set_data_type(self, dialect):
         """USING is only valid on SET DATA TYPE."""
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DEFAULT",
@@ -245,7 +245,7 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_without_using_unaffected(self, dialect):
         """No USING -> output matches the standard form."""
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",

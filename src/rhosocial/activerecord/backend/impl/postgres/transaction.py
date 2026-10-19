@@ -59,7 +59,7 @@ class PostgresTransactionMixin:
         expr = BeginTransactionStatement(self._backend.dialect)
 
         if self._isolation_level is not None:
-            expr.isolation_level(self._isolation_level)
+            expr.with_isolation_level(self._isolation_level)
 
         if self._transaction_mode == TransactionMode.READ_ONLY:
             expr.read_only()
@@ -69,9 +69,9 @@ class PostgresTransactionMixin:
         # SERIALIZABLE (``BEGIN DEFERRABLE`` alone is accepted by PostgreSQL).
         if self._is_deferrable is not None:
             if self._is_deferrable:
-                expr.deferrable()
+                expr.with_deferrable()
             else:
-                expr.not_deferrable()
+                expr.with_not_deferrable()
 
         return expr.to_sql()
 

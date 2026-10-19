@@ -145,7 +145,7 @@ class TestSyncSetTransaction:
 
         # Set isolation level using expression
         expr = SetTransactionExpression(postgres_backend.dialect)
-        expr.isolation_level(IsolationLevel.SERIALIZABLE)
+        expr.with_isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         postgres_backend.execute(sql, params)
 
@@ -204,7 +204,7 @@ class TestSyncSessionCharacteristics:
         try:
             # Set session characteristics to READ ONLY
             expr = SetTransactionExpression(postgres_backend.dialect)
-            expr.session(True).read_only()
+            expr.with_session(True).read_only()
             sql, params = expr.to_sql()
             postgres_backend.execute(sql, params)
 
@@ -233,7 +233,7 @@ class TestSyncSessionCharacteristics:
         finally:
             # Reset session characteristics to READ WRITE for teardown
             expr = SetTransactionExpression(postgres_backend.dialect)
-            expr.session(True).read_write()
+            expr.with_session(True).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
     def test_reset_session_characteristics(self, postgres_backend, test_table):
@@ -242,12 +242,12 @@ class TestSyncSessionCharacteristics:
 
         # Set session characteristics to READ ONLY
         expr = SetTransactionExpression(postgres_backend.dialect)
-        expr.session(True).read_only()
+        expr.with_session(True).read_only()
         postgres_backend.execute(expr.to_sql()[0])
 
         # Reset to READ WRITE
         expr = SetTransactionExpression(postgres_backend.dialect)
-        expr.session(True).read_write()
+        expr.with_session(True).read_write()
         postgres_backend.execute(expr.to_sql()[0])
 
         # Now transactions should allow writes
@@ -273,7 +273,7 @@ class TestSyncSessionCharacteristics:
         try:
             # Set session characteristics with SERIALIZABLE isolation
             expr = SetTransactionExpression(postgres_backend.dialect)
-            expr.session(True).isolation_level(IsolationLevel.SERIALIZABLE).read_write()
+            expr.with_session(True).with_isolation_level(IsolationLevel.SERIALIZABLE).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
             # Verify isolation_level is None (not explicitly set)
@@ -299,7 +299,7 @@ class TestSyncSessionCharacteristics:
             tx_manager = postgres_backend.transaction_manager
             tx_manager.isolation_level = None
             expr = SetTransactionExpression(postgres_backend.dialect)
-            expr.session(True).read_write()
+            expr.with_session(True).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
 
@@ -381,7 +381,7 @@ class TestAsyncSetTransaction:
         await async_postgres_backend.transaction_manager.begin()
 
         expr = SetTransactionExpression(async_postgres_backend.dialect)
-        expr.isolation_level(IsolationLevel.SERIALIZABLE)
+        expr.with_isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         await async_postgres_backend.execute(sql, params)
 
@@ -438,7 +438,7 @@ class TestAsyncSessionCharacteristics:
 
         try:
             expr = SetTransactionExpression(async_postgres_backend.dialect)
-            expr.session(True).read_only()
+            expr.with_session(True).read_only()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
             tx_manager = async_postgres_backend.transaction_manager
@@ -465,7 +465,7 @@ class TestAsyncSessionCharacteristics:
         finally:
             # Reset session characteristics to READ WRITE for teardown
             expr = SetTransactionExpression(async_postgres_backend.dialect)
-            expr.session(True).read_write()
+            expr.with_session(True).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
     @pytest.mark.asyncio
@@ -482,7 +482,7 @@ class TestAsyncSessionCharacteristics:
         try:
             # Set session characteristics with SERIALIZABLE isolation
             expr = SetTransactionExpression(async_postgres_backend.dialect)
-            expr.session(True).isolation_level(IsolationLevel.SERIALIZABLE).read_write()
+            expr.with_session(True).with_isolation_level(IsolationLevel.SERIALIZABLE).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
             # Verify isolation_level is None (not explicitly set)
@@ -508,5 +508,5 @@ class TestAsyncSessionCharacteristics:
             tx_manager = async_postgres_backend.transaction_manager
             tx_manager.isolation_level = None
             expr = SetTransactionExpression(async_postgres_backend.dialect)
-            expr.session(True).read_write()
+            expr.with_session(True).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
