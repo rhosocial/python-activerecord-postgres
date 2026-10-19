@@ -40,7 +40,7 @@ from rhosocial.activerecord.backend.expression import (
     TablePropertiesClause,
     ValuesSource,
     VertexTable,
-    EdgeTable,
+    EdgeTableDefinition,
     AllColumnsWildcard,
     ColumnForeignKeyConstraint,
     ColumnPrimaryKeyConstraint,
@@ -184,16 +184,16 @@ def social_data(postgres_backend):
     vt_posts = VertexTable(dialect, NodeTable(dialect, 'posts'),
                            labels=["post"],
                            properties=TablePropertiesClause(dialect, columns=["id", "content"]))
-    et_follows = EdgeTable(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
+    et_follows = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
                            references_source=("people", ["id"]),
                            references_destination=("people", ["id"]),
                            labels=["follows"])
-    et_posts = EdgeTable(dialect, EdgeTableObject(dialect, 'posts'), ["author_id"], ["id"],
+    et_posts = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'posts'), ["author_id"], ["id"],
                          references_source=("people", ["id"]),
                          references_destination=("posts", ["id"]),
                          labels=["authored"],
                          alias="authored")
-    et_likes = EdgeTable(dialect, EdgeTableObject(dialect, 'likes'), ["user_id"], ["post_id"],
+    et_likes = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'likes'), ["user_id"], ["post_id"],
                          references_source=("people", ["id"]),
                          references_destination=("posts", ["id"]),
                          labels=["likes"])
@@ -232,7 +232,7 @@ class TestSocialGraph:
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
@@ -262,9 +262,9 @@ class TestSocialGraph:
                 ),
             ),
         )
-        f1 = GraphEdge(dialect, "f1", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f1 = GraphEdge(dialect, "f1", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
-        f2 = GraphEdge(dialect, "f2", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f2 = GraphEdge(dialect, "f2", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         c = GraphVertex(dialect, "c", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f1, b, f2, c)
         cols = ColumnsClause(dialect, GraphColumn("c", "name", "c_name"))
@@ -299,9 +299,9 @@ class TestSocialGraph:
                 ),
             ),
         )
-        p = GraphEdge(dialect, "p", EdgeTable(dialect, EdgeTableObject(dialect, 'authored')), GraphEdgeDirection.RIGHT)
+        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, 'authored'), GraphEdgeDirection.RIGHT)
         post = GraphVertex(dialect, "post", NodeTable(dialect, 'post'))
-        like_edge = GraphEdge(dialect, "l", EdgeTable(dialect, EdgeTableObject(dialect, 'likes')), GraphEdgeDirection.LEFT)
+        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, 'likes'), GraphEdgeDirection.LEFT)
         liker = GraphVertex(dialect, "liker", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, p, post, like_edge, liker)
         cols = ColumnsClause(dialect, GraphColumn("liker", "name", "liker_name"))
@@ -320,9 +320,9 @@ class TestSocialGraph:
         """GRAPH_TABLE + GROUP BY."""
         dialect = postgres_backend.dialect
         a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        p = GraphEdge(dialect, "p", EdgeTable(dialect, EdgeTableObject(dialect, 'authored')), GraphEdgeDirection.RIGHT)
+        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, 'authored'), GraphEdgeDirection.RIGHT)
         post = GraphVertex(dialect, "post", NodeTable(dialect, 'post'))
-        like_edge = GraphEdge(dialect, "l", EdgeTable(dialect, EdgeTableObject(dialect, 'likes')), GraphEdgeDirection.LEFT)
+        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, 'likes'), GraphEdgeDirection.LEFT)
         liker = GraphVertex(dialect, "liker", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, p, post, like_edge, liker)
         cols = ColumnsClause(dialect,
@@ -352,7 +352,7 @@ class TestCommerceGraph:
         """Composite: GRAPH_TABLE + JOIN + ORDER BY."""
         dialect = postgres_backend.dialect
         a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect,
@@ -393,7 +393,7 @@ class TestCommerceGraph:
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
@@ -456,7 +456,7 @@ class TestAsyncSocialGraph:
         await backend.execute(*InsertStatement(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
 
         vt = VertexTable(dialect, NodeTable(dialect, 'people'), labels=["person"])
-        et = EdgeTable(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
+        et = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
                        references_source=("people", ["id"]),
                        references_destination=("people", ["id"]),
                        labels=["follows"])
@@ -482,7 +482,7 @@ class TestAsyncSocialGraph:
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
@@ -504,7 +504,7 @@ class TestPGQExplain:
     def test_explain_graph_table(self, postgres_backend, social_data):
         dialect = postgres_backend.dialect
         a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        f = GraphEdge(dialect, "f", EdgeTable(dialect, EdgeTableObject(dialect, 'follows')), GraphEdgeDirection.RIGHT)
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
         b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
