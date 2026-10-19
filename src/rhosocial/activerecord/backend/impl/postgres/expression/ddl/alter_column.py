@@ -6,7 +6,7 @@ conversion expression that has no generic equivalent:
 
 * ``USING (<expression>)`` — how to convert existing values to the new type.
 
-It lives on ``PostgresAlterColumn`` (deriving the generic ``AlterColumnAction``)
+It lives on ``PostgresAlterColumnAction`` (deriving the generic ``AlterColumnAction``)
 and is rendered by the PostgreSQL ``format_alter_column_action`` override.
 PostgreSQL does **not** share it with any other backend.
 """
@@ -23,11 +23,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 __all__ = [
-    "PostgresAlterColumn",
+    "PostgresAlterColumnAction",
 ]
 
 
-class PostgresAlterColumn(AlterColumnAction):
+class PostgresAlterColumnAction(AlterColumnAction):
     """A PostgreSQL ``ALTER COLUMN`` action extending the generic one.
 
     Adds the PostgreSQL-only ``using`` conversion expression for

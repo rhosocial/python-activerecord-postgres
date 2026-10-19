@@ -64,7 +64,7 @@ class PostgresAlterColumnModifierMixin:
         ``SET DATA TYPE``). PostgreSQL additionally supports an optional
         ``USING (conversion_expression)`` on ``SET DATA TYPE`` — an
         extension the core dialect does not emit. This override injects it
-        from the PostgreSQL ``PostgresAlterColumn`` typed ``using`` field.
+        from the PostgreSQL ``PostgresAlterColumnAction`` typed ``using`` field.
 
         Args:
             action: An ``AlterColumnAction`` action (core ``ddl_alter`` module).
@@ -123,7 +123,9 @@ class PostgresAlterColumnModifierMixin:
                     f"{self.format_identifier(name, expr.name_need_quote)}"
                 )
             else:
-                col_sql = f"{self.format_identifier(table, expr.table_need_quote)}.{self.format_identifier(name, expr.name_need_quote)}"
+                table_sql = self.format_identifier(table, expr.table_need_quote)
+                name_sql = self.format_identifier(name, expr.name_need_quote)
+                col_sql = f"{table_sql}.{name_sql}"
         else:
             col_sql = self.format_identifier(name, expr.name_need_quote)
 

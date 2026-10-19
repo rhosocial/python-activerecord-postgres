@@ -353,13 +353,13 @@ class PostgresMaterializedViewMixin(ViewMixin):
         target = self._format_materialized_view_name(expr)
         rendered = []
         for action in expr.actions:
-            action_sql, action_params = self.format_materialized_view_alter_action(
+            action_sql, action_params = self.format_postgres_materialized_view_alter_action(
                 action
             )
             rendered.append(f"ALTER MATERIALIZED VIEW {target} {action_sql}")
         return ";\n".join(rendered), ()
 
-    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Returns the ``(sql, params)`` tuple every ``format_*`` method returns.
@@ -371,7 +371,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         someone treated it as the documented tuple.
 
         Args:
-            expr: A ``MaterializedViewAlterAction`` subclass instance.
+            expr: A ``PostgresMaterializedViewAlterAction`` subclass instance.
 
         Returns:
             A ``(sql, params)`` tuple whose ``sql`` is the action body without

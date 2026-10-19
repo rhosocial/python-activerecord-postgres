@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PartitionValue",
+    "PostgresPartitionValue",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
@@ -44,7 +44,7 @@ __all__ = [
 # reader choose between them for no reason).
 
 
-class PartitionValue(BaseExpression):
+class PostgresPartitionValue(BaseExpression):
     """Represents a partition bound value in PostgreSQL DDL.
 
     Handles the formatting of partition boundary values used in
@@ -67,13 +67,13 @@ class PartitionValue(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> PartitionValue(dialect=dialect, value=None).to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value=None).to_sql()
         ('NULL', ())
-        >>> PartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
         ('MAXVALUE', ())
-        >>> PartitionValue(dialect=dialect, value='2024-01-01').to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value='2024-01-01').to_sql()
         ("'2024-01-01'", ())
-        >>> PartitionValue(dialect=dialect, value=42).to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value=42).to_sql()
         ('42', ())
     """
 
@@ -106,7 +106,7 @@ class PartitionValue(BaseExpression):
                 seen.add(identity)
                 if current.dialect is not dialect:
                     raise ValueError(
-                        "partition value expressions must use the same dialect as PartitionValue"
+                        "partition value expressions must use the same dialect as PostgresPartitionValue"
                     )
                 if isinstance(current, FunctionCall):
                     if current.alias is not None:

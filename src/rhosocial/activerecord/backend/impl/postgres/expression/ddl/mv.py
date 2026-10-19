@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "MaterializedViewAlterAction",
+    "PostgresMaterializedViewAlterAction",
     "PostgresAlterMaterializedViewExpression",
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
@@ -233,7 +233,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewStatement
         return "format_refresh_materialized_view_pg_statement"
 
 
-class MaterializedViewAlterAction(BaseExpression, ABC):
+class PostgresMaterializedViewAlterAction(BaseExpression, ABC):
     """Base class for one ALTER MATERIALIZED VIEW action.
 
     Supported actions (PostgreSQL):
@@ -247,10 +247,10 @@ class MaterializedViewAlterAction(BaseExpression, ABC):
 
     @property
     def format_method(self) -> str:
-        return "format_materialized_view_alter_action"
+        return "format_postgres_materialized_view_alter_action"
 
 
-class PostgresRenameMaterializedViewAction(MaterializedViewAlterAction):
+class PostgresRenameMaterializedViewAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name RENAME TO new_name``."""
 
     action_kind = "rename"
@@ -261,7 +261,7 @@ class PostgresRenameMaterializedViewAction(MaterializedViewAlterAction):
         self.new_name = new_name
 
 
-class PostgresSetMaterializedViewSchemaAction(MaterializedViewAlterAction):
+class PostgresSetMaterializedViewSchemaAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name SET SCHEMA new_schema``."""
 
     action_kind = "set_schema"
@@ -272,7 +272,7 @@ class PostgresSetMaterializedViewSchemaAction(MaterializedViewAlterAction):
         self.new_schema = new_schema
 
 
-class PostgresSetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
+class PostgresSetMaterializedViewPropertiesAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name SET (storage_parameter [= value] [, ...])``.
 
     Parameter names are validated against
@@ -306,7 +306,7 @@ class PostgresSetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresResetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
+class PostgresResetMaterializedViewPropertiesAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name RESET (storage_parameter [, ...])``."""
 
     action_kind = "reset_properties"
@@ -329,7 +329,7 @@ class PostgresResetMaterializedViewPropertiesAction(MaterializedViewAlterAction)
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresChangeMaterializedViewOwnerAction(MaterializedViewAlterAction):
+class PostgresChangeMaterializedViewOwnerAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name OWNER TO {new_owner | CURRENT_ROLE | ...}``.
 
     The ``CURRENT_ROLE`` / ``CURRENT_USER`` / ``SESSION_USER`` keywords are kept
@@ -372,16 +372,16 @@ ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
         self,
         dialect: "SQLDialectBase",
         view: MaterializedView,
-        actions: Sequence[MaterializedViewAlterAction],
+        actions: Sequence[PostgresMaterializedViewAlterAction],
     ) -> None:
         super().__init__(dialect)
         action_list = list(actions or [])
         if not action_list:
-            raise ValueError("actions must contain at least one MaterializedViewAlterAction")
+            raise ValueError("actions must contain at least one PostgresMaterializedViewAlterAction")
         for action in action_list:
-            if not isinstance(action, MaterializedViewAlterAction):
+            if not isinstance(action, PostgresMaterializedViewAlterAction):
                 raise TypeError(
-                    "actions must contain MaterializedViewAlterAction instances, "
+                    "actions must contain PostgresMaterializedViewAlterAction instances, "
                     f"got {type(action).__name__}"
                 )
         self.view = view

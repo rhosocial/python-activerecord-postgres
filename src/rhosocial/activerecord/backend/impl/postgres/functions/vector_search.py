@@ -28,6 +28,7 @@ from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import (
     AllColumnsWildcard,
     BaseExpression,
+    Subquery,
 )
 from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
 from rhosocial.activerecord.backend.expression.query_parts import (
@@ -136,7 +137,13 @@ def vector_search(
         ]
 
     if include_distance:
-        select.append(distance_expr.as_(_METRIC_DISTANCE_ALIAS[metric]))
+        # A binary operation declares no alias field of its own (§4.3: the
+        # operation nodes carry the operands and nothing else), so the alias
+        # rides on the wrapping subquery -- the same shape the cube example
+        # uses for its distance column.
+        select.append(
+            Subquery(dialect, distance_expr).as_(_METRIC_DISTANCE_ALIAS[metric])
+        )
     if include_similarity and metric in _METRIC_SIMILARITY_ALIAS:
         similarity = ArithmeticOperation(
             dialect, "sub", Literal(dialect, 1), distance_expr

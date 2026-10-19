@@ -15,7 +15,7 @@ from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        PartitionValue,
+        PostgresPartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
@@ -303,7 +303,7 @@ class PostgresPartitionMixin:
         """
         return self.version >= (11, 0, 0)
 
-    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+    def format_partition_value(self, expr: "PostgresPartitionValue") -> Tuple[str, tuple]:
         """Format a PostgreSQL partition bound value."""
         if not self.supports_table_partitioning():
             raise UnsupportedFeatureError(
@@ -380,12 +380,12 @@ class PostgresPartitionMixin:
                 "nested rows are not supported"
             )
 
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         value_sql_parts = []
         params: List[Any] = []
         for value in values:
-            value_sql, value_params = PartitionValue(
+            value_sql, value_params = PostgresPartitionValue(
                 self,
                 value,
                 partition_type="LIST",
@@ -439,7 +439,7 @@ class PostgresPartitionMixin:
         parts.append(f"PARTITION OF {parent_name}")
 
         params: List[Any] = []
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")
@@ -457,7 +457,7 @@ class PostgresPartitionMixin:
             from_sql_parts = []
             to_sql_parts = []
             for value in from_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -465,7 +465,7 @@ class PostgresPartitionMixin:
                 from_sql_parts.append(value_sql)
                 params.extend(value_params)
             for value in to_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -613,7 +613,7 @@ class PostgresPartitionMixin:
         parts.extend((parent_name, "ATTACH PARTITION", partition_name))
 
         params: List[Any] = []
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")
@@ -631,7 +631,7 @@ class PostgresPartitionMixin:
             from_sql_parts = []
             to_sql_parts = []
             for value in from_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -639,7 +639,7 @@ class PostgresPartitionMixin:
                 from_sql_parts.append(value_sql)
                 params.extend(value_params)
             for value in to_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",

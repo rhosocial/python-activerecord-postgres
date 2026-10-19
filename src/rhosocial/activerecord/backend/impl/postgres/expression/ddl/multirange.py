@@ -10,12 +10,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "CreateMultirangeTypeExpression",
-    "MultirangeAggFunctionExpression",
+    "PostgresCreateMultirangeTypeExpression",
+    "PostgresMultirangeAggFunctionExpression",
 ]
 
 
-class CreateMultirangeTypeExpression(BaseExpression):
+class PostgresCreateMultirangeTypeExpression(BaseExpression):
     """Compatibility expression for the removed explicit multirange DDL form."""
 
     def __init__(
@@ -32,10 +32,10 @@ class CreateMultirangeTypeExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_create_multirange_type_statement_expression"
+        return "format_postgres_create_multirange_type_expression"
 
 
-class MultirangeAggFunctionExpression(BaseExpression):
+class PostgresMultirangeAggFunctionExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -52,4 +52,4 @@ class MultirangeAggFunctionExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_multirange_agg_function_expression"
+        return "format_postgres_multirange_agg_function_expression"

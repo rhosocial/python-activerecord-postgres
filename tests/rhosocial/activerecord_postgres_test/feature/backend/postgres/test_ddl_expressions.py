@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PartitionValue,
+    PostgresPartitionValue,
     PostgresRefreshMaterializedViewExpression,
     PostgresCommentExpression,
     PostgresCreatePartitionExpression,
@@ -524,22 +524,22 @@ class TestPostgresPartitionValue:
         ],
     )
     def test_partition_value_formats_whitelisted_values(self, dialect, value, expected):
-        expr = PartitionValue(dialect=dialect, value=value)
+        expr = PostgresPartitionValue(dialect=dialect, value=value)
         assert expr.to_sql() == (expected, ())
 
     @pytest.mark.parametrize("value", [True, object(), ["x"]])
     def test_partition_value_rejects_invalid_types(self, dialect, value):
         with pytest.raises(TypeError):
-            PartitionValue(dialect=dialect, value=value)
+            PostgresPartitionValue(dialect=dialect, value=value)
 
     @pytest.mark.parametrize("value", [float("inf"), float("nan"), Decimal("Infinity"), Decimal("NaN")])
     def test_partition_value_rejects_nonfinite_numbers(self, dialect, value):
         with pytest.raises(ValueError):
-            PartitionValue(dialect=dialect, value=value)
+            PostgresPartitionValue(dialect=dialect, value=value)
 
     @pytest.mark.parametrize("value", ["MINVALUE", "MAXVALUE", "DEFAULT"])
     def test_list_partition_value_quotes_special_range_strings(self, dialect, value):
-        expr = PartitionValue(dialect, value, partition_type="LIST")
+        expr = PostgresPartitionValue(dialect, value, partition_type="LIST")
         assert expr.to_sql() == (f"'{value}'", ())
 
     def test_partition_value_renders_the_callers_inline_literal(self, dialect):
@@ -551,7 +551,7 @@ class TestPostgresPartitionValue:
         binding is refused by name rather than silently inlined (the next
         test).
         """
-        expr = PartitionValue(
+        expr = PostgresPartitionValue(
             dialect,
             FunctionCall(
                 dialect, "DATE_TRUNC", Literal(dialect, "month", inline=True)
@@ -565,7 +565,7 @@ class TestPostgresPartitionValue:
         The refusal is the contract: DDL accepts no bind parameters, and the
         caller who wants inline text says so on the literal itself.
         """
-        expr = PartitionValue(
+        expr = PostgresPartitionValue(
             dialect,
             FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
         )
@@ -573,7 +573,7 @@ class TestPostgresPartitionValue:
             expr.to_sql()
 
     def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
-        expr = PartitionValue(
+        expr = PostgresPartitionValue(
             dialect,
             RawSQL(dialect, "DATE %s", ("2024-01-01",)),
         )
@@ -583,7 +583,7 @@ class TestPostgresPartitionValue:
     def test_partition_value_rejects_cross_dialect_expression(self, dialect):
         expression = FunctionCall(DummyDialect(), "DATE", niladic=True)
         with pytest.raises(ValueError, match="same dialect"):
-            PartitionValue(dialect, expression)
+            PostgresPartitionValue(dialect, expression)
 
     @pytest.mark.parametrize("expression_factory", [
         lambda dialect: Column(dialect, "created_at"),
@@ -591,17 +591,17 @@ class TestPostgresPartitionValue:
     ])
     def test_partition_value_rejects_unsafe_expression(self, dialect, expression_factory):
         with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQL"):
-            PartitionValue(dialect, expression_factory(dialect))
+            PostgresPartitionValue(dialect, expression_factory(dialect))
 
     def test_default_partition_value_requires_pg11(self):
         dialect = PostgresDialect(version=(10, 0, 0))
         with pytest.raises(UnsupportedFeatureError, match="DEFAULT partitions require PostgreSQL 11"):
-            PartitionValue(dialect, "DEFAULT").to_sql()
+            PostgresPartitionValue(dialect, "DEFAULT").to_sql()
 
     def test_partition_value_requires_pg10(self):
         dialect = PostgresDialect(version=(9, 6, 0))
         with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
-            PartitionValue(dialect, 1).to_sql()
+            PostgresPartitionValue(dialect, 1).to_sql()
 
 
 class TestPostgresCreatePartitionExpression:

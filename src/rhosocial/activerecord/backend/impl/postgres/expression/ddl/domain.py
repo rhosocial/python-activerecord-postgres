@@ -73,7 +73,7 @@ def _coerce_legacy_data_type(
     return DataType.parse_data_type_str(dialect, value)
 
 
-class _LegacySqlExpression(BaseExpression):
+class _PostgresLegacySqlExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -88,10 +88,10 @@ class _LegacySqlExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "_format_postgres_legacy_sql_expression"
+        return "format_postgres_legacy_sql_expression"
 
 
-class _UnsupportedDomainAction(DomainAlterAction):
+class _PostgresUnsupportedDomainAction(DomainAlterAction):
     action_kind = "unsupported"
 
     def __init__(self, dialect: "SQLDialectBase", action: Any) -> None:
@@ -100,7 +100,7 @@ class _UnsupportedDomainAction(DomainAlterAction):
 
     @property
     def format_method(self) -> str:
-        return "_format_postgres_unsupported_domain_action"
+        return "format_postgres_unsupported_domain_action"
 
 
 class AlterDomainActionType(str, Enum):
@@ -135,7 +135,7 @@ def _domain_actions_for(
                 DeprecationWarning,
                 stacklevel=3,
             )
-            normalized_default = _LegacySqlExpression(
+            normalized_default = _PostgresLegacySqlExpression(
                 dialect,
                 new_value,
                 "new_value",
@@ -275,7 +275,7 @@ class PostgresCreateDomainExpression(CreateDomainStatement):
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                clauses.append(_LegacySqlExpression(dialect, item, "constraints"))
+                clauses.append(_PostgresLegacySqlExpression(dialect, item, "constraints"))
             elif isinstance(item, DomainCheckConstraint):
                 clauses.append(item)
                 normalized_checks.append(item)
@@ -295,7 +295,7 @@ class PostgresCreateDomainExpression(CreateDomainStatement):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            normalized_default = _LegacySqlExpression(dialect, default, "default")
+            normalized_default = _PostgresLegacySqlExpression(dialect, default, "default")
         super().__init__(
             dialect,
             domain,
@@ -367,9 +367,9 @@ class PostgresAlterDomainExpression(AlterDomainStatement):
                     AlterDomainActionType(action), dialect, new_value, new_name
                 )
             except ValueError:
-                actions = [_UnsupportedDomainAction(dialect, action)]
+                actions = [_PostgresUnsupportedDomainAction(dialect, action)]
         else:
-            actions = [_UnsupportedDomainAction(dialect, action)]
+            actions = [_PostgresUnsupportedDomainAction(dialect, action)]
         super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema), actions)
         self.schema = resolved_schema
         self.schema_name = resolved_schema

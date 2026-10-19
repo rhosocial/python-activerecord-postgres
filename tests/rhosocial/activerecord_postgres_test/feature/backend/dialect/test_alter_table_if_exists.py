@@ -124,10 +124,10 @@ class TestPostgresAlterColumnTypeAndUsing:
 
     def test_set_data_type_plain(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect, "price", "SET DATA TYPE", new_value="NUMERIC(10,2)"
         )
         sql, params = action.to_sql()
@@ -140,10 +140,10 @@ class TestPostgresAlterColumnTypeAndUsing:
             ArithmeticOperation,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -160,10 +160,10 @@ class TestPostgresAlterColumnTypeAndUsing:
     def test_set_data_type_using_rejected_for_other_ops(self, dialect):
         from rhosocial.activerecord.backend.expression import Column
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DEFAULT",

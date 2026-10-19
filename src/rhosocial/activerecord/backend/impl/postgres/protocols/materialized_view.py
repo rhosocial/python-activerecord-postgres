@@ -152,14 +152,14 @@ class PostgresMaterializedViewSupport(Protocol):
         """
         ...
 
-    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Storage parameter names must come from
         :class:`~....storage_parameters.PostgresStorageParameter`.
 
         Args:
-            expr: A ``MaterializedViewAlterAction`` subclass instance.
+            expr: A ``PostgresMaterializedViewAlterAction`` subclass instance.
 
         Returns:
             A ``(sql, params)`` tuple whose ``sql`` is the action body without the

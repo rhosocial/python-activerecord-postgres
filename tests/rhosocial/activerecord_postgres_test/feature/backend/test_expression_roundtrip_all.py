@@ -295,10 +295,10 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.values import (
-    HstoreValueExpression,
-    LtreeValueExpression,
-    NetworkValueExpression,
-    RangeValueExpression,
+    PostgresHstoreValueExpression,
+    PostgresLtreeValueExpression,
+    PostgresNetworkValueExpression,
+    PostgresRangeValueExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     hstore as pg_hstore,
@@ -1101,29 +1101,29 @@ def register_specials():
     # ``to_sql`` as a string and raises AttributeError there instead of being
     # refused at the door. The factories below are the ones the classes own.
     register_special_constructor(
-        "values.NetworkValueExpression",
-        lambda d: NetworkValueExpression(d, pg_network.inet_client_addr(d)),
+        "values.PostgresNetworkValueExpression",
+        lambda d: PostgresNetworkValueExpression(d, pg_network.inet_client_addr(d)),
     )
     register_special_constructor(
-        "values.RangeValueExpression",
-        lambda d: RangeValueExpression(
+        "values.PostgresRangeValueExpression",
+        lambda d: PostgresRangeValueExpression(
             d,
             pg_range.range_contains(d, Column(d, "v"), Literal(d, 3)),
             element_type=None,
         ),
     )
     register_special_constructor(
-        "values.HstoreValueExpression",
+        "values.PostgresHstoreValueExpression",
         # A dict is what ``hstore_literal`` casts to ``hstore``; handing it a
         # ``Literal`` would have it wrap a node in a second ``Literal``, which
         # has no value kind and therefore no artifact.
-        lambda d: HstoreValueExpression(
+        lambda d: PostgresHstoreValueExpression(
             d, pg_hstore.hstore_akeys(d, pg_hstore.hstore_literal(d, {"a": "1"}))
         ),
     )
     register_special_constructor(
-        "values.LtreeValueExpression",
-        lambda d: LtreeValueExpression(
+        "values.PostgresLtreeValueExpression",
+        lambda d: PostgresLtreeValueExpression(
             d,
             pg_ltree.ltree_ancestor(
                 d, Column(d, "v"), pg_ltree.ltree_literal(d, "a.b")
@@ -1208,12 +1208,12 @@ def _no_such_formatter(formatter_name: str) -> str:
 
 LEGITIMATE_NON_RENDERS = {
     # ---- a marker class that exists in order to refuse ------------------
-    # ``_UnsupportedDomainAction`` is constructed precisely so an ALTER DOMAIN
+    # ``_PostgresUnsupportedDomainAction`` is constructed precisely so an ALTER DOMAIN
     # action PostgreSQL cannot express gets a message naming the action. The
     # ValueError is the designed behaviour, not a defect -- and it is the only
     # thing this class does.
     "rhosocial.activerecord.backend.impl.postgres.expression.ddl.domain."
-    "_UnsupportedDomainAction": (
+    "_PostgresUnsupportedDomainAction": (
         ValueError,
         "Unsupported ALTER DOMAIN action",
     ),

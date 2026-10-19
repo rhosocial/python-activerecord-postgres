@@ -8,8 +8,8 @@ from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
-        CreateMultirangeTypeExpression,
-        MultirangeAggFunctionExpression,
+        PostgresCreateMultirangeTypeExpression,
+        PostgresMultirangeAggFunctionExpression,
     )
 
 
@@ -65,9 +65,9 @@ class MultirangeMixin:
             sql += f" WHERE {where_clause}"
         return sql, ()
 
-    def format_create_multirange_type_statement_expression(
+    def format_postgres_create_multirange_type_expression(
         self,
-        expr: "CreateMultirangeTypeExpression",
+        expr: "PostgresCreateMultirangeTypeExpression",
     ) -> Tuple[str, tuple]:
         return self.format_create_multirange_type_statement(
             expr.name,
@@ -75,9 +75,9 @@ class MultirangeMixin:
             expr.schema,
         )
 
-    def format_multirange_agg_function_expression(
+    def format_postgres_multirange_agg_function_expression(
         self,
-        expr: "MultirangeAggFunctionExpression",
+        expr: "PostgresMultirangeAggFunctionExpression",
     ) -> Tuple[str, tuple]:
         return self.format_multirange_agg_function(
             expr.range_column,

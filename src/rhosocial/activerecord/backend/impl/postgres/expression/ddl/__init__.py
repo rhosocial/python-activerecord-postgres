@@ -72,9 +72,9 @@ from .column import (
     PostgresColumnDefinition,
     PostgresColumnOptions,
 )
-from .alter_column import PostgresAlterColumn
+from .alter_column import PostgresAlterColumnAction
 from .partition import (
-    PartitionValue,
+    PostgresPartitionValue,
     PostgresCreatePartitionExpression,
     PostgresDetachPartitionExpression,
     PostgresAttachPartitionExpression,
@@ -98,7 +98,7 @@ from .statistics import (
 )
 from .comment import PostgresCommentExpression
 from .mv import (
-    MaterializedViewAlterAction,
+    PostgresMaterializedViewAlterAction,
     PostgresAlterMaterializedViewExpression,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
@@ -138,8 +138,8 @@ from .type import (
 )
 from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
 from .multirange import (
-    CreateMultirangeTypeExpression,
-    MultirangeAggFunctionExpression,
+    PostgresCreateMultirangeTypeExpression,
+    PostgresMultirangeAggFunctionExpression,
 )
 from .pg_partman import (
     PostgresPgPartmanCreateParentExpression,
@@ -218,9 +218,9 @@ __all__ = [
     "PostgresColumnStorage",
     "PostgresColumnDefinition",
     "PostgresColumnOptions",
-    "PostgresAlterColumn",
+    "PostgresAlterColumnAction",
     # partition
-    "PartitionValue",
+    "PostgresPartitionValue",
     "PostgresCreatePartitionExpression",
     "PostgresDetachPartitionExpression",
     "PostgresAttachPartitionExpression",
@@ -240,7 +240,7 @@ __all__ = [
     # comment
     "PostgresCommentExpression",
     # mv
-    "MaterializedViewAlterAction",
+    "PostgresMaterializedViewAlterAction",
     "PostgresAlterMaterializedViewExpression",
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
@@ -277,8 +277,8 @@ __all__ = [
     "PostgresEnumTypeNameExpression",
     "PostgresEnumValuesExpression",
     # multirange
-    "CreateMultirangeTypeExpression",
-    "MultirangeAggFunctionExpression",
+    "PostgresCreateMultirangeTypeExpression",
+    "PostgresMultirangeAggFunctionExpression",
     # extension
     "PostgresCreateExtensionExpression",
     "PostgresDropExtensionExpression",

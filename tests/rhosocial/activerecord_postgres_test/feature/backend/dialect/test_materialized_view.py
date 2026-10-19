@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    MaterializedViewAlterAction,
+    PostgresMaterializedViewAlterAction,
     PostgresAlterMaterializedViewExpression,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
@@ -641,11 +641,11 @@ class TestAlterMaterializedView:
     def test_rejects_unknown_action(self):
         dialect = _dialect()
 
-        class RogueAction(MaterializedViewAlterAction):
+        class RogueAction(PostgresMaterializedViewAlterAction):
             action_kind = "rogue"
 
         with pytest.raises(UnsupportedFeatureError):
-            dialect.format_materialized_view_alter_action(RogueAction(dialect))
+            dialect.format_postgres_materialized_view_alter_action(RogueAction(dialect))
 
 
 class TestPostgresStorageParameterEnum:
@@ -779,7 +779,7 @@ class TestMaterializedViewProtocolAndSurface:
             "format_refresh_materialized_view_statement",
             "format_refresh_materialized_view_pg_statement",
             "format_alter_materialized_view_statement",
-            "format_materialized_view_alter_action",
+            "format_postgres_materialized_view_alter_action",
         ):
             assert hasattr(_dialect(), name), name
             assert hasattr(PostgresMaterializedViewSupport, name), name
@@ -798,7 +798,7 @@ class TestMaterializedViewProtocolAndSurface:
             "PostgresSetMaterializedViewPropertiesAction",
             "PostgresResetMaterializedViewPropertiesAction",
             "PostgresChangeMaterializedViewOwnerAction",
-            "MaterializedViewAlterAction",
+            "PostgresMaterializedViewAlterAction",
         ):
             assert name in pg_expression.__all__, name
             assert hasattr(pg_expression, name), name

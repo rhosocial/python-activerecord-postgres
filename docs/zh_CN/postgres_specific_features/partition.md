@@ -14,7 +14,7 @@ PostgreSQL 自 10 版本起支持声明式分区，11+ 版本功能显著增强�
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression, PartitionValue,
+    PostgresCreatePartitionExpression, PostgresPartitionValue,
 )
 
 # 创建子分区

@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     SetDomainNotNullAction,
 )
 from ...expression.ddl.domain import (
-    _UnsupportedDomainAction,
+    _PostgresUnsupportedDomainAction,
     PostgresAddDomainCheckAction,
     PostgresChangeDomainOwnerAction,
     PostgresCreateDomainExpression,
@@ -37,7 +37,7 @@ from ...expression.ddl.domain import (
 )
 
 if TYPE_CHECKING:
-    from ...expression.ddl.domain import _LegacySqlExpression
+    from ...expression.ddl.domain import _PostgresLegacySqlExpression
 
 
 __all__ = ["PostgresDomainMixin"]
@@ -233,7 +233,7 @@ class PostgresDomainMixin(DomainMixin):
         action_parts: List[str] = []
         action_params: List[Any] = []
         for action in expr.actions:
-            if not isinstance(action, _UnsupportedDomainAction) and not self.supports_alter_domain_action(
+            if not isinstance(action, _PostgresUnsupportedDomainAction) and not self.supports_alter_domain_action(
                 type(action)
             ):
                 raise UnsupportedFeatureError(
@@ -391,14 +391,14 @@ class PostgresDomainMixin(DomainMixin):
             f"ALTER DOMAIN action {expr.action_kind}",
         )
 
-    def _format_postgres_legacy_sql_expression(
+    def format_postgres_legacy_sql_expression(
         self,
-        expr: "_LegacySqlExpression",
+        expr: "_PostgresLegacySqlExpression",
     ) -> Tuple[str, tuple]:
         return expr.sql, ()
 
-    def _format_postgres_unsupported_domain_action(
+    def format_postgres_unsupported_domain_action(
         self,
-        expr: "_UnsupportedDomainAction",
+        expr: "_PostgresUnsupportedDomainAction",
     ) -> Tuple[str, tuple]:
         raise ValueError(f"Unsupported ALTER DOMAIN action: {expr.action}")

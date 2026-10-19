@@ -11,7 +11,7 @@ from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        PartitionValue,
+        PostgresPartitionValue,
         PostgresCreatePartitionExpression,
         PostgresDetachPartitionExpression,
         PostgresAttachPartitionExpression,
@@ -146,11 +146,11 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         """
         ...
 
-    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+    def format_partition_value(self, expr: "PostgresPartitionValue") -> Tuple[str, tuple]:
         """Format a partition bound value from expression.
 
         Args:
-            expr: PartitionValue with the bound value.
+            expr: PostgresPartitionValue with the bound value.
 
         Returns:
             Tuple of (SQL string, parameters tuple)

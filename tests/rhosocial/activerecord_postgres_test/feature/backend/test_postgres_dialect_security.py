@@ -23,7 +23,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     RawSQL,
 )
 from rhosocial.activerecord.backend.expression.core import CastExpression
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PartitionValue
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresPartitionValue
 from typing import Tuple, Any  # noqa: F401
 from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
 
@@ -455,35 +455,35 @@ class TestPostgresExtendedStatisticsNameSecurity:
 
 def test_partition_value_none(dialect):
     """None partition value returns NULL."""
-    sql, params = PartitionValue(dialect=dialect, value=None).to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value=None).to_sql()
     assert params == ()
     assert sql == "NULL"
 
 
 def test_partition_value_maxvalue(dialect):
     """MAXVALUE is returned as-is (case-insensitive)."""
-    sql, params = PartitionValue(dialect=dialect, value="MAXVALUE").to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value="MAXVALUE").to_sql()
     assert params == ()
     assert sql == "MAXVALUE"
 
 
 def test_partition_value_minvalue(dialect):
     """MINVALUE is returned as-is (case-insensitive)."""
-    sql, params = PartitionValue(dialect=dialect, value="minvalue").to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value="minvalue").to_sql()
     assert params == ()
     assert sql == "MINVALUE"
 
 
 def test_partition_value_normal_string(dialect):
     """Normal string value is single-quoted."""
-    sql, params = PartitionValue(dialect=dialect, value="2024-01-01").to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value="2024-01-01").to_sql()
     assert params == ()
     assert sql == "'2024-01-01'"
 
 
 def test_partition_value_escaped_single_quote(dialect):
     """String value with single quote is properly escaped."""
-    sql, params = PartitionValue(dialect=dialect, value="it's").to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value="it's").to_sql()
     assert params == ()
     assert sql == "'it''s'"
     assert "'; DROP" not in sql
@@ -491,7 +491,7 @@ def test_partition_value_escaped_single_quote(dialect):
 
 def test_partition_value_injection_blocked(dialect):
     """SQL injection in partition value is safely escaped (inside quotes)."""
-    sql, params = PartitionValue(
+    sql, params = PostgresPartitionValue(
         dialect=dialect, value="x'; DROP TABLE users--"
     ).to_sql()
     assert params == ()
@@ -502,7 +502,7 @@ def test_partition_value_injection_blocked(dialect):
 
 def test_partition_value_integer(dialect):
     """Integer partition value is returned as str()."""
-    sql, params = PartitionValue(dialect=dialect, value=42).to_sql()
+    sql, params = PostgresPartitionValue(dialect=dialect, value=42).to_sql()
     assert params == ()
     assert sql == "42"
 

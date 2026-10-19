@@ -49,10 +49,22 @@ class PostgresExpressionMixin:
         psycopg uses %s as parameter placeholder. When the SQL operator itself
         contains % (e.g., pg_trgm similarity operator), it must be escaped as %%
         to prevent psycopg from interpreting it as a placeholder prefix.
+
+        The operator is spelled through ``.symbol`` when the node carries the
+        comparison vocabulary: §13.1 split the word from the character, and the
+        word (``EQ``, ``NE``...) is what the artifact holds. A plain string
+        operator -- the pg_trgm and range operators are their own symbols and
+        have no word -- is used as it is.
         """
+        from rhosocial.activerecord.backend.expression.predicates import (
+            ComparisonOperator,
+        )
+
         left_sql, left_params = expr.left.to_sql()
         right_sql, right_params = expr.right.to_sql()
         op = expr.op
+        if isinstance(op, ComparisonOperator):
+            op = op.symbol
         # Escape % in operators for psycopg compatibility
         escaped_op = op.replace('%', '%%') if '%' in op else op
         sql = f"{left_sql} {escaped_op} {right_sql}"
