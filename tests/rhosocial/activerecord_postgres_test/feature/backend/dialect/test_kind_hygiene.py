@@ -32,7 +32,6 @@ from enum import Enum
 import pytest
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.serialization import default_registry
 
 PG_EXPR_PKG = "rhosocial.activerecord.backend.impl.postgres.expression"
 CORE_EXPR_PKG = "rhosocial.activerecord.backend.expression"
@@ -76,8 +75,14 @@ def backend_classes():
 
 @pytest.fixture(scope="module")
 def core_kinds():
-    """Core's kind set, read from the registry core assembles for itself."""
-    return set(default_registry().node_kinds())
+    """Core's kind set, walked from core's own package.
+
+    *Not* read from ``default_registry()``: that instance is process-global and
+    the matrix registers this backend's classes into it, so the answer would
+    depend on which test module imported first -- precisely the import-order
+    coupling this file exists to remove.
+    """
+    return {cls.kind() for cls in _walk(CORE_EXPR_PKG).values()}
 
 
 def test_no_core_kind_is_redeclared(backend_classes, core_kinds):
