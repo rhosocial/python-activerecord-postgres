@@ -70,8 +70,11 @@ class PostgresLockingMixin:
                 self.name, f"{strength.value} (unsupported lock strength)"
             )
 
-        # Use the strength value directly (e.g., "FOR UPDATE", "FOR SHARE")
-        sql_parts = [strength.value]
+        # The strength's *word* travels in the artifact; the clause it writes
+        # is a spelling, and ``phrase`` is where core keeps it (``FOR UPDATE``
+        # &c.). Interpolating the word instead rendered a bare ``update``,
+        # which the server rejects (#14 C).
+        sql_parts = [strength.phrase]
 
         # Handle OF columns if specified
         if clause.of_columns:
