@@ -59,7 +59,7 @@ from rhosocial.activerecord.backend.expression.statements.dml import (
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.impl.postgres.functions import (
@@ -125,7 +125,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert vector data
-    # Use Literal with .cast(PostgresVectorType(self.dialect)) for type-safe vector insertion.
+    # Use CastExpression over a Literal for type-safe vector insertion.
     insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'documents'),
@@ -135,19 +135,31 @@ if installed:
             [
                 [
                     Literal(dialect, "cat"),
-                    Literal(dialect, "[1.0, 0.5, 0.2]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[1.0, 0.5, 0.2]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "dog"),
-                    Literal(dialect, "[0.9, 0.6, 0.3]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.9, 0.6, 0.3]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "car"),
-                    Literal(dialect, "[0.1, 0.2, 0.9]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.1, 0.2, 0.9]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "bicycle"),
-                    Literal(dialect, "[0.15, 0.25, 0.85]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.15, 0.25, 0.85]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
             ],
         ),

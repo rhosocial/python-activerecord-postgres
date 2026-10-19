@@ -57,7 +57,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal, Subquery
+from rhosocial.activerecord.backend.expression.core import CastExpression, Literal, Subquery
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
 )
@@ -140,12 +140,12 @@ if installed:
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Widget A"), Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect))],
-                [Literal(dialect, "Widget B"), Literal(dialect, "(0.3, 0.6, 0.9)").cast(PostgresCubeType(dialect))],
-                [Literal(dialect, "Widget C"), Literal(dialect, "(0.7, 0.4, 0.1)").cast(PostgresCubeType(dialect))],
-                [Literal(dialect, "Widget D"), Literal(dialect, "(0.2, 0.3, 0.7)").cast(PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget A"), CastExpression(dialect, Literal(dialect, "(0.5, 0.8, 0.2)"), PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget B"), CastExpression(dialect, Literal(dialect, "(0.3, 0.6, 0.9)"), PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget C"), CastExpression(dialect, Literal(dialect, "(0.7, 0.4, 0.1)"), PostgresCubeType(dialect))],
+                [Literal(dialect, "Widget D"), CastExpression(dialect, Literal(dialect, "(0.2, 0.3, 0.7)"), PostgresCubeType(dialect))],
                 # A range entry (min corner, max corner in each dimension)
-                [Literal(dialect, "Category X"), Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect))],
+                [Literal(dialect, "Category X"), CastExpression(dialect, Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)"), PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -165,7 +165,10 @@ if installed:
         from_=Table(dialect, "products"),
         where=BinaryExpression(
             dialect, "@>",
-            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect)),
+            CastExpression(
+                dialect, Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)"),
+                PostgresCubeType(dialect),
+            ),
             Column(dialect, "feature_vector"),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
@@ -185,7 +188,10 @@ if installed:
         where=BinaryExpression(
             dialect, "<@",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)").cast(PostgresCubeType(dialect)),
+            CastExpression(
+                dialect, Literal(dialect, "(0.1,0.2,0.0),(0.5,0.6,0.3)"),
+                PostgresCubeType(dialect),
+            ),
         ),
         order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
     )
@@ -205,7 +211,7 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
+            CastExpression(dialect, Literal(dialect, "(0.5, 0.8, 0.2)"), PostgresCubeType(dialect)),
         ),
     ).as_("distance")
 
@@ -216,14 +222,14 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
+            CastExpression(dialect, Literal(dialect, "(0.5, 0.8, 0.2)"), PostgresCubeType(dialect)),
         ),
     )
 
     dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        Literal(dialect, "(0.5, 0.8, 0.2)").cast(PostgresCubeType(dialect)),
+        CastExpression(dialect, Literal(dialect, "(0.5, 0.8, 0.2)"), PostgresCubeType(dialect)),
     )
 
     query = QueryStatement(
@@ -255,14 +261,14 @@ if installed:
         BinaryExpression(
             dialect, "<->",
             Column(dialect, "feature_vector"),
-            Literal(dialect, "(0.4, 0.5, 0.6)").cast(PostgresCubeType(dialect)),
+            CastExpression(dialect, Literal(dialect, "(0.4, 0.5, 0.6)"), PostgresCubeType(dialect)),
         ),
     ).as_("distance")
 
     nn_dist_for_order = BinaryExpression(
         dialect, "<->",
         Column(dialect, "feature_vector"),
-        Literal(dialect, "(0.4, 0.5, 0.6)").cast(PostgresCubeType(dialect)),
+        CastExpression(dialect, Literal(dialect, "(0.4, 0.5, 0.6)"), PostgresCubeType(dialect)),
     )
 
     query = QueryStatement(

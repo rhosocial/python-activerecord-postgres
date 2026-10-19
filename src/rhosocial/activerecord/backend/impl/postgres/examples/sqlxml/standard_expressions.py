@@ -41,6 +41,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
+from rhosocial.activerecord.backend.expression.core import CastExpression
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
@@ -70,16 +71,12 @@ class SQLXMLExample:
         self.executable: bool = executable
 
 
-def text_literal(dialect: PostgresDialect, value: str) -> Literal:
-    expr = Literal(dialect, value)
-    expr.cast(TextType(dialect))
-    return expr
+def text_literal(dialect: PostgresDialect, value: str) -> CastExpression:
+    return CastExpression(dialect, Literal(dialect, value), TextType(dialect))
 
 
-def xml_literal(dialect: PostgresDialect, value: str) -> Literal:
-    expr = Literal(dialect, value)
-    expr.cast(XmlType(dialect))
-    return expr
+def xml_literal(dialect: PostgresDialect, value: str) -> CastExpression:
+    return CastExpression(dialect, Literal(dialect, value), XmlType(dialect))
 
 
 def render(example: SQLXMLExample) -> None:

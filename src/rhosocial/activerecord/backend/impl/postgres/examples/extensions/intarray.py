@@ -56,7 +56,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import CastExpression, FunctionCall, Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
@@ -159,7 +159,7 @@ if installed:
         where=BinaryExpression(
             dialect, "@>",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,3}").cast(IntegerType(dialect)),
+            CastExpression(dialect, Literal(dialect, "{1,3}"), IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()
@@ -178,7 +178,7 @@ if installed:
         where=BinaryExpression(
             dialect, "&&",
             Column(dialect, "tag_ids"),
-            Literal(dialect, "{1,6}").cast(IntegerType(dialect)),
+            CastExpression(dialect, Literal(dialect, "{1,6}"), IntegerType(dialect)),
         ),
     )
     sql, params = query.to_sql()
