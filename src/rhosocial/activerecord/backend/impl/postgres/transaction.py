@@ -15,6 +15,9 @@ from rhosocial.activerecord.backend.transaction import (
     IsolationLevel,
     TransactionMode,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.status import (
+    PostgresShowStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
     PostgresSetConstraintsStatement,
 )
@@ -182,7 +185,10 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
             TransactionError: If getting isolation level fails
         """
         try:
-            result = self._backend.execute("SHOW transaction_isolation")
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'transaction_isolation'
+            ).to_sql()
+            result = self._backend.execute(sql, params)
             if result.data:
                 # result.data is a list of dicts with column names as keys
                 level_name = result.data[0]['transaction_isolation'].upper().replace(" ", "_")
@@ -271,7 +277,10 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             TransactionError: If getting isolation level fails
         """
         try:
-            result = await self._backend.execute("SHOW transaction_isolation")
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'transaction_isolation'
+            ).to_sql()
+            result = await self._backend.execute(sql, params)
             if result.data:
                 # result.data is a list of dicts with column names as keys
                 level_name = result.data[0]['transaction_isolation'].upper().replace(" ", "_")

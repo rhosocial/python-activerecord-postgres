@@ -97,7 +97,7 @@ class PostgresDatabaseSizeFunction(BaseExpression):
         >>> expr = PostgresDatabaseSizeFunction(dialect, database_name="app")
         >>> sql, params = expr.to_sql()
         >>> sql
-        'pg_database_size(%s)'
+        'PG_DATABASE_SIZE(%s)'
         >>> params
         ('app',)
     """
@@ -134,7 +134,7 @@ class PostgresDatabaseSizeQueryExpression(BaseExpression):
         >>> expr = PostgresDatabaseSizeQueryExpression(dialect, database_name="app")
         >>> sql, params = expr.to_sql()
         >>> sql
-        'SELECT pg_database_size(%s) as size_bytes'
+        'SELECT PG_DATABASE_SIZE(%s) AS "size_bytes"'
         >>> params
         ('app',)
     """

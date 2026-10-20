@@ -24,7 +24,10 @@ class TestDatabaseSizeFunction:
 
     def test_call_renders_with_a_placeholder_for_the_name(self):
         sql, params = PostgresDatabaseSizeFunction(_dialect(), database_name="app").to_sql()
-        assert sql == "pg_database_size(%s)"
+        # The name is the FunctionCall node's, so the spelling is its renderer's:
+        # unquoted identifiers fold to lower case on the server, so the upper
+        # case here is the same function the concatenated form named.
+        assert sql == "PG_DATABASE_SIZE(%s)"
         assert params == ("app",)
 
     def test_name_travels_as_a_parameter_not_as_text(self):
@@ -33,7 +36,7 @@ class TestDatabaseSizeFunction:
         sql, params = PostgresDatabaseSizeFunction(
             _dialect(), database_name='ap"p'
         ).to_sql()
-        assert sql == "pg_database_size(%s)"
+        assert sql == "PG_DATABASE_SIZE(%s)"
         assert params == ('ap"p',)
 
 
@@ -44,9 +47,10 @@ class TestDatabaseSizeQuery:
         sql, params = PostgresDatabaseSizeQueryExpression(
             _dialect(), database_name="app"
         ).to_sql()
-        assert sql == "SELECT pg_database_size(%s) as size_bytes"
+        assert sql == 'SELECT PG_DATABASE_SIZE(%s) AS "size_bytes"'
         assert params == ("app",)
 
     def test_alias_is_the_column_callers_read(self):
         sql, _ = PostgresDatabaseSizeQueryExpression(_dialect(), database_name="app").to_sql()
-        assert "as size_bytes" in sql
+        # Quoted or not, the label the driver reports is ``size_bytes``.
+        assert 'AS "size_bytes"' in sql

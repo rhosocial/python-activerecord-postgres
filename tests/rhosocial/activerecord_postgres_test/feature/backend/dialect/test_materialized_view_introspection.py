@@ -49,7 +49,7 @@ class TestMaterializedViewIntrospectionSQL:
             "definition",
             "comment",
         ):
-            assert f"as {column}" in sql
+            assert f'AS "{column}"' in sql
 
     def test_list_query_excludes_system_objects_by_default(self):
         sql, _ = PostgresMaterializedViewListExpression(_dialect()).to_sql()
@@ -58,8 +58,8 @@ class TestMaterializedViewIntrospectionSQL:
 
     def test_list_query_can_include_system_objects(self):
         sql, _ = PostgresMaterializedViewListExpression(
-            _dialect()
-        ).with_include_system(True).to_sql()
+            _dialect(), include_system=True
+        ).to_sql()
         assert "NOT LIKE 'pg_%'" not in sql
 
     def test_info_query_filters_by_name(self):
@@ -67,7 +67,8 @@ class TestMaterializedViewIntrospectionSQL:
             _dialect(), "sales_summary", schema="reporting"
         ).to_sql()
         assert "pg_matviews" in sql
-        assert "m.matviewname = " in sql
+        # the name is bound, so the comparison ends at the placeholder
+        assert "m.matviewname = %s" in sql
         assert params == ("reporting", "sales_summary")
 
     def test_info_query_defaults_to_connection_schema(self):

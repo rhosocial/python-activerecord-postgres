@@ -130,6 +130,7 @@ from .xml import PostgresXMLMixin
 from .collation import PostgresCollationMixin
 from .ordered_set_aggregation import PostgresOrderedSetAggMixin
 from .features import PostgresFeaturesMixin
+from .show import PostgresShowMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
@@ -246,6 +247,7 @@ __all__ = [
     "PostgresCollationMixin",
     "PostgresOrderedSetAggMixin",
     "PostgresFeaturesMixin",
+    "PostgresShowMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]

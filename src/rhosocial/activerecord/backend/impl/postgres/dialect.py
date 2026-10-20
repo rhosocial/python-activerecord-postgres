@@ -194,6 +194,8 @@ from .mixins import (
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # SHOW is not a catalog query, so it has its own mixin.
+    PostgresShowMixin,
     # Extension feature mixins
     PostgresLtreeMixin,
     PostgresIntarrayMixin,
@@ -437,6 +439,10 @@ class PostgresDialect(
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # SHOW is not a catalog query: it names one run-time parameter. It lives in
+    # its own mixin, the same split MySQL and MariaDB make between their
+    # ``show/dialect.py`` and their introspection formatters.
+    PostgresShowMixin,
     # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
     # spells all four natively: ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
     # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)``
@@ -860,6 +866,17 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_table_function(self) -> bool:
+        """PostgreSQL reads a set-returning function as a row source.
+
+        ``pg_ls_waldir()``, ``pg_control_checkpoint()`` and the rest of the
+        server-information family are ordinary FROM sources, so the capability
+        belongs to this dialect's surface. Core defaults it to False because
+        several engines have no such form, and this dialect outranks the
+        ``RelationSourceMixin`` default it would otherwise inherit.
+        """
+        return True
 
     def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""

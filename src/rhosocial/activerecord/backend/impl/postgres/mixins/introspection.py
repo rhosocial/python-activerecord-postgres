@@ -22,7 +22,7 @@ Key pg_catalog tables used:
 Reference: .claude/plan/db-introspection-guide.md
 """
 
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.mixins import IntrospectionMixin
 from rhosocial.activerecord.backend.introspection.types import IntrospectionScope
@@ -49,11 +49,24 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..expression.status import (
         PostgresSettingsQuery,
         PostgresActivityCountQuery,
-        PostgresShowStatement,
         PostgresDatabaseListQuery,
         PostgresSchemaStatsQuery,
         PostgresCurrentDatabaseQuery,
         PostgresRoleListQuery,
+        PostgresCurrentUserQuery,
+        PostgresCurrentSchemaQuery,
+        PostgresClientAddressQuery,
+        PostgresSslSessionQuery,
+        PostgresWalPositionQuery,
+        PostgresWalFileCountQuery,
+        PostgresCheckpointCountQuery,
+        PostgresCheckpointLsnQuery,
+        PostgresRecoveryStateQuery,
+        PostgresReplicationSlotCountQuery,
+        PostgresActiveReplicationCountQuery,
+        PostgresReplicationLagQuery,
+        PostgresArchiveStatsQuery,
+        PostgresExtensionListQuery,
     )
     from ..expression.enum_ import (
         PostgresEnumTypeExistsQuery,
@@ -145,31 +158,208 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         return "public"
 
     # ========== Query Formatting Methods ==========
+    #
+    # Every query below is an expression tree: a projection of Column /
+    # FunctionCall / CaseExpression nodes, a relation or a chain of joins, a
+    # conjunction of predicates, and an optional ordering. No formatter here
+    # writes a clause, a keyword or a separator -- the core renderers do -- and
+    # the relation is a Table object, so the pg_catalog names appear once, as
+    # the unquoted identifiers they are.
+    #
+    # Bind values keep the split the concatenated queries had: a caller's
+    # schema or object name is data and travels as ``%s``, while a value that
+    # is a fact about the catalog (a relkind code, a table-type label, the
+    # ``pg_`` prefix filter) is literal-inline and binds nothing.
+
+    #: The label each ``pg_class.relkind`` code reports as ``table_type``.
+    #: A catalog fact rather than caller data, so it is written inline.
+    _RELKIND_LABELS = (
+        ("r", "BASE TABLE"),
+        ("v", "VIEW"),
+        ("m", "MATERIALIZED VIEW"),
+        ("f", "FOREIGN TABLE"),
+        ("p", "PARTITIONED TABLE"),
+    )
+
+    #: The relkind codes a table listing may be narrowed to, by the type the
+    #: caller asked for. ``BASE TABLE`` admits partitioned tables too, which is
+    #: why it is a set rather than one code.
+    _RELKIND_FILTERS = {
+        "BASE TABLE": ("r", "p"),
+        "VIEW": ("v",),
+        "MATERIALIZED VIEW": ("m",),
+    }
+
+    #: Catalog relations whose names are spelled ``pg_``; a listing that does
+    #: not ask for system objects excludes them. The percent is doubled because
+    #: psycopg reads a bare ``%`` as the start of a placeholder even when the
+    #: statement binds nothing.
+    _SYSTEM_PREFIX = "pg_%%"
+
+    def _catalog_column(self, name: str, table: "Optional[str]" = None, alias: "Optional[str]" = None):
+        """A column reference into pg_catalog, quoted as it is written there.
+
+        The catalog's identifiers are lowercase and never quoted, so a quoted
+        *reference* would be a different (and missing) column; the *alias* is
+        this query's own output name and is quoted like every other projection
+        alias the core renderers write.
+        """
+        from rhosocial.activerecord.backend.expression import Column
+
+        return Column(
+            self,
+            name,
+            table=table,
+            alias=alias,
+            name_need_quote=False,
+            table_need_quote=False,
+        )
+
+    def _catalog_relation(self, name: str, alias: "Optional[str]" = None):
+        """A pg_catalog relation as a FROM source, with its alias."""
+        from rhosocial.activerecord.backend.expression.objects import Table
+        from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+        return NamedRelationRef(
+            self,
+            Table(self, name, name_need_quote=False),
+            alias=alias,
+            alias_need_quote=False,
+        )
+
+    def _catalog_literal(self, value):
+        """A catalog constant: written into the statement, never bound."""
+        from rhosocial.activerecord.backend.expression import Literal
+
+        return Literal(self, value, inline=True)
+
+    def _catalog_value(self, value):
+        """Caller data: bound, so a name can never become part of the text."""
+        from rhosocial.activerecord.backend.expression import Literal
+
+        return Literal(self, value)
+
+    def _catalog_select(
+        self,
+        select: "list",
+        source,
+        conditions: "Optional[list]" = None,
+        order_by: "Optional[list]" = None,
+        group_by: "Optional[list]" = None,
+    ) -> Tuple[str, tuple]:
+        """Assemble a catalog SELECT from its parts, once.
+
+        Args:
+            select: The projection, in order.
+            source: The FROM source: a relation or a join chain.
+            conditions: Predicates to AND together, or ``None``.
+            order_by: Sort expressions, or ``None`` for no ORDER BY.
+            group_by: Grouping expressions, or ``None`` for no GROUP BY.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            LogicalPredicate,
+            OrderByClause,
+            QueryStatement,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.query_parts import GroupByHavingClause
+
+        kwargs: "dict" = {"select": select, "from_": source}
+        if conditions:
+            kwargs["where"] = WhereClause(self, LogicalPredicate(self, "AND", *conditions))
+        if group_by:
+            kwargs["group_by_having"] = GroupByHavingClause(self, group_by=group_by)
+        if order_by:
+            kwargs["order_by"] = OrderByClause(self, order_by)
+        return QueryStatement(self, **kwargs).to_sql()
+
+    def _relkind_case(self, alias: str):
+        """The CASE that names a relation's kind, shared by the table listings."""
+        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+
+        return CaseExpression(
+            self,
+            value=self._catalog_column("relkind", "c"),
+            cases=[
+                (self._catalog_literal(code), self._catalog_literal(label))
+                for code, label in self._RELKIND_LABELS
+            ],
+            alias=alias,
+        )
+
+    def _relation_projection(self) -> "list":
+        """The five columns a table listing and a single-table read both report."""
+        from rhosocial.activerecord.backend.expression import FunctionCall
+        from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        return [
+            self._catalog_column("relname", "c", alias="table_name"),
+            self._relkind_case("table_type"),
+            FunctionCall(
+                self, "obj_description", self._catalog_column("oid", "c"), alias="comment"
+            ),
+            self._catalog_column("reltuples", "c").cast(BigIntType(self)).as_("row_count"),
+            FunctionCall(
+                self,
+                "pg_total_relation_size",
+                self._catalog_column("oid", "c"),
+                alias="size_bytes",
+            ),
+        ]
+
+    def _pg_class_join(self):
+        """``pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid``."""
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, JoinClause
+
+        return JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
 
     def format_database_info_query(self, expr: "DatabaseInfoExpression") -> Tuple[str, tuple]:
         """Format database information query.
 
-        Uses pg_database and version() to get database metadata.
+        Uses pg_database and version() to get database metadata: the row the
+        server answers with describes the database this session is connected
+        to, so the WHERE clause names ``current_database()`` on both sides.
 
         Args:
             expr: Database info expression with parameters.
 
         Returns:
-            Tuple of (SQL string, parameters tuple).
+            Tuple of (SQL string, empty parameters tuple).
         """
-        params = expr.get_params()
-        params.get("database_name")
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, FunctionCall
 
-        sql = """
-            SELECT version() as version,
-                   current_database() as name,
-                   pg_encoding_to_char(encoding) as encoding,
-                   datcollate as collation,
-                   pg_database_size(current_database()) as size
-            FROM pg_database
-            WHERE datname = current_database()
-        """
-        return (sql, ())
+        current_database = FunctionCall(self, "current_database")
+        return self._catalog_select(
+            [
+                FunctionCall(self, "version", alias="version"),
+                FunctionCall(self, "current_database", alias="name"),
+                FunctionCall(
+                    self, "pg_encoding_to_char", self._catalog_column("encoding"), alias="encoding"
+                ),
+                self._catalog_column("datcollate", alias="collation"),
+                FunctionCall(self, "pg_database_size", current_database, alias="size"),
+            ],
+            self._catalog_relation("pg_database"),
+            [
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("datname"), current_database
+                )
+            ],
+        )
 
     def format_table_list_query(self, expr: "TableListExpression") -> Tuple[str, tuple]:
         """Format table list query using pg_catalog.
@@ -182,64 +372,82 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         - 'f': Foreign table
         - 'p': Partitioned table
 
+        The relkind-IN filter and the ``table_type`` narrowing are separate
+        conditions, exactly as the concatenated form spelled them: the first
+        says which kinds a listing may contain at all, the second narrows to the
+        one the caller asked for, and the two stay visible here rather than
+        folded into one expression the caller would have to reconstruct.
+
         Args:
             expr: Table list expression with parameters.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            InPredicate,
+            LikeOperator,
+            LikePredicate,
+        )
+
         params = expr.get_params()
         schema = params.get("schema") or self._get_default_schema()
         include_views = params.get("include_views", True)
         include_system = params.get("include_system", False)
         table_type = params.get("table_type")
 
-        # Build relkind filter
-        if include_views:
-            relkind_filter = "('r', 'v', 'm', 'f', 'p')"
-        else:
-            relkind_filter = "('r', 'f', 'p')"
-
-        # Each collected parameter contributes its own condition, and the
-        # conditions are joined into the WHERE tail in one place: the query is
-        # assembled once from named fragments rather than grown one append at
-        # a time, so its whole shape stays visible together.
-        conditions = []
+        relkind_filter = ("r", "v", "m", "f", "p") if include_views else ("r", "f", "p")
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            InPredicate(
+                self,
+                self._catalog_column("relkind", "c"),
+                self._catalog_literal(relkind_filter),
+            ),
+        ]
 
         if not include_system:
-            conditions.append("c.relname NOT LIKE 'pg_%%'")
+            conditions.append(
+                LikePredicate(
+                    self,
+                    LikeOperator.NOT_LIKE,
+                    self._catalog_column("relname", "c"),
+                    self._catalog_literal(self._SYSTEM_PREFIX),
+                )
+            )
 
-        if table_type == "BASE TABLE":
-            conditions.append("c.relkind IN ('r', 'p')")
-        elif table_type == "VIEW":
-            conditions.append("c.relkind = 'v'")
-        elif table_type == "MATERIALIZED VIEW":
-            conditions.append("c.relkind = 'm'")
+        relkind_narrowing = self._RELKIND_FILTERS.get(table_type)
+        if relkind_narrowing is not None:
+            # One code narrows by equality, several by membership -- the same
+            # split the concatenated branches wrote (``IN ('r', 'p')`` for a
+            # base table, ``= 'v'`` for a view).
+            if len(relkind_narrowing) == 1:
+                conditions.append(
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("relkind", "c"),
+                        self._catalog_literal(relkind_narrowing[0]),
+                    )
+                )
+            else:
+                conditions.append(
+                    InPredicate(
+                        self,
+                        self._catalog_column("relkind", "c"),
+                        self._catalog_literal(relkind_narrowing),
+                    )
+                )
 
-        # The first condition continues the line the base WHERE clause leaves
-        # open, the ones after it follow on that same line, and ORDER BY
-        # closes the clause.
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        closing = " ORDER BY c.relname" if conditions else "\n         ORDER BY c.relname"
-
-        sql = f"""
-            SELECT c.relname as table_name,
-                   CASE c.relkind
-                       WHEN 'r' THEN 'BASE TABLE'
-                       WHEN 'v' THEN 'VIEW'
-                       WHEN 'm' THEN 'MATERIALIZED VIEW'
-                       WHEN 'f' THEN 'FOREIGN TABLE'
-                       WHEN 'p' THEN 'PARTITIONED TABLE'
-                   END as table_type,
-                   obj_description(c.oid) as comment,
-                   c.reltuples::bigint as row_count,
-                   pg_total_relation_size(c.oid) as size_bytes
-            FROM pg_class c
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()}
-                AND c.relkind IN {relkind_filter}{filters}{closing}"""
-
-        return (sql, (schema,))
+        return self._catalog_select(
+            self._relation_projection(),
+            self._pg_class_join(),
+            conditions,
+            [self._catalog_column("relname", "c")],
+        )
 
     def format_table_info_query(self, expr: "TableInfoExpression") -> Tuple[str, tuple]:
         """Format single table information query.
@@ -252,28 +460,27 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
         params = expr.get_params()
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = f"""
-            SELECT c.relname as table_name,
-                   CASE c.relkind
-                       WHEN 'r' THEN 'BASE TABLE'
-                       WHEN 'v' THEN 'VIEW'
-                       WHEN 'm' THEN 'MATERIALIZED VIEW'
-                       WHEN 'f' THEN 'FOREIGN TABLE'
-                       WHEN 'p' THEN 'PARTITIONED TABLE'
-                   END as table_type,
-                   obj_description(c.oid) as comment,
-                   c.reltuples::bigint as row_count,
-                   pg_total_relation_size(c.oid) as size_bytes
-            FROM pg_class c
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()} AND c.relname = {self.p()}
-        """
-
-        return (sql, (schema, table_name))
+        return self._catalog_select(
+            self._relation_projection(),
+            self._pg_class_join(),
+            [
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+        )
 
     def format_column_info_query(self, expr: "ColumnInfoExpression") -> Tuple[str, tuple]:
         """Format column information query using pg_attribute.
@@ -282,51 +489,168 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         The attnum > 0 condition excludes system columns (ctid, oid, etc.).
         The attisdropped = false condition excludes dropped columns.
 
+        ``is_primary_key`` is an EXISTS subquery, and it is a node: the nested
+        QueryStatement is what the predicate holds, so the primary-key test is
+        inspectable rather than a parenthesised string. ``a.attnum = ANY(...)``
+        is a quantified comparison against another column, which is exactly
+        :class:`~...expression.advanced_functions.AnyPredicate`'s shape.
+
         Args:
             expr: Column info expression with parameters.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+            QueryStatement,
+            Subquery,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import (
+            AnyPredicate,
+            ExistsPredicate,
+        )
+
         params = expr.get_params()
         table_name = params.get("table_name", "")
         include_hidden = params.get("include_hidden", False)
         schema = params.get("schema") or self._get_default_schema()
 
-        # If not including hidden columns, add filter
-        conditions = []
+        # pg_index row for the primary-key test, over the column's own table.
+        primary_key_index = QueryStatement(
+            self,
+            select=[self._catalog_literal(1)],
+            from_=self._catalog_relation("pg_index", "i"),
+            where=WhereClause(
+                self,
+                LogicalPredicate(
+                    self,
+                    "AND",
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("indrelid", "i"),
+                        self._catalog_column("attrelid", "a"),
+                    ),
+                    self._catalog_column("indisprimary", "i"),
+                    AnyPredicate(
+                        self,
+                        self._catalog_column("attnum", "a"),
+                        "=",
+                        Subquery(self, self._catalog_column("indkey", "i")),
+                    ),
+                ),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("attname", "a", alias="column_name"),
+            self._catalog_column("attnum", "a", alias="ordinal_position"),
+            FunctionCall(
+                self,
+                "pg_catalog.format_type",
+                self._catalog_column("atttypid", "a"),
+                self._catalog_column("atttypmod", "a"),
+                alias="data_type",
+            ),
+            # ``NOT a.attnotnull``: a truth test on one column, aliased into the
+            # projection. The NOT is the logical node, so the negation is a
+            # node rather than an operator glued to the front of a string.
+            LogicalPredicate(self, "NOT", self._catalog_column("attnotnull", "a")).as_(
+                "is_nullable"
+            ),
+            FunctionCall(
+                self,
+                "pg_get_expr",
+                self._catalog_column("adbin", "d"),
+                self._catalog_column("adrelid", "d"),
+                alias="default_value",
+            ),
+            ExistsPredicate(self, primary_key_index).as_("is_primary_key"),
+            FunctionCall(
+                self,
+                "col_description",
+                self._catalog_column("attrelid", "a"),
+                self._catalog_column("attnum", "a"),
+                alias="comment",
+            ),
+        ]
+
+        attribute_join = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_attribute", "a"),
+            right_table=self._catalog_relation("pg_attrdef", "d"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "a"),
+                    self._catalog_column("adrelid", "d"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attnum", "a"),
+                    self._catalog_column("adnum", "d"),
+                ),
+            ),
+        )
+        source = attribute_join.join(
+            self._catalog_relation("pg_class", "c"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("attrelid", "a"),
+                self._catalog_column("oid", "c"),
+            ),
+        ).join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+
+        # The base conditions exclude dropped columns and system columns; the
+        # attisdropped repeat below is what this query has always rendered for
+        # a caller who did not ask for hidden columns, and it is kept as a
+        # second condition so the bytes (and the parameters) stay as they were.
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relname", "c"),
+                self._catalog_value(table_name),
+            ),
+            ComparisonPredicate(
+                self,
+                "gt",
+                self._catalog_column("attnum", "a"),
+                self._catalog_literal(0),
+            ),
+            LogicalPredicate(self, "NOT", self._catalog_column("attisdropped", "a")),
+        ]
         if not include_hidden:
-            # The base query already excludes dropped columns; this condition
-            # repeats it, which is how this query has always rendered, so the
-            # bytes stay as callers know them.
-            conditions.append("NOT a.attisdropped")
+            conditions.append(
+                LogicalPredicate(self, "NOT", self._catalog_column("attisdropped", "a"))
+            )
 
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        closing = " ORDER BY a.attnum" if conditions else "\n         ORDER BY a.attnum"
-
-        return (
-            f"""
-            SELECT a.attname as column_name,
-                   a.attnum as ordinal_position,
-                   pg_catalog.format_type(a.atttypid, a.atttypmod) as data_type,
-                   NOT a.attnotnull as is_nullable,
-                   pg_get_expr(d.adbin, d.adrelid) as default_value,
-                   (EXISTS (
-                       SELECT 1 FROM pg_index i
-                       WHERE i.indrelid = a.attrelid
-                       AND i.indisprimary
-                       AND a.attnum = ANY(i.indkey)
-                   )) as is_primary_key,
-                   col_description(a.attrelid, a.attnum) as comment
-            FROM pg_attribute a
-            LEFT JOIN pg_attrdef d ON a.attrelid = d.adrelid AND a.attnum = d.adnum
-            JOIN pg_class c ON a.attrelid = c.oid
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()}
-                AND c.relname = {self.p()}
-                AND a.attnum > 0
-                AND NOT a.attisdropped{filters}{closing}""",
-            (schema, table_name),
+        return self._catalog_select(
+            projection, source, conditions, [self._catalog_column("attnum", "a")]
         )
 
     def format_index_info_query(self, expr: "IndexInfoExpression") -> Tuple[str, tuple]:
@@ -336,35 +660,118 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         The indkey array contains column positions for the index.
         The amname field indicates the index type (btree, hash, gin, gist, etc.).
 
+        ``a.attnum = ANY(ix.indkey)`` is the join condition that walks an index's
+        column list, and it is an :class:`AnyPredicate` over the array column --
+        the same node the column query uses for the primary-key test.
+
         Args:
             expr: Index info expression with parameters.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+            Subquery,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import AnyPredicate
+
         params = expr.get_params()
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = f"""
-            SELECT i.relname as index_name,
-                   a.attname as column_name,
-                   array_position(ix.indkey, a.attnum) as column_position,
-                   ix.indisunique as is_unique,
-                   ix.indisprimary as is_primary,
-                   am.amname as index_type,
-                   ix.indpred as filter_condition
-            FROM pg_index ix
-            JOIN pg_class t ON ix.indrelid = t.oid
-            JOIN pg_class i ON ix.indexrelid = i.oid
-            JOIN pg_namespace n ON t.relnamespace = n.oid
-            JOIN pg_am am ON i.relam = am.oid
-            JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-            WHERE n.nspname = {self.p()} AND t.relname = {self.p()}
-            ORDER BY i.relname, column_position
-        """
+        column_position = FunctionCall(
+            self,
+            "array_position",
+            self._catalog_column("indkey", "ix"),
+            self._catalog_column("attnum", "a"),
+            alias="column_position",
+        )
+        projection = [
+            self._catalog_column("relname", "i", alias="index_name"),
+            self._catalog_column("attname", "a", alias="column_name"),
+            column_position,
+            self._catalog_column("indisunique", "ix", alias="is_unique"),
+            self._catalog_column("indisprimary", "ix", alias="is_primary"),
+            self._catalog_column("amname", "am", alias="index_type"),
+            self._catalog_column("indpred", "ix", alias="filter_condition"),
+        ]
 
-        return (sql, (schema, table_name))
+        # The join chain is the order the concatenated FROM clause wrote, so the
+        # rendered statement reads the same way from left to right.
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_index", "ix"),
+            right_table=self._catalog_relation("pg_class", "t"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("indrelid", "ix"),
+                self._catalog_column("oid", "t"),
+            ),
+        )
+        for relation, alias, left_side, right_side in (
+            ("pg_class", "i", ("indexrelid", "ix"), ("oid", "i")),
+            ("pg_namespace", "n", ("relnamespace", "t"), ("oid", "n")),
+            ("pg_am", "am", ("relam", "i"), ("oid", "am")),
+        ):
+            source = source.join(
+                self._catalog_relation(relation, alias),
+                join_type="JOIN",
+                condition=ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column(*left_side),
+                    self._catalog_column(*right_side),
+                ),
+            )
+
+        source = source.join(
+            self._catalog_relation("pg_attribute", "a"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "a"),
+                    self._catalog_column("oid", "t"),
+                ),
+                AnyPredicate(
+                    self,
+                    self._catalog_column("attnum", "a"),
+                    "=",
+                    Subquery(self, self._catalog_column("indkey", "ix")),
+                ),
+            ),
+        )
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "t"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+            # ``column_position`` names the projection's alias, exactly as the
+            # concatenated form ordered by it.
+            [
+                self._catalog_column("relname", "i"),
+                self._catalog_column("column_position"),
+            ],
+        )
 
     def format_foreign_key_query(self, expr: "ForeignKeyExpression") -> Tuple[str, tuple]:
         """Format foreign key information query using pg_constraint.
@@ -379,41 +786,169 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         - 'n': SET NULL
         - 'd': SET DEFAULT
 
+        The referenced column is picked by a subscript on ``con.confkey``: the
+        position of this side's column inside ``conkey`` indexes the other side's
+        list. That subscript is an :class:`ArrayOperation`, so the pairing is a
+        structure rather than a bracketed fragment of text.
+
         Args:
             expr: Foreign key expression with parameters.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+            Subquery,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import (
+            AnyPredicate,
+            ArrayOperation,
+        )
+        from rhosocial.activerecord.backend.expression.types import TextType
+
         params = expr.get_params()
         table_name = params.get("table_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = f"""
-            SELECT
-                con.conname as constraint_name,
-                a.attname as column_name,
-                ref_class.relname as referenced_table,
-                ref_ns.nspname as referenced_schema,
-                ref_a.attname as referenced_column,
-                con.confdeltype::text as on_delete,
-                con.confupdtype::text as on_update,
-                array_position(con.conkey, a.attnum) as column_position
-            FROM pg_constraint con
-            JOIN pg_class class ON con.conrelid = class.oid
-            JOIN pg_namespace ns ON class.relnamespace = ns.oid
-            JOIN pg_attribute a ON a.attrelid = class.oid AND a.attnum = ANY(con.conkey)
-            JOIN pg_class ref_class ON con.confrelid = ref_class.oid
-            JOIN pg_namespace ref_ns ON ref_class.relnamespace = ref_ns.oid
-            JOIN pg_attribute ref_a ON ref_a.attrelid = ref_class.oid
-                AND ref_a.attnum = con.confkey[array_position(con.conkey, a.attnum)]
-            WHERE con.contype = 'f'
-                AND ns.nspname = {self.p()}
-                AND class.relname = {self.p()}
-            ORDER BY con.conname, column_position
-        """
+        column_position = FunctionCall(
+            self,
+            "array_position",
+            self._catalog_column("conkey", "con"),
+            self._catalog_column("attnum", "a"),
+            alias="column_position",
+        )
+        referenced_key = ArrayOperation(
+            self,
+            operation="ACCESS",
+            base_expr=self._catalog_column("confkey", "con"),
+            index_expr=FunctionCall(
+                self,
+                "array_position",
+                self._catalog_column("conkey", "con"),
+                self._catalog_column("attnum", "a"),
+            ),
+        )
 
-        return (sql, (schema, table_name))
+        projection = [
+            self._catalog_column("conname", "con", alias="constraint_name"),
+            self._catalog_column("attname", "a", alias="column_name"),
+            self._catalog_column("relname", "ref_class", alias="referenced_table"),
+            self._catalog_column("nspname", "ref_ns", alias="referenced_schema"),
+            self._catalog_column("attname", "ref_a", alias="referenced_column"),
+            self._catalog_column("confdeltype", "con").cast(TextType(self)).as_("on_delete"),
+            self._catalog_column("confupdtype", "con").cast(TextType(self)).as_("on_update"),
+            column_position,
+        ]
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_constraint", "con"),
+            right_table=self._catalog_relation("pg_class", "class"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("conrelid", "con"),
+                self._catalog_column("oid", "class"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "ns"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "class"),
+                self._catalog_column("oid", "ns"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_attribute", "a"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "a"),
+                    self._catalog_column("oid", "class"),
+                ),
+                AnyPredicate(
+                    self,
+                    self._catalog_column("attnum", "a"),
+                    "=",
+                    Subquery(self, self._catalog_column("conkey", "con")),
+                ),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_class", "ref_class"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("confrelid", "con"),
+                self._catalog_column("oid", "ref_class"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "ref_ns"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "ref_class"),
+                self._catalog_column("oid", "ref_ns"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_attribute", "ref_a"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "ref_a"),
+                    self._catalog_column("oid", "ref_class"),
+                ),
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("attnum", "ref_a"), referenced_key
+                ),
+            ),
+        )
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("contype", "con"),
+                    self._catalog_literal("f"),
+                ),
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("nspname", "ns"), self._catalog_value(schema)
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "class"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+            [
+                self._catalog_column("conname", "con"),
+                self._catalog_column("column_position"),
+            ],
+        )
 
     def format_view_list_query(self, expr: "ViewListExpression") -> Tuple[str, tuple]:
         """Format view list query using pg_class.
@@ -427,27 +962,61 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            LikeOperator,
+            LikePredicate,
+        )
+
         params = expr.get_params()
         schema = params.get("schema") or self._get_default_schema()
         include_system = params.get("include_system", False)
 
-        conditions = []
-
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relkind", "c"),
+                self._catalog_literal("v"),
+            ),
+        ]
         if not include_system:
-            conditions.append("c.relname NOT LIKE 'pg_%%'")
+            conditions.append(
+                LikePredicate(
+                    self,
+                    LikeOperator.NOT_LIKE,
+                    self._catalog_column("relname", "c"),
+                    self._catalog_literal(self._SYSTEM_PREFIX),
+                )
+            )
 
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        closing = " ORDER BY c.relname" if conditions else "\n         ORDER BY c.relname"
+        return self._catalog_select(
+            self._view_projection(),
+            self._pg_class_join(),
+            conditions,
+            [self._catalog_column("relname", "c")],
+        )
 
-        sql = f"""
-            SELECT c.relname as view_name,
-                   pg_get_viewdef(c.oid, true) as definition,
-                   obj_description(c.oid) as comment
-            FROM pg_class c
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()} AND c.relkind = 'v'{filters}{closing}"""
+    def _view_projection(self) -> "list":
+        """The three columns a view listing and a single-view read both report."""
+        from rhosocial.activerecord.backend.expression import FunctionCall
 
-        return (sql, (schema,))
+        return [
+            self._catalog_column("relname", "c", alias="view_name"),
+            FunctionCall(
+                self,
+                "pg_get_viewdef",
+                self._catalog_column("oid", "c"),
+                self._catalog_literal(True),
+                alias="definition",
+            ),
+            FunctionCall(
+                self, "obj_description", self._catalog_column("oid", "c"), alias="comment"
+            ),
+        ]
 
     def format_view_info_query(self, expr: "ViewInfoExpression") -> Tuple[str, tuple]:
         """Format single view information query.
@@ -460,20 +1029,133 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
         params = expr.get_params()
         view_name = params.get("view_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = f"""
-            SELECT c.relname as view_name,
-                   pg_get_viewdef(c.oid, true) as definition,
-                   obj_description(c.oid) as comment
-            FROM pg_class c
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()} AND c.relname = {self.p()} AND c.relkind = 'v'
-        """
+        return self._catalog_select(
+            self._view_projection(),
+            self._pg_class_join(),
+            [
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_value(view_name),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relkind", "c"),
+                    self._catalog_literal("v"),
+                ),
+            ],
+        )
 
-        return (sql, (schema, view_name))
+    def _matview_source(self):
+        """``pg_matviews m JOIN pg_class c ... JOIN pg_namespace n ...``.
+
+        Both join conditions carry two comparisons, exactly as the concatenated
+        ON clauses did: the name pairs the catalogue view with its relation, and
+        the namespace pairs it with the schema the view reports.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            LogicalPredicate,
+        )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_matviews", "m"),
+            right_table=self._catalog_relation("pg_class", "c"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relname", "c"),
+                self._catalog_column("matviewname", "m"),
+            ),
+        )
+        return source.join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("oid", "n"),
+                    self._catalog_column("relnamespace", "c"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_column("schemaname", "m"),
+                ),
+            ),
+        )
+
+    def _matview_projection(self) -> "list":
+        """The materialized-view row shape, including the unique-index test.
+
+        ``has_unique_index`` is the EXISTS subquery ``REFRESH ... CONCURRENTLY``
+        depends on, and it is a nested :class:`QueryStatement` rather than a
+        parenthesised string.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            LogicalPredicate,
+            QueryStatement,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import ExistsPredicate
+
+        unique_index = QueryStatement(
+            self,
+            select=[self._catalog_literal(1)],
+            from_=self._catalog_relation("pg_index", "i"),
+            where=WhereClause(
+                self,
+                LogicalPredicate(
+                    self,
+                    "AND",
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("indrelid", "i"),
+                        self._catalog_column("oid", "c"),
+                    ),
+                    self._catalog_column("indisunique", "i"),
+                ),
+            ),
+        )
+
+        return [
+            self._catalog_column("schemaname", "m", alias="schema_name"),
+            self._catalog_column("matviewname", "m", alias="view_name"),
+            self._catalog_column("definition", "m", alias="definition"),
+            self._catalog_column("ispopulated", "m", alias="is_populated"),
+            FunctionCall(
+                self, "obj_description", self._catalog_column("oid", "c"), alias="comment"
+            ),
+            ExistsPredicate(self, unique_index).as_("has_unique_index"),
+            FunctionCall(
+                self,
+                "pg_get_viewdef",
+                self._catalog_column("oid", "c"),
+                self._catalog_literal(True),
+                alias="view_definition",
+            ),
+        ]
 
     def format_materialized_view_list_query(
         self, expr: "PostgresMaterializedViewListExpression"
@@ -491,37 +1173,41 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            LikeOperator,
+            LikePredicate,
+        )
+
         params = expr.get_params()
         schema = params.get("schema") or self._get_default_schema()
         include_system = params.get("include_system", False)
 
-        conditions = []
-
+        conditions = [
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("schemaname", "m"),
+                self._catalog_value(schema),
+            )
+        ]
         if not include_system:
-            # NOTE: doubled percent — psycopg treats a bare '%' as a placeholder start.
-            conditions.append("m.matviewname NOT LIKE 'pg_%%'")
+            # NOTE: doubled percent -- psycopg treats a bare '%' as a placeholder start.
+            conditions.append(
+                LikePredicate(
+                    self,
+                    LikeOperator.NOT_LIKE,
+                    self._catalog_column("matviewname", "m"),
+                    self._catalog_literal(self._SYSTEM_PREFIX),
+                )
+            )
 
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        closing = " ORDER BY m.matviewname" if conditions else "\n         ORDER BY m.matviewname"
-
-        sql = f"""
-            SELECT m.schemaname as schema_name,
-                   m.matviewname as view_name,
-                   m.definition as definition,
-                   m.ispopulated as is_populated,
-                   obj_description(c.oid) as comment,
-                   EXISTS (
-                       SELECT 1
-                       FROM pg_index i
-                       WHERE i.indrelid = c.oid AND i.indisunique
-                   ) as has_unique_index,
-                   pg_get_viewdef(c.oid, true) as view_definition
-            FROM pg_matviews m
-            JOIN pg_class c ON c.relname = m.matviewname
-            JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = m.schemaname
-            WHERE m.schemaname = {self.p()}{filters}{closing}"""
-
-        return (sql, (schema,))
+        return self._catalog_select(
+            self._matview_projection(),
+            self._matview_source(),
+            conditions,
+            [self._catalog_column("matviewname", "m")],
+        )
 
     def format_materialized_view_info_query(
         self, expr: "PostgresMaterializedViewInfoExpression"
@@ -534,29 +1220,120 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
         params = expr.get_params()
         view_name = params.get("view_name", "")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql = f"""
-            SELECT m.schemaname as schema_name,
-                   m.matviewname as view_name,
-                   m.definition as definition,
-                   m.ispopulated as is_populated,
-                   obj_description(c.oid) as comment,
-                   EXISTS (
-                       SELECT 1
-                       FROM pg_index i
-                       WHERE i.indrelid = c.oid AND i.indisunique
-                   ) as has_unique_index,
-                   pg_get_viewdef(c.oid, true) as view_definition
-            FROM pg_matviews m
-            JOIN pg_class c ON c.relname = m.matviewname
-            JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = m.schemaname
-            WHERE m.schemaname = {self.p()} AND m.matviewname = {self.p()}
-        """
+        return self._catalog_select(
+            self._matview_projection(),
+            self._matview_source(),
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("schemaname", "m"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("matviewname", "m"),
+                    self._catalog_value(view_name),
+                ),
+            ],
+        )
 
-        return (sql, (schema, view_name))
+    def _trigger_source(self):
+        """``pg_trigger t JOIN pg_class c ... JOIN pg_namespace n ... JOIN pg_proc p ...``."""
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, JoinClause
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_trigger", "t"),
+            right_table=self._catalog_relation("pg_class", "c"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("tgrelid", "t"),
+                self._catalog_column("oid", "c"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        return source.join(
+            self._catalog_relation("pg_proc", "p"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("tgfoid", "t"),
+                self._catalog_column("oid", "p"),
+            ),
+        )
+
+    def _trigger_projection(self) -> "list":
+        """The trigger row shape, with ``timing`` derived from the tgtype bitmask.
+
+        The bitmask test is a CASE whose conditions compare an arithmetic
+        expression against its own mask value: ``tgtype::integer & 64 = 64``
+        is ``BinaryExpression`` on the left and a literal on the right, so the
+        bit test is a structure rather than a fragment of text.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            BinaryExpression,
+            ComparisonPredicate,
+            FunctionCall,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.types import IntegerType
+
+        def masked(mask: int):
+            return BinaryExpression(
+                self,
+                "&",
+                self._catalog_column("tgtype", "t").cast(IntegerType(self)),
+                self._catalog_literal(mask),
+            )
+
+        def mask_test(mask: int):
+            return ComparisonPredicate(
+                self, "eq", masked(mask), self._catalog_literal(mask)
+            )
+
+        return [
+            self._catalog_column("tgname", "t", alias="trigger_name"),
+            self._catalog_column("relname", "c", alias="table_name"),
+            CaseExpression(
+                self,
+                cases=[
+                    (mask_test(64), self._catalog_literal("INSTEAD OF")),
+                    (mask_test(2), self._catalog_literal("BEFORE")),
+                ],
+                else_result=self._catalog_literal("AFTER"),
+                alias="timing",
+            ),
+            self._catalog_column("proname", "p", alias="function_name"),
+            self._catalog_column("tgenabled", "t", alias="enabled"),
+            FunctionCall(
+                self,
+                "pg_get_triggerdef",
+                self._catalog_column("oid", "t"),
+                self._catalog_literal(True),
+                alias="definition",
+            ),
+            self._catalog_column("tgtype", "t", alias="trigger_type"),
+        ]
 
     def format_trigger_list_query(self, expr: "TriggerListExpression") -> Tuple[str, tuple]:
         """Format trigger list query using pg_trigger.
@@ -572,47 +1349,45 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Note: Bits 2-5 encode trigger events (INSERT, DELETE, UPDATE, TRUNCATE),
         not timing.
 
+        Filtering by table does not change the ordering: every trigger row of a
+        table is still reported in trigger-name order, which is what the
+        concatenated form rendered on both branches (only its leading
+        whitespace differed).
+
         Args:
             expr: Trigger list expression with parameters.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, LogicalPredicate
+
         params = expr.get_params()
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql_params = [schema]
-        conditions = []
-
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            LogicalPredicate(self, "NOT", self._catalog_column("tgisinternal", "t")),
+        ]
         if table_name:
-            conditions.append(f"c.relname = {self.p()}")
-            sql_params.append(table_name)
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_value(table_name),
+                )
+            )
 
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        closing = " ORDER BY t.tgname" if conditions else "\n         ORDER BY t.tgname"
-
-        sql = f"""
-            SELECT
-                t.tgname as trigger_name,
-                c.relname as table_name,
-                CASE
-                    WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
-                    WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
-                    ELSE 'AFTER'
-                END as timing,
-                p.proname as function_name,
-                t.tgenabled as enabled,
-                pg_get_triggerdef(t.oid, true) as definition,
-                t.tgtype as trigger_type
-            FROM pg_trigger t
-            JOIN pg_class c ON t.tgrelid = c.oid
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            JOIN pg_proc p ON t.tgfoid = p.oid
-            WHERE n.nspname = {self.p()}
-                AND NOT t.tgisinternal{filters}{closing}"""
-
-        return (sql, tuple(sql_params))
+        return self._catalog_select(
+            self._trigger_projection(),
+            self._trigger_source(),
+            conditions,
+            [self._catalog_column("tgname", "t")],
+        )
 
     def format_trigger_info_query(self, expr: "TriggerInfoExpression") -> Tuple[str, tuple]:
         """Format single trigger information query.
@@ -625,46 +1400,36 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, LogicalPredicate
+
         params = expr.get_params()
         trigger_name = params.get("trigger_name", "")
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
 
-        sql_params = [schema, trigger_name]
-        conditions = []
-
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("tgname", "t"),
+                self._catalog_value(trigger_name),
+            ),
+            LogicalPredicate(self, "NOT", self._catalog_column("tgisinternal", "t")),
+        ]
         if table_name:
-            conditions.append(f"c.relname = {self.p()}")
-            sql_params.append(table_name)
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_value(table_name),
+                )
+            )
 
-        # This query ends on its WHERE clause, so the table filter closes it:
-        # it continues the line the base clause leaves open, and without one the
-        # clause keeps the indentation the template ends on.
-        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
-        trailing = "" if conditions else "\n        "
-
-        sql = f"""
-            SELECT
-                t.tgname as trigger_name,
-                c.relname as table_name,
-                CASE
-                    WHEN t.tgtype::integer & 64 = 64 THEN 'INSTEAD OF'
-                    WHEN t.tgtype::integer & 2 = 2 THEN 'BEFORE'
-                    ELSE 'AFTER'
-                END as timing,
-                p.proname as function_name,
-                t.tgenabled as enabled,
-                pg_get_triggerdef(t.oid, true) as definition,
-                t.tgtype as trigger_type
-            FROM pg_trigger t
-            JOIN pg_class c ON t.tgrelid = c.oid
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            JOIN pg_proc p ON t.tgfoid = p.oid
-            WHERE n.nspname = {self.p()}
-                AND t.tgname = {self.p()}
-                AND NOT t.tgisinternal{filters}{trailing}"""
-
-        return (sql, tuple(sql_params))
+        return self._catalog_select(self._trigger_projection(), self._trigger_source(), conditions)
 
     # ========== PostgreSQL database size ==========
 
@@ -673,14 +1438,21 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     ) -> Tuple[str, tuple]:
         """Format the ``pg_database_size(name)`` call.
 
+        The name is a bound value: PostgreSQL parses the argument, so it travels
+        through the driver's placeholder rather than being spelled into the text.
+
         Args:
             expr: Database size function expression with the database name.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
         params = expr.get_params()
-        return f"pg_database_size({self.p()})", (params.get("database_name"),)
+        return FunctionCall(
+            self, "pg_database_size", self._catalog_value(params.get("database_name"))
+        ).to_sql()
 
     def format_postgres_database_size_query(
         self, expr: "PostgresDatabaseSizeQueryExpression"
@@ -690,7 +1462,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         The SELECT and the ``size_bytes`` alias belong to this query, not to
         the function: the caller reads the row by that column name, so the row
         shape is the query node's contract and the function's spelling stays
-        the function node's.
+        the function node's. The call is the same :class:`FunctionCall` node the
+        function formatter writes -- the alias is this query's.
 
         Args:
             expr: Database size query expression with the database name.
@@ -698,13 +1471,20 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
-        params = expr.get_params()
-        from ..expression.introspection import PostgresDatabaseSizeFunction
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
 
-        call_sql, call_params = self.format_postgres_database_size_function(
-            PostgresDatabaseSizeFunction(self, database_name=params.get("database_name"))
-        )
-        return f"SELECT {call_sql} as size_bytes", call_params
+        params = expr.get_params()
+        return QueryStatement(
+            self,
+            select=[
+                FunctionCall(
+                    self,
+                    "pg_database_size",
+                    self._catalog_value(params.get("database_name")),
+                    alias="size_bytes",
+                )
+            ],
+        ).to_sql()
 
 
     # ------------------------------------------------------------------
@@ -716,102 +1496,624 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     def format_postgres_settings_query(
         self, expr: "PostgresSettingsQuery"
     ) -> Tuple[str, tuple]:
-        """Read ``pg_settings`` rows, optionally filtered by name."""
+        """Read ``pg_settings`` rows, optionally filtered by name.
+
+        The name list is data, so it binds: an ``IN`` list of caller-supplied
+        setting names travels as one parameter per name, in the order given.
+        """
+        from rhosocial.activerecord.backend.expression import InPredicate
+
+        conditions = []
         if expr.names:
-            placeholders = ", ".join(self.p() for _ in expr.names)
-            return (
-                "SELECT name, setting, unit FROM pg_settings "
-                f"WHERE name IN ({placeholders}) ORDER BY name",
-                tuple(expr.names),
+            conditions.append(
+                InPredicate(
+                    self,
+                    self._catalog_column("name"),
+                    self._catalog_value(list(expr.names)),
+                )
             )
-        return "SELECT name, setting, unit FROM pg_settings ORDER BY name", ()
+
+        return self._catalog_select(
+            [
+                self._catalog_column("name"),
+                self._catalog_column("setting"),
+                self._catalog_column("unit"),
+            ],
+            self._catalog_relation("pg_settings"),
+            conditions,
+            [self._catalog_column("name")],
+        )
 
     def format_postgres_activity_count_query(
         self, expr: "PostgresActivityCountQuery"
     ) -> Tuple[str, tuple]:
         """Count rows in ``pg_stat_activity``."""
-        return "SELECT count(*) as total_connections FROM pg_stat_activity", ()
+        from rhosocial.activerecord.backend.expression import QueryStatement, RowCountWildcard
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
 
-    def format_postgres_show_statement(
-        self, expr: "PostgresShowStatement"
-    ) -> Tuple[str, tuple]:
-        """Render ``SHOW`` for a run-time parameter (the node validated the name)."""
-        return f"SHOW {expr.parameter}", ()
+        return QueryStatement(
+            self,
+            select=[CountFunction(self, RowCountWildcard(self)).as_("total_connections")],
+            from_=self._catalog_relation("pg_stat_activity"),
+        ).to_sql()
 
     def format_postgres_database_list_query(
         self, expr: "PostgresDatabaseListQuery"
     ) -> Tuple[str, tuple]:
         """List databases with sizes, non-templates plus the current one."""
-        return (
-            "SELECT datname as name, pg_database_size(datname) as size_bytes "
-            "FROM pg_database "
-            "WHERE datistemplate = false OR datname = current_database() "
-            "ORDER BY datname",
-            (),
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            LogicalPredicate,
+        )
+
+        return self._catalog_select(
+            [
+                self._catalog_column("datname", alias="name"),
+                FunctionCall(
+                    self,
+                    "pg_database_size",
+                    self._catalog_column("datname"),
+                    alias="size_bytes",
+                ),
+            ],
+            self._catalog_relation("pg_database"),
+            [
+                LogicalPredicate(
+                    self,
+                    "OR",
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("datistemplate"),
+                        self._catalog_literal(False),
+                    ),
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("datname"),
+                        FunctionCall(self, "current_database"),
+                    ),
+                )
+            ],
+            [self._catalog_column("datname")],
         )
 
     def format_postgres_schema_stats_query(
         self, expr: "PostgresSchemaStatsQuery"
     ) -> Tuple[str, tuple]:
         """Per-schema table and view counts."""
-        return (
-            "SELECT n.nspname as schema_name, "
-            "COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count, "
-            "COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count "
-            "FROM pg_namespace n "
-            "LEFT JOIN pg_class c ON c.relnamespace = n.oid "
-            "WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') "
-            "GROUP BY n.nspname ORDER BY n.nspname",
-            (),
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            InPredicate,
+            JoinClause,
+            LogicalPredicate,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+
+        def counted(relkind: str):
+            return CountFunction(
+                self,
+                CaseExpression(
+                    self,
+                    cases=[
+                        (
+                            ComparisonPredicate(
+                                self,
+                                "eq",
+                                self._catalog_column("relkind", "c"),
+                                self._catalog_literal(relkind),
+                            ),
+                            self._catalog_literal(1),
+                        )
+                    ]
+                ),
+            )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_namespace", "n"),
+            right_table=self._catalog_relation("pg_class", "c"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+
+        return self._catalog_select(
+            [
+                self._catalog_column("nspname", "n", alias="schema_name"),
+                counted("r").as_("table_count"),
+                counted("v").as_("view_count"),
+            ],
+            source,
+            [
+                LogicalPredicate(
+                    self,
+                    "NOT",
+                    InPredicate(
+                        self,
+                        self._catalog_column("nspname", "n"),
+                        self._catalog_literal(
+                            ("pg_catalog", "information_schema", "pg_toast")
+                        ),
+                    ),
+                )
+            ],
+            [self._catalog_column("nspname", "n")],
+            group_by=[self._catalog_column("nspname", "n")],
         )
 
     def format_postgres_current_database_query(
         self, expr: "PostgresCurrentDatabaseQuery"
     ) -> Tuple[str, tuple]:
         """The current database's name."""
-        return "SELECT current_database()", ()
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        return QueryStatement(self, select=[FunctionCall(self, "current_database")]).to_sql()
 
     def format_postgres_role_list_query(
         self, expr: "PostgresRoleListQuery"
     ) -> Tuple[str, tuple]:
         """List roles with superuser flag and owner."""
-        return (
-            "SELECT rolname as name, rolsuper as is_superuser, "
-            "pg_catalog.pg_get_userbyid(oid) as owner "
-            "FROM pg_roles ORDER BY rolname",
-            (),
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        return self._catalog_select(
+            [
+                self._catalog_column("rolname", alias="name"),
+                self._catalog_column("rolsuper", alias="is_superuser"),
+                FunctionCall(
+                    self,
+                    "pg_catalog.pg_get_userbyid",
+                    self._catalog_column("oid"),
+                    alias="owner",
+                ),
+            ],
+            self._catalog_relation("pg_roles"),
+            order_by=[self._catalog_column("rolname")],
+        )
+
+    # ------------------------------------------------------------------
+    # The session / WAL / replication / archive reads
+    # ------------------------------------------------------------------
+
+    def format_postgres_current_user_query(
+        self, expr: "PostgresCurrentUserQuery"
+    ) -> Tuple[str, tuple]:
+        """The session's role.
+
+        ``CURRENT_USER`` is niladic: the standard writes it without parentheses,
+        and PostgreSQL refuses ``CURRENT_USER()`` (measured: syntax error at or
+        near ``"("`` on 17.11). ``niladic`` is what tells the call renderer.
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        return QueryStatement(
+            self, select=[FunctionCall(self, "current_user", niladic=True)]
+        ).to_sql()
+
+    def format_postgres_current_schema_query(
+        self, expr: "PostgresCurrentSchemaQuery"
+    ) -> Tuple[str, tuple]:
+        """The session's current schema."""
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        return QueryStatement(self, select=[FunctionCall(self, "current_schema")]).to_sql()
+
+    def format_postgres_client_address_query(
+        self, expr: "PostgresClientAddressQuery"
+    ) -> Tuple[str, tuple]:
+        """The client's address (null over a Unix-domain socket)."""
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        return QueryStatement(self, select=[FunctionCall(self, "inet_client_addr")]).to_sql()
+
+    def format_postgres_ssl_session_query(
+        self, expr: "PostgresSslSessionQuery"
+    ) -> Tuple[str, tuple]:
+        """This session's SSL state: three columns of its own ``pg_stat_ssl`` row."""
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate, FunctionCall
+
+        return self._catalog_select(
+            [
+                self._catalog_column("ssl"),
+                self._catalog_column("version"),
+                self._catalog_column("cipher"),
+            ],
+            self._catalog_relation("pg_stat_ssl"),
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("pid"),
+                    FunctionCall(self, "pg_backend_pid"),
+                )
+            ],
+        )
+
+    def format_postgres_wal_position_query(
+        self, expr: "PostgresWalPositionQuery"
+    ) -> Tuple[str, tuple]:
+        """Bytes of WAL written, as the LSN distance from ``0/0``.
+
+        The function pair is version-dependent: ``wal`` from PostgreSQL 10, and
+        ``xlog`` before it. The cast to BIGINT is the row's type, not a
+        presentation choice -- the difference is a ``numeric``.
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+        from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        current, diff = (
+            ("pg_current_wal_lsn", "pg_wal_lsn_diff")
+            if self.version >= (10, 0, 0)
+            else ("pg_current_xlog_location", "pg_xlog_location_diff")
+        )
+        return QueryStatement(
+            self,
+            select=[
+                FunctionCall(
+                    self,
+                    diff,
+                    FunctionCall(self, current),
+                    self._catalog_literal("0/0"),
+                )
+                .cast(BigIntType(self))
+                .as_("wal_bytes")
+            ],
+        ).to_sql()
+
+    def format_postgres_wal_file_count_query(
+        self, expr: "PostgresWalFileCountQuery"
+    ) -> Tuple[str, tuple]:
+        """How many files the WAL directory holds.
+
+        ``pg_ls_waldir()`` is a set-returning function, so it is a row source:
+        the count reads its rows rather than calling it in the select list.
+        It exists from PostgreSQL 10, which is why the version refuses it below.
+        """
+        from rhosocial.activerecord.backend.expression import QueryStatement, RowCountWildcard
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+        from rhosocial.activerecord.backend.expression.sources import TableFunctionSource
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
+        if self.version < (10, 0, 0):
+            raise UnsupportedFeatureError(
+                self.name,
+                "pg_ls_waldir()",
+                "The WAL directory listing was introduced in PostgreSQL 10; "
+                "count the files with pg_ls_dir('pg_wal') on older servers.",
+            )
+
+        return QueryStatement(
+            self,
+            select=[CountFunction(self, RowCountWildcard(self)).as_("wal_files")],
+            from_=TableFunctionSource(self, "pg_ls_waldir"),
+        ).to_sql()
+
+    def format_postgres_checkpoint_count_query(
+        self, expr: "PostgresCheckpointCountQuery"
+    ) -> Tuple[str, tuple]:
+        """Checkpoints run so far: the timed and requested counters, summed.
+
+        The counters moved from ``pg_stat_bgwriter`` to ``pg_stat_checkpointer``
+        in PostgreSQL 17, and the column names changed with them; both the
+        relation and the names are therefore the server version's.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            FunctionCall,
+            QueryStatement,
+        )
+        from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
+
+        if self.version >= (17, 0, 0):
+            relation, timed, requested = "pg_stat_checkpointer", "num_timed", "num_requested"
+        else:
+            relation, timed, requested = "pg_stat_bgwriter", "checkpoints_timed", "checkpoints_req"
+
+        def coalesced(column: str):
+            return FunctionCall(
+                self, "coalesce", self._catalog_column(column), self._catalog_literal(0)
+            )
+
+        return QueryStatement(
+            self,
+            select=[
+                ArithmeticOperation(self, "add", coalesced(timed), coalesced(requested)).as_(
+                    "checkpoint_count"
+                )
+            ],
+            from_=self._catalog_relation(relation),
+        ).to_sql()
+
+    def format_postgres_checkpoint_lsn_query(
+        self, expr: "PostgresCheckpointLsnQuery"
+    ) -> Tuple[str, tuple]:
+        """The last checkpoint's LSN.
+
+        ``pg_control_checkpoint()`` answers one composite row, and its
+        ``checkpoint_lsn`` field is read by naming the function as a row source
+        and selecting the field off the alias. The earlier form
+        ``(pg_control_checkpoint()).checkpoint_lsn`` puts a parenthesised call in
+        the select list, which PostgreSQL refuses (measured 17.11: syntax error
+        at or near ``"."``).
+        """
+        from rhosocial.activerecord.backend.expression import QueryStatement
+        from rhosocial.activerecord.backend.expression.sources import TableFunctionSource
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
+        if self.version < (9, 6, 0):
+            raise UnsupportedFeatureError(
+                self.name,
+                "pg_control_checkpoint()",
+                "The control-data accessor was introduced in PostgreSQL 9.6.",
+            )
+
+        return QueryStatement(
+            self,
+            select=[self._catalog_column("checkpoint_lsn", "c", alias="checkpoint_info")],
+            from_=TableFunctionSource(self, "pg_control_checkpoint", alias="c"),
+        ).to_sql()
+
+    def format_postgres_recovery_state_query(
+        self, expr: "PostgresRecoveryStateQuery"
+    ) -> Tuple[str, tuple]:
+        """Whether this server is replaying WAL (a standby)."""
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        return QueryStatement(self, select=[FunctionCall(self, "pg_is_in_recovery")]).to_sql()
+
+    def format_postgres_replication_slot_count_query(
+        self, expr: "PostgresReplicationSlotCountQuery"
+    ) -> Tuple[str, tuple]:
+        """How many replication slots exist."""
+        from rhosocial.activerecord.backend.expression import QueryStatement, RowCountWildcard
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+
+        return QueryStatement(
+            self,
+            select=[CountFunction(self, RowCountWildcard(self)).as_("slot_count")],
+            from_=self._catalog_relation("pg_replication_slots"),
+        ).to_sql()
+
+    def format_postgres_active_replication_count_query(
+        self, expr: "PostgresActiveReplicationCountQuery"
+    ) -> Tuple[str, tuple]:
+        """How many standbys are streaming right now."""
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            QueryStatement,
+            RowCountWildcard,
+        )
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+
+        return QueryStatement(
+            self,
+            select=[CountFunction(self, RowCountWildcard(self)).as_("active_count")],
+            from_=self._catalog_relation("pg_stat_replication"),
+            where=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("state"),
+                self._catalog_literal("streaming"),
+            ),
+        ).to_sql()
+
+    def format_postgres_replication_lag_query(
+        self, expr: "PostgresReplicationLagQuery"
+    ) -> Tuple[str, tuple]:
+        """The replay lag in bytes, as the receive/replay LSN distance."""
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+        from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        return QueryStatement(
+            self,
+            select=[
+                FunctionCall(
+                    self,
+                    "pg_wal_lsn_diff",
+                    FunctionCall(self, "pg_last_wal_receive_lsn"),
+                    FunctionCall(self, "pg_last_wal_replay_lsn"),
+                )
+                .cast(BigIntType(self))
+                .as_("lag_bytes")
+            ],
+        ).to_sql()
+
+    def format_postgres_archive_stats_query(
+        self, expr: "PostgresArchiveStatsQuery"
+    ) -> Tuple[str, tuple]:
+        """The archiver's counters and its last success/failure times."""
+        from rhosocial.activerecord.backend.expression import QueryStatement
+        from rhosocial.activerecord.backend.expression.types import TextType
+
+        return QueryStatement(
+            self,
+            select=[
+                self._catalog_column("archived_count"),
+                self._catalog_column("failed_count"),
+                self._catalog_column("last_archived_time")
+                .cast(TextType(self))
+                .as_("last_archived"),
+                self._catalog_column("last_failed_time")
+                .cast(TextType(self))
+                .as_("last_failed"),
+            ],
+            from_=self._catalog_relation("pg_stat_archiver"),
+        ).to_sql()
+
+    def format_postgres_extension_list_query(
+        self, expr: "PostgresExtensionListQuery"
+    ) -> Tuple[str, tuple]:
+        """Every installed extension with its schema and description."""
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_extension", "e"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "n"),
+                self._catalog_column("extnamespace", "e"),
+            ),
+        )
+
+        return self._catalog_select(
+            [
+                self._catalog_column("extname", "e", alias="name"),
+                self._catalog_column("extversion", "e", alias="version"),
+                self._catalog_column("nspname", "n", alias="schema"),
+                FunctionCall(
+                    self,
+                    "pg_catalog.obj_description",
+                    self._catalog_column("oid", "e"),
+                    self._catalog_literal("pg_extension"),
+                    alias="description",
+                ),
+            ],
+            source,
+            order_by=[self._catalog_column("extname", "e")],
         )
 
     def format_postgres_enum_type_exists_query(
         self, expr: "PostgresEnumTypeExistsQuery"
     ) -> Tuple[str, tuple]:
-        """Whether an enum type exists; name (and optional schema) are bound."""
-        sql = (
-            "SELECT EXISTS (SELECT 1 FROM pg_type t "
-            "JOIN pg_namespace n ON t.typnamespace = n.oid "
-            "WHERE t.typname = " + self.p()
+        """Whether an enum type exists; name (and optional schema) are bound.
+
+        The whole question is one EXISTS over a join between ``pg_type`` and
+        ``pg_namespace``, so the select list is the EXISTS predicate itself and
+        the subquery is a QueryStatement.
+
+        Raises:
+            ValueError: The enum name is blank, which no catalog row can match.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            LogicalPredicate,
+            QueryStatement,
+            WhereClause,
         )
-        params = [expr.name]
+        from rhosocial.activerecord.backend.expression.advanced_functions import ExistsPredicate
+
+        if not expr.name:
+            raise ValueError(
+                "PostgresEnumTypeExistsQuery needs a type name: an empty name "
+                "cannot match a catalog row."
+            )
+
+        conditions = [
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("typname", "t"),
+                self._catalog_value(expr.name),
+            )
+        ]
         if expr.schema is not None:
-            sql += " AND n.nspname = " + self.p()
-            params.append(expr.schema)
-        return sql + ")", tuple(params)
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(expr.schema),
+                )
+            )
+
+        subquery = QueryStatement(
+            self,
+            select=[self._catalog_literal(1)],
+            from_=JoinClause(
+                self,
+                left_table=self._catalog_relation("pg_type", "t"),
+                right_table=self._catalog_relation("pg_namespace", "n"),
+                join_type="JOIN",
+                condition=ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("typnamespace", "t"),
+                    self._catalog_column("oid", "n"),
+                ),
+            ),
+            where=WhereClause(self, LogicalPredicate(self, "AND", *conditions)),
+        )
+        return QueryStatement(self, select=[ExistsPredicate(self, subquery)]).to_sql()
 
     def format_postgres_enum_type_values_query(
         self, expr: "PostgresEnumTypeValuesQuery"
     ) -> Tuple[str, tuple]:
-        """The labels of an enum type in sort order; name (and schema) are bound."""
-        sql = (
-            "SELECT e.enumlabel FROM pg_type t "
-            "JOIN pg_namespace n ON t.typnamespace = n.oid "
-            "JOIN pg_enum e ON t.oid = e.enumtypid "
-            "WHERE t.typname = " + self.p()
+        """The labels of an enum type in sort order; name (and schema) are bound.
+
+        Raises:
+            ValueError: The enum name is blank, which no catalog row can match.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
         )
-        params = [expr.name]
+
+        if not expr.name:
+            raise ValueError(
+                "PostgresEnumTypeValuesQuery needs a type name: an empty name "
+                "cannot match a catalog row."
+            )
+
+        conditions = [
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("typname", "t"),
+                self._catalog_value(expr.name),
+            )
+        ]
         if expr.schema is not None:
-            sql += " AND n.nspname = " + self.p()
-            params.append(expr.schema)
-        return sql + " ORDER BY e.enumsortorder", tuple(params)
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(expr.schema),
+                )
+            )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_type", "t"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("typnamespace", "t"),
+                self._catalog_column("oid", "n"),
+            ),
+        ).join(
+            self._catalog_relation("pg_enum", "e"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "t"),
+                self._catalog_column("enumtypid", "e"),
+            ),
+        )
+
+        return self._catalog_select(
+            [self._catalog_column("enumlabel", "e")],
+            source,
+            conditions,
+            [self._catalog_column("enumsortorder", "e")],
+        )
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]
