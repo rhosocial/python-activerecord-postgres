@@ -155,6 +155,14 @@ class TestReplicationQueries:
         assert "::BIGINT" in sql
         assert 'AS "lag_bytes"' in sql
 
+    def test_lag_spells_xlog_before_version_10(self):
+        # The three names moved together in 10, so a 9.x server needs all three
+        # old spellings -- pg_wal_lsn_diff does not exist there.
+        sql, _ = PostgresReplicationLagQuery(_dialect((9, 6, 0))).to_sql()
+        assert "PG_XLOG_LOCATION_DIFF(" in sql
+        assert "PG_LAST_XLOG_RECEIVE_LOCATION()" in sql
+        assert "PG_LAST_XLOG_REPLAY_LOCATION()" in sql
+
 
 class TestArchiveAndExtensionQueries:
     """The archiver row and the extension listing."""

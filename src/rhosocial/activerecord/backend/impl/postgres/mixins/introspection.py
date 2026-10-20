@@ -1905,18 +1905,36 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     def format_postgres_replication_lag_query(
         self, expr: "PostgresReplicationLagQuery"
     ) -> Tuple[str, tuple]:
-        """The replay lag in bytes, as the receive/replay LSN distance."""
+        """The replay lag in bytes, as the receive/replay LSN distance.
+
+        The three function names moved together in PostgreSQL 10 (``xlog`` to
+        ``wal``), so the pair is chosen as a pair: a 9.x server has no
+        ``pg_wal_lsn_diff`` at all.
+        """
         from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
         from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        if self.version >= (10, 0, 0):
+            diff, receive, replay = (
+                "pg_wal_lsn_diff",
+                "pg_last_wal_receive_lsn",
+                "pg_last_wal_replay_lsn",
+            )
+        else:
+            diff, receive, replay = (
+                "pg_xlog_location_diff",
+                "pg_last_xlog_receive_location",
+                "pg_last_xlog_replay_location",
+            )
 
         return QueryStatement(
             self,
             select=[
                 FunctionCall(
                     self,
-                    "pg_wal_lsn_diff",
-                    FunctionCall(self, "pg_last_wal_receive_lsn"),
-                    FunctionCall(self, "pg_last_wal_replay_lsn"),
+                    diff,
+                    FunctionCall(self, receive),
+                    FunctionCall(self, replay),
                 )
                 .cast(BigIntType(self))
                 .as_("lag_bytes")
