@@ -185,6 +185,28 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         else:
             relkind_filter = "('r', 'f', 'p')"
 
+        # Each collected parameter contributes its own condition, and the
+        # conditions are joined into the WHERE tail in one place: the query is
+        # assembled once from named fragments rather than grown one append at
+        # a time, so its whole shape stays visible together.
+        conditions = []
+
+        if not include_system:
+            conditions.append("c.relname NOT LIKE 'pg_%%'")
+
+        if table_type == "BASE TABLE":
+            conditions.append("c.relkind IN ('r', 'p')")
+        elif table_type == "VIEW":
+            conditions.append("c.relkind = 'v'")
+        elif table_type == "MATERIALIZED VIEW":
+            conditions.append("c.relkind = 'm'")
+
+        # The first condition continues the line the base WHERE clause leaves
+        # open, the ones after it follow on that same line, and ORDER BY
+        # closes the clause.
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        closing = " ORDER BY c.relname" if conditions else "\n         ORDER BY c.relname"
+
         sql = f"""
             SELECT c.relname as table_name,
                    CASE c.relkind
@@ -200,25 +222,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
             WHERE n.nspname = {self.p()}
-                AND c.relkind IN {relkind_filter}
-        """
+                AND c.relkind IN {relkind_filter}{filters}{closing}"""
 
-        params_list = [schema]
-
-        if not include_system:
-            sql += " AND c.relname NOT LIKE 'pg_%%'"
-
-        if table_type:
-            if table_type == "BASE TABLE":
-                sql += " AND c.relkind IN ('r', 'p')"
-            elif table_type == "VIEW":
-                sql += " AND c.relkind = 'v'"
-            elif table_type == "MATERIALIZED VIEW":
-                sql += " AND c.relkind = 'm'"
-
-        sql += " ORDER BY c.relname"
-
-        return (sql, tuple(params_list))
+        return (sql, (schema,))
 
     def format_table_info_query(self, expr: "TableInfoExpression") -> Tuple[str, tuple]:
         """Format single table information query.
@@ -272,8 +278,19 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         include_hidden = params.get("include_hidden", False)
         schema = params.get("schema") or self._get_default_schema()
 
-        # Base query with standard columns
-        sql = f"""
+        # If not including hidden columns, add filter
+        conditions = []
+        if not include_hidden:
+            # The base query already excludes dropped columns; this condition
+            # repeats it, which is how this query has always rendered, so the
+            # bytes stay as callers know them.
+            conditions.append("NOT a.attisdropped")
+
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        closing = " ORDER BY a.attnum" if conditions else "\n         ORDER BY a.attnum"
+
+        return (
+            f"""
             SELECT a.attname as column_name,
                    a.attnum as ordinal_position,
                    pg_catalog.format_type(a.atttypid, a.atttypmod) as data_type,
@@ -293,16 +310,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             WHERE n.nspname = {self.p()}
                 AND c.relname = {self.p()}
                 AND a.attnum > 0
-                AND NOT a.attisdropped
-        """
-
-        # If not including hidden columns, add filter
-        if not include_hidden:
-            sql += " AND NOT a.attisdropped"
-
-        sql += " ORDER BY a.attnum"
-
-        return (sql, (schema, table_name))
+                AND NOT a.attisdropped{filters}{closing}""",
+            (schema, table_name),
+        )
 
     def format_index_info_query(self, expr: "IndexInfoExpression") -> Tuple[str, tuple]:
         """Format index information query using pg_index.
@@ -406,23 +416,23 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         schema = params.get("schema") or self._get_default_schema()
         include_system = params.get("include_system", False)
 
+        conditions = []
+
+        if not include_system:
+            conditions.append("c.relname NOT LIKE 'pg_%%'")
+
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        closing = " ORDER BY c.relname" if conditions else "\n         ORDER BY c.relname"
+
         sql = f"""
             SELECT c.relname as view_name,
                    pg_get_viewdef(c.oid, true) as definition,
                    obj_description(c.oid) as comment
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE n.nspname = {self.p()} AND c.relkind = 'v'
-        """
+            WHERE n.nspname = {self.p()} AND c.relkind = 'v'{filters}{closing}"""
 
-        params_list = [schema]
-
-        if not include_system:
-            sql += " AND c.relname NOT LIKE 'pg_%%'"
-
-        sql += " ORDER BY c.relname"
-
-        return (sql, tuple(params_list))
+        return (sql, (schema,))
 
     def format_view_info_query(self, expr: "ViewInfoExpression") -> Tuple[str, tuple]:
         """Format single view information query.
@@ -470,6 +480,15 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         schema = params.get("schema") or self._get_default_schema()
         include_system = params.get("include_system", False)
 
+        conditions = []
+
+        if not include_system:
+            # NOTE: doubled percent — psycopg treats a bare '%' as a placeholder start.
+            conditions.append("m.matviewname NOT LIKE 'pg_%%'")
+
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        closing = " ORDER BY m.matviewname" if conditions else "\n         ORDER BY m.matviewname"
+
         sql = f"""
             SELECT m.schemaname as schema_name,
                    m.matviewname as view_name,
@@ -485,18 +504,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             FROM pg_matviews m
             JOIN pg_class c ON c.relname = m.matviewname
             JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = m.schemaname
-            WHERE m.schemaname = {self.p()}
-        """
+            WHERE m.schemaname = {self.p()}{filters}{closing}"""
 
-        params_list = [schema]
-
-        if not include_system:
-            # NOTE: doubled percent — psycopg treats a bare '%' as a placeholder start.
-            sql += " AND m.matviewname NOT LIKE 'pg_%%'"
-
-        sql += " ORDER BY m.matviewname"
-
-        return (sql, tuple(params_list))
+        return (sql, (schema,))
 
     def format_materialized_view_info_query(
         self, expr: "PostgresMaterializedViewInfoExpression"
@@ -557,6 +567,16 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
 
+        sql_params = [schema]
+        conditions = []
+
+        if table_name:
+            conditions.append(f"c.relname = {self.p()}")
+            sql_params.append(table_name)
+
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        closing = " ORDER BY t.tgname" if conditions else "\n         ORDER BY t.tgname"
+
         sql = f"""
             SELECT
                 t.tgname as trigger_name,
@@ -575,18 +595,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_namespace n ON c.relnamespace = n.oid
             JOIN pg_proc p ON t.tgfoid = p.oid
             WHERE n.nspname = {self.p()}
-                AND NOT t.tgisinternal
-        """
+                AND NOT t.tgisinternal{filters}{closing}"""
 
-        params_list = [schema]
-
-        if table_name:
-            sql += f" AND c.relname = {self.p()}"
-            params_list.append(table_name)
-
-        sql += " ORDER BY t.tgname"
-
-        return (sql, tuple(params_list))
+        return (sql, tuple(sql_params))
 
     def format_trigger_info_query(self, expr: "TriggerInfoExpression") -> Tuple[str, tuple]:
         """Format single trigger information query.
@@ -603,6 +614,19 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         trigger_name = params.get("trigger_name", "")
         table_name = params.get("table_name")
         schema = params.get("schema") or self._get_default_schema()
+
+        sql_params = [schema, trigger_name]
+        conditions = []
+
+        if table_name:
+            conditions.append(f"c.relname = {self.p()}")
+            sql_params.append(table_name)
+
+        # This query ends on its WHERE clause, so the table filter closes it:
+        # it continues the line the base clause leaves open, and without one the
+        # clause keeps the indentation the template ends on.
+        filters = "\n         AND " + " AND ".join(conditions) if conditions else ""
+        trailing = "" if conditions else "\n        "
 
         sql = f"""
             SELECT
@@ -623,16 +647,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JOIN pg_proc p ON t.tgfoid = p.oid
             WHERE n.nspname = {self.p()}
                 AND t.tgname = {self.p()}
-                AND NOT t.tgisinternal
-        """
+                AND NOT t.tgisinternal{filters}{trailing}"""
 
-        params_list = [schema, trigger_name]
-
-        if table_name:
-            sql += f" AND c.relname = {self.p()}"
-            params_list.append(table_name)
-
-        return (sql, tuple(params_list))
+        return (sql, tuple(sql_params))
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]
