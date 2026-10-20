@@ -33,7 +33,10 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
 from rhosocial.activerecord.backend.expression import RawSQL
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.predicates import (
+    ComparisonPredicate,
+    LogicalPredicate,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression.types import (
@@ -539,7 +542,7 @@ class TestPgTrgmIntegration:
             Literal(dialect, "idx_trgm_name"),
         )
         # Combine both conditions with AND
-        combined_pred = ComparisonPredicate(
+        combined_pred = LogicalPredicate(
             dialect, "AND",
             where_tablename,
             where_indexname,
@@ -785,7 +788,7 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "indexname"),
             Literal(dialect, "idx_trgm_name_async"),
         )
-        combined_pred = ComparisonPredicate(
+        combined_pred = LogicalPredicate(
             dialect, "AND",
             where_tablename,
             where_indexname,

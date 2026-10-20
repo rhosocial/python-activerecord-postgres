@@ -31,6 +31,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -230,7 +231,7 @@ class TestOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            Literal(dialect, 0.0).cast(DecimalType(dialect)),
+            cast(dialect, Literal(dialect, 0.0), DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryStatement(
@@ -495,7 +496,7 @@ class TestAsyncOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            Literal(dialect, 0.0).cast(DecimalType(dialect)),
+            cast(dialect, Literal(dialect, 0.0), DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryStatement(

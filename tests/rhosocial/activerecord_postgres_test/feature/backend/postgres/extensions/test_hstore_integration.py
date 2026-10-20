@@ -34,6 +34,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
+from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -78,7 +79,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
         columns=["data"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, hstore_value).cast(PostgresHstoreType(dialect))]],
+            [[cast(dialect, Literal(dialect, hstore_value), PostgresHstoreType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -113,7 +114,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
         columns=["data"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, hstore_value).cast(PostgresHstoreType(dialect))]],
+            [[cast(dialect, Literal(dialect, hstore_value), PostgresHstoreType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -261,7 +262,7 @@ class TestHstoreIntegration:
         contains_expr = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            Literal(dialect, "color=>red").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "color=>red"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query = QueryStatement(
             dialect=dialect,
@@ -282,7 +283,7 @@ class TestHstoreIntegration:
         contains_expr2 = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            Literal(dialect, "color=>blue").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "color=>blue"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query2 = QueryStatement(
             dialect=dialect,
@@ -355,7 +356,7 @@ class TestHstoreIntegration:
         merged_expr = Subquery(dialect, BinaryExpression(
             dialect, "||",
             Column(dialect, "data"),
-            Literal(dialect, "b=>2").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "b=>2"), PostgresHstoreType(dialect)),
         )).as_("merged")
         query = QueryStatement(
             dialect=dialect,
@@ -459,7 +460,7 @@ class TestHstoreIntegration:
                 "data": BinaryExpression(
                     dialect, "||",
                     Column(dialect, "data"),
-                    Literal(dialect, "status=>inactive").cast(PostgresHstoreType(dialect)),
+                    cast(dialect, Literal(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
                 ),
             },
             where=ComparisonPredicate(
@@ -659,7 +660,7 @@ class TestAsyncHstoreIntegration:
         contains_expr = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            Literal(dialect, "color=>red").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "color=>red"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query = QueryStatement(
             dialect=dialect,
@@ -680,7 +681,7 @@ class TestAsyncHstoreIntegration:
         contains_expr2 = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            Literal(dialect, "color=>blue").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "color=>blue"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query2 = QueryStatement(
             dialect=dialect,
@@ -755,7 +756,7 @@ class TestAsyncHstoreIntegration:
         merged_expr = Subquery(dialect, BinaryExpression(
             dialect, "||",
             Column(dialect, "data"),
-            Literal(dialect, "b=>2").cast(PostgresHstoreType(dialect)),
+            cast(dialect, Literal(dialect, "b=>2"), PostgresHstoreType(dialect)),
         )).as_("merged")
         query = QueryStatement(
             dialect=dialect,
@@ -862,7 +863,7 @@ class TestAsyncHstoreIntegration:
                 "data": BinaryExpression(
                     dialect, "||",
                     Column(dialect, "data"),
-                    Literal(dialect, "status=>inactive").cast(PostgresHstoreType(dialect)),
+                    cast(dialect, Literal(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
                 ),
             },
             where=ComparisonPredicate(

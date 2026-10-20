@@ -33,6 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
@@ -142,7 +143,7 @@ def uuid_ossp_env(postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, str(uuid_val)).cast(UUIDType(dialect)), Literal(dialect, "explicit")]],
+            [[cast(dialect, Literal(dialect, str(uuid_val)), UUIDType(dialect)), Literal(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()
@@ -347,7 +348,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, str(uuid_val)).cast(UUIDType(dialect)), Literal(dialect, "explicit")]],
+            [[cast(dialect, Literal(dialect, str(uuid_val)), UUIDType(dialect)), Literal(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()

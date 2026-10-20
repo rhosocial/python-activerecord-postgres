@@ -35,7 +35,10 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression.predicates import (
+    ComparisonPredicate,
+    LikePredicate,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -564,7 +567,7 @@ class TestCitextIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # LIKE on citext is case-insensitive
-        where_pred = ComparisonPredicate(
+        where_pred = LikePredicate(
             dialect, "LIKE",
             Column(dialect, "name"),
             Literal(dialect, "alice%"),
@@ -736,7 +739,7 @@ class TestAsyncCitextIntegration:
         backend, dialect = async_citext_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        where_pred = ComparisonPredicate(
+        where_pred = LikePredicate(
             dialect, "LIKE",
             Column(dialect, "name"),
             Literal(dialect, "alice%"),
