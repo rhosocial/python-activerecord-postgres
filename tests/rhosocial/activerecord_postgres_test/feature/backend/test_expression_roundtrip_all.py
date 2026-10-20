@@ -174,6 +174,7 @@ from rhosocial.activerecord.backend.expression.objects import (
     Trigger,
 )
 from rhosocial.activerecord.backend.expression.predicates import (
+    LikeOperator,
     ComparisonPredicate,
     ILikePredicate as CoreILIKEExpression,
     LikePredicate,
@@ -858,7 +859,7 @@ def register_specials():
     # become the operator rather than the operand.
     register_special_constructor(
         "predicates.LikePredicate",
-        lambda d: LikePredicate(d, "LIKE", Column(d, "a"), Literal(d, "x%")),
+        lambda d: LikePredicate(d, LikeOperator.LIKE, Column(d, "a"), Literal(d, "x%")),
     )
 
     # -- COLLATE needs a collation PostgreSQL actually has -------------------

@@ -27,6 +27,7 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.predicates import (
+    LikeOperator,
     LikePredicate,
     InPredicate,
     BetweenPredicate,
@@ -152,7 +153,7 @@ like_query = QueryStatement(
         dialect,
         condition=LikePredicate(
             dialect,
-            'LIKE',
+            LikeOperator.LIKE,
             Column(dialect, 'name'),
             Literal(dialect, 'A%'),
         ),
@@ -267,7 +268,7 @@ combined_query = QueryStatement(
             'AND',
             LikePredicate(
                 dialect,
-                'LIKE',
+                LikeOperator.LIKE,
                 Column(dialect, 'name'),
                 Literal(dialect, '%e%'),
             ),
