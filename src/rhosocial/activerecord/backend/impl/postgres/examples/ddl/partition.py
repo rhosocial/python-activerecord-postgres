@@ -14,6 +14,9 @@ This example demonstrates:
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+    PostgresCreatePartitionExpression,
+)
 from rhosocial.activerecord.backend.expression import (
     DropTableStatement,
     InsertStatement,
@@ -74,10 +77,16 @@ partitions = [
 ]
 
 for part_name, start_val, end_val in partitions:
-    part_sql = f"""
-    CREATE TABLE {part_name} PARTITION OF orders
-    FOR VALUES FROM ('{start_val}') TO ('{end_val}')
-    """
+    # The partition statement is a node like everything else: the values are
+    # its parameters and the spelling is the formatter's, so nothing about the
+    # partition is decided at the call site.
+    part_sql, _ = PostgresCreatePartitionExpression(
+        dialect=dialect,
+        partition_name=part_name,
+        parent_table="orders",
+        partition_type="RANGE",
+        partition_values={"from": start_val, "to": end_val},
+    ).to_sql()
     backend.execute(part_sql)
     print(f"Created partition: {part_name} [{start_val}, {end_val})")
 

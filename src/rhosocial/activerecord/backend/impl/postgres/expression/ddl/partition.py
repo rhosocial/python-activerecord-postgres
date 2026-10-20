@@ -172,7 +172,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         ... )
         >>> sql, params = partition.to_sql()
         >>> sql
-        "CREATE TABLE orders_2024_q1 PARTITION OF orders RANGE ('2024-01-01', '2024-04-01')"
+        'CREATE TABLE "orders_2024_q1" PARTITION OF "orders" FOR VALUES FROM (\'2024-01-01\') TO (\'2024-04-01\')'
 
         >>> # LIST partition
         >>> partition = PostgresCreatePartitionExpression(
