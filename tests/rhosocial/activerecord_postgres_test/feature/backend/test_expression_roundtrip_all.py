@@ -3,17 +3,17 @@
 Functional serialization coverage: every registered expression class must
 round-trip losslessly through all three encodings (dict / JSON string / XML).
 
-Reconciled against core at **550ae740** ("check the quoting flags, because
-annotations do not"), where an artifact is a bare ``{kind, params}`` node:
-no envelope, no ``__expr__``/``__tuple__``/``__enum__``/``__dataclass__``/
-``__b64__``/``__dur__`` markers, values as plain JSON scalars, and the kind
-derived from the class name -- ``Literal`` the single exception, naming its
-fourteen value kinds by what they hold. ``test_value_kind_plane`` asserts that
-plane (wire name, payload type, round-trip) because the class matrix sees only
-one row for it whatever the payloads are.
+Reconciled against core at **3e23158e** ("let a word-carrying enum be its word
+on the wire"), where an artifact is a bare ``{kind, params}`` node: no envelope,
+no ``__expr__``/``__tuple__``/``__enum__``/``__dataclass__``/``__b64__``/
+``__dur__`` markers, values as plain JSON scalars, and the kind derived from the
+class name -- ``Literal`` the single exception, naming its fourteen value kinds
+by what they hold. ``test_value_kind_plane`` asserts that plane (wire name,
+payload type, round-trip) because the class matrix sees only one row for it
+whatever the payloads are.
 
-Current census, for the record: 533 registered classes, 531 constructible, 2
-pinned unconstructible, 471 rendered, 37 refused as unsupported, 20 classified
+Current census, for the record: 559 registered classes, 557 constructible, 2
+pinned unconstructible, 498 rendered, 36 refused as unsupported, 20 classified
 non-renders, 3 with no formatter declared. The two gap tables
 (``_CODEC_GAPS`` / ``_CODEC_RENDER_GAPS``) are the only places a parameter may
 be lost, each pinned per class *and* channel with its exception type.
@@ -1457,108 +1457,69 @@ def _unmodelled_methods():
 # The codec gap: classes whose artifact the *core* codec cannot write or read
 # ---------------------------------------------------------------------------
 # Every entry here is a defect in core, confirmed against the core tree of this
-# baseline, and none of them can be fixed from a backend:
+# baseline, and none of them can be fixed from a backend.
 #
-# * the XML codec writes a ``(str, Enum)`` parameter with ``str()`` (which is
-#   ``Enum.__str__``, so ``"DateTimeField.YEAR"``) while the JSON codec writes
-#   the value; the constructor then refuses the enum's *name*;
-# * the JSON/dict/XML encoder refuses a *dataclass* parameter (``XMLAttribute``,
-#   ``XMLForestItem``, ``XMLTableColumn``, ``ReferentialAction``,
-#   ``TriggerEvent``, ``ViewOptions``), although §10 requires every parameter
-#   to travel;
-# * ``Literal`` nested inside another node's payload has no value kind when the
-#   serializer meets it through ``Literal.value`` rather than through the node
-#   (``XMLParseExpression.document_type`` aside, the hstore factory wrapped a
-#   literal in a literal).
+# Two of the three families this table used to hold were repaired in core at
+# ``3e23158e`` ("let a word-carrying enum be its word on the wire"), and their
+# rows are gone:
+#
+# * the XML codec wrote a ``(str, Enum)`` parameter with ``str()``, reaching
+#   ``Enum.__str__`` and so ``"DateTimeField.YEAR"``, while the JSON codec wrote
+#   the value; the constructor then refused the member's *name*. Nine datetime
+#   nodes and the two XML ``document_type`` payloads carried that gap. Every
+#   word-carrying enum now writes its word on every channel.
+# * twelve SQL word enums were bare ``Enum``s, which no writer accepts as a
+#   JSON scalar. They are ``(str, Enum)`` with ``__str__ = str.__str__`` now, so
+#   ``ForeignKeyConstraint`` (``ReferentialAction``),
+#   ``CreateTriggerStatement`` (``TriggerEvent``) and
+#   ``ColumnGeneratedConstraint`` (``GeneratedColumnType``) stopped losing
+#   parameters altogether. ``ColumnGeneratedConstraint`` went further: the enum
+#   was its only gap, and it renders once the word is read back as its enum, so
+#   it left this table entirely.
+#
+# What is left is a *dataclass* parameter, which no encoder accepts although §10
+# requires every parameter to travel: ``XMLAttribute``, ``XMLForestItem``,
+# ``XMLTableColumn``, ``ViewOptions`` and ``GraphColumn``. ``CreateTableCloneStatement``
+# is here for the mirror-image reason: the artifact now carries the
+# ``CreateTableCloneMode`` word, but its constructor still insists on a member
+# and refuses the word it was just handed.
 #
 # They are pinned rather than skipped: the *exact* channel and the *exact*
 # exception type are asserted, so a class that starts failing differently fails
 # here, and one that starts passing fails here too (the entry is stale).
 # Anything not listed must round-trip everywhere. This table is the list the
 # core agent needs; it is not a licence to widen the matrix's blind spot.
-#: The nodes whose *only* codec gap is the XML codec writing an enum member's
-#: name -- those are the ones where asserting SQL on the XML round-trip would
-#: assert the mangling rather than the node.
-_XML_ENUM_NAMES = frozenset(
-    {
-        "rhosocial.activerecord.backend.expression.datetime.DatePartExpression",
-        "rhosocial.activerecord.backend.expression.datetime.DateTimeAddExpression",
-        "rhosocial.activerecord.backend.expression.datetime.DateTimeDiffExpression",
-        "rhosocial.activerecord.backend.expression.datetime.DateTimeSubtractExpression",
-        "rhosocial.activerecord.backend.expression.datetime.DateTruncExpression",
-        "rhosocial.activerecord.backend.expression.datetime.ExtractExpression",
-        "rhosocial.activerecord.backend.expression.datetime.ExtractFieldExpression",
-        "rhosocial.activerecord.backend.expression.datetime.IntervalExpression",
-        "rhosocial.activerecord.backend.expression.datetime._ExtractBase",
-        "rhosocial.activerecord.backend.expression.xml.XMLParseExpression",
-        "rhosocial.activerecord.backend.expression.xml.XMLSerializeExpression",
-    }
-)
 
 #: Nodes whose artifact carries the parameters but whose decoded form will not
 #: *render*: the codec flattened an enum to its word, and core's formatter reads
 #: ``.value`` unconditionally. The parameters are intact -- the value is the same
-#: word -- so this is a render-side defect in core's formatter, not a loss.
+#: word -- so this is a render-side defect in core's formatter, not a loss. The
+#: dict channel hands the constructor an enum member and renders; only the
+#: channels that go through JSON keep the plain word.
 #: ``(fqn, channel)`` pairs, checked in the integrity test below.
 _CODEC_RENDER_GAPS = frozenset(
     {
-        ("rhosocial.activerecord.backend.expression.xml.XMLParseExpression", "dict"),
         ("rhosocial.activerecord.backend.expression.xml.XMLParseExpression", "json"),
         ("rhosocial.activerecord.backend.expression.xml.XMLParseExpression", "xml"),
-        ("rhosocial.activerecord.backend.expression.xml.XMLSerializeExpression", "dict"),
         ("rhosocial.activerecord.backend.expression.xml.XMLSerializeExpression", "json"),
         ("rhosocial.activerecord.backend.expression.xml.XMLSerializeExpression", "xml"),
+        # ``CreateTriggerStatement``'s enum parameters round-trip now, but the
+        # formatter reads ``.value`` unconditionally: the JSON and XML channels
+        # hand the constructor a plain word and it keeps it. Same shape as the
+        # XML document-type gap above -- the parameters are intact.
+        (
+            "rhosocial.activerecord.backend.expression.statements.ddl_trigger.CreateTriggerStatement",
+            "json",
+        ),
+        (
+            "rhosocial.activerecord.backend.expression.statements.ddl_trigger.CreateTriggerStatement",
+            "xml",
+        ),
     }
 )
 
 _CODEC_GAPS = {
-    # -- the XML codec spells an enum by its member name -------------------
-    "rhosocial.activerecord.backend.expression.datetime.DatePartExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.DateTimeAddExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.DateTimeDiffExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.DateTimeSubtractExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.DateTruncExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.ExtractExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.ExtractFieldExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime.IntervalExpression": {
-        "xml": ValueError,
-    },
-    "rhosocial.activerecord.backend.expression.datetime._ExtractBase": {
-        "xml": ValueError,
-    },
-    # ``document_type`` has no ``__str__`` override, so the XML codec writes the
-    # member's *name* and the node comes back with a name instead of its word.
-    "rhosocial.activerecord.backend.expression.xml.XMLParseExpression": {
-        "xml": "document_type",
-    },
-    "rhosocial.activerecord.backend.expression.xml.XMLSerializeExpression": {
-        "xml": "document_type",
-    },
     # -- a dataclass parameter has no language-neutral encoding ------------
-    "rhosocial.activerecord.backend.expression.statements.ddl_table.ForeignKeyConstraint": {
-        "dict": TypeError,
-        "json": TypeError,
-        "xml": TypeError,
-    },
-    "rhosocial.activerecord.backend.expression.statements.ddl_trigger.CreateTriggerStatement": {
-        "dict": TypeError,
-        "json": TypeError,
-        "xml": TypeError,
-    },
     "rhosocial.activerecord.backend.expression.statements.ddl_view.CreateViewStatement": {
         "dict": TypeError,
         "json": TypeError,
@@ -1579,8 +1540,8 @@ _CODEC_GAPS = {
         "json": TypeError,
         "xml": TypeError,
     },
-    # ``GraphColumn`` / ``GeneratedColumnType`` are host objects, not values:
-    # the artifact has no shape for them at all.
+    # ``GraphColumn`` is a host object, not a value: the artifact has no shape
+    # for it at all.
     "rhosocial.activerecord.backend.expression.graph.ColumnsClause": {
         "dict": TypeError,
         "json": TypeError,
@@ -1591,13 +1552,10 @@ _CODEC_GAPS = {
         "json": TypeError,
         "xml": TypeError,
     },
-    "rhosocial.activerecord.backend.expression.statements.ddl_table.ColumnGeneratedConstraint": {
-        "dict": TypeError,
-        "json": TypeError,
-        "xml": TypeError,
-    },
-    # ``CreateTableCloneMode`` is a plain ``Enum`` (no ``str`` base, no
-    # ``__str__``), so the word it travels with is refused by the constructor.
+    # ``CreateTableCloneMode`` is no longer the problem -- it is a ``(str, Enum)``
+    # and the artifact now carries its word. The constructor still insists on a
+    # member and refuses the word the codec just handed it, so the JSON and XML
+    # channels lose ``mode``; the dict channel keeps the member and round-trips.
     "rhosocial.activerecord.backend.expression.statements.ddl_table.CreateTableCloneStatement": {
         "json": TypeError,
         "xml": TypeError,
