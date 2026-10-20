@@ -17,7 +17,10 @@ from rhosocial.activerecord.backend.impl.postgres.functions.pgvector import (
     vector_literal,
 )
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
-from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+from rhosocial.activerecord.backend.expression.operators import (
+    ArithmeticOperation,
+    BinaryExpression,
+)
 from rhosocial.activerecord.backend.expression import bases
 
 
@@ -73,7 +76,9 @@ class TestPgvectorDistanceFunctions:
     def test_vector_cosine_similarity(self, postgres_dialect: PostgresDialect):
         """Test cosine similarity expression (1 - cosine_distance)."""
         result = vector_cosine_similarity(postgres_dialect, "embedding", [1.0, 2.0, 3.0])
-        assert isinstance(result, BinaryExpression)
+        # The similarity is arithmetic: 1 - (column <=> query), which the
+        # word-form separation names ArithmeticOperation.
+        assert isinstance(result, ArithmeticOperation)
         sql, params = result.to_sql()
         assert "-" in sql
         assert "<=>" in sql

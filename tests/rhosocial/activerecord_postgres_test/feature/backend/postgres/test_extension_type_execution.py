@@ -319,8 +319,8 @@ class TestMultirangeOperationsExecute:
 
     def test_multirange_overlaps(self, pg):
         dialect = pg.dialect
-        other = Literal(dialect, "{[4,9)}").cast(
-            PostgresInt4MultirangeType(dialect))
+        other = cast(dialect, Literal(dialect, "{[4,9)}"),
+                     PostgresInt4MultirangeType(dialect))
         result = self.col(pg).multirange_overlaps(other)
         assert bool(read(pg, result, self.TABLE)) is True
 

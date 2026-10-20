@@ -81,10 +81,10 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         """
         config = getattr(self._backend, "config", None) if hasattr(self, "_backend") else None
         if config is not None:
-            if hasattr(config, "default_schema") and getattr(config, "default_schema"):
-                return str(getattr(config, "default_schema"))
-            if hasattr(config, "search_path") and getattr(config, "search_path"):
-                sp = str(getattr(config, "search_path"))
+            if config.default_schema:
+                return str(config.default_schema)
+            if config.search_path:
+                sp = str(config.search_path)
                 first = sp.split(",")[0].strip().strip('"').strip("'")
                 if first:
                     return first
@@ -306,9 +306,9 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         from ..expression.introspection import PostgresMaterializedViewListExpression
 
         target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewListExpression(self.dialect).schema(
-            target_schema
-        ).with_include_system(include_system)
+        expr = PostgresMaterializedViewListExpression(
+            self.dialect, schema=target_schema, include_system=include_system
+        )
         return expr.to_sql()
 
     def _build_materialized_view_info_sql(
@@ -317,8 +317,8 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         from ..expression.introspection import PostgresMaterializedViewInfoExpression
 
         target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewInfoExpression(self.dialect, view_name).schema(
-            target_schema
+        expr = PostgresMaterializedViewInfoExpression(
+            self.dialect, view_name, schema=target_schema
         )
         return expr.to_sql()
 

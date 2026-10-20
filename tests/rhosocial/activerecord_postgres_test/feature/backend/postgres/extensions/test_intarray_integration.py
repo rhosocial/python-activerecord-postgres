@@ -536,8 +536,8 @@ class TestIntarrayIntegration:
         # SELECT id, tags @> '{3,4}'::integer[] AS contains FROM test_intarray
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
                 cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
@@ -686,8 +686,8 @@ class TestIntarrayIntegration:
         # Query using the GIN index with @> operator via Literal
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
                 cast(dialect, Literal(dialect, "{5}"), _int_array(dialect)),
             ),
@@ -745,8 +745,8 @@ class TestAsyncIntarrayIntegration:
 
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
                 cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
@@ -895,8 +895,8 @@ class TestAsyncIntarrayIntegration:
         # Query using the GIN index with @> operator via Literal
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
                 cast(dialect, Literal(dialect, "{5}"), _int_array(dialect)),
             ),

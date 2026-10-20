@@ -240,8 +240,8 @@ class TestCubeIntegration:
         # A point cube is contained by a range cube
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 cast(dialect, Literal(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
                 cast(dialect, Literal(dialect, "(5,5)"), PostgresCubeType(dialect)),
             ),
@@ -258,8 +258,8 @@ class TestCubeIntegration:
         # Point outside the range cube
         not_contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 cast(dialect, Literal(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
                 cast(dialect, Literal(dialect, "(15,15)"), PostgresCubeType(dialect)),
             ),

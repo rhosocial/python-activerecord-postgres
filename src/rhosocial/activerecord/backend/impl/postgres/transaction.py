@@ -56,23 +56,27 @@ class PostgresTransactionMixin:
         """
         from rhosocial.activerecord.backend.expression.transaction import BeginTransactionStatement
 
-        expr = BeginTransactionStatement(self._backend.dialect)
-
-        if self._isolation_level is not None:
-            expr.with_isolation_level(self._isolation_level)
-
-        if self._transaction_mode == TransactionMode.READ_ONLY:
-            expr.read_only()
+        # Every option is collected at construction: the node carries all of
+        # its parameters, so there is no chained call and no open loop where
+        # the caller's state can go missing between the two.
+        expr = BeginTransactionStatement(
+            self._backend.dialect,
+            isolation_level=self._isolation_level,
+            # READ WRITE is PostgreSQL's default and was never rendered
+            # before, so it stays unset: the mode field can only render what
+            # the caller asked for.
+            mode=(
+                self._transaction_mode
+                if self._transaction_mode is TransactionMode.READ_ONLY
+                else None
+            ),
+            deferrable=bool(self._is_deferrable),
+            not_deferrable=self._is_deferrable is False,
+        )
 
         # [NOT] DEFERRABLE is an independent transaction mode in the grammar;
         # it is rendered whenever the caller requested it, not only alongside
         # SERIALIZABLE (``BEGIN DEFERRABLE`` alone is accepted by PostgreSQL).
-        if self._is_deferrable is not None:
-            if self._is_deferrable:
-                expr.with_deferrable()
-            else:
-                expr.with_not_deferrable()
-
         return expr.to_sql()
 
     def set_deferrable(self, deferrable: bool = True) -> None:
