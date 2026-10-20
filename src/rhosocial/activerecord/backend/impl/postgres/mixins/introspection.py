@@ -43,6 +43,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..expression.introspection import (
         PostgresMaterializedViewInfoExpression,
         PostgresMaterializedViewListExpression,
+        PostgresDatabaseSizeFunction,
+        PostgresDatabaseSizeQueryExpression,
     )
 
 
@@ -650,6 +652,46 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 AND NOT t.tgisinternal{filters}{trailing}"""
 
         return (sql, tuple(sql_params))
+
+    # ========== PostgreSQL database size ==========
+
+    def format_postgres_database_size_function(
+        self, expr: "PostgresDatabaseSizeFunction"
+    ) -> Tuple[str, tuple]:
+        """Format the ``pg_database_size(name)`` call.
+
+        Args:
+            expr: Database size function expression with the database name.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        return f"pg_database_size({self.p()})", (params.get("database_name"),)
+
+    def format_postgres_database_size_query(
+        self, expr: "PostgresDatabaseSizeQueryExpression"
+    ) -> Tuple[str, tuple]:
+        """Format the query that reports a database's size in bytes.
+
+        The SELECT and the ``size_bytes`` alias belong to this query, not to
+        the function: the caller reads the row by that column name, so the row
+        shape is the query node's contract and the function's spelling stays
+        the function node's.
+
+        Args:
+            expr: Database size query expression with the database name.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        from ..expression.introspection import PostgresDatabaseSizeFunction
+
+        call_sql, call_params = self.format_postgres_database_size_function(
+            PostgresDatabaseSizeFunction(self, database_name=params.get("database_name"))
+        )
+        return f"SELECT {call_sql} as size_bytes", call_params
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]

@@ -378,9 +378,14 @@ class SyncPostgreSQLStatusIntrospector(
         """Get storage information."""
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
-        # Get database size
-        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
-        rows = self._exec_query(sql, (db_name,))
+        # Get database size: the node carries the database name and the
+        # dialect renders the statement, so no SQL text is assembled here.
+        from ..expression.introspection import PostgresDatabaseSizeQueryExpression
+
+        sql, params = PostgresDatabaseSizeQueryExpression(
+            self.dialect, database_name=db_name
+        ).to_sql()
+        rows = self._exec_query(sql, params)
         size_bytes = rows[0].get('size_bytes') if rows else None
 
         return StorageInfo(
@@ -973,9 +978,14 @@ class AsyncPostgreSQLStatusIntrospector(
         """Get storage information."""
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
-        # Get database size
-        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
-        rows = await self._exec_query_async(sql, (db_name,))
+        # Get database size: the node carries the database name and the
+        # dialect renders the statement, so no SQL text is assembled here.
+        from ..expression.introspection import PostgresDatabaseSizeQueryExpression
+
+        sql, params = PostgresDatabaseSizeQueryExpression(
+            self.dialect, database_name=db_name
+        ).to_sql()
+        rows = await self._exec_query_async(sql, params)
         size_bytes = rows[0].get('size_bytes') if rows else None
 
         return StorageInfo(
