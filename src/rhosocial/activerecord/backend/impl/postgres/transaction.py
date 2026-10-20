@@ -15,6 +15,9 @@ from rhosocial.activerecord.backend.transaction import (
     IsolationLevel,
     TransactionMode,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+    PostgresSetConstraintsStatement,
+)
 
 if TYPE_CHECKING:
     from .backend import PostgresBackend
@@ -158,7 +161,10 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         """
         try:
             self.log(logging.DEBUG, f"Deferring constraint: {constraint_name}")
-            self._backend.execute(f"SET CONSTRAINTS {constraint_name} DEFERRED")
+            sql, params = PostgresSetConstraintsStatement(
+                self._backend.dialect, constraint_name=constraint_name
+            ).to_sql()
+            self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
             self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
         except Exception as e:
@@ -244,7 +250,10 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
         """
         try:
             self.log(logging.DEBUG, f"Deferring constraint: {constraint_name}")
-            await self._backend.execute(f"SET CONSTRAINTS {constraint_name} DEFERRED")
+            sql, params = PostgresSetConstraintsStatement(
+                self._backend.dialect, constraint_name=constraint_name
+            ).to_sql()
+            await self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
             self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
         except Exception as e:

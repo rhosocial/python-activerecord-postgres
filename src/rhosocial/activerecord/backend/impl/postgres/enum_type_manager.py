@@ -28,7 +28,11 @@ from .expression.ddl import (
     PostgresEnumTypeDefinition,
     PostgresRenameEnumValueAction,
 )
-from .expression.enum_ import PostgresEnumType
+from .expression.enum_ import (
+    PostgresEnumType,
+    PostgresEnumTypeExistsQuery,
+    PostgresEnumTypeValuesQuery,
+)
 
 
 class EnumTypeManager:
@@ -166,22 +170,10 @@ class EnumTypeManager:
         Returns:
             True if type exists
         """
-        where_clause = f"typname = {self._backend.dialect.p()}"
-        params = [name]
-
-        if schema:
-            where_clause += f" AND n.nspname = {self._backend.dialect.p()}"
-            params.append(schema)
-
-        sql = f"""
-        SELECT EXISTS (
-            SELECT 1
-            FROM pg_type t
-            JOIN pg_namespace n ON t.typnamespace = n.oid
-            WHERE {where_clause}
-        )
-        """
-        result = self._backend.fetch_one(sql, tuple(params))
+        sql, params = PostgresEnumTypeExistsQuery(
+            self._backend.dialect, name=name, schema=schema
+        ).to_sql()
+        result = self._backend.fetch_one(sql, params)
         return result[list(result.keys())[0]] if result else False
 
     def get_type_values(self, name: str, schema: Optional[str] = None) -> Optional[List[str]]:
@@ -194,22 +186,10 @@ class EnumTypeManager:
         Returns:
             List of enum values, or None if type doesn't exist
         """
-        where_clause = f"t.typname = {self._backend.dialect.p()}"
-        params = [name]
-
-        if schema:
-            where_clause += f" AND n.nspname = {self._backend.dialect.p()}"
-            params.append(schema)
-
-        sql = f"""
-        SELECT e.enumlabel
-        FROM pg_type t
-        JOIN pg_namespace n ON t.typnamespace = n.oid
-        JOIN pg_enum e ON t.oid = e.enumtypid
-        WHERE {where_clause}
-        ORDER BY e.enumsortorder
-        """
-        results = self._backend.fetch_all(sql, tuple(params))
+        sql, params = PostgresEnumTypeValuesQuery(
+            self._backend.dialect, name=name, schema=schema
+        ).to_sql()
+        results = self._backend.fetch_all(sql, params)
         return [r["enumlabel"] for r in results] if results else None
 
 

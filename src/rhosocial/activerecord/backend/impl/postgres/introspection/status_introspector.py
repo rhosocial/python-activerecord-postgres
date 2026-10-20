@@ -29,6 +29,15 @@ from rhosocial.activerecord.backend.introspection.status import (
     SyncAbstractStatusIntrospector,
     AsyncAbstractStatusIntrospector,
 )
+from ..expression.status import (
+    PostgresSettingsQuery,
+    PostgresActivityCountQuery,
+    PostgresShowStatement,
+    PostgresDatabaseListQuery,
+    PostgresSchemaStatsQuery,
+    PostgresCurrentDatabaseQuery,
+    PostgresRoleListQuery,
+)
 
 
 # PostgreSQL settings to include in status overview
@@ -295,8 +304,8 @@ class SyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_settings
-        sql = "SELECT name, setting, unit FROM pg_settings ORDER BY name"
-        rows = self._exec_query(sql)
+        sql, params = PostgresSettingsQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         settings_dict = {row['name']: row for row in rows}
 
@@ -326,12 +335,14 @@ class SyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_stat_activity for performance-related settings
-        sql = """
-        SELECT name, setting, unit FROM pg_settings
-        WHERE name IN ('checkpoint_timeout', 'checkpoint_completion_target', 'archive_timeout', 'archive_command')
-        ORDER BY name
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresSettingsQuery(
+            self._backend.dialect,
+            [
+                'checkpoint_timeout', 'checkpoint_completion_target',
+                'archive_timeout', 'archive_command',
+            ],
+        ).to_sql()
+        rows = self._exec_query(sql, params)
 
         for row in rows:
             name = row['name']
@@ -352,18 +363,16 @@ class SyncPostgreSQLStatusIntrospector(
 
     def get_connection_info(self) -> ConnectionInfo:
         """Get connection information from pg_stat_activity."""
-        sql = """
-        SELECT count(*) as total_connections
-        FROM pg_stat_activity
-        WHERE datname = current_database()
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresActivityCountQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
         total = rows[0].get('total_connections', 0) if rows else 0
 
         max_conn = None
         try:
-            sql = "SHOW max_connections"
-            result = self._exec_query(sql)
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'max_connections'
+            ).to_sql()
+            result = self._exec_query(sql, params)
             if result:
                 max_conn = int(list(result[0].values())[0])
         except Exception:
@@ -399,18 +408,15 @@ class SyncPostgreSQLStatusIntrospector(
         in the extra field.
         """
         # Get list of databases
-        sql = """
-        SELECT datname as name, pg_database_size(datname) as size_bytes
-        FROM pg_database
-        WHERE datistemplate = false OR datname = current_database()
-        ORDER BY datname
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresDatabaseListQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         # Get current database name
         current_db = None
         try:
-            result = self._exec_query("SELECT current_database()")
+            result = self._exec_query(
+    *PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql()
+)
             if result:
                 current_db = result[0].get('current_database')
         except Exception:
@@ -421,18 +427,8 @@ class SyncPostgreSQLStatusIntrospector(
         if current_db:
             try:
                 # Query schemata with table/view counts
-                sql = """
-                SELECT
-                    n.nspname as schema_name,
-                    COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count,
-                    COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count
-                FROM pg_namespace n
-                LEFT JOIN pg_class c ON c.relnamespace = n.oid
-                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-                GROUP BY n.nspname
-                ORDER BY n.nspname
-                """
-                schema_rows = self._exec_query(sql)
+                sql, params = PostgresSchemaStatsQuery(self._backend.dialect).to_sql()
+                schema_rows = self._exec_query(sql, params)
                 for row in schema_rows:
                     schema_name = row.get('schema_name')
                     if schema_name:
@@ -464,13 +460,8 @@ class SyncPostgreSQLStatusIntrospector(
 
     def list_users(self) -> List[UserInfo]:
         """List users from pg_roles."""
-        sql = """
-        SELECT rolname as name, rolsuper as is_superuser,
-               pg_catalog.pg_get_userbyid(oid) as owner
-        FROM pg_roles
-        ORDER BY rolname
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresRoleListQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         return [
             UserInfo(
@@ -895,8 +886,8 @@ class AsyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_settings
-        sql = "SELECT name, setting, unit FROM pg_settings ORDER BY name"
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresSettingsQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         settings_dict = {row['name']: row for row in rows}
 
@@ -926,12 +917,14 @@ class AsyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_stat_activity for performance-related settings
-        sql = """
-        SELECT name, setting, unit FROM pg_settings
-        WHERE name IN ('checkpoint_timeout', 'checkpoint_completion_target', 'archive_timeout', 'archive_command')
-        ORDER BY name
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresSettingsQuery(
+            self._backend.dialect,
+            [
+                'checkpoint_timeout', 'checkpoint_completion_target',
+                'archive_timeout', 'archive_command',
+            ],
+        ).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         for row in rows:
             name = row['name']
@@ -952,18 +945,16 @@ class AsyncPostgreSQLStatusIntrospector(
 
     async def get_connection_info(self) -> ConnectionInfo:
         """Get connection information from pg_stat_activity."""
-        sql = """
-        SELECT count(*) as total_connections
-        FROM pg_stat_activity
-        WHERE datname = current_database()
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresActivityCountQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
         total = rows[0].get('total_connections', 1) if rows else 0
 
         max_conn = None
         try:
-            sql = "SHOW max_connections"
-            result = await self._exec_query_async(sql)
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'max_connections'
+            ).to_sql()
+            result = await self._exec_query_async(sql, params)
             if result:
                 max_conn = int(list(result[0].values())[0])
         except Exception:
@@ -999,18 +990,15 @@ class AsyncPostgreSQLStatusIntrospector(
         in the extra field.
         """
         # Get list of databases
-        sql = """
-        SELECT datname as name, pg_database_size(datname) as size_bytes
-        FROM pg_database
-        WHERE datistemplate = false OR datname = current_database()
-        ORDER BY datname
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresDatabaseListQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         # Get current database name
         current_db = None
         try:
-            result = await self._exec_query_async("SELECT current_database()")
+            result = await self._exec_query_async(
+                *PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql()
+            )
             if result:
                 current_db = result[0].get('current_database')
         except Exception:
@@ -1021,18 +1009,8 @@ class AsyncPostgreSQLStatusIntrospector(
         if current_db:
             try:
                 # Query schemata with table/view counts
-                sql = """
-                SELECT
-                    n.nspname as schema_name,
-                    COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count,
-                    COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count
-                FROM pg_namespace n
-                LEFT JOIN pg_class c ON c.relnamespace = n.oid
-                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-                GROUP BY n.nspname
-                ORDER BY n.nspname
-                """
-                schema_rows = await self._exec_query_async(sql)
+                sql, params = PostgresSchemaStatsQuery(self._backend.dialect).to_sql()
+                schema_rows = await self._exec_query_async(sql, params)
                 for row in schema_rows:
                     schema_name = row.get('schema_name')
                     if schema_name:
@@ -1064,13 +1042,8 @@ class AsyncPostgreSQLStatusIntrospector(
 
     async def list_users(self) -> List[UserInfo]:
         """List users from pg_roles."""
-        sql = """
-        SELECT rolname as name, rolsuper as is_superuser,
-               pg_catalog.pg_get_userbyid(oid) as owner
-        FROM pg_roles
-        ORDER BY rolname
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresRoleListQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         return [
             UserInfo(

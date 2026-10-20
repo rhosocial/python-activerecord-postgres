@@ -10,6 +10,9 @@ if TYPE_CHECKING:
         BeginTransactionStatement,
         SetTransactionExpression,
     )
+    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+        PostgresSetConstraintsStatement,
+    )
 
 
 class PostgresTransactionMixin:
@@ -154,3 +157,27 @@ class PostgresTransactionMixin:
             parts.append(" ".join(options))
 
         return " ".join(parts), ()
+
+    def format_postgres_set_constraints_statement(
+        self, expr: "PostgresSetConstraintsStatement"
+    ) -> Tuple[str, tuple]:
+        """Format SET CONSTRAINTS for PostgreSQL.
+
+        Syntax::
+
+            SET CONSTRAINTS { ALL | name [, ...] } { DEFERRED | IMMEDIATE }
+
+        The constraint name is an identifier, so it is rendered through this
+        dialect's identifier quoting: the server parses it as a name, a bind
+        parameter cannot stand in for it, and a name written into the text as it
+        stood either broke the statement or escaped it.
+
+        Args:
+            expr: Set-constraints statement expression with the constraint name.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        constraint = self.format_identifier(params.get("constraint_name"))
+        return f"SET CONSTRAINTS {constraint} DEFERRED", ()

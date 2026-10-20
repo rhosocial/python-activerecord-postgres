@@ -11,6 +11,20 @@ Directory structure:
 - ddl/         - DDL statement expressions
 """
 
+from .status import (
+    PostgresSettingsQuery,
+    PostgresActivityCountQuery,
+    PostgresShowStatement,
+    PostgresDatabaseListQuery,
+    PostgresSchemaStatsQuery,
+    PostgresCurrentDatabaseQuery,
+    PostgresRoleListQuery,
+)
+from .enum_ import (
+    PostgresEnumType,
+    PostgresEnumTypeExistsQuery,
+    PostgresEnumTypeValuesQuery,
+)
 from .advisory import (
     PostgresAdvisoryLockExpression,
     PostgresAdvisoryUnlockExpression,
@@ -150,6 +164,16 @@ from .types import (
 )
 
 __all__ = [
+    "PostgresEnumType",
+    "PostgresSettingsQuery",
+    "PostgresActivityCountQuery",
+    "PostgresShowStatement",
+    "PostgresDatabaseListQuery",
+    "PostgresSchemaStatsQuery",
+    "PostgresCurrentDatabaseQuery",
+    "PostgresRoleListQuery",
+    "PostgresEnumTypeExistsQuery",
+    "PostgresEnumTypeValuesQuery",
     # advisory
     "PostgresAdvisoryLockExpression",
     "PostgresAdvisoryUnlockExpression",

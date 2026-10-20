@@ -8,6 +8,9 @@ if TYPE_CHECKING:  # pragma: no cover
         BeginTransactionStatement,
         SetTransactionExpression,
     )
+    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+        PostgresSetConstraintsStatement,
+    )
 
 
 @runtime_checkable
@@ -51,6 +54,22 @@ class PostgresTransactionSupport(Protocol):
 
         Args:
             expr: SetTransactionExpression carrying transaction characteristics.
+
+        Returns:
+            Tuple of (SQL statement, parameters tuple)
+        """
+        ...
+
+    def format_postgres_set_constraints_statement(
+        self, expr: "PostgresSetConstraintsStatement"
+    ) -> Tuple[str, tuple]:
+        """Format ``SET CONSTRAINTS <name> DEFERRED``.
+
+        The constraint name is an identifier and is rendered through the
+        dialect's identifier quoting.
+
+        Args:
+            expr: Set-constraints statement carrying the constraint name.
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

@@ -46,6 +46,19 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryExpression,
     )
+    from ..expression.status import (
+        PostgresSettingsQuery,
+        PostgresActivityCountQuery,
+        PostgresShowStatement,
+        PostgresDatabaseListQuery,
+        PostgresSchemaStatsQuery,
+        PostgresCurrentDatabaseQuery,
+        PostgresRoleListQuery,
+    )
+    from ..expression.enum_ import (
+        PostgresEnumTypeExistsQuery,
+        PostgresEnumTypeValuesQuery,
+    )
 
 
 class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
@@ -692,6 +705,113 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             PostgresDatabaseSizeFunction(self, database_name=params.get("database_name"))
         )
         return f"SELECT {call_sql} as size_bytes", call_params
+
+
+    # ------------------------------------------------------------------
+    # Status and enum queries (org guide §16.2: the SQL text is the
+    # formatter's; the status introspector and the enum manager only
+    # construct these nodes and execute them).
+    # ------------------------------------------------------------------
+
+    def format_postgres_settings_query(
+        self, expr: "PostgresSettingsQuery"
+    ) -> Tuple[str, tuple]:
+        """Read ``pg_settings`` rows, optionally filtered by name."""
+        if expr.names:
+            placeholders = ", ".join(self.p() for _ in expr.names)
+            return (
+                "SELECT name, setting, unit FROM pg_settings "
+                f"WHERE name IN ({placeholders}) ORDER BY name",
+                tuple(expr.names),
+            )
+        return "SELECT name, setting, unit FROM pg_settings ORDER BY name", ()
+
+    def format_postgres_activity_count_query(
+        self, expr: "PostgresActivityCountQuery"
+    ) -> Tuple[str, tuple]:
+        """Count rows in ``pg_stat_activity``."""
+        return "SELECT count(*) as total_connections FROM pg_stat_activity", ()
+
+    def format_postgres_show_statement(
+        self, expr: "PostgresShowStatement"
+    ) -> Tuple[str, tuple]:
+        """Render ``SHOW`` for a run-time parameter (the node validated the name)."""
+        return f"SHOW {expr.parameter}", ()
+
+    def format_postgres_database_list_query(
+        self, expr: "PostgresDatabaseListQuery"
+    ) -> Tuple[str, tuple]:
+        """List databases with sizes, non-templates plus the current one."""
+        return (
+            "SELECT datname as name, pg_database_size(datname) as size_bytes "
+            "FROM pg_database "
+            "WHERE datistemplate = false OR datname = current_database() "
+            "ORDER BY datname",
+            (),
+        )
+
+    def format_postgres_schema_stats_query(
+        self, expr: "PostgresSchemaStatsQuery"
+    ) -> Tuple[str, tuple]:
+        """Per-schema table and view counts."""
+        return (
+            "SELECT n.nspname as schema_name, "
+            "COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count, "
+            "COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count "
+            "FROM pg_namespace n "
+            "LEFT JOIN pg_class c ON c.relnamespace = n.oid "
+            "WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') "
+            "GROUP BY n.nspname ORDER BY n.nspname",
+            (),
+        )
+
+    def format_postgres_current_database_query(
+        self, expr: "PostgresCurrentDatabaseQuery"
+    ) -> Tuple[str, tuple]:
+        """The current database's name."""
+        return "SELECT current_database()", ()
+
+    def format_postgres_role_list_query(
+        self, expr: "PostgresRoleListQuery"
+    ) -> Tuple[str, tuple]:
+        """List roles with superuser flag and owner."""
+        return (
+            "SELECT rolname as name, rolsuper as is_superuser, "
+            "pg_catalog.pg_get_userbyid(oid) as owner "
+            "FROM pg_roles ORDER BY rolname",
+            (),
+        )
+
+    def format_postgres_enum_type_exists_query(
+        self, expr: "PostgresEnumTypeExistsQuery"
+    ) -> Tuple[str, tuple]:
+        """Whether an enum type exists; name (and optional schema) are bound."""
+        sql = (
+            "SELECT EXISTS (SELECT 1 FROM pg_type t "
+            "JOIN pg_namespace n ON t.typnamespace = n.oid "
+            "WHERE t.typname = " + self.p()
+        )
+        params = [expr.name]
+        if expr.schema is not None:
+            sql += " AND n.nspname = " + self.p()
+            params.append(expr.schema)
+        return sql + ")", tuple(params)
+
+    def format_postgres_enum_type_values_query(
+        self, expr: "PostgresEnumTypeValuesQuery"
+    ) -> Tuple[str, tuple]:
+        """The labels of an enum type in sort order; name (and schema) are bound."""
+        sql = (
+            "SELECT e.enumlabel FROM pg_type t "
+            "JOIN pg_namespace n ON t.typnamespace = n.oid "
+            "JOIN pg_enum e ON t.oid = e.enumtypid "
+            "WHERE t.typname = " + self.p()
+        )
+        params = [expr.name]
+        if expr.schema is not None:
+            sql += " AND n.nspname = " + self.p()
+            params.append(expr.schema)
+        return sql + " ORDER BY e.enumsortorder", tuple(params)
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]
