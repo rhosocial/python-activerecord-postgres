@@ -17,7 +17,7 @@ Three layers, because they fail differently:
    columns, and types whose value has no text form), and it is the one that
    catches a type whose rendered spelling the server does not recognise.
 2. **Insert through a cast** -- for every type with a text form, the value goes
-   in as ``Literal(text).cast(Type)``. This is the cast doing real work.
+   in as ``cast(dialect, Literal(text), Type)``. This is the cast doing real work.
 3. **Read back through a cast** -- the stored value is cast to text and
    compared, so the assertion is on the value PostgreSQL actually holds rather
    than on a driver-specific Python object.

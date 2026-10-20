@@ -14,6 +14,7 @@ import pytest
 import pytest_asyncio
 
 from rhosocial.activerecord.backend.expression import (
+    cast,
     CreateTableStatement,
     InsertStatement,
     ValuesSource,
@@ -148,7 +149,7 @@ class TestSocialNetworkTraversal:
             select=[
                 Column(dialect, "id"),
                 Column(dialect, "name"),
-                Literal(dialect, 0).as_("depth"),
+                cast(dialect, Literal(dialect, 0), IntegerType(dialect)).as_("depth"),
             ],
             from_=Table(dialect, "users"),
             where=WhereClause(
@@ -326,7 +327,7 @@ class TestAMLFundTracing:
                 Column(dialect, "account_holder", table="a"),
                 Column(dialect, "account_type", table="a"),
                 Column(dialect, "amount", table="tx"),
-                Literal(dialect, 1).as_("depth"),
+                cast(dialect, Literal(dialect, 1), IntegerType(dialect)).as_("depth"),
             ],
             from_=base_join,
             where=WhereClause(
@@ -537,7 +538,7 @@ class TestAsyncRecursiveCTEGraph:
         dialect = async_postgres_backend.dialect
         base = QueryStatement(
             dialect=dialect,
-            select=[Column(dialect, "id"), Column(dialect, "name"), Literal(dialect, 0).as_("depth")],
+            select=[Column(dialect, "id"), Column(dialect, "name"), cast(dialect, Literal(dialect, 0), IntegerType(dialect)).as_("depth")],
             from_=Table(dialect, "users"),
             where=WhereClause(
                 dialect,

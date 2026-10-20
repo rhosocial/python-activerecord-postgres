@@ -34,6 +34,7 @@ backend.connect()
 dialect = backend.dialect
 
 from rhosocial.activerecord.backend.expression import (
+    cast,
     CreateTableStatement,
     InsertStatement,
     ValuesSource,
@@ -156,7 +157,7 @@ base_query = QueryStatement(
     select=[
         Column(dialect, 'id'),
         Column(dialect, 'name'),
-        Literal(dialect, 0).as_('depth'),
+        cast(dialect, Literal(dialect, 0), IntegerType(dialect)).as_('depth'),
     ],
     from_=Table(dialect, 'users'),
     where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'name'), Literal(dialect, 'Alice'))),
@@ -257,7 +258,7 @@ aml_base = QueryStatement(
         Column(dialect, 'account_holder', table='a'),
         Column(dialect, 'account_type', table='a'),
         Column(dialect, 'amount', table='tx'),
-        Literal(dialect, 1).as_('depth'),
+        cast(dialect, Literal(dialect, 1), IntegerType(dialect)).as_('depth'),
     ],
     from_=aml_base_join,
     where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'target_account_id', table='tx'), Literal(dialect, 1))),
