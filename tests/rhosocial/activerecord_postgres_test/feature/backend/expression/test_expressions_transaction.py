@@ -7,7 +7,7 @@ from rhosocial.activerecord.backend.expression.transaction import (
     RollbackStatement,
     SavepointStatement,
     ReleaseSavepointStatement,
-    SetTransactionExpression,
+    SetTransactionStatement,
 )
 from rhosocial.activerecord.backend.transaction import IsolationLevel, TransactionMode  # noqa: F401
 
@@ -153,7 +153,7 @@ class TestPostgreSQLSetTransaction:
 
     def test_set_transaction_isolation(self, postgres_dialect):
         """Test SET TRANSACTION with isolation level."""
-        expr = SetTransactionExpression(postgres_dialect)
+        expr = SetTransactionStatement(postgres_dialect)
         expr.with_isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         assert "SET TRANSACTION" in sql
@@ -163,7 +163,7 @@ class TestPostgreSQLSetTransaction:
 
     def test_set_transaction_read_only(self, postgres_dialect):
         """Test SET TRANSACTION READ ONLY."""
-        expr = SetTransactionExpression(postgres_dialect)
+        expr = SetTransactionStatement(postgres_dialect)
         expr.read_only()
         sql, params = expr.to_sql()
         assert "SET TRANSACTION" in sql
@@ -172,7 +172,7 @@ class TestPostgreSQLSetTransaction:
 
     def test_set_session_characteristics(self, postgres_dialect):
         """Test SET SESSION CHARACTERISTICS AS TRANSACTION."""
-        expr = SetTransactionExpression(postgres_dialect)
+        expr = SetTransactionStatement(postgres_dialect)
         expr.with_session(True).with_isolation_level(IsolationLevel.SERIALIZABLE).read_only()
         sql, params = expr.to_sql()
         assert "SET SESSION CHARACTERISTICS AS TRANSACTION" in sql
@@ -182,7 +182,7 @@ class TestPostgreSQLSetTransaction:
 
     def test_set_transaction_deferrable(self, postgres_dialect):
         """Test SET TRANSACTION DEFERRABLE."""
-        expr = SetTransactionExpression(postgres_dialect)
+        expr = SetTransactionStatement(postgres_dialect)
         expr.with_isolation_level(IsolationLevel.SERIALIZABLE).with_deferrable()
         sql, params = expr.to_sql()
         assert "ISOLATION LEVEL SERIALIZABLE" in sql
@@ -191,7 +191,7 @@ class TestPostgreSQLSetTransaction:
 
     def test_set_transaction_not_deferrable(self, postgres_dialect):
         """Test SET TRANSACTION NOT DEFERRABLE reaches its own spelling."""
-        expr = SetTransactionExpression(postgres_dialect)
+        expr = SetTransactionStatement(postgres_dialect)
         expr.with_not_deferrable()
         sql, params = expr.to_sql()
         assert sql == "SET TRANSACTION NOT DEFERRABLE"

@@ -8,7 +8,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.transaction import (
         BeginTransactionStatement,
-        SetTransactionExpression,
+        SetTransactionStatement,
     )
     from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
         PostgresSetConstraintsStatement,
@@ -108,7 +108,7 @@ class PostgresTransactionMixin:
         return " ".join(parts), ()
 
     def format_set_transaction(
-        self, expr: "SetTransactionExpression"
+        self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION statement for PostgreSQL.
 

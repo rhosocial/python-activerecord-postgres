@@ -90,7 +90,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_view import (
 from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 from rhosocial.activerecord.backend.expression.transaction import (
     BeginTransactionStatement,
-    SetTransactionExpression,
+    SetTransactionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
@@ -429,8 +429,8 @@ PAIR_CASES = (
         r"NOT DEFERRABLE\b",
     ),
     PairCase(
-        "SetTransactionExpression.deferrable",
-        lambda d, **kw: SetTransactionExpression(d, **kw),
+        "SetTransactionStatement.deferrable",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
         "deferrable",
         "not_deferrable",
         r"(?<!NOT )DEFERRABLE\b",
@@ -450,8 +450,8 @@ PAIR_CASES = (
         b_refusal="NO WAIT",
     ),
     PairCase(
-        "SetTransactionExpression.wait",
-        lambda d, **kw: SetTransactionExpression(d, **kw),
+        "SetTransactionStatement.wait",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
         "wait",
         "no_wait",
         r"(?<!NO )WAIT\b",
@@ -750,8 +750,8 @@ class TestGuardIsNotVacuous:
             "ColumnConstraint.initially_deferred",
             "BeginTransactionStatement.deferrable",
             "BeginTransactionStatement.wait",
-            "SetTransactionExpression.deferrable",
-            "SetTransactionExpression.wait",
+            "SetTransactionStatement.deferrable",
+            "SetTransactionStatement.wait",
             "AlterConstraintAction.enforced",
             "PostgresCopyToExpression.force_array",
             "PostgresDropTypeExpression.cascade/restrict",
@@ -913,6 +913,6 @@ class TestMasterProbesGateTheirConsumers:
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
             BeginTransactionStatement(d, no_wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="WAIT"):
-            SetTransactionExpression(d, wait=True).to_sql()
+            SetTransactionStatement(d, wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
-            SetTransactionExpression(d, no_wait=True).to_sql()
+            SetTransactionStatement(d, no_wait=True).to_sql()

@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.transaction import (
         BeginTransactionStatement,
-        SetTransactionExpression,
+        SetTransactionStatement,
     )
     from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
         PostgresSetConstraintsStatement,
@@ -48,12 +48,12 @@ class PostgresTransactionSupport(Protocol):
         ...
 
     def format_set_transaction(
-        self, expr: "SetTransactionExpression"
+        self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION / SET SESSION CHARACTERISTICS statement.
 
         Args:
-            expr: SetTransactionExpression carrying transaction characteristics.
+            expr: SetTransactionStatement carrying transaction characteristics.
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

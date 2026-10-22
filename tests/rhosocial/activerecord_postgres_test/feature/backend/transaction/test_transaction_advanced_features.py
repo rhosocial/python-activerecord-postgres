@@ -138,13 +138,13 @@ class TestSyncSetTransaction:
         SET TRANSACTION sets characteristics for the current transaction.
         It must be called before any queries in the transaction.
         """
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         # Start transaction
         postgres_backend.transaction_manager.begin()
 
         # Set isolation level using expression
-        expr = SetTransactionExpression(postgres_backend.dialect)
+        expr = SetTransactionStatement(postgres_backend.dialect)
         expr.with_isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         postgres_backend.execute(sql, params)
@@ -157,11 +157,11 @@ class TestSyncSetTransaction:
 
     def test_set_transaction_read_only(self, postgres_backend, test_table):
         """Test setting READ ONLY mode via SET TRANSACTION expression."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         postgres_backend.transaction_manager.begin()
 
-        expr = SetTransactionExpression(postgres_backend.dialect)
+        expr = SetTransactionStatement(postgres_backend.dialect)
         expr.read_only()
         sql, params = expr.to_sql()
         postgres_backend.execute(sql, params)
@@ -199,11 +199,11 @@ class TestSyncSessionCharacteristics:
 
     def test_session_characteristics_persist_across_transactions(self, postgres_backend, test_table):
         """Test that SESSION CHARACTERISTICS affect all subsequent transactions."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         try:
             # Set session characteristics to READ ONLY
-            expr = SetTransactionExpression(postgres_backend.dialect)
+            expr = SetTransactionStatement(postgres_backend.dialect)
             expr.with_session(True).read_only()
             sql, params = expr.to_sql()
             postgres_backend.execute(sql, params)
@@ -232,21 +232,21 @@ class TestSyncSessionCharacteristics:
                 tx_manager.rollback()
         finally:
             # Reset session characteristics to READ WRITE for teardown
-            expr = SetTransactionExpression(postgres_backend.dialect)
+            expr = SetTransactionStatement(postgres_backend.dialect)
             expr.with_session(True).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
     def test_reset_session_characteristics(self, postgres_backend, test_table):
         """Test resetting session characteristics to READ WRITE."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         # Set session characteristics to READ ONLY
-        expr = SetTransactionExpression(postgres_backend.dialect)
+        expr = SetTransactionStatement(postgres_backend.dialect)
         expr.with_session(True).read_only()
         postgres_backend.execute(expr.to_sql()[0])
 
         # Reset to READ WRITE
-        expr = SetTransactionExpression(postgres_backend.dialect)
+        expr = SetTransactionStatement(postgres_backend.dialect)
         expr.with_session(True).read_write()
         postgres_backend.execute(expr.to_sql()[0])
 
@@ -268,11 +268,11 @@ class TestSyncSessionCharacteristics:
         1. SESSION CHARACTERISTICS can set default isolation level
         2. BEGIN without explicit isolation level uses session default
         """
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         try:
             # Set session characteristics with SERIALIZABLE isolation
-            expr = SetTransactionExpression(postgres_backend.dialect)
+            expr = SetTransactionStatement(postgres_backend.dialect)
             expr.with_session(True).with_isolation_level(IsolationLevel.SERIALIZABLE).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
@@ -298,7 +298,7 @@ class TestSyncSessionCharacteristics:
             # Reset to default READ WRITE with READ COMMITTED
             tx_manager = postgres_backend.transaction_manager
             tx_manager.isolation_level = None
-            expr = SetTransactionExpression(postgres_backend.dialect)
+            expr = SetTransactionStatement(postgres_backend.dialect)
             expr.with_session(True).read_write()
             postgres_backend.execute(expr.to_sql()[0])
 
@@ -376,11 +376,11 @@ class TestAsyncSetTransaction:
     @pytest.mark.asyncio
     async def test_async_set_transaction_isolation_level(self, async_postgres_backend, async_test_table):
         """Test setting isolation level via SET TRANSACTION (async)."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         await async_postgres_backend.transaction_manager.begin()
 
-        expr = SetTransactionExpression(async_postgres_backend.dialect)
+        expr = SetTransactionStatement(async_postgres_backend.dialect)
         expr.with_isolation_level(IsolationLevel.SERIALIZABLE)
         sql, params = expr.to_sql()
         await async_postgres_backend.execute(sql, params)
@@ -393,11 +393,11 @@ class TestAsyncSetTransaction:
     @pytest.mark.asyncio
     async def test_async_set_transaction_read_only(self, async_postgres_backend, async_test_table):
         """Test setting READ ONLY mode via SET TRANSACTION (async)."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         await async_postgres_backend.transaction_manager.begin()
 
-        expr = SetTransactionExpression(async_postgres_backend.dialect)
+        expr = SetTransactionStatement(async_postgres_backend.dialect)
         expr.read_only()
         await async_postgres_backend.execute(expr.to_sql()[0])
 
@@ -434,10 +434,10 @@ class TestAsyncSessionCharacteristics:
     @pytest.mark.asyncio
     async def test_async_session_characteristics_persist(self, async_postgres_backend, async_test_table):
         """Test that SESSION CHARACTERISTICS affect subsequent transactions (async)."""
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         try:
-            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr = SetTransactionStatement(async_postgres_backend.dialect)
             expr.with_session(True).read_only()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
@@ -464,7 +464,7 @@ class TestAsyncSessionCharacteristics:
                 await tx_manager.rollback()
         finally:
             # Reset session characteristics to READ WRITE for teardown
-            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr = SetTransactionStatement(async_postgres_backend.dialect)
             expr.with_session(True).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
@@ -477,11 +477,11 @@ class TestAsyncSessionCharacteristics:
         1. SESSION CHARACTERISTICS can set default isolation level
         2. BEGIN without explicit isolation level uses session default
         """
-        from rhosocial.activerecord.backend.expression.transaction import SetTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import SetTransactionStatement
 
         try:
             # Set session characteristics with SERIALIZABLE isolation
-            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr = SetTransactionStatement(async_postgres_backend.dialect)
             expr.with_session(True).with_isolation_level(IsolationLevel.SERIALIZABLE).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
 
@@ -507,6 +507,6 @@ class TestAsyncSessionCharacteristics:
             # Reset to default READ WRITE with no explicit isolation level
             tx_manager = async_postgres_backend.transaction_manager
             tx_manager.isolation_level = None
-            expr = SetTransactionExpression(async_postgres_backend.dialect)
+            expr = SetTransactionStatement(async_postgres_backend.dialect)
             expr.with_session(True).read_write()
             await async_postgres_backend.execute(expr.to_sql()[0])
