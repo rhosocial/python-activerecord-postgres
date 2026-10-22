@@ -237,6 +237,23 @@ class PostgresMaterializedViewMixin(ViewMixin):
             parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
 
         query_sql, query_params = expr.query.to_sql()
+        if query_params:
+            # A materialized view's definition is stored and run again later,
+            # so a bound value has no meaning there -- and PostgreSQL says
+            # so: "materialized views may not be defined using bound
+            # parameters".  The statement is refused by name instead of being
+            # rendered for the server to reject.
+            raise UnsupportedFeatureError(
+                self.name,
+                "CREATE MATERIALIZED VIEW with bound parameters",
+                suggestion=(
+                    "PostgreSQL refuses a materialized view whose definition "
+                    'binds -- "materialized views may not be defined using '
+                    'bound parameters" -- because the definition is stored and '
+                    "run again later, where a bound value has no meaning. "
+                    "Build the query with an inlined literal instead."
+                ),
+            )
         parts.append(f"AS {query_sql}")
 
         if expr.with_data:

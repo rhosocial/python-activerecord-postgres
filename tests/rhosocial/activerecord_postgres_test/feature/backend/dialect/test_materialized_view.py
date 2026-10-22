@@ -22,6 +22,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     CreateMaterializedViewStatement,
     DropMaterializedViewStatement,
+    Literal,
     QueryStatement,
     RefreshMaterializedViewStatement,
 )
@@ -863,3 +864,43 @@ class TestMaterializedViewProtocolAndSurface:
         assert dialect.supports_materialized_view_concurrent_refresh() is True
         owner = dialect.format_refresh_materialized_view_statement.__qualname__
         assert owner.startswith("PostgresMaterializedViewMixin.")
+
+
+class TestCreateMaterializedViewRefusesBoundParameters:
+    """G9: a materialized view's definition may not bind.
+
+    PostgreSQL's own words, measured on 19beta4: "materialized views may not
+    be defined using bound parameters". The reason is not a parser quirk --
+    the definition is stored and run again later, where a bound value has no
+    meaning -- so the statement is refused by name, with the way out named,
+    rather than rendered for the server to reject.
+
+    Both directions are pinned: a body that binds is refused, and the same
+    body with an inlined literal renders. A case that only ever exercised the
+    working side could not notice the refusal going away.
+    """
+
+    def test_a_binding_body_is_refused_by_name(self):
+        dialect = _dialect()
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Literal(dialect, 1)],
+            from_=Table(dialect, "sales"),
+        )
+        expr = _create(dialect, query=query)
+        with pytest.raises(UnsupportedFeatureError) as excinfo:
+            expr.to_sql()
+        message = str(excinfo.value)
+        assert "CREATE MATERIALIZED VIEW with bound parameters" in message, message
+        assert "inlined literal" in message, message
+
+    def test_an_inlined_body_renders(self):
+        dialect = _dialect()
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Literal(dialect, 1, inline=True)],
+            from_=Table(dialect, "sales"),
+        )
+        sql, params = _create(dialect, query=query).to_sql()
+        assert "SELECT 1" in sql, sql
+        assert params == ()
