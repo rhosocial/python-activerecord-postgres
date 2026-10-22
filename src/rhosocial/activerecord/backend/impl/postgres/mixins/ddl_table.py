@@ -21,6 +21,16 @@ class PostgresTableMixin:
         """TEMPORARY tables are supported in all versions."""
         return True
 
+
+    def supports_create_table_as_bind_parameters(self) -> bool:
+        """PostgreSQL accepts bind parameters in a CTAS body.
+
+        Measured on 19beta4: ``CREATE TABLE t AS SELECT $1 FROM s`` is
+        accepted and the table is created. The body is executed once, so a
+        bound value is meaningful there -- unlike a view's or a materialized
+        view's body, which is stored and run again later.
+        """
+        return True
     def supports_unlogged_table(self) -> bool:
         """CREATE UNLOGGED TABLE is supported since PostgreSQL 9.5.
 

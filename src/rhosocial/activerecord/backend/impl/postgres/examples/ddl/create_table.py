@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
 )
-from rhosocial.activerecord.backend.expression.functions.datetime import current_timestamp
+from rhosocial.activerecord.backend.expression import functions as F
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     IndexDefinition,
 )
@@ -89,7 +89,7 @@ columns = [
         name='created_at',
         data_type=dialect.parse_type('TIMESTAMP'),
         constraints=[
-            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, current_timestamp(dialect))),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, F.current_timestamp(dialect))),
         ],
     ),
 ]

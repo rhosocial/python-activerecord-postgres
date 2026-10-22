@@ -8,6 +8,26 @@ class PostgresFeaturesMixin:
     All features are native, using version number for detection.
     """
 
+    def _ddl_bind_parameter_reason(self, feature: str) -> str:
+        """Why PostgreSQL refuses bind parameters in a DDL body.
+
+        A view's and a materialized view's definition is *stored and run
+        again later*, where a bound value has no meaning, and PostgreSQL
+        says so in its own words (measured on 19beta4).
+        """
+        if "MATERIALIZED VIEW" in feature:
+            return (
+                'PostgreSQL refuses a materialized view whose definition binds '
+                '-- "materialized views may not be defined using bound '
+                'parameters" -- because the definition is stored and run again '
+                "later, where a bound value has no meaning."
+            )
+        return (
+            'PostgreSQL refuses a view whose definition binds -- "there is no '
+            'parameter $1" -- because the definition is stored and run again '
+            "later, where a bound value has no meaning."
+        )
+
     def supports_generated_columns(self) -> bool:
         return self.version >= (12, 0, 0)
 

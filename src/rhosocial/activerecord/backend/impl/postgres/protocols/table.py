@@ -44,6 +44,16 @@ class PostgresTableSupport(
     PostgreSQL official distribution.
     """
 
+    def supports_create_table_as_bind_parameters(self) -> bool:
+        """Whether this statement's body may carry bind parameters.
+
+        Defaults to ``False``: a DDL statement carries no bind parameters
+        unless the dialect says it can, so a dialect that does not answer
+        refuses rather than emitting a statement the engine may reject. A
+        dialect whose engine accepts them returns ``True``.
+        """
+        ...  # pragma: no cover
+
     def supports_table_inheritance(self) -> bool:
         """Whether table inheritance (INHERITS) is supported.
 

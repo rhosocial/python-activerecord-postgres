@@ -8,6 +8,16 @@ from typing import Any, Protocol, runtime_checkable, Tuple
 class PostgresViewSupport(Protocol):
     """PostgreSQL view feature support protocol."""
 
+    def supports_create_view_bind_parameters(self) -> bool:
+        """Whether this statement's body may carry bind parameters.
+
+        Defaults to ``False``: a DDL statement carries no bind parameters
+        unless the dialect says it can, so a dialect that does not answer
+        refuses rather than emitting a statement the engine may reject. A
+        dialect whose engine accepts them returns ``True``.
+        """
+        ...  # pragma: no cover
+
     def supports_or_replace_view(self) -> bool: ...
     def supports_create_or_replace_view(self) -> bool: ...
     def supports_if_not_exists_view(self) -> bool: ...

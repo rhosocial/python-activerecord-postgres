@@ -89,7 +89,7 @@ def _coerce_legacy_data_type(
         DeprecationWarning,
         stacklevel=3,
     )
-    return DataType.parse_data_type_str(dialect, value)
+    return DataType.as_type(dialect, value)
 
 
 @dataclass

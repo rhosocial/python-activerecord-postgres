@@ -214,7 +214,10 @@ class PostgresRoutineMixin:
         )
         args = ", ".join(expr.args) if expr.args else ""
         parts: List[str] = [f"{base}({args})"]
-        parts.append(f"RETURNS {expr.return_type}")
+        from rhosocial.activerecord.backend.expression.types import DataType
+
+        return_type_sql, _ = DataType.as_type(self, expr.return_type).to_sql()
+        parts.append(f"RETURNS {return_type_sql}")
         if expr.strict:
             parts.append("STRICT")
         if expr.security is not None:
@@ -299,7 +302,10 @@ class PostgresRoutineMixin:
             f"CREATE AGGREGATE "
             f"{self._format_routine_ref(expr.schema, expr.name)}"
         )
-        options = [f"SFUNC={expr.sfunc}", f"STYPE={expr.stype}"]
+        from rhosocial.activerecord.backend.expression.types import DataType
+
+        stype_sql, _ = DataType.as_type(self, expr.stype).to_sql()
+        options = [f"SFUNC={expr.sfunc}", f"STYPE={stype_sql}"]
         if expr.finalfunc:
             options.append(f"FINALFUNC={expr.finalfunc}")
         if expr.initcond is not None:

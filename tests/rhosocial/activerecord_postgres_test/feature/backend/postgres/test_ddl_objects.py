@@ -114,9 +114,20 @@ class TestPostgresDomainExpression:
     def dialect(self):
         return PostgresDialect(version=(14, 0, 0))
 
+    @staticmethod
+    def _numeric(dialect):
+        """The domain's type, said the way a type is said now: with a node.
+
+        A node is rendered by the dialect in its own spelling, so ``DECIMAL``
+        is what a ``DecimalType`` is written as.
+        """
+        from rhosocial.activerecord.backend.expression.types import DecimalType
+
+        return DecimalType(dialect)
+
     def test_create(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC",
+            dialect, "posint", self._numeric(dialect),
             default="0", constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
         assert sql == "CREATE DOMAIN \"posint\" AS DECIMAL DEFAULT 0 CHECK (VALUE > 0)"
@@ -141,14 +152,15 @@ class TestPostgresDomainExpression:
 
     def test_create_with_schema_and_collation(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC",
+            dialect, "posint", self._numeric(dialect),
             schema="app", collation="C",
         ).to_sql()
         assert sql == 'CREATE DOMAIN "app"."posint" AS DECIMAL COLLATE "C"'
 
     def test_create_without_default(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC", constraints=["CHECK (VALUE > 0)"]
+            dialect, "posint", self._numeric(dialect),
+            constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
         assert sql == 'CREATE DOMAIN "posint" AS DECIMAL CHECK (VALUE > 0)'
 

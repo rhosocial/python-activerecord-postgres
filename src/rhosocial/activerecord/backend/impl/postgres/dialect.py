@@ -367,6 +367,14 @@ from .protocols import (
 
 
 class PostgresDialect(
+    # The bases below come in bundles: a backend mixin, then the core bundle
+    # it stands in for. The backend's answer has to come first -- a mixin
+    # placed after the class it overrides never wins -- so a new mixin goes
+    # immediately before the core mixin it overrides, and the pairing is read
+    # off the list. Two positions sit outside that pairing and are called out
+    # where they occur: a mixin that overrides a method ``SQLDialectBase``
+    # defines has to precede the base, and a mixin that subclasses a core
+    # mixin has to precede it too (C3: a subclass precedes its base).
     # Ahead of SQLDialectBase, unlike every other mixin here. Those add methods
     # the base does not have, so their position is a readability choice; this
     # one overrides ``format_literal``, and a mixin placed after the class it
@@ -844,20 +852,6 @@ class PostgresDialect(
         if any(type(enabled) is not bool for enabled in overrides.values()):
             raise TypeError("Graph feature override values must be booleans")
         self._graph_feature_overrides = overrides
-
-    @staticmethod
-    def _validate_data_type(data_type: str) -> bool:
-        """Validate data type for safe embedding in SQL.
-
-        PostgreSQL supports array types like TEXT[], INTEGER[].
-
-        Note: rhosocial-activerecord base dialect will include this change in
-        a future release. This override can be removed after upgrading to that
-        version (expected: include brackets [] in the allowlist pattern).
-        """
-        import re
-
-        return bool(re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", data_type))
 
     def get_parameter_placeholder(self, position: int = 0) -> str:
         """psycopg uses '%s' for placeholders."""

@@ -60,6 +60,15 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """Materialized views require PostgreSQL 9.3+."""
         return self.version >= (9, 3, 0)
 
+
+    def supports_materialized_view_bind_parameters(self) -> bool:
+        """PostgreSQL refuses bind parameters in a materialized view body.
+
+        Measured on 19beta4: "materialized views may not be defined using
+        bound parameters". The definition is stored and run again later,
+        where a bound value has no meaning.
+        """
+        return False
     def supports_refresh_materialized_view(self) -> bool:
         """REFRESH MATERIALIZED VIEW requires PostgreSQL 9.3+."""
         return self.version >= (9, 3, 0)
@@ -237,23 +246,8 @@ class PostgresMaterializedViewMixin(ViewMixin):
             parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
 
         query_sql, query_params = expr.query.to_sql()
-        if query_params:
-            # A materialized view's definition is stored and run again later,
-            # so a bound value has no meaning there -- and PostgreSQL says
-            # so: "materialized views may not be defined using bound
-            # parameters".  The statement is refused by name instead of being
-            # rendered for the server to reject.
-            raise UnsupportedFeatureError(
-                self.name,
-                "CREATE MATERIALIZED VIEW with bound parameters",
-                suggestion=(
-                    "PostgreSQL refuses a materialized view whose definition "
-                    'binds -- "materialized views may not be defined using '
-                    'bound parameters" -- because the definition is stored and '
-                    "run again later, where a bound value has no meaning. "
-                    "Build the query with an inlined literal instead."
-                ),
-            )
+        if query_params and not self.supports_materialized_view_bind_parameters():
+            self._refuse_ddl_bind_parameters("CREATE MATERIALIZED VIEW with bound parameters")
         parts.append(f"AS {query_sql}")
 
         if expr.with_data:

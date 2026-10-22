@@ -34,7 +34,7 @@ def dialect():
     return PostgresDialect((13, 0, 0))
 
 
-def test_postgres_escape_sql_string(dialect):
+def test_postgresescape_sql_string(dialect):
     """PostgreSQL inherits the public string-escape helper core exposes.
 
     It is public because the literal-construction protocol (``SQLLiteral``) must
@@ -45,12 +45,38 @@ def test_postgres_escape_sql_string(dialect):
     assert result == "test''s value"
 
 
-def test_postgres_validate_data_type(dialect):
-    """Test PostgreSQL inherits _validate_data_type."""
-    assert dialect._validate_data_type("INTEGER")
-    assert dialect._validate_data_type("VARCHAR(255)")
-    assert dialect._validate_data_type("TEXT")
-    assert not dialect._validate_data_type("TEXT; DROP TABLE users--")
+def test_postgresa_type_position_refuses_a_payload(dialect):
+    """A type name is a name, and the grammar is what says so.
+
+    The backend has no character filter of its own any more: the type
+    position is guarded by the grammar, which is the framework's rule for
+    what a name may be, and the server decides whether the type exists.
+    """
+    from rhosocial.activerecord.backend.expression import Literal
+    from rhosocial.activerecord.backend.expression.statements import (
+        AlterColumnAction,
+    )
+    from rhosocial.activerecord.backend.expression.type_name import (
+        InvalidTypeNameError,
+    )
+    from rhosocial.activerecord.backend.expression.xml import (
+        XMLSerializeExpression,
+    )
+
+    # A name is a name: the position takes it.
+    XMLSerializeExpression(dialect, Literal(dialect, "x"), "TEXT")
+    AlterColumnAction(dialect, "c", "SET DATA TYPE", new_value="TEXT")
+
+    # A value that is not a name is refused, and refused before the
+    # statement is ever rendered.
+    with pytest.raises(InvalidTypeNameError):
+        XMLSerializeExpression(
+            dialect, Literal(dialect, "x"), "TEXT; DROP TABLE users--"
+        )
+    with pytest.raises(InvalidTypeNameError):
+        AlterColumnAction(
+            dialect, "c", "SET DATA TYPE", new_value="TEXT; DROP TABLE users--"
+        )
 
 
 def test_postgres_format_column_definition_data_type_validation(dialect):
