@@ -16,10 +16,10 @@ from rhosocial.activerecord.backend.expression.statements import PartitionClause
 if TYPE_CHECKING:
     from ...expression.ddl import (
         PostgresPartitionValue,
-        PostgresCreatePartitionExpression,
-        PostgresDetachPartitionExpression,
-        PostgresAttachPartitionExpression,
-        PostgresPartitionMetadataExpression,
+        PostgresCreatePartitionStatement,
+        PostgresDetachPartitionStatement,
+        PostgresAttachPartitionStatement,
+        PostgresPartitionMetadataQueryStatement,
     )
 
 
@@ -396,7 +396,7 @@ class PostgresPartitionMixin:
 
     def format_create_partition_statement(
         self,
-        expr: "PostgresCreatePartitionExpression",
+        expr: "PostgresCreatePartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF for PostgreSQL."""
         if not self.supports_table_partitioning():
@@ -517,7 +517,7 @@ class PostgresPartitionMixin:
 
     def format_detach_partition_statement(
         self,
-        expr: "PostgresDetachPartitionExpression",
+        expr: "PostgresDetachPartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
@@ -528,7 +528,7 @@ class PostgresPartitionMixin:
         - ``expr.finalize`` — add ``FINALIZE`` (valid only with CONCURRENTLY).
 
         Args:
-            expr: PostgresDetachPartitionExpression instance
+            expr: PostgresDetachPartitionStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -568,7 +568,7 @@ class PostgresPartitionMixin:
 
     def format_attach_partition_statement(
         self,
-        expr: "PostgresAttachPartitionExpression",
+        expr: "PostgresAttachPartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION for PostgreSQL."""
         if not self.supports_table_partitioning():
@@ -680,7 +680,9 @@ class PostgresPartitionMixin:
         return " ".join(parts), tuple(params)
 
 
-    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+    def format_partition_metadata_query_statement(
+        self, expr: "PostgresPartitionMetadataQueryStatement"
+    ) -> Tuple[str, tuple]:
         """Format pg_catalog query for partition metadata introspection.
 
         Builds a parameterised query against pg_catalog to inspect a partitioned
@@ -696,7 +698,7 @@ class PostgresPartitionMixin:
         the WHERE clause omits the namespace filter.
 
         Args:
-            expr: PostgresPartitionMetadataExpression with parent table details.
+            expr: PostgresPartitionMetadataQueryStatement with parent table details.
 
         Returns:
             Tuple of (SQL string with %s placeholders, params tuple).

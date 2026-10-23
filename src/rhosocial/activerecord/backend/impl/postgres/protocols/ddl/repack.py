@@ -4,7 +4,7 @@
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.repack import PostgresRepackExpression
+    from ...expression.ddl.repack import PostgresRepackStatement
 
 
 @runtime_checkable
@@ -33,7 +33,7 @@ class PostgresRepackSupport(Protocol):
 
     def format_repack_statement(
         self,
-        expr: "PostgresRepackExpression",
+        expr: "PostgresRepackStatement",
     ) -> Tuple[str, tuple]:
         """Format a native REPACK statement."""
         ...

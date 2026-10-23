@@ -14,8 +14,8 @@ from ...expression.ddl import PostgresCreateIndexExpression
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
-        PostgresAlterIndexExpression,
-        PostgresReindexExpression,
+        PostgresAlterIndexStatement,
+        PostgresReindexStatement,
     )
     from rhosocial.activerecord.backend.expression.statements.ddl_index import (
         CreateIndexStatement,
@@ -516,7 +516,7 @@ class PostgresIndexMixin:
         return " ".join(parts), ()
 
     def format_alter_index_statement(
-        self, expr: "PostgresAlterIndexExpression"
+        self, expr: "PostgresAlterIndexStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER INDEX statement with PostgreSQL-specific operations.
 
@@ -533,7 +533,7 @@ class PostgresIndexMixin:
           ``expr.target_tablespace``.
 
         Args:
-            expr: PostgresAlterIndexExpression instance
+            expr: PostgresAlterIndexStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -607,7 +607,7 @@ class PostgresIndexMixin:
 
         return " ".join(parts), ()
 
-    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "PostgresReindexStatement") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Supports target types: ``INDEX``, ``TABLE``, ``SCHEMA``, ``DATABASE``, ``SYSTEM``.
@@ -618,7 +618,7 @@ class PostgresIndexMixin:
         - ``expr.verbose`` — add ``VERBOSE``.
 
         Args:
-            expr: PostgresReindexExpression instance
+            expr: PostgresReindexStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)

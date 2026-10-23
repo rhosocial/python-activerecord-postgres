@@ -43,7 +43,7 @@ class PostgresExpressionMixin:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, params
 
-    def format_binary_operator(self, expr) -> Tuple[str, tuple]:
+    def format_binary_expression(self, expr) -> Tuple[str, tuple]:
         """Format binary operator with psycopg placeholder escaping.
 
         psycopg uses %s as parameter placeholder. When the SQL operator itself

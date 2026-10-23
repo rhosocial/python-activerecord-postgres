@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "LoggingMode",
-    "PostgresAlterTableSettingsExpression",
+    "PostgresAlterTableSettingsStatement",
 ]
 
 
@@ -42,7 +42,7 @@ class LoggingMode(str, Enum):
     UNLOGGED = "UNLOGGED"
 
 
-class PostgresAlterTableSettingsExpression(BaseExpression):
+class PostgresAlterTableSettingsStatement(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... SET`` table-level settings.
 
     Attributes:
@@ -57,7 +57,7 @@ class PostgresAlterTableSettingsExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresAlterTableSettingsExpression(
+        >>> expr = PostgresAlterTableSettingsStatement(
         ...     dialect, table_name="orders", mode=LoggingMode.UNLOGGED
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP

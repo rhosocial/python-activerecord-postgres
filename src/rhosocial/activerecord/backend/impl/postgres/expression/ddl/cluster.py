@@ -18,10 +18,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresClusterExpression"]
+__all__ = ["PostgresClusterStatement"]
 
 
-class PostgresClusterExpression(BaseExpression):
+class PostgresClusterStatement(BaseExpression):
     """PostgreSQL CLUSTER statement expression.
 
     Physically reorders a table (or all tables) to match the order of the
@@ -38,7 +38,7 @@ class PostgresClusterExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresClusterExpression(
+        >>> expr = PostgresClusterStatement(
         ...     dialect, table_name="orders", using_index="orders_pkey"
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP

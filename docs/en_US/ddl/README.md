@@ -14,8 +14,8 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 | `CreateViewStatement` | ✅ Full | |
 | `DropViewStatement` | ✅ Full | |
 | `PostgresCreateMaterializedViewExpression` | ✅ Full | IF NOT EXISTS, TABLESPACE, storage parameters (see [materialized views](./materialized_view.md)) |
-| `PostgresRefreshMaterializedViewExpression` | ✅ Full | CONCURRENTLY (PG 9.4+, requires a UNIQUE index) |
-| `PostgresAlterMaterializedViewExpression` | ✅ Full | RENAME TO, SET SCHEMA, SET/RESET storage parameters, OWNER TO |
+| `PostgresRefreshMaterializedViewPgStatement` | ✅ Full | CONCURRENTLY (PG 9.4+, requires a UNIQUE index) |
+| `PostgresAlterMaterializedViewStatement` | ✅ Full | RENAME TO, SET SCHEMA, SET/RESET storage parameters, OWNER TO |
 | `PostgresDropMaterializedViewExpression` | ✅ Full | IF EXISTS, CASCADE |
 | `CreatePartitionExpression` | ✅ Full | RANGE, LIST, HASH partitioning (PG 10+) |
 | `AttachPartitionExpression` | ✅ Full | Standard ATTACH PARTITION; `CONCURRENTLY` is unsupported |
@@ -30,7 +30,7 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 PostgreSQL 10+ supports declarative partitioning. See [Partition Documentation](../postgres_specific_features/partition.md).
 
 ```python
-partition = PostgresCreatePartitionExpression(
+partition = PostgresCreatePartitionStatement(
     dialect, parent_table="orders", partition_name="orders_2024_q1",
     partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
 )
@@ -44,18 +44,18 @@ See [Partition Documentation](../postgres_specific_features/partition.md) for pg
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
-    PostgresAlterIndexExpression, PostgresAlterIndexActionType,
-    PostgresReindexExpression,
+    PostgresAlterIndexStatement, PostgresAlterIndexActionType,
+    PostgresReindexStatement,
 )
 
 # ALTER INDEX ... RENAME TO
-alter = PostgresAlterIndexExpression(
+alter = PostgresAlterIndexStatement(
     dialect, index_name="idx_old",
     action=PostgresAlterIndexActionType.RENAME_TO("idx_new"),
 )
 
 # REINDEX CONCURRENTLY
-reindex = PostgresReindexExpression(
+reindex = PostgresReindexStatement(
     dialect, target_type="INDEX", target_name="idx_corrupted",
     concurrently=True,
 )

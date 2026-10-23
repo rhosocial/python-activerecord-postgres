@@ -29,22 +29,22 @@ from rhosocial.activerecord.backend.introspection.types import IntrospectionScop
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.introspection import (
-        DatabaseInfoExpression,
-        TableListExpression,
-        TableInfoExpression,
-        ColumnInfoExpression,
-        IndexInfoExpression,
-        ForeignKeyExpression,
-        ViewListExpression,
-        ViewInfoExpression,
-        TriggerListExpression,
-        TriggerInfoExpression,
+        DatabaseInfoQueryStatement,
+        TableListQueryStatement,
+        TableInfoQueryStatement,
+        ColumnInfoQueryStatement,
+        IndexInfoQueryStatement,
+        ForeignKeyQueryStatement,
+        ViewListQueryStatement,
+        ViewInfoQueryStatement,
+        TriggerListQueryStatement,
+        TriggerInfoQueryStatement,
     )
     from ..expression.introspection import (
-        PostgresMaterializedViewInfoExpression,
-        PostgresMaterializedViewListExpression,
+        PostgresMaterializedViewInfoQueryStatement,
+        PostgresMaterializedViewListQueryStatement,
         PostgresDatabaseSizeFunction,
-        PostgresDatabaseSizeQueryExpression,
+        PostgresDatabaseSizeQueryStatement,
     )
     from ..expression.status import (
         PostgresSettingsQuery,
@@ -327,7 +327,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ),
         )
 
-    def format_database_info_query(self, expr: "DatabaseInfoExpression") -> Tuple[str, tuple]:
+    def format_database_info_query_statement(self, expr: "DatabaseInfoQueryStatement") -> Tuple[str, tuple]:
         """Format database information query.
 
         Uses pg_database and version() to get database metadata: the row the
@@ -361,7 +361,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ],
         )
 
-    def format_table_list_query(self, expr: "TableListExpression") -> Tuple[str, tuple]:
+    def format_table_list_query_statement(self, expr: "TableListQueryStatement") -> Tuple[str, tuple]:
         """Format table list query using pg_catalog.
 
         Uses pg_class and pg_namespace to query table information.
@@ -449,7 +449,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             [self._catalog_column("relname", "c")],
         )
 
-    def format_table_info_query(self, expr: "TableInfoExpression") -> Tuple[str, tuple]:
+    def format_table_info_query_statement(self, expr: "TableInfoQueryStatement") -> Tuple[str, tuple]:
         """Format single table information query.
 
         Query pg_class for table details.
@@ -482,7 +482,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ],
         )
 
-    def format_column_info_query(self, expr: "ColumnInfoExpression") -> Tuple[str, tuple]:
+    def format_column_info_query_statement(self, expr: "ColumnInfoQueryStatement") -> Tuple[str, tuple]:
         """Format column information query using pg_attribute.
 
         Uses pg_attribute, pg_attrdef, and pg_class to query column metadata.
@@ -653,7 +653,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             projection, source, conditions, [self._catalog_column("attnum", "a")]
         )
 
-    def format_index_info_query(self, expr: "IndexInfoExpression") -> Tuple[str, tuple]:
+    def format_index_info_query_statement(self, expr: "IndexInfoQueryStatement") -> Tuple[str, tuple]:
         """Format index information query using pg_index.
 
         Uses pg_index, pg_class, pg_am, and pg_attribute to query index metadata.
@@ -773,7 +773,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ],
         )
 
-    def format_foreign_key_query(self, expr: "ForeignKeyExpression") -> Tuple[str, tuple]:
+    def format_foreign_key_query_statement(self, expr: "ForeignKeyQueryStatement") -> Tuple[str, tuple]:
         """Format foreign key information query using pg_constraint.
 
         Uses pg_constraint, pg_class, pg_attribute, and pg_namespace to query
@@ -950,7 +950,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ],
         )
 
-    def format_view_list_query(self, expr: "ViewListExpression") -> Tuple[str, tuple]:
+    def format_view_list_query_statement(self, expr: "ViewListQueryStatement") -> Tuple[str, tuple]:
         """Format view list query using pg_class.
 
         Uses pg_class with relkind = 'v' to query view information.
@@ -1018,7 +1018,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ),
         ]
 
-    def format_view_info_query(self, expr: "ViewInfoExpression") -> Tuple[str, tuple]:
+    def format_view_info_query_statement(self, expr: "ViewInfoQueryStatement") -> Tuple[str, tuple]:
         """Format single view information query.
 
         Query pg_class for view details.
@@ -1157,8 +1157,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ),
         ]
 
-    def format_materialized_view_list_query(
-        self, expr: "PostgresMaterializedViewListExpression"
+    def format_materialized_view_list_query_statement(
+        self, expr: "PostgresMaterializedViewListQueryStatement"
     ) -> Tuple[str, tuple]:
         """Format materialized view list query.
 
@@ -1209,8 +1209,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             [self._catalog_column("matviewname", "m")],
         )
 
-    def format_materialized_view_info_query(
-        self, expr: "PostgresMaterializedViewInfoExpression"
+    def format_materialized_view_info_query_statement(
+        self, expr: "PostgresMaterializedViewInfoQueryStatement"
     ) -> Tuple[str, tuple]:
         """Format single materialized view information query.
 
@@ -1335,7 +1335,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             self._catalog_column("tgtype", "t", alias="trigger_type"),
         ]
 
-    def format_trigger_list_query(self, expr: "TriggerListExpression") -> Tuple[str, tuple]:
+    def format_trigger_list_query_statement(self, expr: "TriggerListQueryStatement") -> Tuple[str, tuple]:
         """Format trigger list query using pg_trigger.
 
         Uses pg_trigger, pg_class, pg_namespace, and pg_proc to query trigger metadata.
@@ -1389,7 +1389,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             [self._catalog_column("tgname", "t")],
         )
 
-    def format_trigger_info_query(self, expr: "TriggerInfoExpression") -> Tuple[str, tuple]:
+    def format_trigger_info_query_statement(self, expr: "TriggerInfoQueryStatement") -> Tuple[str, tuple]:
         """Format single trigger information query.
 
         Query pg_trigger for trigger details.
@@ -1454,8 +1454,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             self, "pg_database_size", self._catalog_value(params.get("database_name"))
         ).to_sql()
 
-    def format_postgres_database_size_query(
-        self, expr: "PostgresDatabaseSizeQueryExpression"
+    def format_database_size_query_statement(
+        self, expr: "PostgresDatabaseSizeQueryStatement"
     ) -> Tuple[str, tuple]:
         """Format the query that reports a database's size in bytes.
 

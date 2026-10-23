@@ -43,7 +43,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_view import (
 from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
 )
 
 
@@ -151,12 +151,12 @@ class TestMasterProbeExecutionConfirmation:
             (RefreshMaterializedViewStatement, "with_data", {"with_data": True}),
             (RefreshMaterializedViewStatement, "no_data", {"no_data": True}),
             (
-                PostgresRefreshMaterializedViewExpression,
+                PostgresRefreshMaterializedViewPgStatement,
                 "with_data",
                 {"with_data": True},
             ),
             (
-                PostgresRefreshMaterializedViewExpression,
+                PostgresRefreshMaterializedViewPgStatement,
                 "no_data",
                 {"no_data": True},
             ),

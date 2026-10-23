@@ -93,7 +93,7 @@ class PostgresAdvisoryLockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_lock"
+        return "format_advisory_lock_expression"
 
 
 class PostgresAdvisoryUnlockExpression(BaseExpression):
@@ -136,7 +136,7 @@ class PostgresAdvisoryUnlockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_unlock"
+        return "format_advisory_unlock_expression"
 
 
 class PostgresAdvisoryUnlockAllExpression(BaseExpression):
@@ -155,7 +155,7 @@ class PostgresAdvisoryUnlockAllExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_unlock_all"
+        return "format_advisory_unlock_all_expression"
 
 
 class PostgresTryAdvisoryLockExpression(BaseExpression):
@@ -204,4 +204,4 @@ class PostgresTryAdvisoryLockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_try_advisory_lock"
+        return "format_try_advisory_lock_expression"

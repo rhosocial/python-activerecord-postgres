@@ -17,9 +17,9 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
-        PostgresAlterIndexExpression,
+        PostgresAlterIndexStatement,
         PostgresAlterIndexActionType,  # noqa: F401
-        PostgresReindexExpression,
+        PostgresReindexStatement,
     )
 
 
@@ -187,7 +187,7 @@ class PostgresIndexSupport(
         ...  # pragma: no cover
 
     def format_alter_index_statement(
-        self, expr: "PostgresAlterIndexExpression"
+        self, expr: "PostgresAlterIndexStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER INDEX statement with PostgreSQL-specific operations.
 
@@ -195,18 +195,18 @@ class PostgresIndexSupport(
         ALTER COLUMN SET STATISTICS, and ALL IN TABLESPACE operations.
 
         Args:
-            expr: PostgresAlterIndexExpression containing action details
+            expr: PostgresAlterIndexStatement containing action details
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...  # pragma: no cover
 
-    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "PostgresReindexStatement") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Args:
-            expr: PostgresReindexExpression containing all REINDEX options
+            expr: PostgresReindexStatement containing all REINDEX options
 
         Returns:
             Tuple of (SQL string, parameters tuple)

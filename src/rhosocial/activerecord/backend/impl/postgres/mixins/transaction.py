@@ -107,7 +107,7 @@ class PostgresTransactionMixin:
 
         return " ".join(parts), ()
 
-    def format_set_transaction(
+    def format_set_transaction_statement(
         self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION statement for PostgreSQL.

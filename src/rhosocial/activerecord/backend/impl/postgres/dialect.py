@@ -505,7 +505,7 @@ class PostgresDialect(
     PostgresExtensionMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
-    PostgresCommentMixin,  # Before TableMixin to override format_comment_statement
+    PostgresCommentMixin,  # Before TableMixin to override format_comment_on_statement
     TableMixin,
     PostgresConstraintMixin,
     ConstraintMixin,

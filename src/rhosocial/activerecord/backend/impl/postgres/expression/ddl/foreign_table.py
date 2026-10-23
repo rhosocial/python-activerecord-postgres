@@ -18,10 +18,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresCreateForeignTableExpression", "PostgresDropForeignTableExpression"]
+__all__ = ["PostgresCreateForeignTableStatement", "PostgresDropForeignTableStatement"]
 
 
-class PostgresCreateForeignTableExpression(BaseExpression):
+class PostgresCreateForeignTableStatement(BaseExpression):
     """PostgreSQL CREATE FOREIGN TABLE statement expression.
 
     Defines a foreign table backed by a foreign server (FDW).
@@ -61,7 +61,7 @@ class PostgresCreateForeignTableExpression(BaseExpression):
         return "format_create_foreign_table_statement"
 
 
-class PostgresDropForeignTableExpression(BaseExpression):
+class PostgresDropForeignTableStatement(BaseExpression):
     """PostgreSQL DROP FOREIGN TABLE statement expression.
 
     Attributes:

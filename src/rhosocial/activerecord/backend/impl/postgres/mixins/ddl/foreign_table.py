@@ -14,8 +14,8 @@ from rhosocial.activerecord.backend.expression.objects import ForeignTable
 
 if TYPE_CHECKING:
     from ...expression.ddl.foreign_table import (
-        PostgresCreateForeignTableExpression,
-        PostgresDropForeignTableExpression,
+        PostgresCreateForeignTableStatement,
+        PostgresDropForeignTableStatement,
     )
 
 
@@ -48,12 +48,12 @@ class PostgresForeignTableMixin:
     # CREATE FOREIGN TABLE
     # ------------------------------------------------------------------ #
     def format_create_foreign_table_statement(
-        self, expr: "PostgresCreateForeignTableExpression"
+        self, expr: "PostgresCreateForeignTableStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE FOREIGN TABLE statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreateForeignTableExpression`.
+            expr: :class:`PostgresCreateForeignTableStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -85,12 +85,12 @@ class PostgresForeignTableMixin:
     # DROP FOREIGN TABLE
     # ------------------------------------------------------------------ #
     def format_drop_foreign_table_statement(
-        self, expr: "PostgresDropForeignTableExpression"
+        self, expr: "PostgresDropForeignTableStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP FOREIGN TABLE statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropForeignTableExpression`.
+            expr: :class:`PostgresDropForeignTableStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

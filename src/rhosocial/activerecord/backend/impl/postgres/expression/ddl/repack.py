@@ -9,10 +9,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresRepackExpression"]
+__all__ = ["PostgresRepackStatement"]
 
 
-class PostgresRepackExpression(BaseExpression):
+class PostgresRepackStatement(BaseExpression):
     """A native PostgreSQL 19 ``REPACK`` statement expression."""
 
     def __init__(

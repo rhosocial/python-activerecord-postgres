@@ -17,8 +17,8 @@ from rhosocial.activerecord.backend.expression.objects import SchemaObject
 
 if TYPE_CHECKING:
     from ...expression.ddl.collation import (
-        PostgresCreateCollationExpression,
-        PostgresDropCollationExpression,
+        PostgresCreateCollationStatement,
+        PostgresDropCollationStatement,
     )
 
 
@@ -50,13 +50,13 @@ class PostgresCollationDDLMixin:
     # ------------------------------------------------------------------ #
     # CREATE COLLATION
     # ------------------------------------------------------------------ #
-    def format_create_collation_ddl_statement(
-        self, expr: "PostgresCreateCollationExpression"
+    def format_create_collation_statement(
+        self, expr: "PostgresCreateCollationStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE COLLATION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreateCollationExpression`.
+            expr: :class:`PostgresCreateCollationStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -94,13 +94,13 @@ class PostgresCollationDDLMixin:
     # ------------------------------------------------------------------ #
     # DROP COLLATION
     # ------------------------------------------------------------------ #
-    def format_drop_collation_ddl_statement(
-        self, expr: "PostgresDropCollationExpression"
+    def format_drop_collation_statement(
+        self, expr: "PostgresDropCollationStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP COLLATION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropCollationExpression`.
+            expr: :class:`PostgresDropCollationStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

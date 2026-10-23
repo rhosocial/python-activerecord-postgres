@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "RlsConfigurationMode",
-    "PostgresAlterTableRlsExpression",
-    "PostgresForceRlsExpression",
+    "PostgresAlterTableRlsStatement",
+    "PostgresForceRlsStatement",
 ]
 
 
@@ -46,12 +46,12 @@ class RlsConfigurationMode(str, Enum):
     DISABLE = "DISABLE"
 
 
-class PostgresAlterTableRlsExpression(BaseExpression):
+class PostgresAlterTableRlsStatement(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... {ENABLE|DISABLE} ROW LEVEL SECURITY``.
 
     A single expression drives both states through the ``mode`` field. The
     ``ENABLE ALWAYS`` variant is a separate keyword on the same statement and
-    is produced by :attr:`always` (see class :class:`PostgresForceRlsExpression`
+    is produced by :attr:`always` (see class :class:`PostgresForceRlsStatement`
     for the related ``FORCE`` forms).
 
     Attributes:
@@ -64,7 +64,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresAlterTableRlsExpression(
+        >>> expr = PostgresAlterTableRlsStatement(
         ...     dialect, table_name="orders", mode=RlsConfigurationMode.ENABLE
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP
@@ -94,7 +94,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
         return "format_alter_table_rls_statement"
 
 
-class PostgresForceRlsExpression(BaseExpression):
+class PostgresForceRlsStatement(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... {FORCE|NO FORCE} ROW LEVEL SECURITY``.
 
     ``FORCE ROW LEVEL SECURITY`` causes the table owner to also be subject to

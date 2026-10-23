@@ -51,7 +51,7 @@ class PostgresAdvisoryLockMixin:
         """
         return True  # PostgreSQL 9.0+ supports advisory locks
 
-    def format_advisory_lock(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_advisory_lock_expression(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for acquiring an advisory lock.
 
@@ -88,7 +88,7 @@ class PostgresAdvisoryLockMixin:
         else:
             return f"SELECT {func_name}({self.p()})", (expr.key,)
 
-    def format_advisory_unlock(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_expression(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing an advisory lock.
 
@@ -113,7 +113,7 @@ class PostgresAdvisoryLockMixin:
         else:
             return f"SELECT {func_name}({self.p()})", (expr.key,)
 
-    def format_advisory_unlock_all(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_all_expression(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing all advisory locks.
 
@@ -128,7 +128,7 @@ class PostgresAdvisoryLockMixin:
         """
         return "SELECT pg_advisory_unlock_all()", ()
 
-    def format_try_advisory_lock(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_try_advisory_lock_expression(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for non-blocking advisory lock acquisition.
 

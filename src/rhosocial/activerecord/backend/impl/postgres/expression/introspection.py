@@ -13,8 +13,8 @@ from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.introspection import (
-    ViewInfoExpression,
-    ViewListExpression,
+    ViewInfoQueryStatement,
+    ViewListQueryStatement,
 )
 
 if TYPE_CHECKING:
@@ -22,18 +22,18 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PostgresMaterializedViewInfoExpression",
-    "PostgresMaterializedViewListExpression",
+    "PostgresMaterializedViewInfoQueryStatement",
+    "PostgresMaterializedViewListQueryStatement",
     "PostgresDatabaseSizeFunction",
-    "PostgresDatabaseSizeQueryExpression",
+    "PostgresDatabaseSizeQueryStatement",
 ]
 
 
-class PostgresMaterializedViewListExpression(ViewListExpression):
+class PostgresMaterializedViewListQueryStatement(ViewListQueryStatement):
     """List materialized views (``pg_class.relkind = 'm'``).
 
     Example:
-        >>> expr = PostgresMaterializedViewListExpression(dialect, schema="public")
+        >>> expr = PostgresMaterializedViewListQueryStatement(dialect, schema="public")
         >>> sql, params = expr.to_sql()
     """
 
@@ -48,14 +48,14 @@ class PostgresMaterializedViewListExpression(ViewListExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_materialized_view_list_query"
+        return "format_materialized_view_list_query_statement"
 
 
-class PostgresMaterializedViewInfoExpression(ViewInfoExpression):
+class PostgresMaterializedViewInfoQueryStatement(ViewInfoQueryStatement):
     """Fetch a single materialized view by name.
 
     Example:
-        >>> expr = PostgresMaterializedViewInfoExpression(dialect, "sales_summary")
+        >>> expr = PostgresMaterializedViewInfoQueryStatement(dialect, "sales_summary")
         >>> sql, params = expr.to_sql()
     """
 
@@ -76,7 +76,7 @@ class PostgresMaterializedViewInfoExpression(ViewInfoExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_materialized_view_info_query"
+        return "format_materialized_view_info_query_statement"
 
 
 class PostgresDatabaseSizeFunction(BaseExpression):
@@ -121,7 +121,7 @@ class PostgresDatabaseSizeFunction(BaseExpression):
         return "format_postgres_database_size_function"
 
 
-class PostgresDatabaseSizeQueryExpression(BaseExpression):
+class PostgresDatabaseSizeQueryStatement(BaseExpression):
     """The one-row query that reports a database's size in bytes.
 
     Wraps :class:`PostgresDatabaseSizeFunction` in the ``SELECT ... AS
@@ -131,7 +131,7 @@ class PostgresDatabaseSizeQueryExpression(BaseExpression):
     column name.
 
     Example:
-        >>> expr = PostgresDatabaseSizeQueryExpression(dialect, database_name="app")
+        >>> expr = PostgresDatabaseSizeQueryStatement(dialect, database_name="app")
         >>> sql, params = expr.to_sql()
         >>> sql
         'SELECT PG_DATABASE_SIZE(%s) AS "size_bytes"'
@@ -155,4 +155,4 @@ class PostgresDatabaseSizeQueryExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_postgres_database_size_query"
+        return "format_database_size_query_statement"

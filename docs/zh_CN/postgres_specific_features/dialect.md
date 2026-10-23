@@ -304,7 +304,7 @@ if dialect.supports_collate_expression():
 ```python
 from rhosocial.activerecord.backend.expression.datetime import (
     ExtractExpression, DateTimeField, IntervalExpression, IntervalUnit,
-    DateTimeAddExpression, DateTimeSubtractExpression, DateTimeDiffExpression,
+    DatetimeAddExpression, DatetimeSubtractExpression, DatetimeDiffExpression,
 )
 
 # EXTRACT
@@ -320,12 +320,12 @@ interval = IntervalExpression(dialect, 7, IntervalUnit.DAY)
 # 生成: INTERVAL '7' DAY
 
 # 日期 + 间隔
-expr = DateTimeAddExpression(dialect, Column(dialect, "created_at"),
+expr = DatetimeAddExpression(dialect, Column(dialect, "created_at"),
                              IntervalExpression(dialect, 30, IntervalUnit.DAY))
 # 生成: "created_at" + INTERVAL '30' DAY
 
 # 日期差
-expr = DateTimeDiffExpression(dialect, DateTimeField.DAY,
+expr = DatetimeDiffExpression(dialect, DateTimeField.DAY,
                               Column(dialect, "start"), Column(dialect, "end"))
 # 生成: EXTRACT(EPOCH FROM "end" - "start") / 86400
 ```

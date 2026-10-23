@@ -48,8 +48,8 @@ class TestMaterializedViewDocs:
         text = page.read_text(encoding="utf-8")
         for token in (
             "PostgresCreateMaterializedViewExpression",
-            "PostgresRefreshMaterializedViewExpression",
-            "PostgresAlterMaterializedViewExpression",
+            "PostgresRefreshMaterializedViewPgStatement",
+            "PostgresAlterMaterializedViewStatement",
             "PostgresDropMaterializedViewExpression",
             "if_not_exists",
             "concurrently",
@@ -90,7 +90,7 @@ class TestMaterializedViewDocs:
     def test_ddl_index_lists_mv_expressions(self, page):
         text = page.read_text(encoding="utf-8")
         assert "PostgresCreateMaterializedViewExpression" in text
-        assert "PostgresAlterMaterializedViewExpression" in text
+        assert "PostgresAlterMaterializedViewStatement" in text
         assert "materialized_view.md" in text
 
     @pytest.mark.parametrize("page", PROTOCOL_DOC_PAGES, ids=lambda p: p.parent.parent.name)
@@ -112,7 +112,7 @@ class TestMaterializedViewExample:
             "PostgresCreateMaterializedViewExpression",
             "if_not_exists=True",
             "PostgresStorageParameter",
-            "PostgresAlterMaterializedViewExpression",
+            "PostgresAlterMaterializedViewStatement",
             "PostgresRenameMaterializedViewAction",
             "PostgresSetMaterializedViewSchemaAction",
             "PostgresSetMaterializedViewPropertiesAction",

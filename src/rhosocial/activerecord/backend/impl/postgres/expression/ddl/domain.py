@@ -73,7 +73,7 @@ def _coerce_legacy_data_type(
     return DataType.as_type(dialect, value)
 
 
-class _PostgresLegacySqlExpression(BaseExpression):
+class PostgresLegacySqlExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -88,7 +88,7 @@ class _PostgresLegacySqlExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_postgres_legacy_sql_expression"
+        return "format_legacy_sql_expression"
 
 
 class _PostgresUnsupportedDomainAction(DomainAlterAction):
@@ -135,7 +135,7 @@ def _domain_actions_for(
                 DeprecationWarning,
                 stacklevel=3,
             )
-            normalized_default = _PostgresLegacySqlExpression(
+            normalized_default = PostgresLegacySqlExpression(
                 dialect,
                 new_value,
                 "new_value",
@@ -275,7 +275,7 @@ class PostgresCreateDomainExpression(CreateDomainStatement):
                     DeprecationWarning,
                     stacklevel=2,
                 )
-                clauses.append(_PostgresLegacySqlExpression(dialect, item, "constraints"))
+                clauses.append(PostgresLegacySqlExpression(dialect, item, "constraints"))
             elif isinstance(item, DomainCheckConstraint):
                 clauses.append(item)
                 normalized_checks.append(item)
@@ -295,7 +295,7 @@ class PostgresCreateDomainExpression(CreateDomainStatement):
                 DeprecationWarning,
                 stacklevel=2,
             )
-            normalized_default = _PostgresLegacySqlExpression(dialect, default, "default")
+            normalized_default = PostgresLegacySqlExpression(dialect, default, "default")
         super().__init__(
             dialect,
             domain,

@@ -19,11 +19,11 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
+    PostgresAttachPartitionStatement,
     PostgresColumnDefinition,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
 )
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.testsuite.feature.partition.interfaces import IPartitionProvider
@@ -271,7 +271,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _create_range_partition_sql(self, dialect, partition_name: str, from_value: str, to_value: str):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -281,7 +281,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _detach_partition_sql(self, dialect, partition_name: str):
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -289,7 +289,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _attach_partition_sql(self, dialect, partition_name: str, from_value: str, to_value: str):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -312,7 +312,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _partition_metadata_sql(self, dialect):
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table=self.TABLE_NAME,
         )

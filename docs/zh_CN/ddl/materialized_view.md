@@ -12,8 +12,8 @@
 | 表达式 | 用途 | PostgreSQL 专有选项 |
 |---|---|---|
 | `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`、`if_not_exists`、`storage_options`、`tablespace`、`column_aliases`、`with_data` |
-| `PostgresRefreshMaterializedViewExpression` | `REFRESH MATERIALIZED VIEW` | `schema`、`concurrently`、`with_data` |
-| `PostgresAlterMaterializedViewExpression` | `ALTER MATERIALIZED VIEW` | `schema`、动作列表 |
+| `PostgresRefreshMaterializedViewPgStatement` | `REFRESH MATERIALIZED VIEW` | `schema`、`concurrently`、`with_data` |
+| `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`、动作列表 |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`、`if_exists`、`cascade` |
 
 核心库通用表达式（`CreateMaterializedViewStatement`、
@@ -113,19 +113,19 @@ create = PostgresCreateMaterializedViewExpression(
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
 )
 
 # 普通刷新
-PostgresRefreshMaterializedViewExpression(dialect=dialect, name="sales_summary")
+PostgresRefreshMaterializedViewPgStatement(dialect=dialect, name="sales_summary")
 
 # 并发刷新——要求存在 UNIQUE 索引；PG < 9.4 会被拒绝
-PostgresRefreshMaterializedViewExpression(
+PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect, name="sales_summary", schema="reporting", concurrently=True
 )
 
 # 填充 WITH NO DATA 的视图
-PostgresRefreshMaterializedViewExpression(
+PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect, name="sales_daily", with_data=True
 )
 ```
@@ -140,7 +140,7 @@ PostgreSQL 恰好支持 5 种动作，**不含** `SET TABLESPACE`
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresAlterMaterializedViewExpression,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
@@ -148,7 +148,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresSetMaterializedViewSchemaAction,
 )
 
-alter = PostgresAlterMaterializedViewExpression(
+alter = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view_name="sales_summary",
     schema="reporting",

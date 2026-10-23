@@ -37,7 +37,7 @@ class PostgresDomainSupport(
     # to be a member the protocol declares (§7.1.1: a protocol is the
     # declaration of the surface its mixin serves).
 
-    def format_postgres_legacy_sql_expression(
+    def format_legacy_sql_expression(
         self,
         expr: BaseExpression,
     ) -> Tuple[str, tuple]:

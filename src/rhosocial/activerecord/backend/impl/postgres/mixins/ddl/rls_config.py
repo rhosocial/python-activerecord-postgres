@@ -17,8 +17,8 @@ from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from ...expression.ddl.rls_config import (
-        PostgresAlterTableRlsExpression,
-        PostgresForceRlsExpression,
+        PostgresAlterTableRlsStatement,
+        PostgresForceRlsStatement,
     )
 
 
@@ -58,12 +58,12 @@ class PostgresRlsConfigMixin:
     # ENABLE / DISABLE
     # ------------------------------------------------------------------ #
     def format_alter_table_rls_statement(
-        self, expr: "PostgresAlterTableRlsExpression"
+        self, expr: "PostgresAlterTableRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY``.
 
         Args:
-            expr: :class:`PostgresAlterTableRlsExpression`.
+            expr: :class:`PostgresAlterTableRlsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -100,12 +100,12 @@ class PostgresRlsConfigMixin:
     # FORCE / NO FORCE
     # ------------------------------------------------------------------ #
     def format_force_rls_statement(
-        self, expr: "PostgresForceRlsExpression"
+        self, expr: "PostgresForceRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... FORCE/NO FORCE ROW LEVEL SECURITY``.
 
         Args:
-            expr: :class:`PostgresForceRlsExpression`.
+            expr: :class:`PostgresForceRlsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

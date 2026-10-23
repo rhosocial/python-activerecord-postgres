@@ -42,7 +42,7 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
@@ -80,7 +80,7 @@ print(f"Extension check: earthdistance available = {available}, installed = {ins
 
 # Create cube extension first (dependency of earthdistance)
 if cube_available and not cube_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="cube",
     )
@@ -92,7 +92,7 @@ if cube_available and not cube_installed:
 
 # Create earthdistance extension
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="earthdistance",
     )

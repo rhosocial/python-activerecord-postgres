@@ -26,9 +26,9 @@ from ...expression.ddl.policy import (
 
 if TYPE_CHECKING:
     from ...expression.ddl.policy import (
-        PostgresAlterPolicyExpression,
-        PostgresCreatePolicyExpression,
-        PostgresDropPolicyExpression,
+        PostgresAlterPolicyStatement,
+        PostgresCreatePolicyStatement,
+        PostgresDropPolicyStatement,
     )
 
 
@@ -134,7 +134,7 @@ class PostgresPolicyMixin:
     # CREATE POLICY
     # ------------------------------------------------------------------ #
     def format_create_policy_statement(
-        self, expr: "PostgresCreatePolicyExpression"
+        self, expr: "PostgresCreatePolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format CREATE POLICY statement (PostgreSQL-specific).
 
@@ -142,7 +142,7 @@ class PostgresPolicyMixin:
         PostgreSQL's policy semantics, then assembles the SQL.
 
         Args:
-            expr: :class:`PostgresCreatePolicyExpression` with the policy
+            expr: :class:`PostgresCreatePolicyStatement` with the policy
                 definition.
 
         Returns:
@@ -227,7 +227,7 @@ class PostgresPolicyMixin:
     # ALTER POLICY
     # ------------------------------------------------------------------ #
     def format_alter_policy_statement(
-        self, expr: "PostgresAlterPolicyExpression"
+        self, expr: "PostgresAlterPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER POLICY statement (PostgreSQL-specific).
 
@@ -241,7 +241,7 @@ class PostgresPolicyMixin:
         omitted clauses leave the existing policy unchanged (no SQL token).
 
         Args:
-            expr: :class:`PostgresAlterPolicyExpression`.
+            expr: :class:`PostgresAlterPolicyStatement`.
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -325,12 +325,12 @@ class PostgresPolicyMixin:
     # DROP POLICY
     # ------------------------------------------------------------------ #
     def format_drop_policy_statement(
-        self, expr: "PostgresDropPolicyExpression"
+        self, expr: "PostgresDropPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format DROP POLICY statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropPolicyExpression`.
+            expr: :class:`PostgresDropPolicyStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

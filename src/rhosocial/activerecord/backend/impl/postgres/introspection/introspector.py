@@ -103,7 +103,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     def _parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
         db_row = rows[0] if rows else {}
         db_name = self._get_database_name()
-        # Dialect returns 'version' column from format_database_info_query()
+        # Dialect returns 'version' column from format_database_info_query_statement()
         version_str = db_row.get("version", "PostgreSQL 11.0")
         match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
         version_tuple = (
@@ -303,10 +303,10 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     def _build_materialized_view_list_sql(
         self, schema: Optional[str], include_system: bool
     ) -> Tuple[str, tuple]:
-        from ..expression.introspection import PostgresMaterializedViewListExpression
+        from ..expression.introspection import PostgresMaterializedViewListQueryStatement
 
         target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewListExpression(
+        expr = PostgresMaterializedViewListQueryStatement(
             self.dialect, schema=target_schema, include_system=include_system
         )
         return expr.to_sql()
@@ -314,10 +314,10 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     def _build_materialized_view_info_sql(
         self, view_name: str, schema: Optional[str]
     ) -> Tuple[str, tuple]:
-        from ..expression.introspection import PostgresMaterializedViewInfoExpression
+        from ..expression.introspection import PostgresMaterializedViewInfoQueryStatement
 
         target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewInfoExpression(
+        expr = PostgresMaterializedViewInfoQueryStatement(
             self.dialect, view_name, schema=target_schema
         )
         return expr.to_sql()

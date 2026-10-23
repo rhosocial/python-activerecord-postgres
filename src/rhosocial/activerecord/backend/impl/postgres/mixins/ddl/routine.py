@@ -18,10 +18,10 @@ from rhosocial.activerecord.backend.expression.objects import Function
 
 if TYPE_CHECKING:
     from ...expression.ddl.routine import (
-        PostgresCreateAggregateExpression,
-        PostgresCreateFunctionExpression,
-        PostgresDropAggregateExpression,
-        PostgresDropFunctionExpression,
+        PostgresCreateAggregateDdlStatement,
+        PostgresCreateFunctionDdlStatement,
+        PostgresDropAggregateDdlStatement,
+        PostgresDropFunctionDdlStatement,
     )
     from rhosocial.activerecord.backend.expression.statements import (
         CreateFunctionStatement,
@@ -33,8 +33,8 @@ class PostgresRoutineMixin:
     """PostgreSQL FUNCTION / AGGREGATE DDL implementation.
 
     Two spellings of each statement live in this backend and they are not the
-    same thing. ``PostgresCreateFunctionExpression`` and
-    ``PostgresDropFunctionExpression`` are the PostgreSQL-owned ones, with the
+    same thing. ``PostgresCreateFunctionDdlStatement`` and
+    ``PostgresDropFunctionDdlStatement`` are the PostgreSQL-owned ones, with the
     richer option set (``SECURITY``, ``COST``, ``ROWS``, ``STRICT``) rendered by
     :meth:`format_create_function_ddl_statement` below. Core's own
     ``CreateFunctionStatement`` / ``DropFunctionStatement`` carry the portable
@@ -186,12 +186,12 @@ class PostgresRoutineMixin:
     # CREATE FUNCTION
     # ------------------------------------------------------------------ #
     def format_create_function_ddl_statement(
-        self, expr: "PostgresCreateFunctionExpression"
+        self, expr: "PostgresCreateFunctionDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE FUNCTION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreateFunctionExpression`.
+            expr: :class:`PostgresCreateFunctionDdlStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -237,12 +237,12 @@ class PostgresRoutineMixin:
     # DROP FUNCTION
     # ------------------------------------------------------------------ #
     def format_drop_function_ddl_statement(
-        self, expr: "PostgresDropFunctionExpression"
+        self, expr: "PostgresDropFunctionDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP FUNCTION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropFunctionExpression`.
+            expr: :class:`PostgresDropFunctionDdlStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -278,12 +278,12 @@ class PostgresRoutineMixin:
     # CREATE AGGREGATE
     # ------------------------------------------------------------------ #
     def format_create_aggregate_ddl_statement(
-        self, expr: "PostgresCreateAggregateExpression"
+        self, expr: "PostgresCreateAggregateDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE AGGREGATE statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreateAggregateExpression`.
+            expr: :class:`PostgresCreateAggregateDdlStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -316,12 +316,12 @@ class PostgresRoutineMixin:
     # DROP AGGREGATE
     # ------------------------------------------------------------------ #
     def format_drop_aggregate_ddl_statement(
-        self, expr: "PostgresDropAggregateExpression"
+        self, expr: "PostgresDropAggregateDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP AGGREGATE statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropAggregateExpression`.
+            expr: :class:`PostgresDropAggregateDdlStatement`.
 
         Returns:
             Tuple of (string, empty params tuple).

@@ -406,9 +406,9 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get database size: the node carries the database name and the
         # dialect renders the statement, so no SQL text is assembled here.
-        from ..expression.introspection import PostgresDatabaseSizeQueryExpression
+        from ..expression.introspection import PostgresDatabaseSizeQueryStatement
 
-        sql, params = PostgresDatabaseSizeQueryExpression(
+        sql, params = PostgresDatabaseSizeQueryStatement(
             self.dialect, database_name=db_name
         ).to_sql()
         rows = self._exec_query(sql, params)
@@ -935,9 +935,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get database size: the node carries the database name and the
         # dialect renders the statement, so no SQL text is assembled here.
-        from ..expression.introspection import PostgresDatabaseSizeQueryExpression
+        from ..expression.introspection import PostgresDatabaseSizeQueryStatement
 
-        sql, params = PostgresDatabaseSizeQueryExpression(
+        sql, params = PostgresDatabaseSizeQueryStatement(
             self.dialect, database_name=db_name
         ).to_sql()
         rows = await self._exec_query_async(sql, params)

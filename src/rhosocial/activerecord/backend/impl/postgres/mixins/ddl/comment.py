@@ -17,7 +17,7 @@ class PostgresCommentMixin:
         """
         return True
 
-    def format_comment_statement(self, expr) -> Tuple[str, tuple]:
+    def format_comment_on_statement(self, expr) -> Tuple[str, tuple]:
         """Format COMMENT ON statement (PostgreSQL-specific).
 
         Accepts a :class:`~rhosocial.activerecord.backend.expression.objects.SchemaObject`

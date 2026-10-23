@@ -15,7 +15,7 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression,
+    PostgresCreatePartitionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
     DropTableStatement,
@@ -80,7 +80,7 @@ for part_name, start_val, end_val in partitions:
     # The partition statement is a node like everything else: the values are
     # its parameters and the spelling is the formatter's, so nothing about the
     # partition is decided at the call site.
-    part_sql, _ = PostgresCreatePartitionExpression(
+    part_sql, _ = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=part_name,
         parent_table="orders",

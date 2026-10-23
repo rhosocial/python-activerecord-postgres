@@ -41,10 +41,10 @@ from rhosocial.activerecord.backend.expression.statements import (
     TruncateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresAttachPartitionStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanDeleteConfigExpression,
     PostgresPgPartmanRunMaintenanceExpression,
@@ -114,7 +114,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
 
 
 def _create_range_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -125,7 +125,7 @@ def _create_range_partition_sql(dialect, partition_name: str, from_value: str, t
 
 
 def _create_default_partition_sql(dialect, partition_name: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -165,7 +165,7 @@ def _insert_partition_events_expression(dialect, rows):
 
 
 def _detach_partition_sql(dialect, partition_name: str):
-    expr = PostgresDetachPartitionExpression(
+    expr = PostgresDetachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -174,7 +174,7 @@ def _detach_partition_sql(dialect, partition_name: str):
 
 
 def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresAttachPartitionExpression(
+    expr = PostgresAttachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -203,7 +203,7 @@ def _truncate_table_sql(dialect, table_name: str):
 
 
 def _partition_metadata_sql(dialect, table_name: str):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=table_name,
     )
@@ -278,7 +278,7 @@ def _create_production_parent_sql(dialect):
 
 
 def _create_production_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -289,7 +289,7 @@ def _create_production_partition_sql(dialect, partition_name: str, from_value: s
 
 
 def _detach_production_partition_sql(dialect, partition_name: str):
-    expr = PostgresDetachPartitionExpression(
+    expr = PostgresDetachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -298,7 +298,7 @@ def _detach_production_partition_sql(dialect, partition_name: str):
 
 
 def _attach_production_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresAttachPartitionExpression(
+    expr = PostgresAttachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -390,7 +390,7 @@ def _select_count_expression(dialect, table_name: str):
 
 
 def _production_partition_metadata_sql(dialect):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=PRODUCTION_PARTITION_TABLE,
     )

@@ -58,7 +58,7 @@ from ..protocols import PostgresExtensionInfo
 from ..transaction import AsyncPostgresTransactionManager
 
 if TYPE_CHECKING:
-    from ..expression import PostgresCopyFromExpression, PostgresCopyToExpression
+    from ..expression import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 CopyChunk = Union[str, bytes, bytearray, memoryview]
@@ -327,12 +327,12 @@ class AsyncPostgresBackend(
             raise TypeError("COPY FROM with ENCODING requires bytes-like input chunks")
         return chunk
 
-    async def copy_to(self, expression: "PostgresCopyToExpression") -> bytes:
+    async def copy_to(self, expression: "PostgresCopyToStatement") -> bytes:
         """Execute COPY TO STDOUT and return the complete byte stream."""
-        from ..expression import PostgresCopyToExpression
+        from ..expression import PostgresCopyToStatement
 
-        if not isinstance(expression, PostgresCopyToExpression):
-            raise TypeError("expression must be a PostgresCopyToExpression")
+        if not isinstance(expression, PostgresCopyToStatement):
+            raise TypeError("expression must be a PostgresCopyToStatement")
         sql, params = expression.to_sql()
         chunks = []
         try:
@@ -350,14 +350,14 @@ class AsyncPostgresBackend(
 
     async def copy_from(
         self,
-        expression: "PostgresCopyFromExpression",
+        expression: "PostgresCopyFromStatement",
         data: AsyncCopyInput,
     ) -> int:
         """Stream COPY FROM STDIN data and return the server-reported row count."""
-        from ..expression import PostgresCopyFromExpression
+        from ..expression import PostgresCopyFromStatement
 
-        if not isinstance(expression, PostgresCopyFromExpression):
-            raise TypeError("expression must be a PostgresCopyFromExpression")
+        if not isinstance(expression, PostgresCopyFromStatement):
+            raise TypeError("expression must be a PostgresCopyFromStatement")
         sql, params = expression.to_sql()
         binary = str(expression.format).lower() == "binary"
         try:

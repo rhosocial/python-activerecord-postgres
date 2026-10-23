@@ -37,7 +37,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.expression.types import BigIntType, TextType, TimestampType
 from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreatePartitionExpression,
+    PostgresCreatePartitionStatement,
 )
 
 PARTITION_EXPLAIN_TABLE = "ar_pg_partition_explain_events"
@@ -90,7 +90,7 @@ def _create_parent_table_expression(dialect):
 
 
 def _create_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PARTITION_EXPLAIN_TABLE,

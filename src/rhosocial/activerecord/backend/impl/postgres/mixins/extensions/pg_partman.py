@@ -56,7 +56,7 @@ class PostgresPgPartmanMixin:
         """
         return self.check_extension_feature("pg_partman", "auto_partition")
 
-    def format_pg_partman_create_parent(
+    def format_pg_partman_create_parent_expression(
         self,
         expr: "PostgresPgPartmanCreateParentExpression",
     ) -> tuple:
@@ -120,7 +120,7 @@ class PostgresPgPartmanMixin:
             tuple(params),
         )
 
-    def format_pg_partman_run_maintenance(
+    def format_pg_partman_run_maintenance_expression(
         self,
         expr: "PostgresPgPartmanRunMaintenanceExpression",
     ) -> tuple:
@@ -147,7 +147,7 @@ class PostgresPgPartmanMixin:
         placeholder = self.get_parameter_placeholder()
         return f"SELECT {function_name_sql}({placeholder}::text)", (expr.parent_table,)
 
-    def format_pg_partman_update_config(
+    def format_pg_partman_update_config_expression(
         self,
         expr: "PostgresPgPartmanUpdateConfigExpression",
     ) -> tuple:
@@ -203,7 +203,7 @@ class PostgresPgPartmanMixin:
             tuple(params),
         )
 
-    def format_pg_partman_delete_config(
+    def format_pg_partman_delete_config_expression(
         self,
         expr: "PostgresPgPartmanDeleteConfigExpression",
     ) -> tuple:

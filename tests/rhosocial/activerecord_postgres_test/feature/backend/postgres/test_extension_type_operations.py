@@ -40,7 +40,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresTsTzRangeType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.values import (
-    PostgresNetworkValueExpression,
+    PostgresNetworkValue,
     operations_class_for,
     value_expression_for,
 )
@@ -337,7 +337,7 @@ class TestArrayDimensionsCompose:
             dialect=dialect,
         )
         element = operations_class_for(array.element_type)
-        assert element is PostgresNetworkValueExpression
+        assert element is PostgresNetworkValue
         expr = element(dialect, Column(dialect, "v"))
         assert "NETWORK(" in expr.network().to_sql()[0]
 

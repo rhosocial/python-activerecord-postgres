@@ -43,7 +43,7 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
@@ -74,7 +74,7 @@ print(f"Extension: pgrouting available = {pgr_available}, installed = {pgr_insta
 
 # Create extensions if needed
 if postgis_available and not postgis_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="postgis",
     )
@@ -85,7 +85,7 @@ if postgis_available and not postgis_installed:
     backend.introspect_and_adapt()
 
 if pgr_available and not pgr_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pgrouting",
     )

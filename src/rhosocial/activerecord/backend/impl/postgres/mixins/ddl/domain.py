@@ -37,7 +37,7 @@ from ...expression.ddl.domain import (
 )
 
 if TYPE_CHECKING:
-    from ...expression.ddl.domain import _PostgresLegacySqlExpression
+    from ...expression.ddl.domain import PostgresLegacySqlExpression
 
 
 __all__ = ["PostgresDomainMixin"]
@@ -402,9 +402,9 @@ class PostgresDomainMixin(DomainMixin):
             f"ALTER DOMAIN action {expr.action_kind}",
         )
 
-    def format_postgres_legacy_sql_expression(
+    def format_legacy_sql_expression(
         self,
-        expr: "_PostgresLegacySqlExpression",
+        expr: "PostgresLegacySqlExpression",
     ) -> Tuple[str, tuple]:
         return expr.sql, ()
 

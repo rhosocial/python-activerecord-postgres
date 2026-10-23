@@ -13,11 +13,11 @@ from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresAlterMaterializedViewExpression,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
     PostgresRenameMaterializedViewAction,
     PostgresSetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewSchemaAction,
@@ -88,7 +88,7 @@ class TestCreateMaterializedView:
             _query(mv_backend, "SELECT count(*) FROM mv_sales_daily")
         assert "has not been populated" in str(exc.value)
 
-        refresh = PostgresRefreshMaterializedViewExpression(
+        refresh = PostgresRefreshMaterializedViewPgStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_daily"), with_data=True
         )
         sql, params = refresh.to_sql()
@@ -104,7 +104,7 @@ class TestRefreshMaterializedView:
         mv_backend.execute(
             "INSERT INTO mv_sales (product_id, amount, sale_date) VALUES (3, 10.00, '2024-02-01')"
         )
-        refresh = PostgresRefreshMaterializedViewExpression(
+        refresh = PostgresRefreshMaterializedViewPgStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_summary")
         )
         sql, params = refresh.to_sql()
@@ -115,7 +115,7 @@ class TestRefreshMaterializedView:
     def test_concurrent_refresh_requires_unique_index(self, mv_backend, create_summary_mv):
         """T-43: without a UNIQUE index the server must reject CONCURRENTLY."""
         create_summary_mv()
-        refresh = PostgresRefreshMaterializedViewExpression(
+        refresh = PostgresRefreshMaterializedViewPgStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_summary"), concurrently=True
         )
         sql, params = refresh.to_sql()
@@ -143,7 +143,7 @@ class TestSchemaQualifiedMaterializedView:
         result = _query(mv_backend, "SELECT product_id FROM mv_reporting.sales_summary ORDER BY product_id")
         assert [row["product_id"] for row in result.data or []] == [1, 2]
 
-        alter = PostgresAlterMaterializedViewExpression(
+        alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "sales_summary", schema_name="mv_reporting"),
             actions=[PostgresSetMaterializedViewSchemaAction(mv_backend.dialect, "public")],
@@ -159,7 +159,7 @@ class TestAlterMaterializedView:
     def test_rename(self, mv_backend, create_summary_mv):
         """T-47."""
         create_summary_mv()
-        alter = PostgresAlterMaterializedViewExpression(
+        alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
             actions=[PostgresRenameMaterializedViewAction(mv_backend.dialect, "mv_sales_renamed")],
@@ -172,7 +172,7 @@ class TestAlterMaterializedView:
 
     def test_set_storage_properties(self, mv_backend, create_summary_mv):
         create_summary_mv()
-        alter = PostgresAlterMaterializedViewExpression(
+        alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
             actions=[
@@ -187,7 +187,7 @@ class TestAlterMaterializedView:
 
     def test_owner_to_is_accepted(self, mv_backend, create_summary_mv):
         create_summary_mv()
-        alter = PostgresAlterMaterializedViewExpression(
+        alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
             actions=[PostgresChangeMaterializedViewOwnerAction(mv_backend.dialect, "CURRENT_USER")],
@@ -294,7 +294,7 @@ class TestMaterializedViewAsyncParity:
         await async_mv_backend.execute(
             "INSERT INTO mv_sales (product_id, amount, sale_date) VALUES (3, 10.00, '2024-02-01')"
         )
-        refresh = PostgresRefreshMaterializedViewExpression(
+        refresh = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect, view=MaterializedView(dialect, "mv_sales_summary")
         )
         sql, params = refresh.to_sql()

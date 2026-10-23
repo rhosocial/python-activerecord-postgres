@@ -119,7 +119,7 @@ def test_postgres_format_storage_options_string_escaping(dialect):
     """Test storage options string values are escaped."""
     from rhosocial.activerecord.backend.expression.statements import StorageOptionsExpression
     storage_opts = StorageOptionsExpression(dialect, {"key": "value's"})
-    sql, params = dialect.format_storage_options(storage_opts)
+    sql, params = dialect.format_storage_options_expression(storage_opts)
     assert "value''s" in sql
     assert "'; DROP" not in sql
 
@@ -444,10 +444,10 @@ class TestPostgresExtendedStatisticsNameSecurity:
     def test_create_statistics_name_quoted(self, dialect):
         """Test CREATE STATISTICS name is properly quoted."""
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
-            PostgresCreateStatisticsExpression,
+            PostgresCreateStatisticsStatement,
         )
 
-        expr = PostgresCreateStatisticsExpression(
+        expr = PostgresCreateStatisticsStatement(
             dialect=dialect,
             name="my_stats",
             table_name="users",
@@ -462,10 +462,10 @@ class TestPostgresExtendedStatisticsNameSecurity:
     def test_drop_statistics_name_quoted(self, dialect):
         """Test DROP STATISTICS name is properly quoted."""
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
-            PostgresDropStatisticsExpression,
+            PostgresDropStatisticsStatement,
         )
 
-        expr = PostgresDropStatisticsExpression(
+        expr = PostgresDropStatisticsStatement(
             dialect=dialect,
             name="my_stats",
         )
@@ -591,11 +591,11 @@ def test_format_identifier_empty_string(dialect):
     assert dialect.format_identifier("") == '""'
 
 
-# ── format_binary_operator % escaping ─────────────────────────────────
+# ── format_binary_expression % escaping ─────────────────────────────────
 
 
 def test_format_binary_operator_percent_escaped():
-    """format_binary_operator escapes % to %% for psycopg compatibility."""
+    """format_binary_expression escapes % to %% for psycopg compatibility."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     from rhosocial.activerecord.backend.expression.core import Literal
     d = PostgresDialect((16, 0, 0))

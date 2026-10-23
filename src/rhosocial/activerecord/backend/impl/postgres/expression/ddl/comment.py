@@ -21,10 +21,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresCommentExpression"]
+__all__ = ["PostgresCommentOnStatement"]
 
 
-class PostgresCommentExpression(BaseExpression):
+class PostgresCommentOnStatement(BaseExpression):
     """PostgreSQL COMMENT ON statement expression.
 
     Stores a comment about a database object.
@@ -44,7 +44,7 @@ class PostgresCommentExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Comment on a table
-        >>> comment = PostgresCommentExpression(
+        >>> comment = PostgresCommentOnStatement(
         ...     dialect=dialect,
         ...     object_type="TABLE",
         ...     object=Table(dialect, "users"),
@@ -55,7 +55,7 @@ class PostgresCommentExpression(BaseExpression):
         'COMMENT ON TABLE "users" IS ?'
 
         >>> # Comment on a column
-        >>> comment = PostgresCommentExpression(
+        >>> comment = PostgresCommentOnStatement(
         ...     dialect=dialect,
         ...     object_type="COLUMN",
         ...     object=Table(dialect, "users"),
@@ -64,7 +64,7 @@ class PostgresCommentExpression(BaseExpression):
         ... )
 
         >>> # Remove comment
-        >>> comment = PostgresCommentExpression(
+        >>> comment = PostgresCommentOnStatement(
         ...     dialect=dialect,
         ...     object_type="INDEX",
         ...     object=Table(dialect, "users"),
@@ -96,4 +96,4 @@ class PostgresCommentExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_comment_statement"
+        return "format_comment_on_statement"

@@ -20,12 +20,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PostgresCreateExtensionExpression",
-    "PostgresDropExtensionExpression",
+    "PostgresCreateExtensionStatement",
+    "PostgresDropExtensionStatement",
 ]
 
 
-class PostgresCreateExtensionExpression(BaseExpression):
+class PostgresCreateExtensionStatement(BaseExpression):
     """PostgreSQL CREATE EXTENSION statement expression.
 
     Installs a PostgreSQL extension into the database.
@@ -40,7 +40,7 @@ class PostgresCreateExtensionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> create_ext = PostgresCreateExtensionExpression(
+        >>> create_ext = PostgresCreateExtensionStatement(
         ...     dialect=dialect,
         ...     name="uuid-ossp",
         ... )
@@ -49,7 +49,7 @@ class PostgresCreateExtensionExpression(BaseExpression):
         'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'
 
         >>> # With schema and version
-        >>> create_ext = PostgresCreateExtensionExpression(
+        >>> create_ext = PostgresCreateExtensionStatement(
         ...     dialect=dialect,
         ...     name="postgis",
         ...     schema="public",
@@ -78,10 +78,10 @@ class PostgresCreateExtensionExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_create_extension"
+        return "format_create_extension_statement"
 
 
-class PostgresDropExtensionExpression(BaseExpression):
+class PostgresDropExtensionStatement(BaseExpression):
     """PostgreSQL DROP EXTENSION statement expression.
 
     Removes an extension from the database.
@@ -96,7 +96,7 @@ class PostgresDropExtensionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> drop_ext = PostgresDropExtensionExpression(
+        >>> drop_ext = PostgresDropExtensionStatement(
         ...     dialect=dialect,
         ...     name="uuid-ossp",
         ...     if_exists=True,
@@ -127,4 +127,4 @@ class PostgresDropExtensionExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_drop_extension"
+        return "format_drop_extension_statement"

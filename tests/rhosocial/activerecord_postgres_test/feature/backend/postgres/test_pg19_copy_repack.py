@@ -20,11 +20,11 @@ from rhosocial.activerecord.backend.expression.serialization import deserialize,
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCopyFromExpression,
+    PostgresCopyFromStatement,
     PostgresCopyLogVerbosity,
     PostgresCopyOnError,
-    PostgresCopyToExpression,
-    PostgresRepackExpression,
+    PostgresCopyToStatement,
+    PostgresRepackStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins import (
@@ -143,7 +143,7 @@ def select_query(dialect):
 
 def test_copy_to_table_formatter_and_safe_literals():
     dialect = PostgresDialect((19, 0, 0))
-    expression = PostgresCopyToExpression(
+    expression = PostgresCopyToStatement(
         dialect,
         table_name='users"; DROP TABLE users; --',
         schema="app data",
@@ -174,37 +174,37 @@ def test_copy_to_table_formatter_and_safe_literals():
 def test_copy_to_requires_table_or_base_expression_query():
     dialect = PostgresDialect((19, 0, 0))
     with pytest.raises(ValueError, match="exactly one"):
-        PostgresCopyToExpression(dialect)
+        PostgresCopyToStatement(dialect)
     with pytest.raises(TypeError, match="BaseExpression"):
-        PostgresCopyToExpression(dialect, query="SELECT 1")
+        PostgresCopyToStatement(dialect, query="SELECT 1")
     with pytest.raises(ValueError, match="not both"):
-        PostgresCopyToExpression(dialect, table_name="users", query=RawSQL(dialect, "SELECT 1"))
+        PostgresCopyToStatement(dialect, table_name="users", query=RawSQL(dialect, "SELECT 1"))
     with pytest.raises(TypeError):
-        PostgresCopyToExpression(dialect, table_name="users", program="cat input")
+        PostgresCopyToStatement(dialect, table_name="users", program="cat input")
 
 
 def test_copy_to_query_returns_parameters_and_rejects_mutations():
     dialect = PostgresDialect((19, 0, 0))
-    expression = PostgresCopyToExpression(dialect, query=select_query(dialect))
+    expression = PostgresCopyToStatement(dialect, query=select_query(dialect))
 
     sql, params = expression.to_sql()
 
     assert sql == 'COPY (SELECT "id" FROM "users" WHERE "id" > %s) TO STDOUT (FORMAT TEXT)'
     assert params == (3,)
     with pytest.raises(ValueError, match="read-only"):
-        PostgresCopyToExpression(
+        PostgresCopyToStatement(
             dialect,
             query=RawSQL(dialect, "SELECT 1; DELETE FROM users"),
         ).to_sql()
     with pytest.raises(ValueError, match="read-only"):
-        PostgresCopyToExpression(
+        PostgresCopyToStatement(
             dialect,
             query=RawSQL(dialect, "WITH gone AS (DELETE FROM users RETURNING id) SELECT * FROM gone"),
         ).to_sql()
 
 
 def test_copy_to_pg19_json_force_array_and_partitioned_gates():
-    expression = PostgresCopyToExpression(
+    expression = PostgresCopyToStatement(
         PostgresDialect((18, 0, 0)),
         table_name="events",
         format="json",
@@ -214,7 +214,7 @@ def test_copy_to_pg19_json_force_array_and_partitioned_gates():
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 19"):
         expression.to_sql()
 
-    sql, params = PostgresCopyToExpression(
+    sql, params = PostgresCopyToStatement(
         PostgresDialect((19, 0, 0)),
         table_name="events",
         format="json",
@@ -228,18 +228,18 @@ def test_copy_to_pg19_json_force_array_and_partitioned_gates():
 def test_copy_to_rejects_format_option_combinations():
     dialect = PostgresDialect((19, 0, 0))
     with pytest.raises(ValueError, match="JSON"):
-        PostgresCopyToExpression(dialect, table_name="events", format="json", header=True).to_sql()
+        PostgresCopyToStatement(dialect, table_name="events", format="json", header=True).to_sql()
     with pytest.raises(ValueError, match="CSV"):
-        PostgresCopyToExpression(dialect, table_name="events", quote='"').to_sql()
+        PostgresCopyToStatement(dialect, table_name="events", quote='"').to_sql()
     with pytest.raises(ValueError, match="FORCE_ARRAY"):
-        PostgresCopyToExpression(dialect, table_name="events", force_array=True).to_sql()
+        PostgresCopyToStatement(dialect, table_name="events", force_array=True).to_sql()
     with pytest.raises(ValueError, match="single-byte"):
-        PostgresCopyToExpression(dialect, table_name="events", delimiter="ab").to_sql()
+        PostgresCopyToStatement(dialect, table_name="events", delimiter="ab").to_sql()
 
 
 def test_copy_from_csv_formatter_with_all_supported_options():
     dialect = PostgresDialect((19, 0, 0))
-    expression = PostgresCopyFromExpression(
+    expression = PostgresCopyFromStatement(
         dialect,
         'users"; DROP TABLE users; --',
         schema="app data",
@@ -279,37 +279,37 @@ def test_copy_from_csv_formatter_with_all_supported_options():
 def test_copy_from_rejects_json_and_direction_options():
     dialect = PostgresDialect((19, 0, 0))
     with pytest.raises(ValueError, match="COPY FROM does not support JSON"):
-        PostgresCopyFromExpression(dialect, "users", format="json").to_sql()
+        PostgresCopyFromStatement(dialect, "users", format="json").to_sql()
     with pytest.raises(TypeError):
-        PostgresCopyFromExpression(dialect, "users", stdout=True)
+        PostgresCopyFromStatement(dialect, "users", stdout=True)
     with pytest.raises(TypeError):
-        PostgresCopyFromExpression(dialect, "users", query=RawSQL(dialect, "SELECT 1"))
+        PostgresCopyFromStatement(dialect, "users", query=RawSQL(dialect, "SELECT 1"))
 
 
 def test_copy_header_version_boundaries():
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 15"):
-        PostgresCopyToExpression(
+        PostgresCopyToStatement(
             PostgresDialect((14, 0, 0)),
             table_name="users",
             header=True,
         ).to_sql()
     assert (
         "HEADER"
-        in PostgresCopyToExpression(
+        in PostgresCopyToStatement(
             PostgresDialect((15, 0, 0)),
             table_name="users",
             header=True,
         ).to_sql()[0]
     )
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 15"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((14, 0, 0)),
             "users",
             header="match",
         ).to_sql()
     assert (
         "HEADER MATCH"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((15, 0, 0)),
             "users",
             header="match",
@@ -317,7 +317,7 @@ def test_copy_header_version_boundaries():
     )
     assert (
         "HEADER FALSE"
-        in PostgresCopyToExpression(
+        in PostgresCopyToStatement(
             PostgresDialect((14, 0, 0)),
             table_name="users",
             header=False,
@@ -325,7 +325,7 @@ def test_copy_header_version_boundaries():
     )
     assert (
         "HEADER"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((14, 0, 0)),
             "users",
             format="csv",
@@ -333,7 +333,7 @@ def test_copy_header_version_boundaries():
         ).to_sql()[0]
     )
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 19"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((18, 0, 0)),
             "users",
             format="csv",
@@ -341,7 +341,7 @@ def test_copy_header_version_boundaries():
         ).to_sql()
     assert (
         "HEADER 1"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((18, 0, 0)),
             "users",
             format="csv",
@@ -350,7 +350,7 @@ def test_copy_header_version_boundaries():
     )
     assert (
         "HEADER 3"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((19, 0, 0)),
             "users",
             format="csv",
@@ -358,7 +358,7 @@ def test_copy_header_version_boundaries():
         ).to_sql()[0]
     )
     with pytest.raises(ValueError, match="0 or 1"):
-        PostgresCopyToExpression(
+        PostgresCopyToStatement(
             PostgresDialect((19, 0, 0)),
             table_name="users",
             header=2,
@@ -367,13 +367,13 @@ def test_copy_header_version_boundaries():
 
 def test_copy_error_option_version_boundaries():
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 17"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((16, 0, 0)),
             "users",
             on_error="ignore",
         ).to_sql()
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 18"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((17, 0, 0)),
             "users",
             on_error="ignore",
@@ -381,7 +381,7 @@ def test_copy_error_option_version_boundaries():
         ).to_sql()
     assert (
         "REJECT_LIMIT 2"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((18, 0, 0)),
             "users",
             on_error="ignore",
@@ -389,34 +389,34 @@ def test_copy_error_option_version_boundaries():
         ).to_sql()[0]
     )
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 19"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((18, 0, 0)),
             "users",
             on_error="set_null",
         ).to_sql()
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 17"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((16, 0, 0)),
             "users",
             log_verbosity="verbose",
         ).to_sql()
     assert (
         "LOG_VERBOSITY VERBOSE"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((17, 0, 0)),
             "users",
             log_verbosity="verbose",
         ).to_sql()[0]
     )
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 18"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             PostgresDialect((17, 0, 0)),
             "users",
             log_verbosity="silent",
         ).to_sql()
     assert (
         "LOG_VERBOSITY SILENT"
-        in PostgresCopyFromExpression(
+        in PostgresCopyFromStatement(
             PostgresDialect((18, 0, 0)),
             "users",
             on_error="ignore",
@@ -428,7 +428,7 @@ def test_copy_error_option_version_boundaries():
 def test_copy_force_all_star_version_boundaries():
     for option in ("force_not_null", "force_null"):
         with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 17"):
-            PostgresCopyFromExpression(
+            PostgresCopyFromStatement(
                 PostgresDialect((16, 0, 0)),
                 "users",
                 format="csv",
@@ -436,7 +436,7 @@ def test_copy_force_all_star_version_boundaries():
             ).to_sql()
         assert (
             f"{option.upper()} *"
-            in PostgresCopyFromExpression(
+            in PostgresCopyFromStatement(
                 PostgresDialect((17, 0, 0)),
                 "users",
                 format="csv",
@@ -445,7 +445,7 @@ def test_copy_force_all_star_version_boundaries():
         )
     assert (
         "FORCE_QUOTE *"
-        in PostgresCopyToExpression(
+        in PostgresCopyToStatement(
             PostgresDialect((16, 0, 0)),
             table_name="users",
             format="csv",
@@ -457,18 +457,18 @@ def test_copy_force_all_star_version_boundaries():
 def test_copy_from_rejects_invalid_option_relationships():
     dialect = PostgresDialect((19, 0, 0))
     with pytest.raises(ValueError, match="REJECT_LIMIT requires"):
-        PostgresCopyFromExpression(dialect, "users", reject_limit=1).to_sql()
+        PostgresCopyFromStatement(dialect, "users", reject_limit=1).to_sql()
     with pytest.raises(ValueError, match="require text or csv"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             dialect,
             "users",
             format="binary",
             on_error="ignore",
         ).to_sql()
     with pytest.raises(ValueError, match="QUOTE and ESCAPE"):
-        PostgresCopyFromExpression(dialect, "users", quote='"').to_sql()
+        PostgresCopyFromStatement(dialect, "users", quote='"').to_sql()
     with pytest.raises(ValueError, match="absent"):
-        PostgresCopyFromExpression(
+        PostgresCopyFromStatement(
             dialect,
             "users",
             columns=["id"],
@@ -476,12 +476,12 @@ def test_copy_from_rejects_invalid_option_relationships():
             format="csv",
         ).to_sql()
     with pytest.raises(TypeError, match="BaseExpression"):
-        PostgresCopyFromExpression(dialect, "users", where="id > 0")
+        PostgresCopyFromStatement(dialect, "users", where="id > 0")
 
 
 def test_copy_from_where_returns_parameters():
     dialect = PostgresDialect((19, 0, 0))
-    expression = PostgresCopyFromExpression(
+    expression = PostgresCopyFromStatement(
         dialect,
         "users",
         where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 7)),
@@ -494,24 +494,24 @@ def test_copy_from_where_returns_parameters():
 
 
 def test_repack_version_gate_and_all_forms():
-    expression = PostgresRepackExpression(PostgresDialect((18, 0, 0)), table_name="users")
+    expression = PostgresRepackStatement(PostgresDialect((18, 0, 0)), table_name="users")
     with pytest.raises(UnsupportedFeatureError, match="PostgreSQL 19"):
         expression.to_sql()
 
     dialect = PostgresDialect((19, 0, 0))
-    assert PostgresRepackExpression(dialect).to_sql() == ("REPACK", ())
-    assert PostgresRepackExpression(
+    assert PostgresRepackStatement(dialect).to_sql() == ("REPACK", ())
+    assert PostgresRepackStatement(
         dialect,
         verbose=True,
         all_using_index=True,
     ).to_sql() == ("REPACK (VERBOSE) USING INDEX", ())
-    assert PostgresRepackExpression(
+    assert PostgresRepackStatement(
         dialect,
         table_name="users",
         concurrently=True,
         using_index=True,
     ).to_sql() == ('REPACK (CONCURRENTLY) "users" USING INDEX', ())
-    assert PostgresRepackExpression(
+    assert PostgresRepackStatement(
         dialect,
         table_name="users",
         schema="app data",
@@ -527,15 +527,15 @@ def test_repack_version_gate_and_all_forms():
 def test_repack_strict_relationships():
     dialect = PostgresDialect((19, 0, 0))
     with pytest.raises(ValueError, match="columns require ANALYZE"):
-        PostgresRepackExpression(dialect, table_name="users", columns=["id"]).to_sql()
+        PostgresRepackStatement(dialect, table_name="users", columns=["id"]).to_sql()
     with pytest.raises(ValueError, match="ANALYZE requires one table"):
-        PostgresRepackExpression(dialect, analyze=True).to_sql()
+        PostgresRepackStatement(dialect, analyze=True).to_sql()
     with pytest.raises(ValueError, match="CONCURRENTLY requires one table"):
-        PostgresRepackExpression(dialect, concurrently=True).to_sql()
+        PostgresRepackStatement(dialect, concurrently=True).to_sql()
     with pytest.raises(ValueError, match="named REPACK index"):
-        PostgresRepackExpression(dialect, using_index="users_idx").to_sql()
+        PostgresRepackStatement(dialect, using_index="users_idx").to_sql()
     with pytest.raises(ValueError, match="cannot be combined"):
-        PostgresRepackExpression(
+        PostgresRepackStatement(
             dialect,
             table_name="users",
             all_using_index=True,
@@ -549,9 +549,9 @@ def test_protocol_mro_and_serialization():
     assert PostgresDialect.__mro__.index(PostgresCopyMixin) < PostgresDialect.__mro__.index(PostgresCopySupport)
     assert PostgresDialect.__mro__.index(PostgresRepackMixin) < PostgresDialect.__mro__.index(PostgresRepackSupport)
 
-    original = PostgresCopyToExpression(dialect, query=select_query(dialect))
+    original = PostgresCopyToStatement(dialect, query=select_query(dialect))
     restored = deserialize(serialize(original), dialect)
-    assert isinstance(restored, PostgresCopyToExpression)
+    assert isinstance(restored, PostgresCopyToStatement)
     assert restored.to_sql() == original.to_sql()
 
 
@@ -561,7 +561,7 @@ def test_sync_copy_to_consumes_complete_stream_and_passes_parameters():
     cursor = SyncCursor(copy)
     backend = make_sync_backend(cursor)
 
-    result = backend.copy_to(PostgresCopyToExpression(dialect, query=select_query(dialect)))
+    result = backend.copy_to(PostgresCopyToStatement(dialect, query=select_query(dialect)))
 
     assert result == b"first-secondthird"
     assert cursor.statements[0][1] == (3,)
@@ -575,7 +575,7 @@ def test_sync_copy_from_streams_chunks_and_returns_row_count():
     backend = make_sync_backend(cursor)
 
     result = backend.copy_from(
-        PostgresCopyFromExpression(dialect, "users", format="csv"),
+        PostgresCopyFromStatement(dialect, "users", format="csv"),
         (b"1,one\n", memoryview(b"2,two\n"), "3,three\n"),
     )
 
@@ -594,7 +594,7 @@ def test_sync_copy_to_client_error_rolls_back_explicit_transaction():
     backend._connection = Mock(closed=False)
 
     with pytest.raises(RuntimeError, match="client copy failure"):
-        backend.copy_to(PostgresCopyToExpression(dialect, table_name="users"))
+        backend.copy_to(PostgresCopyToStatement(dialect, table_name="users"))
 
     manager.rollback.assert_called_once_with()
 
@@ -607,7 +607,7 @@ def test_sync_copy_from_rejects_str_with_explicit_encoding():
 
     with pytest.raises(TypeError, match="ENCODING"):
         backend.copy_from(
-            PostgresCopyFromExpression(dialect, "users", encoding="LATIN1"),
+            PostgresCopyFromStatement(dialect, "users", encoding="LATIN1"),
             "one\n",
         )
 
@@ -628,7 +628,7 @@ def test_sync_copy_client_error_rolls_back_explicit_transaction():
         raise RuntimeError("client copy failure")
 
     with pytest.raises(RuntimeError, match="client copy failure"):
-        backend.copy_from(PostgresCopyFromExpression(dialect, "users"), input_chunks())
+        backend.copy_from(PostgresCopyFromStatement(dialect, "users"), input_chunks())
 
     manager.rollback.assert_called_once_with()
     assert copy.writes == [b"one\n"]
@@ -647,7 +647,7 @@ async def test_async_copy_to_client_error_rolls_back_explicit_transaction():
     backend._connection.rollback = AsyncMock()
 
     with pytest.raises(RuntimeError, match="client copy failure"):
-        await backend.copy_to(PostgresCopyToExpression(dialect, table_name="users"))
+        await backend.copy_to(PostgresCopyToStatement(dialect, table_name="users"))
 
     manager.rollback.assert_awaited_once_with()
 
@@ -661,7 +661,7 @@ async def test_async_copy_from_rejects_str_with_explicit_encoding():
 
     with pytest.raises(TypeError, match="ENCODING"):
         await backend.copy_from(
-            PostgresCopyFromExpression(dialect, "users", encoding="LATIN1"),
+            PostgresCopyFromStatement(dialect, "users", encoding="LATIN1"),
             "one\n",
         )
 
@@ -685,7 +685,7 @@ async def test_async_copy_client_error_rolls_back_explicit_transaction():
         raise RuntimeError("client copy failure")
 
     with pytest.raises(RuntimeError, match="client copy failure"):
-        await backend.copy_from(PostgresCopyFromExpression(dialect, "users"), input_chunks())
+        await backend.copy_from(PostgresCopyFromStatement(dialect, "users"), input_chunks())
 
     manager.rollback.assert_awaited_once_with()
     assert copy.writes == [b"one\n"]
@@ -706,7 +706,7 @@ def test_sync_copy_converts_psycopg_errors():
     backend._handle_error = Mock(side_effect=QueryError("converted"))
 
     with pytest.raises(QueryError, match="converted"):
-        backend.copy_to(PostgresCopyToExpression(dialect, table_name="users"))
+        backend.copy_to(PostgresCopyToStatement(dialect, table_name="users"))
 
 
 @pytest.mark.asyncio
@@ -714,7 +714,7 @@ async def test_async_copy_apis_are_symmetric_and_consume_streams():
     dialect = PostgresDialect((19, 0, 0))
     output_cursor = AsyncCursor(AsyncCopy([b"one", b"two"]))
     output_backend = make_async_backend(output_cursor)
-    output = await output_backend.copy_to(PostgresCopyToExpression(dialect, query=select_query(dialect)))
+    output = await output_backend.copy_to(PostgresCopyToStatement(dialect, query=select_query(dialect)))
     assert output == b"onetwo"
     assert output_cursor.statements[0][1] == (3,)
     assert output_cursor.closed is True
@@ -723,7 +723,7 @@ async def test_async_copy_apis_are_symmetric_and_consume_streams():
     input_cursor = AsyncCursor(input_copy, rowcount=2)
     input_backend = make_async_backend(input_cursor)
     count = await input_backend.copy_from(
-        PostgresCopyFromExpression(dialect, "users"),
+        PostgresCopyFromStatement(dialect, "users"),
         [b"one\n", b"two\n"],
     )
     assert count == 2

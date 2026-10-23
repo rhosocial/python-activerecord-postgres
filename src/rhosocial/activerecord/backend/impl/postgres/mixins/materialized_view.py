@@ -43,8 +43,8 @@ from ..storage_parameters import resolve_storage_parameter
 if TYPE_CHECKING:
     from ....expression.statements.ddl_view import CreateMaterializedViewStatement
     from ..expression.ddl.mv import (
-        PostgresAlterMaterializedViewExpression,
-        PostgresRefreshMaterializedViewExpression,
+        PostgresAlterMaterializedViewStatement,
+        PostgresRefreshMaterializedViewPgStatement,
     )
 
 
@@ -306,12 +306,12 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return super().format_refresh_materialized_view_statement(expr)
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "PostgresRefreshMaterializedViewExpression"
+        self, expr: "PostgresRefreshMaterializedViewPgStatement"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: PostgresRefreshMaterializedViewExpression containing all options
+            expr: PostgresRefreshMaterializedViewPgStatement containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -341,7 +341,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return " ".join(parts), ()
 
     def format_alter_materialized_view_statement(
-        self, expr: "PostgresAlterMaterializedViewExpression"
+        self, expr: "PostgresAlterMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER MATERIALIZED VIEW statement.
 
@@ -349,7 +349,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         statement; multiple actions are joined with ``";\\n"``.
 
         Args:
-            expr: PostgresAlterMaterializedViewExpression with the actions to apply
+            expr: PostgresAlterMaterializedViewStatement with the actions to apply
 
         Returns:
             Tuple of (SQL statement, parameters tuple); ``params`` is always empty.

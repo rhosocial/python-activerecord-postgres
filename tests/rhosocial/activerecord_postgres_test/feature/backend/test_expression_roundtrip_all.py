@@ -143,9 +143,9 @@ from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression import declared
 from rhosocial.activerecord.backend.expression.datetime import (
     DatePartExpression,
-    DateTimeAddExpression,
-    DateTimeDiffExpression,
-    DateTimeSubtractExpression,
+    DatetimeAddExpression,
+    DatetimeDiffExpression,
+    DatetimeSubtractExpression,
     DateTimeField,
     DateTruncExpression,
     ExtractExpression,
@@ -248,7 +248,7 @@ from rhosocial.activerecord.backend.expression.xml import (
     XMLTableExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
-    PostgresCopyToExpression,
+    PostgresCopyToStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.column import (
     PostgresColumnDefinition,
@@ -266,34 +266,34 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constra
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
     PostgresAlterIndexActionType,
-    PostgresAlterIndexExpression,
-    PostgresReindexExpression,
+    PostgresAlterIndexStatement,
+    PostgresReindexStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresAlterMaterializedViewExpression,
+    PostgresAlterMaterializedViewStatement,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresAttachPartitionExpression,
-    PostgresCreatePartitionExpression,
+    PostgresAttachPartitionStatement,
+    PostgresCreatePartitionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.pg_partman import (
     PostgresPgPartmanUpdateConfigExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.policy import (
-    PostgresAlterPolicyExpression,
+    PostgresAlterPolicyStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.publication import (
-    PostgresCreatePublicationExpression,
+    PostgresCreatePublicationStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.rls_config import (
-    PostgresAlterTableRlsExpression,
+    PostgresAlterTableRlsStatement,
     RlsConfigurationMode,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_settings import (
     LoggingMode,
-    PostgresAlterTableSettingsExpression,
+    PostgresAlterTableSettingsStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     PostgresEnumValuesExpression,
@@ -311,10 +311,10 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.values import (
-    PostgresHstoreValueExpression,
-    PostgresLtreeValueExpression,
-    PostgresNetworkValueExpression,
-    PostgresRangeValueExpression,
+    PostgresHstoreValue,
+    PostgresLtreeValue,
+    PostgresNetworkValue,
+    PostgresRangeValue,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     hstore as pg_hstore,
@@ -644,8 +644,8 @@ def register_specials():
     # against the REINDEX targets; ``mode`` against the RLS modes. The guess
     # supplies a bare string and the formatter refuses it.
     register_special_constructor(
-        "ddl.partition.PostgresCreatePartitionExpression",
-        lambda d: PostgresCreatePartitionExpression(
+        "ddl.partition.PostgresCreatePartitionStatement",
+        lambda d: PostgresCreatePartitionStatement(
             d,
             partition_name="p1",
             parent_table="t",
@@ -654,8 +654,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "ddl.partition.PostgresAttachPartitionExpression",
-        lambda d: PostgresAttachPartitionExpression(
+        "ddl.partition.PostgresAttachPartitionStatement",
+        lambda d: PostgresAttachPartitionStatement(
             d,
             partition_name="p1",
             parent_table="t",
@@ -668,8 +668,8 @@ def register_specials():
         lambda d: PartitionClause(d, PartitionStrategy.RANGE, [Column(d, "a")]),
     )
     register_special_constructor(
-        "ddl.index.PostgresAlterIndexExpression",
-        lambda d: PostgresAlterIndexExpression(
+        "ddl.index.PostgresAlterIndexStatement",
+        lambda d: PostgresAlterIndexStatement(
             d,
             index_name="i",
             action_type=PostgresAlterIndexActionType.RENAME_TO,
@@ -677,18 +677,18 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "ddl.index.PostgresReindexExpression",
-        lambda d: PostgresReindexExpression(d, target_type="INDEX", name="i"),
+        "ddl.index.PostgresReindexStatement",
+        lambda d: PostgresReindexStatement(d, target_type="INDEX", name="i"),
     )
     register_special_constructor(
-        "ddl.rls_config.PostgresAlterTableRlsExpression",
-        lambda d: PostgresAlterTableRlsExpression(
+        "ddl.rls_config.PostgresAlterTableRlsStatement",
+        lambda d: PostgresAlterTableRlsStatement(
             d, table_name="t", mode=RlsConfigurationMode.ENABLE
         ),
     )
     register_special_constructor(
-        "ddl.table_settings.PostgresAlterTableSettingsExpression",
-        lambda d: PostgresAlterTableSettingsExpression(
+        "ddl.table_settings.PostgresAlterTableSettingsStatement",
+        lambda d: PostgresAlterTableSettingsStatement(
             d, table_name="t", mode=LoggingMode.LOGGED
         ),
     )
@@ -717,14 +717,14 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "ddl.policy.PostgresAlterPolicyExpression",
-        lambda d: PostgresAlterPolicyExpression(
+        "ddl.policy.PostgresAlterPolicyStatement",
+        lambda d: PostgresAlterPolicyStatement(
             d, name="p", table_name="t", new_name="q"
         ),
     )
     register_special_constructor(
-        "ddl.publication.PostgresCreatePublicationExpression",
-        lambda d: PostgresCreatePublicationExpression(
+        "ddl.publication.PostgresCreatePublicationStatement",
+        lambda d: PostgresCreatePublicationStatement(
             d, name="pub", tables=["t"]
         ),
     )
@@ -782,8 +782,8 @@ def register_specials():
     # COPY needs a source: either a query or a table. With neither, there is no
     # statement.
     register_special_constructor(
-        "copy.PostgresCopyToExpression",
-        lambda d: PostgresCopyToExpression(d, table_name="t"),
+        "copy.PostgresCopyToStatement",
+        lambda d: PostgresCopyToStatement(d, table_name="t"),
     )
     register_special_constructor(
         "ddl.mv.PostgresSetMaterializedViewPropertiesAction",
@@ -796,8 +796,8 @@ def register_specials():
         lambda d: PostgresResetMaterializedViewPropertiesAction(d, parameters=["fillfactor"]),
     )
     register_special_constructor(
-        "ddl.mv.PostgresAlterMaterializedViewExpression",
-        lambda d: PostgresAlterMaterializedViewExpression(
+        "ddl.mv.PostgresAlterMaterializedViewStatement",
+        lambda d: PostgresAlterMaterializedViewStatement(
             d,
             view=MaterializedView(d, "mv"),
             actions=[PostgresSetMaterializedViewPropertiesAction(
@@ -1050,20 +1050,20 @@ def register_specials():
         lambda d: IntervalExpression(d, 7, IntervalUnit.DAY),
     )
     register_special_constructor(
-        "datetime.DateTimeDiffExpression",
-        lambda d: DateTimeDiffExpression(
+        "datetime.DatetimeDiffExpression",
+        lambda d: DatetimeDiffExpression(
             d, IntervalUnit.DAY, Column(d, "a"), Column(d, "b")
         ),
     )
     register_special_constructor(
-        "datetime.DateTimeSubtractExpression",
-        lambda d: DateTimeSubtractExpression(
+        "datetime.DatetimeSubtractExpression",
+        lambda d: DatetimeSubtractExpression(
             d, Column(d, "a"), IntervalExpression(d, 1, IntervalUnit.DAY)
         ),
     )
     register_special_constructor(
-        "datetime.DateTimeAddExpression",
-        lambda d: DateTimeAddExpression(
+        "datetime.DatetimeAddExpression",
+        lambda d: DatetimeAddExpression(
             d, Column(d, "a"), IntervalExpression(d, 1, IntervalUnit.DAY)
         ),
     )
@@ -1117,29 +1117,29 @@ def register_specials():
     # ``to_sql`` as a string and raises AttributeError there instead of being
     # refused at the door. The factories below are the ones the classes own.
     register_special_constructor(
-        "values.PostgresNetworkValueExpression",
-        lambda d: PostgresNetworkValueExpression(d, pg_network.inet_client_addr(d)),
+        "values.PostgresNetworkValue",
+        lambda d: PostgresNetworkValue(d, pg_network.inet_client_addr(d)),
     )
     register_special_constructor(
-        "values.PostgresRangeValueExpression",
-        lambda d: PostgresRangeValueExpression(
+        "values.PostgresRangeValue",
+        lambda d: PostgresRangeValue(
             d,
             pg_range.range_contains(d, Column(d, "v"), Literal(d, 3)),
             element_type=None,
         ),
     )
     register_special_constructor(
-        "values.PostgresHstoreValueExpression",
+        "values.PostgresHstoreValue",
         # A dict is what ``hstore_literal`` casts to ``hstore``; handing it a
         # ``Literal`` would have it wrap a node in a second ``Literal``, which
         # has no value kind and therefore no artifact.
-        lambda d: PostgresHstoreValueExpression(
+        lambda d: PostgresHstoreValue(
             d, pg_hstore.hstore_akeys(d, pg_hstore.hstore_literal(d, {"a": "1"}))
         ),
     )
     register_special_constructor(
-        "values.PostgresLtreeValueExpression",
-        lambda d: PostgresLtreeValueExpression(
+        "values.PostgresLtreeValue",
+        lambda d: PostgresLtreeValue(
             d,
             pg_ltree.ltree_ancestor(
                 d, Column(d, "v"), pg_ltree.ltree_literal(d, "a.b")

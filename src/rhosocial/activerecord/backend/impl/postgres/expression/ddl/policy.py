@@ -32,9 +32,9 @@ __all__ = [
     "PolicyType",
     "PolicyCommand",
     "AlterPolicyMode",
-    "PostgresCreatePolicyExpression",
-    "PostgresAlterPolicyExpression",
-    "PostgresDropPolicyExpression",
+    "PostgresCreatePolicyStatement",
+    "PostgresAlterPolicyStatement",
+    "PostgresDropPolicyStatement",
 ]
 
 
@@ -81,7 +81,7 @@ class AlterPolicyMode(str, Enum):
     RENAME = "RENAME"
 
 
-class PostgresCreatePolicyExpression(BaseExpression):
+class PostgresCreatePolicyStatement(BaseExpression):
     """PostgreSQL CREATE POLICY statement expression.
 
     Defines a new row-level security policy for a table.
@@ -107,7 +107,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresCreatePolicyExpression(
+        >>> expr = PostgresCreatePolicyStatement(
         ...     dialect=dialect,
         ...     name="user_select_own",
         ...     table_name="orders",
@@ -146,7 +146,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
         return "format_create_policy_statement"
 
 
-class PostgresAlterPolicyExpression(BaseExpression):
+class PostgresAlterPolicyStatement(BaseExpression):
     """PostgreSQL ALTER POLICY statement expression.
 
     PostgreSQL supports two syntactic forms:
@@ -208,7 +208,7 @@ class PostgresAlterPolicyExpression(BaseExpression):
         return "format_alter_policy_statement"
 
 
-class PostgresDropPolicyExpression(BaseExpression):
+class PostgresDropPolicyStatement(BaseExpression):
     """PostgreSQL DROP POLICY statement expression.
 
     Removes a row-level security policy from a table.

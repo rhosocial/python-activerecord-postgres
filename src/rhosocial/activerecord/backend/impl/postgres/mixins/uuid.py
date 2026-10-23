@@ -27,7 +27,7 @@ class PostgresUUIDMixin:
 
     #: ``gen_random_uuid()`` is absent from this table on purpose: it is not
     #: one fixed spelling across supported servers, so
-    #: :meth:`format_uuid_generation` resolves it per version instead.
+    #: :meth:`format_uuid_generation_expression` resolves it per version instead.
     UUID_SQL = {
         "constant": {
             "nil": "'00000000-0000-0000-0000-000000000000'::uuid",
@@ -71,7 +71,7 @@ class PostgresUUIDMixin:
             return True
         return self.supports_uuid_ossp_extension()
 
-    def format_uuid_generation(
+    def format_uuid_generation_expression(
         self, expr: "UUIDGenerationExpression"
     ) -> Tuple[str, Tuple]:
         """Render the version-appropriate UUID generator.

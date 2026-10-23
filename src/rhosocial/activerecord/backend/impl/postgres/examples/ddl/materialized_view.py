@@ -10,7 +10,7 @@ This example demonstrates:
 6. REFRESH MATERIALIZED VIEW (normal)
 7. REFRESH MATERIALIZED VIEW CONCURRENTLY (PostgreSQL 9.4+)
 8. REFRESH MATERIALIZED VIEW WITH DATA (after NO DATA)
-9. Schema-qualified refresh (PostgresRefreshMaterializedViewExpression)
+9. Schema-qualified refresh (PostgresRefreshMaterializedViewPgStatement)
 10. DROP MATERIALIZED VIEW with CASCADE and IF EXISTS
 11. IF NOT EXISTS (PostgreSQL 9.4+) via PostgresCreateMaterializedViewExpression
 12. Schema-qualified create/drop
@@ -55,11 +55,11 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresAlterMaterializedViewExpression,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -371,14 +371,14 @@ for row in result.data or []:
     print(f"  {row}")
 
 # ============================================================
-# SECTION: 7. Schema-Qualified Refresh (PostgresRefreshMaterializedViewExpression)
+# SECTION: 7. Schema-Qualified Refresh (PostgresRefreshMaterializedViewPgStatement)
 # ============================================================
 # The PostgreSQL backend provides an extended refresh expression that
 # supports specifying the schema for the materialized view.
-# (PostgresRefreshMaterializedViewExpression is imported at the top of this file.)
+# (PostgresRefreshMaterializedViewPgStatement is imported at the top of this file.)
 
 # Refresh with schema (public is PG's default schema)
-pg_refresh = PostgresRefreshMaterializedViewExpression(
+pg_refresh = PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary', schema_name='public'),
 )
@@ -387,7 +387,7 @@ print(f"\nSchema-qualified REFRESH SQL: {sql}")
 backend.execute(sql, params)
 
 # Also supports the backward-compatible concurrently= alias
-pg_refresh_c = PostgresRefreshMaterializedViewExpression(
+pg_refresh_c = PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     concurrently=True,
@@ -489,7 +489,7 @@ for row in result.data or []:
 # relocated to another tablespace after creation.
 # Multiple actions render as separate statements joined with ";\n".
 
-alter_mv = PostgresAlterMaterializedViewExpression(
+alter_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     actions=[
@@ -505,7 +505,7 @@ sql, params = alter_mv.to_sql()
 print(f"\nALTER SET/RESET SQL:\n{sql}")
 backend.execute(sql, params, options=ddl_options)
 
-rename_mv = PostgresAlterMaterializedViewExpression(
+rename_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     actions=[PostgresRenameMaterializedViewAction(dialect, 'sales_summary_v2')],
@@ -515,7 +515,7 @@ print(f"\nALTER RENAME SQL: {sql}")
 backend.execute(sql, params, options=ddl_options)
 
 # Move the schema-qualified view into the public schema.
-set_schema_mv = PostgresAlterMaterializedViewExpression(
+set_schema_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
     actions=[PostgresSetMaterializedViewSchemaAction(dialect, 'public')],
@@ -525,7 +525,7 @@ print(f"\nALTER SET SCHEMA SQL: {sql}")
 backend.execute(sql, params, options=ddl_options)
 
 # CURRENT_USER / CURRENT_ROLE / SESSION_USER are emitted verbatim.
-owner_mv = PostgresAlterMaterializedViewExpression(
+owner_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary_v2'),
     actions=[PostgresChangeMaterializedViewOwnerAction(dialect, 'CURRENT_USER')],
@@ -595,7 +595,7 @@ backend.disconnect()
 # 6. Use RefreshMaterializedViewStatement for standard refresh
 # 7. Use RefreshMaterializedViewStatement with concurrent=True for CONCURRENTLY refresh (PG 9.4+, requires UNIQUE index)
 # 8. Use RefreshMaterializedViewStatement with with_data=True to populate a NO-DATA MV
-# 9. Use PostgresRefreshMaterializedViewExpression for schema-qualified refresh
+# 9. Use PostgresRefreshMaterializedViewPgStatement for schema-qualified refresh
 # 10. Use DropMaterializedViewStatement with cascade=True to drop dependent objects
 # 11. Use DropMaterializedViewStatement with if_exists=True for safe drop
 # 12. Requires PostgreSQL 9.3+ for basic MV support

@@ -35,11 +35,11 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PostgresMaterializedViewAlterAction",
-    "PostgresAlterMaterializedViewExpression",
+    "PostgresAlterMaterializedViewStatement",
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
     "PostgresDropMaterializedViewExpression",
-    "PostgresRefreshMaterializedViewExpression",
+    "PostgresRefreshMaterializedViewPgStatement",
     "PostgresRenameMaterializedViewAction",
     "PostgresResetMaterializedViewPropertiesAction",
     "PostgresSetMaterializedViewPropertiesAction",
@@ -150,7 +150,7 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewStatement):
         )
 
 
-class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewStatement):
+class PostgresRefreshMaterializedViewPgStatement(RefreshMaterializedViewStatement):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
 
     Replaces the contents of a materialized view by recalculating its query.
@@ -172,7 +172,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewStatement
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ... )
@@ -181,14 +181,14 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewStatement
         'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
 
         >>> # Concurrent refresh (PG 9.4+, requires unique index)
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     concurrently=True,
         ... )
 
         >>> # Refresh without data (create empty, PG 9.4+)
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     no_data=True,
@@ -344,18 +344,18 @@ class PostgresChangeMaterializedViewOwnerAction(PostgresMaterializedViewAlterAct
         self.new_owner = new_owner
 
 
-class PostgresAlterMaterializedViewExpression(BaseExpression):
+class PostgresAlterMaterializedViewStatement(BaseExpression):
     """Expression for ``ALTER MATERIALIZED VIEW``.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-        ...     PostgresAlterMaterializedViewExpression,
+        ...     PostgresAlterMaterializedViewStatement,
         ...     PostgresRenameMaterializedViewAction,
         ...     PostgresSetMaterializedViewPropertiesAction,
         ... )
         >>> dialect = PostgresDialect(version=(15, 0, 0))
-        >>> alter = PostgresAlterMaterializedViewExpression(
+        >>> alter = PostgresAlterMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "sales_summary"),
         ...     actions=[

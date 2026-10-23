@@ -20,10 +20,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresCreateStatisticsExpression", "PostgresDropStatisticsExpression"]
+__all__ = ["PostgresCreateStatisticsStatement", "PostgresDropStatisticsStatement"]
 
 
-class PostgresCreateStatisticsExpression(BaseExpression):
+class PostgresCreateStatisticsStatement(BaseExpression):
     """PostgreSQL CREATE STATISTICS statement expression.
 
     Creates extended statistics for columns to improve query planning for complex queries.
@@ -42,7 +42,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Create ndistinct statistics
-        >>> stats = PostgresCreateStatisticsExpression(
+        >>> stats = PostgresCreateStatisticsStatement(
         ...     dialect=dialect,
         ...     name="users_status_expr",
         ...     columns=["status", "category"],
@@ -54,7 +54,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         "CREATE STATISTICS users_status_expr ON (status, category) FROM users"
 
         >>> # Create multiple statistics types (PG 12+)
-        >>> stats = PostgresCreateStatisticsExpression(
+        >>> stats = PostgresCreateStatisticsStatement(
         ...     dialect=dialect,
         ...     name="order_stats",
         ...     columns=["customer_id", "status", "region"],
@@ -88,7 +88,7 @@ class PostgresCreateStatisticsExpression(BaseExpression):
         return "format_create_statistics_statement"
 
 
-class PostgresDropStatisticsExpression(BaseExpression):
+class PostgresDropStatisticsStatement(BaseExpression):
     """PostgreSQL DROP STATISTICS statement expression.
 
     Drops an extended statistics object.
@@ -101,7 +101,7 @@ class PostgresDropStatisticsExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> drop = PostgresDropStatisticsExpression(
+        >>> drop = PostgresDropStatisticsStatement(
         ...     dialect=dialect,
         ...     name="users_status_expr",
         ... )

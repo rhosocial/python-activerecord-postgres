@@ -8,7 +8,7 @@ Tests for:
 - Format DROP INDEX with CONCURRENTLY
 - Format ALTER INDEX
 - PostgreSQL-specific IndexObjectSupport protocol methods
-- CreateIndexStatement / DropIndexStatement / PostgresAlterIndexExpression
+- CreateIndexStatement / DropIndexStatement / PostgresAlterIndexStatement
 """
 import pytest
 
@@ -29,9 +29,9 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.index import PostgresIndexMixin
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresAlterIndexExpression,
+    PostgresAlterIndexStatement,
     PostgresAlterIndexActionType,
-    PostgresReindexExpression,
+    PostgresReindexStatement,
     PostgresCreateIndexExpression,
 )
 
@@ -126,7 +126,7 @@ class TestFormatReindexStatement:
     def test_reindex_index_basic(self):
         """Test basic REINDEX INDEX."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_users_email"
@@ -138,7 +138,7 @@ class TestFormatReindexStatement:
     def test_reindex_table(self):
         """Test REINDEX TABLE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="TABLE",
             name="users"
@@ -149,7 +149,7 @@ class TestFormatReindexStatement:
     def test_reindex_schema(self):
         """Test REINDEX SCHEMA."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="SCHEMA",
             name="public"
@@ -160,7 +160,7 @@ class TestFormatReindexStatement:
     def test_reindex_database(self):
         """Test REINDEX DATABASE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="DATABASE",
             name="mydb"
@@ -171,7 +171,7 @@ class TestFormatReindexStatement:
     def test_reindex_system(self):
         """Test REINDEX SYSTEM."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="SYSTEM",
             name="mydb"
@@ -182,7 +182,7 @@ class TestFormatReindexStatement:
     def test_reindex_invalid_target_type(self):
         """Test REINDEX with invalid target type."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INVALID",
             name="test"
@@ -193,7 +193,7 @@ class TestFormatReindexStatement:
     def test_reindex_concurrently_pg11_raises_error(self):
         """REINDEX CONCURRENTLY should raise error on PostgreSQL 11."""
         dialect = PostgresDialect((11, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -205,7 +205,7 @@ class TestFormatReindexStatement:
     def test_reindex_concurrently_pg12(self):
         """Test REINDEX CONCURRENTLY on PostgreSQL 12."""
         dialect = PostgresDialect((12, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -217,7 +217,7 @@ class TestFormatReindexStatement:
     def test_reindex_with_tablespace(self):
         """Test REINDEX with TABLESPACE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -229,7 +229,7 @@ class TestFormatReindexStatement:
     def test_reindex_verbose(self):
         """Test REINDEX VERBOSE."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -241,7 +241,7 @@ class TestFormatReindexStatement:
     def test_reindex_with_schema(self):
         """Test REINDEX with schema."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = PostgresReindexExpression(
+        expr = PostgresReindexStatement(
             dialect,
             target_type="INDEX",
             name="idx_test",
@@ -719,11 +719,11 @@ class TestDropIndexExpression:
 
 
 class TestPostgresAlterIndexExpression:
-    """Test PostgresAlterIndexExpression for all action types."""
+    """Test PostgresAlterIndexStatement for all action types."""
 
     def test_rename_to(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.RENAME_TO, new_name="idx_new"
         )
         sql, _ = expr.to_sql()
@@ -731,7 +731,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_rename_to_if_exists(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.RENAME_TO,
             new_name="idx_new", if_exists=True,
         )
@@ -740,7 +740,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_rename_to_missing_name_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.RENAME_TO
         )
         with pytest.raises(ValueError, match="new_name is required"):
@@ -748,7 +748,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_set_tablespace(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.SET_TABLESPACE,
             tablespace="fast_ts",
         )
@@ -757,7 +757,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_set_storage_parameters(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.SET_STORAGE_PARAMETERS,
             storage_parameters={"fillfactor": 70},
         )
@@ -766,7 +766,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_set_storage_parameters_multiple(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.SET_STORAGE_PARAMETERS,
             storage_parameters={"fillfactor": 70, "deduplicate_items": "off"},
         )
@@ -776,7 +776,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_reset_storage_parameters(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.RESET_STORAGE_PARAMETERS,
             storage_parameters={"fillfactor": 70},
         )
@@ -785,7 +785,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_alter_column_statistics(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx_old", PostgresAlterIndexActionType.ALTER_COLUMN_STATISTICS,
             column_number=1, statistics_target=100,
         )
@@ -794,7 +794,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_all_in_tablespace(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "", PostgresAlterIndexActionType.ALL_IN_TABLESPACE,
             source_tablespace="old_ts", target_tablespace="new_ts",
         )
@@ -803,7 +803,7 @@ class TestPostgresAlterIndexExpression:
 
     def test_all_in_tablespace_nowait(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "", PostgresAlterIndexActionType.ALL_IN_TABLESPACE,
             source_tablespace="old_ts", target_tablespace="new_ts", nowait=True,
         )
@@ -945,7 +945,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_all_in_tablespace_missing_source_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "", PostgresAlterIndexActionType.ALL_IN_TABLESPACE,
             target_tablespace="new_ts",
         )
@@ -954,7 +954,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_all_in_tablespace_missing_target_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "", PostgresAlterIndexActionType.ALL_IN_TABLESPACE,
             source_tablespace="old_ts",
         )
@@ -963,7 +963,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_set_tablespace_missing_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx", PostgresAlterIndexActionType.SET_TABLESPACE,
         )
         with pytest.raises(ValueError, match="tablespace is required"):
@@ -971,7 +971,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_set_storage_params_missing_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx", PostgresAlterIndexActionType.SET_STORAGE_PARAMETERS,
         )
         with pytest.raises(ValueError, match="storage_parameters"):
@@ -979,7 +979,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_reset_storage_params_missing_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx", PostgresAlterIndexActionType.RESET_STORAGE_PARAMETERS,
         )
         with pytest.raises(ValueError, match="storage_parameters"):
@@ -987,7 +987,7 @@ class TestPostgresAlterIndexExpressionErrorPaths:
 
     def test_alter_statistics_missing_params_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(
+        expr = PostgresAlterIndexStatement(
             d, "idx", PostgresAlterIndexActionType.ALTER_COLUMN_STATISTICS,
         )
         with pytest.raises(ValueError, match="column_number"):
@@ -1065,13 +1065,13 @@ class TestPostgresIndexMixinDirect:
 
     def test_unsupported_alter_index_action_raises(self):
         d = PostgresDialect()
-        expr = PostgresAlterIndexExpression(d, "idx", "INVALID")
+        expr = PostgresAlterIndexStatement(d, "idx", "INVALID")
         with pytest.raises(ValueError, match="Unsupported ALTER INDEX action"):
             expr.to_sql()
 
     def test_reindex_expression_to_sql(self):
         d = PostgresDialect((15, 0, 0))
-        expr = PostgresReindexExpression(d, "INDEX", "idx_test")
+        expr = PostgresReindexStatement(d, "INDEX", "idx_test")
         sql, _ = expr.to_sql()
         assert "REINDEX INDEX" in sql
         assert "idx_test" in sql

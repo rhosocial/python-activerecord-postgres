@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PostgresPartitionValue",
-    "PostgresCreatePartitionExpression",
-    "PostgresDetachPartitionExpression",
-    "PostgresAttachPartitionExpression",
-    "PostgresPartitionMetadataExpression",
+    "PostgresCreatePartitionStatement",
+    "PostgresDetachPartitionStatement",
+    "PostgresAttachPartitionStatement",
+    "PostgresPartitionMetadataQueryStatement",
 ]
 
 # ``PARTITION BY {RANGE|LIST|HASH} (...)`` is core's clause: PostgreSQL's
@@ -141,7 +141,7 @@ class PostgresPartitionValue(BaseExpression):
         return "format_partition_value"
 
 
-class PostgresCreatePartitionExpression(BaseExpression):
+class PostgresCreatePartitionStatement(BaseExpression):
     """PostgreSQL CREATE TABLE ... PARTITION OF statement expression.
 
     Creates a new partition as a child of a partitioned table.
@@ -163,7 +163,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # RANGE partition
-        >>> partition = PostgresCreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",
@@ -175,7 +175,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         'CREATE TABLE "orders_2024_q1" PARTITION OF "orders" FOR VALUES FROM (\'2024-01-01\') TO (\'2024-04-01\')'
 
         >>> # LIST partition
-        >>> partition = PostgresCreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_active",
         ...     parent_table="orders",
@@ -220,7 +220,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         return "format_create_partition_statement"
 
 
-class PostgresDetachPartitionExpression(BaseExpression):
+class PostgresDetachPartitionStatement(BaseExpression):
     """PostgreSQL ALTER TABLE ... DETACH PARTITION statement expression.
 
     Detaches a partition from its parent table without dropping the data.
@@ -236,7 +236,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> detach = PostgresDetachPartitionExpression(
+        >>> detach = PostgresDetachPartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2023",
         ...     parent_table="orders",
@@ -272,7 +272,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         return "format_detach_partition_statement"
 
 
-class PostgresAttachPartitionExpression(BaseExpression):
+class PostgresAttachPartitionStatement(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
@@ -292,7 +292,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> attach = PostgresAttachPartitionExpression(
+        >>> attach = PostgresAttachPartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",
@@ -331,7 +331,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         return "format_attach_partition_statement"
 
 
-class PostgresPartitionMetadataExpression(BaseExpression):
+class PostgresPartitionMetadataQueryStatement(BaseExpression):
     """PostgreSQL partition metadata query expression.
 
     This expression builds the public metadata query used by tests and provider
@@ -358,4 +358,4 @@ class PostgresPartitionMetadataExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_partition_metadata_query"
+        return "format_partition_metadata_query_statement"

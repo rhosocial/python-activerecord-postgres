@@ -150,13 +150,13 @@ FAMILY_FORMATTERS = {
     "rhosocial.activerecord.backend.impl.postgres.expression.ddl.type."
     "PostgresDropEnumTypeExpression": "a DROP TYPE statement, rendered by core's type formatter",
     "rhosocial.activerecord.backend.impl.postgres.expression.values."
-    "PostgresHstoreValueExpression": "renders the FunctionCall it wraps, deliberately verbatim",
+    "PostgresHstoreValue": "renders the FunctionCall it wraps, deliberately verbatim",
     "rhosocial.activerecord.backend.impl.postgres.expression.values."
-    "PostgresLtreeValueExpression": "renders the FunctionCall it wraps, deliberately verbatim",
+    "PostgresLtreeValue": "renders the FunctionCall it wraps, deliberately verbatim",
     "rhosocial.activerecord.backend.impl.postgres.expression.values."
-    "PostgresNetworkValueExpression": "renders the FunctionCall it wraps, deliberately verbatim",
+    "PostgresNetworkValue": "renders the FunctionCall it wraps, deliberately verbatim",
     "rhosocial.activerecord.backend.impl.postgres.expression.values."
-    "PostgresRangeValueExpression": "renders the FunctionCall it wraps, deliberately verbatim",
+    "PostgresRangeValue": "renders the FunctionCall it wraps, deliberately verbatim",
 }
 
 

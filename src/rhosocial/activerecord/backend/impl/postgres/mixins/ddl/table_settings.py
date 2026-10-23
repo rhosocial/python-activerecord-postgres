@@ -17,7 +17,7 @@ from ...expression.ddl.table_settings import LoggingMode
 
 if TYPE_CHECKING:
     from ...expression.ddl.table_settings import (
-        PostgresAlterTableSettingsExpression,
+        PostgresAlterTableSettingsStatement,
     )
 
 
@@ -54,12 +54,12 @@ class PostgresAlterTableSettingsMixin:
     # Statement
     # ------------------------------------------------------------------ #
     def format_alter_table_settings_statement(
-        self, expr: "PostgresAlterTableSettingsExpression"
+        self, expr: "PostgresAlterTableSettingsStatement"
     ) -> Tuple[str, tuple]:
         """Format an ALTER TABLE ... SET table-level settings statement.
 
         Args:
-            expr: :class:`PostgresAlterTableSettingsExpression`.
+            expr: :class:`PostgresAlterTableSettingsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

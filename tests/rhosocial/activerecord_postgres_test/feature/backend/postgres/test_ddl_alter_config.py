@@ -24,14 +24,14 @@ from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresVacuumExpression,  # noqa: F401
-    PostgresAnalyzeExpression,  # noqa: F401
+    PostgresVacuumStatement,  # noqa: F401
+    PostgresAnalyzeStatement,  # noqa: F401
     LoggingMode,
     RlsConfigurationMode,
-    PostgresAlterTableRlsExpression,
-    PostgresForceRlsExpression,
-    PostgresAlterTableSettingsExpression,
-    PostgresClusterExpression,
+    PostgresAlterTableRlsStatement,
+    PostgresForceRlsStatement,
+    PostgresAlterTableSettingsStatement,
+    PostgresClusterStatement,
     PostgresAlterColumnAction,
 )
 from rhosocial.activerecord.backend.expression.types import (
@@ -53,45 +53,45 @@ class TestPostgresRlsConfigExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_enable(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY'
 
     def test_disable(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.DISABLE
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" DISABLE ROW LEVEL SECURITY'
 
     def test_enable_always(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE, always=True
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" ENABLE ALWAYS ROW LEVEL SECURITY'
 
     def test_schema_qualify(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE, schema="app"
         ).to_sql()
         assert sql == 'ALTER TABLE "app"."orders" ENABLE ROW LEVEL SECURITY'
 
     def test_force(self, dialect):
-        sql, _ = PostgresForceRlsExpression(dialect, "orders").to_sql()
+        sql, _ = PostgresForceRlsStatement(dialect, "orders").to_sql()
         assert sql == 'ALTER TABLE "orders" FORCE ROW LEVEL SECURITY'
 
     def test_no_force(self, dialect):
-        sql, _ = PostgresForceRlsExpression(dialect, "orders", force=False).to_sql()
+        sql, _ = PostgresForceRlsStatement(dialect, "orders", force=False).to_sql()
         assert sql == 'ALTER TABLE "orders" NO FORCE ROW LEVEL SECURITY'
 
     def test_version_gate_94(self):
         d = PostgresDialect(version=(9, 4, 0))
-        expr = PostgresAlterTableRlsExpression(d, "orders", RlsConfigurationMode.ENABLE)
+        expr = PostgresAlterTableRlsStatement(d, "orders", RlsConfigurationMode.ENABLE)
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 
     def test_disable_with_always_raises(self, dialect):
-        expr = PostgresAlterTableRlsExpression(
+        expr = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.DISABLE, always=True
         )
         with pytest.raises(ValueError, match="ALWAYS"):
@@ -100,7 +100,7 @@ class TestPostgresRlsConfigExpression:
     def test_force_version_gate_94(self):
         d = PostgresDialect(version=(9, 4, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresForceRlsExpression(d, "orders").to_sql()
+            PostgresForceRlsStatement(d, "orders").to_sql()
 
 
 class TestPostgresAlterTableSettingsExpression:
@@ -111,36 +111,36 @@ class TestPostgresAlterTableSettingsExpression:
         return PostgresDialect(version=(15, 0, 0))
 
     def test_unlogged(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", mode=LoggingMode.UNLOGGED
         ).to_sql()
         assert sql == 'ALTER TABLE "t" SET UNLOGGED'
 
     def test_logged_schema(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", schema="s", mode=LoggingMode.LOGGED
         ).to_sql()
         assert sql == 'ALTER TABLE "s"."t" SET LOGGED'
 
     def test_access_method(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", access_method="heap"
         ).to_sql()
         assert sql == 'ALTER TABLE "t" SET ACCESS METHOD "heap"'
 
     def test_access_method_requires_15(self):
         d = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresAlterTableSettingsExpression(d, "t", access_method="heap")
+        expr = PostgresAlterTableSettingsStatement(d, "t", access_method="heap")
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 
     def test_no_clause_raises(self, dialect):
-        expr = PostgresAlterTableSettingsExpression(dialect, "t")
+        expr = PostgresAlterTableSettingsStatement(dialect, "t")
         with pytest.raises(ValueError):
             expr.to_sql()
 
     def test_both_clauses_raises(self, dialect):
-        expr = PostgresAlterTableSettingsExpression(
+        expr = PostgresAlterTableSettingsStatement(
             dialect, "t", mode=LoggingMode.UNLOGGED, access_method="heap"
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
@@ -148,7 +148,7 @@ class TestPostgresAlterTableSettingsExpression:
 
     def test_logging_version_gate_96(self):
         d = PostgresDialect(version=(9, 5, 0))
-        expr = PostgresAlterTableSettingsExpression(
+        expr = PostgresAlterTableSettingsStatement(
             d, "t", mode=LoggingMode.LOGGED
         )
         with pytest.raises(UnsupportedFeatureError):
@@ -163,35 +163,35 @@ class TestPostgresClusterExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_full(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", schema="public",
             using_index="orders_pkey", verbose=True,
         ).to_sql()
         assert sql == 'CLUSTER VERBOSE "public"."orders" USING "orders_pkey"'
 
     def test_bare(self, dialect):
-        sql, _ = PostgresClusterExpression(dialect, verbose=True).to_sql()
+        sql, _ = PostgresClusterStatement(dialect, verbose=True).to_sql()
         assert sql == "CLUSTER VERBOSE"
 
     def test_version_gate_95(self):
         d = PostgresDialect(version=(9, 5, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresClusterExpression(d, "t").to_sql()
+            PostgresClusterStatement(d, "t").to_sql()
 
     def test_without_verbose(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", using_index="orders_pkey"
         ).to_sql()
         assert sql == 'CLUSTER "orders" USING "orders_pkey"'
 
     def test_without_index(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", verbose=True
         ).to_sql()
         assert sql == 'CLUSTER VERBOSE "orders"'
 
     def test_verbose_false_schema(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", schema="app", verbose=False
         ).to_sql()
         assert sql == 'CLUSTER "app"."orders"'

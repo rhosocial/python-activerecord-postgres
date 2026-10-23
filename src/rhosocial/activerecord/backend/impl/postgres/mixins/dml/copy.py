@@ -9,7 +9,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
-    from ...expression.copy import PostgresCopyFromExpression, PostgresCopyToExpression
+    from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 class PostgresCopyMixin:
@@ -328,7 +328,7 @@ class PostgresCopyMixin:
 
     def _format_copy_to_source(
         self,
-        expr: "PostgresCopyToExpression",
+        expr: "PostgresCopyToStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         if (expr.table_name is None) == (expr.query is None):
             raise ValueError("COPY TO requires exactly one table_name or query source")
@@ -356,7 +356,7 @@ class PostgresCopyMixin:
 
     def format_copy_to_statement(
         self,
-        expr: "PostgresCopyToExpression",
+        expr: "PostgresCopyToStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format a client-stream-only ``COPY ... TO STDOUT`` statement."""
         self._require_copy_version(self.supports_copy_to(), "COPY TO", (9, 6, 0))
@@ -449,7 +449,7 @@ class PostgresCopyMixin:
 
     def format_copy_from_statement(
         self,
-        expr: "PostgresCopyFromExpression",
+        expr: "PostgresCopyFromStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format a client-stream-only ``COPY ... FROM STDIN`` statement."""
         self._require_copy_version(self.supports_copy_from(), "COPY FROM", (9, 6, 0))

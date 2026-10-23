@@ -94,7 +94,7 @@ from rhosocial.activerecord.backend.expression.transaction import (
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
-    PostgresCopyToExpression,
+    PostgresCopyToStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins import (
     PostgresCTEMixin,
@@ -106,7 +106,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constra
     PostgresExcludeConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     PostgresDropTypeExpression,
@@ -354,8 +354,8 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "PostgresRefreshMaterializedViewExpression.with_data",
-        lambda d, **kw: PostgresRefreshMaterializedViewExpression(
+        "PostgresRefreshMaterializedViewPgStatement.with_data",
+        lambda d, **kw: PostgresRefreshMaterializedViewPgStatement(
             d, MaterializedView(d, "mv"), **kw
         ),
         "with_data",
@@ -472,8 +472,8 @@ PAIR_CASES = (
         neither_error="AlterConstraintAction requires exactly one of",
     ),
     PairCase(
-        "PostgresCopyToExpression.force_array",
-        lambda d, **kw: PostgresCopyToExpression(
+        "PostgresCopyToStatement.force_array",
+        lambda d, **kw: PostgresCopyToStatement(
             d, table_name="t", format="json", **kw
         ),
         "force_array",
@@ -740,7 +740,7 @@ class TestGuardIsNotVacuous:
             "TruncateStatement.restart_identity",
             "CreateMaterializedViewStatement.with_data",
             "RefreshMaterializedViewStatement.with_data",
-            "PostgresRefreshMaterializedViewExpression.with_data",
+            "PostgresRefreshMaterializedViewPgStatement.with_data",
             "CreateTableAsStatement.with_data",
             "CTEClause.materialized",
             "TableConstraint.deferrable",
@@ -753,7 +753,7 @@ class TestGuardIsNotVacuous:
             "SetTransactionStatement.deferrable",
             "SetTransactionStatement.wait",
             "AlterConstraintAction.enforced",
-            "PostgresCopyToExpression.force_array",
+            "PostgresCopyToStatement.force_array",
             "PostgresDropTypeExpression.cascade/restrict",
         }
         covered = {case.case_id for case in PAIR_CASES}
@@ -882,14 +882,14 @@ class TestMasterProbesGateTheirConsumers:
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"no_data": True},

@@ -15,10 +15,10 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 
 if TYPE_CHECKING:
     from ...expression.ddl.publication import (
-        PostgresCreatePublicationExpression,
-        PostgresCreateSubscriptionExpression,
-        PostgresDropPublicationExpression,
-        PostgresDropSubscriptionExpression,
+        PostgresCreatePublicationStatement,
+        PostgresCreateSubscriptionStatement,
+        PostgresDropPublicationStatement,
+        PostgresDropSubscriptionStatement,
     )
 
 
@@ -40,12 +40,12 @@ class PostgresPublicationMixin:
     # CREATE PUBLICATION
     # ------------------------------------------------------------------ #
     def format_create_publication_statement(
-        self, expr: "PostgresCreatePublicationExpression"
+        self, expr: "PostgresCreatePublicationStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE PUBLICATION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreatePublicationExpression`.
+            expr: :class:`PostgresCreatePublicationStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -89,12 +89,12 @@ class PostgresPublicationMixin:
     # DROP PUBLICATION
     # ------------------------------------------------------------------ #
     def format_drop_publication_statement(
-        self, expr: "PostgresDropPublicationExpression"
+        self, expr: "PostgresDropPublicationStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP PUBLICATION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropPublicationExpression`.
+            expr: :class:`PostgresDropPublicationStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -127,12 +127,12 @@ class PostgresPublicationMixin:
     # CREATE SUBSCRIPTION
     # ------------------------------------------------------------------ #
     def format_create_subscription_statement(
-        self, expr: "PostgresCreateSubscriptionExpression"
+        self, expr: "PostgresCreateSubscriptionStatement"
     ) -> Tuple[str, tuple]:
         """Format a CREATE SUBSCRIPTION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresCreateSubscriptionExpression`.
+            expr: :class:`PostgresCreateSubscriptionStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -164,12 +164,12 @@ class PostgresPublicationMixin:
     # DROP SUBSCRIPTION
     # ------------------------------------------------------------------ #
     def format_drop_subscription_statement(
-        self, expr: "PostgresDropSubscriptionExpression"
+        self, expr: "PostgresDropSubscriptionStatement"
     ) -> Tuple[str, tuple]:
         """Format a DROP SUBSCRIPTION statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropSubscriptionExpression`.
+            expr: :class:`PostgresDropSubscriptionStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

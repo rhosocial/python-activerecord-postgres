@@ -15,8 +15,8 @@ import pytest
 from rhosocial.activerecord.backend.introspection.types import IntrospectionScope
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
-    PostgresMaterializedViewInfoExpression,
-    PostgresMaterializedViewListExpression,
+    PostgresMaterializedViewInfoQueryStatement,
+    PostgresMaterializedViewListQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
     AsyncPostgreSQLIntrospector,
@@ -33,7 +33,7 @@ class TestMaterializedViewIntrospectionSQL:
     """The generated catalog queries must target relkind 'm' via pg_matviews."""
 
     def test_list_query_uses_pg_matviews(self):
-        sql, params = PostgresMaterializedViewListExpression(
+        sql, params = PostgresMaterializedViewListQueryStatement(
             _dialect(), schema="reporting"
         ).to_sql()
         assert "pg_matviews" in sql
@@ -42,7 +42,7 @@ class TestMaterializedViewIntrospectionSQL:
         assert params == ("reporting",)
 
     def test_list_query_reports_unique_index_and_populated_flag(self):
-        sql, _ = PostgresMaterializedViewListExpression(_dialect()).to_sql()
+        sql, _ = PostgresMaterializedViewListQueryStatement(_dialect()).to_sql()
         for column in (
             "is_populated",
             "has_unique_index",
@@ -52,18 +52,18 @@ class TestMaterializedViewIntrospectionSQL:
             assert f'AS "{column}"' in sql
 
     def test_list_query_excludes_system_objects_by_default(self):
-        sql, _ = PostgresMaterializedViewListExpression(_dialect()).to_sql()
+        sql, _ = PostgresMaterializedViewListQueryStatement(_dialect()).to_sql()
         # doubled percent: psycopg would treat a bare '%' as a placeholder start
         assert "NOT LIKE 'pg_%%'" in sql
 
     def test_list_query_can_include_system_objects(self):
-        sql, _ = PostgresMaterializedViewListExpression(
+        sql, _ = PostgresMaterializedViewListQueryStatement(
             _dialect(), include_system=True
         ).to_sql()
         assert "NOT LIKE 'pg_%'" not in sql
 
     def test_info_query_filters_by_name(self):
-        sql, params = PostgresMaterializedViewInfoExpression(
+        sql, params = PostgresMaterializedViewInfoQueryStatement(
             _dialect(), "sales_summary", schema="reporting"
         ).to_sql()
         assert "pg_matviews" in sql
@@ -72,7 +72,7 @@ class TestMaterializedViewIntrospectionSQL:
         assert params == ("reporting", "sales_summary")
 
     def test_info_query_defaults_to_connection_schema(self):
-        _, params = PostgresMaterializedViewInfoExpression(_dialect(), "sales_summary").to_sql()
+        _, params = PostgresMaterializedViewInfoQueryStatement(_dialect(), "sales_summary").to_sql()
         assert params[0] == "public"
 
 

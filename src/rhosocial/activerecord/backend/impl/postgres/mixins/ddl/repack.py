@@ -6,7 +6,7 @@ from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.ddl.repack import PostgresRepackExpression
+    from ...expression.ddl.repack import PostgresRepackStatement
 
 
 class PostgresRepackMixin:
@@ -55,7 +55,7 @@ class PostgresRepackMixin:
 
     def format_repack_statement(
         self,
-        expr: "PostgresRepackExpression",
+        expr: "PostgresRepackStatement",
     ) -> Tuple[str, tuple]:
         """Format a native PostgreSQL 19 REPACK statement."""
         if not self.supports_repack():

@@ -39,7 +39,7 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_surgery import (
     heap_force_freeze,
@@ -53,7 +53,7 @@ print(f"Extension check: pg_surgery available = {available}, installed = {instal
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pg_surgery",
     )

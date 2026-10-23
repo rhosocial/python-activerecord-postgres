@@ -11,9 +11,9 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.policy import (
-        PostgresAlterPolicyExpression,
-        PostgresCreatePolicyExpression,
-        PostgresDropPolicyExpression,
+        PostgresAlterPolicyStatement,
+        PostgresCreatePolicyStatement,
+        PostgresDropPolicyStatement,
     )
 
 
@@ -70,12 +70,12 @@ class PostgresPolicySupport(Protocol):
         ...
 
     def format_create_policy_statement(
-        self, expr: "PostgresCreatePolicyExpression"
+        self, expr: "PostgresCreatePolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format ``CREATE POLICY`` statement (PostgreSQL-specific syntax).
 
         Args:
-            expr: ``PostgresCreatePolicyExpression`` defining the policy.
+            expr: ``PostgresCreatePolicyStatement`` defining the policy.
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -90,7 +90,7 @@ class PostgresPolicySupport(Protocol):
         ...
 
     def format_alter_policy_statement(
-        self, expr: "PostgresAlterPolicyExpression"
+        self, expr: "PostgresAlterPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER POLICY`` statement (PostgreSQL-specific syntax).
 
@@ -101,7 +101,7 @@ class PostgresPolicySupport(Protocol):
           [USING (...)] [WITH CHECK (...)]``
 
         Args:
-            expr: ``PostgresAlterPolicyExpression``.
+            expr: ``PostgresAlterPolicyStatement``.
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -115,12 +115,12 @@ class PostgresPolicySupport(Protocol):
         ...
 
     def format_drop_policy_statement(
-        self, expr: "PostgresDropPolicyExpression"
+        self, expr: "PostgresDropPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format ``DROP POLICY`` statement (PostgreSQL-specific syntax).
 
         Args:
-            expr: ``PostgresDropPolicyExpression``.
+            expr: ``PostgresDropPolicyStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

@@ -28,10 +28,10 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause, PartitionStrategy
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresAttachPartitionStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
 )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
@@ -79,7 +79,7 @@ def _create_list_parent_expression(dialect):
 
 
 def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[str]):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=LIST_PARENT,
@@ -107,7 +107,7 @@ def _create_hash_parent_expression(dialect):
 
 
 def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=HASH_PARENT,
@@ -135,7 +135,7 @@ def _create_range_parent_expression(dialect):
 
 
 def _create_range_partition_sql(dialect, partition_name: str, start: str, end: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=RANGE_PARENT,
@@ -169,7 +169,7 @@ def _select_tableoid_payload_expression(dialect, table_name: str):
 
 
 def _metadata_sql(dialect, parent_table: str, *, schema: str | None = None, include_partitions: bool = True):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=parent_table,
         schema=schema,
@@ -333,7 +333,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
 
         try:
             # Attach as DEFAULT partition
-            attach = PostgresAttachPartitionExpression(
+            attach = PostgresAttachPartitionStatement(
                 dialect=dialect,
                 partition_name=default_partition_name,
                 parent_table=RANGE_PARENT,
@@ -353,7 +353,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             assert default_partition_name in names
 
             # Detach it back
-            detach = PostgresDetachPartitionExpression(
+            detach = PostgresDetachPartitionStatement(
                 dialect=dialect,
                 partition_name=default_partition_name,
                 parent_table=RANGE_PARENT,
@@ -394,7 +394,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                     ),
                 )
                 postgres_backend.execute(*parent.to_sql())
-                child = PostgresCreatePartitionExpression(
+                child = PostgresCreatePartitionStatement(
                     dialect=dialect,
                     partition_name=SCHEMA_CHILD,
                     parent_table=SCHEMA_PARENT,
@@ -497,7 +497,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         dialect = postgres_backend.dialect
         if not dialect.supports_concurrent_detach():
             pytest.skip("DETACH CONCURRENTLY requires PostgreSQL 14+")
-        sql, params = PostgresDetachPartitionExpression(
+        sql, params = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name=RANGE_JAN,
             parent_table=RANGE_PARENT,

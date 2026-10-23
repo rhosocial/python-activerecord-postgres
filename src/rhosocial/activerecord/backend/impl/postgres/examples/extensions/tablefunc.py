@@ -4,7 +4,7 @@ tablefunc extension - pivot tables, tree traversal, and random data.
 
 This example demonstrates:
 1. Check if tablefunc extension is available
-2. Create extension using PostgresCreateExtensionExpression
+2. Create extension using PostgresCreateExtensionStatement
 3. Create table with sales data and hierarchical tree data
 4. Use normal_rand() to generate normally distributed random values
 5. Use crosstab() to produce pivot table displays
@@ -44,7 +44,7 @@ for table_name in ["monthly_sales", "org_tree"]:
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
@@ -72,7 +72,7 @@ print(f"Extension: tablefunc available = {available}, installed = {installed}")
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="tablefunc",
     )

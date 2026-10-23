@@ -14,8 +14,8 @@ __all__ = [
     "PostgresCopyFormat",
     "PostgresCopyOnError",
     "PostgresCopyLogVerbosity",
-    "PostgresCopyToExpression",
-    "PostgresCopyFromExpression",
+    "PostgresCopyToStatement",
+    "PostgresCopyFromStatement",
 ]
 
 
@@ -89,7 +89,7 @@ def _copy_force_columns(
     return columns
 
 
-class PostgresCopyToExpression(BaseExpression):
+class PostgresCopyToStatement(BaseExpression):
     """A PostgreSQL 19-safe ``COPY ... TO STDOUT`` expression."""
 
     def __init__(
@@ -150,7 +150,7 @@ class PostgresCopyToExpression(BaseExpression):
         return "format_copy_to_statement"
 
 
-class PostgresCopyFromExpression(BaseExpression):
+class PostgresCopyFromStatement(BaseExpression):
     """A PostgreSQL ``COPY ... FROM STDIN`` expression."""
 
     def __init__(

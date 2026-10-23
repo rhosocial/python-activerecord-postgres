@@ -8,7 +8,7 @@ the interface for PostgreSQL's native COMMENT ON feature.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresCommentExpression
+    from ...expression.ddl import PostgresCommentOnStatement
 
 
 @runtime_checkable
@@ -44,11 +44,11 @@ class PostgresCommentSupport(Protocol):
         """
         ...
 
-    def format_comment_statement(self, expr: "PostgresCommentExpression") -> Tuple[str, tuple]:
+    def format_comment_on_statement(self, expr: "PostgresCommentOnStatement") -> Tuple[str, tuple]:
         """Format COMMENT ON statement.
 
         Args:
-            expr: PostgresCommentExpression containing all options
+            expr: PostgresCommentOnStatement containing all options
 
         Returns:
             Tuple of (SQL string, parameters)

@@ -47,7 +47,7 @@ class PostgresTransactionSupport(Protocol):
         """
         ...
 
-    def format_set_transaction(
+    def format_set_transaction_statement(
         self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION / SET SESSION CHARACTERISTICS statement.
