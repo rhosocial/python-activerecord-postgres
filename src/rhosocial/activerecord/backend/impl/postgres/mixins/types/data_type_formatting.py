@@ -390,7 +390,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`, which is where the reason is written
         down."""
-        self._check_spelling(data_type, TinyIntType)
+        self.check_spelling(data_type, TinyIntType)
         self._refuse_unsigned_integer(data_type, "SMALLINT")
         return "SMALLINT", ()
 
@@ -400,7 +400,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, SmallIntType)
+        self.check_spelling(data_type, SmallIntType)
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -421,7 +421,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, ("integer", "int"))
+        self.check_spelling(data_type, ("integer", "int"))
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -431,7 +431,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, BigIntType)
+        self.check_spelling(data_type, BigIntType)
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -483,7 +483,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_numeric`."""
-        self._check_spelling(data_type, DoubleType)
+        self.check_spelling(data_type, DoubleType)
         self._refuse_unsigned_numeric(data_type, "DOUBLE PRECISION")
         return "DOUBLE PRECISION", ()
 
@@ -500,7 +500,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         whether or not it also named numbers this grammar could not have taken.
         The scale-without-precision refusal and the two ``ValueError`` range
         checks below are untouched and still fire for a signed declaration."""
-        self._check_spelling(data_type, DecimalType)
+        self.check_spelling(data_type, DecimalType)
         self._refuse_unsigned_numeric(data_type, "DECIMAL")
         if data_type.precision is not None:
             if not (1 <= data_type.precision <= 1000):
@@ -551,7 +551,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_char(self, data_type: CharType) -> Tuple[str, tuple]:
         """``CHARACTER`` is PostgreSQL's own long form and is rendered as
         written, since PostgreSQL emits it back from the catalog."""
-        self._check_spelling(data_type, CharType)
+        self.check_spelling(data_type, CharType)
         width = f"({data_type.length})" if data_type.length is not None else ""
         return f"{data_type.spelling.upper()}{width}", ()
 
@@ -559,7 +559,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         """PostgreSQL writes this concept both ways — and emits
         ``character varying`` from the catalog, which is why the long form is a
         spelling of the core type rather than a class of its own."""
-        self._check_spelling(data_type, VarCharType)
+        self.check_spelling(data_type, VarCharType)
         width = f"({data_type.length})" if data_type.length is not None else ""
         if data_type.spelling == "character varying":
             return f"CHARACTER VARYING{width}", ()
@@ -574,12 +574,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         something else. The default spelling must always render, or the concept
         would be unusable on this backend.
         """
-        self._check_spelling(data_type, ("text",))
+        self.check_spelling(data_type, ("text",))
         return "TEXT", ()
 
     def format_data_type_boolean(self, data_type: BooleanType) -> Tuple[str, tuple]:
         """``BOOL`` is a PostgreSQL alias, so it is accepted and rendered."""
-        self._check_spelling(data_type, BooleanType)
+        self.check_spelling(data_type, BooleanType)
         return data_type.spelling.upper(), ()
 
     def format_data_type_blob(self, data_type: BlobType) -> Tuple[str, tuple]:
@@ -591,7 +591,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         carries. A backend that writes the concept under another name normalises
         the spelling; it does not refuse the request.
         """
-        self._check_spelling(data_type, BlobType)
+        self.check_spelling(data_type, BlobType)
         return "BYTEA", ()
 
     def format_data_type_date(self, data_type: DateType) -> Tuple[str, tuple]:
@@ -951,7 +951,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             name = match.group(1)
             supports = getattr(self, f"supports_data_type_{name}", None)
             if supports is not None and supports():
-                cls = self._type_class_for(name)
+                cls = self.type_class_for(name)
                 if cls is not None:
                     result[name] = cls
         return result

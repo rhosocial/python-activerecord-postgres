@@ -330,7 +330,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         Materialized views share ``IntrospectionScope.VIEW`` with regular views,
         so the key is namespaced to avoid cross-contamination.
         """
-        return self._make_cache_key(
+        return self.make_cache_key(
             IntrospectionScope.VIEW,
             view_name or "*",
             schema=schema,
@@ -448,12 +448,12 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, include_system=include_system)
-        cached = self._get_cached(key)
+        cached = self.get_cached(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_list_sql(schema, include_system)
         result = self._parse_materialized_views(self._executor.execute(sql, params), target)
-        self._set_cached(key, result)
+        self.set_cached(key, result)
         return result
 
     def get_materialized_view_info(
@@ -470,7 +470,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, view_name=view_name)
-        cached = self._get_cached(key)
+        cached = self.get_cached(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_info_sql(view_name, schema)
@@ -478,7 +478,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             self._executor.execute(sql, params), view_name, target
         )
         if result is not None:
-            self._set_cached(key, result)
+            self.set_cached(key, result)
         return result
 
     def materialized_view_exists(self, view_name: str, schema: Optional[str] = None) -> bool:
@@ -529,13 +529,13 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, include_system=include_system)
-        cached = self._get_cached(key)
+        cached = self.get_cached(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_list_sql(schema, include_system)
         rows = await self._executor.execute(sql, params)
         result = self._parse_materialized_views(rows, target)
-        self._set_cached(key, result)
+        self.set_cached(key, result)
         return result
 
     async def get_materialized_view_info(
@@ -552,14 +552,14 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         """
         target = schema if schema is not None else self._get_default_schema()
         key = self._materialized_view_cache_key(schema, view_name=view_name)
-        cached = self._get_cached(key)
+        cached = self.get_cached(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_info_sql(view_name, schema)
         rows = await self._executor.execute(sql, params)
         result = self._parse_materialized_view_info(rows, view_name, target)
         if result is not None:
-            self._set_cached(key, result)
+            self.set_cached(key, result)
         return result
 
     async def materialized_view_exists(

@@ -113,10 +113,10 @@ class TestInvalidateIntrospectionCache:
         backend_with_tables.introspector.get_table_info(table2)
 
         # Both should be in cache
-        key1 = backend_with_tables.introspector._make_cache_key(
+        key1 = backend_with_tables.introspector.make_cache_key(
             IntrospectionScope.TABLE, table1
         )
-        key2 = backend_with_tables.introspector._make_cache_key(
+        key2 = backend_with_tables.introspector.make_cache_key(
             IntrospectionScope.TABLE, table2
         )
         assert key1 in backend_with_tables.introspector._cache
@@ -150,7 +150,7 @@ class TestCacheThreadSafety:
             try:
                 for _ in range(5):
                     # Only read from cache, don't execute DB queries concurrently
-                    backend_with_tables.introspector._get_cached("nonexistent_key")
+                    backend_with_tables.introspector.get_cached("nonexistent_key")
                     results.append(True)
             except Exception as e:
                 errors.append(e)
@@ -204,7 +204,7 @@ class TestCacheKeys:
 
     def test_cache_key_generation(self, postgres_backend_single):
         """Test that cache keys are generated correctly."""
-        key = postgres_backend_single.introspector._make_cache_key(
+        key = postgres_backend_single.introspector.make_cache_key(
             IntrospectionScope.TABLE,
             "users",
             schema="public"
@@ -215,7 +215,7 @@ class TestCacheKeys:
 
     def test_cache_key_with_extra(self, postgres_backend_single):
         """Test cache key with extra component."""
-        key = postgres_backend_single.introspector._make_cache_key(
+        key = postgres_backend_single.introspector.make_cache_key(
             IntrospectionScope.COLUMN,
             "users",
             extra="email"
@@ -227,13 +227,13 @@ class TestCacheKeys:
 
     def test_cache_key_uniqueness(self, postgres_backend_single):
         """Test that different parameters produce different keys."""
-        key1 = postgres_backend_single.introspector._make_cache_key(
+        key1 = postgres_backend_single.introspector.make_cache_key(
             IntrospectionScope.TABLE, "users"
         )
-        key2 = postgres_backend_single.introspector._make_cache_key(
+        key2 = postgres_backend_single.introspector.make_cache_key(
             IntrospectionScope.TABLE, "posts"
         )
-        key3 = postgres_backend_single.introspector._make_cache_key(
+        key3 = postgres_backend_single.introspector.make_cache_key(
             IntrospectionScope.COLUMN, "users"
         )
 

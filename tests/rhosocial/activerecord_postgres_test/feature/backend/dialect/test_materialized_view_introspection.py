@@ -151,7 +151,7 @@ class TestMaterializedViewIntrospectionSurface:
             "public", view_name="sales_summary"
         )
         system_key = introspector._materialized_view_cache_key("public", include_system=True)
-        view_key = introspector._make_cache_key(IntrospectionScope.VIEW, schema="public")
+        view_key = introspector.make_cache_key(IntrospectionScope.VIEW, schema="public")
         assert list_key != single_key
         assert list_key != system_key
         assert list_key != view_key

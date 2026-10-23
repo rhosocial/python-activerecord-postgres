@@ -28,7 +28,7 @@ class PostgresListAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(list, list)
+        self.register_type(list, list)
 
     def _do_to_database(self, value: list, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         return value
@@ -118,7 +118,7 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(dict, Jsonb)
+        self.register_type(dict, Jsonb)
 
     def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         return Jsonb(value)
@@ -180,10 +180,10 @@ class PostgresNetworkAddressAdapter(BaseSQLTypeAdapter):
         super().__init__()
         try:
             import ipaddress
-            self._register_type(ipaddress.IPv4Address, str)
-            self._register_type(ipaddress.IPv6Address, str)
-            self._register_type(ipaddress.IPv4Network, str)
-            self._register_type(ipaddress.IPv6Network, str)
+            self.register_type(ipaddress.IPv4Address, str)
+            self.register_type(ipaddress.IPv6Address, str)
+            self.register_type(ipaddress.IPv4Network, str)
+            self.register_type(ipaddress.IPv6Network, str)
         except ImportError:
             pass
 
@@ -267,7 +267,7 @@ class PostgresEnumAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(str, str)
+        self.register_type(str, str)
 
     def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         # Handle Python Enum
