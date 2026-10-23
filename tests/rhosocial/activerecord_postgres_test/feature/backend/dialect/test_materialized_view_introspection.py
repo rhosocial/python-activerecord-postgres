@@ -12,6 +12,7 @@ Covers the introspection half of the regression matrix documented in
 
 import pytest
 
+from rhosocial.activerecord.backend.introspection.cache import InMemoryIntrospectionCache
 from rhosocial.activerecord.backend.introspection.types import IntrospectionScope
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
@@ -146,12 +147,13 @@ class TestMaterializedViewIntrospectionSurface:
     def test_cache_keys_are_namespaced(self):
         """MV lookups must not collide with regular view lookups."""
         introspector = SyncPostgreSQLIntrospector.__new__(SyncPostgreSQLIntrospector)
+        introspector._cache = InMemoryIntrospectionCache()
         list_key = introspector._materialized_view_cache_key("public", include_system=False)
         single_key = introspector._materialized_view_cache_key(
             "public", view_name="sales_summary"
         )
         system_key = introspector._materialized_view_cache_key("public", include_system=True)
-        view_key = introspector.make_cache_key(IntrospectionScope.VIEW, schema="public")
+        view_key = introspector._cache.key(IntrospectionScope.VIEW, schema="public")
         assert list_key != single_key
         assert list_key != system_key
         assert list_key != view_key
