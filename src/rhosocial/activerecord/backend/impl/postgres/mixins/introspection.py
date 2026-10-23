@@ -43,6 +43,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..expression.introspection import (
         PostgresMaterializedViewInfoQueryStatement,
         PostgresMaterializedViewListQueryStatement,
+        PostgresSequenceInfoQueryStatement,
+        PostgresSequenceListQueryStatement,
         PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryStatement,
     )
@@ -215,14 +217,33 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             table_need_quote=False,
         )
 
-    def _catalog_relation(self, name: str, alias: "Optional[str]" = None):
-        """A pg_catalog relation as a FROM source, with its alias."""
+    def _catalog_relation(
+        self,
+        name: str,
+        alias: "Optional[str]" = None,
+        schema: "Optional[str]" = None,
+        schema_need_quote: bool = False,
+    ):
+        """A catalog relation as a FROM source, with its alias.
+
+        ``schema`` qualifies the name for the relations that live outside
+        ``pg_catalog`` -- ``information_schema.sequences`` is the one this
+        module reads. Neither part is quoted by default: the catalog spells
+        both lower-case and never quoted, so quoting would name something
+        else.
+        """
         from rhosocial.activerecord.backend.expression.objects import Table
         from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 
         return NamedRelationRef(
             self,
-            Table(self, name, name_need_quote=False),
+            Table(
+                self,
+                name,
+                schema_name=schema,
+                schema_need_quote=schema_need_quote,
+                name_need_quote=False,
+            ),
             alias=alias,
             alias_need_quote=False,
         )
@@ -1241,6 +1262,148 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                     "eq",
                     self._catalog_column("matviewname", "m"),
                     self._catalog_value(view_name),
+                ),
+            ],
+        )
+
+    def _sequence_source(self, include_pg_sequences: bool = True):
+        """``information_schema.sequences s`` with ``pg_sequences p`` beside it.
+
+        The standard view is the object list: it exists on every server this
+        backend supports. ``pg_sequences`` carries the state the standard view
+        omits, and arrived in PostgreSQL 10, so it is joined only when the
+        caller says the server has it. The join is a LEFT JOIN because
+        ``pg_sequences`` omits sequences the current role cannot read; those
+        rows must still be listed, with the withheld columns as NULL.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            LogicalPredicate,
+        )
+
+        sequences = self._catalog_relation("sequences", "s", schema="information_schema")
+        if not include_pg_sequences:
+            return sequences
+
+        return JoinClause(
+            self,
+            left_table=sequences,
+            right_table=self._catalog_relation("pg_sequences", "p"),
+            join_type="LEFT JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("sequence_schema", "s"),
+                    self._catalog_column("schemaname", "p"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("sequence_name", "s"),
+                    self._catalog_column("sequencename", "p"),
+                ),
+            ),
+        )
+
+    def _sequence_projection(self, include_pg_sequences: bool = True) -> "list":
+        """The sequence row shape.
+
+        ``information_schema`` reports the numeric attributes as
+        ``character_data``, so each is cast to ``bigint`` -- the type the
+        server actually stores -- rather than left for the caller to parse.
+        """
+        from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        def numeric(name: str):
+            return self._catalog_column(name, "s").cast(BigIntType(self))
+
+        projection = [
+            self._catalog_column("sequence_schema", "s", alias="schema_name"),
+            self._catalog_column("sequence_name", "s", alias="sequence_name"),
+            self._catalog_column("data_type", "s", alias="data_type"),
+            numeric("start_value").as_("start_value"),
+            numeric("minimum_value").as_("minimum_value"),
+            numeric("maximum_value").as_("maximum_value"),
+            numeric("increment").as_("increment"),
+            self._catalog_column("cycle_option", "s", alias="cycle"),
+        ]
+        if include_pg_sequences:
+            projection.extend(
+                [
+                    self._catalog_column("cache_size", "p", alias="cache_size"),
+                    self._catalog_column("last_value", "p", alias="last_value"),
+                ]
+            )
+        return projection
+
+    def format_sequence_list_query_statement(
+        self, expr: "PostgresSequenceListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the sequence list query for one schema.
+
+        Args:
+            expr: Sequence list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
+        params = expr.get_params()
+        schema = params.get("schema") or self._get_default_schema()
+        include_pg_sequences = params.get("include_pg_sequences", True)
+
+        return self._catalog_select(
+            self._sequence_projection(include_pg_sequences),
+            self._sequence_source(include_pg_sequences),
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("sequence_schema", "s"),
+                    self._catalog_value(schema),
+                )
+            ],
+            [self._catalog_column("sequence_name", "s")],
+        )
+
+    def format_sequence_info_query_statement(
+        self, expr: "PostgresSequenceInfoQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the single-sequence query.
+
+        Args:
+            expr: Sequence info expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
+        params = expr.get_params()
+        sequence_name = params.get("sequence_name", "")
+        schema = params.get("schema") or self._get_default_schema()
+        include_pg_sequences = params.get("include_pg_sequences", True)
+
+        return self._catalog_select(
+            self._sequence_projection(include_pg_sequences),
+            self._sequence_source(include_pg_sequences),
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("sequence_schema", "s"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("sequence_name", "s"),
+                    self._catalog_value(sequence_name),
                 ),
             ],
         )

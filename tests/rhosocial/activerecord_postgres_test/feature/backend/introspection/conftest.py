@@ -145,6 +145,37 @@ _CLEANUP_TRIGGER_SQL = [
     "DROP TABLE IF EXISTS users CASCADE",
 ]
 
+# SQL statements for sequence / materialized view introspection tests.
+# The sequence is created with non-default attributes so a test can tell a
+# parsed row from a default-valued one, and it is drawn from once so that
+# ``last_value`` has something to report.
+_SEQUENCE_SQL = [
+    "DROP MATERIALIZED VIEW IF EXISTS seq_demo_mv",
+    "DROP SEQUENCE IF EXISTS seq_demo_untouched",
+    "DROP TABLE IF EXISTS seq_demo_tbl",
+    "DROP SEQUENCE IF EXISTS seq_demo_id",
+    """
+    CREATE SEQUENCE seq_demo_id
+    START 7 INCREMENT 3 MINVALUE 2 MAXVALUE 1000 CACHE 5 NO CYCLE
+    """,
+    "SELECT nextval('seq_demo_id')",
+    # Never drawn from: last_value stays NULL and must still parse.
+    "CREATE SEQUENCE seq_demo_untouched START 1",
+    "CREATE TABLE seq_demo_tbl (id INTEGER PRIMARY KEY, amount INTEGER)",
+    "INSERT INTO seq_demo_tbl (id, amount) VALUES (1, 100), (2, 250)",
+    """
+    CREATE MATERIALIZED VIEW seq_demo_mv AS
+    SELECT id, amount FROM seq_demo_tbl
+    """,
+]
+
+_CLEANUP_SEQUENCE_SQL = [
+    "DROP MATERIALIZED VIEW IF EXISTS seq_demo_mv",
+    "DROP TABLE IF EXISTS seq_demo_tbl",
+    "DROP SEQUENCE IF EXISTS seq_demo_untouched",
+    "DROP SEQUENCE IF EXISTS seq_demo_id",
+]
+
 
 def _execute_sql_list(backend, sql_list):
     """Execute a list of SQL statements."""
@@ -240,5 +271,33 @@ async def async_backend_with_trigger(async_postgres_backend):
     try:
         async_postgres_backend.introspector.clear_cache()
         await _async_execute_sql_list(async_postgres_backend, _CLEANUP_TRIGGER_SQL)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="function")
+def backend_with_sequence(postgres_backend):
+    """Fixture providing backend with a demo sequence and materialized view."""
+    postgres_backend.introspector.clear_cache()
+    _execute_sql_list(postgres_backend, _SEQUENCE_SQL)
+    postgres_backend.introspector.clear_cache()
+    yield postgres_backend
+    try:
+        postgres_backend.introspector.clear_cache()
+        _execute_sql_list(postgres_backend, _CLEANUP_SEQUENCE_SQL)
+    except Exception:
+        pass
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_backend_with_sequence(async_postgres_backend):
+    """Async fixture providing backend with a demo sequence and MV."""
+    async_postgres_backend.introspector.clear_cache()
+    await _async_execute_sql_list(async_postgres_backend, _SEQUENCE_SQL)
+    async_postgres_backend.introspector.clear_cache()
+    yield async_postgres_backend
+    try:
+        async_postgres_backend.introspector.clear_cache()
+        await _async_execute_sql_list(async_postgres_backend, _CLEANUP_SEQUENCE_SQL)
     except Exception:
         pass

@@ -33,6 +33,15 @@ EXAMPLES_META = {
         'min_version': '9',
         'max_version': '18',
     },
+    'introspection_objects.py': {
+        'title': 'Introspection of Sequences and Materialized Views',
+        'dialect_protocols': [],
+        'priority': 5,
+        'min_version': '9',
+        'max_version': '18',
+        'note': 'Sequences need PostgreSQL 10+ for the pg_sequence columns '
+                '(cache_size, last_value); materialized views need 9.3+',
+    },
     'ddl/create_table.py': {
         'title': 'Create Table',
         'dialect_protocols': [],

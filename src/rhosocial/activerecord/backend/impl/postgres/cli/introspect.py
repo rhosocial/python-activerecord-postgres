@@ -2,7 +2,8 @@
 """introspect subcommand - Database introspection.
 
 PostgreSQL introspect includes the 'extensions' type in addition to
-the standard types.
+the standard types, plus the two schema-object families this backend
+answers for on its own: materialized views and sequences.
 """
 
 import argparse
@@ -24,7 +25,7 @@ OUTPUT_CHOICES = ['table', 'json', 'csv', 'tsv']
 INTROSPECT_TYPES = [
     "tables", "views", "table", "columns",
     "indexes", "foreign-keys", "triggers", "database",
-    "extensions"
+    "extensions", "materialized-views", "sequences",
 ]
 
 
@@ -61,6 +62,14 @@ def create_parser(subparsers):
   # List installed extensions (PostgreSQL specific)
   %(prog)s extensions --database mydb
 
+  # List materialized views, or inspect one by name
+  %(prog)s materialized-views --database mydb
+  %(prog)s materialized-views sales_summary --database mydb
+
+  # List sequences, or inspect one by name
+  %(prog)s sequences --database mydb
+  %(prog)s sequences order_id_seq --database mydb
+
   # Output as JSON
   %(prog)s tables --database mydb -o json
 
@@ -96,13 +105,16 @@ def create_parser(subparsers):
     parser.add_argument(
         "type",
         choices=INTROSPECT_TYPES,
-        help="Introspection type: tables, views, table, columns, indexes, foreign-keys, triggers, database, extensions",
+        help="Introspection type: tables, views, table, columns, indexes, "
+             "foreign-keys, triggers, database, extensions, "
+             "materialized-views, sequences",
     )
     parser.add_argument(
         "name",
         nargs="?",
         default=None,
-        help="Table/view name (required for some types)",
+        help="Object name (required for some types; optional for "
+             "materialized-views and sequences, where it selects one object)",
     )
     parser.add_argument(
         "--schema",
@@ -259,6 +271,44 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 print("No extensions information available", file=sys.stderr)
                 sys.exit(1)
 
+        elif args.type == "materialized-views":
+            # The listing reads the server version, and an unadapted
+            # dialect has none to read, so adapting is part of answering.
+            backend.introspect_and_adapt()
+            if args.name:
+                info = introspector.get_materialized_view_info(args.name, schema=args.schema)
+                if info is None:
+                    print(
+                        f"Error: Materialized view '{args.name}' not found",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"Materialized View {args.name}")
+            else:
+                views = introspector.list_materialized_views(
+                    schema=args.schema,
+                    include_system=args.include_system,
+                )
+                data = _serialize_for_output(views)
+                provider.display_results(data, title="Materialized Views")
+
+        elif args.type == "sequences":
+            # The sequence query widens on PostgreSQL 10, so it reads the
+            # server version the same way, for the same reason.
+            backend.introspect_and_adapt()
+            if args.name:
+                info = introspector.get_sequence_info(args.name, schema=args.schema)
+                if info is None:
+                    print(f"Error: Sequence '{args.name}' not found", file=sys.stderr)
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"Sequence {args.name}")
+            else:
+                sequences = introspector.list_sequences(schema=args.schema)
+                data = _serialize_for_output(sequences)
+                provider.display_results(data, title="Sequences")
+
     except ConnectionError as e:
         provider.display_connection_error(e)
         sys.exit(1)
@@ -366,6 +416,47 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             else:
                 print("No extensions information available", file=sys.stderr)
                 sys.exit(1)
+
+        elif args.type == "materialized-views":
+            # The listing reads the server version, and an unadapted
+            # dialect has none to read, so adapting is part of answering.
+            await backend.introspect_and_adapt()
+            if args.name:
+                info = await introspector.get_materialized_view_info(args.name, schema=args.schema)
+                if info is None:
+                    print(
+                        f"Error: Materialized view '{args.name}' not found",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"Materialized View {args.name}")
+            else:
+                views = await introspector.list_materialized_views(
+                    schema=args.schema,
+                    include_system=args.include_system,
+                )
+                data = _serialize_for_output(views)
+                provider.display_results(data, title="Materialized Views")
+
+        elif args.type == "sequences":
+            # The sequence query widens on PostgreSQL 10, so it reads the
+            # server version the same way, for the same reason.
+            await backend.introspect_and_adapt()
+            if args.name:
+                info = await introspector.get_sequence_info(args.name, schema=args.schema)
+                if info is None:
+                    print(
+                        f"Error: Sequence '{args.name}' not found",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"Sequence {args.name}")
+            else:
+                sequences = await introspector.list_sequences(schema=args.schema)
+                data = _serialize_for_output(sequences)
+                provider.display_results(data, title="Sequences")
 
     except ConnectionError as e:
         provider.display_connection_error(e)

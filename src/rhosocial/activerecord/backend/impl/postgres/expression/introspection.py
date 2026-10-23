@@ -13,6 +13,7 @@ from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.introspection import (
+    IntrospectionExpression,
     ViewInfoQueryStatement,
     ViewListQueryStatement,
 )
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
 __all__ = [
     "PostgresMaterializedViewInfoQueryStatement",
     "PostgresMaterializedViewListQueryStatement",
+    "PostgresSequenceInfoQueryStatement",
+    "PostgresSequenceListQueryStatement",
     "PostgresDatabaseSizeFunction",
     "PostgresDatabaseSizeQueryStatement",
 ]
@@ -77,6 +80,75 @@ class PostgresMaterializedViewInfoQueryStatement(ViewInfoQueryStatement):
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
         return "format_materialized_view_info_query_statement"
+
+
+class PostgresSequenceListQueryStatement(IntrospectionExpression):
+    """List the sequences in one schema.
+
+    ``information_schema.sequences`` is the object list; ``pg_sequences`` adds
+    the runtime state it does not carry (``cache_size`` and ``last_value``).
+    ``include_pg_sequences`` says whether that join is available: the catalog
+    view arrived in PostgreSQL 10, so a 9.x server is asked the narrower
+    question and reports those two columns as absent.
+
+    Example:
+        >>> expr = PostgresSequenceListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        include_pg_sequences: bool = True,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            include_pg_sequences: Whether the server has ``pg_sequences``
+                (PostgreSQL 10+).
+        """
+        super().__init__(dialect, schema=schema)
+        self.include_pg_sequences = include_pg_sequences
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_sequence_list_query_statement"
+
+
+class PostgresSequenceInfoQueryStatement(IntrospectionExpression):
+    """Fetch a single sequence by name.
+
+    Example:
+        >>> expr = PostgresSequenceInfoQueryStatement(dialect, "order_id_seq")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        sequence_name: str,
+        schema: Optional[str] = None,
+        include_pg_sequences: bool = True,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            sequence_name: Name of the sequence to read.
+            schema: Optional schema name. Defaults to the connection schema.
+            include_pg_sequences: Whether the server has ``pg_sequences``
+                (PostgreSQL 10+).
+        """
+        super().__init__(dialect, schema=schema)
+        self.sequence_name = sequence_name
+        self.include_pg_sequences = include_pg_sequences
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_sequence_info_query_statement"
 
 
 class PostgresDatabaseSizeFunction(BaseExpression):

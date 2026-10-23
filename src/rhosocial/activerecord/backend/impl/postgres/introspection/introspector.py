@@ -37,6 +37,7 @@ from rhosocial.activerecord.backend.introspection.executor import (
     SyncIntrospectorExecutor,
     AsyncIntrospectorExecutor,
 )
+from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from rhosocial.activerecord.backend.introspection.types import (
     IntrospectionColumnInfo,
     ColumnNullable,
@@ -57,6 +58,7 @@ from .status_introspector import (
     SyncPostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
+from .types import SequenceInfo
 
 
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
@@ -338,6 +340,158 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             extra=f"matviews:{include_system}",
         )
 
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    def _server_has_pg_sequences(self) -> bool:
+        """Whether the connected server has the ``pg_sequences`` catalog view.
+
+        The view arrived in PostgreSQL 10. A server older than that answers
+        the widened question with ``relation does not exist``, so the caller
+        asks the narrower one and reports the two columns ``pg_sequences``
+        would have carried as absent. The version is read from the cache
+        ``introspect_and_adapt()`` keeps, then from the dialect, which is how
+        the rest of the backend answers the same question.
+
+        A dialect that was never adapted raises rather than reporting an
+        unknown version; that case answers the narrower question, because a
+        server this backend never learned to speak to is not one to assume
+        carries the newest catalog.
+        """
+        backend = getattr(self, "_backend", None)
+        version = getattr(backend, "_server_version_cache", None) if backend is not None else None
+        if not version:
+            dialect = getattr(backend, "dialect", None) if backend is not None else None
+            try:
+                version = getattr(dialect, "version", None) if dialect is not None else None
+            except Exception:
+                version = None
+        if not version:
+            return False
+        return tuple(version) >= (10, 0, 0)
+
+    def _resolve_include_pg_sequences(self, include_pg_sequences: Optional[bool]) -> bool:
+        """``None`` asks the server; an explicit flag is taken as given."""
+        if include_pg_sequences is None:
+            return self._server_has_pg_sequences()
+        return include_pg_sequences
+
+    @staticmethod
+    def _parse_sequence(
+        row: Dict[str, Any], default_schema: str, default_name: str = ""
+    ) -> SequenceInfo:
+        """Build a SequenceInfo from one ``information_schema.sequences`` row.
+
+        ``cycle_option`` is the server's ``YES``/``NO`` text, not a boolean,
+        and ``last_value`` is ``None`` for a sequence that never handed out a
+        value -- neither of which the caller should have to normalise.
+        """
+        cycle = row.get("cycle")
+        return SequenceInfo(
+            name=row.get("sequence_name") or default_name,
+            schema=row.get("schema_name") or default_schema,
+            data_type=row.get("data_type") or "",
+            start_value=row.get("start_value"),
+            minimum_value=row.get("minimum_value"),
+            maximum_value=row.get("maximum_value"),
+            increment=row.get("increment"),
+            cycle=str(cycle).strip().upper() == "YES" if cycle is not None else False,
+            cache_size=row.get("cache_size"),
+            last_value=row.get("last_value"),
+        )
+
+    @staticmethod
+    def _parse_sequences(rows: List[Dict[str, Any]], schema: str) -> List[SequenceInfo]:
+        return [
+            PostgreSQLIntrospectorMixin._parse_sequence(row, schema) for row in rows
+        ]
+
+    @staticmethod
+    def _parse_sequence_info(
+        rows: List[Dict[str, Any]], sequence_name: str, schema: str
+    ) -> Optional[SequenceInfo]:
+        if not rows:
+            return None
+        return PostgreSQLIntrospectorMixin._parse_sequence(rows[0], schema, sequence_name)
+
+    def _build_sequence_list_sql(
+        self, schema: Optional[str], include_pg_sequences: bool
+    ) -> Tuple[str, tuple]:
+        """Render the sequence list query for one schema."""
+        from ..expression.introspection import PostgresSequenceListQueryStatement
+
+        return PostgresSequenceListQueryStatement(
+            self.dialect, schema=schema, include_pg_sequences=include_pg_sequences
+        ).to_sql()
+
+    def _build_sequence_info_sql(
+        self, sequence_name: str, schema: Optional[str], include_pg_sequences: bool
+    ) -> Tuple[str, tuple]:
+        """Render the single-sequence query."""
+        from ..expression.introspection import PostgresSequenceInfoQueryStatement
+
+        return PostgresSequenceInfoQueryStatement(
+            self.dialect,
+            sequence_name,
+            schema=schema,
+            include_pg_sequences=include_pg_sequences,
+        ).to_sql()
+
+    def _sequence_cache_key(
+        self,
+        schema: Optional[str],
+        sequence_name: Optional[str] = None,
+        include_pg_sequences: bool = True,
+    ) -> str:
+        """Build the cache key for sequence introspection results.
+
+        A 9.x server answers a different question than a 10+ one -- the two
+        columns ``pg_sequences`` carries are simply absent -- so the flag
+        is part of the key rather than assumed constant for a connection.
+        """
+        return self._cache.key(
+            IntrospectionScope.SEQUENCE,
+            sequence_name or "*",
+            schema=schema,
+            extra=str(include_pg_sequences),
+        )
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _parse_extensions(rows: List[Dict[str, Any]]) -> List[ExtensionInfo]:
+        """Build the ExtensionInfo list from a ``pg_extension`` listing."""
+        return [
+            ExtensionInfo(
+                name=row.get("name") or "",
+                version=row.get("version"),
+                schema=row.get("schema"),
+                description=row.get("description"),
+            )
+            for row in rows
+        ]
+
+    def _build_extension_list_sql(self) -> Tuple[str, tuple]:
+        """Render the installed-extension listing."""
+        from ..expression.status import PostgresExtensionListQuery
+
+        return PostgresExtensionListQuery(self.dialect).to_sql()
+
+    def _extension_cache_key(self) -> str:
+        """Build the cache key for the installed-extension listing.
+
+        Extensions have no scope of their own, and the one closest in
+        meaning is the schema: an extension is a named object published
+        into a schema. The ``extra`` keeps the family apart from any other
+        schema-listing that comes later.
+        """
+        return self._cache.key(
+            IntrospectionScope.SCHEMA, "*", extra="extensions"
+        )
+
     def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionTriggerInfo]:
         triggers = []
         for row in rows:
@@ -491,6 +645,118 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         """Return True when the named materialized view exists."""
         return self.get_materialized_view_info(view_name, schema) is not None
 
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    def list_sequences(
+        self,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> List[SequenceInfo]:
+        """List the sequences in one schema.
+
+        The object list comes from ``information_schema.sequences``, the SQL
+        standard view; ``pg_sequences`` is joined beside it for the runtime
+        state the standard view omits (``cache_size`` and ``last_value``)
+        whenever the server has it.
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+                ``None`` (the default) detects it from the server version.
+
+        Returns:
+            List of SequenceInfo, ordered by sequence name.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self._get_default_schema()
+        sql, params = self._build_sequence_list_sql(schema, with_pg)
+        result = self._parse_sequences(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_sequence_info(
+        self,
+        sequence_name: str,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> Optional[SequenceInfo]:
+        """Return information for one sequence, or None when absent.
+
+        Args:
+            sequence_name: Name of the sequence to read.
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            SequenceInfo, or None when the sequence does not exist.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, sequence_name=sequence_name, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self._get_default_schema()
+        sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
+        result = self._parse_sequence_info(
+            self._executor.execute(sql, params), sequence_name, target
+        )
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    def sequence_exists(
+        self, sequence_name: str, schema: Optional[str] = None
+    ) -> bool:
+        """Return True when the named sequence exists."""
+        return self.get_sequence_info(sequence_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    def list_extensions(self) -> List[ExtensionInfo]:
+        """List the extensions installed in this database, by name.
+
+        The listing is the catalog's own: ``pg_extension`` joined to
+        ``pg_namespace`` for the schema each extension published its objects
+        into. Extensions live in the schema introspector rather than the
+        status introspector because they are schema objects, not position
+        in a status report; ``status.get_overview()`` keeps its own call for
+        the overview it builds.
+
+        Returns:
+            List of ExtensionInfo, ordered by extension name.
+        """
+        key = self._extension_cache_key()
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_extension_list_sql()
+        result = self._parse_extensions(self._executor.execute(sql, params))
+        self._cache.set(key, result)
+        return result
+
+    def get_extension_info(self, name: str) -> Optional[ExtensionInfo]:
+        """Return information for one installed extension, or None.
+
+        The catalog is asked for the whole family once and filtered here,
+        so a caller asking about a single extension pays one query rather
+        than one per call.
+        """
+        return next(
+            (ext for ext in self.list_extensions() if ext.name == name), None
+        )
+
+    def extension_exists(self, name: str) -> bool:
+        """Return True when the named extension is installed."""
+        return self.get_extension_info(name) is not None
+
 
 class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntrospector):
     """Asynchronous introspector for PostgreSQL backends.
@@ -578,3 +844,98 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
     ) -> bool:
         """Return True when the named materialized view exists (async)."""
         return await self.get_materialized_view_info(view_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    async def list_sequences(
+        self,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> List[SequenceInfo]:
+        """List the sequences in one schema (async counterpart).
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            List of SequenceInfo, ordered by sequence name.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self._get_default_schema()
+        sql, params = self._build_sequence_list_sql(schema, with_pg)
+        rows = await self._executor.execute(sql, params)
+        result = self._parse_sequences(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_sequence_info(
+        self,
+        sequence_name: str,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> Optional[SequenceInfo]:
+        """Return information for one sequence, or None when absent (async).
+
+        Args:
+            sequence_name: Name of the sequence to read.
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            SequenceInfo, or None when the sequence does not exist.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, sequence_name=sequence_name, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self._get_default_schema()
+        sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
+        rows = await self._executor.execute(sql, params)
+        result = self._parse_sequence_info(rows, sequence_name, target)
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    async def sequence_exists(
+        self, sequence_name: str, schema: Optional[str] = None
+    ) -> bool:
+        """Return True when the named sequence exists (async)."""
+        return await self.get_sequence_info(sequence_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    async def list_extensions(self) -> List[ExtensionInfo]:
+        """List the extensions installed in this database, by name (async).
+
+        Returns:
+            List of ExtensionInfo, ordered by extension name.
+        """
+        key = self._extension_cache_key()
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self._build_extension_list_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self._parse_extensions(rows)
+        self._cache.set(key, result)
+        return result
+
+    async def get_extension_info(self, name: str) -> Optional[ExtensionInfo]:
+        """Return information for one installed extension, or None (async)."""
+        return next(
+            (ext for ext in await self.list_extensions() if ext.name == name), None
+        )
+
+    async def extension_exists(self, name: str) -> bool:
+        """Return True when the named extension is installed (async)."""
+        return await self.get_extension_info(name) is not None
