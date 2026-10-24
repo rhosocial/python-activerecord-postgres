@@ -33,10 +33,16 @@ async_cli = pytest.mark.skipif(
            "asyncio.run gives it the ProactorEventLoop on Windows",
 )
 
-_SETUP_SQL = [
+# Order matters, and it is the order a previous run may have died in. A view
+# depends on its table, so the table cannot be dropped while the view still
+# names it; CASCADE on the table's drop is what takes a straggler view with it.
+_SETUP_DROPS = [
     "DROP MATERIALIZED VIEW IF EXISTS arx_cli_demo_mv",
-    "DROP TABLE IF EXISTS arx_cli_demo_tbl",
+    "DROP TABLE IF EXISTS arx_cli_demo_tbl CASCADE",
     "DROP SEQUENCE IF EXISTS arx_cli_demo_seq",
+]
+
+_SETUP_CREATES = [
     "CREATE SEQUENCE arx_cli_demo_seq START 42 INCREMENT 4",
     "CREATE TABLE arx_cli_demo_tbl (id INTEGER PRIMARY KEY)",
     "CREATE MATERIALIZED VIEW arx_cli_demo_mv AS SELECT id FROM arx_cli_demo_tbl",
@@ -44,7 +50,7 @@ _SETUP_SQL = [
 
 _CLEANUP_SQL = [
     "DROP MATERIALIZED VIEW IF EXISTS arx_cli_demo_mv",
-    "DROP TABLE IF EXISTS arx_cli_demo_tbl",
+    "DROP TABLE IF EXISTS arx_cli_demo_tbl CASCADE",
     "DROP SEQUENCE IF EXISTS arx_cli_demo_seq",
 ]
 
@@ -79,7 +85,16 @@ def conn_args():
 
 @pytest.fixture(scope="module")
 def cli_objects(conn_args):
-    """The objects the CLI subcommands list, created and dropped here."""
+    """The objects the CLI subcommands list, created and dropped here.
+
+    The drops run twice, before and after, because a run that dies mid-way
+    -- or an earlier run whose container vanished before its ``finally`` --
+    leaves objects behind, and a fixture that cannot recover from that poisons
+    every later test in the module with a half-built schema. Neither the drop
+    nor the create is allowed to raise here: a duplicate means a previous run
+    got there first, and ``CASCADE`` takes what depends on the table. What the
+    tests assert is that the objects exist afterwards, not how they got there.
+    """
     host, port, database, user, password = conn_args[1::2]
     config = PostgresConnectionConfig(
         host=host, port=int(port), database=database, username=user,
@@ -88,12 +103,26 @@ def cli_objects(conn_args):
     backend = PostgresBackend(connection_config=config)
     backend.connect()
     try:
-        for sql in _SETUP_SQL:
+        # Drops tolerate leftovers: a run that died half-way is not this
+        # test's problem, and refusing to continue would leave the module
+        # with a half-built schema. Creates do not get the same licence -- if
+        # a CREATE fails the objects the tests assert on are genuinely absent,
+        # and that must be a loud error rather than a passing test that read
+        # nothing.
+        for sql in _SETUP_DROPS:
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
+        for sql in _SETUP_CREATES:
             backend.execute(sql)
         yield
     finally:
         for sql in _CLEANUP_SQL:
-            backend.execute(sql)
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
         backend.disconnect()
 
 
