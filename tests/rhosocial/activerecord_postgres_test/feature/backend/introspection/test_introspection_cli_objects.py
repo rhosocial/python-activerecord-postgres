@@ -11,6 +11,7 @@ import io
 import json
 import socket
 import sys
+import uuid
 from contextlib import redirect_stderr, redirect_stdout
 
 import pytest
@@ -19,9 +20,6 @@ from rhosocial.activerecord.backend.impl.postgres.__main__ import main
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from providers.scenarios import SCENARIO_MAP, get_scenario_raw
-
-CLI_SEQUENCE = "arx_cli_demo_seq"
-CLI_VIEW = "arx_cli_demo_mv"
 
 # The CLI runs its async handler inside ``asyncio.run``, which on Windows
 # builds the ProactorEventLoop psycopg refuses to work with. That is the
@@ -33,26 +31,67 @@ async_cli = pytest.mark.skipif(
            "asyncio.run gives it the ProactorEventLoop on Windows",
 )
 
-# Order matters, and it is the order a previous run may have died in. A view
-# depends on its table, so the table cannot be dropped while the view still
-# names it; CASCADE on the table's drop is what takes a straggler view with it.
-_SETUP_DROPS = [
-    "DROP MATERIALIZED VIEW IF EXISTS arx_cli_demo_mv",
-    "DROP TABLE IF EXISTS arx_cli_demo_tbl CASCADE",
-    "DROP SEQUENCE IF EXISTS arx_cli_demo_seq",
-]
+@pytest.fixture(scope="module")
+def cli_objects(conn_args):
+    """The objects the CLI subcommands list, created and dropped here.
 
-_SETUP_CREATES = [
-    "CREATE SEQUENCE arx_cli_demo_seq START 42 INCREMENT 4",
-    "CREATE TABLE arx_cli_demo_tbl (id INTEGER PRIMARY KEY)",
-    "CREATE MATERIALIZED VIEW arx_cli_demo_mv AS SELECT id FROM arx_cli_demo_tbl",
-]
+    Names carry a per-process suffix. The matrix runs a dozen jobs against the
+    same scenario servers, and a run that dies mid-way leaves its objects
+    behind: with one fixed name, the next job's setup collides on
+    ``pg_class_relname_nsp_index`` and every later assertion in the module
+    reads whatever survived. A unique suffix makes each run's objects its own,
+    so neither a leftover nor a concurrent job can be mistaken for it.
 
-_CLEANUP_SQL = [
-    "DROP MATERIALIZED VIEW IF EXISTS arx_cli_demo_mv",
-    "DROP TABLE IF EXISTS arx_cli_demo_tbl CASCADE",
-    "DROP SEQUENCE IF EXISTS arx_cli_demo_seq",
-]
+    The drops stay forgiving (``IF EXISTS``, ``CASCADE`` on the table because a
+    view names its table) so a run that died half-way is cleaned up rather than
+    blocking. The creates do not get the same licence: if a CREATE fails, the
+    objects the tests assert on are genuinely absent, and that must be a loud
+    error rather than a test that reads nothing.
+    """
+    suffix = uuid.uuid4().hex[:8]
+    seq_name = f"arx_cli_demo_seq_{suffix}"
+    table_name = f"arx_cli_demo_tbl_{suffix}"
+    view_name = f"arx_cli_demo_mv_{suffix}"
+
+    setup_drops = [
+        f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+        f"DROP TABLE IF EXISTS {table_name} CASCADE",
+        f"DROP SEQUENCE IF EXISTS {seq_name}",
+    ]
+    setup_creates = [
+        f"CREATE SEQUENCE {seq_name} START 42 INCREMENT 4",
+        f"CREATE TABLE {table_name} (id INTEGER PRIMARY KEY)",
+        f"CREATE MATERIALIZED VIEW {view_name} AS SELECT id FROM {table_name}",
+    ]
+    cleanup_sql = [
+        f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+        f"DROP TABLE IF EXISTS {table_name} CASCADE",
+        f"DROP SEQUENCE IF EXISTS {seq_name}",
+    ]
+
+    host, port, database, user, password = conn_args[1::2]
+    config = PostgresConnectionConfig(
+        host=host, port=int(port), database=database, username=user,
+        password=password,
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    try:
+        for sql in setup_drops:
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
+        for sql in setup_creates:
+            backend.execute(sql)
+        yield {"seq": seq_name, "table": table_name, "view": view_name}
+    finally:
+        for sql in cleanup_sql:
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
+        backend.disconnect()
 
 
 def _reachable(config) -> bool:
@@ -83,49 +122,6 @@ def conn_args():
     pytest.skip("No scenario server reachable")
 
 
-@pytest.fixture(scope="module")
-def cli_objects(conn_args):
-    """The objects the CLI subcommands list, created and dropped here.
-
-    The drops run twice, before and after, because a run that dies mid-way
-    -- or an earlier run whose container vanished before its ``finally`` --
-    leaves objects behind, and a fixture that cannot recover from that poisons
-    every later test in the module with a half-built schema. Neither the drop
-    nor the create is allowed to raise here: a duplicate means a previous run
-    got there first, and ``CASCADE`` takes what depends on the table. What the
-    tests assert is that the objects exist afterwards, not how they got there.
-    """
-    host, port, database, user, password = conn_args[1::2]
-    config = PostgresConnectionConfig(
-        host=host, port=int(port), database=database, username=user,
-        password=password,
-    )
-    backend = PostgresBackend(connection_config=config)
-    backend.connect()
-    try:
-        # Drops tolerate leftovers: a run that died half-way is not this
-        # test's problem, and refusing to continue would leave the module
-        # with a half-built schema. Creates do not get the same licence -- if
-        # a CREATE fails the objects the tests assert on are genuinely absent,
-        # and that must be a loud error rather than a passing test that read
-        # nothing.
-        for sql in _SETUP_DROPS:
-            try:
-                backend.execute(sql)
-            except Exception:
-                pass
-        for sql in _SETUP_CREATES:
-            backend.execute(sql)
-        yield
-    finally:
-        for sql in _CLEANUP_SQL:
-            try:
-                backend.execute(sql)
-            except Exception:
-                pass
-        backend.disconnect()
-
-
 def run_cli(argv):
     out, err = io.StringIO(), io.StringIO()
     exc = None
@@ -150,25 +146,25 @@ class TestSequencesCLI:
         assert len(rows) > 0
         # The row shape is SequenceInfo's own, so the key is "name" exactly
         # as it is for tables, views and every other listing.
-        assert CLI_SEQUENCE in [row["name"] for row in rows]
-        demo = next(r for r in rows if r["name"] == CLI_SEQUENCE)
+        assert cli_objects["seq"] in [row["name"] for row in rows]
+        demo = next(r for r in rows if r["name"] == cli_objects["seq"])
         assert demo["start_value"] == 42
         assert demo["increment"] == 4
         assert demo["schema"] == "public"
 
     def test_single_sequence_json(self, conn_args, cli_objects):
         out, err, exc = run_cli(
-            ["introspect", "sequences", CLI_SEQUENCE] + conn_args + ["-o", "json"]
+            ["introspect", "sequences", cli_objects["seq"]] + conn_args + ["-o", "json"]
         )
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
         assert len(rows) == 1
-        assert rows[0]["name"] == CLI_SEQUENCE
+        assert rows[0]["name"] == cli_objects["seq"]
 
     def test_single_sequence_table(self, conn_args, cli_objects):
-        out, err, exc = run_cli(["introspect", "sequences", CLI_SEQUENCE] + conn_args)
+        out, err, exc = run_cli(["introspect", "sequences", cli_objects["seq"]] + conn_args)
         assert exc is None, f"stderr: {err}"
-        assert CLI_SEQUENCE in out
+        assert cli_objects["seq"] in out
 
     def test_unknown_sequence_exits_nonzero(self, conn_args, cli_objects):
         _, err, exc = run_cli(
@@ -184,7 +180,7 @@ class TestSequencesCLI:
         )
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
-        assert CLI_SEQUENCE in [row["name"] for row in rows]
+        assert cli_objects["seq"] in [row["name"] for row in rows]
 
 
 class TestMaterializedViewsCLI:
@@ -197,26 +193,26 @@ class TestMaterializedViewsCLI:
         assert exc is None, f"stderr: {err}\nstdout: {out}"
         rows = json.loads(out)
         assert isinstance(rows, list)
-        assert CLI_VIEW in [row["name"] for row in rows]
-        demo = next(r for r in rows if r["name"] == CLI_VIEW)
+        assert cli_objects["view"] in [row["name"] for row in rows]
+        demo = next(r for r in rows if r["name"] == cli_objects["view"])
         assert demo["extra"]["is_materialized"] is True
 
     def test_single_materialized_view_json(self, conn_args, cli_objects):
         out, err, exc = run_cli(
-            ["introspect", "materialized-views", CLI_VIEW] + conn_args + ["-o", "json"]
+            ["introspect", "materialized-views", cli_objects["view"]] + conn_args + ["-o", "json"]
         )
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
         assert len(rows) == 1
-        assert rows[0]["name"] == CLI_VIEW
+        assert rows[0]["name"] == cli_objects["view"]
         assert "SELECT" in rows[0]["definition"].upper()
 
     def test_single_materialized_view_table(self, conn_args, cli_objects):
         out, err, exc = run_cli(
-            ["introspect", "materialized-views", CLI_VIEW] + conn_args
+            ["introspect", "materialized-views", cli_objects["view"]] + conn_args
         )
         assert exc is None, f"stderr: {err}"
-        assert CLI_VIEW in out
+        assert cli_objects["view"] in out
 
     def test_unknown_materialized_view_exits_nonzero(self, conn_args, cli_objects):
         _, err, exc = run_cli(
@@ -233,4 +229,4 @@ class TestMaterializedViewsCLI:
         )
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
-        assert CLI_VIEW in [row["name"] for row in rows]
+        assert cli_objects["view"] in [row["name"] for row in rows]
