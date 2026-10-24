@@ -31,66 +31,98 @@ async_cli = pytest.mark.skipif(
            "asyncio.run gives it the ProactorEventLoop on Windows",
 )
 
+def _server_config():
+    """The first reachable scenario's raw config, or ``None``."""
+    for name in SCENARIO_MAP:
+        _, config = get_scenario_raw(name)
+        if _reachable(config):
+            return config
+    return None
+
+
 @pytest.fixture(scope="module")
-def cli_objects(conn_args):
+def conn_args(cli_objects):
+    """Connection arguments, naming the schema this run owns.
+
+    The schema comes from :func:`cli_objects` because that is where it is
+    created -- the connection flags and the objects have to agree, and the CLI
+    is a separate process that inherits nothing from the test.
+    """
+    config = _server_config()
+    if config is None:
+        pytest.skip("No scenario server reachable")
+    return [
+        "--host", config.host,
+        "--port", str(config.port),
+        "--database", config.database,
+        "--user", config.username,
+        "--password", config.password,
+        "--schema", cli_objects["schema"],
+    ]
+
+
+@pytest.fixture(scope="module")
+def cli_objects():
     """The objects the CLI subcommands list, created and dropped here.
 
-    Names carry a per-process suffix. The matrix runs a dozen jobs against the
-    same scenario servers, and a run that dies mid-way leaves its objects
-    behind: with one fixed name, the next job's setup collides on
-    ``pg_class_relname_nsp_index`` and every later assertion in the module
-    reads whatever survived. A unique suffix makes each run's objects its own,
-    so neither a leftover nor a concurrent job can be mistaken for it.
+    Names carry a per-process suffix, and the objects live in a schema that
+    also carries it. The suite runs ``-n 8 --dist=loadgroup`` -- eight workers
+    against the same scenario server -- so uniqueness of *names* is not enough
+    on its own: the server still reports "could not open relation with OID"
+    whenever one worker drops the relation another is mid-read on. A schema of
+    its own puts each worker's objects in a namespace nobody else touches, and
+    the CLI is asked for that schema rather than the default one.
 
-    The drops stay forgiving (``IF EXISTS``, ``CASCADE`` on the table because a
-    view names its table) so a run that died half-way is cleaned up rather than
-    blocking. The creates do not get the same licence: if a CREATE fails, the
-    objects the tests assert on are genuinely absent, and that must be a loud
-    error rather than a test that reads nothing.
+    The drops stay forgiving (``IF EXISTS``, ``CASCADE`` on the schema because
+    it contains everything) so a run that died half-way is cleaned up rather
+    than blocking. The creates do not get the same licence: if a CREATE fails,
+    the objects the tests assert on are genuinely absent, and that must be a
+    loud error rather than a test that reads nothing.
     """
+    config = _server_config()
+    if config is None:
+        pytest.skip("No scenario server reachable")
+
     suffix = uuid.uuid4().hex[:8]
-    seq_name = f"arx_cli_demo_seq_{suffix}"
-    table_name = f"arx_cli_demo_tbl_{suffix}"
-    view_name = f"arx_cli_demo_mv_{suffix}"
+    schema_name = f"arx_cli_demo_{suffix}"
+    seq_name = f"seq_{suffix}"
+    table_name = f"tbl_{suffix}"
+    view_name = f"mv_{suffix}"
 
-    setup_drops = [
-        f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
-        f"DROP TABLE IF EXISTS {table_name} CASCADE",
-        f"DROP SEQUENCE IF EXISTS {seq_name}",
-    ]
-    setup_creates = [
-        f"CREATE SEQUENCE {seq_name} START 42 INCREMENT 4",
-        f"CREATE TABLE {table_name} (id INTEGER PRIMARY KEY)",
-        f"CREATE MATERIALIZED VIEW {view_name} AS SELECT id FROM {table_name}",
-    ]
-    cleanup_sql = [
-        f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
-        f"DROP TABLE IF EXISTS {table_name} CASCADE",
-        f"DROP SEQUENCE IF EXISTS {seq_name}",
-    ]
-
-    host, port, database, user, password = conn_args[1::2]
-    config = PostgresConnectionConfig(
-        host=host, port=int(port), database=database, username=user,
-        password=password,
+    backend = PostgresBackend(
+        connection_config=PostgresConnectionConfig(
+            host=config.host,
+            port=int(config.port),
+            database=config.database,
+            username=config.username,
+            password=config.password,
+        )
     )
-    backend = PostgresBackend(connection_config=config)
     backend.connect()
     try:
-        for sql in setup_drops:
-            try:
-                backend.execute(sql)
-            except Exception:
-                pass
-        for sql in setup_creates:
+        # The schema is created through plain SQL because the backend's own
+        # namespace DSL is not what is under test here, and it has to exist
+        # before the objects that live in it.
+        backend.execute(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE")
+        backend.execute(f"CREATE SCHEMA {schema_name}")
+        for sql in (
+            f"CREATE SEQUENCE {schema_name}.{seq_name} START 42 INCREMENT 4",
+            f"CREATE TABLE {schema_name}.{table_name} (id INTEGER PRIMARY KEY)",
+            f"CREATE MATERIALIZED VIEW {schema_name}.{view_name} "
+            f"AS SELECT id FROM {schema_name}.{table_name}",
+        ):
             backend.execute(sql)
-        yield {"seq": seq_name, "table": table_name, "view": view_name}
+        yield {
+            "schema": schema_name,
+            "seq": seq_name,
+            "table": table_name,
+            "view": view_name,
+        }
     finally:
-        for sql in cleanup_sql:
-            try:
-                backend.execute(sql)
-            except Exception:
-                pass
+        try:
+            backend.execute(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE")
+        except Exception:
+            pass
         backend.disconnect()
 
 
@@ -104,22 +136,6 @@ def _reachable(config) -> bool:
     finally:
         sock.close()
     return True
-
-
-@pytest.fixture(scope="module")
-def conn_args():
-    """Connection arguments for the first reachable scenario."""
-    for name in SCENARIO_MAP:
-        _, config = get_scenario_raw(name)
-        if _reachable(config):
-            return [
-                "--host", config.host,
-                "--port", str(config.port),
-                "--database", config.database,
-                "--user", config.username,
-                "--password", config.password,
-            ]
-    pytest.skip("No scenario server reachable")
 
 
 def run_cli(argv):
@@ -150,7 +166,7 @@ class TestSequencesCLI:
         demo = next(r for r in rows if r["name"] == cli_objects["seq"])
         assert demo["start_value"] == 42
         assert demo["increment"] == 4
-        assert demo["schema"] == "public"
+        assert demo["schema"] == cli_objects["schema"]
 
     def test_single_sequence_json(self, conn_args, cli_objects):
         out, err, exc = run_cli(
