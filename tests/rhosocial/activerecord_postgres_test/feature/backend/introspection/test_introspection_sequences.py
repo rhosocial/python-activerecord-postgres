@@ -36,7 +36,8 @@ class TestListSequences:
 
     def test_list_sequences_reports_created_attributes(self, backend_with_sequence):
         """The row mirrors the CREATE SEQUENCE the fixture issued."""
-        sequences = backend_with_sequence.introspector.list_sequences()
+        introspector = backend_with_sequence.introspector
+        sequences = introspector.list_sequences()
         demo = next(s for s in sequences if s.name == "seq_demo_id")
 
         assert demo.schema == "public"
@@ -49,8 +50,12 @@ class TestListSequences:
         # server writes the end of the block it reserved ahead of what it
         # has handed out, which is why the assertion is "at least" and not
         # an equality -- the value returned by nextval was 7.
-        assert demo.last_value is not None
-        assert demo.last_value >= 7
+        #
+        # ``pg_sequences`` (PostgreSQL 10+) is where last_value is read from,
+        # so on an older server the value is absent rather than present.
+        if introspector._server_has_pg_sequences():
+            assert demo.last_value is not None
+            assert demo.last_value >= 7
 
     def test_list_sequences_is_sorted_by_name(self, backend_with_sequence):
         sequences = backend_with_sequence.introspector.list_sequences()
@@ -82,13 +87,22 @@ class TestGetSequenceInfo:
     """Tests for get_sequence_info method."""
 
     def test_get_sequence_info_existing(self, backend_with_sequence):
-        info = backend_with_sequence.introspector.get_sequence_info("seq_demo_id")
+        introspector = backend_with_sequence.introspector
+        info = introspector.get_sequence_info("seq_demo_id")
 
         assert isinstance(info, SequenceInfo)
         assert info.name == "seq_demo_id"
         assert info.schema == "public"
         assert info.increment == 3
-        assert info.cache_size == 5
+        # ``cache_size`` and ``last_value`` come from ``pg_sequences``, which
+        # arrived in PostgreSQL 10. On an older server the introspector asks
+        # the narrower question and those two columns are legitimately absent,
+        # so the assertion rides the same capability gate the code rides
+        # instead of assuming every server has the view.
+        if introspector._server_has_pg_sequences():
+            assert info.cache_size == 5
+        else:
+            assert info.cache_size is None
 
     def test_get_sequence_info_nonexistent(self, backend_with_sequence):
         assert backend_with_sequence.introspector.get_sequence_info("arx_no_seq") is None
@@ -97,10 +111,12 @@ class TestGetSequenceInfo:
         self, backend_with_sequence
     ):
         """A sequence nobody drew from reports last_value NULL, not an error."""
-        info = backend_with_sequence.introspector.get_sequence_info("seq_demo_untouched")
+        introspector = backend_with_sequence.introspector
+        info = introspector.get_sequence_info("seq_demo_untouched")
 
         assert info is not None
-        assert info.last_value is None
+        if introspector._server_has_pg_sequences():
+            assert info.last_value is None
 
     def test_get_sequence_info_narrow_query_omits_pg_columns(
         self, backend_with_sequence
@@ -225,11 +241,15 @@ class TestAsyncSequenceIntrospection:
 
     @pytest.mark.asyncio
     async def test_async_get_sequence_info(self, async_backend_with_sequence):
-        info = await async_backend_with_sequence.introspector.get_sequence_info("seq_demo_id")
+        introspector = async_backend_with_sequence.introspector
+        info = await introspector.get_sequence_info("seq_demo_id")
 
         assert isinstance(info, SequenceInfo)
         assert info.increment == 3
-        assert info.cache_size == 5
+        if introspector._server_has_pg_sequences():
+            assert info.cache_size == 5
+        else:
+            assert info.cache_size is None
 
     @pytest.mark.asyncio
     async def test_async_sequence_exists(self, async_backend_with_sequence):
