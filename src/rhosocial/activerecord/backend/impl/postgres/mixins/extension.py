@@ -20,6 +20,15 @@ class PostgresExtensionMixin:
     Known extensions definition with minimum version requirements and descriptions.
     """
 
+    def supports_extension_introspection(self) -> bool:
+        """PostgreSQL answers for its extensions from ``pg_extension``.
+
+        The capability for the ``introspect extensions`` family. Declared
+        beside the extension detection it describes, so a caller can ask
+        which extensions are installed rather than assuming.
+        """
+        return True
+
     KNOWN_EXTENSIONS = {
         # Spatial/Geospatial
         "postgis": {

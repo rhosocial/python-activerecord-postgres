@@ -56,6 +56,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
     in ``PostgresDialect``'s base list so its formatters win.
     """
 
+    def supports_materialized_view_introspection(self) -> bool:
+        """PostgreSQL answers for its materialized views from ``pg_matviews``.
+
+        The capability for the ``introspect materialized-views`` family,
+        declared beside the statements that render the REFRESH path.
+        """
+        return True
+
     def supports_materialized_view(self) -> bool:
         """Materialized views require PostgreSQL 9.3+."""
         return self.version >= (9, 3, 0)

@@ -43,6 +43,15 @@ class PostgresSequenceMixin:
     is False, applied here to the one spelling of an option whose probe is True.
     """
 
+    def supports_sequence_introspection(self) -> bool:
+        """PostgreSQL answers for its sequences from ``information_schema.sequences``.
+
+        The capability for the ``introspect sequences`` family, and the
+        same name MariaDB's switch uses so the family is answerable the
+        same way across the two engines that share the question.
+        """
+        return True
+
     def supports_sequence(self) -> bool:
         return True
 
