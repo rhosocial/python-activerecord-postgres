@@ -73,9 +73,6 @@ def create_parser(subparsers):
   # Output as JSON
   %(prog)s tables --database mydb -o json
 
-  # Specify schema (PostgreSQL specific)
-  %(prog)s tables --database mydb --schema public
-
   # Using environment variables for connection
   export POSTGRES_HOST=localhost POSTGRES_DATABASE=mydb POSTGRES_USER=postgres POSTGRES_PASSWORD=secret
   %(prog)s tables
@@ -102,12 +99,12 @@ def create_parser(subparsers):
     )
 
     # introspect-specific arguments
+    # INTROSPECT_TYPES is this backend's own answer to what families Postgres
+    # has; the CLI offers exactly that list.
     parser.add_argument(
         "type",
         choices=INTROSPECT_TYPES,
-        help="Introspection type: tables, views, table, columns, indexes, "
-             "foreign-keys, triggers, database, extensions, "
-             "materialized-views, sequences",
+        help="Introspection type: " + ", ".join(INTROSPECT_TYPES),
     )
     parser.add_argument(
         "name",
@@ -115,11 +112,6 @@ def create_parser(subparsers):
         default=None,
         help="Object name (required for some types; optional for "
              "materialized-views and sequences, where it selects one object)",
-    )
-    parser.add_argument(
-        "--schema",
-        default=None,
-        help='Schema name (defaults to "public" for PostgreSQL)',
     )
     parser.add_argument(
         "--include-system",
@@ -186,14 +178,14 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
 
         if args.type == "tables":
             tables = introspector.list_tables(
-                schema=args.schema,
+                schema=None,
                 include_system=args.include_system
             )
             data = _serialize_for_output(tables)
             provider.display_results(data, title="Tables")
 
         elif args.type == "views":
-            views = introspector.list_views(schema=args.schema)
+            views = introspector.list_views(schema=None)
             data = _serialize_for_output(views)
             provider.display_results(data, title="Views")
 
@@ -201,7 +193,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             if not args.name:
                 print("Error: Table name is required for 'table' introspection", file=sys.stderr)
                 sys.exit(1)
-            info = introspector.get_table_info(args.name, schema=args.schema)
+            info = introspector.get_table_info(args.name, schema=None)
             if info:
                 provider.display_results(_serialize_for_output(info.columns), title=f"Columns of {args.name}")
                 if info.indexes:
@@ -219,7 +211,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             if not args.name:
                 print("Error: Table name is required for 'columns' introspection", file=sys.stderr)
                 sys.exit(1)
-            columns = introspector.list_columns(args.name, schema=args.schema)
+            columns = introspector.list_columns(args.name, schema=None)
             data = _serialize_for_output(columns)
             provider.display_results(data, title=f"Columns of {args.name}")
 
@@ -227,7 +219,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             if not args.name:
                 print("Error: Table name is required for 'indexes' introspection", file=sys.stderr)
                 sys.exit(1)
-            indexes = introspector.list_indexes(args.name, schema=args.schema)
+            indexes = introspector.list_indexes(args.name, schema=None)
             data = _serialize_for_output(indexes)
             provider.display_results(data, title=f"Indexes of {args.name}")
 
@@ -235,14 +227,14 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             if not args.name:
                 print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
                 sys.exit(1)
-            fks = introspector.list_foreign_keys(args.name, schema=args.schema)
+            fks = introspector.list_foreign_keys(args.name, schema=None)
             data = _serialize_for_output(fks)
             provider.display_results(data, title=f"Foreign Keys of {args.name}")
 
         elif args.type == "triggers":
             triggers = introspector.list_triggers(
                 table_name=args.name,
-                schema=args.schema
+                schema=None
             )
             data = _serialize_for_output(triggers)
             provider.display_results(data, title="Triggers")
@@ -276,7 +268,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             # dialect has none to read, so adapting is part of answering.
             backend.introspect_and_adapt()
             if args.name:
-                info = introspector.get_materialized_view_info(args.name, schema=args.schema)
+                info = introspector.get_materialized_view_info(args.name, schema=None)
                 if info is None:
                     print(
                         f"Error: Materialized view '{args.name}' not found",
@@ -287,7 +279,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 provider.display_results(data, title=f"Materialized View {args.name}")
             else:
                 views = introspector.list_materialized_views(
-                    schema=args.schema,
+                    schema=None,
                     include_system=args.include_system,
                 )
                 data = _serialize_for_output(views)
@@ -298,14 +290,14 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             # server version the same way, for the same reason.
             backend.introspect_and_adapt()
             if args.name:
-                info = introspector.get_sequence_info(args.name, schema=args.schema)
+                info = introspector.get_sequence_info(args.name, schema=None)
                 if info is None:
                     print(f"Error: Sequence '{args.name}' not found", file=sys.stderr)
                     sys.exit(1)
                 data = _serialize_for_output([info])
                 provider.display_results(data, title=f"Sequence {args.name}")
             else:
-                sequences = introspector.list_sequences(schema=args.schema)
+                sequences = introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
 
@@ -332,14 +324,14 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
 
         if args.type == "tables":
             tables = await introspector.list_tables(
-                schema=args.schema,
+                schema=None,
                 include_system=args.include_system
             )
             data = _serialize_for_output(tables)
             provider.display_results(data, title="Tables")
 
         elif args.type == "views":
-            views = await introspector.list_views(schema=args.schema)
+            views = await introspector.list_views(schema=None)
             data = _serialize_for_output(views)
             provider.display_results(data, title="Views")
 
@@ -347,7 +339,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'table' introspection", file=sys.stderr)
                 sys.exit(1)
-            info = await introspector.get_table_info(args.name, schema=args.schema)
+            info = await introspector.get_table_info(args.name, schema=None)
             if info:
                 provider.display_results(_serialize_for_output(info.columns), title=f"Columns of {args.name}")
                 if info.indexes:
@@ -365,7 +357,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'columns' introspection", file=sys.stderr)
                 sys.exit(1)
-            columns = await introspector.list_columns(args.name, schema=args.schema)
+            columns = await introspector.list_columns(args.name, schema=None)
             data = _serialize_for_output(columns)
             provider.display_results(data, title=f"Columns of {args.name}")
 
@@ -373,7 +365,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'indexes' introspection", file=sys.stderr)
                 sys.exit(1)
-            indexes = await introspector.list_indexes(args.name, schema=args.schema)
+            indexes = await introspector.list_indexes(args.name, schema=None)
             data = _serialize_for_output(indexes)
             provider.display_results(data, title=f"Indexes of {args.name}")
 
@@ -381,14 +373,14 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             if not args.name:
                 print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
                 sys.exit(1)
-            fks = await introspector.list_foreign_keys(args.name, schema=args.schema)
+            fks = await introspector.list_foreign_keys(args.name, schema=None)
             data = _serialize_for_output(fks)
             provider.display_results(data, title=f"Foreign Keys of {args.name}")
 
         elif args.type == "triggers":
             triggers = await introspector.list_triggers(
                 table_name=args.name,
-                schema=args.schema
+                schema=None
             )
             data = _serialize_for_output(triggers)
             provider.display_results(data, title="Triggers")
@@ -422,7 +414,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             # dialect has none to read, so adapting is part of answering.
             await backend.introspect_and_adapt()
             if args.name:
-                info = await introspector.get_materialized_view_info(args.name, schema=args.schema)
+                info = await introspector.get_materialized_view_info(args.name, schema=None)
                 if info is None:
                     print(
                         f"Error: Materialized view '{args.name}' not found",
@@ -433,7 +425,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 provider.display_results(data, title=f"Materialized View {args.name}")
             else:
                 views = await introspector.list_materialized_views(
-                    schema=args.schema,
+                    schema=None,
                     include_system=args.include_system,
                 )
                 data = _serialize_for_output(views)
@@ -444,7 +436,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             # server version the same way, for the same reason.
             await backend.introspect_and_adapt()
             if args.name:
-                info = await introspector.get_sequence_info(args.name, schema=args.schema)
+                info = await introspector.get_sequence_info(args.name, schema=None)
                 if info is None:
                     print(
                         f"Error: Sequence '{args.name}' not found",
@@ -454,7 +446,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 data = _serialize_for_output([info])
                 provider.display_results(data, title=f"Sequence {args.name}")
             else:
-                sequences = await introspector.list_sequences(schema=args.schema)
+                sequences = await introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
 

@@ -18,6 +18,7 @@ import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.__main__ import main
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.cli.introspect import INTROSPECT_TYPES
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from providers.scenarios import SCENARIO_MAP, get_scenario_raw
 
@@ -41,12 +42,13 @@ def _server_config():
 
 
 @pytest.fixture(scope="module")
-def conn_args(cli_objects):
-    """Connection arguments, naming the schema this run owns.
+def conn_args():
+    """Connection arguments for the first reachable scenario.
 
-    The schema comes from :func:`cli_objects` because that is where it is
-    created -- the connection flags and the objects have to agree, and the CLI
-    is a separate process that inherits nothing from the test.
+    Nothing names a schema: the connection fixes the scope, and the CLI reads
+    the schema the connection resolves -- ``public`` for these scenarios.
+    That is also where :func:`cli_objects` puts the objects, because a
+    separate process inherits nothing from the test.
     """
     config = _server_config()
     if config is None:
@@ -57,7 +59,6 @@ def conn_args(cli_objects):
         "--database", config.database,
         "--user", config.username,
         "--password", config.password,
-        "--schema", cli_objects["schema"],
     ]
 
 
@@ -65,29 +66,30 @@ def conn_args(cli_objects):
 def cli_objects():
     """The objects the CLI subcommands list, created and dropped here.
 
-    Names carry a per-process suffix, and the objects live in a schema that
-    also carries it. The suite runs ``-n 8 --dist=loadgroup`` -- eight workers
-    against the same scenario server -- so uniqueness of *names* is not enough
-    on its own: the server still reports "could not open relation with OID"
-    whenever one worker drops the relation another is mid-read on. A schema of
-    its own puts each worker's objects in a namespace nobody else touches, and
-    the CLI is asked for that schema rather than the default one.
+    Names carry a per-process suffix. The matrix runs a dozen jobs against the
+    same scenario servers, and a run that dies mid-way leaves its objects
+    behind: with one fixed name, the next job's setup collides on
+    ``pg_class_relname_nsp_index`` and every later assertion in the module
+    reads whatever survived. A unique suffix makes each run's objects its own,
+    so neither a leftover nor a concurrent job can be mistaken for it.
 
-    The drops stay forgiving (``IF EXISTS``, ``CASCADE`` on the schema because
-    it contains everything) so a run that died half-way is cleaned up rather
-    than blocking. The creates do not get the same licence: if a CREATE fails,
-    the objects the tests assert on are genuinely absent, and that must be a
-    loud error rather than a test that reads nothing.
+    They live in the connection's default schema, because that is the scope
+    the CLI answers for; a run cannot name a schema of its own.
+
+    The drops stay forgiving (``IF EXISTS``, ``CASCADE`` on the table because a
+    view names its table) so a run that died half-way is cleaned up rather than
+    blocking. The creates do not get the same licence: if a CREATE fails, the
+    objects the tests assert on are genuinely absent, and that must be a loud
+    error rather than a test that reads nothing.
     """
     config = _server_config()
     if config is None:
         pytest.skip("No scenario server reachable")
 
     suffix = uuid.uuid4().hex[:8]
-    schema_name = f"arx_cli_demo_{suffix}"
-    seq_name = f"seq_{suffix}"
-    table_name = f"tbl_{suffix}"
-    view_name = f"mv_{suffix}"
+    seq_name = f"arx_cli_demo_seq_{suffix}"
+    table_name = f"arx_cli_demo_tbl_{suffix}"
+    view_name = f"arx_cli_demo_mv_{suffix}"
 
     backend = PostgresBackend(
         connection_config=PostgresConnectionConfig(
@@ -100,29 +102,39 @@ def cli_objects():
     )
     backend.connect()
     try:
-        # The schema is created through plain SQL because the backend's own
-        # namespace DSL is not what is under test here, and it has to exist
-        # before the objects that live in it.
-        backend.execute(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE")
-        backend.execute(f"CREATE SCHEMA {schema_name}")
         for sql in (
-            f"CREATE SEQUENCE {schema_name}.{seq_name} START 42 INCREMENT 4",
-            f"CREATE TABLE {schema_name}.{table_name} (id INTEGER PRIMARY KEY)",
-            f"CREATE MATERIALIZED VIEW {schema_name}.{view_name} "
-            f"AS SELECT id FROM {schema_name}.{table_name}",
+            f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+            f"DROP TABLE IF EXISTS {table_name} CASCADE",
+            f"DROP SEQUENCE IF EXISTS {seq_name}",
+        ):
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
+        for sql in (
+            f"CREATE SEQUENCE {seq_name} START 42 INCREMENT 4",
+            f"CREATE TABLE {table_name} (id INTEGER PRIMARY KEY)",
+            f"CREATE MATERIALIZED VIEW {view_name} AS SELECT id FROM {table_name}",
         ):
             backend.execute(sql)
         yield {
-            "schema": schema_name,
+            # The scope the CLI will answer for, spelled out so the assertions
+            # below read it rather than assume it.
+            "schema": "public",
             "seq": seq_name,
             "table": table_name,
             "view": view_name,
         }
     finally:
-        try:
-            backend.execute(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE")
-        except Exception:
-            pass
+        for sql in (
+            f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+            f"DROP TABLE IF EXISTS {table_name} CASCADE",
+            f"DROP SEQUENCE IF EXISTS {seq_name}",
+        ):
+            try:
+                backend.execute(sql)
+            except Exception:
+                pass
         backend.disconnect()
 
 
@@ -147,6 +159,27 @@ def run_cli(argv):
         except SystemExit as e:
             exc = e
     return out.getvalue(), err.getvalue(), exc
+
+
+class TestParserContract:
+    """Offline checks on what the introspect parser offers.
+
+    The scope of a run is fixed by its connection, so the parser must not ask
+    for a schema a second time: ``--schema`` is not a flag of this subcommand,
+    and argparse refuses it like any other unknown option.
+    """
+
+    def test_schema_flag_is_refused(self, capsys):
+        with pytest.raises(SystemExit):
+            main(["introspect", "tables", "--database", "mydb", "--schema", "public"])
+        assert "--schema" in capsys.readouterr().err
+
+    def test_help_lists_every_type_and_no_schema_flag(self):
+        out, _, exc = run_cli(["introspect", "--help"])
+        assert exc is not None and exc.code == 0
+        for type_name in INTROSPECT_TYPES:
+            assert type_name in out
+        assert "--schema" not in out
 
 
 class TestSequencesCLI:

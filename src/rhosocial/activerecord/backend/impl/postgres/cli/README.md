@@ -35,7 +35,6 @@ instead of the family.
 | Option | Default | Description |
 | :--- | :--- | :--- |
 | `-o, --output` | `table` | `table` (rich), `json`, `csv`, `tsv`. |
-| `--schema` | `public` | The schema to read. Fewer surprises than a search path. |
 | `--include-system` | off | Include system objects. |
 | `--host`, `--port`, `--database`, `--user`, `--password` | env or defaults | Connection. `POSTGRES_*` env vars are honoured, and arguments override them. |
 | `--ssl` | off | Use SSL for the connection. |
@@ -49,9 +48,11 @@ instead of the family.
 *   **Read-only.** `introspect` never writes. It does not create, drop, or
     alter anything, so it is safe to run against a database whose schema
     matters.
-*   **The schema is explicit.** `--schema` defaults to `public`; the catalogue
-    views are then asked about that schema, rather than resolving names
-    through the server's search path, which differs between roles.
+*   **The connection fixes the scope.** A run names one database, and that is
+    the scope of the answer; the catalogue views are asked about the
+    connection's default schema rather than resolving names through the
+    server's search path, which differs between roles. There is no separate
+    schema flag to pass.
 *   **One question per invocation.** A CLI process is one connection that
     opens, answers, and closes — there is no cache carried between runs, so
     the answer reflects the server as it is *now*, including a change made by
@@ -71,8 +72,8 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect table orders -
 python -m rhosocial.activerecord.backend.impl.postgres introspect sequences --database mydb
 python -m rhosocial.activerecord.backend.impl.postgres introspect sequences order_id_seq --database mydb -o json
 
-# Another schema, including its materialized views
-python -m rhosocial.activerecord.backend.impl.postgres introspect materialized-views --schema reporting --database mydb
+# Materialized views, whose definitions are not in information_schema
+python -m rhosocial.activerecord.backend.impl.postgres introspect materialized-views --database mydb
 
 # A script asks the question and reads the answer
 export POSTGRES_HOST=localhost POSTGRES_DATABASE=mydb POSTGRES_USER=postgres POSTGRES_PASSWORD=secret
