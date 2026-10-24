@@ -1081,14 +1081,28 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     def _matview_source(self):
         """``pg_matviews m JOIN pg_class c ... JOIN pg_namespace n ...``.
 
-        Both join conditions carry two comparisons, exactly as the concatenated
-        ON clauses did: the name pairs the catalogue view with its relation, and
-        the namespace pairs it with the schema the view reports.
+        The ``pg_class`` pair carries two comparisons: the name, and the
+        namespace it resolves in. The namespace half is what makes this a
+        correct read rather than a lucky one -- ``relname`` is unique per
+        namespace, not per database, so pairing on the name alone lets a
+        same-named row in *any* schema stand in for the one asked about. When
+        that row had just been dropped by a concurrent worker the server
+        refuses the query with "could not open relation with OID", which is
+        what the parallelised suite reported.
+
+        The ``pg_namespace`` join keeps its own two comparisons: the OID pair
+        ties the relation to its namespace, and the name pair re-checks the
+        schema ``pg_matviews`` reports against it.
         """
         from rhosocial.activerecord.backend.expression import (
             ComparisonPredicate,
             JoinClause,
             LogicalPredicate,
+            QueryStatement,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import (
+            ExistsPredicate,
         )
 
         source = JoinClause(
@@ -1096,11 +1110,46 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             left_table=self._catalog_relation("pg_matviews", "m"),
             right_table=self._catalog_relation("pg_class", "c"),
             join_type="JOIN",
-            condition=ComparisonPredicate(
+            condition=LogicalPredicate(
                 self,
-                "eq",
-                self._catalog_column("relname", "c"),
-                self._catalog_column("matviewname", "m"),
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_column("matviewname", "m"),
+                ),
+                # c.relnamespace == (the namespace whose name is m.schemaname).
+                # Written as a scalar subquery because pg_class carries no
+                # namespace name, only its OID, and the comparison has to
+                # resolve through pg_namespace to be a real test.
+                ExistsPredicate(
+                    self,
+                    QueryStatement(
+                        self,
+                        select=[self._catalog_literal(1)],
+                        from_=self._catalog_relation("pg_namespace", "n2"),
+                        where=WhereClause(
+                            self,
+                            LogicalPredicate(
+                                self,
+                                "AND",
+                                ComparisonPredicate(
+                                    self,
+                                    "eq",
+                                    self._catalog_column("oid", "n2"),
+                                    self._catalog_column("relnamespace", "c"),
+                                ),
+                                ComparisonPredicate(
+                                    self,
+                                    "eq",
+                                    self._catalog_column("nspname", "n2"),
+                                    self._catalog_column("schemaname", "m"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
             ),
         )
         return source.join(
