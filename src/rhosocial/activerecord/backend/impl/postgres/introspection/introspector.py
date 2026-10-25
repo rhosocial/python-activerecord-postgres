@@ -25,7 +25,7 @@ Design principle: Sync and Async are separate and cannot coexist.
 """
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
@@ -59,6 +59,15 @@ from .status_introspector import (
     AsyncPostgreSQLStatusIntrospector,
 )
 from .types import SequenceInfo
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ..expression.introspection import (
+        PostgresMaterializedViewInfoQueryStatement,
+        PostgresMaterializedViewListQueryStatement,
+        PostgresSequenceInfoQueryStatement,
+        PostgresSequenceListQueryStatement,
+    )
+    from ..expression.status import PostgresExtensionListQuery
 
 
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
@@ -304,27 +313,27 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             rows[0], schema, view_name
         )
 
-    def _build_materialized_view_list_sql(
-        self, schema: Optional[str], include_system: bool
-    ) -> Tuple[str, tuple]:
+    def materialized_view_list_statement(
+        self, *, schema: Optional[str], include_system: bool
+    ) -> "PostgresMaterializedViewListQueryStatement":
+        """Return the statement that lists materialized views in one schema."""
         from ..expression.introspection import PostgresMaterializedViewListQueryStatement
 
         target_schema = schema if schema is not None else self.default_schema
-        expr = PostgresMaterializedViewListQueryStatement(
+        return PostgresMaterializedViewListQueryStatement(
             self.dialect, schema=target_schema, include_system=include_system
         )
-        return expr.to_sql()
 
-    def _build_materialized_view_info_sql(
-        self, view_name: str, schema: Optional[str]
-    ) -> Tuple[str, tuple]:
+    def materialized_view_info_statement(
+        self, *, view_name: str, schema: Optional[str]
+    ) -> "PostgresMaterializedViewInfoQueryStatement":
+        """Return the statement that asks for one materialized view."""
         from ..expression.introspection import PostgresMaterializedViewInfoQueryStatement
 
         target_schema = schema if schema is not None else self.default_schema
-        expr = PostgresMaterializedViewInfoQueryStatement(
+        return PostgresMaterializedViewInfoQueryStatement(
             self.dialect, view_name, schema=target_schema
         )
-        return expr.to_sql()
 
     def _materialized_view_cache_key(
         self, schema: Optional[str], view_name: Optional[str] = None, include_system: bool = False
@@ -416,20 +425,20 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             return None
         return PostgreSQLIntrospectorMixin.parse_sequence(rows[0], schema, sequence_name)
 
-    def _build_sequence_list_sql(
-        self, schema: Optional[str], include_pg_sequences: bool
-    ) -> Tuple[str, tuple]:
-        """Render the sequence list query for one schema."""
+    def sequence_list_statement(
+        self, *, schema: Optional[str], include_pg_sequences: bool
+    ) -> "PostgresSequenceListQueryStatement":
+        """Return the statement that lists the sequences in one schema."""
         from ..expression.introspection import PostgresSequenceListQueryStatement
 
         return PostgresSequenceListQueryStatement(
             self.dialect, schema=schema, include_pg_sequences=include_pg_sequences
-        ).to_sql()
+        )
 
-    def _build_sequence_info_sql(
-        self, sequence_name: str, schema: Optional[str], include_pg_sequences: bool
-    ) -> Tuple[str, tuple]:
-        """Render the single-sequence query."""
+    def sequence_info_statement(
+        self, *, sequence_name: str, schema: Optional[str], include_pg_sequences: bool
+    ) -> "PostgresSequenceInfoQueryStatement":
+        """Return the statement that asks for one sequence."""
         from ..expression.introspection import PostgresSequenceInfoQueryStatement
 
         return PostgresSequenceInfoQueryStatement(
@@ -437,7 +446,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             sequence_name,
             schema=schema,
             include_pg_sequences=include_pg_sequences,
-        ).to_sql()
+        )
 
     def _sequence_cache_key(
         self,
@@ -475,11 +484,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _build_extension_list_sql(self) -> Tuple[str, tuple]:
-        """Render the installed-extension listing."""
+    def extension_list_statement(self) -> "PostgresExtensionListQuery":
+        """Return the statement that lists the installed extensions."""
         from ..expression.status import PostgresExtensionListQuery
 
-        return PostgresExtensionListQuery(self.dialect).to_sql()
+        return PostgresExtensionListQuery(self.dialect)
 
     def _extension_cache_key(self) -> str:
         """Build the cache key for the installed-extension listing.
@@ -612,7 +621,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_list_sql(schema, include_system)
+        sql, params = self.materialized_view_list_statement(
+            schema=schema, include_system=include_system
+        ).to_sql()
         result = self.parse_materialized_views(self._executor.execute(sql, params), target)
         self._cache.set(key, result)
         return result
@@ -634,7 +645,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_info_sql(view_name, schema)
+        sql, params = self.materialized_view_info_statement(
+            view_name=view_name, schema=schema
+        ).to_sql()
         result = self.parse_materialized_view_info(
             self._executor.execute(sql, params), view_name, target
         )
@@ -676,7 +689,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         if cached is not None:
             return cached
         target = schema if schema is not None else self.default_schema
-        sql, params = self._build_sequence_list_sql(schema, with_pg)
+        sql, params = self.sequence_list_statement(
+            schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
         result = self.parse_sequences(self._executor.execute(sql, params), target)
         self._cache.set(key, result)
         return result
@@ -703,7 +718,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         if cached is not None:
             return cached
         target = schema if schema is not None else self.default_schema
-        sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
+        sql, params = self.sequence_info_statement(
+            sequence_name=sequence_name, schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
         result = self.parse_sequence_info(
             self._executor.execute(sql, params), sequence_name, target
         )
@@ -738,7 +755,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_extension_list_sql()
+        sql, params = self.extension_list_statement().to_sql()
         result = self.parse_extensions(self._executor.execute(sql, params))
         self._cache.set(key, result)
         return result
@@ -810,7 +827,9 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_list_sql(schema, include_system)
+        sql, params = self.materialized_view_list_statement(
+            schema=schema, include_system=include_system
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_materialized_views(rows, target)
         self._cache.set(key, result)
@@ -833,7 +852,9 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_info_sql(view_name, schema)
+        sql, params = self.materialized_view_info_statement(
+            view_name=view_name, schema=schema
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_materialized_view_info(rows, view_name, target)
         if result is not None:
@@ -870,7 +891,9 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         if cached is not None:
             return cached
         target = schema if schema is not None else self.default_schema
-        sql, params = self._build_sequence_list_sql(schema, with_pg)
+        sql, params = self.sequence_list_statement(
+            schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_sequences(rows, target)
         self._cache.set(key, result)
@@ -898,7 +921,9 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         if cached is not None:
             return cached
         target = schema if schema is not None else self.default_schema
-        sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
+        sql, params = self.sequence_info_statement(
+            sequence_name=sequence_name, schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_sequence_info(rows, sequence_name, target)
         if result is not None:
@@ -925,7 +950,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_extension_list_sql()
+        sql, params = self.extension_list_statement().to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_extensions(rows)
         self._cache.set(key, result)
