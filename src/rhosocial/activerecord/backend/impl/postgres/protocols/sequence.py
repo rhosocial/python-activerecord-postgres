@@ -44,6 +44,15 @@ class PostgresSequenceSupport(
 
     def supports_sequence(self) -> bool: ...
 
+    def supports_sequence_introspection(self) -> bool:
+        """Whether sequences can be read back from ``information_schema``.
+
+        The ``introspect sequences`` family, under the name MariaDB's switch
+        uses too, so the family is answerable the same way across the two
+        engines that share the question.
+        """
+        ...
+
     def supports_create_sequence(self) -> bool: ...
 
     def supports_drop_sequence(self) -> bool: ...

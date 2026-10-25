@@ -40,6 +40,15 @@ class PostgresExtensionSupport(Protocol):
     Version requirement: PostgreSQL 9.1+ supports CREATE EXTENSION
     """
 
+    def supports_extension_introspection(self) -> bool:
+        """Whether the installed extensions can be read back.
+
+        The ``introspect extensions`` family, declared beside the extension
+        detection it describes: a caller can ask which extensions exist rather
+        than assume the catalogue is answerable.
+        """
+        ...
+
     def detect_extensions(self, connection) -> Dict[str, "PostgresExtensionInfo"]:
         """Detect all installed and available extensions.
 

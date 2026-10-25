@@ -46,6 +46,14 @@ class PostgresMaterializedViewSupport(Protocol):
         """
         ...  # pragma: no cover
 
+    def supports_materialized_view_introspection(self) -> bool:
+        """Whether materialized views can be read back from ``pg_matviews``.
+
+        The ``introspect materialized-views`` family, declared beside the
+        statements that render the REFRESH path.
+        """
+        ...  # pragma: no cover
+
     def supports_materialized_view(self) -> bool:
         """Whether materialized views are supported (PostgreSQL 9.3+)."""
         ...
