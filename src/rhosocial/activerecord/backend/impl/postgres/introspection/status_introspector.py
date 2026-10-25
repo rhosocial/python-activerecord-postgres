@@ -119,7 +119,7 @@ class PostgreSQLStatusIntrospectorMixin:
     Both SyncPostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
     inherit from this mixin to share:
     - Query execution helpers
-    - _parse_* implementations
+    - parse_* implementations
     """
 
     def _get_vendor_name(self) -> str:
@@ -129,7 +129,7 @@ class PostgreSQLStatusIntrospectorMixin:
     def _show(self, parameter: str):
         """The node for a ``SHOW`` of one run-time parameter."""
         return PostgresShowStatement(self._backend.dialect, parameter)
-    def _parse_setting_value(self, value: Any) -> Any:
+    def parse_setting_value(self, value: Any) -> Any:
         """Parse PostgreSQL setting value to appropriate Python type.
 
         PostgreSQL settings can be:
@@ -223,7 +223,7 @@ class PostgreSQLStatusIntrospectorMixin:
         """Create a StatusItem with parsed value."""
         return StatusItem(
             name=name,
-            value=self._parse_setting_value(value),
+            value=self.parse_setting_value(value),
             category=category,
             description=description,
             unit=unit,

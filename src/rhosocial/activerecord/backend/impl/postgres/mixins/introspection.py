@@ -138,8 +138,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
     # ========== Helper Methods ==========
 
-    def _get_default_schema(self) -> str:
-        """Get default schema name.
+    @property
+    def default_schema(self) -> str:
+        """The default schema name.
 
         PostgreSQL's default schema is 'public', but may be overridden by
         the connection config's `default_schema` or the first entry of
@@ -413,7 +414,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
         params = expr.get_params()
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
         include_views = params.get("include_views", True)
         include_system = params.get("include_system", False)
         table_type = params.get("table_type")
@@ -485,7 +486,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         table_name = params.get("table_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         return self._catalog_select(
             self._relation_projection(),
@@ -539,7 +540,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         params = expr.get_params()
         table_name = params.get("table_name", "")
         include_hidden = params.get("include_hidden", False)
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         # pg_index row for the primary-key test, over the column's own table.
         primary_key_index = QueryStatement(
@@ -702,7 +703,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         table_name = params.get("table_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
             self,
@@ -833,7 +834,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         table_name = params.get("table_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
             self,
@@ -990,7 +991,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
         params = expr.get_params()
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
         include_system = params.get("include_system", False)
 
         conditions = [
@@ -1054,7 +1055,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         view_name = params.get("view_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         return self._catalog_select(
             self._view_projection(),
@@ -1250,7 +1251,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
         params = expr.get_params()
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
         include_system = params.get("include_system", False)
 
         conditions = [
@@ -1294,7 +1295,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         view_name = params.get("view_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         return self._catalog_select(
             self._matview_projection(),
@@ -1403,7 +1404,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression import ComparisonPredicate
 
         params = expr.get_params()
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
         include_pg_sequences = params.get("include_pg_sequences", True)
 
         return self._catalog_select(
@@ -1435,7 +1436,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         sequence_name = params.get("sequence_name", "")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
         include_pg_sequences = params.get("include_pg_sequences", True)
 
         return self._catalog_select(
@@ -1576,7 +1577,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         params = expr.get_params()
         table_name = params.get("table_name")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         conditions = [
             ComparisonPredicate(
@@ -1617,7 +1618,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         params = expr.get_params()
         trigger_name = params.get("trigger_name", "")
         table_name = params.get("table_name")
-        schema = params.get("schema") or self._get_default_schema()
+        schema = params.get("schema") or self.default_schema
 
         conditions = [
             ComparisonPredicate(

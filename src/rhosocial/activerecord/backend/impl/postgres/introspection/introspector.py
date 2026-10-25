@@ -11,12 +11,12 @@ Architecture:
   - SQL generation: Delegated to PostgresIntrospectionCapabilityMixin.format_*_query()
     methods in the Dialect layer via Expression.to_sql()
   - Query execution: Handled by IntrospectorExecutor
-  - Result parsing: _parse_* methods in this module (pure Python, no I/O)
+  - Result parsing: parse_* methods in this module (pure Python, no I/O)
 
 Key behaviours:
   - Queries pg_catalog system tables (pg_class, pg_attribute, pg_index,
     pg_constraint, pg_trigger, pg_proc, etc.)
-  - _parse_* methods are pure Python — shared by sync and async introspectors
+  - parse_* methods are pure Python — shared by sync and async introspectors
   - Default schema is 'public'
 
 Design principle: Sync and Async are separate and cannot coexist.
@@ -67,15 +67,16 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     Both SyncPostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
     from this mixin to share:
     - Default schema handling
-    - _parse_* implementations
+    - parse_* implementations
     - Trigger decoding helpers
 
     SQL generation is delegated to the Dialect layer via Expression.to_sql()
     which calls PostgresIntrospectionCapabilityMixin.format_*_query() methods.
     """
 
-    def _get_default_schema(self) -> str:
-        """Return the actual schema from backend config or search_path.
+    @property
+    def default_schema(self) -> str:
+        """The actual schema from backend config or search_path.
 
         Priority:
         1. config.default_schema
@@ -103,7 +104,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # Parse methods — pure Python, no I/O
     # ------------------------------------------------------------------ #
 
-    def _parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
+    def parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
         db_row = rows[0] if rows else {}
         db_name = self._get_database_name()
         # Dialect returns 'version' column from format_database_info_query_statement()
@@ -129,8 +130,8 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             size_bytes=db_row.get("size"),
         )
 
-    def _parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:
-        target_schema = schema if schema is not None else self._get_default_schema()
+    def parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:
+        target_schema = schema if schema is not None else self.default_schema
         table_type_map = {
             "BASE TABLE": TableType.BASE_TABLE,
             "VIEW": TableType.VIEW,
@@ -151,7 +152,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
+    def parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []
         for row in rows:
             data_type = row.get("data_type", "")
@@ -175,7 +176,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return columns
 
-    def _parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
+    def parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
         index_type_map = {
             "btree": IndexType.BTREE,
             "hash": IndexType.HASH,
@@ -207,7 +208,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return list(index_map.values())
 
-    def _parse_foreign_keys(
+    def parse_foreign_keys(
         self, rows: List[Dict[str, Any]], table_name: str, schema: str
     ) -> List[IntrospectionForeignKeyInfo]:
         # PostgreSQL uses single-char codes for referential actions
@@ -237,7 +238,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             fk_map[fk_name].referenced_columns.append(row.get("referenced_column", ""))
         return list(fk_map.values())
 
-    def _parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionViewInfo]:
+    def parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionViewInfo]:
         return [
             IntrospectionViewInfo(
                 name=row.get("view_name", ""),
@@ -248,7 +249,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_view_info(
+    def parse_view_info(
         self, rows: List[Dict[str, Any]], view_name: str, schema: str
     ) -> Optional[IntrospectionViewInfo]:
         if not rows:
@@ -262,7 +263,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_materialized_view(
+    def parse_materialized_view(
         row: Dict[str, Any], default_schema: str, default_name: str = ""
     ) -> IntrospectionViewInfo:
         """Build a IntrospectionViewInfo for a materialized view.
@@ -286,20 +287,20 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_materialized_views(
+    def parse_materialized_views(
         rows: List[Dict[str, Any]], schema: str
     ) -> List[IntrospectionViewInfo]:
         return [
-            PostgreSQLIntrospectorMixin._parse_materialized_view(row, schema) for row in rows
+            PostgreSQLIntrospectorMixin.parse_materialized_view(row, schema) for row in rows
         ]
 
     @staticmethod
-    def _parse_materialized_view_info(
+    def parse_materialized_view_info(
         rows: List[Dict[str, Any]], view_name: str, schema: str
     ) -> Optional[IntrospectionViewInfo]:
         if not rows:
             return None
-        return PostgreSQLIntrospectorMixin._parse_materialized_view(
+        return PostgreSQLIntrospectorMixin.parse_materialized_view(
             rows[0], schema, view_name
         )
 
@@ -308,7 +309,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     ) -> Tuple[str, tuple]:
         from ..expression.introspection import PostgresMaterializedViewListQueryStatement
 
-        target_schema = schema if schema is not None else self._get_default_schema()
+        target_schema = schema if schema is not None else self.default_schema
         expr = PostgresMaterializedViewListQueryStatement(
             self.dialect, schema=target_schema, include_system=include_system
         )
@@ -319,7 +320,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     ) -> Tuple[str, tuple]:
         from ..expression.introspection import PostgresMaterializedViewInfoQueryStatement
 
-        target_schema = schema if schema is not None else self._get_default_schema()
+        target_schema = schema if schema is not None else self.default_schema
         expr = PostgresMaterializedViewInfoQueryStatement(
             self.dialect, view_name, schema=target_schema
         )
@@ -378,7 +379,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         return include_pg_sequences
 
     @staticmethod
-    def _parse_sequence(
+    def parse_sequence(
         row: Dict[str, Any], default_schema: str, default_name: str = ""
     ) -> SequenceInfo:
         """Build a SequenceInfo from one ``information_schema.sequences`` row.
@@ -402,18 +403,18 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_sequences(rows: List[Dict[str, Any]], schema: str) -> List[SequenceInfo]:
+    def parse_sequences(rows: List[Dict[str, Any]], schema: str) -> List[SequenceInfo]:
         return [
-            PostgreSQLIntrospectorMixin._parse_sequence(row, schema) for row in rows
+            PostgreSQLIntrospectorMixin.parse_sequence(row, schema) for row in rows
         ]
 
     @staticmethod
-    def _parse_sequence_info(
+    def parse_sequence_info(
         rows: List[Dict[str, Any]], sequence_name: str, schema: str
     ) -> Optional[SequenceInfo]:
         if not rows:
             return None
-        return PostgreSQLIntrospectorMixin._parse_sequence(rows[0], schema, sequence_name)
+        return PostgreSQLIntrospectorMixin.parse_sequence(rows[0], schema, sequence_name)
 
     def _build_sequence_list_sql(
         self, schema: Optional[str], include_pg_sequences: bool
@@ -462,7 +463,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # ------------------------------------------------------------------ #
 
     @staticmethod
-    def _parse_extensions(rows: List[Dict[str, Any]]) -> List[ExtensionInfo]:
+    def parse_extensions(rows: List[Dict[str, Any]]) -> List[ExtensionInfo]:
         """Build the ExtensionInfo list from a ``pg_extension`` listing."""
         return [
             ExtensionInfo(
@@ -492,7 +493,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             IntrospectionScope.SCHEMA, "*", extra="extensions"
         )
 
-    def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionTriggerInfo]:
+    def parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionTriggerInfo]:
         triggers = []
         for row in rows:
             # Dialect returns 'timing' column already decoded
@@ -606,13 +607,13 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         Returns:
             List of IntrospectionViewInfo describing each materialized view.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, include_system=include_system)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_list_sql(schema, include_system)
-        result = self._parse_materialized_views(self._executor.execute(sql, params), target)
+        result = self.parse_materialized_views(self._executor.execute(sql, params), target)
         self._cache.set(key, result)
         return result
 
@@ -628,13 +629,13 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         Returns:
             IntrospectionViewInfo, or None when the materialized view does not exist.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, view_name=view_name)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_info_sql(view_name, schema)
-        result = self._parse_materialized_view_info(
+        result = self.parse_materialized_view_info(
             self._executor.execute(sql, params), view_name, target
         )
         if result is not None:
@@ -674,9 +675,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         sql, params = self._build_sequence_list_sql(schema, with_pg)
-        result = self._parse_sequences(self._executor.execute(sql, params), target)
+        result = self.parse_sequences(self._executor.execute(sql, params), target)
         self._cache.set(key, result)
         return result
 
@@ -701,9 +702,9 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
-        result = self._parse_sequence_info(
+        result = self.parse_sequence_info(
             self._executor.execute(sql, params), sequence_name, target
         )
         if result is not None:
@@ -738,7 +739,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         if cached is not None:
             return cached
         sql, params = self._build_extension_list_sql()
-        result = self._parse_extensions(self._executor.execute(sql, params))
+        result = self.parse_extensions(self._executor.execute(sql, params))
         self._cache.set(key, result)
         return result
 
@@ -804,14 +805,14 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         Returns:
             List of IntrospectionViewInfo describing each materialized view.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, include_system=include_system)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_list_sql(schema, include_system)
         rows = await self._executor.execute(sql, params)
-        result = self._parse_materialized_views(rows, target)
+        result = self.parse_materialized_views(rows, target)
         self._cache.set(key, result)
         return result
 
@@ -827,14 +828,14 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         Returns:
             IntrospectionViewInfo, or None when the materialized view does not exist.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, view_name=view_name)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
         sql, params = self._build_materialized_view_info_sql(view_name, schema)
         rows = await self._executor.execute(sql, params)
-        result = self._parse_materialized_view_info(rows, view_name, target)
+        result = self.parse_materialized_view_info(rows, view_name, target)
         if result is not None:
             self._cache.set(key, result)
         return result
@@ -868,10 +869,10 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         sql, params = self._build_sequence_list_sql(schema, with_pg)
         rows = await self._executor.execute(sql, params)
-        result = self._parse_sequences(rows, target)
+        result = self.parse_sequences(rows, target)
         self._cache.set(key, result)
         return result
 
@@ -896,10 +897,10 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         sql, params = self._build_sequence_info_sql(sequence_name, schema, with_pg)
         rows = await self._executor.execute(sql, params)
-        result = self._parse_sequence_info(rows, sequence_name, target)
+        result = self.parse_sequence_info(rows, sequence_name, target)
         if result is not None:
             self._cache.set(key, result)
         return result
@@ -926,7 +927,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
             return cached
         sql, params = self._build_extension_list_sql()
         rows = await self._executor.execute(sql, params)
-        result = self._parse_extensions(rows)
+        result = self.parse_extensions(rows)
         self._cache.set(key, result)
         return result
 

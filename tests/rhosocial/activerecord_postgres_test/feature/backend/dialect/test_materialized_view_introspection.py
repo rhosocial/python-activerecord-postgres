@@ -97,7 +97,7 @@ class TestMaterializedViewParsing:
         return row
 
     def test_parse_exposes_materialized_state(self, parser):
-        info = parser._parse_materialized_view(self._row(), "public")
+        info = parser.parse_materialized_view(self._row(), "public")
         assert info.name == "sales_summary"
         assert info.schema == "reporting"
         assert info.definition == " SELECT 1;"
@@ -109,21 +109,21 @@ class TestMaterializedViewParsing:
         assert info.extra["has_unique_index"] is True
 
     def test_parse_unpopulated_view(self, parser):
-        info = parser._parse_materialized_view(
+        info = parser.parse_materialized_view(
             self._row(is_populated=False, has_unique_index=False), "public"
         )
         assert info.extra["is_populated"] is False
         assert info.extra["has_unique_index"] is False
 
     def test_parse_falls_back_to_defaults(self, parser):
-        info = parser._parse_materialized_view({}, "public", "fallback_mv")
+        info = parser.parse_materialized_view({}, "public", "fallback_mv")
         assert info.name == "fallback_mv"
         assert info.schema == "public"
         assert info.extra["is_populated"] is False
         assert info.extra["has_unique_index"] is False
 
     def test_parse_list(self, parser):
-        infos = parser._parse_materialized_views(
+        infos = parser.parse_materialized_views(
             [self._row(), self._row(view_name="sales_daily", is_populated=False)],
             "public",
         )
@@ -131,7 +131,7 @@ class TestMaterializedViewParsing:
         assert [info.extra["is_populated"] for info in infos] == [True, False]
 
     def test_parse_info_returns_none_when_missing(self, parser):
-        assert parser._parse_materialized_view_info([], "missing_mv", "public") is None
+        assert parser.parse_materialized_view_info([], "missing_mv", "public") is None
 
 
 class TestMaterializedViewIntrospectionSurface:
