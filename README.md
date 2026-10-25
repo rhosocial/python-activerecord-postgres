@@ -24,7 +24,7 @@ _979088a_
 - **Python**: `>=3.8`
 - **Core**: `rhosocial-activerecord>=1.0.0.dev0,<2.0.0`
 - **Driver**: `psycopg[binary]>=3.2.13`
-- **CI-tested server versions**: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19beta4
+- **CI-tested server versions**: 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19rc1
 - **Published**: PyPI `1.0.0.dev16`
 
 ## Installation

@@ -11,6 +11,7 @@ import io
 import json
 import socket
 import sys
+import time
 import uuid
 from contextlib import redirect_stderr, redirect_stdout
 
@@ -150,15 +151,43 @@ def _reachable(config) -> bool:
     return True
 
 
-def run_cli(argv):
-    out, err = io.StringIO(), io.StringIO()
-    exc = None
-    with redirect_stdout(out), redirect_stderr(err):
-        try:
-            main(argv)
-        except SystemExit as e:
-            exc = e
-    return out.getvalue(), err.getvalue(), exc
+#: The error PostgreSQL answers when a catalogue row names a relation that is
+#: gone by the time the row's definition is read.
+_CATALOG_CHURN = "could not open relation with OID"
+
+
+def run_cli(argv, attempts=3):
+    """Run the CLI in-process, retrying a read that lost a relation mid-flight.
+
+    A listing answers for every object of its type in the schema the connection
+    resolves, and it reads each one's definition (a materialized view) or last
+    value (a sequence) by OID. The rest of the suite runs in parallel against
+    the same server, so a sibling worker can drop a relation between the
+    snapshot that listed it and the lookup that describes it; PostgreSQL then
+    raises ``could not open relation with OID`` rather than leaving the row
+    out. That is a property of catalog snapshots, not of this backend, and a
+    fresh process takes a fresh snapshot in which the dropped relation is
+    absent altogether, so a bounded retry is the honest read.
+
+    Only that one error is retried, and only ``attempts`` times: the last
+    attempt's result is returned unchanged, so a persistent failure still fails
+    the test with the server's own message.
+    """
+    out, err, exc = "", "", None
+    for attempt in range(attempts):
+        out_buf, err_buf = io.StringIO(), io.StringIO()
+        exc = None
+        with redirect_stdout(out_buf), redirect_stderr(err_buf):
+            try:
+                main(argv)
+            except SystemExit as e:
+                exc = e
+        out, err = out_buf.getvalue(), err_buf.getvalue()
+        if exc is None or _CATALOG_CHURN not in err:
+            break
+        if attempt < attempts - 1:
+            time.sleep(0.2 * (attempt + 1))
+    return out, err, exc
 
 
 class TestParserContract:
