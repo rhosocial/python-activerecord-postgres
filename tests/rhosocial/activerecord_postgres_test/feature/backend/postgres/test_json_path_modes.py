@@ -352,19 +352,15 @@ def test_arrow_mode_is_refused_before_nine_three():
         _text_expr(_dialect((9, 2, 4)), "arrow").to_sql()
 
 
-def test_arrow_probe_needs_a_version_to_answer():
-    """An unadapted dialect raises from ``self.version``, like every probe.
+def test_arrow_probe_without_a_version_answers_false():
+    """An unadapted dialect has no answer, and "no" is the answer it gives.
 
-    The version is what the question is about; a dialect that has not been
-    told one has no answer to give, and quietly answering True is how the
-    versionless probe above survived.
+    A capability nobody has confirmed is not claimed, and asking must not
+    throw: a caller deciding *whether* to use a feature cannot be expected to
+    catch an exception just to learn "no". That is what ``version_at_least``
+    is for, and this probe uses it.
     """
-    from rhosocial.activerecord.backend.dialect.exceptions import (
-        DialectNotAdaptedException,
-    )
-
-    with pytest.raises(DialectNotAdaptedException):
-        PostgresDialect().supports_json_arrow_operators()
+    assert PostgresDialect().supports_json_arrow_operators() is False
 
 
 # ---------------------------------------------------------------------------

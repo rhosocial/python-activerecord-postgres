@@ -290,8 +290,14 @@ class TestPostgresTriggerMixinDirect:
     class _Host:
         version = (9, 5, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _LowHost:
         version = (9, 4, 0)
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _TriggerMixin(_Host, PostgresTriggerMixin):
         pass

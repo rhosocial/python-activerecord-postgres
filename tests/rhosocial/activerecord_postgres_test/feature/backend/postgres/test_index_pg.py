@@ -1002,6 +1002,9 @@ class TestPostgresIndexMixinDirect:
         name = "PostgreSQL"
         def format_identifier(self, s): return f'"{s}"'
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _IndexMixinLow(_Host, PostgresIndexMixin):
         pass
 
@@ -1009,6 +1012,9 @@ class TestPostgresIndexMixinDirect:
         version = (15, 0, 0)
         name = "PostgreSQL"
         def format_identifier(self, s): return f'"{s}"'
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _IndexMixinHigh(_HostHigh, PostgresIndexMixin):
         pass

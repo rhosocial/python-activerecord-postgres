@@ -41,8 +41,14 @@ class TestPostgresTableMixinDirect:
     class _Host:
         version = (15, 0, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _LowHost:
         version = (9, 4, 0)
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _TableMixin(_Host, PostgresTableMixin):
         pass

@@ -194,11 +194,20 @@ class TestPostgresPartitionMixinDirect:
     class _Host:
         version = (15, 0, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _Pg10Host:
         version = (10, 0, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _LowHost:
         version = (9, 6, 0)
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _PartitionMixin(_Host, PostgresPartitionMixin):
         pass
