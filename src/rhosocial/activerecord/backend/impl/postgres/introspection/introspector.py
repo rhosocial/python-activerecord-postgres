@@ -122,12 +122,17 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         reported as the literal ``"unknown"`` with ``(0, 0, 0)``, which is
         distinguishable from a server that really is version 0.0.0.
 
-        ``size_bytes`` is the size column the statement selects. A column it
-        did not select -- ``table_count`` for now -- stays ``None`` rather than
-        being guessed.
+        ``size_bytes`` is the size column the statement selects. ``table_count``
+        is the count the statement selects; a missing or unreadable cell is
+        reported as ``None`` -- unknown -- rather than allowed to raise past the
+        rest of the answer, which is already known.
         """
         db_row = rows[0] if rows else {}
         version = self.server_version
+        try:
+            table_count = int(db_row.get("table_count"))
+        except (TypeError, ValueError):
+            table_count = None
         return IntrospectionDatabaseInfo(
             name=self._get_database_name(),
             version=".".join(str(part) for part in version) if version else "unknown",
@@ -136,7 +141,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             encoding=db_row.get("encoding"),
             collation=db_row.get("collation"),  # Dialect returns 'collation' (not 'datcollate')
             size_bytes=db_row.get("size"),
-            table_count=db_row.get("table_count"),
+            table_count=table_count,
         )
 
     def parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:

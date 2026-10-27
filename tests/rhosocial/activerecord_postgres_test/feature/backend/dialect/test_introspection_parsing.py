@@ -17,6 +17,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression.introspection import (
     ColumnInfoQueryStatement,
+    DatabaseInfoQueryStatement,
     TableListQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.cli.introspect import (
@@ -25,7 +26,9 @@ from rhosocial.activerecord.backend.impl.postgres.cli.introspect import (
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
+    AsyncPostgreSQLIntrospector,
     PostgreSQLIntrospectorMixin,
+    SyncPostgreSQLIntrospector,
 )
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from rhosocial.activerecord.backend.introspection.types import TableType
@@ -183,11 +186,51 @@ class TestTableTypeMapping:
         assert f"c.relkind = {relkind}" in sql
 
 
+class TestDatabaseInfoStatement:
+    """``table_count`` rides along in the one database-info row."""
+
+    def _sql(self):
+        sql, params = DatabaseInfoQueryStatement(_dialect()).to_sql()
+        assert params == ()
+        return sql
+
+    def test_count_is_projected_as_a_scalar_subquery(self):
+        sql = self._sql()
+        assert " AS \"table_count\"" in sql
+        assert "SELECT COUNT(*) FROM pg_class AS c JOIN pg_namespace AS n" in sql
+        # One statement: the count is a projected scalar, not a second query.
+        assert ";" not in sql
+
+    def test_count_asks_for_ordinary_and_partitioned_tables_only(self):
+        # Views, materialized views and foreign tables are not tables, so the
+        # count names the two relkinds that are rather than subtracting the
+        # others from a wider listing.
+        assert "c.relkind IN ('r', 'p')" in self._sql()
+
+    def test_count_excludes_the_server_schemas_and_the_temp_family(self):
+        sql = self._sql()
+        assert "NOT (n.nspname IN ('pg_catalog', 'information_schema', 'pg_toast'))" in sql
+        # ``pg_temp%%`` is what reaches psycopg: a bare % would open a placeholder.
+        assert "n.nspname NOT LIKE 'pg_temp%%'" in sql
+
+
 class TestDatabaseInfoParsing:
     """The version is reported, never guessed."""
 
     def _parse(self, backend, rows):
         return _ParsingIntrospector(backend).parse_database_info(rows)
+
+    def test_sync_and_async_read_the_same_row(self):
+        # The statement is the dialect's and the parser is the mixin's, so
+        # neither path can drift into reading a different shape.
+        assert (
+            SyncPostgreSQLIntrospector.parse_database_info
+            is AsyncPostgreSQLIntrospector.parse_database_info
+        )
+        assert (
+            SyncPostgreSQLIntrospector.parse_database_info
+            is PostgreSQLIntrospectorMixin.parse_database_info
+        )
 
     def test_unknown_version_is_the_literal_unknown(self):
         info = self._parse(_FakeBackend(PostgresDialect()), [])
@@ -214,6 +257,20 @@ class TestDatabaseInfoParsing:
         assert info.collation == "C"
         assert info.size_bytes == 4096
         assert info.table_count == 7
+
+    def test_count_is_read_as_an_int_whatever_the_driver_answers(self):
+        info = self._parse(_FakeBackend(_dialect()), [{"table_count": "7"}])
+        assert info.table_count == 7
+
+    @pytest.mark.parametrize("cell", [None, "unreadable", float("nan")])
+    def test_unreadable_count_is_unknown_rather_than_an_error(self, cell):
+        info = self._parse(_FakeBackend(_dialect()), [{"table_count": cell}])
+        assert info.table_count is None
+
+    def test_missing_count_column_is_unknown(self):
+        info = self._parse(_FakeBackend(_dialect()), [{"encoding": "UTF8"}])
+        assert info.table_count is None
+        assert info.encoding == "UTF8"
 
 
 class TestCapabilityPredicates:

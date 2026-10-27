@@ -203,6 +203,16 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     #: statement binds nothing.
     _SYSTEM_PREFIX = "pg_%%"
 
+    #: The schemas PostgreSQL owns: the catalog itself, the standard views, and
+    #: the out-of-line storage. A relation in one of them belongs to the server,
+    #: not to the database being described.
+    _SYSTEM_SCHEMAS = ("pg_catalog", "information_schema", "pg_toast")
+
+    #: Temporary namespaces are per session and carry a suffix (``pg_temp_3``),
+    #: so they are matched by prefix. Doubled like ``_SYSTEM_PREFIX``: psycopg
+    #: reads a bare ``%`` as a placeholder start even when nothing is bound.
+    _TEMP_SCHEMA_PREFIX = "pg_temp%%"
+
     def _catalog_column(self, name: str, table: "Optional[str]" = None, alias: "Optional[str]" = None):
         """A column reference into pg_catalog, quoted as it is written there.
 
@@ -353,12 +363,88 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ),
         )
 
+    def _table_count_projection(self):
+        """``table_count``: how many tables this database declares.
+
+        The count is a scalar subquery in the database-info projection, so the
+        answer stays one round trip.
+
+        What it asks for is the catalog's own definition of a table, not the
+        listing's: ordinary and partitioned tables (``relkind`` ``'r'`` and
+        ``'p'``) are the kinds that are tables, and asking for those two codes
+        excludes views, materialized views and foreign tables by construction
+        rather than by subtracting them afterwards. The namespace test is what
+        makes the answer the *database's*: the catalog, the standard views and
+        the toast storage are PostgreSQL's, and each session's temporary
+        namespace is the session's, whichever schema the connection defaults
+        to. Every other schema in the database counts, so this is the
+        whole-database scope the SQLite backend answers, not one schema's.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            LikeOperator,
+            LogicalPredicate,
+            QueryStatement,
+            RowCountWildcard,
+            Subquery,
+        )
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+        from rhosocial.activerecord.backend.expression.predicates import (
+            InPredicate,
+            LikePredicate,
+        )
+        from rhosocial.activerecord.backend.expression.query_parts import WhereClause
+
+        return Subquery(
+            self,
+            QueryStatement(
+                self,
+                select=[CountFunction(self, RowCountWildcard(self))],
+                from_=self._pg_class_join(),
+                where=WhereClause(
+                    self,
+                    LogicalPredicate(
+                        self,
+                        "AND",
+                        InPredicate(
+                            self,
+                            self._catalog_column("relkind", "c"),
+                            self._catalog_literal(("r", "p")),
+                        ),
+                        LogicalPredicate(
+                            self,
+                            "NOT",
+                            InPredicate(
+                                self,
+                                self._catalog_column("nspname", "n"),
+                                self._catalog_literal(self._SYSTEM_SCHEMAS),
+                            ),
+                        ),
+                        LikePredicate(
+                            self,
+                            LikeOperator.NOT_LIKE,
+                            self._catalog_column("nspname", "n"),
+                            self._catalog_literal(self._TEMP_SCHEMA_PREFIX),
+                        ),
+                    ),
+                ),
+            ),
+            alias="table_count",
+        )
+
     def format_database_info_query_statement(self, expr: "DatabaseInfoQueryStatement") -> Tuple[str, tuple]:
         """Format database information query.
 
         Uses pg_database and version() to get database metadata: the row the
         server answers with describes the database this session is connected
         to, so the WHERE clause names ``current_database()`` on both sides.
+
+        ``table_count`` is "how many tables this database declares, system ones
+        excluded": ordinary and partitioned tables in any schema the database
+        owns, with the server's own schemas (``pg_catalog``,
+        ``information_schema``, ``pg_toast`` and the ``pg_temp*`` family) left
+        out. Views, materialized views and foreign tables are not tables. The
+        count travels as a scalar subquery in this projection, which keeps the
+        answer to a single round trip.
 
         Args:
             expr: Database info expression with parameters.
@@ -378,6 +464,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 ),
                 self._catalog_column("datcollate", alias="collation"),
                 FunctionCall(self, "pg_database_size", current_database, alias="size"),
+                self._table_count_projection(),
             ],
             self._catalog_relation("pg_database"),
             [
