@@ -9,4 +9,4 @@ class PostgresMergeMixin:
     """
 
     def supports_merge_statement(self) -> bool:
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))

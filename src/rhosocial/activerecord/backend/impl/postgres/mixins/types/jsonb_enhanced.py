@@ -325,7 +325,7 @@ class PostgresJSONBEnhancedMixin:
         return any(
             wanted in {name.lower() for name in names}
             for introduced, names in self._JSON_FUNCTIONS_BY_VERSION
-            if self.version >= introduced
+            if self.version_at_least(introduced)
         )
 
     def format_json_expression(self, expr: "JSONPathNode") -> Tuple[str, tuple]:
@@ -550,11 +550,11 @@ class PostgresJSONBEnhancedMixin:
 
     def supports_json_type(self) -> bool:
         """JSON is supported since PostgreSQL 9.2."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))
 
     def supports_jsonb(self) -> bool:
         """Check if PostgreSQL version supports JSONB type (introduced in 9.4)."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_json_path(self) -> bool:
         """Whether a JSON path can be read at all. PostgreSQL 9.3+.
@@ -570,7 +570,7 @@ class PostgresJSONBEnhancedMixin:
         refused to render a path the server answers, behind two probes that
         both said PostgreSQL had JSON.
         """
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_sql_json_path(self) -> bool:
         """Whether the SQL/JSON path language is available. PostgreSQL 12.0+.
@@ -584,7 +584,7 @@ class PostgresJSONBEnhancedMixin:
         had a path read since 9.3 and the language since 12.0, and a caller that
         asks the only versioned question gets a refusal it cannot act on.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_json_table(self) -> bool:
         """PostgreSQL has no ``JSON_TABLE`` function, so this is always False.
@@ -629,4 +629,4 @@ class PostgresJSONBEnhancedMixin:
 
     def supports_infinity_numeric_infinity_jsonb(self) -> bool:
         """Whether numeric infinity values are allowed in JSONB (PostgreSQL 17+)."""
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))

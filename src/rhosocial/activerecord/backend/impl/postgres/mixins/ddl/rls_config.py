@@ -30,15 +30,15 @@ class PostgresRlsConfigMixin:
     # ------------------------------------------------------------------ #
     def supports_rls_enable_disable(self) -> bool:
         """``ENABLE/DISABLE ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_rls_force(self) -> bool:
         """``FORCE / NO FORCE ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_rls_enable_always(self) -> bool:
         """``ENABLE ALWAYS ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers

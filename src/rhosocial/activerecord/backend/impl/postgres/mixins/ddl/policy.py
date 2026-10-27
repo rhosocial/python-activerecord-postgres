@@ -56,11 +56,11 @@ class PostgresPolicyMixin:
     # ------------------------------------------------------------------ #
     def supports_create_policy(self) -> bool:
         """CREATE/ALTER/DROP POLICY basic syntax requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_policy_restrictive(self) -> bool:
         """AS RESTRICTIVE clause requires PostgreSQL 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_explicit_permissive_keyword(self) -> bool:
         """The literal ``AS PERMISSIVE`` keyword requires PostgreSQL 10+.
@@ -68,23 +68,23 @@ class PostgresPolicyMixin:
         On PostgreSQL 9.5, permissive is the implicit default and the
         keyword itself is not accepted by the parser; it must be omitted.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_drop_policy_if_exists(self) -> bool:
         """DROP POLICY IF EXISTS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_alter_policy_rename(self) -> bool:
         """ALTER POLICY ... RENAME TO ... is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_alter_policy_replace(self) -> bool:
         """ALTER POLICY (roles/USING/WITH CHECK) is supported since 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_current_role_keyword(self) -> bool:
         """CURRENT_ROLE keyword in TO role list requires PostgreSQL 15+."""
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     # ------------------------------------------------------------------ #
     # Shared helpers

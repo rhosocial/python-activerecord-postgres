@@ -16,49 +16,49 @@ class PostgresCopyMixin:
     """PostgreSQL COPY support restricted to client-side streams."""
 
     def supports_copy_to(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_copy_from(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_copy_json(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_from_json(self) -> bool:
         return False
 
     def supports_copy_force_array(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_force_all(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_partitioned_table_to(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_text_header(self) -> bool:
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     def supports_copy_header_match(self) -> bool:
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     def supports_copy_header_line_count(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_on_error(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_reject_limit(self) -> bool:
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def supports_copy_set_null(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_log_verbosity(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_silent_log(self) -> bool:
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def _require_copy_version(
         self,

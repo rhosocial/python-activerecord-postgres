@@ -21,15 +21,15 @@ class PostgresVacuumMixin:
 
     def supports_parallel_vacuum(self) -> bool:
         """Parallel VACUUM is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_index_cleanup_auto(self) -> bool:
         """INDEX_CLEANUP AUTO is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_vacuum_process_toast(self) -> bool:
         """PROCESS_TOAST control is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def format_vacuum_statement(self, expr: "PostgresVacuumStatement") -> Tuple[str, tuple]:
         """Format VACUUM statement from PostgresVacuumStatement.

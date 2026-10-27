@@ -11,11 +11,12 @@ import asyncio
 import sys
 from dataclasses import asdict, is_dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List
 
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
+from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 
 from .connection import add_connection_args, resolve_connection_config_from_args
 from .output import create_provider
@@ -169,6 +170,26 @@ def _serialize_for_output(obj: Any) -> Any:
     return str(obj)
 
 
+def _extension_rows(extensions: List[ExtensionInfo]) -> List[Dict[str, Any]]:
+    """The installed-extension listing as the CLI reports it.
+
+    The rows come from ``pg_extension`` through the introspector, so the
+    answer is what this database has installed. The dialect's ``_extensions``
+    registry is a catalogue of every extension the dialect *knows* -- dozens,
+    regardless of the server -- and reading it here made the answer grow with
+    the code rather than with the database.
+    """
+    return [
+        {
+            "name": ext.name,
+            "version": ext.version,
+            "schema": ext.schema,
+            "description": ext.description,
+        }
+        for ext in extensions
+    ]
+
+
 def _handle_introspect_sync(args, backend: PostgresBackend, provider):
     """Handle introspect subcommand synchronously."""
     try:
@@ -227,23 +248,11 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             provider.display_results([data], title="Database Info")
 
         elif args.type == "extensions":
-            backend.introspect_and_adapt()
-            if hasattr(backend.dialect, "_extensions"):
-                extensions = backend.dialect._extensions
-                ext_list = []
-                for name, ext_info in sorted(extensions.items()):
-                    ext_list.append({
-                        "name": name,
-                        "installed": ext_info.installed,
-                        "available": ext_info.available,
-                        "version": ext_info.version,
-                        "schema": ext_info.schema,
-                    })
-                data = _serialize_for_output(ext_list)
-                provider.display_results(data, title="Extensions")
-            else:
+            if not hasattr(introspector, "list_extensions"):
                 print("No extensions information available", file=sys.stderr)
                 sys.exit(1)
+            data = _serialize_for_output(_extension_rows(introspector.list_extensions()))
+            provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
             # The listing reads the server version, and an unadapted
@@ -355,23 +364,13 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             provider.display_results([data], title="Database Info")
 
         elif args.type == "extensions":
-            await backend.introspect_and_adapt()
-            if hasattr(backend.dialect, "_extensions"):
-                extensions = backend.dialect._extensions
-                ext_list = []
-                for name, ext_info in sorted(extensions.items()):
-                    ext_list.append({
-                        "name": name,
-                        "installed": ext_info.installed,
-                        "available": ext_info.available,
-                        "version": ext_info.version,
-                        "schema": ext_info.schema,
-                    })
-                data = _serialize_for_output(ext_list)
-                provider.display_results(data, title="Extensions")
-            else:
+            if not hasattr(introspector, "list_extensions"):
                 print("No extensions information available", file=sys.stderr)
                 sys.exit(1)
+            data = _serialize_for_output(
+                _extension_rows(await introspector.list_extensions())
+            )
+            provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
             # The listing reads the server version, and an unadapted

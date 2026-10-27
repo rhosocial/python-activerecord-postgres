@@ -85,7 +85,7 @@ class PostgresDomainMixin(DomainMixin):
         return ""
 
     def supports_domains(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_create_domain(self) -> bool:
         return self.supports_domains()

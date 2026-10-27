@@ -28,7 +28,7 @@ class PostgresTruncateMixin:
         return True
 
     def supports_truncate_restart_identity(self) -> bool:
-        return self.version >= (8, 4, 0)
+        return self.version_at_least((8, 4, 0))
 
     def supports_truncate_cascade(self) -> bool:
         return True

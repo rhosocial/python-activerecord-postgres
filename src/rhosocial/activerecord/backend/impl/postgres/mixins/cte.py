@@ -25,4 +25,4 @@ class PostgresCTEMixin:
         "MATERIALIZED"`` (measured), so those versions must answer ``False``
         or core's ``format_cte_clause`` renders a hint the server refuses.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))

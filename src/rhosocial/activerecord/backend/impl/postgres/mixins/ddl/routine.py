@@ -54,11 +54,11 @@ class PostgresRoutineMixin:
     # ------------------------------------------------------------------ #
     def supports_function_ddl(self) -> bool:
         """CREATE/DROP FUNCTION require PostgreSQL 9.6+."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_aggregate_ddl(self) -> bool:
         """CREATE/DROP AGGREGATE require PostgreSQL 9.6+."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_function(self) -> bool:
         """PostgreSQL has user-defined functions.

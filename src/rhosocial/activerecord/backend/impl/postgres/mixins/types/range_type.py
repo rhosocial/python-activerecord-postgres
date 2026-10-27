@@ -15,16 +15,16 @@ class PostgresRangeTypeMixin:
 
     def supports_range_type(self) -> bool:
         """Whether range data types are supported (PostgreSQL 9.2+)."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))
 
     def supports_range_operators(self) -> bool:
         """Whether range operators are supported (PostgreSQL 9.2+)."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))
 
     def supports_range_functions(self) -> bool:
         """Whether range functions are supported (PostgreSQL 9.2+)."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))
 
     def supports_range_constructors(self) -> bool:
         """Whether range constructor functions are supported (PostgreSQL 9.2+)."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))

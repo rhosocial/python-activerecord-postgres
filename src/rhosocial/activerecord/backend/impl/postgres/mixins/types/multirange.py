@@ -24,13 +24,13 @@ class MultirangeMixin:
         def format_identifier(self, identifier: str, need_quote: bool = True) -> str: ...
 
     def supports_multirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_multirange_constructor(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_multirange_agg(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def format_create_multirange_type_statement(
         self,

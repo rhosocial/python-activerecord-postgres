@@ -34,35 +34,35 @@ class PostgresIndexMixin:
 
     def supports_safe_hash_index(self) -> bool:
         """Hash index WAL logging is native feature, PG 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_parallel_create_index(self) -> bool:
         """Parallel index build is native feature, PG 11+."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_gist_include(self) -> bool:
         """GiST INCLUDE is native feature, PG 12+."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_reindex_concurrently(self) -> bool:
         """REINDEX CONCURRENTLY is native feature, PG 12+."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_btree_deduplication(self) -> bool:
         """B-tree deduplication is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_brin_multivalue(self) -> bool:
         """BRIN multivalue is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_brin_bloom(self) -> bool:
         """BRIN bloom filter is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_spgist_include(self) -> bool:
         """SP-GiST INCLUDE is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     # =========================================================================
     # Extended Statistics Support (PostgreSQL 10+)
@@ -78,7 +78,7 @@ class PostgresIndexMixin:
             True if CREATE STATISTICS is supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_mcv(self) -> bool:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12.
@@ -90,7 +90,7 @@ class PostgresIndexMixin:
             True if MCV statistics are supported
 
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_statistics_dependencies(self) -> bool:
         """Statistics dependencies are supported since PostgreSQL 10.
@@ -102,7 +102,7 @@ class PostgresIndexMixin:
             True if statistics dependencies are supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_ndistinct(self) -> bool:
         """NDistinct statistics are supported since PostgreSQL 10.
@@ -113,7 +113,7 @@ class PostgresIndexMixin:
             True if ndistinct statistics are supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     # =========================================================================
     # PostgreSQL 16+ Index Features
@@ -126,7 +126,7 @@ class PostgresIndexMixin:
             True if supported
 
         """
-        return self.version >= (16, 0, 0)
+        return self.version_at_least((16, 0, 0))
 
     # =========================================================================
     # PostgreSQL 18+ Index Features
@@ -141,7 +141,7 @@ class PostgresIndexMixin:
             True if supported
 
         """
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     # =========================================================================
     # IndexObjectSupport Protocol Overrides (all supported by PostgreSQL)
@@ -161,7 +161,7 @@ class PostgresIndexMixin:
 
     def supports_index_if_not_exists(self) -> bool:
         """IF NOT EXISTS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_index_if_exists(self) -> bool:
         """DROP INDEX IF EXISTS is supported in all versions."""
@@ -185,7 +185,7 @@ class PostgresIndexMixin:
 
     def supports_index_include(self) -> bool:
         """PostgreSQL supports INCLUDE clause (PG 11+ for btree, PG 12+ for GiST, PG 14+ for SP-GiST)."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_index_tablespace(self) -> bool:
         """PostgreSQL supports TABLESPACE for indexes."""
@@ -197,7 +197,7 @@ class PostgresIndexMixin:
         Note: CONCURRENTLY-only features may have higher version requirements
         (e.g., CONCURRENTLY + NULLS NOT DISTINCT requires PG 16+).
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def get_supported_index_types(self) -> List[str]:
         """Return all index access methods supported by PostgreSQL."""

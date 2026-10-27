@@ -25,7 +25,7 @@ class PostgresTriggerMixin:
 
     def supports_trigger_referencing(self) -> bool:
         """REFERENCING clause is supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_trigger_when(self) -> bool:
         """WHEN condition is supported in all modern versions."""
@@ -41,7 +41,7 @@ class PostgresTriggerMixin:
 
     def supports_trigger_if_not_exists(self) -> bool:
         """IF NOT EXISTS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def format_create_trigger_statement(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TRIGGER statement (PostgreSQL syntax).

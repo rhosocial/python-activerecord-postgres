@@ -27,4 +27,4 @@ class PostgresJSONMixin:
         backend does: the question is about the server version, and a dialect
         that has not been told one has no answer to give.
         """
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))

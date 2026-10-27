@@ -185,12 +185,16 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     )
 
     #: The relkind codes a table listing may be narrowed to, by the type the
-    #: caller asked for. ``BASE TABLE`` admits partitioned tables too, which is
-    #: why it is a set rather than one code.
+    #: caller asked for. One entry per label the catalog reports: a partitioned
+    #: table is now its own answer, so it is no longer folded into a base
+    #: table. The keys are the labels ``_RELKIND_LABELS`` writes, because the
+    #: filter is asked for in the same words the listing reports.
     _RELKIND_FILTERS = {
-        "BASE TABLE": ("r", "p"),
+        "BASE TABLE": ("r",),
         "VIEW": ("v",),
         "MATERIALIZED VIEW": ("m",),
+        "FOREIGN TABLE": ("f",),
+        "PARTITIONED TABLE": ("p",),
     }
 
     #: Catalog relations whose names are spelled ``pg_``; a listing that does
@@ -600,6 +604,18 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self._catalog_column("attnum", "a"),
                 alias="comment",
             ),
+            # The four shape attributes are not columns of pg_attribute: they
+            # are what information_schema.columns derives from atttypmod and
+            # the type. Reading them from that view keeps the derivation the
+            # server's rather than a second one written here, and the LEFT JOIN
+            # keeps a relation the view does not list (a materialized view, for
+            # one) in the answer with those attributes absent.
+            self._catalog_column(
+                "character_maximum_length", "ic", alias="character_maximum_length"
+            ),
+            self._catalog_column("numeric_precision", "ic", alias="numeric_precision"),
+            self._catalog_column("numeric_scale", "ic", alias="numeric_scale"),
+            self._catalog_column("datetime_precision", "ic", alias="datetime_precision"),
         ]
 
         attribute_join = JoinClause(
@@ -641,6 +657,34 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 "eq",
                 self._catalog_column("relnamespace", "c"),
                 self._catalog_column("oid", "n"),
+            ),
+        ).join(
+            # The shape attributes travel with the column's own row: schema,
+            # relation and column name are the view's key, so all three pairs
+            # are compared rather than the name alone.
+            self._catalog_relation("columns", "ic", schema="information_schema"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("table_schema", "ic"),
+                    self._catalog_column("nspname", "n"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("table_name", "ic"),
+                    self._catalog_column("relname", "c"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("column_name", "ic"),
+                    self._catalog_column("attname", "a"),
+                ),
             ),
         )
 

@@ -182,7 +182,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         return f"({', '.join(clauses)})"
 
     def supports_type_objects(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_create_type(self) -> bool:
         return self.supports_type_objects()
@@ -224,9 +224,9 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         except TypeError:
             return False
         if issubclass(action_type, PostgresRenameEnumValueAction):
-            return self.version >= (10, 0, 0)
+            return self.version_at_least((10, 0, 0))
         if issubclass(action_type, PostgresSetTypePropertiesAction):
-            return self.version >= (13, 0, 0)
+            return self.version_at_least((13, 0, 0))
         return True
 
     def supports_create_type_if_not_exists(self) -> bool:

@@ -50,7 +50,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 10.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_partitioned_table_creation(self) -> bool:
         """Check if CREATE TABLE can create partitioned parent tables.
@@ -227,7 +227,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_default_partition(self) -> bool:
         """Check if DEFAULT partition is supported.
@@ -238,7 +238,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_partition_key_update(self) -> bool:
         """Check if partition key update row movement is supported.
@@ -249,7 +249,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_concurrent_detach(self) -> bool:
         """Check if CONCURRENTLY DETACH is supported.
@@ -260,7 +260,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 14.
         """
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_concurrent_attach(self) -> bool:
         """Check if CONCURRENTLY ATTACH is exposed by this implementation.
@@ -279,7 +279,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 12.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_partitionwise_join(self) -> bool:
         """Check if partitionwise join optimization is supported.
@@ -290,7 +290,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_partitionwise_aggregate(self) -> bool:
         """Check if partitionwise aggregate optimization is supported.
@@ -301,7 +301,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def format_partition_value(self, expr: "PostgresPartitionValue") -> Tuple[str, tuple]:
         """Format a PostgreSQL partition bound value."""

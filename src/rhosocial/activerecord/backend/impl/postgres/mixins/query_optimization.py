@@ -14,19 +14,19 @@ class PostgresQueryOptimizationMixin:
 
     def supports_jit(self) -> bool:
         """JIT compilation is native feature, PG 11+."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_incremental_sort(self) -> bool:
         """Incremental sort is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_memoize(self) -> bool:
         """Memoize is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_async_foreign_scan(self) -> bool:
         """Async foreign scan is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     # =========================================================================
     # Parallel Query Support (PostgreSQL 9.6+)
@@ -43,7 +43,7 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if parallel query is supported
         """
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_parallel_append(self) -> bool:
         """Parallel Append merge is supported since PostgreSQL 10.
@@ -54,7 +54,7 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if parallel append is supported
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_parallel_index_scan(self) -> bool:
         """Parallel index scan is supported since PostgreSQL 10.
@@ -62,7 +62,7 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if parallel index scan is supported
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_parallel_index_only_scan(self) -> bool:
         """Parallel index-only scan is supported since PostgreSQL 11.
@@ -70,7 +70,7 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if parallel index-only scan is supported
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_parallel_hash_join(self) -> bool:
         """Parallel hash join is supported since PostgreSQL 11.
@@ -78,7 +78,7 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if parallel hash join is supported
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_parallel_gather_merge(self) -> bool:
         """Gather Merge node for parallel query is supported since PostgreSQL 10.
@@ -86,4 +86,4 @@ class PostgresQueryOptimizationMixin:
         Returns:
             True if Gather Merge is supported
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))

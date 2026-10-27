@@ -30,11 +30,11 @@ class PostgresPublicationMixin:
     # ------------------------------------------------------------------ #
     def supports_publication(self) -> bool:
         """CREATE/DROP PUBLICATION require PostgreSQL 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_subscription(self) -> bool:
         """CREATE/DROP SUBSCRIPTION require PostgreSQL 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     # ------------------------------------------------------------------ #
     # CREATE PUBLICATION

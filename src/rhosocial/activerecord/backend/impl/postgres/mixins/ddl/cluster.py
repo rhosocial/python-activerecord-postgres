@@ -24,7 +24,7 @@ class PostgresClusterMixin:
     # ------------------------------------------------------------------ #
     def supports_cluster(self) -> bool:
         """CLUSTER is supported on all supported PostgreSQL versions."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers

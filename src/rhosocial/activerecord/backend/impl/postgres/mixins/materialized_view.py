@@ -66,7 +66,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
     def supports_materialized_view(self) -> bool:
         """Materialized views require PostgreSQL 9.3+."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
 
     def supports_materialized_view_bind_parameters(self) -> bool:
@@ -79,27 +79,27 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return False
     def supports_refresh_materialized_view(self) -> bool:
         """REFRESH MATERIALIZED VIEW requires PostgreSQL 9.3+."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_concurrent_refresh(self) -> bool:
         """CONCURRENTLY is supported since PostgreSQL 9.4."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_materialized_view_if_not_exists(self) -> bool:
         """CREATE MATERIALIZED VIEW IF NOT EXISTS is supported since PostgreSQL 9.4."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_materialized_view_tablespace(self) -> bool:
         """TABLESPACE on CREATE MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_storage_options(self) -> bool:
         """WITH (storage_parameter) is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_alter_materialized_view(self) -> bool:
         """ALTER MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_restrict(self) -> bool:
         """``DROP MATERIALIZED VIEW ... RESTRICT`` is in the synopsis.

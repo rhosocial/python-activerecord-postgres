@@ -37,21 +37,21 @@ class PostgresDataTypeMixin:
 
         Native feature, PostgreSQL 14+.
         """
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_domain_arrays(self) -> bool:
         """Whether arrays of domain types are supported.
 
         Native feature, PostgreSQL 11+.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_composite_domains(self) -> bool:
         """Whether domains over composite types are supported.
 
         Native feature, PostgreSQL 11+.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_jsonb_subscript(self) -> bool:
         """Always False: PostgreSQL has no ``jsonb['key']`` subscript.
@@ -72,21 +72,21 @@ class PostgresDataTypeMixin:
 
         Native feature, PostgreSQL 14+.
         """
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_nondeterministic_collation(self) -> bool:
         """Whether nondeterministic ICU collations are supported.
 
         Native feature, PostgreSQL 12+.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_xid8_type(self) -> bool:
         """Whether xid8 (64-bit transaction ID) type is supported.
 
         Native feature, PostgreSQL 13+.
         """
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def format_create_range_type(
         self,

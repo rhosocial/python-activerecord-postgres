@@ -11,7 +11,7 @@ class PostgresTableMixin:
 
     def supports_if_not_exists_table(self) -> bool:
         """CREATE TABLE IF NOT EXISTS is supported since PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_if_exists_table(self) -> bool:
         """DROP TABLE IF EXISTS is supported in all versions."""
@@ -40,7 +40,7 @@ class PostgresTableMixin:
         ``UNLOGGED`` qualifier on CREATE TABLE exists since 9.5, matching the
         §0 baseline.
         """
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_table_inheritance(self) -> bool:
         """PostgreSQL supports table inheritance."""

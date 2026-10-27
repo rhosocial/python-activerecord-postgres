@@ -29,11 +29,11 @@ class PostgresAlterTableSettingsMixin:
     # ------------------------------------------------------------------ #
     def supports_table_logging_switch(self) -> bool:
         """``SET LOGGED/UNLOGGED`` requires PostgreSQL 9.6+ (since 9.5)."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_table_set_access_method(self) -> bool:
         """``SET ACCESS METHOD`` requires PostgreSQL 15+."""
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers

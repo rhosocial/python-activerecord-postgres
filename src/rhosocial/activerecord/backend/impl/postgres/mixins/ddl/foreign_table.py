@@ -27,7 +27,7 @@ class PostgresForeignTableMixin:
     # ------------------------------------------------------------------ #
     def supports_foreign_table_ddl(self) -> bool:
         """CREATE/DROP FOREIGN TABLE require PostgreSQL 9.6+."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers

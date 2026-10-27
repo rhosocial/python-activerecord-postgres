@@ -24,7 +24,6 @@ Design principle: Sync and Async are separate and cannot coexist.
 - AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
-import re
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.introspection.base import (
@@ -114,39 +113,47 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # ------------------------------------------------------------------ #
 
     def parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
-        db_row = rows[0] if rows else {}
-        db_name = self._get_database_name()
-        # Dialect returns 'version' column from format_database_info_query_statement()
-        version_str = db_row.get("version", "PostgreSQL 11.0")
-        match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
-        version_tuple = (
-            (
-                int(match.group(1)),
-                int(match.group(2)),
-                int(match.group(3)) if match.group(3) else 0,
-            )
-            if match
-            else (11, 0, 0)
-        )
+        """Turn the one database row into a record.
 
+        The version comes from :attr:`server_version`, not from the strict
+        ``dialect.version``: a parser has no connection to ask, and refusing to
+        describe a database until ``introspect_and_adapt()`` has run would make
+        the answer depend on a step the caller did not need. Unknown is
+        reported as the literal ``"unknown"`` with ``(0, 0, 0)``, which is
+        distinguishable from a server that really is version 0.0.0.
+
+        ``size_bytes`` is the size column the statement selects. A column it
+        did not select -- ``table_count`` for now -- stays ``None`` rather than
+        being guessed.
+        """
+        db_row = rows[0] if rows else {}
+        version = self.server_version
         return IntrospectionDatabaseInfo(
-            name=db_name,
-            version=version_str,
-            version_tuple=version_tuple,
+            name=self._get_database_name(),
+            version=".".join(str(part) for part in version) if version else "unknown",
+            version_tuple=tuple(version) if version else (0, 0, 0),
             vendor="PostgreSQL",
             encoding=db_row.get("encoding"),
             collation=db_row.get("collation"),  # Dialect returns 'collation' (not 'datcollate')
             size_bytes=db_row.get("size"),
+            table_count=db_row.get("table_count"),
         )
 
     def parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:
+        """Turn a table listing into records.
+
+        Every kind the catalog names gets its own :class:`TableType`: the
+        catalog distinguished them, and collapsing a materialized view or a
+        partitioned table back into ``BASE_TABLE`` would lose that at the only
+        layer that saw it.
+        """
         target_schema = schema if schema is not None else self.default_schema
         table_type_map = {
             "BASE TABLE": TableType.BASE_TABLE,
             "VIEW": TableType.VIEW,
-            "MATERIALIZED VIEW": TableType.BASE_TABLE,
-            "FOREIGN TABLE": TableType.EXTERNAL,
-            "PARTITIONED TABLE": TableType.BASE_TABLE,
+            "MATERIALIZED VIEW": TableType.MATERIALIZED_VIEW,
+            "FOREIGN TABLE": TableType.FOREIGN_TABLE,
+            "PARTITIONED TABLE": TableType.PARTITIONED_TABLE,
         }
         return [
             IntrospectionTableInfo(
@@ -181,6 +188,14 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     default_value=row.get("default_value"),
                     is_primary_key=row.get("is_primary_key", False),
                     comment=row.get("comment"),
+                    # The four shape attributes information_schema.columns
+                    # derives from atttypmod. They are absent for a relation
+                    # that view does not list, which is why they are read
+                    # with .get() rather than indexed.
+                    character_maximum_length=row.get("character_maximum_length"),
+                    numeric_precision=row.get("numeric_precision"),
+                    numeric_scale=row.get("numeric_scale"),
+                    datetime_precision=row.get("datetime_precision"),
                 )
             )
         return columns
@@ -360,23 +375,15 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         The view arrived in PostgreSQL 10. A server older than that answers
         the widened question with ``relation does not exist``, so the caller
         asks the narrower one and reports the two columns ``pg_sequences``
-        would have carried as absent. The version is read from the cache
-        ``introspect_and_adapt()`` keeps, then from the dialect, which is how
-        the rest of the backend answers the same question.
+        would have carried as absent.
 
-        A dialect that was never adapted raises rather than reporting an
-        unknown version; that case answers the narrower question, because a
-        server this backend never learned to speak to is not one to assume
-        carries the newest catalog.
+        The version is :attr:`server_version`, which reads the cache
+        ``introspect_and_adapt()`` keeps and falls back to the dialect without
+        raising. An unknown version answers the narrower question: a server
+        this backend never learned to speak to is not one to assume carries
+        the newest catalog.
         """
-        backend = getattr(self, "_backend", None)
-        version = getattr(backend, "_server_version_cache", None) if backend is not None else None
-        if not version:
-            dialect = getattr(backend, "dialect", None) if backend is not None else None
-            try:
-                version = getattr(dialect, "version", None) if dialect is not None else None
-            except Exception:
-                version = None
+        version = self.server_version
         if not version:
             return False
         return tuple(version) >= (10, 0, 0)

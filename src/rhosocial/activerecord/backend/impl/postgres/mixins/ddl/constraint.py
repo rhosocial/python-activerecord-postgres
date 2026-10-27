@@ -346,7 +346,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         :meth:`_require_constraint_enforced`, called from
         :meth:`format_table_constraint` and :meth:`format_column_constraint`.
         """
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def supports_alter_constraint_enforced(self) -> bool:
         """Whether ``ALTER TABLE ... ALTER CONSTRAINT ... [NOT] ENFORCED`` works.
@@ -400,7 +400,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         :meth:`_require_enforceable_constraint`, called from
         :meth:`format_alter_constraint_action`.
         """
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def supports_enable_disable_constraint(self) -> bool:
         """Whether ``ALTER TABLE ... ENABLE|DISABLE CONSTRAINT`` works.

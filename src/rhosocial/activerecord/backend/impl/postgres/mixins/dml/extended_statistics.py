@@ -22,19 +22,19 @@ class PostgresExtendedStatisticsMixin:
 
     def supports_create_statistics(self) -> bool:
         """CREATE STATISTICS is supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_dependencies(self) -> bool:
         """Functional dependencies statistics are supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_ndistinct(self) -> bool:
         """NDistinct statistics are supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_mcv(self) -> bool:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsStatement") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.

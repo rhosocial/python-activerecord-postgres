@@ -67,7 +67,7 @@ class PostgresUUIDMixin:
         "is the extension installed" question is
         ``supports_uuid_ossp_extension``.
         """
-        if self.version >= (13, 0, 0):
+        if self.version_at_least((13, 0, 0)):
             return True
         return self.supports_uuid_ossp_extension()
 

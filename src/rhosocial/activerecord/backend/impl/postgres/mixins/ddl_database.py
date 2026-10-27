@@ -36,11 +36,11 @@ class PostgresDatabaseMixin:
 
     def supports_database_if_not_exists(self) -> bool:
         """PostgreSQL 13+ supports IF NOT EXISTS."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_database_if_exists(self) -> bool:
         """PostgreSQL 13+ supports IF EXISTS."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_database_owner(self) -> bool:
         """PostgreSQL supports OWNER TO."""

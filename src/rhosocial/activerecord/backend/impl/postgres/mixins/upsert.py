@@ -14,7 +14,7 @@ class PostgresUpsertMixin:
     """
 
     def supports_upsert(self) -> bool:
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_on_conflict_clause(self) -> bool:
         return True

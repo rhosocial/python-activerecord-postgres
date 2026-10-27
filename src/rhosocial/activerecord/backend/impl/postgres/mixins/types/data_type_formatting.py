@@ -697,7 +697,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         12 on. Unconditional True meant a 9, 10 or 11 server was told it could
         have the type, and found out by executing the DDL.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_data_type_postgres_bit(self) -> bool:
         return True
@@ -721,7 +721,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         (v MACADDR8) on 9.6 comes back 'type "macaddr8" does not exist'.
         jsonpath is 12, xid8 is 13, the multiranges are 14, this is 10.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_data_type_postgres_point(self) -> bool:
         return True
@@ -766,22 +766,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_int4multirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_int8multirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_nummultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_tsmultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_tstzmultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_datemultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_oid(self) -> bool:
         return True
@@ -803,7 +803,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         back as 'type "xid8" does not exist' rather than at the point of asking
         the dialect what it supports.
         """
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_data_type_postgres_cid(self) -> bool:
         return True
