@@ -319,6 +319,14 @@ class _FakeCliBackend:
     def connect(self):
         pass
 
+    def introspect_and_adapt(self):
+        """The real backend reads the server version here; this one has none.
+
+        The handler adapts before it asks anything, so a stand-in that cannot
+        answer the call would fail every type -- which is why the fake answers
+        it, and why the dialect is constructed with a version already set.
+        """
+
     def disconnect(self):
         self._connection = False
 
@@ -373,6 +381,9 @@ class TestExtensionsAnswer:
 
         class _AsyncCliBackend(_FakeCliBackend):
             async def connect(self):
+                pass
+
+            async def introspect_and_adapt(self):
                 pass
 
             async def disconnect(self):
