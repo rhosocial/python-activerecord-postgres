@@ -27,18 +27,56 @@ from .output import create_provider
 
 OUTPUT_CHOICES = ["table", "json", "csv", "tsv"]
 
-INTROSPECT_TYPES = [
-    "tables",
-    "views",
-    "columns",
-    "indexes",
-    "foreign-keys",
-    "triggers",
-    "database",
-    "extensions",
-    "materialized-views",
-    "sequences",
-]
+#: CLI type -> the dialect capability switch that answers for it.
+#:
+#: The advertised list is derived from this mapping, so a type cannot be
+#: offered without saying which switch decides whether the connected server
+#: can answer it. A type whose switch is False is refused when handled, rather
+#: than run and answered with an empty list: "this server cannot report
+#: sequences" and "this database has no sequences" are different answers.
+#:
+#: One entry per family the catalog reports independently. Partition metadata
+#: has a switch too, but no introspector question of its own -- it is read as
+#: part of the DDL a partitioned table carries -- so it is not a type here.
+_TYPE_CAPABILITIES = {
+    "tables": "supports_table_introspection",
+    "views": "supports_view_introspection",
+    "columns": "supports_column_introspection",
+    "indexes": "supports_index_introspection",
+    "foreign-keys": "supports_foreign_key_introspection",
+    "triggers": "supports_trigger_introspection",
+    "database": "supports_database_info",
+    "extensions": "supports_extension_introspection",
+    "materialized-views": "supports_materialized_view_introspection",
+    "sequences": "supports_sequence_introspection",
+}
+
+INTROSPECT_TYPES = list(_TYPE_CAPABILITIES)
+
+
+def _require_capability(backend, args) -> None:
+    """Refuse a type the connected server cannot answer.
+
+    The dialect is adapted before this runs, so the switches answer for the
+    server in front of us rather than for the newest release this backend
+    knows.
+    """
+    switch = _TYPE_CAPABILITIES.get(args.type)
+    if switch is None:
+        return
+    dialect = getattr(backend, "dialect", None)
+    if dialect is None:
+        # A stub standing in for the backend (the offline CLI tests) has no
+        # dialect to ask; a real one always does.
+        return
+    supported = getattr(dialect, switch, None)
+    if supported is None or supported():
+        return
+    print(
+        f"Error: {args.type} introspection is not supported by this server",
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 
 def _refuse_name(args: argparse.Namespace, hint: str) -> None:
@@ -221,6 +259,13 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
     """Handle introspect subcommand synchronously."""
     try:
         backend.connect()
+        # Adapted once, at the entrance: the switch that decides whether the
+        # family can be asked must answer for the server in front of us, and so
+        # must every formatter downstream. Adapting inside the branches that
+        # happened to need it made "can this be asked" depend on where the
+        # question was read.
+        backend.introspect_and_adapt()
+        _require_capability(backend, args)
 
         introspector = backend.introspector
 
@@ -302,9 +347,6 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
-            # The listing reads the server version, and an unadapted
-            # dialect has none to read, so adapting is part of answering.
-            backend.introspect_and_adapt()
             if args.name:
                 info = introspector.get_materialized_view_info(args.name, schema=None)
                 if info is None:
@@ -324,9 +366,6 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 provider.display_results(data, title="Materialized Views")
 
         elif args.type == "sequences":
-            # The sequence query widens on PostgreSQL 10, so it reads the
-            # server version the same way, for the same reason.
-            backend.introspect_and_adapt()
             if args.name:
                 info = introspector.get_sequence_info(args.name, schema=None)
                 if info is None:
@@ -357,6 +396,10 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
     """Handle introspect subcommand asynchronously."""
     try:
         await backend.connect()
+        # Same reason as the sync handler: the dialect must know the server
+        # before a capability switch -- or a formatter -- can answer.
+        await backend.introspect_and_adapt()
+        _require_capability(backend, args)
 
         introspector = backend.introspector
 
@@ -438,9 +481,6 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
-            # The listing reads the server version, and an unadapted
-            # dialect has none to read, so adapting is part of answering.
-            await backend.introspect_and_adapt()
             if args.name:
                 info = await introspector.get_materialized_view_info(args.name, schema=None)
                 if info is None:
@@ -460,9 +500,6 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 provider.display_results(data, title="Materialized Views")
 
         elif args.type == "sequences":
-            # The sequence query widens on PostgreSQL 10, so it reads the
-            # server version the same way, for the same reason.
-            await backend.introspect_and_adapt()
             if args.name:
                 info = await introspector.get_sequence_info(args.name, schema=None)
                 if info is None:
