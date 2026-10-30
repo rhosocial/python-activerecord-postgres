@@ -12,23 +12,33 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect <TYPE> [NAME] 
 
 ## What it can ask about
 
-| Type | Reads | Notes |
+| Type | Reads | NAME |
 | :--- | :--- | :--- |
-| `tables` | `information_schema.tables` | Base tables. `--include-system` adds the system catalogues. |
-| `views` | `information_schema.views` | Ordinary views, with their definitions. |
-| `table` | several | One table by name, with its columns, indexes and foreign keys filled in. |
-| `columns` | `information_schema.columns` | One table's columns: name, type, nullability, default. |
-| `indexes` | `pg_index`, `pg_class`, `pg_attribute` | One table's indexes, including the primary key. |
-| `foreign-keys` | `information_schema.*` | One table's constraints and the columns each side names. |
-| `triggers` | `information_schema.triggers` | Triggers, optionally narrowed to one table. |
-| `database` | `information_schema.schemata`, `pg_database` | Server version, charset, and the databases visible to this role. |
-| `extensions` | `pg_extension` | Installed extensions with version and comment. |
-| `materialized-views` | `pg_matviews`, `pg_class`, `pg_namespace` | List, or one by name; carries the definition and whether a unique index backs `REFRESH … CONCURRENTLY`. |
-| `sequences` | `information_schema.sequences`, `pg_sequences` | List, or one by name. `last_value` and `cache_size` come from `pg_sequences`, which arrived in PostgreSQL 10; on an older server both are reported as absent rather than invented. |
+| `tables` | `information_schema.tables` | Refused. `--include-system` adds the system catalogues. |
+| `views` | `information_schema.views` | Optional: one view, with its definition. |
+| `columns` | `information_schema.columns` | Required: the table. Name, type, nullability, default. |
+| `indexes` | `pg_index`, `pg_class`, `pg_attribute` | Required: the table. Includes the primary key. |
+| `foreign-keys` | `information_schema.*` | Required: the table. The columns each side names. |
+| `triggers` | `information_schema.triggers` | Optional: narrowed to one table. |
+| `database` | `information_schema.schemata`, `pg_database` | Refused: it describes the connected database. |
+| `extensions` | `pg_extension` | Optional: one extension, with version and comment. |
+| `materialized-views` | `pg_matviews`, `pg_class`, `pg_namespace` | Optional: one view; carries the definition and whether a unique index backs `REFRESH … CONCURRENTLY`. |
+| `sequences` | `information_schema.sequences`, `pg_sequences` | Optional: one sequence. `last_value` and `cache_size` come from `pg_sequences`, which arrived in PostgreSQL 10; on an older server both are reported as absent rather than invented. |
 
-`NAME` is required for `table`, `columns`, `indexes` and `foreign-keys`. It is
-optional for `materialized-views` and `sequences`, where it selects one object
-instead of the family.
+`NAME` means the object the type answers for, and each type has exactly one
+answer to whether it takes one. `columns`, `indexes` and `foreign-keys` name
+the table they belong to and require it; `triggers` accepts a table name and
+lists every trigger when it gets none; `views`, `materialized-views`,
+`sequences` and `extensions` accept an object name and list the family when
+they get none. `tables` and `database` take no name: a name there is an error
+rather than a filter, so a question aimed at one object cannot quietly return
+the whole family.
+
+A run exits `1` when it could not finish -- the connection failed, a query
+failed, or the object a name asked for is not there -- and `2` when the
+request cannot be served here: an unknown type, a name the type does not take,
+or a family this server cannot answer. An empty listing is a successful
+answer to a family question, never an error.
 
 ## Options
 
@@ -66,7 +76,15 @@ instead of the family.
 ```bash
 # Everything in the default schema, one table at a time
 python -m rhosocial.activerecord.backend.impl.postgres introspect tables --database mydb
-python -m rhosocial.activerecord.backend.impl.postgres introspect table orders --database mydb
+python -m rhosocial.activerecord.backend.impl.postgres introspect columns orders --database mydb
+
+# Views, and the one an analytics job reads
+python -m rhosocial.activerecord.backend.impl.postgres introspect views --database mydb
+python -m rhosocial.activerecord.backend.impl.postgres introspect views active_orders --database mydb -o json
+
+# Extensions installed in this database, or just the one a feature needs
+python -m rhosocial.activerecord.backend.impl.postgres introspect extensions --database mydb
+python -m rhosocial.activerecord.backend.impl.postgres introspect extensions pgcrypto --database mydb
 
 # Sequences, and the one sequence that hands out order ids
 python -m rhosocial.activerecord.backend.impl.postgres introspect sequences --database mydb

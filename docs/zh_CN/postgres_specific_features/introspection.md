@@ -428,10 +428,6 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect tables \
 ### 查询表详情
 
 ```bash
-# 获取表的完整信息（列、索引、外键）
-python -m rhosocial.activerecord.backend.impl.postgres introspect table users \
-  --database mydb --user postgres
-
 # 仅查询列信息
 python -m rhosocial.activerecord.backend.impl.postgres introspect columns users \
   --database mydb --user postgres
@@ -461,24 +457,33 @@ PostgreSQL 支持 schema 参数：
 # 指定 schema 查询表
 python -m rhosocial.activerecord.backend.impl.postgres introspect tables \
   --database mydb --user postgres --schema auth
-
-# 查询特定 schema 中的表详情
-python -m rhosocial.activerecord.backend.impl.postgres introspect table users \
-  --database mydb --user postgres --schema analytics
 ```
 
 ### 内省类型
 
-| 类型 | 说明 | 是否需要表名 |
-|------|------|-------------|
-| `tables` | 列出所有表 | 否 |
-| `views` | 列出所有视图 | 否 |
-| `database` | 数据库信息 | 否 |
-| `table` | 表完整详情（列、索引、外键） | 是 |
-| `columns` | 列信息 | 是 |
-| `indexes` | 索引信息 | 是 |
-| `foreign-keys` | 外键信息 | 是 |
-| `triggers` | 触发器信息 | 可选 |
+| 类型 | 说明 | NAME |
+|------|------|------|
+| `tables` | 列出所有基础表 | 不接受 |
+| `views` | 列出普通视图，或按名称查询一个视图 | 可选：视图名 |
+| `columns` | 一张表的列信息 | 必填：表名 |
+| `indexes` | 一张表的索引信息 | 必填：表名 |
+| `foreign-keys` | 一张表的外键信息 | 必填：表名 |
+| `triggers` | 触发器，可缩小到一张表 | 可选：表名 |
+| `database` | 服务器版本、字符集，以及当前角色可见的数据库 | 不接受 |
+| `extensions` | 已安装的扩展，或按名称查询一个扩展 | 可选：扩展名 |
+| `materialized-views` | 物化视图，或按名称查询一个 | 可选：视图名 |
+| `sequences` | 序列，或按名称查询一个 | 可选：序列名 |
+
+`NAME` 指明该类型要回答的对象，每种类型对"是否接受名称"只有一个答案。
+`columns`、`indexes`、`foreign-keys` 的名称是它们所属的表，必须给出；
+`triggers` 接受表名，不给则列出全部触发器；`views`、`materialized-views`、
+`sequences`、`extensions` 接受对象名，不给则列出整族。`tables` 与 `database`
+不接受名称：在那里给名称是错误而不是过滤条件，因此针对单个对象的问题不会
+悄悄返回整族列表。
+
+运行以 `1` 退出表示没能完成——连接失败、查询失败，或名称所指的对象不存在；
+以 `2` 退出表示这个请求在此不成立：未知类型、该类型不接受名称，或本服务器
+不支持该族。
 
 ### 输出格式
 

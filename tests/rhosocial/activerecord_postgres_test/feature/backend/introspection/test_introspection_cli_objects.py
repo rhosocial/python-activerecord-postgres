@@ -1,8 +1,9 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/introspection/test_introspection_cli_objects.py
 """
-Black-box CLI tests for the ``materialized-views`` and ``sequences`` types.
+Black-box CLI tests for the types that answer for a recognised server object:
+``views``, ``materialized-views``, ``sequences`` and ``extensions``.
 
-Both are driven through ``main()`` so the test exercises the same path a
+All four are driven through ``main()`` so the test exercises the same path a
 terminal user takes: argument parsing, dispatch onto
 ``backend.introspector``, and rendering through the output provider.
 """
