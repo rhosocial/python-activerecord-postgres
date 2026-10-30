@@ -4,6 +4,10 @@
 PostgreSQL introspect includes the 'extensions' type in addition to
 the standard types, plus the two schema-object families this backend
 answers for on its own: materialized views and sequences.
+
+A type either lists a family or, when it names a single catalogue object,
+answers for that one object; ``NAME`` is required, optional or refused
+according to which of the two it is, and never silently dropped.
 """
 
 import argparse
@@ -21,29 +25,46 @@ from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from .connection import add_connection_args, resolve_connection_config_from_args
 from .output import create_provider
 
-OUTPUT_CHOICES = ['table', 'json', 'csv', 'tsv']
+OUTPUT_CHOICES = ["table", "json", "csv", "tsv"]
 
 INTROSPECT_TYPES = [
-    "tables", "views", "columns",
-    "indexes", "foreign-keys", "triggers", "database",
-    "extensions", "materialized-views", "sequences",
+    "tables",
+    "views",
+    "columns",
+    "indexes",
+    "foreign-keys",
+    "triggers",
+    "database",
+    "extensions",
+    "materialized-views",
+    "sequences",
 ]
+
+
+def _refuse_name(args: argparse.Namespace, hint: str) -> None:
+    """Refuse a ``NAME`` the type has no question for.
+
+    ``tables`` lists every table and ``database`` describes the database the
+    run connected to; neither can be narrowed to one object. Dropping the
+    name instead would print the family listing under a one-object question,
+    which is a different answer than the one asked for.
+    """
+    print(f"Error: '{args.type}' does not take an object name; {hint}", file=sys.stderr)
+    sys.exit(2)
 
 
 def create_parser(subparsers):
     """Create the introspect subcommand parser."""
     parser = subparsers.add_parser(
-        'introspect',
-        help='Database introspection',
+        "introspect",
+        help="Database introspection",
         epilog="""Examples:
   # List all tables in database
   %(prog)s tables --database mydb
 
-  # List all views
+  # List all views, or inspect one by name
   %(prog)s views --database mydb
-
-  # Get detailed table info (columns, indexes, foreign keys)
-  %(prog)s table users --database mydb
+  %(prog)s views active_users --database mydb
 
   # Get column details for a table
   %(prog)s columns users --database mydb
@@ -54,14 +75,16 @@ def create_parser(subparsers):
   # Get foreign key relationships
   %(prog)s foreign-keys users --database mydb
 
-  # List triggers
+  # List triggers, optionally narrowed to one table
   %(prog)s triggers --database mydb
+  %(prog)s triggers users --database mydb
 
   # Get database information
   %(prog)s database --database mydb
 
-  # List installed extensions (PostgreSQL specific)
+  # List installed extensions (PostgreSQL specific), or inspect one by name
   %(prog)s extensions --database mydb
+  %(prog)s extensions pgcrypto --database mydb
 
   # List materialized views, or inspect one by name
   %(prog)s materialized-views --database mydb
@@ -83,10 +106,11 @@ def create_parser(subparsers):
 
     # Output format
     parser.add_argument(
-        '-o', '--output',
+        "-o",
+        "--output",
         choices=OUTPUT_CHOICES,
-        default='table',
-        help='Output format (default: table)',
+        default="table",
+        help="Output format (default: table)",
     )
 
     # Connection arguments
@@ -94,9 +118,9 @@ def create_parser(subparsers):
 
     # Rich display options
     parser.add_argument(
-        '--rich-ascii',
-        action='store_true',
-        help='Use ASCII characters for rich table borders.',
+        "--rich-ascii",
+        action="store_true",
+        help="Use ASCII characters for rich table borders.",
     )
 
     # introspect-specific arguments
@@ -111,8 +135,10 @@ def create_parser(subparsers):
         "name",
         nargs="?",
         default=None,
-        help="Object name (required for some types; optional for "
-             "materialized-views and sequences, where it selects one object)",
+        help="Object name. Required for columns, indexes and foreign-keys "
+        "(the table they belong to); optional for triggers (a table) "
+        "and for views, materialized-views, sequences and extensions "
+        "(one object); refused for tables and database",
     )
     parser.add_argument(
         "--include-system",
@@ -146,13 +172,14 @@ def handle(args):
 # Internal helper functions
 # ---------------------------------------------------------------------------
 
+
 def _serialize_for_output(obj: Any) -> Any:
     """Serialize object for JSON output, handling non-serializable types."""
     if obj is None:
         return None
-    if hasattr(obj, 'model_dump'):
+    if hasattr(obj, "model_dump"):
         try:
-            result = obj.model_dump(mode='json')
+            result = obj.model_dump(mode="json")
             return _serialize_for_output(result)
         except TypeError:
             result = obj.model_dump()
@@ -198,17 +225,27 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
         introspector = backend.introspector
 
         if args.type == "tables":
-            tables = introspector.list_tables(
-                schema=None,
-                include_system=args.include_system
-            )
+            if args.name:
+                _refuse_name(
+                    args,
+                    "use 'columns', 'indexes' or 'foreign-keys' with a table name",
+                )
+            tables = introspector.list_tables(schema=None, include_system=args.include_system)
             data = _serialize_for_output(tables)
             provider.display_results(data, title="Tables")
 
         elif args.type == "views":
-            views = introspector.list_views(schema=None)
-            data = _serialize_for_output(views)
-            provider.display_results(data, title="Views")
+            if args.name:
+                info = introspector.get_view_info(args.name, schema=None)
+                if info is None:
+                    print(f"Error: View '{args.name}' not found", file=sys.stderr)
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"View {args.name}")
+            else:
+                views = introspector.list_views(schema=None)
+                data = _serialize_for_output(views)
+                provider.display_results(data, title="Views")
 
         elif args.type == "columns":
             if not args.name:
@@ -228,31 +265,41 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
 
         elif args.type == "foreign-keys":
             if not args.name:
-                print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
+                print(
+                    "Error: Table name is required for 'foreign-keys' introspection",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             fks = introspector.list_foreign_keys(args.name, schema=None)
             data = _serialize_for_output(fks)
             provider.display_results(data, title=f"Foreign Keys of {args.name}")
 
         elif args.type == "triggers":
-            triggers = introspector.list_triggers(
-                table_name=args.name,
-                schema=None
-            )
+            triggers = introspector.list_triggers(table_name=args.name, schema=None)
             data = _serialize_for_output(triggers)
             provider.display_results(data, title="Triggers")
 
         elif args.type == "database":
+            if args.name:
+                _refuse_name(args, "it describes the database the run connected to")
             info = introspector.get_database_info()
             data = _serialize_for_output(info)
             provider.display_results([data], title="Database Info")
 
         elif args.type == "extensions":
-            if not hasattr(introspector, "list_extensions"):
-                print("No extensions information available", file=sys.stderr)
-                sys.exit(1)
-            data = _serialize_for_output(_extension_rows(introspector.list_extensions()))
-            provider.display_results(data, title="Extensions")
+            if args.name:
+                info = introspector.get_extension_info(args.name)
+                if info is None:
+                    print(
+                        f"Error: Extension '{args.name}' not installed",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                data = _serialize_for_output(_extension_rows([info]))
+                provider.display_results(data, title=f"Extension {args.name}")
+            else:
+                data = _serialize_for_output(_extension_rows(introspector.list_extensions()))
+                provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
             # The listing reads the server version, and an unadapted
@@ -314,17 +361,27 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
         introspector = backend.introspector
 
         if args.type == "tables":
-            tables = await introspector.list_tables(
-                schema=None,
-                include_system=args.include_system
-            )
+            if args.name:
+                _refuse_name(
+                    args,
+                    "use 'columns', 'indexes' or 'foreign-keys' with a table name",
+                )
+            tables = await introspector.list_tables(schema=None, include_system=args.include_system)
             data = _serialize_for_output(tables)
             provider.display_results(data, title="Tables")
 
         elif args.type == "views":
-            views = await introspector.list_views(schema=None)
-            data = _serialize_for_output(views)
-            provider.display_results(data, title="Views")
+            if args.name:
+                info = await introspector.get_view_info(args.name, schema=None)
+                if info is None:
+                    print(f"Error: View '{args.name}' not found", file=sys.stderr)
+                    sys.exit(1)
+                data = _serialize_for_output([info])
+                provider.display_results(data, title=f"View {args.name}")
+            else:
+                views = await introspector.list_views(schema=None)
+                data = _serialize_for_output(views)
+                provider.display_results(data, title="Views")
 
         elif args.type == "columns":
             if not args.name:
@@ -344,33 +401,41 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
 
         elif args.type == "foreign-keys":
             if not args.name:
-                print("Error: Table name is required for 'foreign-keys' introspection", file=sys.stderr)
+                print(
+                    "Error: Table name is required for 'foreign-keys' introspection",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             fks = await introspector.list_foreign_keys(args.name, schema=None)
             data = _serialize_for_output(fks)
             provider.display_results(data, title=f"Foreign Keys of {args.name}")
 
         elif args.type == "triggers":
-            triggers = await introspector.list_triggers(
-                table_name=args.name,
-                schema=None
-            )
+            triggers = await introspector.list_triggers(table_name=args.name, schema=None)
             data = _serialize_for_output(triggers)
             provider.display_results(data, title="Triggers")
 
         elif args.type == "database":
+            if args.name:
+                _refuse_name(args, "it describes the database the run connected to")
             info = await introspector.get_database_info()
             data = _serialize_for_output(info)
             provider.display_results([data], title="Database Info")
 
         elif args.type == "extensions":
-            if not hasattr(introspector, "list_extensions"):
-                print("No extensions information available", file=sys.stderr)
-                sys.exit(1)
-            data = _serialize_for_output(
-                _extension_rows(await introspector.list_extensions())
-            )
-            provider.display_results(data, title="Extensions")
+            if args.name:
+                info = await introspector.get_extension_info(args.name)
+                if info is None:
+                    print(
+                        f"Error: Extension '{args.name}' not installed",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                data = _serialize_for_output(_extension_rows([info]))
+                provider.display_results(data, title=f"Extension {args.name}")
+            else:
+                data = _serialize_for_output(_extension_rows(await introspector.list_extensions()))
+                provider.display_results(data, title="Extensions")
 
         elif args.type == "materialized-views":
             # The listing reads the server version, and an unadapted

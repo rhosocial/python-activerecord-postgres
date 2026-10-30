@@ -30,8 +30,9 @@ from providers.scenarios import SCENARIO_MAP, get_scenario_raw
 async_cli = pytest.mark.skipif(
     sys.platform == "win32",
     reason="psycopg async mode needs the selector event loop; the CLI's "
-           "asyncio.run gives it the ProactorEventLoop on Windows",
+    "asyncio.run gives it the ProactorEventLoop on Windows",
 )
+
 
 def _server_config():
     """The first reachable scenario's raw config, or ``None``."""
@@ -55,11 +56,16 @@ def conn_args():
     if config is None:
         pytest.skip("No scenario server reachable")
     return [
-        "--host", config.host,
-        "--port", str(config.port),
-        "--database", config.database,
-        "--user", config.username,
-        "--password", config.password,
+        "--host",
+        config.host,
+        "--port",
+        str(config.port),
+        "--database",
+        config.database,
+        "--user",
+        config.username,
+        "--password",
+        config.password,
     ]
 
 
@@ -91,6 +97,7 @@ def cli_objects():
     seq_name = f"arx_cli_demo_seq_{suffix}"
     table_name = f"arx_cli_demo_tbl_{suffix}"
     view_name = f"arx_cli_demo_mv_{suffix}"
+    plain_view_name = f"arx_cli_demo_v_{suffix}"
 
     backend = PostgresBackend(
         connection_config=PostgresConnectionConfig(
@@ -105,6 +112,7 @@ def cli_objects():
     try:
         for sql in (
             f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+            f"DROP VIEW IF EXISTS {plain_view_name}",
             f"DROP TABLE IF EXISTS {table_name} CASCADE",
             f"DROP SEQUENCE IF EXISTS {seq_name}",
         ):
@@ -116,6 +124,7 @@ def cli_objects():
             f"CREATE SEQUENCE {seq_name} START 42 INCREMENT 4",
             f"CREATE TABLE {table_name} (id INTEGER PRIMARY KEY)",
             f"CREATE MATERIALIZED VIEW {view_name} AS SELECT id FROM {table_name}",
+            f"CREATE VIEW {plain_view_name} AS SELECT id FROM {table_name}",
         ):
             backend.execute(sql)
         yield {
@@ -125,10 +134,12 @@ def cli_objects():
             "seq": seq_name,
             "table": table_name,
             "view": view_name,
+            "plain_view": plain_view_name,
         }
     finally:
         for sql in (
             f"DROP MATERIALIZED VIEW IF EXISTS {view_name}",
+            f"DROP VIEW IF EXISTS {plain_view_name}",
             f"DROP TABLE IF EXISTS {table_name} CASCADE",
             f"DROP SEQUENCE IF EXISTS {seq_name}",
         ):
@@ -215,9 +226,7 @@ class TestSequencesCLI:
     """``introspect sequences`` against a live server."""
 
     def test_sequences_json(self, conn_args, cli_objects):
-        out, err, exc = run_cli(
-            ["introspect", "sequences"] + conn_args + ["-o", "json"]
-        )
+        out, err, exc = run_cli(["introspect", "sequences"] + conn_args + ["-o", "json"])
         assert exc is None, f"stderr: {err}\nstdout: {out}"
         rows = json.loads(out)
         assert isinstance(rows, list)
@@ -253,9 +262,7 @@ class TestSequencesCLI:
 
     @async_cli
     def test_sequences_async(self, conn_args, cli_objects):
-        out, err, exc = run_cli(
-            ["introspect", "sequences"] + conn_args + ["-o", "json", "--async"]
-        )
+        out, err, exc = run_cli(["introspect", "sequences"] + conn_args + ["-o", "json", "--async"])
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
         assert cli_objects["seq"] in [row["name"] for row in rows]
@@ -265,9 +272,7 @@ class TestMaterializedViewsCLI:
     """``introspect materialized-views`` against a live server."""
 
     def test_materialized_views_json(self, conn_args, cli_objects):
-        out, err, exc = run_cli(
-            ["introspect", "materialized-views"] + conn_args + ["-o", "json"]
-        )
+        out, err, exc = run_cli(["introspect", "materialized-views"] + conn_args + ["-o", "json"])
         assert exc is None, f"stderr: {err}\nstdout: {out}"
         rows = json.loads(out)
         assert isinstance(rows, list)
@@ -294,8 +299,7 @@ class TestMaterializedViewsCLI:
 
     def test_unknown_materialized_view_exits_nonzero(self, conn_args, cli_objects):
         _, err, exc = run_cli(
-            ["introspect", "materialized-views", "arx_cli_no_mv"]
-            + conn_args + ["-o", "json"]
+            ["introspect", "materialized-views", "arx_cli_no_mv"] + conn_args + ["-o", "json"]
         )
         assert exc is not None and exc.code == 1
         assert "arx_cli_no_mv" in err
@@ -308,3 +312,93 @@ class TestMaterializedViewsCLI:
         assert exc is None, f"stderr: {err}"
         rows = json.loads(out)
         assert cli_objects["view"] in [row["name"] for row in rows]
+
+
+class TestViewsCLI:
+    """``introspect views`` against a live server, listing and one by name."""
+
+    def test_views_json(self, conn_args, cli_objects):
+        out, err, exc = run_cli(["introspect", "views"] + conn_args + ["-o", "json"])
+        assert exc is None, f"stderr: {err}\nstdout: {out}"
+        rows = json.loads(out)
+        names = [row["name"] for row in rows]
+        assert cli_objects["plain_view"] in names
+        # The listing is ordinary views, not the materialized ones: the two
+        # families answer through different questions.
+        assert cli_objects["view"] not in names
+
+    def test_single_view_json(self, conn_args, cli_objects):
+        out, err, exc = run_cli(
+            ["introspect", "views", cli_objects["plain_view"]] + conn_args + ["-o", "json"]
+        )
+        assert exc is None, f"stderr: {err}"
+        rows = json.loads(out)
+        assert len(rows) == 1
+        assert rows[0]["name"] == cli_objects["plain_view"]
+        assert "SELECT" in rows[0]["definition"].upper()
+
+    def test_single_view_table(self, conn_args, cli_objects):
+        out, err, exc = run_cli(["introspect", "views", cli_objects["plain_view"]] + conn_args)
+        assert exc is None, f"stderr: {err}"
+        assert cli_objects["plain_view"] in out
+
+    def test_unknown_view_exits_nonzero(self, conn_args, cli_objects):
+        _, err, exc = run_cli(
+            ["introspect", "views", "arx_cli_no_view"] + conn_args + ["-o", "json"]
+        )
+        assert exc is not None and exc.code == 1
+        assert "arx_cli_no_view" in err
+
+    @async_cli
+    def test_single_view_async(self, conn_args, cli_objects):
+        out, err, exc = run_cli(
+            ["introspect", "views", cli_objects["plain_view"]]
+            + conn_args
+            + ["-o", "json", "--async"]
+        )
+        assert exc is None, f"stderr: {err}"
+        rows = json.loads(out)
+        assert [row["name"] for row in rows] == [cli_objects["plain_view"]]
+
+
+class TestExtensionsCLI:
+    """``introspect extensions`` against a live server, listing and one by name.
+
+    Which extensions a server has installed is the scenario's business, so the
+    single-extension case reads the name out of the listing rather than naming
+    an extension the server may not carry.
+    """
+
+    def test_extensions_json(self, conn_args, cli_objects):
+        out, err, exc = run_cli(["introspect", "extensions"] + conn_args + ["-o", "json"])
+        assert exc is None, f"stderr: {err}\nstdout: {out}"
+        rows = json.loads(out)
+        assert isinstance(rows, list)
+        assert rows, "every PostgreSQL database has at least plpgsql"
+        assert {"name", "version", "schema", "description"} <= set(rows[0])
+
+    def test_single_extension_json(self, conn_args, cli_objects):
+        listed, err, exc = run_cli(["introspect", "extensions"] + conn_args + ["-o", "json"])
+        assert exc is None, f"stderr: {err}"
+        installed = [row["name"] for row in json.loads(listed)]
+        name = installed[0]
+
+        out, err, exc = run_cli(["introspect", "extensions", name] + conn_args + ["-o", "json"])
+        assert exc is None, f"stderr: {err}"
+        rows = json.loads(out)
+        assert len(rows) == 1
+        assert rows[0]["name"] == name
+
+    def test_unknown_extension_exits_nonzero(self, conn_args, cli_objects):
+        _, err, exc = run_cli(["introspect", "extensions", "arx_cli_no_extension"] + conn_args)
+        assert exc is not None and exc.code == 1
+        assert "arx_cli_no_extension" in err
+
+    @async_cli
+    def test_extensions_async(self, conn_args, cli_objects):
+        out, err, exc = run_cli(
+            ["introspect", "extensions"] + conn_args + ["-o", "json", "--async"]
+        )
+        assert exc is None, f"stderr: {err}"
+        rows = json.loads(out)
+        assert rows
