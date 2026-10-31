@@ -47,6 +47,9 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresSequenceListQueryStatement,
         PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryStatement,
+        PostgresIndexesSizeFunction,
+        PostgresRelationSizeFunction,
+        PostgresTableStorageQueryStatement,
     )
     from ..expression.status import (
         PostgresSettingsQuery,
@@ -122,6 +125,21 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
     def supports_trigger_introspection(self) -> bool:
         """PostgreSQL supports trigger introspection via pg_trigger."""
+        return True
+
+    def supports_table_storage_introspection(self) -> bool:
+        """PostgreSQL reports each table's storage split.
+
+        PostgreSQL's storage is row-plus-index shaped, so the narrow slots of
+        ``IntrospectionTableInfo`` can all be answered: ``size_bytes`` from
+        ``pg_total_relation_size``, ``data_size_bytes`` from
+        ``pg_relation_size`` and ``index_size_bytes`` from ``pg_indexes_size``.
+        Declaring the family is what lets the table listing project the trio and
+        what a CLI checks before offering it; core defaults the probe to False
+        because an engine whose storage answers no part of that has nothing to
+        say, and an unanswered family must stay unoffered rather than answered
+        with an empty row.
+        """
         return True
 
     def get_supported_introspection_scopes(self) -> List[IntrospectionScope]:
@@ -326,8 +344,41 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             alias=alias,
         )
 
+    def _relation_size_call(self, function_name: str, alias: str):
+        """One of the three size calls, each measured on the relation's own OID.
+
+        ``pg_total_relation_size`` reports the total footprint;
+        ``pg_relation_size`` and ``pg_indexes_size`` report the heap and the
+        index side of it -- the split the total cannot separate, which is why
+        all three are asked for rather than derived from one. The argument is
+        the same column in all three: the ``oid`` of the row being read.
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        return FunctionCall(self, function_name, self._catalog_column("oid", "c"), alias=alias)
+
     def _relation_projection(self) -> "list":
-        """The five columns a table listing and a single-table read both report."""
+        """The columns a table listing and a single-table read both report.
+
+        Three of them are the storage trio: ``size_bytes`` (the total, from
+        ``pg_total_relation_size``) with ``data_size_bytes`` and
+        ``index_size_bytes`` beside it. They are here because
+        :meth:`supports_table_storage_introspection` answers True for this
+        engine -- PostgreSQL's storage is row-plus-index shaped, so the narrow
+        slots of ``IntrospectionTableInfo`` carry the split instead of staying
+        empty.
+
+        The row count travels as two signals, not one. ``reltuples`` is the
+        planner's estimate of the relation, maintained by ANALYZE; ``n_live_tup``
+        is the statistics view's estimate of its live rows, maintained by the
+        stats collector. The two go stale by different routes and at different
+        times -- a freshly loaded table has neither, a table ANALYZEd long ago
+        may have a reliable ``reltuples`` and a decayed ``n_live_tup``, and a
+        table that has only ever been written through DML may have the reverse
+        -- so the projection carries both and the parser chooses. Both are cast
+        to ``bigint``, the type each is already stored as: the row shape states
+        it rather than leaving the driver to decide.
+        """
         from rhosocial.activerecord.backend.expression import FunctionCall
         from rhosocial.activerecord.backend.expression.types import BigIntType
 
@@ -338,12 +389,10 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self, "obj_description", self._catalog_column("oid", "c"), alias="comment"
             ),
             self._catalog_column("reltuples", "c").cast(BigIntType(self)).as_("row_count"),
-            FunctionCall(
-                self,
-                "pg_total_relation_size",
-                self._catalog_column("oid", "c"),
-                alias="size_bytes",
-            ),
+            self._catalog_column("n_live_tup", "s").cast(BigIntType(self)).as_("live_row_count"),
+            self._relation_size_call("pg_total_relation_size", "size_bytes"),
+            self._relation_size_call("pg_relation_size", "data_size_bytes"),
+            self._relation_size_call("pg_indexes_size", "index_size_bytes"),
         ]
 
     def _pg_class_join(self):
@@ -360,6 +409,28 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 "eq",
                 self._catalog_column("relnamespace", "c"),
                 self._catalog_column("oid", "n"),
+            ),
+        )
+
+    def _relation_source(self):
+        """``pg_class c JOIN pg_namespace n ... LEFT JOIN pg_stat_user_tables s ...``.
+
+        The statistics join is what makes ``n_live_tup`` readable beside the
+        planner's ``reltuples``. It is a LEFT JOIN because that view lists only
+        the relations the stats collector has a row for: a relation it does not
+        list must still be reported, with the live-row column absent rather than
+        the whole row missing.
+        """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
+        return self._pg_class_join().join(
+            self._catalog_relation("pg_stat_user_tables", "s"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relid", "s"),
+                self._catalog_column("oid", "c"),
             ),
         )
 
@@ -557,7 +628,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         return self._catalog_select(
             self._relation_projection(),
-            self._pg_class_join(),
+            self._relation_source(),
             conditions,
             [self._catalog_column("relname", "c")],
         )
@@ -581,7 +652,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         return self._catalog_select(
             self._relation_projection(),
-            self._pg_class_join(),
+            self._relation_source(),
             [
                 ComparisonPredicate(
                     self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
@@ -1827,6 +1898,89 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                     self._catalog_value(params.get("database_name")),
                     alias="size_bytes",
                 )
+            ],
+        ).to_sql()
+
+    # ------------------------------------------------------------------
+    # The per-table storage trio. The table listing asks the same three
+    # calls in its projection (``_relation_size_call``); these formatters
+    # answer them for one relation whose OID a caller already holds.
+    # ------------------------------------------------------------------
+
+    def format_postgres_relation_size_function(
+        self, expr: "PostgresRelationSizeFunction"
+    ) -> Tuple[str, tuple]:
+        """Format the ``pg_relation_size(relid)`` call.
+
+        The relation's OID names a catalog row the caller already read, so it is
+        a bound value: PostgreSQL reads an ``oid`` where the function's
+        ``regclass`` argument is expected without a cast, and nothing about the
+        relation is spelled into the text.
+
+        Args:
+            expr: Relation size function expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        params = expr.get_params()
+        return FunctionCall(
+            self, "pg_relation_size", self._catalog_value(params.get("relid"))
+        ).to_sql()
+
+    def format_postgres_indexes_size_function(
+        self, expr: "PostgresIndexesSizeFunction"
+    ) -> Tuple[str, tuple]:
+        """Format the ``pg_indexes_size(relid)`` call.
+
+        The index side of the split, bound for the same reason the heap side is:
+        the OID is data. Together they are the two narrow slots
+        ``pg_total_relation_size`` cannot separate.
+
+        Args:
+            expr: Indexes size function expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        params = expr.get_params()
+        return FunctionCall(
+            self, "pg_indexes_size", self._catalog_value(params.get("relid"))
+        ).to_sql()
+
+    def format_table_storage_query_statement(
+        self, expr: "PostgresTableStorageQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the query that reports one relation's storage split.
+
+        The two calls in one statement, aliased to the slot names the parser
+        fills: the row shape is the contract, and asking both in one round trip
+        is what makes the split a single answer rather than two numbers read at
+        two different moments. The OID binds once per call.
+
+        Args:
+            expr: Table storage query expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        params = expr.get_params()
+        relid = params.get("relid")
+        return QueryStatement(
+            self,
+            select=[
+                FunctionCall(
+                    self, "pg_relation_size", self._catalog_value(relid), alias="data_size_bytes"
+                ),
+                FunctionCall(
+                    self, "pg_indexes_size", self._catalog_value(relid), alias="index_size_bytes"
+                ),
             ],
         ).to_sql()
 

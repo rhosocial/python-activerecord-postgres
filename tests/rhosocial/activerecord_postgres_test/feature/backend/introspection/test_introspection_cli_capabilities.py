@@ -44,6 +44,22 @@ class FakeDialect:
         return switch
 
 
+class _Row(dict):
+    """A fake catalogue row: a dict, and the attribute the real record has.
+
+    The real ``list_tables`` answers ``IntrospectionTableInfo`` objects; the
+    fake answers dicts because the serializers read both. A consumer that
+    reads an attribute -- like the ``table-storage`` branch picking the named
+    row -- gets the real contract's surface rather than a surprise.
+    """
+
+    def __getattr__(self, item):
+        try:
+            return self[item]
+        except KeyError:
+            raise AttributeError(item)
+
+
 class FakeIntrospector:
     """One method per family, each recording the call it answered."""
 
@@ -58,7 +74,7 @@ class FakeIntrospector:
 
     def list_tables(self, schema=None, include_system=False):
         self._record("list_tables", schema, include_system)
-        return [{"name": "users"}]
+        return [_Row(name="users")]
 
     def list_views(self, schema=None):
         self._record("list_views", schema)
@@ -170,6 +186,10 @@ _FIRST_CALL = {
     "extensions": "list_extensions",
     "materialized-views": "list_materialized_views",
     "sequences": "list_sequences",
+    # The storage figures ride the listing's projection, so the CLI asks the
+    # listing and picks the row -- one read, not the four a per-table info
+    # answer would spend.
+    "table-storage": "list_tables",
 }
 
 #: The name each type needs to reach its branch; the family listings take none.
@@ -177,6 +197,7 @@ _ARGV = {
     "columns": ["users"],
     "indexes": ["users"],
     "foreign-keys": ["users"],
+    "table-storage": ["users"],
 }
 
 

@@ -151,6 +151,26 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         catalog distinguished them, and collapsing a materialized view or a
         partitioned table back into ``BASE_TABLE`` would lose that at the only
         layer that saw it.
+
+        The storage slots are filled from the trio the listing projects:
+        ``size_bytes`` is the total footprint, ``data_size_bytes`` the heap and
+        ``index_size_bytes`` the index side of it -- the two PostgreSQL keeps
+        apart and a total cannot separate. A missing or unreadable cell is
+        reported as ``None`` rather than allowed to raise past the rest of the
+        answer, which is already known.
+
+        **Which row estimate answers ``row_count``.** The listing carries two:
+        ``reltuples``, the planner's estimate, and ``live_row_count``, the
+        statistics view's ``n_live_tup``. The planner's is preferred, because it
+        is the number the server itself plans with and it is refreshed by
+        ``ANALYZE``/``VACUUM`` for exactly that purpose -- a value it holds is
+        the server's best current estimate of the relation's size. The
+        statistics view's is the fallback, taken only when the planner has
+        none: PostgreSQL 14+ reports ``-1`` for a relation that has never been
+        analyzed, which is the absence of an estimate rather than an empty
+        table, and in that case a live-row estimate says more than nothing does.
+        Neither is ever presented as exact, and neither is invented: a relation
+        with neither estimate reports ``None``.
         """
         target_schema = schema if schema is not None else self.default_schema
         table_type_map = {
@@ -166,12 +186,35 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
                 comment=row.get("comment"),
-                # PostgreSQL 14+ returns -1 for unanalyzed tables, convert to None for consistency
-                row_count=row.get("row_count") if row.get("row_count") != -1 else None,
+                row_count=self.parse_row_count(row),
                 size_bytes=row.get("size_bytes"),
+                data_size_bytes=row.get("data_size_bytes"),
+                index_size_bytes=row.get("index_size_bytes"),
             )
             for row in rows
         ]
+
+    @staticmethod
+    def parse_row_count(row: Dict[str, Any]) -> Optional[int]:
+        """The row estimate a catalog row answers with, or ``None``.
+
+        Two estimates arrive and one is chosen. ``reltuples`` is the planner's
+        and wins when it holds a value; ``n_live_tup`` (``live_row_count``) is
+        the statistics view's and answers only when the planner has none.
+
+        PostgreSQL 14+ reports ``-1`` for a never-analyzed relation, which is
+        "no estimate" rather than "zero rows", so that value is normalized to
+        ``None`` here and the fallback is consulted; ``0`` from either source is
+        a real estimate and passes through unchanged. Anything unreadable is
+        ``None``: unknown is an answer, and guessing one would be worse.
+        """
+        reltuples = row.get("row_count")
+        if reltuples is not None and reltuples != -1:
+            return int(reltuples)
+        live_rows = row.get("live_row_count")
+        if live_rows is not None and live_rows != -1:
+            return int(live_rows)
+        return None
 
     def parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []

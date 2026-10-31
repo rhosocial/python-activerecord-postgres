@@ -38,6 +38,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression.status import (
     PostgresWalFileCountQuery,
     PostgresWalPositionQuery,
 )
+from rhosocial.activerecord.backend.impl.postgres.introspection.status_types import (
+    ArchiveInfo,
+    PostgreSQLServerOverview,
+    ReplicationInfo,
+    SecurityInfo,
+    WALInfo,
+)
+from rhosocial.activerecord.backend.introspection.status import ServerOverview
 
 
 def _dialect(version=(17, 0, 0)):
@@ -236,3 +244,58 @@ class TestSettingsAndCountingQueries:
         assert "PG_CATALOG.PG_GET_USERBYID(oid)" in sql
         assert "FROM pg_roles ORDER BY rolname" in sql
         assert params == ()
+
+
+class TestOverviewSubclass:
+    """The four engine families ride this backend's own overview.
+
+    Core keeps the public slots and no longer carries PostgreSQL's WAL,
+    replication, archive and security families; the subclass declares them as
+    typed fields, which is what lets ``get_overview()`` keep core's signature
+    while answering more than core's shape.
+    """
+
+    @staticmethod
+    def _overview(**overrides):
+        defaults = dict(server_version="17.4", server_vendor="PostgreSQL")
+        defaults.update(overrides)
+        return PostgreSQLServerOverview(**defaults)
+
+    def test_the_subclass_is_the_core_entry_point(self):
+        overview = self._overview()
+        # Legal covariant return: a caller written against core's shape still
+        # accepts what this server answers.
+        assert isinstance(overview, ServerOverview)
+
+    def test_the_families_are_typed_fields_that_default_to_none(self):
+        overview = self._overview()
+        assert overview.wal is None
+        assert overview.replication is None
+        assert overview.archive is None
+        assert overview.security is None
+
+    def test_the_families_serialize_without_being_re_declared(self):
+        # to_dict() is field-driven, so the subclass's facts travel under their
+        # own names rather than being folded into ``extra``.
+        overview = self._overview(
+            wal=WALInfo(wal_level="replica"),
+            replication=ReplicationInfo(is_standby=True),
+            archive=ArchiveInfo(archive_mode="on"),
+            security=SecurityInfo(ssl_enabled=True),
+        )
+        payload = overview.to_dict()
+        assert payload["wal"]["wal_level"] == "replica"
+        assert payload["replication"]["is_standby"] is True
+        assert payload["archive"]["archive_mode"] == "on"
+        assert payload["security"]["ssl_enabled"] is True
+        # The core slots are still there, unchanged.
+        assert payload["server_version"] == "17.4"
+        assert payload["databases"] == []
+
+    def test_the_taken_back_families_are_the_moved_types(self):
+        # The move changed the address, not the shape: these are the classes
+        # core used to carry, now imported from this backend.
+        assert WALInfo().wal_size_bytes is None
+        assert ReplicationInfo().lag_bytes is None
+        assert ArchiveInfo().archived_count is None
+        assert SecurityInfo().row_security is None

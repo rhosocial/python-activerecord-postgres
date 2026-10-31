@@ -49,6 +49,10 @@ _TYPE_CAPABILITIES = {
     "extensions": "supports_extension_introspection",
     "materialized-views": "supports_materialized_view_introspection",
     "sequences": "supports_sequence_introspection",
+    # The per-table storage family answers for one table: the three size
+    # figures ride the listing's projection, and this type asks it for one
+    # name rather than making the caller read the whole listing.
+    "table-storage": "supports_table_storage_introspection",
 }
 
 INTROSPECT_TYPES = list(_TYPE_CAPABILITIES)
@@ -132,6 +136,9 @@ def create_parser(subparsers):
   %(prog)s sequences --database mydb
   %(prog)s sequences order_id_seq --database mydb
 
+  # Get one table's storage split (total, data, index bytes; row estimate)
+  %(prog)s table-storage orders --database mydb
+
   # Output as JSON
   %(prog)s tables --database mydb -o json
 
@@ -173,8 +180,9 @@ def create_parser(subparsers):
         "name",
         nargs="?",
         default=None,
-        help="Object name. Required for columns, indexes and foreign-keys "
-        "(the table they belong to); optional for triggers (a table) "
+        help="Object name. Required for columns, indexes, foreign-keys "
+        "(the table they belong to) and table-storage (the table itself); "
+        "optional for triggers (a table) "
         "and for views, materialized-views, sequences and extensions "
         "(one object); refused for tables and database",
     )
@@ -377,6 +385,26 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 sequences = introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
+        elif args.type == "table-storage":
+            # The storage figures ride the listing's projection, so the
+            # question asks the listing and picks the row -- one read, and
+            # none of the three per-table questions get_table_info would add
+            # (columns, indexes, foreign keys) that a storage answer does not
+            # need. The name is required because every figure is that
+            # table's own.
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'table-storage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            tables = introspector.list_tables(schema=None, include_system=args.include_system)
+            info = next((t for t in tables if t.name == args.name), None)
+            if info is None:
+                print(f"Error: Table '{args.name}' not found", file=sys.stderr)
+                sys.exit(1)
+            data = _serialize_for_output([info])
+            provider.display_results(data, title=f"Table storage {args.name}")
 
     except ConnectionError as e:
         provider.display_connection_error(e)
@@ -514,6 +542,22 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 sequences = await introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
+        elif args.type == "table-storage":
+            # The async twin of the sync branch: the same listing read,
+            # awaited, and the same pick.
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'table-storage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            tables = await introspector.list_tables(schema=None, include_system=args.include_system)
+            info = next((t for t in tables if t.name == args.name), None)
+            if info is None:
+                print(f"Error: Table '{args.name}' not found", file=sys.stderr)
+                sys.exit(1)
+            data = _serialize_for_output([info])
+            provider.display_results(data, title=f"Table storage {args.name}")
 
     except ConnectionError as e:
         provider.display_connection_error(e)
