@@ -98,7 +98,7 @@ When using these examples as reference:
 - Focus on the **SECTION: Business Logic** portion
 - The Setup and Teardown sections are boilerplate for execution only
 - Copy the business logic pattern to your own project
-- All SQL operations use expression classes (CreateTableExpression, InsertExpression, QueryExpression, etc.)
+- All SQL operations use expression classes (CreateTableStatement, InsertStatement, QueryStatement, etc.)
 
 ## PostgreSQL-Specific Features
 

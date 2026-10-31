@@ -16,8 +16,11 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     VarCharType,
@@ -26,7 +29,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterTableExpression, AddColumn,
+    AlterTableStatement, AddColumnAction,
 )
 
 config = PostgresConnectionConfig(
@@ -41,14 +44,14 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_users = DropTableExpression(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
+drop_users = DropTableStatement(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
 sql, params = drop_users.to_sql()
 backend.execute(sql, params)
 
-users_table = CreateTableExpression(
+users_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'users'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ColumnDefinition(dialect, "email", VarCharType(dialect, length=200)),
     ]
@@ -75,8 +78,8 @@ snapshot_json = json.dumps(snapshot_before.to_dict(), default=str)
 snapshot_loaded = SchemaSnapshot.from_dict(json.loads(snapshot_json))
 
 # Modify the database
-add_phone = AlterTableExpression(dialect, Table(dialect, 'users'), [
-    AddColumn(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
+add_phone = AlterTableStatement(dialect, Table(dialect, 'users'), [
+    AddColumnAction(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
 ])
 sql, params = add_phone.to_sql()
 backend.execute(sql, params)

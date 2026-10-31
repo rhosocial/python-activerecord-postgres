@@ -150,21 +150,21 @@ PostgreSQL supports TRUNCATE TABLE with several database-specific features:
 **Example:**
 ```python
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+from rhosocial.activerecord.backend.expression.statements import TruncateStatement
 
 # Basic truncate
 dialect = PostgresDialect()
-expr = TruncateExpression(dialect, table_name="users")
+expr = TruncateStatement(dialect, table_name="users")
 sql, params = dialect.format_truncate_statement(expr)
 # Result: TRUNCATE TABLE "users"
 
 # With RESTART IDENTITY (PostgreSQL 8.4+)
-expr = TruncateExpression(dialect, table_name="users", restart_identity=True)
+expr = TruncateStatement(dialect, table_name="users", restart_identity=True)
 sql, params = dialect.format_truncate_statement(expr)
 # Result: TRUNCATE TABLE "users" RESTART IDENTITY
 
 # With CASCADE
-expr = TruncateExpression(dialect, table_name="orders", cascade=True)
+expr = TruncateStatement(dialect, table_name="orders", cascade=True)
 sql, params = dialect.format_truncate_statement(expr)
 # Result: TRUNCATE TABLE "orders" CASCADE
 ```

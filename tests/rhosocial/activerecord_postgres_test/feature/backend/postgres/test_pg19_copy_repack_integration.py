@@ -3,13 +3,13 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal, QueryExpression
+from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCopyFromExpression,
-    PostgresCopyToExpression,
-    PostgresRepackExpression,
+    PostgresCopyFromStatement,
+    PostgresCopyToStatement,
+    PostgresRepackStatement,
 )
 
 
@@ -33,22 +33,22 @@ def test_live_copy_round_trip_and_native_repack(postgres_backend):
     prepare_table(postgres_backend)
     try:
         copied = postgres_backend.copy_from(
-            PostgresCopyFromExpression(dialect, TABLE_NAME),
+            PostgresCopyFromStatement(dialect, TABLE_NAME),
             [b"1\tAlice\n", b"2\tBob\n"],
         )
         assert copied == 2
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),
             where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 1)),
         )
-        assert postgres_backend.copy_to(PostgresCopyToExpression(dialect, query=query)) == b"2\tBob\n"
+        assert postgres_backend.copy_to(PostgresCopyToStatement(dialect, query=query)) == b"2\tBob\n"
 
         if dialect.version >= (19, 0, 0):
             json_data = postgres_backend.copy_to(
-                PostgresCopyToExpression(
+                PostgresCopyToStatement(
                     dialect,
                     table_name=TABLE_NAME,
                     format="json",
@@ -57,7 +57,7 @@ def test_live_copy_round_trip_and_native_repack(postgres_backend):
             )
             assert b'"name":"Alice"' in json_data
             assert b'"name":"Bob"' in json_data
-            postgres_backend.execute(*PostgresRepackExpression(dialect, table_name=TABLE_NAME).to_sql())
+            postgres_backend.execute(*PostgresRepackStatement(dialect, table_name=TABLE_NAME).to_sql())
     finally:
         postgres_backend.execute(f'DROP TABLE IF EXISTS "{TABLE_NAME}"')
 
@@ -75,12 +75,12 @@ def test_live_pg19_partitioned_copy_to(postgres_backend):
     )
     try:
         copied = postgres_backend.copy_from(
-            PostgresCopyFromExpression(dialect, PARTITION_NAME),
+            PostgresCopyFromStatement(dialect, PARTITION_NAME),
             b"1\tPartitioned\n",
         )
         assert copied == 1
         data = postgres_backend.copy_to(
-            PostgresCopyToExpression(
+            PostgresCopyToStatement(
                 dialect,
                 table_name=PARTITIONED_TABLE_NAME,
                 partitioned=True,
@@ -97,23 +97,23 @@ async def test_live_async_copy_round_trip_and_native_repack(async_postgres_backe
     await async_prepare_table(async_postgres_backend)
     try:
         copied = await async_postgres_backend.copy_from(
-            PostgresCopyFromExpression(dialect, TABLE_NAME),
+            PostgresCopyFromStatement(dialect, TABLE_NAME),
             [b"1\tAlice\n", b"2\tBob\n"],
         )
         assert copied == 2
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id"), Column(dialect, "name")],
             from_=Table(dialect, TABLE_NAME),
             where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 1)),
         )
-        copied_query = await async_postgres_backend.copy_to(PostgresCopyToExpression(dialect, query=query))
+        copied_query = await async_postgres_backend.copy_to(PostgresCopyToStatement(dialect, query=query))
         assert copied_query == b"2\tBob\n"
 
         if dialect.version >= (19, 0, 0):
             json_data = await async_postgres_backend.copy_to(
-                PostgresCopyToExpression(
+                PostgresCopyToStatement(
                     dialect,
                     table_name=TABLE_NAME,
                     format="json",
@@ -121,6 +121,6 @@ async def test_live_async_copy_round_trip_and_native_repack(async_postgres_backe
                 )
             )
             assert b'"name":"Alice"' in json_data
-            await async_postgres_backend.execute(*PostgresRepackExpression(dialect, table_name=TABLE_NAME).to_sql())
+            await async_postgres_backend.execute(*PostgresRepackStatement(dialect, table_name=TABLE_NAME).to_sql())
     finally:
         await async_postgres_backend.execute(f'DROP TABLE IF EXISTS "{TABLE_NAME}"')

@@ -91,10 +91,10 @@ class TestTruncateSupport:
 
     def test_format_truncate_statement_basic(self):
         """Test basic TRUNCATE statement formatting."""
-        from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.expression.statements import TruncateStatement
 
         dialect = PostgresDialect()
-        expr = TruncateExpression(dialect, table=Table(dialect, 'users'))
+        expr = TruncateStatement(dialect, table=Table(dialect, 'users'))
         sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users"'
@@ -102,10 +102,10 @@ class TestTruncateSupport:
 
     def test_format_truncate_statement_with_restart_identity(self):
         """Test TRUNCATE statement with RESTART IDENTITY."""
-        from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.expression.statements import TruncateStatement
 
         dialect = PostgresDialect(version=(9, 0, 0))
-        expr = TruncateExpression(dialect, table=Table(dialect, 'users'), restart_identity=True)
+        expr = TruncateStatement(dialect, table=Table(dialect, 'users'), restart_identity=True)
         sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "users" RESTART IDENTITY'
@@ -113,10 +113,10 @@ class TestTruncateSupport:
 
     def test_format_truncate_statement_with_cascade(self):
         """Test TRUNCATE statement with CASCADE."""
-        from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.expression.statements import TruncateStatement
 
         dialect = PostgresDialect()
-        expr = TruncateExpression(dialect, table=Table(dialect, 'orders'), cascade=True)
+        expr = TruncateStatement(dialect, table=Table(dialect, 'orders'), cascade=True)
         sql, params = expr.to_sql()
 
         assert sql == 'TRUNCATE TABLE "orders" CASCADE'
@@ -124,10 +124,10 @@ class TestTruncateSupport:
 
     def test_format_truncate_statement_with_restart_identity_and_cascade(self):
         """Test TRUNCATE statement with both RESTART IDENTITY and CASCADE."""
-        from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.expression.statements import TruncateStatement
 
         dialect = PostgresDialect(version=(9, 0, 0))
-        expr = TruncateExpression(
+        expr = TruncateStatement(
             dialect,
             table=Table(dialect, 'orders'),
             restart_identity=True,
@@ -141,12 +141,12 @@ class TestTruncateSupport:
     def test_format_truncate_statement_restart_identity_unsupported_version(self):
         """Test TRUNCATE with RESTART IDENTITY on unsupported version raises error."""
         import pytest
-        from rhosocial.activerecord.backend.expression.statements import TruncateExpression
+        from rhosocial.activerecord.backend.expression.statements import TruncateStatement
         from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
         # PostgreSQL 8.3 does not support RESTART IDENTITY
         dialect = PostgresDialect(version=(8, 3, 0))
-        expr = TruncateExpression(dialect, table=Table(dialect, 'users'), restart_identity=True)
+        expr = TruncateStatement(dialect, table=Table(dialect, 'users'), restart_identity=True)
 
         # RESTART IDENTITY should raise UnsupportedFeatureError on unsupported version
         with pytest.raises(UnsupportedFeatureError, match="RESTART IDENTITY"):

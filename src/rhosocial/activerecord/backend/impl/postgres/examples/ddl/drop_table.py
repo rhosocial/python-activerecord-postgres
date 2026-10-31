@@ -24,12 +24,12 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression import CreateTableExpression
+from rhosocial.activerecord.backend.expression import CreateTableStatement
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
 )
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -44,10 +44,10 @@ backend.execute(sql, params)
 # ============================================================
 # SECTION: DROP TABLE
 # ============================================================
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 from rhosocial.activerecord.backend.expression.objects import Table
 
-drop_expr = DropTableExpression(
+drop_expr = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
 )
@@ -57,7 +57,7 @@ print(f"Params: {params}")
 backend.execute(sql, params)
 
 # Already deleted
-drop_expr_exists = DropTableExpression(
+drop_expr_exists = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -72,5 +72,5 @@ backend.execute(sql, params)
 backend.disconnect()
 
 # Key points:
-# 1. Use DropTableExpression to drop tables
+# 1. Use DropTableStatement to drop tables
 # 2. if_exists=True prevents error

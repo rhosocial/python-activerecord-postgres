@@ -17,8 +17,8 @@ from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
     from ...expression.ddl.rls_config import (
-        PostgresAlterTableRlsExpression,
-        PostgresForceRlsExpression,
+        PostgresAlterTableRlsStatement,
+        PostgresForceRlsStatement,
     )
 
 
@@ -30,15 +30,15 @@ class PostgresRlsConfigMixin:
     # ------------------------------------------------------------------ #
     def supports_rls_enable_disable(self) -> bool:
         """``ENABLE/DISABLE ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_rls_force(self) -> bool:
         """``FORCE / NO FORCE ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_rls_enable_always(self) -> bool:
         """``ENABLE ALWAYS ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers
@@ -58,12 +58,12 @@ class PostgresRlsConfigMixin:
     # ENABLE / DISABLE
     # ------------------------------------------------------------------ #
     def format_alter_table_rls_statement(
-        self, expr: "PostgresAlterTableRlsExpression"
+        self, expr: "PostgresAlterTableRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY``.
 
         Args:
-            expr: :class:`PostgresAlterTableRlsExpression`.
+            expr: :class:`PostgresAlterTableRlsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -79,12 +79,16 @@ class PostgresRlsConfigMixin:
                 "ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY",
                 suggestion="requires PostgreSQL 9.5+",
             )
-        if expr.always and expr.mode.value == "DISABLE":
+        # Compare and spell the *word*: an artifact carries it (JSON has no
+        # enum) and the constructor keeps what it was handed, so reading
+        # ``.value`` raised on a round-tripped node.
+        mode_word = str(expr.mode)
+        if expr.always and mode_word == "DISABLE":
             raise ValueError(
                 "ENABLE ALWAYS is only valid with ENABLE ROW LEVEL SECURITY"
             )
 
-        mode = "ENABLE ALWAYS" if expr.always else expr.mode.value
+        mode = "ENABLE ALWAYS" if expr.always else mode_word
         parts = [
             "ALTER TABLE",
             self._format_rls_table_ref(expr.schema, expr.table_name),
@@ -96,12 +100,12 @@ class PostgresRlsConfigMixin:
     # FORCE / NO FORCE
     # ------------------------------------------------------------------ #
     def format_force_rls_statement(
-        self, expr: "PostgresForceRlsExpression"
+        self, expr: "PostgresForceRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... FORCE/NO FORCE ROW LEVEL SECURITY``.
 
         Args:
-            expr: :class:`PostgresForceRlsExpression`.
+            expr: :class:`PostgresForceRlsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

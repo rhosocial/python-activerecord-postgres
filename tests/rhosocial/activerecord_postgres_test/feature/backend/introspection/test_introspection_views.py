@@ -7,7 +7,7 @@ This module tests the list_views and get_view_info methods for retrieving view m
 
 import pytest
 
-from rhosocial.activerecord.backend.introspection.types import ViewInfo
+from rhosocial.activerecord.backend.introspection.types import IntrospectionViewInfo
 
 
 # SQL statements for async view tests (duplicated from conftest to avoid import issues)
@@ -86,7 +86,7 @@ class TestGetViewInfo:
         view = backend_with_view.introspector.get_view_info("user_summary")
 
         assert view is not None
-        assert isinstance(view, ViewInfo)
+        assert isinstance(view, IntrospectionViewInfo)
         assert view.name == "user_summary"
 
     def test_get_view_info_nonexistent(self, backend_with_view):
@@ -105,7 +105,7 @@ class TestGetViewInfo:
 
 
 class TestViewInfoDetails:
-    """Tests for ViewInfo detail properties."""
+    """Tests for IntrospectionViewInfo detail properties."""
 
     def test_view_schema(self, backend_with_view):
         """Test that view schema is correctly identified."""

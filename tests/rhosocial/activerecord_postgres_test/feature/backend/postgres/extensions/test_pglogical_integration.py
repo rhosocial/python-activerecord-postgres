@@ -17,7 +17,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pglogical import (
     pglogical_create_node,
@@ -52,7 +52,7 @@ class TestPglogicalIntegration:
                 "test_node",
                 "host=localhost dbname=test",
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[node_func.as_("node_result")],
             )
@@ -73,7 +73,7 @@ class TestPglogicalIntegration:
         try:
             # Show all subscription statuses
             status_func = pglogical_show_subscription_status(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[status_func.as_("subscription_status")],
             )
@@ -113,7 +113,7 @@ class TestAsyncPglogicalIntegration:
                 "test_node",
                 "host=localhost dbname=test",
             )
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[node_func.as_("node_result")],
             )
@@ -135,7 +135,7 @@ class TestAsyncPglogicalIntegration:
         try:
             # Show all subscription statuses
             status_func = pglogical_show_subscription_status(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[status_func.as_("subscription_status")],
             )

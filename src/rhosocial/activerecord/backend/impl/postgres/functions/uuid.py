@@ -269,12 +269,13 @@ def uuid_default_generator(dialect: "SQLDialectBase") -> core.FunctionCall:
 
     Example:
         >>> from rhosocial.activerecord.backend.expression.statements import (
-        ...     ColumnDefinition, ColumnConstraint, ColumnConstraintType,
+        ...     ColumnDefinition, ColumnConstraint, ColumnPrimaryKeyConstraint,
+        ...     ColumnDefaultConstraint,
         ... )
         >>> uuid_func = uuid_default_generator(dialect)
         >>> ColumnDefinition('id', 'UUID', constraints=[
-        ...     ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-        ...     ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=uuid_func),
+        ...     ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+        ...     ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, uuid_func)),
         ... ])
     """
     version = dialect.get_server_version()

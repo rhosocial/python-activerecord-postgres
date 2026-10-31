@@ -12,8 +12,8 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.trigger import PostgresTriggerMixin
 from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
 from rhosocial.activerecord.backend.expression.statements import (
-    CreateTriggerExpression,
-    DropTriggerExpression,
+    CreateTriggerStatement,
+    DropTriggerStatement,
     TriggerTiming,
     TriggerEvent,
     TriggerLevel,
@@ -80,7 +80,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_basic_before(self):
         """Test basic CREATE TRIGGER BEFORE statement."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'update_timestamp'),
             table=Table(dialect, 'users'),
@@ -97,7 +97,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_basic_after(self):
         """Test basic CREATE TRIGGER AFTER statement."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'log_insert'),
             table=Table(dialect, 'users'),
@@ -111,7 +111,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_multiple_events(self):
         """Test CREATE TRIGGER with multiple events."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'audit_trigger'),
             table=Table(dialect, 'users'),
@@ -125,7 +125,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_update_of(self):
         """Test CREATE TRIGGER with UPDATE OF columns."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'check_status'),
             table=Table(dialect, 'orders'),
@@ -140,7 +140,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_with_level_row(self):
         """Test CREATE TRIGGER with FOR EACH ROW."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             table=Table(dialect, 'users'),
@@ -155,7 +155,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_with_level_statement(self):
         """Test CREATE TRIGGER with FOR EACH STATEMENT."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             table=Table(dialect, 'users'),
@@ -170,7 +170,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_if_not_exists(self):
         """Test CREATE TRIGGER IF NOT EXISTS."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             table=Table(dialect, 'users'),
@@ -185,7 +185,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_with_referencing_pg10(self):
         """Test CREATE TRIGGER with REFERENCING clause on PG 10."""
         dialect = PostgresDialect((10, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             table=Table(dialect, 'users'),
@@ -201,7 +201,7 @@ class TestFormatCreateTriggerStatement:
         """Test CREATE TRIGGER without FOR EACH clause (level=None)."""
         from rhosocial.activerecord.backend.expression.statements import TriggerLevel  # noqa: F401
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'simple_trigger'),
             table=Table(dialect, 'users'),
@@ -219,7 +219,7 @@ class TestFormatCreateTriggerStatement:
         from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         dialect = PostgresDialect((14, 0, 0))
         condition = ComparisonPredicate(dialect, "=", Column(dialect, "status"), Literal(dialect, "ACTIVE"))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'check_status'),
             table=Table(dialect, 'users'),
@@ -236,7 +236,7 @@ class TestFormatCreateTriggerStatement:
     def test_create_trigger_instead_of(self):
         """Test CREATE TRIGGER INSTEAD OF for views."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = CreateTriggerExpression(
+        expr = CreateTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'view_trigger'),
             table=Table(dialect, 'user_view'),
@@ -254,7 +254,7 @@ class TestFormatDropTriggerStatement:
     def test_drop_trigger_basic(self):
         """Test basic DROP TRIGGER statement."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropTriggerExpression(
+        expr = DropTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger')
         )
@@ -264,7 +264,7 @@ class TestFormatDropTriggerStatement:
     def test_drop_trigger_with_table(self):
         """Test DROP TRIGGER with table name."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropTriggerExpression(
+        expr = DropTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             table=Table(dialect, 'users')
@@ -275,7 +275,7 @@ class TestFormatDropTriggerStatement:
     def test_drop_trigger_if_exists(self):
         """Test DROP TRIGGER IF EXISTS."""
         dialect = PostgresDialect((14, 0, 0))
-        expr = DropTriggerExpression(
+        expr = DropTriggerStatement(
             dialect,
             trigger=Trigger(dialect, 'test_trigger'),
             if_exists=True
@@ -290,8 +290,14 @@ class TestPostgresTriggerMixinDirect:
     class _Host:
         version = (9, 5, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _LowHost:
         version = (9, 4, 0)
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _TriggerMixin(_Host, PostgresTriggerMixin):
         pass

@@ -11,17 +11,19 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
+    DropTableStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -37,7 +39,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -46,7 +48,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -54,8 +56,8 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -63,7 +65,7 @@ create_table = CreateTableExpression(
 )
 backend.execute(*create_table.to_sql())
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['name'],
@@ -78,16 +80,16 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    AlterTableExpression,
+    AlterTableStatement,
     ColumnDefinition,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AddColumn,
-    RenameObject,
+    AddColumnAction,
+    RenameColumnAction,
 )
 
 # Add a new column
-add_email_action = AddColumn(
+add_email_action = AddColumnAction(
     dialect=dialect,
     column=ColumnDefinition(
         name='email',
@@ -95,7 +97,7 @@ add_email_action = AddColumn(
     ),
 )
 
-add_email_expr = AlterTableExpression(
+add_email_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[add_email_action],
@@ -112,7 +114,7 @@ backend.execute(sql, params)
 print("Column added successfully")
 
 # Add another column without default (PostgreSQL ALTER TABLE doesn't support parameterized DEFAULT well)
-add_age_action = AddColumn(
+add_age_action = AddColumnAction(
     dialect=dialect,
     column=ColumnDefinition(
         'age',
@@ -120,7 +122,7 @@ add_age_action = AddColumn(
     ),
 )
 
-add_age_expr = AlterTableExpression(
+add_age_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[add_age_action],
@@ -131,13 +133,13 @@ backend.execute(sql, params)
 print("Column age added successfully")
 
 # Rename a column
-rename_action = RenameObject(
+rename_action = RenameColumnAction(
     dialect=dialect,
     old_name='name',
     new_name='full_name',
 )
 
-rename_expr = AlterTableExpression(
+rename_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     actions=[rename_action],
@@ -149,12 +151,12 @@ backend.execute(sql, params)
 print("Column renamed successfully")
 
 # Verify table structure
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-verify_expr = QueryExpression(
+verify_expr = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'column_name'),

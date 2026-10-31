@@ -49,7 +49,7 @@ class PostgresAdvisoryLockSupport(Protocol):
         """
         ...  # pragma: no cover
 
-    def format_advisory_lock(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_advisory_lock_expression(self, expr: "PostgresAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for acquiring an advisory lock.
 
@@ -61,7 +61,7 @@ class PostgresAdvisoryLockSupport(Protocol):
         """
         ...  # pragma: no cover
 
-    def format_advisory_unlock(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_expression(self, expr: "PostgresAdvisoryUnlockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing an advisory lock.
 
@@ -73,7 +73,7 @@ class PostgresAdvisoryLockSupport(Protocol):
         """
         ...  # pragma: no cover
 
-    def format_advisory_unlock_all(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
+    def format_advisory_unlock_all_expression(self, expr: "PostgresAdvisoryUnlockAllExpression") -> Tuple[str, tuple]:
         """
         Format SQL for releasing all advisory locks.
 
@@ -85,7 +85,7 @@ class PostgresAdvisoryLockSupport(Protocol):
         """
         ...  # pragma: no cover
 
-    def format_try_advisory_lock(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
+    def format_try_advisory_lock_expression(self, expr: "PostgresTryAdvisoryLockExpression") -> Tuple[str, tuple]:
         """
         Format SQL for non-blocking advisory lock acquisition.
 

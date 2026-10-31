@@ -23,14 +23,14 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -65,14 +65,14 @@ def btree_gin_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(element_type=TextType(dialect=dialect), dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gin'),
         columns=columns,
@@ -87,7 +87,7 @@ def btree_gin_env(postgres_backend_single):
         [Literal(dialect, "Bob"), Literal(dialect, 20), Literal(dialect, "{marketing,frontend}")],
         [Literal(dialect, "Charlie"), Literal(dialect, 30), Literal(dialect, "{engineering,frontend}")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_btree_gin'),
         columns=["name", "value", "tags"],
@@ -99,7 +99,7 @@ def btree_gin_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gin'),
         if_exists=True,
@@ -130,7 +130,7 @@ class TestBtreeGinIntegration:
         backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -161,7 +161,7 @@ class TestBtreeGinIntegration:
         backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -192,7 +192,7 @@ class TestBtreeGinIntegration:
         backend.execute(sql, params)
 
         # Query the table and verify data is accessible
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "value")],
             from_=Table(dialect, "test_btree_gin"),
@@ -220,14 +220,14 @@ async def async_btree_gin_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
         ColumnDefinition(dialect, name="tags", data_type=PostgresArrayType(element_type=TextType(dialect=dialect), dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gin_async'),
         columns=columns,
@@ -242,7 +242,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
         [Literal(dialect, "Bob"), Literal(dialect, 20), Literal(dialect, "{marketing,frontend}")],
         [Literal(dialect, "Charlie"), Literal(dialect, 30), Literal(dialect, "{engineering,frontend}")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_btree_gin_async'),
         columns=["name", "value", "tags"],
@@ -254,7 +254,7 @@ async def async_btree_gin_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gin_async'),
         if_exists=True,
@@ -286,7 +286,7 @@ class TestAsyncBtreeGinIntegration:
         await backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -320,7 +320,7 @@ class TestAsyncBtreeGinIntegration:
         await backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -354,7 +354,7 @@ class TestAsyncBtreeGinIntegration:
         await backend.execute(sql, params)
 
         # Query the table and verify data is accessible
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "value")],
             from_=Table(dialect, "test_btree_gin_async"),

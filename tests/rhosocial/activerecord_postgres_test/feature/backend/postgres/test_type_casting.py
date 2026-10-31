@@ -10,6 +10,7 @@ Tests for:
 import pytest  # noqa: F401
 import warnings
 
+from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
 from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -69,7 +70,10 @@ class TestTypeCastingMixin:
     def test_literal_cast(self):
         """Test type cast on Literal."""
         lit = Literal(self.dialect, "123")
-        expr = lit.cast(_t(self.dialect, INTEGER))
+        # A Literal is a value node and carries no operation surface of its
+        # own (rules 4.3), so the cast is composed with the cast factory over
+        # it rather than as a chain on the literal.
+        expr = cast(self.dialect, lit, _t(self.dialect, INTEGER))
         sql, params = expr.to_sql()
         assert sql == "%s::integer"
         assert params == ("123",)
@@ -168,7 +172,7 @@ class TestPostgresDialectFormatCast:
     def test_format_cast_preserves_params(self):
         """Test that parameters are preserved."""
         params_in = ("test_value",)
-        expr = Literal(self.dialect, "test_value").cast(_t(self.dialect, TEXT))
+        expr = cast(self.dialect, Literal(self.dialect, "test_value"), _t(self.dialect, TEXT))
         sql, params = expr.to_sql()
         assert sql == "%s::text"
         assert params == params_in

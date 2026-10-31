@@ -17,15 +17,17 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefaultConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
-from rhosocial.activerecord.backend.expression.functions.datetime import current_timestamp
+from rhosocial.activerecord.backend.expression import functions as F
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     IndexDefinition,
 )
@@ -42,7 +44,7 @@ backend.connect()
 dialect = backend.dialect
 
 # Drop if exists for clean setup
-drop = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop.to_sql()
 backend.execute(sql, params)
 
@@ -55,21 +57,21 @@ columns = [
         name='id',
         data_type=dialect.parse_type('SERIAL'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='name',
         data_type=dialect.parse_type('VARCHAR(200)'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='price',
         data_type=dialect.parse_type('NUMERIC(10,2)'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
@@ -80,17 +82,14 @@ columns = [
         name='is_active',
         data_type=dialect.parse_type('BOOLEAN'),
         constraints=[
-            ColumnConstraint(ColumnConstraintType.DEFAULT, default_value=True),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True)),
         ],
     ),
     ColumnDefinition(
         name='created_at',
         data_type=dialect.parse_type('TIMESTAMP'),
         constraints=[
-            ColumnConstraint(
-                ColumnConstraintType.DEFAULT,
-                default_value=current_timestamp(dialect),
-            ),
+            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, F.current_timestamp(dialect))),
         ],
     ),
 ]
@@ -102,7 +101,7 @@ indexes = [
     ),
 ]
 
-create_expr = CreateTableExpression(
+create_expr = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'products'),
     columns=columns,
@@ -129,7 +128,7 @@ for col in columns_info:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

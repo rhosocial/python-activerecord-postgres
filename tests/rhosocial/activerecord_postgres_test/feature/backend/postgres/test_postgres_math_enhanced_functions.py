@@ -44,23 +44,28 @@ class TestPostgresMathEnhancedFunctions:
         assert "ROUND(" in sql
 
     def test_pow(self, postgres_dialect: PostgresDialect):
-        """Test pow() function."""
+        """Test pow() function.
+
+        The factory keeps its name but writes the canonical POWER spelling:
+        PostgreSQL accepts both, and the classed node carries only the
+        canonical one (measured live 2026-10-18, 17.11: both answer 1024).
+        """
         result = pow(postgres_dialect, Column(postgres_dialect, "base"), Literal(postgres_dialect, 2))
         sql, _ = result.to_sql()
-        assert "POW(" in sql
+        assert "POWER(" in sql
 
     def test_pow_both_columns(self, postgres_dialect: PostgresDialect):
-        """Test pow() with both column references."""
+        """Test pow() with both column references (canonical POWER spelling)."""
         result = pow(
             postgres_dialect,
             Column(postgres_dialect, "x"),
             Column(postgres_dialect, "y")
         )
         sql, _ = result.to_sql()
-        assert "POW(" in sql
+        assert "POWER(" in sql
 
     def test_power(self, postgres_dialect: PostgresDialect):
-        """Test power() function (alias for POW)."""
+        """Test power() function (the canonical spelling; pow() aliases it)."""
         result = power(postgres_dialect, Literal(postgres_dialect, 2), Literal(postgres_dialect, 3))
         sql, _ = result.to_sql()
         assert "POWER(" in sql
@@ -158,7 +163,12 @@ class TestPostgresMathEnhancedFunctions:
 
     def test_max__with_literals(self, postgres_dialect: PostgresDialect):
         """Test max_() with literal values (uses GREATEST)."""
-        result = max_(postgres_dialect, Literal(postgres_dialect, 1), Literal(postgres_dialect, 2), Literal(postgres_dialect, 3))
+        result = max_(
+            postgres_dialect,
+            Literal(postgres_dialect, 1),
+            Literal(postgres_dialect, 2),
+            Literal(postgres_dialect, 3),
+        )
         sql, _ = result.to_sql()
         assert "GREATEST(" in sql
 
@@ -181,7 +191,12 @@ class TestPostgresMathEnhancedFunctions:
 
     def test_min__with_literals(self, postgres_dialect: PostgresDialect):
         """Test min_() with literal values (uses LEAST)."""
-        result = min_(postgres_dialect, Literal(postgres_dialect, 1), Literal(postgres_dialect, 2), Literal(postgres_dialect, 3))
+        result = min_(
+            postgres_dialect,
+            Literal(postgres_dialect, 1),
+            Literal(postgres_dialect, 2),
+            Literal(postgres_dialect, 3),
+        )
         sql, _ = result.to_sql()
         assert "LEAST(" in sql
 
@@ -227,10 +242,10 @@ class TestPostgresMathEnhancedFunctions:
         assert params == ("3.5", 2)
 
     def test_pow_with_string_integer(self, postgres_dialect: PostgresDialect):
-        """Test pow() with string integer exponent."""
+        """Test pow() with string integer exponent (canonical POWER spelling)."""
         result = pow(postgres_dialect, Column(postgres_dialect, "base"), Literal(postgres_dialect, "2"))
         sql, _ = result.to_sql()
-        assert "POW(" in sql
+        assert "POWER(" in sql
 
     def test_sqrt_with_string_integer(self, postgres_dialect: PostgresDialect):
         """Test sqrt() with string integer value."""

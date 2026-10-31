@@ -21,8 +21,8 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterEnumAddValueExpression,
     PostgresAlterEnumTypeAddValueExpression,
     PostgresAlterEnumTypeRenameValueExpression,
-    EnumTypeNameExpression,
-    EnumValuesExpression,
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
 )
 
 
@@ -442,21 +442,21 @@ class TestEnumTypeMixin:
     """Tests for EnumTypeMixin formatting methods."""
 
     def test_format_enum_type_name(self):
-        """Test format_enum_type_name via EnumTypeNameExpression."""
+        """Test format_enum_type_name via PostgresEnumTypeNameExpression."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        sql, params = EnumTypeNameExpression(dialect, name='status').to_sql()
+        sql, params = PostgresEnumTypeNameExpression(dialect, name='status').to_sql()
         assert sql == '"status"'
         assert params == ()
-        sql, params = EnumTypeNameExpression(
+        sql, params = PostgresEnumTypeNameExpression(
             dialect, name='status', schema='app'
         ).to_sql()
         assert sql == '"app"."status"'
         assert params == ()
 
     def test_format_enum_values(self):
-        """Test format_enum_values via EnumValuesExpression."""
+        """Test format_enum_values via PostgresEnumValuesExpression."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        sql, params = EnumValuesExpression(
+        sql, params = PostgresEnumValuesExpression(
             dialect, values=['a', 'b', 'c']
         ).to_sql()
         assert sql == "'a', 'b', 'c'"

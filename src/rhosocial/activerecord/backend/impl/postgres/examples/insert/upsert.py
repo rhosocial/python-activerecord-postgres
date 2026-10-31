@@ -14,11 +14,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
+    QueryStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
+    ColumnUniqueConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -26,7 +29,6 @@ from rhosocial.activerecord.backend.expression.predicates import ComparisonPredi
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     OnConflictClause,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -45,7 +47,7 @@ dialect = backend.dialect
 
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -54,7 +56,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
@@ -62,16 +64,16 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('username', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(ColumnConstraintType.UNIQUE),
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnUniqueConstraint(dialect)),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('email', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('login_count', 'INTEGER'),
     ],
@@ -85,7 +87,7 @@ backend.execute(sql, params)
 # ============================================================
 # Ignore duplicate key violations
 
-insert_nothing = InsertExpression(
+insert_nothing = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
@@ -103,7 +105,7 @@ print(f"DO NOTHING SQL: {sql}")
 backend.execute(sql, params)
 
 # Try to insert again - will be ignored
-insert_nothing2 = InsertExpression(
+insert_nothing2 = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
@@ -119,7 +121,7 @@ insert_nothing2 = InsertExpression(
 sql, params = insert_nothing2.to_sql()
 backend.execute(sql, params)
 
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
     from_=Table(dialect, 'users'),
@@ -134,7 +136,7 @@ print(f"DO NOTHING result: {result.data}")
 # ============================================================
 # Update existing rows on conflict
 
-insert_update = InsertExpression(
+insert_update = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
@@ -155,7 +157,7 @@ print(f"DO UPDATE SQL: {sql}")
 backend.execute(sql, params)
 
 # Insert again - will update
-insert_update2 = InsertExpression(
+insert_update2 = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['username', 'email', 'login_count'],
@@ -174,7 +176,7 @@ insert_update2 = InsertExpression(
 sql, params = insert_update2.to_sql()
 backend.execute(sql, params)
 
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'), Column(dialect, 'username'),
@@ -190,7 +192,7 @@ print(f"DO UPDATE result: {result.data}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,

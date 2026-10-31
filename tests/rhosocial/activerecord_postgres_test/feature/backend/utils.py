@@ -203,7 +203,7 @@ def ensure_extension_installed(backend, *extension_names):
         pytest.skip: If any required extension cannot be installed.
     """
     from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateExtensionExpression,
+        PostgresCreateExtensionStatement,
     )
 
     dialect = backend.dialect
@@ -213,7 +213,7 @@ def ensure_extension_installed(backend, *extension_names):
         if not dialect.is_extension_available(ext_name):
             pytest.skip(f"Extension '{ext_name}' not available on this server")
         try:
-            create_ext = PostgresCreateExtensionExpression(
+            create_ext = PostgresCreateExtensionStatement(
                 dialect=dialect,
                 name=ext_name,
             )
@@ -240,7 +240,7 @@ async def async_ensure_extension_installed(backend, *extension_names):
         pytest.skip: If any required extension cannot be installed.
     """
     from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateExtensionExpression,
+        PostgresCreateExtensionStatement,
     )
 
     dialect = backend.dialect
@@ -250,7 +250,7 @@ async def async_ensure_extension_installed(backend, *extension_names):
         if not dialect.is_extension_available(ext_name):
             pytest.skip(f"Extension '{ext_name}' not available on this server")
         try:
-            create_ext = PostgresCreateExtensionExpression(
+            create_ext = PostgresCreateExtensionStatement(
                 dialect=dialect,
                 name=ext_name,
             )

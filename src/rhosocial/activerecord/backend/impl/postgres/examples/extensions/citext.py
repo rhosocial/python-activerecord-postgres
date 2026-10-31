@@ -29,10 +29,10 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up for demo using DropTableExpression
-from rhosocial.activerecord.backend.expression import DropTableExpression
+# Clean up for demo using DropTableStatement
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -40,24 +40,25 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
 from rhosocial.activerecord.backend.expression import (
-    Column, QueryExpression,
+    Column, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 
@@ -68,7 +69,7 @@ print(f"Extension check: citext available = {available}, installed = {installed}
 
 # Create extension using expression
 if not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="citext",
     )
@@ -85,26 +86,26 @@ columns = [
         name="id",
         data_type="SERIAL",
         constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name="email",
         data_type="CITEXT",
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name="username",
         data_type="VARCHAR(100)",
         constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
 ]
 
-create_expr = CreateTableExpression(
+create_expr = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=columns,
@@ -120,7 +121,7 @@ if available:
     backend.execute(sql, params)
 
     # Example 2: Insert with case-insensitive data
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'users'),
         columns=["email", "username"],
@@ -139,7 +140,7 @@ if available:
 
     # Example 3: Case-insensitive query
     # CITEXT automatically handles case-insensitive comparison
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "id"),
@@ -167,7 +168,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

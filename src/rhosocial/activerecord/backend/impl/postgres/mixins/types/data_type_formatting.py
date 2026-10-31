@@ -32,6 +32,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeTzType,
     TimestampType,
     TimestampTzType,
+    UUIDType,
     TinyIntType,
     VarCharType,
     XmlType,
@@ -63,10 +64,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         the CREATE TYPE ... AS ENUM is a separate DDL operation.
         """
         return data_type.name, ()
-
-    def format_data_type_postgres_bytea(self, data_type) -> Tuple[str, tuple]:
-        return "BYTEA", ()
-
     def format_data_type_postgres_smallserial(self, data_type) -> Tuple[str, tuple]:
         return "SMALLSERIAL", ()
 
@@ -75,13 +72,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def format_data_type_postgres_bigserial(self, data_type) -> Tuple[str, tuple]:
         return "BIGSERIAL", ()
-
-    def format_data_type_postgres_uuid(self, data_type) -> Tuple[str, tuple]:
-        return "UUID", ()
-
-    def format_data_type_postgres_xml(self, data_type) -> Tuple[str, tuple]:
-        return "XML", ()
-
     def format_data_type_postgres_tsvector(self, data_type) -> Tuple[str, tuple]:
         return "TSVECTOR", ()
 
@@ -277,7 +267,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         dropping the *concept* here; what would be lost is the caller's
         statement that this column holds no negative value, and that belongs in
         a ``CHECK`` constraint.
+
+        The shape of ``unsigned`` is checked here, at the rendering end, rather
+        than in the expression's constructor: an expression collects its
+        parameters without judging them, because only the formatter knows which
+        backend will have to honour this flag.  A non-boolean therefore arrives
+        here instead of being turned away at construction, and is named here --
+        testing its truth instead would let ``unsigned="yes"`` through the same
+        branch as ``True``, render a signed ``INTEGER``, and report success,
+        which is the failure this whole refusal exists to prevent.
         """
+        if not isinstance(expr.unsigned, bool):
+            raise TypeError(
+                f"unsigned must be a bool, got "
+                f"{type(expr.unsigned).__name__}; it "
+                f"becomes a type modifier in the rendered DDL."
+            )
         if not expr.unsigned:
             return
         raise UnsupportedFeatureError(
@@ -341,8 +346,23 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         ``UnsupportedFeatureError``, not ``ValueError``: this is a declaration
         the grammar cannot express at all rather than a wrong value, and the two
         exceptions do not share a base class.
+
+        The shape of ``unsigned`` is checked here rather than in the expression's
+        constructor, for the reason given on :meth:`_refuse_unsigned_integer`:
+        the expression collects the value, the formatter judges it.  The
+        attribute is read **directly** rather than with ``getattr``: the
+        expression classes are the protocol, so whether ``unsigned`` exists is
+        statically settled -- ``DecimalType``, ``FloatType``, ``RealType`` and
+        ``DoubleType`` all declare it in ``PARAMETERS`` -- and a probe would
+        turn "the caller passed the wrong class" into a silent signed rendering.
         """
-        if not getattr(expr, "unsigned", False):
+        if not isinstance(expr.unsigned, bool):
+            raise TypeError(
+                f"unsigned must be a bool, got "
+                f"{type(expr.unsigned).__name__}; it "
+                f"becomes a type modifier in the rendered DDL."
+            )
+        if not expr.unsigned:
             return
         raise UnsupportedFeatureError(
             self.name,
@@ -370,7 +390,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`, which is where the reason is written
         down."""
-        self._check_spelling(data_type, TinyIntType)
+        self.check_spelling(data_type, TinyIntType)
         self._refuse_unsigned_integer(data_type, "SMALLINT")
         return "SMALLINT", ()
 
@@ -380,7 +400,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, SmallIntType)
+        self.check_spelling(data_type, SmallIntType)
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -401,7 +421,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, ("integer", "int"))
+        self.check_spelling(data_type, ("integer", "int"))
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -411,7 +431,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self._check_spelling(data_type, BigIntType)
+        self.check_spelling(data_type, BigIntType)
         self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
         return data_type.spelling.upper(), ()
 
@@ -463,7 +483,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_numeric`."""
-        self._check_spelling(data_type, DoubleType)
+        self.check_spelling(data_type, DoubleType)
         self._refuse_unsigned_numeric(data_type, "DOUBLE PRECISION")
         return "DOUBLE PRECISION", ()
 
@@ -480,7 +500,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         whether or not it also named numbers this grammar could not have taken.
         The scale-without-precision refusal and the two ``ValueError`` range
         checks below are untouched and still fire for a signed declaration."""
-        self._check_spelling(data_type, DecimalType)
+        self.check_spelling(data_type, DecimalType)
         self._refuse_unsigned_numeric(data_type, "DECIMAL")
         if data_type.precision is not None:
             if not (1 <= data_type.precision <= 1000):
@@ -531,7 +551,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def format_data_type_char(self, data_type: CharType) -> Tuple[str, tuple]:
         """``CHARACTER`` is PostgreSQL's own long form and is rendered as
         written, since PostgreSQL emits it back from the catalog."""
-        self._check_spelling(data_type, CharType)
+        self.check_spelling(data_type, CharType)
         width = f"({data_type.length})" if data_type.length is not None else ""
         return f"{data_type.spelling.upper()}{width}", ()
 
@@ -539,7 +559,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         """PostgreSQL writes this concept both ways — and emits
         ``character varying`` from the catalog, which is why the long form is a
         spelling of the core type rather than a class of its own."""
-        self._check_spelling(data_type, VarCharType)
+        self.check_spelling(data_type, VarCharType)
         width = f"({data_type.length})" if data_type.length is not None else ""
         if data_type.spelling == "character varying":
             return f"CHARACTER VARYING{width}", ()
@@ -554,12 +574,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         something else. The default spelling must always render, or the concept
         would be unusable on this backend.
         """
-        self._check_spelling(data_type, ("text",))
+        self.check_spelling(data_type, ("text",))
         return "TEXT", ()
 
     def format_data_type_boolean(self, data_type: BooleanType) -> Tuple[str, tuple]:
         """``BOOL`` is a PostgreSQL alias, so it is accepted and rendered."""
-        self._check_spelling(data_type, BooleanType)
+        self.check_spelling(data_type, BooleanType)
         return data_type.spelling.upper(), ()
 
     def format_data_type_blob(self, data_type: BlobType) -> Tuple[str, tuple]:
@@ -571,7 +591,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         carries. A backend that writes the concept under another name normalises
         the spelling; it does not refuse the request.
         """
-        self._check_spelling(data_type, BlobType)
+        self.check_spelling(data_type, BlobType)
         return "BYTEA", ()
 
     def format_data_type_date(self, data_type: DateType) -> Tuple[str, tuple]:
@@ -655,10 +675,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def supports_data_type_postgres_enum(self) -> bool:
         return True
-
-    def supports_data_type_postgres_bytea(self) -> bool:
-        return True
-
     def supports_data_type_postgres_smallserial(self) -> bool:
         return True
 
@@ -667,13 +683,6 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     def supports_data_type_postgres_bigserial(self) -> bool:
         return True
-
-    def supports_data_type_postgres_uuid(self) -> bool:
-        return True
-
-    def supports_data_type_postgres_xml(self) -> bool:
-        return True
-
     def supports_data_type_postgres_tsvector(self) -> bool:
         return True
 
@@ -688,7 +697,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         12 on. Unconditional True meant a 9, 10 or 11 server was told it could
         have the type, and found out by executing the DDL.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_data_type_postgres_bit(self) -> bool:
         return True
@@ -712,7 +721,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         (v MACADDR8) on 9.6 comes back 'type "macaddr8" does not exist'.
         jsonpath is 12, xid8 is 13, the multiranges are 14, this is 10.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_data_type_postgres_point(self) -> bool:
         return True
@@ -757,22 +766,22 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_int4multirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_int8multirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_nummultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_tsmultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_tstzmultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_datemultirange(self) -> bool:
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_data_type_postgres_oid(self) -> bool:
         return True
@@ -794,7 +803,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         back as 'type "xid8" does not exist' rather than at the point of asking
         the dialect what it supports.
         """
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_data_type_postgres_cid(self) -> bool:
         return True
@@ -942,7 +951,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             name = match.group(1)
             supports = getattr(self, f"supports_data_type_{name}", None)
             if supports is not None and supports():
-                cls = self._type_class_for(name)
+                cls = self.type_class_for(name)
                 if cls is not None:
                     result[name] = cls
         return result
@@ -1003,9 +1012,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         The type may be validated against an XML Schema registered for it, but
         the schema is a column/domain attribute rather than part of the type's
-        identity, so it does not appear here. ``PostgresXMLType`` renders the
-        same SQL under its own namespaced name — both are the XML concept, one
-        reached through the core type and one through the backend's.
+        identity, so it does not appear here.
         """
         return "XML", ()
 
@@ -1191,8 +1198,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # Binary
         if self._PG_BINARY_TYPES.match(upper):
-            from ...expression.types import PostgresByteaType
-            return PostgresByteaType(self)
+            return BlobType(dialect=self)
 
         # Date/time
         if self._PG_DATE_TYPES.match(upper):
@@ -1228,8 +1234,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         # UUID
         if self._PG_UUID_TYPES.match(upper):
-            from ...expression.types import PostgresUUIDType
-            return PostgresUUIDType(dialect=self)
+            return UUIDType(dialect=self)
 
         # Boolean
         if upper.startswith("BOOLEAN") or upper.startswith("BOOL"):
@@ -1381,12 +1386,11 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                 PostgresHstoreType,
                 PostgresMoneyType,
                 PostgresPgLSNType,
-                PostgresXMLType,
             )
             if upper.startswith("MONEY"):
                 return PostgresMoneyType(self)
             if upper.startswith("XML"):
-                return PostgresXMLType(self)
+                return XmlType(dialect=self)
             if upper.startswith("PG_LSN"):
                 return PostgresPgLSNType(self)
             if upper.startswith("HSTORE"):

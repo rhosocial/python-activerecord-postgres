@@ -5,7 +5,7 @@ btree_gin extension - B-tree equivalence for GIN indexes.
 This example demonstrates:
 1. Check if btree_gin extension is available
 2. CREATE EXTENSION and create table with text and array columns
-3. Create GIN index with btree_gin operator class using CreateIndexExpression
+3. Create GIN index with btree_gin operator class using CreateIndexStatement
 4. Query data using the GIN index
 """
 
@@ -31,9 +31,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -41,18 +41,18 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    InsertExpression,
-    QueryExpression,
+    InsertStatement,
+    QueryStatement,
     Column,
-    CreateIndexExpression,
+    CreateIndexStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -67,7 +67,7 @@ print(f"Extension check: btree_gin available = {available}, installed = {install
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="btree_gin",
     )
@@ -87,14 +87,14 @@ if installed:
             name="id",
             data_type="SERIAL",
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(name="name", data_type="TEXT"),
         ColumnDefinition(name="department", data_type="TEXT"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'employees'),
         columns=columns,
@@ -113,7 +113,7 @@ if installed:
         [Literal(dialect, "Diana"), Literal(dialect, "Sales")],
         [Literal(dialect, "Eve"), Literal(dialect, "Engineering")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'employees'),
         columns=["name", "department"],
@@ -143,7 +143,7 @@ if installed:
 
     # Example 4: Query data using the GIN index
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "department")],
         from_=Table(dialect, "employees"),
@@ -161,7 +161,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

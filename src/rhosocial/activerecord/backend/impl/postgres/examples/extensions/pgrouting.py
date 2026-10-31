@@ -33,9 +33,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -43,15 +43,15 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    InsertExpression,
-    QueryExpression,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -74,7 +74,7 @@ print(f"Extension: pgrouting available = {pgr_available}, installed = {pgr_insta
 
 # Create extensions if needed
 if postgis_available and not postgis_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="postgis",
     )
@@ -85,7 +85,7 @@ if postgis_available and not postgis_installed:
     backend.introspect_and_adapt()
 
 if pgr_available and not pgr_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pgrouting",
     )
@@ -105,7 +105,7 @@ if pgr_installed:
             name="id",
             data_type="SERIAL",
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(name="source", data_type="INT"),
@@ -118,7 +118,7 @@ if pgr_installed:
         ColumnDefinition(name="y2", data_type="FLOAT"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'route_edges'),
         columns=columns,
@@ -132,7 +132,7 @@ if pgr_installed:
     # Example 2: Insert edge data for a simple directed graph
     # Graph: 1 --(cost=1)--> 2 --(cost=2)--> 3
     #             1 --(cost=4)--> 3
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'route_edges'),
         columns=["source", "target", "cost", "reverse_cost", "x1", "y1", "x2", "y2"],
@@ -167,7 +167,7 @@ if pgr_installed:
         Literal(dialect, 1),
         Literal(dialect, 3),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[dijkstra_func.as_("route")],
     )
@@ -185,7 +185,7 @@ if pgr_installed:
         Literal(dialect, 1),
         Literal(dialect, 3),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[astar_func.as_("route")],
     )
@@ -205,7 +205,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'route_edges'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

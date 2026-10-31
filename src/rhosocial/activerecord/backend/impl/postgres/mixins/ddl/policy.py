@@ -26,9 +26,9 @@ from ...expression.ddl.policy import (
 
 if TYPE_CHECKING:
     from ...expression.ddl.policy import (
-        PostgresAlterPolicyExpression,
-        PostgresCreatePolicyExpression,
-        PostgresDropPolicyExpression,
+        PostgresAlterPolicyStatement,
+        PostgresCreatePolicyStatement,
+        PostgresDropPolicyStatement,
     )
 
 
@@ -56,11 +56,11 @@ class PostgresPolicyMixin:
     # ------------------------------------------------------------------ #
     def supports_create_policy(self) -> bool:
         """CREATE/ALTER/DROP POLICY basic syntax requires PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_policy_restrictive(self) -> bool:
         """AS RESTRICTIVE clause requires PostgreSQL 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_explicit_permissive_keyword(self) -> bool:
         """The literal ``AS PERMISSIVE`` keyword requires PostgreSQL 10+.
@@ -68,23 +68,23 @@ class PostgresPolicyMixin:
         On PostgreSQL 9.5, permissive is the implicit default and the
         keyword itself is not accepted by the parser; it must be omitted.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_drop_policy_if_exists(self) -> bool:
         """DROP POLICY IF EXISTS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_alter_policy_rename(self) -> bool:
         """ALTER POLICY ... RENAME TO ... is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_alter_policy_replace(self) -> bool:
         """ALTER POLICY (roles/USING/WITH CHECK) is supported since 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_current_role_keyword(self) -> bool:
         """CURRENT_ROLE keyword in TO role list requires PostgreSQL 15+."""
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     # ------------------------------------------------------------------ #
     # Shared helpers
@@ -134,7 +134,7 @@ class PostgresPolicyMixin:
     # CREATE POLICY
     # ------------------------------------------------------------------ #
     def format_create_policy_statement(
-        self, expr: "PostgresCreatePolicyExpression"
+        self, expr: "PostgresCreatePolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format CREATE POLICY statement (PostgreSQL-specific).
 
@@ -142,7 +142,7 @@ class PostgresPolicyMixin:
         PostgreSQL's policy semantics, then assembles the SQL.
 
         Args:
-            expr: :class:`PostgresCreatePolicyExpression` with the policy
+            expr: :class:`PostgresCreatePolicyStatement` with the policy
                 definition.
 
         Returns:
@@ -185,7 +185,7 @@ class PostgresPolicyMixin:
         if expr.command is not None:
             cmd = expr.command
             cmd_combined_clause_errors(cmd, expr.using, expr.with_check)
-            command_clause = f"FOR {cmd.value}"
+            command_clause = f"FOR {cmd}"
 
         # TO role list
         to_clause = ""
@@ -227,7 +227,7 @@ class PostgresPolicyMixin:
     # ALTER POLICY
     # ------------------------------------------------------------------ #
     def format_alter_policy_statement(
-        self, expr: "PostgresAlterPolicyExpression"
+        self, expr: "PostgresAlterPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER POLICY statement (PostgreSQL-specific).
 
@@ -241,7 +241,7 @@ class PostgresPolicyMixin:
         omitted clauses leave the existing policy unchanged (no SQL token).
 
         Args:
-            expr: :class:`PostgresAlterPolicyExpression`.
+            expr: :class:`PostgresAlterPolicyStatement`.
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -325,12 +325,12 @@ class PostgresPolicyMixin:
     # DROP POLICY
     # ------------------------------------------------------------------ #
     def format_drop_policy_statement(
-        self, expr: "PostgresDropPolicyExpression"
+        self, expr: "PostgresDropPolicyStatement"
     ) -> Tuple[str, tuple]:
         """Format DROP POLICY statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresDropPolicyExpression`.
+            expr: :class:`PostgresDropPolicyStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

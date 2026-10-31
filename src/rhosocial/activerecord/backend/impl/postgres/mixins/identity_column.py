@@ -52,7 +52,7 @@ class PostgresIdentityColumnMixin(IdentityColumnMixin):
         the live server rejects the clause with a syntax error, so the
         formatter must refuse rather than render it.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_identity_generation_always(self) -> bool:
         """``GENERATED ALWAYS AS IDENTITY`` is in the PostgreSQL synopsis."""

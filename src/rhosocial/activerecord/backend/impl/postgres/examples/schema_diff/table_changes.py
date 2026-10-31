@@ -14,8 +14,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType, TableConstraint, TableConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    TableConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
+    TableForeignKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType, DecimalType,
@@ -37,8 +43,8 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_users = DropTableExpression(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
-drop_orders = DropTableExpression(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
+drop_users = DropTableStatement(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
+drop_orders = DropTableStatement(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
 sql, params = drop_users.to_sql()
 backend.execute(sql, params)
 sql, params = drop_orders.to_sql()
@@ -57,31 +63,28 @@ from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa
 builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 snapshot_before = builder.build(schema="public")
 
-users_table = CreateTableExpression(
+users_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'users'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.NOT_NULL)]),
+            constraints=[ColumnConstraint(branch=ColumnNotNullConstraint())]),
     ]
 )
 sql, params = users_table.to_sql()
 backend.execute(sql, params)
 
-orders_table = CreateTableExpression(
+orders_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'orders'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
         ColumnDefinition(dialect, "amount", DecimalType(dialect, precision=10, scale=2)),
     ],
     table_constraints=[
         TableConstraint(
             dialect,
-            constraint_type=TableConstraintType.FOREIGN_KEY,
-            columns=["user_id"],
-            foreign_key_table=Table(dialect, "users"),
-            foreign_key_columns=["id"],
+            branch=TableForeignKeyConstraint(dialect, ["user_id"], (Table(dialect, "users"), ["id"])),
         )
     ]
 )

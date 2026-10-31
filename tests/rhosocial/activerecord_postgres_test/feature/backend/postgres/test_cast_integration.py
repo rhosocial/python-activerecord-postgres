@@ -17,7 +17,7 @@ Three layers, because they fail differently:
    columns, and types whose value has no text form), and it is the one that
    catches a type whose rendered spelling the server does not recognise.
 2. **Insert through a cast** -- for every type with a text form, the value goes
-   in as ``Literal(text).cast(Type)``. This is the cast doing real work.
+   in as ``cast(dialect, Literal(text), Type)``. This is the cast doing real work.
 3. **Read back through a cast** -- the stored value is cast to text and
    compared, so the assertion is on the value PostgreSQL actually holds rather
    than on a driver-specific Python object.
@@ -30,22 +30,23 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import (
     Column,
+    cast,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     Literal,
-    QueryExpression,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
+from rhosocial.activerecord.backend.expression.types import BlobType, XmlType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBitType,
     PostgresBoxType,
-    PostgresByteaType,
     PostgresCIDType,
     PostgresCidrType,
     PostgresCircleType,
@@ -93,7 +94,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresVectorType,
     PostgresXID8Type,
     PostgresXIDType,
-    PostgresXMLType,
 )
 from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -189,7 +189,7 @@ CASES = [
     Case("character_varying",
          lambda d: _core("VarCharType")(d, length=32, spelling="character varying"),
          "hello", "hello"),
-    Case("bytea", lambda d: PostgresByteaType(d), "abc", r"\x616263"),
+    Case("bytea", lambda d: BlobType(d), "abc", r"\x616263"),
     Case("bit", lambda d: PostgresBitType(n=3, dialect=d), "101", "101"),
     Case("varbit", lambda d: PostgresVarBitType(n=3, dialect=d), "101", "101"),
     Case("cidr", lambda d: PostgresCidrType(d), "192.168.0.0/24", "192.168.0.0/24"),
@@ -218,7 +218,7 @@ CASES = [
          type_name="postgres_jsonpath"),
     Case("regtype", lambda d: PostgresRegTypeType(d), "integer", "integer"),
     Case("regclass", lambda d: PostgresRegClassType(d), "pg_class", "pg_class"),
-    Case("xml", lambda d: PostgresXMLType(d), "<a/>", "<a/>"),
+    Case("xml", lambda d: XmlType(d), "<a/>", "<a/>"),
     Case("tsvector", lambda d: PostgresTSVectorType(d), "cat", "'cat'"),
     Case("tsquery", lambda d: PostgresTSQueryType(d), "cat", "'cat'"),
 
@@ -339,7 +339,7 @@ def _table(case):
 
 
 def _drop(backend, dialect, table):
-    sql, params = DropTableExpression(
+    sql, params = DropTableStatement(
         dialect=dialect, table=Table(dialect, table), if_exists=True
     ).to_sql()
     backend.execute(sql, params)
@@ -347,7 +347,7 @@ def _drop(backend, dialect, table):
 
 def _select_as_text(backend, dialect, table):
     """Read the stored value as text, so the assertion is on PostgreSQL's value."""
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "v").cast(_core("TextType")(dialect))],
         from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -371,7 +371,7 @@ class TestEveryTypeCanBeDeclared:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -379,8 +379,7 @@ class TestEveryTypeCanBeDeclared:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(
@@ -403,7 +402,7 @@ class TestInsertThroughACast:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -411,8 +410,7 @@ class TestInsertThroughACast:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(
@@ -422,14 +420,13 @@ class TestInsertThroughACast:
             sql, params = create.to_sql()
             backend.execute(sql, params)
 
-            insert = InsertExpression(
+            insert = InsertStatement(
                 dialect=dialect,
                 into=Table(dialect, table),
                 columns=["v"],
                 source=ValuesSource(
                     dialect,
-                    [[Literal(dialect, case.literal).cast(
-                        case.factory(dialect))]],
+                    [[cast(dialect, Literal(dialect, case.literal), case.factory(dialect))]],
                 ),
             )
             sql, params = insert.to_sql()
@@ -441,7 +438,7 @@ class TestInsertThroughACast:
                 # The text form is the server's to choose, but the value still
                 # has to parse back into the type it came from.
                 assert result.data[0]["v"]
-                check = QueryExpression(
+                check = QueryStatement(
                     dialect=dialect,
                     select=[Column(dialect, "v")],
                     from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -479,7 +476,7 @@ class TestChainedCasts:
         table = "cast_t_chain"
         _drop(backend, dialect, table)
         try:
-            create = CreateTableExpression(
+            create = CreateTableStatement(
                 dialect=dialect,
                 table=Table(dialect, table),
                 columns=[
@@ -487,8 +484,7 @@ class TestChainedCasts:
                         dialect, name="id",
                         data_type=PostgresSerialType(dialect),
                         constraints=[
-                            ColumnConstraint(
-                                dialect, ColumnConstraintType.PRIMARY_KEY),
+                            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                         ],
                     ),
                     ColumnDefinition(
@@ -505,8 +501,8 @@ class TestChainedCasts:
             # date or a uuid.
             expression = Literal(dialect, _CHAIN_INPUT[chain[1]])
             for name in chain:
-                expression = expression.cast(_type_by_label(dialect, name))
-            sql, params = InsertExpression(
+                expression = cast(dialect, expression, _type_by_label(dialect, name))
+            sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[expression]]),
             ).to_sql()
@@ -560,7 +556,7 @@ class TestRejectedConversions:
         table = _table(case)
         _drop(backend, dialect, table)
         try:
-            sql, params = CreateTableExpression(
+            sql, params = CreateTableStatement(
                 dialect=dialect, table=Table(dialect, table),
                 columns=[
                     ColumnDefinition(dialect, name="v",
@@ -569,10 +565,10 @@ class TestRejectedConversions:
             ).to_sql()
             backend.execute(sql, params)
 
-            sql, params = InsertExpression(
+            sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[
-                    Literal(dialect, literal).cast(case.factory(dialect))]]),
+                    cast(dialect, Literal(dialect, literal), case.factory(dialect))]]),
             ).to_sql()
             with pytest.raises(DatabaseError):
                 backend.execute(sql, params)

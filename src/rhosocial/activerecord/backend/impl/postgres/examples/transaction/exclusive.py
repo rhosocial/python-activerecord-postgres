@@ -15,12 +15,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
-    UpdateExpression,
+    QueryStatement,
+    UpdateStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
@@ -29,7 +31,6 @@ from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -49,7 +50,7 @@ dialect = backend.dialect
 dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 dml_options = ExecutionOptions(stmt_type=StatementType.DML)
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     if_exists=True,
@@ -58,7 +59,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     columns=[
@@ -66,12 +67,12 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('balance', 'NUMERIC(10,2)'),
     ],
@@ -80,7 +81,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'accounts'),
     columns=['name', 'balance'],
@@ -103,7 +104,7 @@ backend.execute(sql, params)
 print("--- READ COMMITTED (PostgreSQL default) ---")
 with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ_COMMITTED):
     # Read Alice's balance
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -118,7 +119,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ
     print(f"READ COMMITTED - Alice's balance: {result.data[0]['balance']}")
 
     # Update within the transaction
-    update_expr = UpdateExpression(
+    update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1100)},
@@ -132,7 +133,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.READ
     backend.execute(sql, params)
 
 # After commit, the change is visible to all subsequent transactions
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'name'), Column(dialect, 'balance')],
     from_=Table(dialect, 'accounts'),
@@ -154,7 +155,7 @@ print(f"After commit - Alice's balance: {result.data[0]['balance']}")
 print("\n--- REPEATABLE READ ---")
 with backend.transaction_manager.transaction(isolation_level=IsolationLevel.REPEATABLE_READ):
     # First read
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -184,7 +185,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.REPE
 print("\n--- SERIALIZABLE ---")
 with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
     # Read all accounts
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -195,7 +196,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERI
     print(f"SERIALIZABLE - All accounts: {result.data}")
 
     # Update Bob's balance
-    update_expr = UpdateExpression(
+    update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 600)},
@@ -216,7 +217,7 @@ print("\n--- Per-transaction isolation level ---")
 
 # Transaction 1: SERIALIZABLE
 with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERIALIZABLE):
-    update_expr = UpdateExpression(
+    update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
         assignments={'balance': Literal(dialect, 1200)},
@@ -231,7 +232,7 @@ with backend.transaction_manager.transaction(isolation_level=IsolationLevel.SERI
 
 # Transaction 2: defaults to READ COMMITTED (PostgreSQL default)
 with backend.transaction():
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
@@ -244,7 +245,7 @@ with backend.transaction():
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'accounts'),
     if_exists=True,

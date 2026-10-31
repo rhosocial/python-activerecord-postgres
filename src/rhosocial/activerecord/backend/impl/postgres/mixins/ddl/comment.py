@@ -1,6 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/comment.py
 """PostgreSQL COMMENT ON DDL implementation."""
 
+from enum import Enum
 from typing import Tuple
 
 
@@ -16,7 +17,7 @@ class PostgresCommentMixin:
         """
         return True
 
-    def format_comment_statement(self, expr) -> Tuple[str, tuple]:
+    def format_comment_on_statement(self, expr) -> Tuple[str, tuple]:
         """Format COMMENT ON statement (PostgreSQL-specific).
 
         Accepts a :class:`~rhosocial.activerecord.backend.expression.objects.SchemaObject`
@@ -29,7 +30,7 @@ class PostgresCommentMixin:
         (clears the comment).
 
         Args:
-            expr: ``CommentOnExpression`` carrying ``object_type``, ``object``,
+            expr: ``CommentOnStatement`` carrying ``object_type``, ``object``,
                 ``comment`` and an optional ``column``.
 
         Returns:
@@ -44,7 +45,10 @@ class PostgresCommentMixin:
         if expr.column:
             object_sql = f"{object_sql}.{self.format_identifier(expr.column)}"
 
-        object_type = getattr(expr.object_type, "value", expr.object_type)
+        # ``object_type`` accepts the enum or its raw spelling.
+        object_type = (
+            expr.object_type.value if isinstance(expr.object_type, Enum) else expr.object_type
+        )
         parts = ["COMMENT ON", object_type, object_sql]
         parts.append("IS")
         parts.append(comment_value)

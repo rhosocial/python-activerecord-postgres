@@ -2,62 +2,63 @@
 """PostgreSQL COPY statement formatting and version gates."""
 
 import re
+from enum import Enum
 from typing import Any, List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
-    from ...expression.copy import PostgresCopyFromExpression, PostgresCopyToExpression
+    from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 class PostgresCopyMixin:
     """PostgreSQL COPY support restricted to client-side streams."""
 
     def supports_copy_to(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_copy_from(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_copy_json(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_from_json(self) -> bool:
         return False
 
     def supports_copy_force_array(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_force_all(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_partitioned_table_to(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_text_header(self) -> bool:
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     def supports_copy_header_match(self) -> bool:
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     def supports_copy_header_line_count(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_on_error(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_reject_limit(self) -> bool:
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def supports_copy_set_null(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_copy_log_verbosity(self) -> bool:
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))
 
     def supports_copy_silent_log(self) -> bool:
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     def _require_copy_version(
         self,
@@ -327,7 +328,7 @@ class PostgresCopyMixin:
 
     def _format_copy_to_source(
         self,
-        expr: "PostgresCopyToExpression",
+        expr: "PostgresCopyToStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         if (expr.table_name is None) == (expr.query is None):
             raise ValueError("COPY TO requires exactly one table_name or query source")
@@ -355,7 +356,7 @@ class PostgresCopyMixin:
 
     def format_copy_to_statement(
         self,
-        expr: "PostgresCopyToExpression",
+        expr: "PostgresCopyToStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format a client-stream-only ``COPY ... TO STDOUT`` statement."""
         self._require_copy_version(self.supports_copy_to(), "COPY TO", (9, 6, 0))
@@ -448,7 +449,7 @@ class PostgresCopyMixin:
 
     def format_copy_from_statement(
         self,
-        expr: "PostgresCopyFromExpression",
+        expr: "PostgresCopyFromStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format a client-stream-only ``COPY ... FROM STDIN`` statement."""
         self._require_copy_version(self.supports_copy_from(), "COPY FROM", (9, 6, 0))
@@ -544,7 +545,9 @@ class PostgresCopyMixin:
             options.append("FREEZE")
         on_error = None
         if expr.on_error is not None:
-            on_error = str(getattr(expr.on_error, "value", expr.on_error)).lower()
+            on_error = str(
+                expr.on_error.value if isinstance(expr.on_error, Enum) else expr.on_error
+            ).lower()
             if on_error not in {"stop", "ignore", "set_null"}:
                 raise ValueError("ON_ERROR must be stop, ignore, or set_null")
             self._require_copy_version(
@@ -580,7 +583,11 @@ class PostgresCopyMixin:
                 raise ValueError("encoding must be a PostgreSQL encoding name")
             options.append(f"ENCODING {self._format_copy_string(encoding, 'encoding')}")
         if expr.log_verbosity is not None:
-            verbosity = str(getattr(expr.log_verbosity, "value", expr.log_verbosity)).lower()
+            verbosity = str(
+                expr.log_verbosity.value
+                if isinstance(expr.log_verbosity, Enum)
+                else expr.log_verbosity
+            ).lower()
             if verbosity not in {"default", "verbose", "silent"}:
                 raise ValueError("LOG_VERBOSITY must be default, verbose, or silent")
             self._require_copy_version(

@@ -10,10 +10,10 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.publication import (
-        PostgresCreatePublicationExpression,
-        PostgresCreateSubscriptionExpression,
-        PostgresDropPublicationExpression,
-        PostgresDropSubscriptionExpression,
+        PostgresCreatePublicationStatement,
+        PostgresCreateSubscriptionStatement,
+        PostgresDropPublicationStatement,
+        PostgresDropSubscriptionStatement,
     )
 
 
@@ -43,25 +43,25 @@ class PostgresPublicationSupport(Protocol):
         ...
 
     def format_create_publication_statement(
-        self, expr: "PostgresCreatePublicationExpression"
+        self, expr: "PostgresCreatePublicationStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE PUBLICATION`` statement."""
         ...
 
     def format_drop_publication_statement(
-        self, expr: "PostgresDropPublicationExpression"
+        self, expr: "PostgresDropPublicationStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP PUBLICATION`` statement."""
         ...
 
     def format_create_subscription_statement(
-        self, expr: "PostgresCreateSubscriptionExpression"
+        self, expr: "PostgresCreateSubscriptionStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE SUBSCRIPTION`` statement."""
         ...
 
     def format_drop_subscription_statement(
-        self, expr: "PostgresDropSubscriptionExpression"
+        self, expr: "PostgresDropSubscriptionStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP SUBSCRIPTION`` statement."""
         ...

@@ -194,11 +194,20 @@ class TestPostgresPartitionMixinDirect:
     class _Host:
         version = (15, 0, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _Pg10Host:
         version = (10, 0, 0)
 
+        def version_at_least(self, floor):
+            return self.version >= floor
+
     class _LowHost:
         version = (9, 6, 0)
+
+        def version_at_least(self, floor):
+            return self.version >= floor
 
     class _PartitionMixin(_Host, PostgresPartitionMixin):
         pass
@@ -753,7 +762,7 @@ class TestPostgresTypeDomainProtocols:
         assert baseline.supports_drop_domain_restrict() is True
         check = DomainCheckConstraint(
             baseline,
-            DomainValueExpression(baseline) > Literal(baseline, 0, inline_literals=True),
+            DomainValueExpression(baseline) > Literal(baseline, 0, inline=True),
         )
         assert baseline.supports_alter_domain_action(PostgresAddDomainCheckAction) is True
         assert isinstance(check, DomainCheckConstraint)

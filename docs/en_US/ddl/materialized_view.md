@@ -13,24 +13,24 @@
 | Expression | Purpose | PostgreSQL-specific options |
 |---|---|---|
 | `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`, `if_not_exists`, `storage_options`, `tablespace`, `column_aliases`, `with_data` |
-| `PostgresRefreshMaterializedViewExpression` | `REFRESH MATERIALIZED VIEW` | `schema`, `concurrently`, `with_data` |
-| `PostgresAlterMaterializedViewExpression` | `ALTER MATERIALIZED VIEW` | `schema`, action list |
+| `PostgresRefreshMaterializedViewPgStatement` | `REFRESH MATERIALIZED VIEW` | `schema`, `concurrently`, `with_data` |
+| `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`, action list |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`, `if_exists`, `cascade` |
 
-The generic core expressions (`CreateMaterializedViewExpression`,
-`RefreshMaterializedViewExpression`, `DropMaterializedViewExpression`) remain
+The generic core expressions (`CreateMaterializedViewStatement`,
+`RefreshMaterializedViewStatement`, `DropMaterializedViewStatement`) remain
 usable; they simply do not carry `schema` / `if_not_exists`.
 
 ## Creating a materialized view
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryExpression, TableExpression
+from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryStatement, TableExpression
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateMaterializedViewExpression,
 )
 
-summary = QueryExpression(
+summary = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, "product_id"),
@@ -117,19 +117,19 @@ create = PostgresCreateMaterializedViewExpression(
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
 )
 
 # standard refresh
-PostgresRefreshMaterializedViewExpression(dialect=dialect, name="sales_summary")
+PostgresRefreshMaterializedViewPgStatement(dialect=dialect, name="sales_summary")
 
 # concurrent refresh — requires a UNIQUE index, rejected below PG 9.4
-PostgresRefreshMaterializedViewExpression(
+PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect, name="sales_summary", schema="reporting", concurrently=True
 )
 
 # populate a WITH NO DATA view
-PostgresRefreshMaterializedViewExpression(
+PostgresRefreshMaterializedViewPgStatement(
     dialect=dialect, name="sales_daily", with_data=True
 )
 ```
@@ -145,7 +145,7 @@ creation).
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresAlterMaterializedViewExpression,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
@@ -153,7 +153,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresSetMaterializedViewSchemaAction,
 )
 
-alter = PostgresAlterMaterializedViewExpression(
+alter = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view_name="sales_summary",
     schema="reporting",
@@ -209,7 +209,7 @@ info = backend.introspector.get_materialized_view_info("sales_summary")
 exists = backend.introspector.materialized_view_exists("sales_summary")
 ```
 
-Each `ViewInfo` carries:
+Each `IntrospectionViewInfo` carries:
 
 | Field | Meaning |
 |---|---|

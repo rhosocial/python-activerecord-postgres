@@ -10,10 +10,10 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.routine import (
-        PostgresCreateAggregateExpression,
-        PostgresCreateFunctionExpression,
-        PostgresDropAggregateExpression,
-        PostgresDropFunctionExpression,
+        PostgresCreateAggregateDdlStatement,
+        PostgresCreateFunctionDdlStatement,
+        PostgresDropAggregateDdlStatement,
+        PostgresDropFunctionDdlStatement,
     )
 
 
@@ -43,12 +43,12 @@ class PostgresRoutineDDLSupport(Protocol):
         ...
 
     def format_create_function_ddl_statement(
-        self, expr: "PostgresCreateFunctionExpression"
+        self, expr: "PostgresCreateFunctionDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE FUNCTION`` statement.
 
         Args:
-            expr: ``PostgresCreateFunctionExpression``.
+            expr: ``PostgresCreateFunctionDdlStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -56,19 +56,19 @@ class PostgresRoutineDDLSupport(Protocol):
         ...
 
     def format_drop_function_ddl_statement(
-        self, expr: "PostgresDropFunctionExpression"
+        self, expr: "PostgresDropFunctionDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP FUNCTION`` statement."""
         ...
 
     def format_create_aggregate_ddl_statement(
-        self, expr: "PostgresCreateAggregateExpression"
+        self, expr: "PostgresCreateAggregateDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE AGGREGATE`` statement."""
         ...
 
     def format_drop_aggregate_ddl_statement(
-        self, expr: "PostgresDropAggregateExpression"
+        self, expr: "PostgresDropAggregateDdlStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP AGGREGATE`` statement."""
         ...

@@ -16,14 +16,13 @@ from typing import Iterable, Optional, Tuple, Union
 from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     Literal,
     OrderByClause,
-    QueryExpression,
+    QueryStatement,
     ValuesSource,
     XMLStandaloneOption,
     XMLTableColumn,
@@ -39,15 +38,15 @@ from rhosocial.activerecord.backend.expression import (
     xmlroot,
     xmlserialize,
     xmltable,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
+from rhosocial.activerecord.backend.expression.core import CastExpression
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression.types import TextType
-from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-    PostgresXMLType,
-)
+from rhosocial.activerecord.backend.expression.types import TextType, XmlType
 
 SQLParam = Optional[Union[str, int, float, bool]]
 SQLParams = Tuple[SQLParam, ...]
@@ -72,16 +71,12 @@ class SQLXMLExample:
         self.executable: bool = executable
 
 
-def text_literal(dialect: PostgresDialect, value: str) -> Literal:
-    expr = Literal(dialect, value)
-    expr.cast(TextType(dialect))
-    return expr
+def text_literal(dialect: PostgresDialect, value: str) -> CastExpression:
+    return CastExpression(dialect, Literal(dialect, value), TextType(dialect))
 
 
-def xml_literal(dialect: PostgresDialect, value: str) -> Literal:
-    expr = Literal(dialect, value)
-    expr.cast(PostgresXMLType(dialect))
-    return expr
+def xml_literal(dialect: PostgresDialect, value: str) -> CastExpression:
+    return CastExpression(dialect, Literal(dialect, value), XmlType(dialect))
 
 
 def render(example: SQLXMLExample) -> None:
@@ -92,12 +87,12 @@ def render(example: SQLXMLExample) -> None:
 
 
 def select(dialect: PostgresDialect, expr) -> SQLQueryAndParams:
-    sql, params = QueryExpression(dialect, [expr]).to_sql()
+    sql, params = QueryStatement(dialect, [expr]).to_sql()
     return sql, tuple(params)
 
 
 def select_from_examples(dialect: PostgresDialect, expr) -> SQLQueryAndParams:
-    sql, params = QueryExpression(
+    sql, params = QueryStatement(
         dialect,
         [expr],
         from_=Table(dialect, EXAMPLE_TABLE),
@@ -245,29 +240,29 @@ def execute_expression(backend: PostgresBackend, expr) -> None:
 
 
 def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> None:
-    execute_expression(backend, DropTableExpression(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
+    execute_expression(backend, DropTableStatement(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
     execute_expression(
         backend,
-        CreateTableExpression(
+        CreateTableStatement(
             dialect,
             Table(dialect, EXAMPLE_TABLE),
             [
                 ColumnDefinition(
                     "id",
                     "INTEGER",
-                    [ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+                    [ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
                 ),
                 ColumnDefinition(
                     "payload",
                     "XML",
-                    [ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+                    [ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
             ],
         ),
     )
     execute_expression(
         backend,
-        InsertExpression(
+        InsertStatement(
             dialect,
             Table(dialect, EXAMPLE_TABLE),
             ValuesSource(
@@ -283,7 +278,7 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
 
 
 def cleanup_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> None:
-    execute_expression(backend, DropTableExpression(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
+    execute_expression(backend, DropTableStatement(dialect, Table(dialect, EXAMPLE_TABLE), if_exists=True))
 
 
 def run_select_examples(dialect: PostgresDialect, examples: Iterable[SQLXMLExample]) -> None:

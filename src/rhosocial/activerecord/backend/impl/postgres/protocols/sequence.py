@@ -20,8 +20,8 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 
 if TYPE_CHECKING:
     from ...expression.statements.ddl_sequence import (
-        AlterSequenceExpression,
-        CreateSequenceExpression,
+        AlterSequenceStatement,
+        CreateSequenceStatement,
     )
 
 
@@ -43,6 +43,15 @@ class PostgresSequenceSupport(
     """
 
     def supports_sequence(self) -> bool: ...
+
+    def supports_sequence_introspection(self) -> bool:
+        """Whether sequences can be read back from ``information_schema``.
+
+        The ``introspect sequences`` family, under the name MariaDB's switch
+        uses too, so the family is answerable the same way across the two
+        engines that share the question.
+        """
+        ...
 
     def supports_create_sequence(self) -> bool: ...
 
@@ -73,9 +82,9 @@ class PostgresSequenceSupport(
     def supports_sequence_owned_by(self) -> bool: ...
 
     def format_create_sequence_statement(
-        self, expr: "CreateSequenceExpression"
+        self, expr: "CreateSequenceStatement"
     ) -> Tuple[str, tuple]: ...
 
     def format_alter_sequence_statement(
-        self, expr: "AlterSequenceExpression"
+        self, expr: "AlterSequenceStatement"
     ) -> Tuple[str, tuple]: ...

@@ -10,8 +10,8 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.collation import (
-        PostgresCreateCollationExpression,
-        PostgresDropCollationExpression,
+        PostgresCreateCollationStatement,
+        PostgresDropCollationStatement,
     )
 
 
@@ -33,13 +33,13 @@ class PostgresCollationDDLSupport(Protocol):
         """Whether CREATE/DROP COLLATION is supported (9.6+)."""
         ...
 
-    def format_create_collation_ddl_statement(
-        self, expr: "PostgresCreateCollationExpression"
+    def format_create_collation_statement(
+        self, expr: "PostgresCreateCollationStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE COLLATION`` statement.
 
         Args:
-            expr: ``PostgresCreateCollationExpression``.
+            expr: ``PostgresCreateCollationStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -49,13 +49,13 @@ class PostgresCollationDDLSupport(Protocol):
         """
         ...
 
-    def format_drop_collation_ddl_statement(
-        self, expr: "PostgresDropCollationExpression"
+    def format_drop_collation_statement(
+        self, expr: "PostgresDropCollationStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP COLLATION`` statement.
 
         Args:
-            expr: ``PostgresDropCollationExpression``.
+            expr: ``PostgresDropCollationStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

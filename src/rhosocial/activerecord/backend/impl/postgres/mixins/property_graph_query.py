@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.graph import (
-        AlterPropertyGraphExpression,
+        AlterPropertyGraphStatement,
         ColumnsClause,
         GraphEdge,
         MatchClause,
@@ -157,17 +157,17 @@ class PostgresPropertyGraphQueryMixin:
         raise ValueError(f"Invalid ALTER PROPERTY GRAPH {label}: {value!r}")
 
     def format_alter_property_graph_statement(
-        self, expr: "AlterPropertyGraphExpression"
+        self, expr: "AlterPropertyGraphStatement"
     ) -> Tuple[str, tuple]:
         """Validate and format an ALTER PROPERTY GRAPH statement."""
         self._require_graph_table("ALTER PROPERTY GRAPH")
 
-        from rhosocial.activerecord.backend.expression.graph import AlterPropertyGraphExpression
+        from rhosocial.activerecord.backend.expression.graph import AlterPropertyGraphStatement
 
-        if not isinstance(expr, AlterPropertyGraphExpression):
+        if not isinstance(expr, AlterPropertyGraphStatement):
             raise TypeError(
                 "ALTER PROPERTY GRAPH expression must be an "
-                "AlterPropertyGraphExpression"
+                "AlterPropertyGraphStatement"
             )
         self._normalize_alter_keyword(expr.action, self.ALTER_ACTIONS, "action")
         self._normalize_alter_keyword(expr.target, self.ALTER_TARGETS, "target")

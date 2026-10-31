@@ -69,7 +69,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@fix/column-constraint-gates"
 
       - name: Create postgres scenario config
         run: |
@@ -284,7 +284,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@fix/column-constraint-gates"
 
       - name: Create postgres scenario config
         run: |
@@ -396,7 +396,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@fix/column-constraint-gates"
 
       - name: Create postgres scenario config
         run: |
@@ -459,12 +459,12 @@ jobs:
           fail_ci_if_error: false
 
   test-postgres-19:
-    name: Python 3.14 / postgres 19beta4
+    name: Python 3.14 / postgres 19rc1
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:19beta4
+        image: postgres:19rc1
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
@@ -494,7 +494,7 @@ jobs:
       - name: Install activerecord and testsuite
         run: |
           pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@fix/column-constraint-gates"
 
       - name: Create postgres scenario config
         run: |

@@ -9,19 +9,19 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresVacuumExpression,
-    PostgresAnalyzeExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresAttachPartitionExpression,
-    PostgresReindexExpression,  # noqa: F401
-    PostgresCreateStatisticsExpression,  # noqa: F401
-    PostgresDropStatisticsExpression,  # noqa: F401
+    PostgresVacuumStatement,
+    PostgresAnalyzeStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresAttachPartitionStatement,
+    PostgresReindexStatement,  # noqa: F401
+    PostgresCreateStatisticsStatement,  # noqa: F401
+    PostgresDropStatisticsStatement,  # noqa: F401
 )
 
 
 class TestPostgresVacuumExpression:
-    """Test PostgresVacuumExpression and format_vacuum_statement."""
+    """Test PostgresVacuumStatement and format_vacuum_statement."""
 
     @pytest.fixture
     def dialect(self):
@@ -29,27 +29,27 @@ class TestPostgresVacuumExpression:
 
     def test_basic_vacuum(self, dialect):
         """Test basic VACUUM statement."""
-        expr = PostgresVacuumExpression(dialect)
+        expr = PostgresVacuumStatement(dialect)
         sql, params = expr.to_sql()
         assert sql == "VACUUM"
         assert params == ()
 
     def test_vacuum_with_table(self, dialect):
         """Test VACUUM with table name."""
-        expr = PostgresVacuumExpression(dialect, table_name="users")
+        expr = PostgresVacuumStatement(dialect, table_name="users")
         sql, params = expr.to_sql()
         assert '"users"' in sql
         assert params == ()
 
     def test_vacuum_with_schema(self, dialect):
         """Test VACUUM with schema.table."""
-        expr = PostgresVacuumExpression(dialect, table_name="users", schema="public")
+        expr = PostgresVacuumStatement(dialect, table_name="users", schema="public")
         sql, params = expr.to_sql()
         assert '"public"."users"' in sql
 
     def test_vacuum_with_options(self, dialect):
         """Test VACUUM with multiple options."""
-        expr = PostgresVacuumExpression(
+        expr = PostgresVacuumStatement(
             dialect,
             table_name="users",
             verbose=True,
@@ -64,39 +64,39 @@ class TestPostgresVacuumExpression:
     def test_vacuum_parallel_pg13(self):
         """Test VACUUM PARALLEL requires PG 13+."""
         dialect_pg12 = PostgresDialect(version=(12, 0, 0))
-        expr = PostgresVacuumExpression(dialect_pg12, parallel=4)
+        expr = PostgresVacuumStatement(dialect_pg12, parallel=4)
 
         with pytest.raises(ValueError, match="Parallel VACUUM requires PostgreSQL 13"):
             expr.to_sql()
 
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = PostgresVacuumExpression(dialect_pg13, parallel=4)
+        expr = PostgresVacuumStatement(dialect_pg13, parallel=4)
         sql, _ = expr.to_sql()
         assert "PARALLEL 4" in sql
 
     def test_vacuum_index_cleanup_pg14(self):
         """Test VACUUM INDEX_CLEANUP requires PG 14+."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = PostgresVacuumExpression(dialect_pg13, index_cleanup="AUTO")
+        expr = PostgresVacuumStatement(dialect_pg13, index_cleanup="AUTO")
 
         with pytest.raises(ValueError, match="INDEX_CLEANUP requires PostgreSQL 14"):
             expr.to_sql()
 
         dialect_pg14 = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresVacuumExpression(dialect_pg14, index_cleanup="AUTO")
+        expr = PostgresVacuumStatement(dialect_pg14, index_cleanup="AUTO")
         sql, _ = expr.to_sql()
         assert "INDEX_CLEANUP AUTO" in sql
 
     def test_vacuum_truncate_excludes_full(self, dialect):
         """Test TRUNCATE and FULL are mutually exclusive."""
-        expr = PostgresVacuumExpression(dialect, full=True, truncate=True)
+        expr = PostgresVacuumStatement(dialect, full=True, truncate=True)
 
         with pytest.raises(ValueError, match="TRUNCATE cannot be used with FULL"):
             expr.to_sql()
 
 
 class TestPostgresAnalyzeExpression:
-    """Test PostgresAnalyzeExpression and format_analyze_statement."""
+    """Test PostgresAnalyzeStatement and format_analyze_statement."""
 
     @pytest.fixture
     def dialect(self):
@@ -104,14 +104,14 @@ class TestPostgresAnalyzeExpression:
 
     def test_basic_analyze(self, dialect):
         """Test basic ANALYZE statement."""
-        expr = PostgresAnalyzeExpression(dialect)
+        expr = PostgresAnalyzeStatement(dialect)
         sql, params = expr.to_sql()
         assert sql == "ANALYZE"
         assert params == ()
 
     def test_analyze_with_columns(self, dialect):
         """Test ANALYZE with specific columns."""
-        expr = PostgresAnalyzeExpression(
+        expr = PostgresAnalyzeStatement(
             dialect,
             table_name="users",
             columns=["id", "name", "email"]
@@ -122,7 +122,7 @@ class TestPostgresAnalyzeExpression:
 
 
 class TestPostgresCreatePartitionExpression:
-    """Test PostgresCreatePartitionExpression and format_create_partition_statement."""
+    """Test PostgresCreatePartitionStatement and format_create_partition_statement."""
 
     @pytest.fixture
     def dialect(self):
@@ -130,7 +130,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_range_partition_with_dates(self, dialect):
         """Test RANGE partition with date values - verify proper quoting."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users",
@@ -147,7 +147,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_range_partition_with_maxvalue(self, dialect):
         """Test RANGE partition with MAXVALUE - no quotes."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_max",
             parent_table="users",
@@ -162,7 +162,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_range_partition_with_minvalue(self, dialect):
         """Test RANGE partition with MINVALUE - no quotes."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_min",
             parent_table="users",
@@ -177,7 +177,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_list_partition_with_values(self, dialect):
         """Test LIST partition with values - verify proper quoting."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_active",
             parent_table="users",
@@ -195,7 +195,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_list_partition_default(self, dialect):
         """Test LIST partition with DEFAULT."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_default",
             parent_table="users",
@@ -207,7 +207,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_hash_partition(self, dialect):
         """Test HASH partition."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_hash_0",
             parent_table="users",
@@ -222,7 +222,7 @@ class TestPostgresCreatePartitionExpression:
     def test_hash_partition_requires_pg11(self):
         """Test HASH partition requires PostgreSQL 11+."""
         dialect_pg10 = PostgresDialect(version=(10, 0, 0))
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect_pg10,
             partition_name="users_hash",
             parent_table="users",
@@ -235,7 +235,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_partition_with_tablespace(self, dialect):
         """Test partition with tablespace."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users",
@@ -248,7 +248,7 @@ class TestPostgresCreatePartitionExpression:
 
 
 class TestPostgresDetachPartitionExpression:
-    """Test PostgresDetachPartitionExpression and format_detach_partition_statement."""
+    """Test PostgresDetachPartitionStatement and format_detach_partition_statement."""
 
     @pytest.fixture
     def dialect(self):
@@ -256,7 +256,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_basic_detach(self, dialect):
         """Test basic DETACH PARTITION."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users"
@@ -268,7 +268,7 @@ class TestPostgresDetachPartitionExpression:
     def test_detach_concurrently_pg14(self, dialect):
         """Test DETACH CONCURRENTLY requires PostgreSQL 14+."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect_pg13,
             partition_name="users_2024",
             parent_table="users",
@@ -279,7 +279,7 @@ class TestPostgresDetachPartitionExpression:
             expr.to_sql()
 
         # PG 14 should work
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users",
@@ -290,7 +290,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_finalize_requires_concurrently(self, dialect):
         """Test FINALIZE only valid with CONCURRENTLY."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users",
@@ -303,7 +303,7 @@ class TestPostgresDetachPartitionExpression:
 
 
 class TestPostgresAttachPartitionExpression:
-    """Test PostgresAttachPartitionExpression and format_attach_partition_statement."""
+    """Test PostgresAttachPartitionStatement and format_attach_partition_statement."""
 
     @pytest.fixture
     def dialect(self):
@@ -311,7 +311,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_range_partition(self, dialect):
         """Test ATTACH PARTITION for RANGE."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             partition_name="users_2024",
             parent_table="users",
@@ -332,7 +332,7 @@ class TestQuoteHandling:
 
     def test_string_values_are_quoted(self, dialect):
         """Test that string values are properly quoted."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="test",
             parent_table="parent",
@@ -350,7 +350,7 @@ class TestQuoteHandling:
 
     def test_numeric_values_not_quoted(self, dialect):
         """Test that numeric values are not quoted."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="test",
             parent_table="parent",
@@ -365,7 +365,7 @@ class TestQuoteHandling:
 
     def test_null_value(self, dialect):
         """Test NULL value handling."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             partition_name="test",
             parent_table="parent",

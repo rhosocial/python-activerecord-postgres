@@ -10,7 +10,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
+    from ...expression.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
 
 
 class PostgresVacuumMixin:
@@ -21,18 +21,18 @@ class PostgresVacuumMixin:
 
     def supports_parallel_vacuum(self) -> bool:
         """Parallel VACUUM is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_index_cleanup_auto(self) -> bool:
         """INDEX_CLEANUP AUTO is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_vacuum_process_toast(self) -> bool:
         """PROCESS_TOAST control is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
-    def format_vacuum_statement(self, expr: "PostgresVacuumExpression") -> Tuple[str, tuple]:
-        """Format VACUUM statement from PostgresVacuumExpression.
+    def format_vacuum_statement(self, expr: "PostgresVacuumStatement") -> Tuple[str, tuple]:
+        """Format VACUUM statement from PostgresVacuumStatement.
 
         Supported expression attributes:
 
@@ -50,7 +50,7 @@ class PostgresVacuumMixin:
         - ``expr.columns`` — optional column list (for ANALYZE).
 
         Args:
-            expr: PostgresVacuumExpression instance
+            expr: PostgresVacuumStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -119,8 +119,8 @@ class PostgresVacuumMixin:
 
         return (" ".join(parts), ())
 
-    def format_analyze_statement(self, expr: "PostgresAnalyzeExpression") -> Tuple[str, tuple]:
-        """Format ANALYZE statement from PostgresAnalyzeExpression.
+    def format_analyze_statement(self, expr: "PostgresAnalyzeStatement") -> Tuple[str, tuple]:
+        """Format ANALYZE statement from PostgresAnalyzeStatement.
 
         - ``expr.verbose`` — ``VERBOSE``.
         - ``expr.skip_locked`` — ``SKIP_LOCKED``.
@@ -129,7 +129,7 @@ class PostgresVacuumMixin:
         - ``expr.columns`` — optional column list.
 
         Args:
-            expr: PostgresAnalyzeExpression instance
+            expr: PostgresAnalyzeStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)

@@ -60,7 +60,7 @@ class ListToStringAdapter(BaseSQLTypeAdapter):
     
     def __init__(self):
         super().__init__()
-        self._register_type(list, str)
+        self.register_type(list, str)
 
     def _do_to_database(self, value: List, target_type: type, options=None) -> Optional[str]:
         if value is None:

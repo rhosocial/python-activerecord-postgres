@@ -3,7 +3,7 @@ import re
 from typing import Any, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements.ddl_table import IdentityClause
+from rhosocial.activerecord.backend.expression.statements.ddl_table import ColumnPrimaryKeyConstraint, IdentityClause
 
 
 class PostgresTableMixin:
@@ -11,7 +11,7 @@ class PostgresTableMixin:
 
     def supports_if_not_exists_table(self) -> bool:
         """CREATE TABLE IF NOT EXISTS is supported since PostgreSQL 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_if_exists_table(self) -> bool:
         """DROP TABLE IF EXISTS is supported in all versions."""
@@ -21,6 +21,16 @@ class PostgresTableMixin:
         """TEMPORARY tables are supported in all versions."""
         return True
 
+
+    def supports_create_table_as_bind_parameters(self) -> bool:
+        """PostgreSQL accepts bind parameters in a CTAS body.
+
+        Measured on 19beta4: ``CREATE TABLE t AS SELECT $1 FROM s`` is
+        accepted and the table is created. The body is executed once, so a
+        bound value is meaningful there -- unlike a view's or a materialized
+        view's body, which is stored and run again later.
+        """
+        return True
     def supports_unlogged_table(self) -> bool:
         """CREATE UNLOGGED TABLE is supported since PostgreSQL 9.5.
 
@@ -30,7 +40,7 @@ class PostgresTableMixin:
         ``UNLOGGED`` qualifier on CREATE TABLE exists since 9.5, matching the
         §0 baseline.
         """
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_table_inheritance(self) -> bool:
         """PostgreSQL supports table inheritance."""
@@ -84,18 +94,17 @@ class PostgresTableMixin:
         - HASH requires PostgreSQL 11+.
         - MySQL-specific methods (KEY, RANGE COLUMNS) are rejected.
         """
-        if getattr(expr, "partition", None) is not None:
+        if expr.partition is not None:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
             PostgresCreateTableOptions,
         )
-        table_options = getattr(expr, "table_options", None)
         if (
-            isinstance(table_options, PostgresCreateTableOptions)
-            and table_options.unlogged
-            and getattr(expr, "temporary", False)
+            isinstance(expr.table_options, PostgresCreateTableOptions)
+            and expr.table_options.unlogged
+            and expr.temporary
         ):
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,
@@ -137,12 +146,12 @@ class PostgresTableMixin:
 
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateTableLikeExpression.table must be a Table, "
+                f"CreateTableLikeStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         if not isinstance(expr.like_table, Table):
             raise TypeError(
-                f"CreateTableLikeExpression.like_table must be a Table, "
+                f"CreateTableLikeStatement.like_table must be a Table, "
                 f"got {type(expr.like_table).__name__}"
             )
         if not self.supports_create_table_like():
@@ -208,13 +217,19 @@ class PostgresTableMixin:
         all_params.extend(attr_params)
         auto_identity_added = False
         for constraint in col_def.constraints:
-            if not auto_identity_added and getattr(constraint, 'is_auto_increment', False):
+            if (
+                not auto_identity_added
+                and isinstance(constraint.branch, ColumnPrimaryKeyConstraint)
+                and constraint.branch.is_auto_increment
+            ):
                 # An auto-increment constraint on PostgreSQL is the standard
                 # identity clause in its default generation mode. Routing it
                 # through the gated formatter keeps the version boundary in
                 # one place: PostgreSQL 9 refuses here instead of rendering
                 # a GENERATED clause its server rejects, and no silent
-                # fallback to SERIAL is attempted.
+                # fallback to SERIAL is attempted. The flag lives on the
+                # PRIMARY KEY branch since the two-level split, so it is read
+                # there rather than probed off the clause.
                 identity_sql, identity_params = self.format_identity_clause(
                     IdentityClause(self, "BY DEFAULT")
                 )
@@ -242,7 +257,7 @@ class PostgresTableMixin:
             if col_def.compression:
                 col_sql += f" COMPRESSION {col_def.compression}"
             if col_def.storage is not None:
-                col_sql += f" STORAGE {col_def.storage.value}"
+                col_sql += f" STORAGE {col_def.storage}"
             if col_def.statistics is not None:
                 col_sql += f" STATISTICS {col_def.statistics}"
         return col_sql, tuple(all_params)

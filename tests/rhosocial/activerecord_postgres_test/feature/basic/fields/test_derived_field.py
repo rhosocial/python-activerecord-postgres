@@ -6,7 +6,7 @@ from typing_extensions import Annotated
 from rhosocial.activerecord.base import DerivedField, UseColumn
 from rhosocial.activerecord.model import ActiveRecord
 from rhosocial.activerecord.backend.expression import (
-    BinaryArithmeticExpression,
+    ArithmeticOperation,
     Column,
     Literal,
 )
@@ -24,8 +24,8 @@ class TestDerivedFieldDeclaration:
     def test_derived_field_with_static_expression(self, product_class):
         """Test DerivedField constructed with a pre-built expression object (non-callable path)."""
         dialect = product_class.backend().dialect
-        static_expr = BinaryArithmeticExpression(
-            dialect, "*", Column(dialect, "price"), Literal(dialect, 2)
+        static_expr = ArithmeticOperation(
+            dialect, "mul", Column(dialect, "price"), Literal(dialect, 2)
         )
         df = DerivedField(static_expr)
         resolved = df.resolve(dialect)
@@ -144,8 +144,8 @@ class TestDerivedFieldDictForm:
         self._insert(product_class, "D1", 100.0, 4)
         results = product_class.find_all(
             derived={
-                "my_discount": lambda d: BinaryArithmeticExpression(
-                    dialect, "*", Column(dialect, d, "price"), Literal(d, 0.8)
+                "my_discount": lambda d: ArithmeticOperation(
+                    dialect, "mul", Column(dialect, d, "price"), Literal(d, 0.8)
                 )
             }
         )
@@ -163,8 +163,8 @@ class TestDerivedFieldDictForm:
     def test_derived_dict_with_expression_object(self, product_class):
         self._insert(product_class, "D3", 80.0, 5)
         dialect = product_class.backend().dialect
-        expr = BinaryArithmeticExpression(
-            dialect, "*", Column(dialect, "price"), Literal(dialect, 0.5)
+        expr = ArithmeticOperation(
+            dialect, "mul", Column(dialect, "price"), Literal(dialect, 0.5)
         )
         results = product_class.find_all(
             derived={"half_price": expr}
@@ -198,8 +198,8 @@ class TestExtraDerived:
         self._insert(product_class, "F", 100.0, 10)
         results = product_class.find_all(
             extra_derived={
-                "triple_price": lambda d: BinaryArithmeticExpression(
-                    dialect, "*", Column(dialect, d, "price"), Literal(d, 3)
+                "triple_price": lambda d: ArithmeticOperation(
+                    dialect, "mul", Column(dialect, d, "price"), Literal(d, 3)
                 )
             }
         )
@@ -211,8 +211,8 @@ class TestExtraDerived:
         with pytest.raises(ValueError, match="conflicts with a declared derived field"):
             product_class.find_all(
                 extra_derived={
-                    "discounted_price": lambda d: BinaryArithmeticExpression(
-                        dialect, "*", Column(dialect, d, "price"), Literal(d, 0.5)
+                    "discounted_price": lambda d: ArithmeticOperation(
+                        dialect, "mul", Column(dialect, d, "price"), Literal(d, 0.5)
                     )
                 }
             )
@@ -222,8 +222,8 @@ class TestExtraDerived:
         results = product_class.find_all(
             derived=True,
             extra_derived={
-                "double_qty": lambda d: BinaryArithmeticExpression(
-                    dialect, "*", Column(dialect, d, "quantity"), Literal(d, 2)
+                "double_qty": lambda d: ArithmeticOperation(
+                    dialect, "mul", Column(dialect, d, "quantity"), Literal(d, 2)
                 )
             }
         )
@@ -339,8 +339,8 @@ class TestDerivedFieldColumnConflict:
                 id: Optional[int] = None
                 discount_rate: Annotated[float, UseColumn("disc")]
                 discounted: ClassVar[Annotated[float, DerivedField(
-                    lambda d: BinaryArithmeticExpression(
-                        dialect, "*", Column(dialect, d, "price"), Literal(d, 0.9)
+                    lambda d: ArithmeticOperation(
+                        dialect, "mul", Column(dialect, d, "price"), Literal(d, 0.9)
                     ),
                 ), UseColumn("disc")]]
 
@@ -351,8 +351,8 @@ class TestDerivedFieldColumnConflict:
             id: Optional[int] = None
             discount_rate: Annotated[float, UseColumn("rate")]
             discounted: ClassVar[Annotated[float, DerivedField(
-                lambda d: BinaryArithmeticExpression(
-                    dialect, "*", Column(dialect, d, "price"), Literal(d, 0.9)
+                lambda d: ArithmeticOperation(
+                    dialect, "mul", Column(dialect, d, "price"), Literal(d, 0.9)
                 ),
             ), UseColumn("disc")]]
 

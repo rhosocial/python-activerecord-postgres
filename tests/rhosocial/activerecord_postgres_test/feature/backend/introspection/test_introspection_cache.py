@@ -113,14 +113,14 @@ class TestInvalidateIntrospectionCache:
         backend_with_tables.introspector.get_table_info(table2)
 
         # Both should be in cache
-        key1 = backend_with_tables.introspector._make_cache_key(
+        key1 = backend_with_tables.introspector._cache.key(
             IntrospectionScope.TABLE, table1
         )
-        key2 = backend_with_tables.introspector._make_cache_key(
+        key2 = backend_with_tables.introspector._cache.key(
             IntrospectionScope.TABLE, table2
         )
-        assert key1 in backend_with_tables.introspector._cache
-        assert key2 in backend_with_tables.introspector._cache
+        assert backend_with_tables.introspector._cache.get(key1) is not None
+        assert backend_with_tables.introspector._cache.get(key2) is not None
 
         # Invalidate only table1
         backend_with_tables.introspector.invalidate_cache(
@@ -128,18 +128,18 @@ class TestInvalidateIntrospectionCache:
         )
 
         # table1's cache key should be removed
-        assert key1 not in backend_with_tables.introspector._cache
+        assert backend_with_tables.introspector._cache.get(key1) is None
 
         # table2's cache key should still be present
-        assert key2 in backend_with_tables.introspector._cache
+        assert backend_with_tables.introspector._cache.get(key2) is not None
 
 
 class TestCacheThreadSafety:
     """Tests for cache thread safety."""
 
     def test_cache_lock_exists(self, backend_with_tables):
-        """Test that cache lock exists."""
-        assert hasattr(backend_with_tables.introspector, "_cache_lock")
+        """Test that cache lock exists (inside the cache component)."""
+        assert hasattr(backend_with_tables.introspector._cache, "_lock")
 
     def test_concurrent_cache_access(self, backend_with_tables):
         """Test concurrent cache access is safe (read-only, single connection)."""
@@ -150,7 +150,7 @@ class TestCacheThreadSafety:
             try:
                 for _ in range(5):
                     # Only read from cache, don't execute DB queries concurrently
-                    backend_with_tables.introspector._get_cached("nonexistent_key")
+                    backend_with_tables.introspector._cache.get("nonexistent_key")
                     results.append(True)
             except Exception as e:
                 errors.append(e)
@@ -180,13 +180,13 @@ class TestCacheExpiration:
 
     def test_cache_ttl_exists(self, backend_with_tables):
         """Test that cache TTL is configured."""
-        assert hasattr(backend_with_tables.introspector, "_cache_ttl")
-        assert backend_with_tables.introspector._cache_ttl > 0
+        assert hasattr(backend_with_tables.introspector._cache, "ttl")
+        assert backend_with_tables.introspector._cache.ttl > 0
 
     def test_expired_cache_not_returned(self, backend_with_tables):
         """Test that expired cache entries are not returned."""
         # Set very short TTL
-        backend_with_tables.introspector._cache_ttl = 0.01  # 10ms
+        backend_with_tables.introspector._cache.ttl = 0.01  # 10ms
 
         db_info1 = backend_with_tables.introspector.get_database_info()
 
@@ -204,7 +204,7 @@ class TestCacheKeys:
 
     def test_cache_key_generation(self, postgres_backend_single):
         """Test that cache keys are generated correctly."""
-        key = postgres_backend_single.introspector._make_cache_key(
+        key = postgres_backend_single.introspector._cache.key(
             IntrospectionScope.TABLE,
             "users",
             schema="public"
@@ -215,7 +215,7 @@ class TestCacheKeys:
 
     def test_cache_key_with_extra(self, postgres_backend_single):
         """Test cache key with extra component."""
-        key = postgres_backend_single.introspector._make_cache_key(
+        key = postgres_backend_single.introspector._cache.key(
             IntrospectionScope.COLUMN,
             "users",
             extra="email"
@@ -227,13 +227,13 @@ class TestCacheKeys:
 
     def test_cache_key_uniqueness(self, postgres_backend_single):
         """Test that different parameters produce different keys."""
-        key1 = postgres_backend_single.introspector._make_cache_key(
+        key1 = postgres_backend_single.introspector._cache.key(
             IntrospectionScope.TABLE, "users"
         )
-        key2 = postgres_backend_single.introspector._make_cache_key(
+        key2 = postgres_backend_single.introspector._cache.key(
             IntrospectionScope.TABLE, "posts"
         )
-        key3 = postgres_backend_single.introspector._make_cache_key(
+        key3 = postgres_backend_single.introspector._cache.key(
             IntrospectionScope.COLUMN, "users"
         )
 

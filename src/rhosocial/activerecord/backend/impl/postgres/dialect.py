@@ -194,6 +194,8 @@ from .mixins import (
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # SHOW is not a catalog query, so it has its own mixin.
+    PostgresShowMixin,
     # Extension feature mixins
     PostgresLtreeMixin,
     PostgresIntarrayMixin,
@@ -260,6 +262,7 @@ from .mixins import (
     PostgresAutoIncrementMixin,
     PostgresExpressionMixin,
     PostgresFunctionMixin,
+    PostgresLiteralValueMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -364,6 +367,21 @@ from .protocols import (
 
 
 class PostgresDialect(
+    # The bases below come in bundles: a backend mixin, then the core bundle
+    # it stands in for. The backend's answer has to come first -- a mixin
+    # placed after the class it overrides never wins -- so a new mixin goes
+    # immediately before the core mixin it overrides, and the pairing is read
+    # off the list. Two positions sit outside that pairing and are called out
+    # where they occur: a mixin that overrides a method ``SQLDialectBase``
+    # defines has to precede the base, and a mixin that subclasses a core
+    # mixin has to precede it too (C3: a subclass precedes its base).
+    # Ahead of SQLDialectBase, unlike every other mixin here. Those add methods
+    # the base does not have, so their position is a readability choice; this
+    # one overrides ``format_literal``, and a mixin placed after the class it
+    # overrides never wins. It resolves PostgreSQL's three tier-2 spellings --
+    # bytea, uuid and interval -- and leaves the base's portable forms and the
+    # literal-construction protocol to it.
+    PostgresLiteralValueMixin,
     SQLDialectBase,
     PostgresTypeMixin,
     PostgresDomainMixin,
@@ -429,6 +447,10 @@ class PostgresDialect(
     PostgresCollationMixin,
     PostgresOrderedSetAggMixin,
     PostgresFeaturesMixin,
+    # SHOW is not a catalog query: it names one run-time parameter. It lives in
+    # its own mixin, the same split MySQL and MariaDB make between their
+    # ``show/dialect.py`` and their introspection formatters.
+    PostgresShowMixin,
     # TRIM/LPAD/RPAD/REPEAT are nodes with default formatters, and PostgreSQL
     # spells all four natively: ``TRIM([BOTH|LEADING|TRAILING] [chars] FROM
     # str)``, ``LPAD``/``RPAD(str, len, padstr)`` and ``REPEAT(str, n)``
@@ -483,7 +505,7 @@ class PostgresDialect(
     PostgresExtensionMixin,
     PostgresAlterColumnModifierMixin,  # Before TableMixin/ConstraintMixin to override format_*_action
     PostgresTableMixin,  # Before TableMixin to override supports_create_table_like
-    PostgresCommentMixin,  # Before TableMixin to override format_comment_statement
+    PostgresCommentMixin,  # Before TableMixin to override format_comment_on_statement
     TableMixin,
     PostgresConstraintMixin,
     ConstraintMixin,
@@ -831,20 +853,6 @@ class PostgresDialect(
             raise TypeError("Graph feature override values must be booleans")
         self._graph_feature_overrides = overrides
 
-    @staticmethod
-    def _validate_data_type(data_type: str) -> bool:
-        """Validate data type for safe embedding in SQL.
-
-        PostgreSQL supports array types like TEXT[], INTEGER[].
-
-        Note: rhosocial-activerecord base dialect will include this change in
-        a future release. This override can be removed after upgrading to that
-        version (expected: include brackets [] in the allowlist pattern).
-        """
-        import re
-
-        return bool(re.fullmatch(r"[A-Za-z0-9\s(),\[\]]+", data_type))
-
     def get_parameter_placeholder(self, position: int = 0) -> str:
         """psycopg uses '%s' for placeholders."""
         return "%s"
@@ -852,6 +860,17 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_table_function(self) -> bool:
+        """PostgreSQL reads a set-returning function as a row source.
+
+        ``pg_ls_waldir()``, ``pg_control_checkpoint()`` and the rest of the
+        server-information family are ordinary FROM sources, so the capability
+        belongs to this dialect's surface. Core defaults it to False because
+        several engines have no such form, and this dialect outranks the
+        ``RelationSourceMixin`` default it would otherwise inherit.
+        """
+        return True
 
     def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""

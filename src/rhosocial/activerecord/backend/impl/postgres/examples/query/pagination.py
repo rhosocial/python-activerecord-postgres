@@ -9,25 +9,27 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
-    QueryExpression,
+    DropTableStatement,
+    QueryStatement,
     Column,
     OrderByClause,
     LimitOffsetClause,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import (
     Literal,
-    WildcardExpression,
+    RowCountWildcard,
+    CountFunction,
     FunctionCall,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -43,7 +45,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'articles'),
     if_exists=True,
@@ -52,7 +54,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'articles'),
     columns=[
@@ -60,14 +62,14 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             'title',
             'VARCHAR(200)',
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
         ),
         ColumnDefinition('author', 'VARCHAR(100)'),
         ColumnDefinition('published_at', 'DATE'),
@@ -77,7 +79,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'articles'),
     columns=['title', 'author', 'published_at'],
@@ -110,7 +112,7 @@ page_size = 5
 options = ExecutionOptions(stmt_type=StatementType.DQL)
 
 # --- 1. Basic LIMIT/OFFSET pagination (page 1) ---
-page1_query = QueryExpression(
+page1_query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),
@@ -132,9 +134,9 @@ print(f"SQL: {sql}")
 print(f"Params: {params}")
 
 # --- 2. Calculate total pages using COUNT ---
-count_query = QueryExpression(
+count_query = QueryStatement(
     dialect=dialect,
-    select=[FunctionCall(dialect, 'COUNT', WildcardExpression(dialect)).as_('total')],
+    select=[CountFunction(dialect, RowCountWildcard(dialect)).as_('total')],
     from_=Table(dialect, 'articles'),
 )
 
@@ -166,7 +168,7 @@ print(f"Total pages (page_size={page_size}): {total_pages}")
 # Iterate remaining pages
 for page_num in range(2, total_pages + 1):
     offset = (page_num - 1) * page_size
-    page_query = QueryExpression(
+    page_query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, 'id'),

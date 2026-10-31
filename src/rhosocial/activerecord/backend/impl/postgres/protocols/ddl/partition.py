@@ -11,11 +11,11 @@ from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        PartitionValue,
-        PostgresCreatePartitionExpression,
-        PostgresDetachPartitionExpression,
-        PostgresAttachPartitionExpression,
-        PostgresPartitionMetadataExpression,
+        PostgresPartitionValue,
+        PostgresCreatePartitionStatement,
+        PostgresDetachPartitionStatement,
+        PostgresAttachPartitionStatement,
+        PostgresPartitionMetadataQueryStatement,
     )
 
 
@@ -135,47 +135,47 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         """Whether DETACH PARTITION is supported."""
         ...
 
-    def format_create_partition_statement(self, expr: "PostgresCreatePartitionExpression") -> Tuple[str, tuple]:
+    def format_create_partition_statement(self, expr: "PostgresCreatePartitionStatement") -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF statement from expression.
 
         Args:
-            expr: PostgresCreatePartitionExpression with partition details
+            expr: PostgresCreatePartitionStatement with partition details
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...
 
-    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+    def format_partition_value(self, expr: "PostgresPartitionValue") -> Tuple[str, tuple]:
         """Format a partition bound value from expression.
 
         Args:
-            expr: PartitionValue with the bound value.
+            expr: PostgresPartitionValue with the bound value.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...
 
-    def format_detach_partition_statement(self, expr: "PostgresDetachPartitionExpression") -> Tuple[str, tuple]:
+    def format_detach_partition_statement(self, expr: "PostgresDetachPartitionStatement") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
         Args:
-            expr: PostgresDetachPartitionExpression with detach details
+            expr: PostgresDetachPartitionStatement with detach details
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...
 
-    def format_attach_partition_statement(self, expr: "PostgresAttachPartitionExpression") -> Tuple[str, tuple]:
+    def format_attach_partition_statement(self, expr: "PostgresAttachPartitionStatement") -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION statement from expression.
 
         The expression supports RANGE, LIST, and HASH bounds. DEFAULT requires
         PostgreSQL 11+. Concurrent attachment is rejected for every version.
 
         Args:
-            expr: PostgresAttachPartitionExpression with attach details.
+            expr: PostgresAttachPartitionStatement with attach details.
                   ``expr.concurrently`` controls CONCURRENTLY mode.
 
         Returns:
@@ -187,7 +187,9 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         """
         ...
 
-    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+    def format_partition_metadata_query_statement(
+        self, expr: "PostgresPartitionMetadataQueryStatement"
+    ) -> Tuple[str, tuple]:
         """Format partition metadata introspection query from expression.
 
         Builds a parameterised query against pg_catalog to inspect a partitioned
@@ -197,7 +199,7 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         across all schemas.
 
         Args:
-            expr: PostgresPartitionMetadataExpression with parent table details.
+            expr: PostgresPartitionMetadataQueryStatement with parent table details.
 
         Returns:
             Tuple of (SQL string with %s placeholders, params tuple).

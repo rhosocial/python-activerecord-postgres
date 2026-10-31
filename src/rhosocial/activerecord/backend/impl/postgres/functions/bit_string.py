@@ -30,7 +30,8 @@ from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import (
-    BinaryArithmeticExpression,
+    BinaryExpression,
+    ConcatenationOperation,
     UnaryExpression,
 )
 
@@ -44,7 +45,7 @@ def bit_concat(
     dialect: "SQLDialectBase",
     bit1: bases.BaseExpression,
     bit2: bases.BaseExpression,
-) -> BinaryArithmeticExpression:
+) -> ConcatenationOperation:
     """Generate SQL for bit string concatenation.
 
     Args:
@@ -53,10 +54,10 @@ def bit_concat(
         bit2: Second bit string expression
 
     Returns:
-        BinaryArithmeticExpression for bit1 || bit2
+        ConcatenationOperation for bit1 || bit2
     """
-    return BinaryArithmeticExpression(
-        dialect, "||",
+    return ConcatenationOperation(
+        dialect,
         bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
         bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
     )
@@ -66,7 +67,7 @@ def bit_and(
     dialect: "SQLDialectBase",
     bit1: bases.BaseExpression,
     bit2: bases.BaseExpression,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL for bitwise AND operation.
 
     Args:
@@ -75,9 +76,9 @@ def bit_and(
         bit2: Second bit string expression
 
     Returns:
-        BinaryArithmeticExpression for bit1 & bit2
+        BinaryExpression for bit1 & bit2
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, "&",
         bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
         bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
@@ -88,7 +89,7 @@ def bit_or(
     dialect: "SQLDialectBase",
     bit1: bases.BaseExpression,
     bit2: bases.BaseExpression,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL for bitwise OR operation.
 
     Args:
@@ -97,9 +98,9 @@ def bit_or(
         bit2: Second bit string expression
 
     Returns:
-        BinaryArithmeticExpression for bit1 | bit2
+        BinaryExpression for bit1 | bit2
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, "|",
         bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
         bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
@@ -110,7 +111,7 @@ def bit_xor(
     dialect: "SQLDialectBase",
     bit1: bases.BaseExpression,
     bit2: bases.BaseExpression,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL for bitwise XOR operation.
 
     Args:
@@ -119,9 +120,9 @@ def bit_xor(
         bit2: Second bit string expression
 
     Returns:
-        BinaryArithmeticExpression for bit1 # bit2
+        BinaryExpression for bit1 # bit2
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, "#",
         bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
         bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
@@ -152,7 +153,7 @@ def bit_shift_left(
     dialect: "SQLDialectBase",
     bit: bases.BaseExpression,
     n: int,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL for bitwise left shift operation.
 
     Args:
@@ -161,9 +162,9 @@ def bit_shift_left(
         n: Number of positions to shift
 
     Returns:
-        BinaryArithmeticExpression for bit << n
+        BinaryExpression for bit << n
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, "<<",
         bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
         n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),
@@ -174,7 +175,7 @@ def bit_shift_right(
     dialect: "SQLDialectBase",
     bit: bases.BaseExpression,
     n: int,
-) -> BinaryArithmeticExpression:
+) -> BinaryExpression:
     """Generate SQL for bitwise right shift operation.
 
     Args:
@@ -183,9 +184,9 @@ def bit_shift_right(
         n: Number of positions to shift
 
     Returns:
-        BinaryArithmeticExpression for bit >> n
+        BinaryExpression for bit >> n
     """
-    return BinaryArithmeticExpression(
+    return BinaryExpression(
         dialect, ">>",
         bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
         n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),

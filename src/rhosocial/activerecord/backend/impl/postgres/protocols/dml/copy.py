@@ -4,7 +4,7 @@
 from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.copy import PostgresCopyFromExpression, PostgresCopyToExpression
+    from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 @runtime_checkable
@@ -73,14 +73,14 @@ class PostgresCopySupport(Protocol):
 
     def format_copy_to_statement(
         self,
-        expr: "PostgresCopyToExpression",
+        expr: "PostgresCopyToStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format COPY TO STDOUT."""
         ...
 
     def format_copy_from_statement(
         self,
-        expr: "PostgresCopyFromExpression",
+        expr: "PostgresCopyFromStatement",
     ) -> Tuple[str, Tuple[Any, ...]]:
         """Format COPY FROM STDIN."""
         ...

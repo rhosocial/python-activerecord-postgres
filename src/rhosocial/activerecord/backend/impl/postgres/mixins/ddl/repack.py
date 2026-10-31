@@ -6,26 +6,26 @@ from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.ddl.repack import PostgresRepackExpression
+    from ...expression.ddl.repack import PostgresRepackStatement
 
 
 class PostgresRepackMixin:
     """PostgreSQL native REPACK support, separate from the pg_repack extension."""
 
     def supports_repack(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_repack_all_tables(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_repack_using_index(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_repack_concurrently(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     def supports_repack_analyze(self) -> bool:
-        return self.version >= (19, 0, 0)
+        return self.version_at_least((19, 0, 0))
 
     @staticmethod
     def _repack_identifier(value: str, name: str) -> str:
@@ -55,7 +55,7 @@ class PostgresRepackMixin:
 
     def format_repack_statement(
         self,
-        expr: "PostgresRepackExpression",
+        expr: "PostgresRepackStatement",
     ) -> Tuple[str, tuple]:
         """Format a native PostgreSQL 19 REPACK statement."""
         if not self.supports_repack():

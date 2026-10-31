@@ -29,6 +29,29 @@ from rhosocial.activerecord.backend.introspection.status import (
     SyncAbstractStatusIntrospector,
     AsyncAbstractStatusIntrospector,
 )
+from ..expression.status import (
+    PostgresSettingsQuery,
+    PostgresActivityCountQuery,
+    PostgresShowStatement,
+    PostgresDatabaseListQuery,
+    PostgresSchemaStatsQuery,
+    PostgresCurrentDatabaseQuery,
+    PostgresRoleListQuery,
+    PostgresCurrentUserQuery,
+    PostgresCurrentSchemaQuery,
+    PostgresClientAddressQuery,
+    PostgresSslSessionQuery,
+    PostgresWalPositionQuery,
+    PostgresWalFileCountQuery,
+    PostgresCheckpointCountQuery,
+    PostgresCheckpointLsnQuery,
+    PostgresRecoveryStateQuery,
+    PostgresReplicationSlotCountQuery,
+    PostgresActiveReplicationCountQuery,
+    PostgresReplicationLagQuery,
+    PostgresArchiveStatsQuery,
+    PostgresExtensionListQuery,
+)
 
 
 # PostgreSQL settings to include in status overview
@@ -96,14 +119,17 @@ class PostgreSQLStatusIntrospectorMixin:
     Both SyncPostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
     inherit from this mixin to share:
     - Query execution helpers
-    - _parse_* implementations
+    - parse_* implementations
     """
 
     def _get_vendor_name(self) -> str:
         """Get PostgreSQL vendor name."""
         return "PostgreSQL"
 
-    def _parse_setting_value(self, value: Any) -> Any:
+    def _show(self, parameter: str):
+        """The node for a ``SHOW`` of one run-time parameter."""
+        return PostgresShowStatement(self._backend.dialect, parameter)
+    def parse_setting_value(self, value: Any) -> Any:
         """Parse PostgreSQL setting value to appropriate Python type.
 
         PostgreSQL settings can be:
@@ -197,7 +223,7 @@ class PostgreSQLStatusIntrospectorMixin:
         """Create a StatusItem with parsed value."""
         return StatusItem(
             name=name,
-            value=self._parse_setting_value(value),
+            value=self.parse_setting_value(value),
             category=category,
             description=description,
             unit=unit,
@@ -295,8 +321,8 @@ class SyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_settings
-        sql = "SELECT name, setting, unit FROM pg_settings ORDER BY name"
-        rows = self._exec_query(sql)
+        sql, params = PostgresSettingsQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         settings_dict = {row['name']: row for row in rows}
 
@@ -326,12 +352,14 @@ class SyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_stat_activity for performance-related settings
-        sql = """
-        SELECT name, setting, unit FROM pg_settings
-        WHERE name IN ('checkpoint_timeout', 'checkpoint_completion_target', 'archive_timeout', 'archive_command')
-        ORDER BY name
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresSettingsQuery(
+            self._backend.dialect,
+            [
+                'checkpoint_timeout', 'checkpoint_completion_target',
+                'archive_timeout', 'archive_command',
+            ],
+        ).to_sql()
+        rows = self._exec_query(sql, params)
 
         for row in rows:
             name = row['name']
@@ -352,18 +380,16 @@ class SyncPostgreSQLStatusIntrospector(
 
     def get_connection_info(self) -> ConnectionInfo:
         """Get connection information from pg_stat_activity."""
-        sql = """
-        SELECT count(*) as total_connections
-        FROM pg_stat_activity
-        WHERE datname = current_database()
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresActivityCountQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
         total = rows[0].get('total_connections', 0) if rows else 0
 
         max_conn = None
         try:
-            sql = "SHOW max_connections"
-            result = self._exec_query(sql)
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'max_connections'
+            ).to_sql()
+            result = self._exec_query(sql, params)
             if result:
                 max_conn = int(list(result[0].values())[0])
         except Exception:
@@ -378,9 +404,14 @@ class SyncPostgreSQLStatusIntrospector(
         """Get storage information."""
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
-        # Get database size
-        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
-        rows = self._exec_query(sql, (db_name,))
+        # Get database size: the node carries the database name and the
+        # dialect renders the statement, so no SQL text is assembled here.
+        from ..expression.introspection import PostgresDatabaseSizeQueryStatement
+
+        sql, params = PostgresDatabaseSizeQueryStatement(
+            self.dialect, database_name=db_name
+        ).to_sql()
+        rows = self._exec_query(sql, params)
         size_bytes = rows[0].get('size_bytes') if rows else None
 
         return StorageInfo(
@@ -394,18 +425,15 @@ class SyncPostgreSQLStatusIntrospector(
         in the extra field.
         """
         # Get list of databases
-        sql = """
-        SELECT datname as name, pg_database_size(datname) as size_bytes
-        FROM pg_database
-        WHERE datistemplate = false OR datname = current_database()
-        ORDER BY datname
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresDatabaseListQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         # Get current database name
         current_db = None
         try:
-            result = self._exec_query("SELECT current_database()")
+            result = self._exec_query(
+    *PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql()
+)
             if result:
                 current_db = result[0].get('current_database')
         except Exception:
@@ -416,18 +444,8 @@ class SyncPostgreSQLStatusIntrospector(
         if current_db:
             try:
                 # Query schemata with table/view counts
-                sql = """
-                SELECT
-                    n.nspname as schema_name,
-                    COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count,
-                    COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count
-                FROM pg_namespace n
-                LEFT JOIN pg_class c ON c.relnamespace = n.oid
-                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-                GROUP BY n.nspname
-                ORDER BY n.nspname
-                """
-                schema_rows = self._exec_query(sql)
+                sql, params = PostgresSchemaStatsQuery(self._backend.dialect).to_sql()
+                schema_rows = self._exec_query(sql, params)
                 for row in schema_rows:
                     schema_name = row.get('schema_name')
                     if schema_name:
@@ -459,13 +477,8 @@ class SyncPostgreSQLStatusIntrospector(
 
     def list_users(self) -> List[UserInfo]:
         """List users from pg_roles."""
-        sql = """
-        SELECT rolname as name, rolsuper as is_superuser,
-               pg_catalog.pg_get_userbyid(oid) as owner
-        FROM pg_roles
-        ORDER BY rolname
-        """
-        rows = self._exec_query(sql)
+        sql, params = PostgresRoleListQuery(self._backend.dialect).to_sql()
+        rows = self._exec_query(sql, params)
 
         return [
             UserInfo(
@@ -480,9 +493,10 @@ class SyncPostgreSQLStatusIntrospector(
         """Get current session/connection information."""
         session = SessionInfo()
 
-        # Get current user
+        # Get current user. ``CURRENT_USER`` is niladic: the standard writes it
+        # without parentheses and PostgreSQL refuses the call form.
         try:
-            rows = self._exec_query("SELECT current_user")
+            rows = self._exec_query(*PostgresCurrentUserQuery(self._backend.dialect).to_sql())
             if rows:
                 session.user = rows[0].get('current_user')
         except Exception:
@@ -490,7 +504,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get current database
         try:
-            rows = self._exec_query("SELECT current_database()")
+            rows = self._exec_query(*PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql())
             if rows:
                 session.database = rows[0].get('current_database')
         except Exception:
@@ -498,7 +512,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get current schema
         try:
-            rows = self._exec_query("SELECT current_schema()")
+            rows = self._exec_query(*PostgresCurrentSchemaQuery(self._backend.dialect).to_sql())
             if rows:
                 session.schema = rows[0].get('current_schema')
         except Exception:
@@ -506,7 +520,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get client host address
         try:
-            rows = self._exec_query("SELECT inet_client_addr()")
+            rows = self._exec_query(*PostgresClientAddressQuery(self._backend.dialect).to_sql())
             if rows:
                 host = rows[0].get('inet_client_addr')
                 if host:
@@ -516,11 +530,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get SSL status from pg_stat_ssl
         try:
-            rows = self._exec_query("""
-                SELECT ssl, version, cipher
-                FROM pg_stat_ssl
-                WHERE pid = pg_backend_pid()
-            """)
+            rows = self._exec_query(*PostgresSslSessionQuery(self._backend.dialect).to_sql())
             if rows and rows[0]:
                 ssl_info = rows[0]
                 ssl_value = ssl_info.get('ssl')
@@ -543,36 +553,26 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get WAL level
         try:
-            rows = self._exec_query("SHOW wal_level")
+            rows = self._exec_query(*self._show('wal_level').to_sql())
             if rows:
                 wal_info.wal_level = list(rows[0].values())[0]
         except Exception:
             pass
 
-        # Get WAL position/size
-        # PostgreSQL 10+: pg_current_wal_lsn()
-        # PostgreSQL 9.6 and below: pg_current_xlog_location()
+        # Get WAL position/size. The node names the question; the formatter
+        # spells the function pair this server version has (wal/xlog).
         try:
-            if version >= (10, 0, 0):
-                rows = self._exec_query("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes")
-            else:
-                # PG 9.6 and below use xlog terminology
-                rows = self._exec_query(
-                    "SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes"
-                )
+            rows = self._exec_query(*PostgresWalPositionQuery(self._backend.dialect).to_sql())
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
             pass
 
         # Get WAL files count
-        # pg_ls_waldir() only exists in PostgreSQL 10+
+        # pg_ls_waldir() only exists in PostgreSQL 10+; the node refuses below.
         if version >= (10, 0, 0):
             try:
-                rows = self._exec_query("""
-                    SELECT count(*) as wal_files
-                    FROM pg_ls_waldir()
-                """)
+                rows = self._exec_query(*PostgresWalFileCountQuery(self._backend.dialect).to_sql())
                 if rows:
                     wal_info.wal_files = int(rows[0].get('wal_files', 0))
             except Exception:
@@ -582,22 +582,7 @@ class SyncPostgreSQLStatusIntrospector(
         # PostgreSQL 10-16: pg_stat_bgwriter has checkpoints_timed and checkpoints_req
         # PostgreSQL 17+: these columns moved to pg_stat_checkpointer
         try:
-            if version >= (17, 0, 0):
-                # PostgreSQL 17+ uses pg_stat_checkpointer
-                rows = self._exec_query("""
-                    SELECT
-                        COALESCE(num_timed, 0) +
-                        COALESCE(num_requested, 0) as checkpoint_count
-                    FROM pg_stat_checkpointer
-                """)
-            else:
-                # PostgreSQL 10-16 uses pg_stat_bgwriter
-                rows = self._exec_query("""
-                    SELECT
-                        COALESCE(checkpoints_timed, 0) +
-                        COALESCE(checkpoints_req, 0) as checkpoint_count
-                    FROM pg_stat_bgwriter
-                """)
+            rows = self._exec_query(*PostgresCheckpointCountQuery(self._backend.dialect).to_sql())
             if rows:
                 wal_info.checkpoint_count = int(rows[0].get('checkpoint_count', 0))
         except Exception:
@@ -608,9 +593,7 @@ class SyncPostgreSQLStatusIntrospector(
         # Returns a record with checkpoint LSN as the first column
         if version >= (10, 0, 0):
             try:
-                rows = self._exec_query("""
-                    SELECT (pg_control_checkpoint()).checkpoint_lsn as checkpoint_info
-                """)
+                rows = self._exec_query(*PostgresCheckpointLsnQuery(self._backend.dialect).to_sql())
                 if rows and rows[0].get('checkpoint_info'):
                     wal_info.checkpoint_time = rows[0]['checkpoint_info']
             except Exception:
@@ -620,20 +603,13 @@ class SyncPostgreSQLStatusIntrospector(
         # Get WAL keep size/segments
         # PostgreSQL 13+: wal_keep_size
         # PostgreSQL 12 and below: wal_keep_segments
-        if version >= (13, 0, 0):
-            try:
-                rows = self._exec_query("SHOW wal_keep_size")
-                if rows:
-                    wal_info.wal_segments = list(rows[0].values())[0]
-            except Exception:
-                pass
-        else:
-            try:
-                rows = self._exec_query("SHOW wal_keep_segments")
-                if rows:
-                    wal_info.wal_segments = list(rows[0].values())[0]
-            except Exception:
-                pass
+        parameter = 'wal_keep_size' if version >= (13, 0, 0) else 'wal_keep_segments'
+        try:
+            rows = self._exec_query(*self._show(parameter).to_sql())
+            if rows:
+                wal_info.wal_segments = list(rows[0].values())[0]
+        except Exception:
+            pass
 
         return wal_info
 
@@ -643,7 +619,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Check if primary or standby
         try:
-            rows = self._exec_query("SELECT pg_is_in_recovery()")
+            rows = self._exec_query(*PostgresRecoveryStateQuery(self._backend.dialect).to_sql())
             if rows:
                 is_in_recovery = list(rows[0].values())[0]
                 # pg_is_in_recovery returns False for primary, True for standby
@@ -658,10 +634,9 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get replication slots count
         try:
-            rows = self._exec_query("""
-                SELECT count(*) as slot_count
-                FROM pg_replication_slots
-            """)
+            rows = self._exec_query(
+                *PostgresReplicationSlotCountQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 replication_info.replication_slots = int(rows[0].get('slot_count', 0))
         except Exception:
@@ -669,11 +644,9 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get active replications count
         try:
-            rows = self._exec_query("""
-                SELECT count(*) as active_count
-                FROM pg_stat_replication
-                WHERE state = 'streaming'
-            """)
+            rows = self._exec_query(
+                *PostgresActiveReplicationCountQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 replication_info.active_replications = int(rows[0].get('active_count', 0))
                 replication_info.streaming = replication_info.active_replications > 0
@@ -683,9 +656,9 @@ class SyncPostgreSQLStatusIntrospector(
         # Get replication lag (for standby)
         if replication_info.is_standby:
             try:
-                rows = self._exec_query("""
-                    SELECT pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::bigint as lag_bytes
-                """)
+                rows = self._exec_query(
+                    *PostgresReplicationLagQuery(self._backend.dialect).to_sql()
+                )
                 if rows and rows[0].get('lag_bytes') is not None:
                     replication_info.lag_bytes = int(rows[0]['lag_bytes'])
             except Exception:
@@ -699,7 +672,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get archive mode
         try:
-            rows = self._exec_query("SHOW archive_mode")
+            rows = self._exec_query(*self._show('archive_mode').to_sql())
             if rows:
                 archive_info.archive_mode = list(rows[0].values())[0]
         except Exception:
@@ -707,7 +680,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get archive command
         try:
-            rows = self._exec_query("SHOW archive_command")
+            rows = self._exec_query(*self._show('archive_command').to_sql())
             if rows:
                 archive_info.archive_command = list(rows[0].values())[0]
         except Exception:
@@ -715,7 +688,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get archive timeout
         try:
-            rows = self._exec_query("SHOW archive_timeout")
+            rows = self._exec_query(*self._show('archive_timeout').to_sql())
             if rows:
                 timeout_str = list(rows[0].values())[0]
                 # Parse timeout (could be like '5min' or '300s')
@@ -730,12 +703,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get archive statistics
         try:
-            rows = self._exec_query("""
-                SELECT archived_count, failed_count,
-                       last_archived_time::text as last_archived,
-                       last_failed_time::text as last_failed
-                FROM pg_stat_archiver
-            """)
+            rows = self._exec_query(*PostgresArchiveStatsQuery(self._backend.dialect).to_sql())
             if rows:
                 row = rows[0]
                 archive_info.archived_count = int(row.get('archived_count', 0) or 0)
@@ -753,7 +721,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get SSL status
         try:
-            rows = self._exec_query("SHOW ssl")
+            rows = self._exec_query(*self._show('ssl').to_sql())
             if rows:
                 ssl_value = list(rows[0].values())[0]
                 security_info.ssl_enabled = ssl_value == 'on' or ssl_value is True
@@ -762,7 +730,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get SSL certificate file
         try:
-            rows = self._exec_query("SHOW ssl_cert_file")
+            rows = self._exec_query(*self._show('ssl_cert_file').to_sql())
             if rows:
                 security_info.ssl_cert_file = list(rows[0].values())[0]
         except Exception:
@@ -770,7 +738,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get SSL key file
         try:
-            rows = self._exec_query("SHOW ssl_key_file")
+            rows = self._exec_query(*self._show('ssl_key_file').to_sql())
             if rows:
                 security_info.ssl_key_file = list(rows[0].values())[0]
         except Exception:
@@ -778,7 +746,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get SSL CA file
         try:
-            rows = self._exec_query("SHOW ssl_ca_file")
+            rows = self._exec_query(*self._show('ssl_ca_file').to_sql())
             if rows:
                 security_info.ssl_ca_file = list(rows[0].values())[0]
         except Exception:
@@ -786,7 +754,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Get password encryption
         try:
-            rows = self._exec_query("SHOW password_encryption")
+            rows = self._exec_query(*self._show('password_encryption').to_sql())
             if rows:
                 security_info.password_encryption = list(rows[0].values())[0]
         except Exception:
@@ -794,7 +762,7 @@ class SyncPostgreSQLStatusIntrospector(
 
         # Check row-level security
         try:
-            rows = self._exec_query("SHOW row_security")
+            rows = self._exec_query(*self._show('row_security').to_sql())
             if rows:
                 rls_value = list(rows[0].values())[0]
                 security_info.row_security = rls_value == 'on' or rls_value is True
@@ -808,15 +776,7 @@ class SyncPostgreSQLStatusIntrospector(
         extensions = []
 
         try:
-            rows = self._exec_query("""
-                SELECT e.extname as name,
-                       e.extversion as version,
-                       n.nspname as schema,
-                       pg_catalog.obj_description(e.oid, 'pg_extension') as description
-                FROM pg_extension e
-                LEFT JOIN pg_namespace n ON n.oid = e.extnamespace
-                ORDER BY e.extname
-            """)
+            rows = self._exec_query(*PostgresExtensionListQuery(self._backend.dialect).to_sql())
 
             for row in rows:
                 ext = ExtensionInfo(
@@ -890,8 +850,8 @@ class AsyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_settings
-        sql = "SELECT name, setting, unit FROM pg_settings ORDER BY name"
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresSettingsQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         settings_dict = {row['name']: row for row in rows}
 
@@ -921,12 +881,14 @@ class AsyncPostgreSQLStatusIntrospector(
         items = []
 
         # Query pg_stat_activity for performance-related settings
-        sql = """
-        SELECT name, setting, unit FROM pg_settings
-        WHERE name IN ('checkpoint_timeout', 'checkpoint_completion_target', 'archive_timeout', 'archive_command')
-        ORDER BY name
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresSettingsQuery(
+            self._backend.dialect,
+            [
+                'checkpoint_timeout', 'checkpoint_completion_target',
+                'archive_timeout', 'archive_command',
+            ],
+        ).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         for row in rows:
             name = row['name']
@@ -947,18 +909,16 @@ class AsyncPostgreSQLStatusIntrospector(
 
     async def get_connection_info(self) -> ConnectionInfo:
         """Get connection information from pg_stat_activity."""
-        sql = """
-        SELECT count(*) as total_connections
-        FROM pg_stat_activity
-        WHERE datname = current_database()
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresActivityCountQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
         total = rows[0].get('total_connections', 1) if rows else 0
 
         max_conn = None
         try:
-            sql = "SHOW max_connections"
-            result = await self._exec_query_async(sql)
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'max_connections'
+            ).to_sql()
+            result = await self._exec_query_async(sql, params)
             if result:
                 max_conn = int(list(result[0].values())[0])
         except Exception:
@@ -973,9 +933,14 @@ class AsyncPostgreSQLStatusIntrospector(
         """Get storage information."""
         db_name = getattr(self._backend.config, 'database', 'postgres')
 
-        # Get database size
-        sql = f"SELECT pg_database_size({self.dialect.p()}) as size_bytes"
-        rows = await self._exec_query_async(sql, (db_name,))
+        # Get database size: the node carries the database name and the
+        # dialect renders the statement, so no SQL text is assembled here.
+        from ..expression.introspection import PostgresDatabaseSizeQueryStatement
+
+        sql, params = PostgresDatabaseSizeQueryStatement(
+            self.dialect, database_name=db_name
+        ).to_sql()
+        rows = await self._exec_query_async(sql, params)
         size_bytes = rows[0].get('size_bytes') if rows else None
 
         return StorageInfo(
@@ -989,18 +954,15 @@ class AsyncPostgreSQLStatusIntrospector(
         in the extra field.
         """
         # Get list of databases
-        sql = """
-        SELECT datname as name, pg_database_size(datname) as size_bytes
-        FROM pg_database
-        WHERE datistemplate = false OR datname = current_database()
-        ORDER BY datname
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresDatabaseListQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         # Get current database name
         current_db = None
         try:
-            result = await self._exec_query_async("SELECT current_database()")
+            result = await self._exec_query_async(
+                *PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql()
+            )
             if result:
                 current_db = result[0].get('current_database')
         except Exception:
@@ -1011,18 +973,8 @@ class AsyncPostgreSQLStatusIntrospector(
         if current_db:
             try:
                 # Query schemata with table/view counts
-                sql = """
-                SELECT
-                    n.nspname as schema_name,
-                    COUNT(CASE WHEN c.relkind = 'r' THEN 1 END) as table_count,
-                    COUNT(CASE WHEN c.relkind = 'v' THEN 1 END) as view_count
-                FROM pg_namespace n
-                LEFT JOIN pg_class c ON c.relnamespace = n.oid
-                WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
-                GROUP BY n.nspname
-                ORDER BY n.nspname
-                """
-                schema_rows = await self._exec_query_async(sql)
+                sql, params = PostgresSchemaStatsQuery(self._backend.dialect).to_sql()
+                schema_rows = await self._exec_query_async(sql, params)
                 for row in schema_rows:
                     schema_name = row.get('schema_name')
                     if schema_name:
@@ -1054,13 +1006,8 @@ class AsyncPostgreSQLStatusIntrospector(
 
     async def list_users(self) -> List[UserInfo]:
         """List users from pg_roles."""
-        sql = """
-        SELECT rolname as name, rolsuper as is_superuser,
-               pg_catalog.pg_get_userbyid(oid) as owner
-        FROM pg_roles
-        ORDER BY rolname
-        """
-        rows = await self._exec_query_async(sql)
+        sql, params = PostgresRoleListQuery(self._backend.dialect).to_sql()
+        rows = await self._exec_query_async(sql, params)
 
         return [
             UserInfo(
@@ -1075,9 +1022,12 @@ class AsyncPostgreSQLStatusIntrospector(
         """Get current session/connection information."""
         session = SessionInfo()
 
-        # Get current user
+        # Get current user. ``CURRENT_USER`` is niladic: the standard writes it
+        # without parentheses and PostgreSQL refuses the call form.
         try:
-            rows = await self._exec_query_async("SELECT current_user")
+            rows = await self._exec_query_async(
+                *PostgresCurrentUserQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 session.user = rows[0].get('current_user')
         except Exception:
@@ -1085,7 +1035,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get current database
         try:
-            rows = await self._exec_query_async("SELECT current_database()")
+            rows = await self._exec_query_async(
+                *PostgresCurrentDatabaseQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 session.database = rows[0].get('current_database')
         except Exception:
@@ -1093,7 +1045,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get current schema
         try:
-            rows = await self._exec_query_async("SELECT current_schema()")
+            rows = await self._exec_query_async(
+                *PostgresCurrentSchemaQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 session.schema = rows[0].get('current_schema')
         except Exception:
@@ -1101,7 +1055,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get client host address
         try:
-            rows = await self._exec_query_async("SELECT inet_client_addr()")
+            rows = await self._exec_query_async(
+                *PostgresClientAddressQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 host = rows[0].get('inet_client_addr')
                 if host:
@@ -1109,23 +1065,19 @@ class AsyncPostgreSQLStatusIntrospector(
         except Exception:
             pass
 
-        # Get SSL status
+        # Get SSL status from the session's own pg_stat_ssl row. The sync path
+        # reads the same shape; there is no ssl_is_used() function (measured
+        # 17.11: function does not exist), which is why both paths read the view.
         try:
-            rows = await self._exec_query_async("SELECT ssl_is_used()")
-            if rows:
-                ssl_used = rows[0].get('ssl_is_used')
-                session.ssl_enabled = ssl_used is True or ssl_used == 't' or ssl_used == 'true'
-
-            if session.ssl_enabled:
-                # Get SSL version
-                rows = await self._exec_query_async("SELECT ssl_version FROM pg_stat_ssl WHERE pid = pg_backend_pid()")
-                if rows and rows[0].get('ssl_version'):
-                    session.ssl_version = rows[0].get('ssl_version')
-
-                # Get SSL cipher
-                rows = await self._exec_query_async("SELECT ssl_cipher FROM pg_stat_ssl WHERE pid = pg_backend_pid()")
-                if rows and rows[0].get('ssl_cipher'):
-                    session.ssl_cipher = rows[0].get('ssl_cipher')
+            rows = await self._exec_query_async(
+                *PostgresSslSessionQuery(self._backend.dialect).to_sql()
+            )
+            if rows and rows[0]:
+                ssl_info = rows[0]
+                ssl_value = ssl_info.get('ssl')
+                session.ssl_enabled = ssl_value is True or ssl_value == 't' or ssl_value == 'true'
+                session.ssl_version = ssl_info.get('version')
+                session.ssl_cipher = ssl_info.get('cipher')
         except Exception:
             pass
 
@@ -1141,38 +1093,30 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get WAL level
         try:
-            rows = await self._exec_query_async("SHOW wal_level")
+            rows = await self._exec_query_async(*self._show('wal_level').to_sql())
             if rows:
                 wal_info.wal_level = list(rows[0].values())[0]
         except Exception:
             pass
 
-        # Get WAL position/size
-        # PostgreSQL 10+: pg_current_wal_lsn()
-        # PostgreSQL 9.6 and below: pg_current_xlog_location()
+        # Get WAL position/size. The node names the question; the formatter
+        # spells the function pair this server version has (wal/xlog).
         try:
-            if version >= (10, 0, 0):
-                rows = await self._exec_query_async(
-                    "SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint as wal_bytes"
-                )
-            else:
-                # PG 9.6 and below use xlog terminology
-                rows = await self._exec_query_async(
-                    "SELECT pg_xlog_location_diff(pg_current_xlog_location(), '0/0')::bigint as wal_bytes"
-                )
+            rows = await self._exec_query_async(
+                *PostgresWalPositionQuery(self._backend.dialect).to_sql()
+            )
             if rows and rows[0].get('wal_bytes'):
                 wal_info.wal_size_bytes = int(rows[0]['wal_bytes'])
         except Exception:
             pass
 
         # Get WAL files count
-        # pg_ls_waldir() only exists in PostgreSQL 10+
+        # pg_ls_waldir() only exists in PostgreSQL 10+; the node refuses below.
         if version >= (10, 0, 0):
             try:
-                rows = await self._exec_query_async("""
-                    SELECT count(*) as wal_files
-                    FROM pg_ls_waldir()
-                """)
+                rows = await self._exec_query_async(
+                    *PostgresWalFileCountQuery(self._backend.dialect).to_sql()
+                )
                 if rows:
                     wal_info.wal_files = int(rows[0].get('wal_files', 0))
             except Exception:
@@ -1182,22 +1126,9 @@ class AsyncPostgreSQLStatusIntrospector(
         # PostgreSQL 10-16: pg_stat_bgwriter has checkpoints_timed and checkpoints_req
         # PostgreSQL 17+: these columns moved to pg_stat_checkpointer
         try:
-            if version >= (17, 0, 0):
-                # PostgreSQL 17+ uses pg_stat_checkpointer
-                rows = await self._exec_query_async("""
-                    SELECT
-                        COALESCE(num_timed, 0) +
-                        COALESCE(num_requested, 0) as checkpoint_count
-                    FROM pg_stat_checkpointer
-                """)
-            else:
-                # PostgreSQL 10-16 uses pg_stat_bgwriter
-                rows = await self._exec_query_async("""
-                    SELECT
-                        COALESCE(checkpoints_timed, 0) +
-                        COALESCE(checkpoints_req, 0) as checkpoint_count
-                    FROM pg_stat_bgwriter
-                """)
+            rows = await self._exec_query_async(
+                *PostgresCheckpointCountQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 wal_info.checkpoint_count = int(rows[0].get('checkpoint_count', 0))
         except Exception:
@@ -1205,12 +1136,11 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get last checkpoint info
         # pg_control_checkpoint() exists in PostgreSQL 9.6+
-        # Returns a record with checkpoint LSN as the first column
         if version >= (10, 0, 0):
             try:
-                rows = await self._exec_query_async("""
-                    SELECT (pg_control_checkpoint()).checkpoint_lsn as checkpoint_info
-                """)
+                rows = await self._exec_query_async(
+                    *PostgresCheckpointLsnQuery(self._backend.dialect).to_sql()
+                )
                 if rows and rows[0].get('checkpoint_info'):
                     wal_info.checkpoint_time = rows[0]['checkpoint_info']
             except Exception:
@@ -1220,20 +1150,13 @@ class AsyncPostgreSQLStatusIntrospector(
         # Get WAL keep size/segments
         # PostgreSQL 13+: wal_keep_size
         # PostgreSQL 12 and below: wal_keep_segments
-        if version >= (13, 0, 0):
-            try:
-                rows = await self._exec_query_async("SHOW wal_keep_size")
-                if rows:
-                    wal_info.wal_segments = list(rows[0].values())[0]
-            except Exception:
-                pass
-        else:
-            try:
-                rows = await self._exec_query_async("SHOW wal_keep_segments")
-                if rows:
-                    wal_info.wal_segments = list(rows[0].values())[0]
-            except Exception:
-                pass
+        parameter = 'wal_keep_size' if version >= (13, 0, 0) else 'wal_keep_segments'
+        try:
+            rows = await self._exec_query_async(*self._show(parameter).to_sql())
+            if rows:
+                wal_info.wal_segments = list(rows[0].values())[0]
+        except Exception:
+            pass
 
         return wal_info
 
@@ -1243,7 +1166,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Check if primary or standby
         try:
-            rows = await self._exec_query_async("SELECT pg_is_in_recovery()")
+            rows = await self._exec_query_async(
+                *PostgresRecoveryStateQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 is_in_recovery = list(rows[0].values())[0]
                 # pg_is_in_recovery returns False for primary, True for standby
@@ -1258,10 +1183,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get replication slots count
         try:
-            rows = await self._exec_query_async("""
-                SELECT count(*) as slot_count
-                FROM pg_replication_slots
-            """)
+            rows = await self._exec_query_async(
+                *PostgresReplicationSlotCountQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 replication_info.replication_slots = int(rows[0].get('slot_count', 0))
         except Exception:
@@ -1269,11 +1193,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get active replications count
         try:
-            rows = await self._exec_query_async("""
-                SELECT count(*) as active_count
-                FROM pg_stat_replication
-                WHERE state = 'streaming'
-            """)
+            rows = await self._exec_query_async(
+                *PostgresActiveReplicationCountQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 replication_info.active_replications = int(rows[0].get('active_count', 0))
                 replication_info.streaming = replication_info.active_replications > 0
@@ -1283,9 +1205,9 @@ class AsyncPostgreSQLStatusIntrospector(
         # Get replication lag (for standby)
         if replication_info.is_standby:
             try:
-                rows = await self._exec_query_async("""
-                    SELECT pg_wal_lsn_diff(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())::bigint as lag_bytes
-                """)
+                rows = await self._exec_query_async(
+                    *PostgresReplicationLagQuery(self._backend.dialect).to_sql()
+                )
                 if rows and rows[0].get('lag_bytes') is not None:
                     replication_info.lag_bytes = int(rows[0]['lag_bytes'])
             except Exception:
@@ -1299,7 +1221,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get archive mode
         try:
-            rows = await self._exec_query_async("SHOW archive_mode")
+            rows = await self._exec_query_async(*self._show('archive_mode').to_sql())
             if rows:
                 archive_info.archive_mode = list(rows[0].values())[0]
         except Exception:
@@ -1307,7 +1229,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get archive command
         try:
-            rows = await self._exec_query_async("SHOW archive_command")
+            rows = await self._exec_query_async(*self._show('archive_command').to_sql())
             if rows:
                 archive_info.archive_command = list(rows[0].values())[0]
         except Exception:
@@ -1315,7 +1237,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get archive timeout
         try:
-            rows = await self._exec_query_async("SHOW archive_timeout")
+            rows = await self._exec_query_async(*self._show('archive_timeout').to_sql())
             if rows:
                 timeout_str = list(rows[0].values())[0]
                 # Parse timeout (could be like '5min' or '300s')
@@ -1330,12 +1252,9 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get archive statistics
         try:
-            rows = await self._exec_query_async("""
-                SELECT archived_count, failed_count,
-                       last_archived_time::text as last_archived,
-                       last_failed_time::text as last_failed
-                FROM pg_stat_archiver
-            """)
+            rows = await self._exec_query_async(
+                *PostgresArchiveStatsQuery(self._backend.dialect).to_sql()
+            )
             if rows:
                 row = rows[0]
                 archive_info.archived_count = int(row.get('archived_count', 0) or 0)
@@ -1353,7 +1272,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get SSL status
         try:
-            rows = await self._exec_query_async("SHOW ssl")
+            rows = await self._exec_query_async(*self._show('ssl').to_sql())
             if rows:
                 ssl_value = list(rows[0].values())[0]
                 security_info.ssl_enabled = ssl_value == 'on' or ssl_value is True
@@ -1362,7 +1281,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get SSL certificate file
         try:
-            rows = await self._exec_query_async("SHOW ssl_cert_file")
+            rows = await self._exec_query_async(*self._show('ssl_cert_file').to_sql())
             if rows:
                 security_info.ssl_cert_file = list(rows[0].values())[0]
         except Exception:
@@ -1370,7 +1289,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get SSL key file
         try:
-            rows = await self._exec_query_async("SHOW ssl_key_file")
+            rows = await self._exec_query_async(*self._show('ssl_key_file').to_sql())
             if rows:
                 security_info.ssl_key_file = list(rows[0].values())[0]
         except Exception:
@@ -1378,7 +1297,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get SSL CA file
         try:
-            rows = await self._exec_query_async("SHOW ssl_ca_file")
+            rows = await self._exec_query_async(*self._show('ssl_ca_file').to_sql())
             if rows:
                 security_info.ssl_ca_file = list(rows[0].values())[0]
         except Exception:
@@ -1386,7 +1305,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Get password encryption
         try:
-            rows = await self._exec_query_async("SHOW password_encryption")
+            rows = await self._exec_query_async(*self._show('password_encryption').to_sql())
             if rows:
                 security_info.password_encryption = list(rows[0].values())[0]
         except Exception:
@@ -1394,7 +1313,7 @@ class AsyncPostgreSQLStatusIntrospector(
 
         # Check row-level security
         try:
-            rows = await self._exec_query_async("SHOW row_security")
+            rows = await self._exec_query_async(*self._show('row_security').to_sql())
             if rows:
                 rls_value = list(rows[0].values())[0]
                 security_info.row_security = rls_value == 'on' or rls_value is True
@@ -1408,15 +1327,9 @@ class AsyncPostgreSQLStatusIntrospector(
         extensions = []
 
         try:
-            rows = await self._exec_query_async("""
-                SELECT e.extname as name,
-                       e.extversion as version,
-                       n.nspname as schema,
-                       pg_catalog.obj_description(e.oid, 'pg_extension') as description
-                FROM pg_extension e
-                LEFT JOIN pg_namespace n ON n.oid = e.extnamespace
-                ORDER BY e.extname
-            """)
+            rows = await self._exec_query_async(
+                *PostgresExtensionListQuery(self._backend.dialect).to_sql()
+            )
 
             for row in rows:
                 ext = ExtensionInfo(

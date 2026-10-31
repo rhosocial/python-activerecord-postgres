@@ -36,8 +36,13 @@ __all__ = [
 ]
 
 
-class PostgresStorageParameterValueType(Enum):
+class PostgresStorageParameterValueType(str, Enum):
     """Value type of a storage parameter, mirroring PostgreSQL ``relopt_type``."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     INT = "int"
     REAL = "real"
@@ -63,6 +68,11 @@ class PostgresStorageParameter(str, Enum):
         ...     PostgresStorageParameter.AUTOVACUUM_ENABLED
         True
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     FILLFACTOR = "fillfactor"
     TOAST_TUPLE_TARGET = "toast_tuple_target"

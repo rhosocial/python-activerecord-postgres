@@ -16,13 +16,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -55,13 +55,13 @@ def hypopg_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_hypopg_items'),
         columns=columns,
@@ -79,7 +79,7 @@ def hypopg_env(postgres_backend_single):
                 Literal(dialect, f"user{i}@example.com"),
             ]
         )
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_hypopg_items'),
         columns=["name", "email"],
@@ -90,7 +90,7 @@ def hypopg_env(postgres_backend_single):
 
     # Reset any leftover hypothetical indexes
     reset_func = hypopg_reset(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[reset_func],
     )
@@ -101,7 +101,7 @@ def hypopg_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_hypopg_items'),
         if_exists=True,
@@ -111,7 +111,7 @@ def hypopg_env(postgres_backend_single):
 
     # Reset hypothetical indexes
     reset_func = hypopg_reset(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[reset_func],
     )
@@ -131,7 +131,7 @@ class TestHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items USING btree (email)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -152,7 +152,7 @@ class TestHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items USING btree (name)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -162,7 +162,7 @@ class TestHypopgIntegration:
 
         # Then list all hypothetical indexes
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )
@@ -180,7 +180,7 @@ class TestHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items USING btree (email)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("result")],
         )
@@ -199,7 +199,7 @@ class TestHypopgIntegration:
 
         # Estimate the size of the hypothetical index
         size_func = hypopg_estimate_size(dialect, index_id)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[size_func.as_("estimated_size")],
         )
@@ -220,7 +220,7 @@ class TestHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items USING btree (name)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -230,7 +230,7 @@ class TestHypopgIntegration:
 
         # Verify the index exists by listing
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )
@@ -240,7 +240,7 @@ class TestHypopgIntegration:
 
         # Reset all hypothetical indexes
         reset_func = hypopg_reset(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[reset_func],
         )
@@ -249,7 +249,7 @@ class TestHypopgIntegration:
 
         # Verify no hypothetical indexes remain
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )
@@ -271,13 +271,13 @@ async def async_hypopg_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_hypopg_items_async'),
         columns=columns,
@@ -295,7 +295,7 @@ async def async_hypopg_env(async_postgres_backend_single):
                 Literal(dialect, f"user{i}@example.com"),
             ]
         )
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_hypopg_items_async'),
         columns=["name", "email"],
@@ -306,7 +306,7 @@ async def async_hypopg_env(async_postgres_backend_single):
 
     # Reset any leftover hypothetical indexes
     reset_func = hypopg_reset(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[reset_func],
     )
@@ -317,7 +317,7 @@ async def async_hypopg_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_hypopg_items_async'),
         if_exists=True,
@@ -327,7 +327,7 @@ async def async_hypopg_env(async_postgres_backend_single):
 
     # Reset hypothetical indexes
     reset_func = hypopg_reset(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[reset_func],
     )
@@ -348,7 +348,7 @@ class TestAsyncHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items_async USING btree (email)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -370,7 +370,7 @@ class TestAsyncHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items_async USING btree (name)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -380,7 +380,7 @@ class TestAsyncHypopgIntegration:
 
         # Then list all hypothetical indexes
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )
@@ -399,7 +399,7 @@ class TestAsyncHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items_async USING btree (email)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("result")],
         )
@@ -418,7 +418,7 @@ class TestAsyncHypopgIntegration:
 
         # Estimate the size of the hypothetical index
         size_func = hypopg_estimate_size(dialect, index_id)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[size_func.as_("estimated_size")],
         )
@@ -440,7 +440,7 @@ class TestAsyncHypopgIntegration:
             dialect,
             "CREATE INDEX ON test_hypopg_items_async USING btree (name)",
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[create_func.as_("index_id")],
         )
@@ -450,7 +450,7 @@ class TestAsyncHypopgIntegration:
 
         # Verify the index exists by listing
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )
@@ -460,7 +460,7 @@ class TestAsyncHypopgIntegration:
 
         # Reset all hypothetical indexes
         reset_func = hypopg_reset(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[reset_func],
         )
@@ -469,7 +469,7 @@ class TestAsyncHypopgIntegration:
 
         # Verify no hypothetical indexes remain
         show_func = hypopg_show_indexes(dialect)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[show_func.as_("index_info")],
         )

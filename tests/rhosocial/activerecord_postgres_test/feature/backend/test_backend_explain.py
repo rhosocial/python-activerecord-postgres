@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.explain import (
     SyncExplainBackendProtocol,
     AsyncExplainBackendProtocol,
 )
-from rhosocial.activerecord.backend.expression import RawSQLExpression
+from rhosocial.activerecord.backend.expression import RawSQL
 from rhosocial.activerecord.backend.expression.statements import ExplainOptions
 from rhosocial.activerecord.backend.impl.postgres.explain import (
     PostgresExplainResult,
@@ -104,19 +104,19 @@ class TestExplainProtocol:
 class TestSyncExplainBasic:
     def test_explain_returns_postgres_explain_result(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         assert isinstance(result, PostgresExplainResult)
 
     def test_result_has_rows(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         assert len(result.rows) > 0
 
     def test_result_row_type(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         for row in result.rows:
             assert isinstance(row, PostgresExplainPlanLine)
@@ -125,20 +125,20 @@ class TestSyncExplainBasic:
 
     def test_result_sql_starts_with_explain(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         assert result.sql.upper().startswith("EXPLAIN")
         assert "explain_orders" in result.sql.lower()
 
     def test_result_has_duration(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         assert result.duration >= 0.0
 
     def test_result_has_raw_rows(self, indexed_backend):
         dialect = indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = indexed_backend.explain(expr)
         assert isinstance(result.raw_rows, list)
         assert len(result.raw_rows) == len(result.rows)
@@ -157,7 +157,7 @@ class TestSyncExplainIndexAnalysis:
         dialect = indexed_backend.dialect
         # ANALYZE forces actual execution so the planner won't cheat
         result = indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+            RawSQL(dialect, "SELECT * FROM explain_orders")
         )
         assert result.analyze_index_usage() == "full_scan"
         assert result.is_full_scan is True
@@ -168,7 +168,7 @@ class TestSyncExplainIndexAnalysis:
         """SELECT * … WHERE indexed_col = ? → Index Scan (with heap access)."""
         dialect = indexed_backend.dialect
         result = indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders WHERE status = 'pending'")
+            RawSQL(dialect, "SELECT * FROM explain_orders WHERE status = 'pending'")
         )
         usage = result.analyze_index_usage()
         # Small table may still use Seq Scan; if it uses an index, verify the flag
@@ -180,7 +180,7 @@ class TestSyncExplainIndexAnalysis:
         """SELECT indexed_cols WHERE indexed_col = ? → Index Only Scan."""
         dialect = indexed_backend.dialect
         result = indexed_backend.explain(
-            RawSQLExpression(
+            RawSQL(
                 dialect,
                 "SELECT order_id, sku FROM explain_order_items WHERE order_id = 1"
             )
@@ -195,7 +195,7 @@ class TestSyncExplainIndexAnalysis:
         """Plan lines should contain meaningful plan text."""
         dialect = indexed_backend.dialect
         result = indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+            RawSQL(dialect, "SELECT * FROM explain_orders")
         )
         combined = " ".join(r.line for r in result.rows)
         # Should mention the table name or a scan type
@@ -214,7 +214,7 @@ class TestSyncExplainAnalyze:
             pytest.skip("Dialect does not support EXPLAIN ANALYZE")
         opts = ExplainOptions(analyze=True)
         result = indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders"),
+            RawSQL(dialect, "SELECT * FROM explain_orders"),
             opts,
         )
         assert isinstance(result, PostgresExplainResult)
@@ -231,7 +231,7 @@ class TestSyncExplainAnalyze:
             pytest.skip("Dialect does not support EXPLAIN ANALYZE")
         opts = ExplainOptions(analyze=True)
         result = indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT 1"),
+            RawSQL(dialect, "SELECT 1"),
             opts,
         )
         assert result.sql.upper().startswith("EXPLAIN (ANALYZE)")
@@ -245,21 +245,21 @@ class TestAsyncExplainBasic:
     @pytest.mark.asyncio
     async def test_explain_returns_postgres_explain_result(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = await async_indexed_backend.explain(expr)
         assert isinstance(result, PostgresExplainResult)
 
     @pytest.mark.asyncio
     async def test_result_has_rows(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = await async_indexed_backend.explain(expr)
         assert len(result.rows) > 0
 
     @pytest.mark.asyncio
     async def test_result_sql_and_duration(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
-        expr = RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+        expr = RawSQL(dialect, "SELECT * FROM explain_orders")
         result = await async_indexed_backend.explain(expr)
         assert result.sql.upper().startswith("EXPLAIN")
         assert result.duration >= 0.0
@@ -268,7 +268,7 @@ class TestAsyncExplainBasic:
     async def test_full_scan_detection(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
         result = await async_indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+            RawSQL(dialect, "SELECT * FROM explain_orders")
         )
         assert result.is_full_scan is True
 
@@ -276,7 +276,7 @@ class TestAsyncExplainBasic:
     async def test_raw_rows_have_query_plan_key(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
         result = await async_indexed_backend.explain(
-            RawSQLExpression(dialect, "SELECT * FROM explain_orders")
+            RawSQL(dialect, "SELECT * FROM explain_orders")
         )
         for raw in result.raw_rows:
             assert "QUERY PLAN" in raw

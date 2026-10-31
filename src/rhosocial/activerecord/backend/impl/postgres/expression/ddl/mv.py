@@ -22,9 +22,9 @@ from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    RefreshMaterializedViewStatement,
 )
 
 from ...storage_parameters import validate_storage_parameters
@@ -34,12 +34,12 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "MaterializedViewAlterAction",
-    "PostgresAlterMaterializedViewExpression",
+    "PostgresMaterializedViewAlterAction",
+    "PostgresAlterMaterializedViewStatement",
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
     "PostgresDropMaterializedViewExpression",
-    "PostgresRefreshMaterializedViewExpression",
+    "PostgresRefreshMaterializedViewPgStatement",
     "PostgresRenameMaterializedViewAction",
     "PostgresResetMaterializedViewPropertiesAction",
     "PostgresSetMaterializedViewPropertiesAction",
@@ -54,7 +54,7 @@ def _validate_name(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} must be a non-empty string")
 
 
-class PostgresCreateMaterializedViewExpression(CreateMaterializedViewExpression):
+class PostgresCreateMaterializedViewExpression(CreateMaterializedViewStatement):
     """PostgreSQL CREATE MATERIALIZED VIEW with schema and IF NOT EXISTS support.
 
     Extends the generic expression with the PostgreSQL-specific ``IF NOT EXISTS``
@@ -120,7 +120,7 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
+class PostgresDropMaterializedViewExpression(DropMaterializedViewStatement):
     """PostgreSQL DROP MATERIALIZED VIEW.
 
     Example:
@@ -150,7 +150,7 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewExpression):
         )
 
 
-class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpression):
+class PostgresRefreshMaterializedViewPgStatement(RefreshMaterializedViewStatement):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
 
     Replaces the contents of a materialized view by recalculating its query.
@@ -172,7 +172,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ... )
@@ -181,14 +181,14 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
 
         >>> # Concurrent refresh (PG 9.4+, requires unique index)
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     concurrently=True,
         ... )
 
         >>> # Refresh without data (create empty, PG 9.4+)
-        >>> refresh = PostgresRefreshMaterializedViewExpression(
+        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     no_data=True,
@@ -233,7 +233,7 @@ class PostgresRefreshMaterializedViewExpression(RefreshMaterializedViewExpressio
         return "format_refresh_materialized_view_pg_statement"
 
 
-class MaterializedViewAlterAction(BaseExpression, ABC):
+class PostgresMaterializedViewAlterAction(BaseExpression, ABC):
     """Base class for one ALTER MATERIALIZED VIEW action.
 
     Supported actions (PostgreSQL):
@@ -247,10 +247,10 @@ class MaterializedViewAlterAction(BaseExpression, ABC):
 
     @property
     def format_method(self) -> str:
-        return "format_materialized_view_alter_action"
+        return "format_postgres_materialized_view_alter_action"
 
 
-class PostgresRenameMaterializedViewAction(MaterializedViewAlterAction):
+class PostgresRenameMaterializedViewAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name RENAME TO new_name``."""
 
     action_kind = "rename"
@@ -261,7 +261,7 @@ class PostgresRenameMaterializedViewAction(MaterializedViewAlterAction):
         self.new_name = new_name
 
 
-class PostgresSetMaterializedViewSchemaAction(MaterializedViewAlterAction):
+class PostgresSetMaterializedViewSchemaAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name SET SCHEMA new_schema``."""
 
     action_kind = "set_schema"
@@ -272,7 +272,7 @@ class PostgresSetMaterializedViewSchemaAction(MaterializedViewAlterAction):
         self.new_schema = new_schema
 
 
-class PostgresSetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
+class PostgresSetMaterializedViewPropertiesAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name SET (storage_parameter [= value] [, ...])``.
 
     Parameter names are validated against
@@ -306,7 +306,7 @@ class PostgresSetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresResetMaterializedViewPropertiesAction(MaterializedViewAlterAction):
+class PostgresResetMaterializedViewPropertiesAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name RESET (storage_parameter [, ...])``."""
 
     action_kind = "reset_properties"
@@ -329,7 +329,7 @@ class PostgresResetMaterializedViewPropertiesAction(MaterializedViewAlterAction)
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
 
 
-class PostgresChangeMaterializedViewOwnerAction(MaterializedViewAlterAction):
+class PostgresChangeMaterializedViewOwnerAction(PostgresMaterializedViewAlterAction):
     """``ALTER MATERIALIZED VIEW name OWNER TO {new_owner | CURRENT_ROLE | ...}``.
 
     The ``CURRENT_ROLE`` / ``CURRENT_USER`` / ``SESSION_USER`` keywords are kept
@@ -344,18 +344,18 @@ class PostgresChangeMaterializedViewOwnerAction(MaterializedViewAlterAction):
         self.new_owner = new_owner
 
 
-class PostgresAlterMaterializedViewExpression(BaseExpression):
+class PostgresAlterMaterializedViewStatement(BaseExpression):
     """Expression for ``ALTER MATERIALIZED VIEW``.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-        ...     PostgresAlterMaterializedViewExpression,
+        ...     PostgresAlterMaterializedViewStatement,
         ...     PostgresRenameMaterializedViewAction,
         ...     PostgresSetMaterializedViewPropertiesAction,
         ... )
         >>> dialect = PostgresDialect(version=(15, 0, 0))
-        >>> alter = PostgresAlterMaterializedViewExpression(
+        >>> alter = PostgresAlterMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "sales_summary"),
         ...     actions=[
@@ -372,16 +372,16 @@ ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
         self,
         dialect: "SQLDialectBase",
         view: MaterializedView,
-        actions: Sequence[MaterializedViewAlterAction],
+        actions: Sequence[PostgresMaterializedViewAlterAction],
     ) -> None:
         super().__init__(dialect)
         action_list = list(actions or [])
         if not action_list:
-            raise ValueError("actions must contain at least one MaterializedViewAlterAction")
+            raise ValueError("actions must contain at least one PostgresMaterializedViewAlterAction")
         for action in action_list:
-            if not isinstance(action, MaterializedViewAlterAction):
+            if not isinstance(action, PostgresMaterializedViewAlterAction):
                 raise TypeError(
-                    "actions must contain MaterializedViewAlterAction instances, "
+                    "actions must contain PostgresMaterializedViewAlterAction instances, "
                     f"got {type(action).__name__}"
                 )
         self.view = view

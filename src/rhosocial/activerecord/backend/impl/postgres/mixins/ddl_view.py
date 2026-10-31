@@ -6,7 +6,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import View
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateViewExpression
+    from ....expression.statements.ddl_view import CreateViewStatement
 
 
 class PostgresViewMixin:
@@ -25,6 +25,15 @@ class PostgresViewMixin:
     def supports_temporary_view(self) -> bool:
         return True
 
+
+    def supports_create_view_bind_parameters(self) -> bool:
+        """PostgreSQL refuses bind parameters in a view body.
+
+        Measured on 19beta4: a view whose definition binds is rejected with
+        "there is no parameter $1". The definition is stored and run again
+        later, where a bound value has no meaning.
+        """
+        return False
     def supports_if_exists_view(self) -> bool:
         return True
 
@@ -43,7 +52,7 @@ class PostgresViewMixin:
         """
         return True
 
-    def format_create_view_statement(self, expr: "CreateViewExpression") -> Tuple[str, tuple]:
+    def format_create_view_statement(self, expr: "CreateViewStatement") -> Tuple[str, tuple]:
         """Format CREATE VIEW statement for PostgreSQL.
 
         - ``expr.temporary`` — add ``TEMPORARY``.
@@ -54,7 +63,7 @@ class PostgresViewMixin:
         - ``expr.options.check_option`` — ``WITH {LOCAL|CASCADED} CHECK OPTION``.
 
         Args:
-            expr: CreateViewExpression instance
+            expr: CreateViewStatement instance
 
         Returns:
             Tuple of (SQL string, params tuple)
@@ -67,7 +76,7 @@ class PostgresViewMixin:
         """
         if not isinstance(expr.view, View):
             raise TypeError(
-                f"CreateViewExpression.view must be a View, "
+                f"CreateViewStatement.view must be a View, "
                 f"got {type(expr.view).__name__}"
             )
         parts = ["CREATE"]
@@ -86,6 +95,8 @@ class PostgresViewMixin:
             parts.append(f"({cols})")
 
         query_sql, query_params = expr.query.to_sql()
+        if query_params and not self.supports_create_view_bind_parameters():
+            self.refuse_ddl_bind_parameters("CREATE VIEW with bound parameters")
         parts.append(f"AS {query_sql}")
 
         if expr.options and expr.options.check_option:

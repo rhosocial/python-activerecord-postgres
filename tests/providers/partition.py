@@ -10,19 +10,20 @@ from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
     PartitionClause,
     PartitionStrategy,
-    TruncateExpression,
+    TruncateStatement,
+    ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
+    PostgresAttachPartitionStatement,
     PostgresColumnDefinition,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
 )
 from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 from rhosocial.activerecord.testsuite.feature.partition.interfaces import IPartitionProvider
@@ -31,7 +32,7 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType, IntegerType, TextType, TimestampType, DecimalType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 
 from .scenarios import get_enabled_scenarios, get_scenario
@@ -251,13 +252,13 @@ class PartitionProvider(IPartitionProvider):
         return self.PARTITIONS[partition_key][0]
 
     def _create_parent_sql(self, dialect):
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=self.TABLE_NAME,
             columns=[
                 PostgresColumnDefinition(dialect, "id", BigIntType(dialect=dialect), attributes=[IdentityAttribute(generation="BY DEFAULT")]),
-                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                ColumnDefinition(dialect, "tenant_id", IntegerType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
                 ColumnDefinition(dialect, "amount", DecimalType(precision=12, scale=2, dialect=dialect)),
             ],
@@ -270,7 +271,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _create_range_partition_sql(self, dialect, partition_name: str, from_value: str, to_value: str):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -280,7 +281,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _detach_partition_sql(self, dialect, partition_name: str):
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -288,7 +289,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _attach_partition_sql(self, dialect, partition_name: str, from_value: str, to_value: str):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name=partition_name,
             parent_table=self.TABLE_NAME,
@@ -298,11 +299,11 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _truncate_partition_sql(self, dialect, partition_name: str):
-        expr = TruncateExpression(dialect=dialect, table=Table(dialect, partition_name))
+        expr = TruncateStatement(dialect=dialect, table=Table(dialect, partition_name))
         return expr.to_sql()
 
     def _drop_partition_sql(self, dialect, table_name: str):
-        expr = DropTableExpression(
+        expr = DropTableStatement(
             dialect=dialect,
             table=Table(dialect, table_name),
             if_exists=True,
@@ -311,7 +312,7 @@ class PartitionProvider(IPartitionProvider):
         return expr.to_sql()
 
     def _partition_metadata_sql(self, dialect):
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table=self.TABLE_NAME,
         )

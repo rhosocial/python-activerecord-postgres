@@ -7,9 +7,9 @@ from typing import Any, List, Optional, Sequence, Tuple, cast, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
-    DropTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
+    DropTypeStatement,
 )
 from ...expression.ddl.type import (
     PostgresAddEnumValueAction,
@@ -33,11 +33,11 @@ class EnumTypeMixin:
 
         def inline_sql_literal(self, value: object) -> str: ...
 
-        def format_create_type_statement(self, expr: CreateTypeExpression) -> Tuple[str, tuple]: ...
+        def format_create_type_statement(self, expr: CreateTypeStatement) -> Tuple[str, tuple]: ...
 
-        def format_drop_type_statement(self, expr: DropTypeExpression) -> Tuple[str, tuple]: ...
+        def format_drop_type_statement(self, expr: DropTypeStatement) -> Tuple[str, tuple]: ...
 
-        def format_alter_type_statement(self, expr: AlterTypeExpression) -> Tuple[str, tuple]: ...
+        def format_alter_type_statement(self, expr: AlterTypeStatement) -> Tuple[str, tuple]: ...
 
     def _as_dialect(self) -> "SQLDialectBase":
         return cast("SQLDialectBase", self)
@@ -55,7 +55,7 @@ class EnumTypeMixin:
         """
         return self.format_type_object(Type(self, name, schema_name=schema))
 
-    def format_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
         return self.format_enum_type_name(expr.name, expr.schema)
 
     def format_enum_values(self, values: Sequence[str]) -> Tuple[str, tuple]:
@@ -64,7 +64,7 @@ class EnumTypeMixin:
             raise TypeError("ENUM values must be strings")
         return ", ".join(self.inline_sql_literal(label) for label in labels), ()
 
-    def format_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
         return self.format_enum_values(expr.values)
 
     def format_create_enum_type_raw(
@@ -75,7 +75,7 @@ class EnumTypeMixin:
         if_not_exists: bool = False,
     ) -> Tuple[str, tuple]:
         dialect = self._as_dialect()
-        expr = CreateTypeExpression(
+        expr = CreateTypeStatement(
             dialect,
             Type(dialect, name, schema_name=schema),
             PostgresEnumTypeDefinition(dialect, values),
@@ -130,7 +130,7 @@ class EnumTypeMixin:
             before=before,
             after=after,
         )
-        expr = AlterTypeExpression(
+        expr = AlterTypeStatement(
             dialect, Type(dialect, type_name, schema_name=schema), [action]
         )
         return self.format_alter_type_statement(expr)
@@ -230,7 +230,7 @@ class EnumTypeMixin:
             expr.old_value,
             expr.new_value,
         )
-        statement = AlterTypeExpression(
+        statement = AlterTypeStatement(
             dialect,
             Type(dialect, expr.type_name, schema_name=expr.schema),
             [action],

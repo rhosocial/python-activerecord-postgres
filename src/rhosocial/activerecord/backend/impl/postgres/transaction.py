@@ -15,6 +15,12 @@ from rhosocial.activerecord.backend.transaction import (
     IsolationLevel,
     TransactionMode,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.status import (
+    PostgresShowStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+    PostgresSetConstraintsStatement,
+)
 
 if TYPE_CHECKING:
     from .backend import PostgresBackend
@@ -47,32 +53,36 @@ class PostgresTransactionMixin:
     def _build_begin_sql(self) -> Tuple[str, tuple]:
         """Build BEGIN TRANSACTION SQL with PostgreSQL-specific options.
 
-        This method creates a BeginTransactionExpression and delegates
+        This method creates a BeginTransactionStatement and delegates
         SQL generation to the backend's dialect. All options including
         DEFERRABLE are handled by the Expression/Dialect system.
 
         Returns:
             Tuple of (SQL string, parameters tuple).
         """
-        from rhosocial.activerecord.backend.expression.transaction import BeginTransactionExpression
+        from rhosocial.activerecord.backend.expression.transaction import BeginTransactionStatement
 
-        expr = BeginTransactionExpression(self._backend.dialect)
-
-        if self._isolation_level is not None:
-            expr.isolation_level(self._isolation_level)
-
-        if self._transaction_mode == TransactionMode.READ_ONLY:
-            expr.read_only()
+        # Every option is collected at construction: the node carries all of
+        # its parameters, so there is no chained call and no open loop where
+        # the caller's state can go missing between the two.
+        expr = BeginTransactionStatement(
+            self._backend.dialect,
+            isolation_level=self._isolation_level,
+            # READ WRITE is PostgreSQL's default and was never rendered
+            # before, so it stays unset: the mode field can only render what
+            # the caller asked for.
+            mode=(
+                self._transaction_mode
+                if self._transaction_mode is TransactionMode.READ_ONLY
+                else None
+            ),
+            deferrable=bool(self._is_deferrable),
+            not_deferrable=self._is_deferrable is False,
+        )
 
         # [NOT] DEFERRABLE is an independent transaction mode in the grammar;
         # it is rendered whenever the caller requested it, not only alongside
         # SERIALIZABLE (``BEGIN DEFERRABLE`` alone is accepted by PostgreSQL).
-        if self._is_deferrable is not None:
-            if self._is_deferrable:
-                expr.deferrable()
-            else:
-                expr.not_deferrable()
-
         return expr.to_sql()
 
     def set_deferrable(self, deferrable: bool = True) -> None:
@@ -154,7 +164,10 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
         """
         try:
             self.log(logging.DEBUG, f"Deferring constraint: {constraint_name}")
-            self._backend.execute(f"SET CONSTRAINTS {constraint_name} DEFERRED")
+            sql, params = PostgresSetConstraintsStatement(
+                self._backend.dialect, constraint_name=constraint_name
+            ).to_sql()
+            self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
             self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
         except Exception as e:
@@ -172,7 +185,10 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
             TransactionError: If getting isolation level fails
         """
         try:
-            result = self._backend.execute("SHOW transaction_isolation")
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'transaction_isolation'
+            ).to_sql()
+            result = self._backend.execute(sql, params)
             if result.data:
                 # result.data is a list of dicts with column names as keys
                 level_name = result.data[0]['transaction_isolation'].upper().replace(" ", "_")
@@ -240,7 +256,10 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
         """
         try:
             self.log(logging.DEBUG, f"Deferring constraint: {constraint_name}")
-            await self._backend.execute(f"SET CONSTRAINTS {constraint_name} DEFERRED")
+            sql, params = PostgresSetConstraintsStatement(
+                self._backend.dialect, constraint_name=constraint_name
+            ).to_sql()
+            await self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
             self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
         except Exception as e:
@@ -258,7 +277,10 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             TransactionError: If getting isolation level fails
         """
         try:
-            result = await self._backend.execute("SHOW transaction_isolation")
+            sql, params = PostgresShowStatement(
+                self._backend.dialect, 'transaction_isolation'
+            ).to_sql()
+            result = await self._backend.execute(sql, params)
             if result.data:
                 # result.data is a list of dicts with column names as keys
                 level_name = result.data[0]['transaction_isolation'].upper().replace(" ", "_")

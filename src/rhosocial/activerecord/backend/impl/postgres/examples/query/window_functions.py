@@ -24,7 +24,7 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Column, FunctionCall
@@ -91,7 +91,7 @@ print(f"DENSE_RANK: {sql}")
 # SECTION: Full Query Example
 # ============================================================
 # Using window functions in a SELECT query
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'id'),

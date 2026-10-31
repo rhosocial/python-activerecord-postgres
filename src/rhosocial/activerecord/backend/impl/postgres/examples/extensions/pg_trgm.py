@@ -35,26 +35,27 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    CreateIndexExpression,
-    DropTableExpression,
-    QueryExpression,
+    CreateIndexStatement,
+    DropTableStatement,
+    QueryStatement,
     Column,
     FunctionCall,
     BinaryExpression,
     OrderByClause,
     Literal,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
@@ -63,7 +64,7 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
 # Clean up for demo
-drop_expr = DropTableExpression(
+drop_expr = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'articles'),
     if_exists=True,
@@ -78,7 +79,7 @@ print(f"Extension check: pg_trgm available = {available}, installed = {installed
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pg_trgm",
     )
@@ -99,19 +100,19 @@ if installed:
             name="id",
             data_type="SERIAL",
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             name="title",
             data_type="TEXT",
             constraints=[
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'articles'),
         columns=columns,
@@ -123,7 +124,7 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert text data
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'articles'),
         columns=["title"],
@@ -160,7 +161,7 @@ if installed:
     sim_order = FunctionCall(
         dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "title"),
@@ -181,7 +182,7 @@ if installed:
     # Example 4: Using % operator (similarity threshold)
     # The % operator returns true if similarity exceeds the threshold
     # Default threshold: 0.3 (set by pg_trgm.similarity_threshold)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "title")],
         from_=Table(dialect, "articles"),
@@ -208,7 +209,7 @@ if installed:
     sim_pg_order = FunctionCall(
         dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL")
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             Column(dialect, "title"),
@@ -250,7 +251,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(
+drop_expr = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'articles'),
     if_exists=True,

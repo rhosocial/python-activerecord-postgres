@@ -8,7 +8,7 @@ from enum import Enum
 from rhosocial.activerecord.backend.config import ConnectionConfig, ConnectionPoolMixin
 
 
-class RangeAdapterMode(Enum):
+class RangeAdapterMode(str, Enum):
     """Range adapter mode selection.
 
     Determines which range type adapter to use for PostgreSQL range types.
@@ -18,6 +18,11 @@ class RangeAdapterMode(Enum):
         CUSTOM: Use custom PostgresRange type
         BOTH: Make both adapters available, with native as default
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     NATIVE = "native"
     CUSTOM = "custom"

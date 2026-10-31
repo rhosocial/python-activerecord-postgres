@@ -20,20 +20,23 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
-from rhosocial.activerecord.backend.expression import RawSQLExpression
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression import RawSQL
+from rhosocial.activerecord.backend.expression.predicates import (
+    ComparisonPredicate,
+    LogicalPredicate,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression.types import (
@@ -64,12 +67,12 @@ def _setup_trgm_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -84,7 +87,7 @@ def _setup_trgm_table(backend, dialect, table):
         [Literal(dialect, "hi there")],
         [Literal(dialect, "completely different")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -101,12 +104,12 @@ def _setup_trgm_ops_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -120,7 +123,7 @@ def _setup_trgm_ops_table(backend, dialect, table):
         [Literal(dialect, "MySQL database")],
         [Literal(dialect, "completely unrelated")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -142,12 +145,12 @@ def _setup_trgm_idx_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -165,7 +168,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "application development")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -182,12 +185,12 @@ def _setup_trgm_word_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -199,7 +202,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "The quick brown fox jumps over the lazy dog")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["description"],
@@ -211,7 +214,7 @@ def _setup_trgm_word_table(backend, dialect, table):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -227,12 +230,12 @@ async def _async_setup_trgm_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -247,7 +250,7 @@ async def _async_setup_trgm_table(backend, dialect, table):
         [Literal(dialect, "hi there")],
         [Literal(dialect, "completely different")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -264,12 +267,12 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -283,7 +286,7 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
         [Literal(dialect, "MySQL database")],
         [Literal(dialect, "completely unrelated")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -305,12 +308,12 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -328,7 +331,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "application development")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["name"],
@@ -345,12 +348,12 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="description", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -362,7 +365,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     rows = [
         [Literal(dialect, "The quick brown fox jumps over the lazy dog")],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["description"],
@@ -374,7 +377,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -429,7 +432,7 @@ class TestPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[sim_func],
             from_=Table(dialect, TABLE_TRGM),
@@ -452,7 +455,7 @@ class TestPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query_world = QueryExpression(
+        query_world = QueryStatement(
             dialect=dialect,
             select=[sim_func_world],
             from_=Table(dialect, TABLE_TRGM),
@@ -472,7 +475,7 @@ class TestPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 4),
         )
-        query_diff = QueryExpression(
+        query_diff = QueryStatement(
             dialect=dialect,
             select=[sim_func_diff],
             from_=Table(dialect, TABLE_TRGM),
@@ -508,7 +511,7 @@ class TestPgTrgmIntegration:
             sim_func_where,
             Literal(dialect, 0.3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name"), sim_func_select],
             from_=Table(dialect, TABLE_TRGM_OPS),
@@ -539,18 +542,18 @@ class TestPgTrgmIntegration:
             Literal(dialect, "idx_trgm_name"),
         )
         # Combine both conditions with AND
-        combined_pred = ComparisonPredicate(
+        combined_pred = LogicalPredicate(
             dialect, "AND",
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQLExpression because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Literal("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
         # Replace with FunctionCall once expression system supports star args.
-        count_func = RawSQLExpression(
+        count_func = RawSQL(
             dialect, 'COUNT(*) AS "cnt"'
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[count_func],
             from_=Table(dialect, "pg_indexes"),
@@ -571,7 +574,7 @@ class TestPgTrgmIntegration:
             sim_func,
             Literal(dialect, 0.3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name")],
             from_=Table(dialect, TABLE_TRGM_IDX),
@@ -590,7 +593,7 @@ class TestPgTrgmIntegration:
             dialect, "show_trgm",
             Literal(dialect, "hello"),
         ).as_("trigrams")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -614,7 +617,7 @@ class TestPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[ws_func],
             from_=Table(dialect, TABLE_TRGM_WORD),
@@ -674,7 +677,7 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[sim_func],
             from_=Table(dialect, TABLE_TRGM_ASYNC),
@@ -697,7 +700,7 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query_world = QueryExpression(
+        query_world = QueryStatement(
             dialect=dialect,
             select=[sim_func_world],
             from_=Table(dialect, TABLE_TRGM_ASYNC),
@@ -717,7 +720,7 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 4),
         )
-        query_diff = QueryExpression(
+        query_diff = QueryStatement(
             dialect=dialect,
             select=[sim_func_diff],
             from_=Table(dialect, TABLE_TRGM_ASYNC),
@@ -754,7 +757,7 @@ class TestAsyncPgTrgmIntegration:
             sim_func_where,
             Literal(dialect, 0.3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name"), sim_func_select],
             from_=Table(dialect, TABLE_TRGM_OPS_ASYNC),
@@ -785,17 +788,17 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "indexname"),
             Literal(dialect, "idx_trgm_name_async"),
         )
-        combined_pred = ComparisonPredicate(
+        combined_pred = LogicalPredicate(
             dialect, "AND",
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQLExpression because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Literal("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
-        count_func = RawSQLExpression(
+        count_func = RawSQL(
             dialect, 'COUNT(*) AS "cnt"'
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[count_func],
             from_=Table(dialect, "pg_indexes"),
@@ -816,7 +819,7 @@ class TestAsyncPgTrgmIntegration:
             sim_func,
             Literal(dialect, 0.3),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name")],
             from_=Table(dialect, TABLE_TRGM_IDX_ASYNC),
@@ -836,7 +839,7 @@ class TestAsyncPgTrgmIntegration:
             dialect, "show_trgm",
             Literal(dialect, "hello"),
         ).as_("trigrams")
-        query = QueryExpression(dialect=dialect, select=[func])
+        query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
         assert result.data is not None
@@ -861,7 +864,7 @@ class TestAsyncPgTrgmIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[ws_func],
             from_=Table(dialect, TABLE_TRGM_WORD_ASYNC),

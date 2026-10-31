@@ -9,13 +9,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -31,7 +32,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'logs'),
     if_exists=True,
@@ -40,7 +41,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'logs'),
     columns=[
@@ -48,8 +49,8 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('level', 'VARCHAR(20)'),
@@ -63,13 +64,13 @@ backend.execute(*create_table.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    InsertExpression, ValuesSource, QueryExpression,
+    InsertStatement, ValuesSource, QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, WildcardExpression, Column
+from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-insert = InsertExpression(
+insert = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'logs'),
     columns=['level', 'message'],
@@ -95,9 +96,9 @@ backend.execute(sql, params)
 print("Batch insert completed")
 
 # Verify
-verify_query = QueryExpression(
+verify_query = QueryStatement(
     dialect=dialect,
-    select=[WildcardExpression(dialect)],
+    select=[AllColumnsWildcard(dialect)],
     from_=Table(dialect, 'logs'),
     order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
 )

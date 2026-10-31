@@ -26,10 +26,10 @@ class PostgresPgPartmanSupport(Protocol):
 
     Declares the interface for pg_partman operations:
     - supports_pg_partman / supports_pg_partman_auto_partition: capability checks
-    - format_pg_partman_create_parent: initialize automated partitioning
-    - format_pg_partman_run_maintenance: trigger maintenance
-    - format_pg_partman_update_config: update partition config
-    - format_pg_partman_delete_config: remove partition config
+    - format_pg_partman_create_parent_expression: initialize automated partitioning
+    - format_pg_partman_run_maintenance_expression: trigger maintenance
+    - format_pg_partman_update_config_expression: update partition config
+    - format_pg_partman_delete_config_expression: remove partition config
     """
 
     def supports_pg_partman(self) -> bool:
@@ -48,7 +48,7 @@ class PostgresPgPartmanSupport(Protocol):
         """
         ...
 
-    def format_pg_partman_create_parent(
+    def format_pg_partman_create_parent_expression(
         self,
         expr: "PostgresPgPartmanCreateParentExpression",
     ) -> tuple:
@@ -69,7 +69,7 @@ class PostgresPgPartmanSupport(Protocol):
         """
         ...
 
-    def format_pg_partman_run_maintenance(
+    def format_pg_partman_run_maintenance_expression(
         self,
         expr: "PostgresPgPartmanRunMaintenanceExpression",
     ) -> tuple:
@@ -84,7 +84,7 @@ class PostgresPgPartmanSupport(Protocol):
         """
         ...
 
-    def format_pg_partman_update_config(
+    def format_pg_partman_update_config_expression(
         self,
         expr: "PostgresPgPartmanUpdateConfigExpression",
     ) -> tuple:
@@ -102,7 +102,7 @@ class PostgresPgPartmanSupport(Protocol):
         """
         ...
 
-    def format_pg_partman_delete_config(
+    def format_pg_partman_delete_config_expression(
         self,
         expr: "PostgresPgPartmanDeleteConfigExpression",
     ) -> tuple:

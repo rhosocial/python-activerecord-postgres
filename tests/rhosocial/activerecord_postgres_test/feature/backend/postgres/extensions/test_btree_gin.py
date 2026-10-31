@@ -7,7 +7,7 @@ Tests for PostgresBtreeGinMixin format methods:
 - format_btree_gin_operator_class
 """
 
-from rhosocial.activerecord.backend.expression import CreateIndexExpression
+from rhosocial.activerecord.backend.expression import CreateIndexStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
@@ -20,8 +20,8 @@ class TestPostgresBtreeGinMixin:
         self.dialect = PostgresDialect(version=(14, 0, 0))
 
     def test_format_gin_index(self):
-        """CreateIndexExpression with index_type gin should render a gin index."""
-        expr = CreateIndexExpression(
+        """CreateIndexStatement with index_type gin should render a gin index."""
+        expr = CreateIndexStatement(
             self.dialect,
             index=Index(self.dialect, 'idx_name'),
             table=Table(self.dialect, 'table_name'),

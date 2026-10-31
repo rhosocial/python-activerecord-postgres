@@ -8,7 +8,7 @@ This module tests the list_tables, get_table_info, and table_exists methods for 
 import pytest
 
 from rhosocial.activerecord.backend.introspection.types import (
-    TableInfo,
+    IntrospectionTableInfo,
     TableType,
 )
 
@@ -59,7 +59,7 @@ class TestGetTableInfo:
         table = backend_with_tables.introspector.get_table_info("users")
 
         assert table is not None
-        assert isinstance(table, TableInfo)
+        assert isinstance(table, IntrospectionTableInfo)
         assert table.name == "users"
         assert table.table_type == TableType.BASE_TABLE
 
@@ -127,7 +127,7 @@ class TestTableExists:
 
 
 class TestTableInfoDetails:
-    """Tests for TableInfo detail properties."""
+    """Tests for IntrospectionTableInfo detail properties."""
 
     def test_table_type_base_table(self, backend_with_tables):
         """Test that base tables have correct type."""

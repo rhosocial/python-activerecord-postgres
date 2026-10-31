@@ -25,16 +25,16 @@ statements, and only one of them would ever be checked otherwise.
 import pytest
 
 from rhosocial.activerecord.backend.expression import (
+    cast,
     Literal,
     Column,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
-    Literal,
-    QueryExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
@@ -85,7 +85,7 @@ class _Aliased:
 def read(backend, expression, table):
     """Return the single value *expression* produces for the row in *table*."""
     dialect = backend.dialect
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[_Aliased(dialect, expression)],
         from_=NamedRelationRef(dialect, Table(dialect, table)),
@@ -99,14 +99,14 @@ def make_table(backend, table, columns):
     """Create *table*; each column is ``(name, DataType)``."""
     dialect = backend.dialect
     drop(backend, table)
-    backend.execute(*CreateTableExpression(
+    backend.execute(*CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=[
             ColumnDefinition(
                 dialect, name="id", data_type=PostgresSerialType(dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY)],
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
             ),
         ] + [
             ColumnDefinition(dialect, name=name, data_type=data_type)
@@ -118,17 +118,17 @@ def make_table(backend, table, columns):
 def insert(backend, table, name, value, data_type):
     """Insert *value* into *name* as *data_type*, through a cast."""
     dialect = backend.dialect
-    backend.execute(*InsertExpression(
+    backend.execute(*InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=[name],
         source=ValuesSource(
-            dialect, [[Literal(dialect, value).cast(data_type)]]),
+            dialect, [[cast(dialect, Literal(dialect, value), data_type)]]),
     ).to_sql())
 
 
 def drop(backend, table):
-    backend.execute(*DropTableExpression(
+    backend.execute(*DropTableStatement(
         dialect=backend.dialect, table=Table(backend.dialect, table), if_exists=True).to_sql())
 
 
@@ -175,8 +175,8 @@ class TestNetworkOperationsExecute:
         assert str(result) == "63.87.254.255/24"
 
     def test_merge_finds_the_common_network(self, pg):
-        other = Literal(pg.dialect, "192.168.1.200").cast(
-            PostgresInetType(pg.dialect))
+        other = cast(pg.dialect, Literal(pg.dialect, "192.168.1.200"),
+                     PostgresInetType(pg.dialect))
         assert str(read(pg, self.col(pg).merge(other), self.TABLE)) == "192.168.1.0/24"
 
     def test_a_chained_address_still_answers(self, pg):
@@ -188,7 +188,7 @@ class TestNetworkOperationsExecute:
     ])
     def test_and_mask_with_a_disjoint_address(self, pg, value, expected):
         dialect = pg.dialect
-        other = Literal(dialect, value).cast(PostgresInetType(dialect))
+        other = cast(dialect, Literal(dialect, value), PostgresInetType(dialect))
         # A cidr & b only makes sense; both operands must be the same family,
         # so this checks the operator renders and runs at all.
         assert read(pg, self.col(pg).and_mask(other), self.TABLE) is not None \
@@ -216,7 +216,7 @@ class TestRangeOperationsExecute:
 
     def other(self, backend, text):
         dialect = backend.dialect
-        return Literal(dialect, text).cast(PostgresInt4RangeType(dialect))
+        return cast(dialect, Literal(dialect, text), PostgresInt4RangeType(dialect))
 
     @pytest.mark.parametrize(
         "value,contains", [(1, True), (3, True), (4, True), (5, False), (9, False)]
@@ -319,8 +319,8 @@ class TestMultirangeOperationsExecute:
 
     def test_multirange_overlaps(self, pg):
         dialect = pg.dialect
-        other = Literal(dialect, "{[4,9)}").cast(
-            PostgresInt4MultirangeType(dialect))
+        other = cast(dialect, Literal(dialect, "{[4,9)}"),
+                     PostgresInt4MultirangeType(dialect))
         result = self.col(pg).multirange_overlaps(other)
         assert bool(read(pg, result, self.TABLE)) is True
 
@@ -396,7 +396,7 @@ class TestLtreeOperationsExecute:
 
     def path(self, backend, text):
         dialect = backend.dialect
-        return Literal(dialect, text).cast(PostgresLtreeType(dialect))
+        return cast(dialect, Literal(dialect, text), PostgresLtreeType(dialect))
 
     def test_nlevel(self, pg):
         assert read(pg, self.col(pg).nlevel(), self.TABLE) == 3

@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl.cluster import PostgresClusterExpression
+    from ...expression.ddl.cluster import PostgresClusterStatement
 
 
 class PostgresClusterMixin:
@@ -24,7 +24,7 @@ class PostgresClusterMixin:
     # ------------------------------------------------------------------ #
     def supports_cluster(self) -> bool:
         """CLUSTER is supported on all supported PostgreSQL versions."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers
@@ -45,12 +45,12 @@ class PostgresClusterMixin:
     # Statement
     # ------------------------------------------------------------------ #
     def format_cluster_statement(
-        self, expr: "PostgresClusterExpression"
+        self, expr: "PostgresClusterStatement"
     ) -> Tuple[str, tuple]:
         """Format a CLUSTER statement (PostgreSQL-specific).
 
         Args:
-            expr: :class:`PostgresClusterExpression`.
+            expr: :class:`PostgresClusterStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

@@ -24,14 +24,19 @@ Keys can be either a single 64-bit integer or two 32-bit integers.
 from enum import Enum
 from typing import Tuple, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression.bases import BaseExpression, SQLQueryAndParams
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-class AdvisoryLockType(Enum):
+class AdvisoryLockType(str, Enum):
     """Type of advisory lock."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     EXCLUSIVE = "exclusive"  # Only one session can hold the lock
     SHARED = "shared"  # Multiple sessions can hold the lock simultaneously
@@ -88,7 +93,7 @@ class PostgresAdvisoryLockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_lock"
+        return "format_advisory_lock_expression"
 
 
 class PostgresAdvisoryUnlockExpression(BaseExpression):
@@ -131,7 +136,7 @@ class PostgresAdvisoryUnlockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_unlock"
+        return "format_advisory_unlock_expression"
 
 
 class PostgresAdvisoryUnlockAllExpression(BaseExpression):
@@ -150,7 +155,7 @@ class PostgresAdvisoryUnlockAllExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_advisory_unlock_all"
+        return "format_advisory_unlock_all_expression"
 
 
 class PostgresTryAdvisoryLockExpression(BaseExpression):
@@ -199,4 +204,4 @@ class PostgresTryAdvisoryLockExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_try_advisory_lock"
+        return "format_try_advisory_lock_expression"

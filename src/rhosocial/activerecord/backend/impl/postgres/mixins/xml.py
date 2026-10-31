@@ -9,40 +9,40 @@ class PostgresXMLMixin:
     """
 
     def supports_xmlparse(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlserialize(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlelement(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlattributes(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlforest(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlconcat(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlcomment(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlpi(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlroot(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlagg(self) -> bool:
-        return self.version >= (8, 3, 0)
+        return self.version_at_least((8, 3, 0))
 
     def supports_xmlquery(self) -> bool:
         return False
 
     def supports_xmlexists(self) -> bool:
-        return self.version >= (8, 4, 0)
+        return self.version_at_least((8, 4, 0))
 
     def supports_xmltable(self) -> bool:
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))

@@ -15,20 +15,21 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    QueryExpression,
-    ExplainExpression,
-    CreateIndexExpression,
-    DropTableExpression,
+    QueryStatement,
+    ExplainStatement,
+    CreateIndexStatement,
+    DropTableStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Literal, Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.statements.explain import ExplainOptions
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -44,7 +45,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -53,16 +54,16 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('email', 'VARCHAR(200)'),
     ],
@@ -71,7 +72,7 @@ create_table = CreateTableExpression(
 sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
-create_index = CreateIndexExpression(
+create_index = CreateIndexStatement(
     dialect=dialect,
     index=Index(dialect, 'idx_users_email'),
     table=Table(dialect, 'users'),
@@ -87,7 +88,7 @@ users = [
     ('Charlie', 'charlie@example.com'),
 ]
 for name, email in users:
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'users'),
         columns=['name', 'email'],
@@ -101,7 +102,7 @@ for name, email in users:
 # ============================================================
 
 # 1. EXPLAIN for table scan (no index on name column)
-query1 = QueryExpression(
+query1 = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, '*')],
     from_=Table(dialect, 'users'),
@@ -109,7 +110,7 @@ query1 = QueryExpression(
         dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice'),
     ),
 )
-explain_scan = ExplainExpression(
+explain_scan = ExplainStatement(
     dialect=dialect,
     statement=query1,
     options=ExplainOptions(),
@@ -122,7 +123,7 @@ for row in result.data:
     print(f"  {row}")
 
 # 2. EXPLAIN for index scan (email has index)
-query2 = QueryExpression(
+query2 = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, '*')],
     from_=Table(dialect, 'users'),
@@ -130,7 +131,7 @@ query2 = QueryExpression(
         dialect, '=', Column(dialect, 'email'), Literal(dialect, 'alice@example.com'),
     ),
 )
-explain_search = ExplainExpression(
+explain_search = ExplainStatement(
     dialect=dialect,
     statement=query2,
     options=ExplainOptions(),
@@ -143,7 +144,7 @@ for row in result.data:
     print(f"  {row}")
 
 # 3. EXPLAIN ANALYZE for actual execution time (executes the query)
-explain_analyze = ExplainExpression(
+explain_analyze = ExplainStatement(
     dialect=dialect,
     statement=query2,
     options=ExplainOptions(analyze=True, timing=True, costs=True),
@@ -156,7 +157,7 @@ for row in result.data:
     print(f"  {row}")
 
 # 4. EXPLAIN with FORMAT JSON
-explain_json = ExplainExpression(
+explain_json = ExplainStatement(
     dialect=dialect,
     statement=query2,
     options=ExplainOptions(format='JSON'),
@@ -171,7 +172,7 @@ for row in result.data:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,

@@ -11,7 +11,7 @@ from ..protocols.base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
-    from ..expression.ddl.extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
+    from ..expression.ddl.extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
 
 
 class PostgresExtensionMixin:
@@ -19,6 +19,15 @@ class PostgresExtensionMixin:
 
     Known extensions definition with minimum version requirements and descriptions.
     """
+
+    def supports_extension_introspection(self) -> bool:
+        """PostgreSQL answers for its extensions from ``pg_extension``.
+
+        The capability for the ``introspect extensions`` family. Declared
+        beside the extension detection it describes, so a caller can ask
+        which extensions are installed rather than assuming.
+        """
+        return True
 
     KNOWN_EXTENSIONS = {
         # Spatial/Geospatial
@@ -615,13 +624,13 @@ class PostgresExtensionMixin:
                 return a - b
         return 0
 
-    def format_create_extension(
-        self, expr: "PostgresCreateExtensionExpression"
+    def format_create_extension_statement(
+        self, expr: "PostgresCreateExtensionStatement"
     ) -> "SQLQueryAndParams":
         """Format CREATE EXTENSION expression.
 
         Args:
-            expr: PostgresCreateExtensionExpression instance
+            expr: PostgresCreateExtensionStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -649,13 +658,13 @@ class PostgresExtensionMixin:
 
         return " ".join(parts), ()
 
-    def format_drop_extension(
-        self, expr: "PostgresDropExtensionExpression"
+    def format_drop_extension_statement(
+        self, expr: "PostgresDropExtensionStatement"
     ) -> "SQLQueryAndParams":
         """Format DROP EXTENSION expression.
 
         Args:
-            expr: PostgresDropExtensionExpression instance
+            expr: PostgresDropExtensionStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple).

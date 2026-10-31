@@ -14,12 +14,17 @@ __all__ = [
     "PostgresCopyFormat",
     "PostgresCopyOnError",
     "PostgresCopyLogVerbosity",
-    "PostgresCopyToExpression",
-    "PostgresCopyFromExpression",
+    "PostgresCopyToStatement",
+    "PostgresCopyFromStatement",
 ]
 
 
 class PostgresCopyFormat(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     TEXT = "text"
     CSV = "csv"
     JSON = "json"
@@ -27,12 +32,22 @@ class PostgresCopyFormat(str, Enum):
 
 
 class PostgresCopyOnError(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     STOP = "stop"
     IGNORE = "ignore"
     SET_NULL = "set_null"
 
 
 class PostgresCopyLogVerbosity(str, Enum):
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
     DEFAULT = "default"
     VERBOSE = "verbose"
     SILENT = "silent"
@@ -74,7 +89,7 @@ def _copy_force_columns(
     return columns
 
 
-class PostgresCopyToExpression(BaseExpression):
+class PostgresCopyToStatement(BaseExpression):
     """A PostgreSQL 19-safe ``COPY ... TO STDOUT`` expression."""
 
     def __init__(
@@ -135,7 +150,7 @@ class PostgresCopyToExpression(BaseExpression):
         return "format_copy_to_statement"
 
 
-class PostgresCopyFromExpression(BaseExpression):
+class PostgresCopyFromStatement(BaseExpression):
     """A PostgreSQL ``COPY ... FROM STDIN`` expression."""
 
     def __init__(

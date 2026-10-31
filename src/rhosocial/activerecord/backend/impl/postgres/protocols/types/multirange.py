@@ -35,8 +35,8 @@ class PostgresMultirangeSupport(Protocol):
     ) -> Tuple[str, tuple]:
         ...
 
-    def format_create_multirange_type_statement_expression(self, expr: object) -> Tuple[str, tuple]:
+    def format_postgres_create_multirange_type_expression(self, expr: object) -> Tuple[str, tuple]:
         ...
 
-    def format_multirange_agg_function_expression(self, expr: object) -> Tuple[str, tuple]:
+    def format_postgres_multirange_agg_function_expression(self, expr: object) -> Tuple[str, tuple]:
         ...

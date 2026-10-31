@@ -5,7 +5,6 @@ Tests for:
 - FunctionVersionRequirement dataclass
 - FunctionSupportInfo dataclass
 - POSTGRES_FUNCTION_VERSIONS assembly
-- _is_postgres_function_supported() extension-aware logic
 - _check_function_support() detailed support info
 - supports_functions() return type
 """
@@ -212,109 +211,129 @@ class TestPostgresFunctionVersionsAssembly:
             assert req.extension == "postgis"
 
 
-# ── _is_postgres_function_supported ────────────────────────
+# ── supports_functions(): function availability ─────────────
 
 
-class TestIsPostgresFunctionSupported:
-    """Tests for _is_postgres_function_supported() with extension awareness."""
+class TestSupportsFunctionsAvailability:
+    """Whether a function is available, asked of the public entry point.
+
+    These assertions ran against a private boolean fork
+    (``_is_postgres_function_supported``) that no production code called and that
+    duplicated the version and extension checks with a coarser answer. The
+    public ``supports_functions()`` answers the same question and names the
+    reason, so each case below asserts the verdict *and* the reason: a check
+    that starts failing for a different cause fails here instead of reading as
+    the same answer.
+
+    ``dialect._extensions`` is set directly because it is what
+    ``introspect_and_adapt()`` would have populated against a live database;
+    there is no public entry point for injecting that state yet.
+    """
+
+    def _support(self, dialect, func_name):
+        return dialect.supports_functions()[func_name]
 
     def test_core_function_version_ok(self):
-        """Built-in function with sufficient PG version returns True."""
+        """Built-in function with sufficient PG version is supported."""
         dialect = PostgresDialect((12, 0, 0))
-        assert dialect._is_postgres_function_supported("jsonb_path_query") is True
+        info = self._support(dialect, "jsonb_path_query")
+        assert info.supported is True
+        assert info.reason is None
 
     def test_core_function_version_too_low(self):
-        """Built-in function with insufficient PG version returns False."""
+        """Built-in function below its minimum is refused, and says why."""
         dialect = PostgresDialect((11, 0, 0))
-        assert dialect._is_postgres_function_supported("jsonb_path_query") is False
+        info = self._support(dialect, "jsonb_path_query")
+        assert info.supported is False
+        assert info.reason == "pg_version_too_low"
 
     def test_core_function_no_version_requirement(self):
-        """Built-in function with no version requirement always returns True."""
+        """A function with no version gate is supported on any version."""
         dialect = PostgresDialect((8, 0, 0))
-        assert dialect._is_postgres_function_supported("geometry_distance") is True
+        assert self._support(dialect, "geometry_distance").supported is True
 
-    def test_unregistered_function_defaults_supported(self):
-        """Unregistered function defaults to supported."""
+    def test_unregistered_function_is_absent(self):
+        """A function nobody registered is not reported as supported.
+
+        The deleted private fork answered ``True`` for an unknown name, which
+        read a typo as "supported". The public table simply has no entry, so
+        the caller can tell "unknown" from "supported".
+        """
         dialect = PostgresDialect((14, 0, 0))
-        assert dialect._is_postgres_function_supported("unknown_function_xyz") is True
+        assert dialect.supports_functions().get("unknown_function_xyz") is None
 
     def test_extension_function_not_probed(self):
-        """Extension function returns False when _extensions not set."""
+        """An extension function is refused until the extensions are probed."""
         dialect = PostgresDialect((14, 0, 0))
-        assert dialect._is_postgres_function_supported("hstore_from_record") is False
+        info = self._support(dialect, "hstore_from_record")
+        assert info.supported is False
+        assert info.reason == "extension_not_probed"
 
     def test_extension_function_probed_installed(self):
-        """Extension function returns True when extension is installed."""
+        """An installed extension unlocks its functions."""
         dialect = PostgresDialect((14, 0, 0))
         dialect._extensions = {
             "hstore": PostgresExtensionInfo(name="hstore", installed=True, version="1.8"),
         }
-        assert dialect._is_postgres_function_supported("hstore_from_record") is True
+        assert self._support(dialect, "hstore_from_record").supported is True
 
-    def test_extension_function_probed_not_installed(self):
-        """Extension function returns False when extension is not installed."""
+    def test_extension_function_probed_none_installed(self):
+        """Probed, but the extension is absent: refused, and not "unprobed".
+
+        An empty ``_extensions`` means the probe ran and found nothing, so the
+        reason names the extension rather than the missing probe.
+        """
         dialect = PostgresDialect((14, 0, 0))
         dialect._extensions = {}
-        assert dialect._is_postgres_function_supported("hstore_from_record") is False
-
-    def test_extension_function_probed_empty_extensions(self):
-        """Extension function returns False when _extensions is empty dict (probed, no extensions installed)."""
-        dialect = PostgresDialect((14, 0, 0))
-        # Empty dict means probed but no extensions installed
-        dialect._extensions = {}
-        assert dialect._is_postgres_function_supported("hstore_from_record") is False
-        # Should get "extension_not_installed", not "extension_not_probed"
-        info = dialect._check_function_support("hstore_from_record")
+        info = self._support(dialect, "hstore_from_record")
+        assert info.supported is False
         assert info.reason == "extension_not_installed"
 
     def test_uuid_ossp_function_installed(self):
-        """uuid-ossp function returns True when extension is installed."""
+        """uuid-ossp is an extension: its functions follow the extension."""
         dialect = PostgresDialect((14, 0, 0))
         dialect._extensions = {
             "uuid-ossp": PostgresExtensionInfo(name="uuid-ossp", installed=True, version="1.1"),
         }
-        assert dialect._is_postgres_function_supported("uuid_generate_v1") is True
+        assert self._support(dialect, "uuid_generate_v1").supported is True
 
     def test_uuid_ossp_function_not_installed(self):
-        """uuid-ossp function returns False when extension is not installed."""
         dialect = PostgresDialect((14, 0, 0))
         dialect._extensions = {}
-        assert dialect._is_postgres_function_supported("uuid_generate_v1") is False
+        assert self._support(dialect, "uuid_generate_v1").supported is False
 
-    def test_gen_random_uuid_builtin(self):
-        """gen_random_uuid is a built-in function (PG 13+), no extension needed."""
-        dialect = PostgresDialect((13, 0, 0))
-        assert dialect._is_postgres_function_supported("gen_random_uuid") is True
-        dialect2 = PostgresDialect((12, 0, 0))
-        assert dialect2._is_postgres_function_supported("gen_random_uuid") is False
+    def test_gen_random_uuid_is_builtin(self):
+        """gen_random_uuid needs no extension, only PG 13+."""
+        assert self._support(PostgresDialect((13, 0, 0)), "gen_random_uuid").supported is True
+        assert self._support(PostgresDialect((12, 0, 0)), "gen_random_uuid").supported is False
 
     def test_hstore_function_with_pg_version_constraint(self):
-        """hstore_to_json requires both hstore extension and PG 9.3+."""
+        """hstore_to_json needs both the extension and PG 9.3+."""
         dialect = PostgresDialect((9, 2, 0))
         dialect._extensions = {
             "hstore": PostgresExtensionInfo(name="hstore", installed=True, version="1.8"),
         }
-        # PG 9.2 doesn't support hstore_to_json (needs 9.3+)
-        assert dialect._is_postgres_function_supported("hstore_to_json") is False
+        # PG 9.2 is below the floor, extension installed or not
+        assert self._support(dialect, "hstore_to_json").supported is False
 
         dialect.version = (9, 3, 0)
-        assert dialect._is_postgres_function_supported("hstore_to_json") is True
+        assert self._support(dialect, "hstore_to_json").supported is True
 
     def test_pgvector_function_with_feature_check(self):
-        """pgvector function uses ext_feature for version check."""
+        """pgvector gates on a feature of the installed extension version."""
         dialect = PostgresDialect((14, 0, 0))
         # vector 0.3.0 installed - basic features should work
         dialect._extensions = {
             "vector": PostgresExtensionInfo(name="vector", installed=True, version="0.3.0"),
         }
-        assert dialect._is_postgres_function_supported("vector_l2_distance") is True
+        assert self._support(dialect, "vector_l2_distance").supported is True
 
     def test_core_function_works_without_extensions(self):
-        """Core built-in functions work without _extensions."""
+        """Built-ins are answered without probing anything."""
         dialect = PostgresDialect((14, 0, 0))
-        assert dialect._is_postgres_function_supported("geometry_distance") is True
-        assert dialect._is_postgres_function_supported("range_contains") is True
-        assert dialect._is_postgres_function_supported("bit_concat") is True
+        table = dialect.supports_functions()
+        for name in ("geometry_distance", "range_contains", "bit_concat"):
+            assert table[name].supported is True, name
 
 
 # ── _check_function_support ────────────────────────────────

@@ -23,6 +23,7 @@ from .identity_column import PostgresIdentityColumnMixin
 from .auto_increment import PostgresAutoIncrementMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
+from .literal import PostgresLiteralValueMixin
 
 # DDL mixins
 from .ddl.partition import PostgresPartitionMixin
@@ -129,12 +130,14 @@ from .xml import PostgresXMLMixin
 from .collation import PostgresCollationMixin
 from .ordered_set_aggregation import PostgresOrderedSetAggMixin
 from .features import PostgresFeaturesMixin
+from .show import PostgresShowMixin
 
 # Introspection capability mixin
 from .introspection import PostgresIntrospectionCapabilityMixin
 
 __all__ = [
     # Core mixins
+    "PostgresObjectNameMixin",
     "PostgresExtensionMixin",
     "PostgresMaterializedViewMixin",
     "PostgresTableMixin",
@@ -146,6 +149,7 @@ __all__ = [
     "PostgresAutoIncrementMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
+    "PostgresLiteralValueMixin",
     # DDL mixins
     "PostgresPartitionMixin",
     "PostgresIndexMixin",
@@ -243,6 +247,7 @@ __all__ = [
     "PostgresCollationMixin",
     "PostgresOrderedSetAggMixin",
     "PostgresFeaturesMixin",
+    "PostgresShowMixin",
     # Introspection capability mixin
     "PostgresIntrospectionCapabilityMixin",
 ]

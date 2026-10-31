@@ -47,7 +47,7 @@ class PostgresPgPartmanCreateParentExpression(BaseExpression):
         jobmon: Whether to use pg_jobmon for logging. Defaults to True.
         schema: Schema where pg_partman functions reside. Defaults to 'partman'.
 
-    Delegates to dialect.format_pg_partman_create_parent() for SQL generation.
+    Delegates to dialect.format_pg_partman_create_parent_expression() for SQL generation.
     """
 
     def __init__(
@@ -85,7 +85,7 @@ class PostgresPgPartmanCreateParentExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_pg_partman_create_parent"
+        return "format_pg_partman_create_parent_expression"
 
 
 class PostgresPgPartmanRunMaintenanceExpression(BaseExpression):
@@ -99,7 +99,7 @@ class PostgresPgPartmanRunMaintenanceExpression(BaseExpression):
         parent_table: Optional parent table to scope maintenance to.
         schema: Schema where pg_partman functions reside. Defaults to 'partman'.
 
-    Delegates to dialect.format_pg_partman_run_maintenance() for SQL generation.
+    Delegates to dialect.format_pg_partman_run_maintenance_expression() for SQL generation.
     """
 
     def __init__(
@@ -115,7 +115,7 @@ class PostgresPgPartmanRunMaintenanceExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_pg_partman_run_maintenance"
+        return "format_pg_partman_run_maintenance_expression"
 
 
 class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
@@ -137,7 +137,7 @@ class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
     Raises:
         ValueError: If no config options are specified.
 
-    Delegates to dialect.format_pg_partman_update_config() for SQL generation.
+    Delegates to dialect.format_pg_partman_update_config_expression() for SQL generation.
     """
 
     def __init__(
@@ -164,7 +164,7 @@ class PostgresPgPartmanUpdateConfigExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_pg_partman_update_config"
+        return "format_pg_partman_update_config_expression"
 
 
 class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
@@ -177,7 +177,7 @@ class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
         parent_table: Parent table whose config to delete.
         schema: Schema where part_config table resides. Defaults to 'partman'.
 
-    Delegates to dialect.format_pg_partman_delete_config() for SQL generation.
+    Delegates to dialect.format_pg_partman_delete_config_expression() for SQL generation.
     """
 
     def __init__(
@@ -193,4 +193,4 @@ class PostgresPgPartmanDeleteConfigExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_pg_partman_delete_config"
+        return "format_pg_partman_delete_config_expression"

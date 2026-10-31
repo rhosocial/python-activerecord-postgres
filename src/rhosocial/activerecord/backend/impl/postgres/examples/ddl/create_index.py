@@ -9,13 +9,14 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -31,7 +32,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'products'),
     if_exists=True,
@@ -40,7 +41,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'products'),
     columns=[
@@ -48,8 +49,8 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('name', 'VARCHAR(100)'),
@@ -62,9 +63,9 @@ backend.execute(*create_table.to_sql())
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
-from rhosocial.activerecord.backend.expression import CreateIndexExpression
+from rhosocial.activerecord.backend.expression import CreateIndexStatement
 
-create_idx = CreateIndexExpression(
+create_idx = CreateIndexStatement(
     dialect=dialect,
     index=Index(dialect, 'idx_category_price'),
     table=Table(dialect, 'products'),
@@ -83,12 +84,12 @@ result = backend.execute(sql, params)
 print("Index created: idx_category_price")
 
 # Verify index creation
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-verify_expr = QueryExpression(
+verify_expr = QueryStatement(
     dialect=dialect,
     select=[Column(dialect, 'indexname')],
     from_=Table(dialect, 'pg_indexes'),

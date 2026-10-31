@@ -15,43 +15,44 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     FunctionCall,
     Literal,
-    RawSQLExpression,
+    RawSQL,
+    ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    CreateTableExpression,
+    CreateTableStatement,
     PartitionClause,
     PartitionStrategy,
 )
 from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PartitionValue,
-    PostgresRefreshMaterializedViewExpression,
-    PostgresCommentExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresAttachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresPartitionValue,
+    PostgresRefreshMaterializedViewPgStatement,
+    PostgresCommentOnStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresAttachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanDeleteConfigExpression,
     PostgresPgPartmanRunMaintenanceExpression,
     PostgresPgPartmanUpdateConfigExpression,
-    PostgresVacuumExpression,  # noqa: F401
-    PostgresAnalyzeExpression,  # noqa: F401
+    PostgresVacuumStatement,  # noqa: F401
+    PostgresAnalyzeStatement,  # noqa: F401
     )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
 
 class TestPostgresRefreshMaterializedViewExpression:
-    """Test PostgresRefreshMaterializedViewExpression."""
+    """Test PostgresRefreshMaterializedViewPgStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -59,7 +60,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
     def test_basic_refresh(self, dialect):
         """Test basic REFRESH MATERIALIZED VIEW statement."""
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
         )
@@ -69,7 +70,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
     def test_refresh_with_schema(self, dialect):
         """Test REFRESH MATERIALIZED VIEW with schema."""
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary", schema_name="analytics"),
         )
@@ -80,7 +81,7 @@ class TestPostgresRefreshMaterializedViewExpression:
     def test_refresh_concurrently_pg13(self):
         """Test CONCURRENTLY refresh requires PG 9.4+."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect_pg93,
             view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
             concurrently=True,
@@ -93,7 +94,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
     def test_refresh_concurrently_pg94(self, dialect):
         """Test CONCURRENTLY refresh with PG 9.4+."""
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
@@ -105,7 +106,7 @@ class TestPostgresRefreshMaterializedViewExpression:
     def test_refresh_no_data_pg93(self):
         """Test WITH NO DATA on the PG 9.3 baseline."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect_pg93,
             view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
             no_data=True,
@@ -116,7 +117,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
     def test_refresh_no_data_pg94(self, dialect):
         """Test WITH NO DATA with PG 9.4+."""
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             no_data=True,
@@ -127,7 +128,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
     def test_refresh_concurrently_and_no_data(self, dialect):
         """Test CONCURRENTLY with WITH NO DATA."""
-        expr = PostgresRefreshMaterializedViewExpression(
+        expr = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
@@ -140,7 +141,7 @@ class TestPostgresRefreshMaterializedViewExpression:
 
 
 class TestPostgresCommentExpression:
-    """Test PostgresCommentExpression."""
+    """Test PostgresCommentOnStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -148,7 +149,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_table(self, dialect):
         """Test COMMENT ON TABLE."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="TABLE",
             object=Table(dialect, "users"),
@@ -161,7 +162,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_column(self, dialect):
         """Test COMMENT ON COLUMN (column named beside the object it belongs to)."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="COLUMN",
             object=Table(dialect, "users"),
@@ -175,7 +176,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_index(self, dialect):
         """Test COMMENT ON INDEX."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="INDEX",
             object=Table(dialect, "users"),
@@ -186,7 +187,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_view(self, dialect):
         """Test COMMENT ON VIEW."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="VIEW",
             object=Table(dialect, "user_stats"),
@@ -197,7 +198,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_schema(self, dialect):
         """Test COMMENT ON SCHEMA."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="SCHEMA",
             object=Table(dialect, "analytics"),
@@ -208,7 +209,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_on_function(self, dialect):
         """Test COMMENT ON FUNCTION."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="FUNCTION",
             object=Table(dialect, "calculate_total"),
@@ -219,7 +220,7 @@ class TestPostgresCommentExpression:
 
     def test_remove_comment(self, dialect):
         """Test removing comment by setting comment to None."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="TABLE",
             object=Table(dialect, "users"),
@@ -232,7 +233,7 @@ class TestPostgresCommentExpression:
 
     def test_comment_with_schema(self, dialect):
         """Test comment on an object in a schema (namespace comes off the object)."""
-        expr = PostgresCommentExpression(
+        expr = PostgresCommentOnStatement(
             dialect=dialect,
             object_type="TABLE",
             object=Table(dialect, "users", schema_name="public"),
@@ -252,7 +253,7 @@ class TestPostgresPartitionedTableCreation:
 
     def test_create_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table."""
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
@@ -260,7 +261,7 @@ class TestPostgresPartitionedTableCreation:
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
             ],
             partition=PartitionClause(
@@ -277,12 +278,21 @@ class TestPostgresPartitionedTableCreation:
 
     def test_create_list_partitioned_parent_table(self, dialect):
         """Test creating a LIST-partitioned parent table."""
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(dialect, "id", BigIntType(dialect=dialect)),
-                ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(
+                    dialect,
+                    "status",
+                    TextType(dialect=dialect),
+                    constraints=[
+                        ColumnConstraint(
+                            dialect, branch=ColumnNotNullConstraint(dialect)
+                        )
+                    ],
+                ),
             ],
             partition=PartitionClause(
                 dialect=dialect,
@@ -298,14 +308,14 @@ class TestPostgresPartitionedTableCreation:
     def test_create_hash_partitioned_parent_table_pg10(self):
         """HASH parent table partitioning requires PostgreSQL 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -321,14 +331,14 @@ class TestPostgresPartitionedTableCreation:
     def test_create_hash_partitioned_parent_table_pg11(self):
         """Test HASH parent table partitioning on PostgreSQL 11+."""
         dialect = PostgresDialect(version=(11, 0, 0))
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -345,14 +355,14 @@ class TestPostgresPartitionedTableCreation:
     def test_create_partitioned_parent_table_pg9(self):
         """Declarative parent table partitioning requires PostgreSQL 10+."""
         dialect = PostgresDialect(version=(9, 6, 0))
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
             partition=PartitionClause(
@@ -374,39 +384,30 @@ class TestPostgresPartitionedTableCreation:
                 keys=[Column(dialect, "id")],
             )
 
-    def test_postgres_partition_clause_is_generic_subclass(self, dialect):
-        """PostgresPartitionClause derives from the generic PartitionClause."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresPartitionClause,
-        )
-
-        clause = PostgresPartitionClause(
+    def test_partition_clause_is_the_generic_clause(self, dialect):
+        """PostgreSQL uses core's PartitionClause; it adds no field of its own."""
+        clause = PartitionClause(
             dialect=dialect,
             method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         )
-        assert isinstance(clause, PartitionClause)
         sql, params = clause.to_sql()
         assert sql == ' PARTITION BY RANGE ("created_at")'
         assert params == ()
 
-    def test_postgres_partition_clause_in_create_table(self, dialect):
-        """CreateTableExpression accepts the PostgreSQL-owned clause subclass."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresPartitionClause,
-        )
-
-        expr = CreateTableExpression(
+    def test_partition_clause_in_create_table(self, dialect):
+        """CreateTableStatement accepts core's clause with the PostgreSQL dialect."""
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'events'),
             columns=[
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PostgresPartitionClause(
+            partition=PartitionClause(
                 dialect=dialect,
                 method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "created_at")],
@@ -431,7 +432,7 @@ class TestPostgresPartitionedTableCreation:
             [Column(DummyDialect(), "bucket")],
         )
         with pytest.raises(ValueError, match="same dialect"):
-            PostgresCreatePartitionExpression(
+            PostgresCreatePartitionStatement(
                 dialect,
                 "events_p1",
                 "events",
@@ -442,19 +443,19 @@ class TestPostgresPartitionedTableCreation:
 
     def test_multi_column_range_partitioned_parent_table(self, dialect):
         """Test creating a RANGE-partitioned parent table with multiple partition keys."""
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'tenanted_events'),
             columns=[
                 ColumnDefinition(
                     dialect,
                     "tenant_id", BigIntType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
                 ColumnDefinition(
                     dialect,
                     "created_at", TimestampType(dialect=dialect),
-                    constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+                    constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
             ],
@@ -486,7 +487,7 @@ class TestPostgresPartitionedTableCreation:
             method=PartitionStrategy.LIST,
             keys=[Column(dialect, "region"), Column(dialect, "status")],
         )
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -523,35 +524,58 @@ class TestPostgresPartitionValue:
         ],
     )
     def test_partition_value_formats_whitelisted_values(self, dialect, value, expected):
-        expr = PartitionValue(dialect=dialect, value=value)
+        expr = PostgresPartitionValue(dialect=dialect, value=value)
         assert expr.to_sql() == (expected, ())
 
     @pytest.mark.parametrize("value", [True, object(), ["x"]])
     def test_partition_value_rejects_invalid_types(self, dialect, value):
         with pytest.raises(TypeError):
-            PartitionValue(dialect=dialect, value=value)
+            PostgresPartitionValue(dialect=dialect, value=value)
 
     @pytest.mark.parametrize("value", [float("inf"), float("nan"), Decimal("Infinity"), Decimal("NaN")])
     def test_partition_value_rejects_nonfinite_numbers(self, dialect, value):
         with pytest.raises(ValueError):
-            PartitionValue(dialect=dialect, value=value)
+            PostgresPartitionValue(dialect=dialect, value=value)
 
     @pytest.mark.parametrize("value", ["MINVALUE", "MAXVALUE", "DEFAULT"])
     def test_list_partition_value_quotes_special_range_strings(self, dialect, value):
-        expr = PartitionValue(dialect, value, partition_type="LIST")
+        expr = PostgresPartitionValue(dialect, value, partition_type="LIST")
         assert expr.to_sql() == (f"'{value}'", ())
 
-    def test_partition_value_renders_function_call_with_inline_literals(self, dialect):
-        expr = PartitionValue(
+    def test_partition_value_renders_the_callers_inline_literal(self, dialect):
+        """An inline literal inside a partition bound renders as text.
+
+        The bound is a DDL position, and the literal's owner is the caller:
+        one marked ``inline=True`` renders as text -- core removed the pass
+        that used to lift a tree's literals into the DDL class -- and one left
+        binding is refused by name rather than silently inlined (the next
+        test).
+        """
+        expr = PostgresPartitionValue(
             dialect,
-            FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
+            FunctionCall(
+                dialect, "DATE_TRUNC", Literal(dialect, "month", inline=True)
+            ),
         )
         assert expr.to_sql() == ("DATE_TRUNC('month')", ())
 
-    def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
-        expr = PartitionValue(
+    def test_partition_value_refuses_a_binding_literal(self, dialect):
+        """A literal left binding inside a DDL position fails by name.
+
+        The refusal is the contract: DDL accepts no bind parameters, and the
+        caller who wants inline text says so on the literal itself.
+        """
+        expr = PostgresPartitionValue(
             dialect,
-            RawSQLExpression(dialect, "DATE %s", ("2024-01-01",)),
+            FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
+        )
+        with pytest.raises(ValueError, match="must not contain bind parameters"):
+            expr.to_sql()
+
+    def test_partition_value_rejects_parameterized_raw_sql(self, dialect):
+        expr = PostgresPartitionValue(
+            dialect,
+            RawSQL(dialect, "DATE %s", ("2024-01-01",)),
         )
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             expr.to_sql()
@@ -559,29 +583,29 @@ class TestPostgresPartitionValue:
     def test_partition_value_rejects_cross_dialect_expression(self, dialect):
         expression = FunctionCall(DummyDialect(), "DATE", niladic=True)
         with pytest.raises(ValueError, match="same dialect"):
-            PartitionValue(dialect, expression)
+            PostgresPartitionValue(dialect, expression)
 
     @pytest.mark.parametrize("expression_factory", [
         lambda dialect: Column(dialect, "created_at"),
         lambda dialect: FunctionCall(dialect, "DATE", Column(dialect, "created_at")),
     ])
     def test_partition_value_rejects_unsafe_expression(self, dialect, expression_factory):
-        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQLExpression"):
-            PartitionValue(dialect, expression_factory(dialect))
+        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQL"):
+            PostgresPartitionValue(dialect, expression_factory(dialect))
 
     def test_default_partition_value_requires_pg11(self):
         dialect = PostgresDialect(version=(10, 0, 0))
         with pytest.raises(UnsupportedFeatureError, match="DEFAULT partitions require PostgreSQL 11"):
-            PartitionValue(dialect, "DEFAULT").to_sql()
+            PostgresPartitionValue(dialect, "DEFAULT").to_sql()
 
     def test_partition_value_requires_pg10(self):
         dialect = PostgresDialect(version=(9, 6, 0))
         with pytest.raises(UnsupportedFeatureError, match="requires PostgreSQL 10"):
-            PartitionValue(dialect, 1).to_sql()
+            PostgresPartitionValue(dialect, 1).to_sql()
 
 
 class TestPostgresCreatePartitionExpression:
-    """Test PostgresCreatePartitionExpression."""
+    """Test PostgresCreatePartitionStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -589,7 +613,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_range_partition(self, dialect):
         """Test CREATE TABLE ... PARTITION OF for RANGE."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -606,7 +630,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_list_partition(self, dialect):
         """Test CREATE TABLE ... PARTITION OF for LIST."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_active",
             parent_table="orders",
@@ -621,7 +645,7 @@ class TestPostgresCreatePartitionExpression:
     @pytest.mark.parametrize("partition_type", ["RANGE", "LIST"])
     def test_create_default_partition(self, dialect, partition_type):
         """Test CREATE TABLE ... PARTITION OF for DEFAULT catch-all partitions."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_default",
             parent_table="orders",
@@ -637,7 +661,7 @@ class TestPostgresCreatePartitionExpression:
     def test_create_hash_partition_pg10(self):
         """Test HASH partitioning requires PG 11+."""
         dialect_pg10 = PostgresDialect(version=(10, 0, 0))
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect_pg10,
             partition_name="orders shard0",
             parent_table="orders",
@@ -649,7 +673,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_hash_partition_pg11(self, dialect):
         """Test HASH partitioning with PG 11+."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_shard0",
             parent_table="orders",
@@ -663,7 +687,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_partition_with_schema(self, dialect):
         """Test partition with schema."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="2024_q1",
             parent_table="orders",
@@ -676,7 +700,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_partition_if_not_exists(self, dialect):
         """Test partition with IF NOT EXISTS."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -689,7 +713,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_partition_with_tablespace(self, dialect):
         """Test partition with TABLESPACE."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -718,7 +742,7 @@ class TestPostgresCreatePartitionExpression:
     )
     def test_create_partition_value_types(self, dialect, partition_type, partition_values, expected_clause):
         """Test PARTITION OF with various value types and expressions (PG 12+)."""
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect=dialect,
             partition_name="test_partition",
             parent_table="test_parent",
@@ -730,7 +754,7 @@ class TestPostgresCreatePartitionExpression:
         assert params == ()
 
     def test_create_multi_column_range_partition(self, dialect):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -745,7 +769,7 @@ class TestPostgresCreatePartitionExpression:
         assert params == ()
 
     def test_create_multi_column_list_partition_rejected(self, dialect):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -757,7 +781,7 @@ class TestPostgresCreatePartitionExpression:
             expr.to_sql()
 
     def test_list_special_range_strings_remain_quoted(self, dialect):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_special",
             "events",
@@ -773,7 +797,7 @@ class TestPostgresCreatePartitionExpression:
             PartitionStrategy.HASH,
             [Column(dialect, "bucket")],
         )
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -798,15 +822,15 @@ class TestPostgresCreatePartitionExpression:
         clause = PartitionClause(
             dialect,
             PartitionStrategy.HASH,
-            [RawSQLExpression(dialect, "bucket %s", (1,))],
+            [RawSQL(dialect, "bucket %s", (1,))],
         )
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
             "RANGE",
             {
-                "from": RawSQLExpression(dialect, "DATE %s", ("2026-01-01",)),
+                "from": RawSQL(dialect, "DATE %s", ("2026-01-01",)),
                 "to": "MAXVALUE",
             },
             partition_clause=clause,
@@ -818,16 +842,16 @@ class TestPostgresCreatePartitionExpression:
         clause = PartitionClause(
             dialect,
             PartitionStrategy.HASH,
-            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket"))],
+            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket", inline=True))],
         )
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01"),
-                "to": Literal(dialect, "2027-01-01"),
+                "from": Literal(dialect, "2026-01-01", inline=True),
+                "to": Literal(dialect, "2027-01-01", inline=True),
             },
             partition_clause=clause,
         )
@@ -840,12 +864,18 @@ class TestPostgresCreatePartitionExpression:
         assert "FROM ('2026-01-01')" in sql
 
     def test_create_list_partition_literals_are_inlined(self, dialect):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
             "LIST",
-            {"values": [FunctionCall(dialect, "LOWER", Literal(dialect, "ACTIVE"))]},
+            {
+                "values": [
+                    FunctionCall(
+                        dialect, "LOWER", Literal(dialect, "ACTIVE", inline=True)
+                    )
+                ]
+            },
         )
 
         sql, params = expr.to_sql()
@@ -856,7 +886,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_default_partition_requires_pg11(self):
         dialect = PostgresDialect(version=(10, 0, 0))
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_default",
             "events",
@@ -868,7 +898,7 @@ class TestPostgresCreatePartitionExpression:
 
     @pytest.mark.parametrize("modulus", [True, "4", 4.0])
     def test_create_hash_rejects_non_integer_modulus(self, dialect, modulus):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -880,7 +910,7 @@ class TestPostgresCreatePartitionExpression:
 
     @pytest.mark.parametrize("modulus", [0, -1])
     def test_create_hash_rejects_non_positive_modulus(self, dialect, modulus):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -892,7 +922,7 @@ class TestPostgresCreatePartitionExpression:
 
     @pytest.mark.parametrize("remainder", [True, "0", 0.0])
     def test_create_hash_rejects_non_integer_remainder(self, dialect, remainder):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -904,7 +934,7 @@ class TestPostgresCreatePartitionExpression:
 
     @pytest.mark.parametrize("remainder", [-1, 4])
     def test_create_hash_rejects_out_of_range_remainder(self, dialect, remainder):
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -916,7 +946,7 @@ class TestPostgresCreatePartitionExpression:
 
     def test_create_partition_requires_pg10(self):
         dialect = PostgresDialect(version=(9, 6, 0))
-        expr = PostgresCreatePartitionExpression(
+        expr = PostgresCreatePartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -928,7 +958,7 @@ class TestPostgresCreatePartitionExpression:
 
 
 class TestPostgresDetachPartitionExpression:
-    """Test PostgresDetachPartitionExpression."""
+    """Test PostgresDetachPartitionStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -936,7 +966,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_basic_detach(self, dialect):
         """Test basic DETACH PARTITION."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -950,7 +980,7 @@ class TestPostgresDetachPartitionExpression:
     def test_detach_concurrently_pg13(self):
         """Test CONCURRENTLY requires PG 14+."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect_pg13,
             partition_name="orders_2023",
             parent_table="orders",
@@ -961,7 +991,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_detach_concurrently_pg14(self, dialect):
         """Test DETACH CONCURRENTLY with PG 14+."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -973,7 +1003,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_detach_finalize_requires_concurrently(self, dialect):
         """Test FINALIZE requires CONCURRENTLY."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -984,7 +1014,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_detach_concurrently_finalize_pg14(self, dialect):
         """Test DETACH CONCURRENTLY FINALIZE on PG 14+."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -999,7 +1029,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_detach_with_schema(self, dialect):
         """Test partition detach with schema."""
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2023",
             parent_table="orders",
@@ -1010,7 +1040,7 @@ class TestPostgresDetachPartitionExpression:
 
     def test_detach_partition_requires_pg10(self):
         dialect = PostgresDialect(version=(9, 6, 0))
-        expr = PostgresDetachPartitionExpression(
+        expr = PostgresDetachPartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -1020,7 +1050,7 @@ class TestPostgresDetachPartitionExpression:
 
 
 class TestPostgresAttachPartitionExpression:
-    """Test PostgresAttachPartitionExpression."""
+    """Test PostgresAttachPartitionStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -1028,7 +1058,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_range_partition(self, dialect):
         """Test ATTACH PARTITION for RANGE."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -1045,7 +1075,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_list_partition(self, dialect):
         """Test ATTACH PARTITION for LIST."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_active",
             parent_table="orders",
@@ -1058,7 +1088,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_hash_partition(self, dialect):
         """Test ATTACH PARTITION for HASH."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_shard0",
             parent_table="orders",
@@ -1071,7 +1101,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_range_partition_requires_bounds(self, dialect):
         """RANGE attach requires explicit from/to bounds."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -1083,7 +1113,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_list_partition_requires_values(self, dialect):
         """LIST attach requires non-empty values."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_empty",
             parent_table="orders",
@@ -1094,7 +1124,7 @@ class TestPostgresAttachPartitionExpression:
             expr.to_sql()
 
     def test_attach_multi_column_list_partition_rejected(self, dialect):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -1106,14 +1136,16 @@ class TestPostgresAttachPartitionExpression:
             expr.to_sql()
 
     def test_attach_partition_literals_are_inlined(self, dialect):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_p1",
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01"),
-                "to": FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "year")),
+                "from": Literal(dialect, "2026-01-01", inline=True),
+                "to": FunctionCall(
+                    dialect, "DATE_TRUNC", Literal(dialect, "year", inline=True)
+                ),
             },
         )
 
@@ -1127,7 +1159,7 @@ class TestPostgresAttachPartitionExpression:
     def test_attach_hash_partition_requires_pg11(self):
         """HASH attach requires PostgreSQL 11+."""
         dialect = PostgresDialect(version=(10, 0, 0))
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_shard0",
             parent_table="orders",
@@ -1140,7 +1172,7 @@ class TestPostgresAttachPartitionExpression:
     def test_attach_concurrently_pg13(self):
         """ATTACH CONCURRENTLY is rejected on PG 13."""
         dialect_pg13 = PostgresDialect(version=(13, 0, 0))
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect_pg13,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -1153,7 +1185,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_concurrently_pg14(self, dialect):
         """ATTACH CONCURRENTLY is rejected on PG 14+."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_2024_q1",
             parent_table="orders",
@@ -1166,7 +1198,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_default_range_partition(self, dialect):
         """ATTACH DEFAULT partition for RANGE should emit DEFAULT keyword."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_default",
             parent_table="orders",
@@ -1180,7 +1212,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_default_list_partition(self, dialect):
         """ATTACH DEFAULT partition for LIST should emit DEFAULT keyword."""
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect=dialect,
             partition_name="orders_default",
             parent_table="orders",
@@ -1193,7 +1225,7 @@ class TestPostgresAttachPartitionExpression:
         assert params == ()
 
     def test_attach_multi_column_range_partition(self, dialect):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -1206,7 +1238,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_default_partition_requires_pg11(self):
         dialect = PostgresDialect(version=(10, 0, 0))
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_default",
             "events",
@@ -1222,7 +1254,7 @@ class TestPostgresAttachPartitionExpression:
         (4, 4),
     ])
     def test_attach_hash_rejects_invalid_integers(self, dialect, modulus, remainder):
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -1234,7 +1266,7 @@ class TestPostgresAttachPartitionExpression:
 
     def test_attach_partition_requires_pg10(self):
         dialect = PostgresDialect(version=(9, 6, 0))
-        expr = PostgresAttachPartitionExpression(
+        expr = PostgresAttachPartitionStatement(
             dialect,
             "events_p1",
             "events",
@@ -1251,7 +1283,7 @@ class TestPostgresPartitionMetadataExpression:
     def test_metadata_query_for_parent(self):
         """Metadata query uses pg_catalog and parameter binding."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table="orders",
         )
@@ -1266,7 +1298,7 @@ class TestPostgresPartitionMetadataExpression:
     def test_metadata_query_with_schema(self):
         """Metadata query includes schema filter when schema is specified."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table="orders",
             schema="public",
@@ -1279,7 +1311,7 @@ class TestPostgresPartitionMetadataExpression:
     def test_metadata_query_without_partitions(self):
         """Metadata query omits partition details when include_partitions=False."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table="orders",
             include_partitions=False,
@@ -1294,7 +1326,7 @@ class TestPostgresPartitionMetadataExpression:
     def test_metadata_query_requires_pg10(self):
         """Metadata introspection follows PostgreSQL declarative partition support."""
         dialect = PostgresDialect(version=(9, 6, 0))
-        expr = PostgresPartitionMetadataExpression(
+        expr = PostgresPartitionMetadataQueryStatement(
             dialect=dialect,
             parent_table="orders",
         )

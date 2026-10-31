@@ -7,8 +7,11 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.transaction import (
-        BeginTransactionExpression,
-        SetTransactionExpression,
+        BeginTransactionStatement,
+        SetTransactionStatement,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+        PostgresSetConstraintsStatement,
     )
 
 
@@ -62,8 +65,8 @@ class PostgresTransactionMixin:
                 f"WAIT / NO WAIT is Firebird grammar.",
             )
 
-    def format_begin_transaction(
-        self, expr: "BeginTransactionExpression"
+    def format_begin_transaction_statement(
+        self, expr: "BeginTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format BEGIN TRANSACTION statement for PostgreSQL.
 
@@ -104,8 +107,8 @@ class PostgresTransactionMixin:
 
         return " ".join(parts), ()
 
-    def format_set_transaction(
-        self, expr: "SetTransactionExpression"
+    def format_set_transaction_statement(
+        self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION statement for PostgreSQL.
 
@@ -154,3 +157,27 @@ class PostgresTransactionMixin:
             parts.append(" ".join(options))
 
         return " ".join(parts), ()
+
+    def format_postgres_set_constraints_statement(
+        self, expr: "PostgresSetConstraintsStatement"
+    ) -> Tuple[str, tuple]:
+        """Format SET CONSTRAINTS for PostgreSQL.
+
+        Syntax::
+
+            SET CONSTRAINTS { ALL | name [, ...] } { DEFERRED | IMMEDIATE }
+
+        The constraint name is an identifier, so it is rendered through this
+        dialect's identifier quoting: the server parses it as a name, a bind
+        parameter cannot stand in for it, and a name written into the text as it
+        stood either broke the statement or escaped it.
+
+        Args:
+            expr: Set-constraints statement expression with the constraint name.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        params = expr.get_params()
+        constraint = self.format_identifier(params.get("constraint_name"))
+        return f"SET CONSTRAINTS {constraint} DEFERRED", ()

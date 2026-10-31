@@ -98,7 +98,7 @@ def lquery_literal(
         >>> lquery_literal(dialect, '*.Astronomy.*')
         # Generates SQL: '*.Astronomy.*'::lquery
     """
-    return core.Literal(dialect, pattern).cast(PostgresLqueryType(dialect))
+    return core.CastExpression(dialect, core.Literal(dialect, pattern), PostgresLqueryType(dialect))
 
 
 def ltxtquery_literal(
@@ -121,7 +121,7 @@ def ltxtquery_literal(
         >>> ltxtquery_literal(dialect, 'Science & Astronomy')
         # Generates SQL: 'Science & Astronomy'::ltxtquery
     """
-    return core.Literal(dialect, query).cast(PostgresLtxtqueryType(dialect))
+    return core.CastExpression(dialect, core.Literal(dialect, query), PostgresLtxtqueryType(dialect))
 
 
 # ============== ltree Operators ==============

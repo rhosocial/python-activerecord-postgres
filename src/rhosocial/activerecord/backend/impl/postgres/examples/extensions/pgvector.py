@@ -34,9 +34,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -44,21 +44,22 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertExpression,
+    InsertStatement,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ValuesSource,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.impl.postgres.functions import (
@@ -74,7 +75,7 @@ print(f"Extension check: vector available = {available}, installed = {installed}
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="vector",
     )
@@ -96,14 +97,14 @@ if installed:
             name="id",
             data_type=dialect.parse_type("SERIAL"),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             name="content",
             data_type=dialect.parse_type("TEXT"),
             constraints=[
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
@@ -112,7 +113,7 @@ if installed:
         ),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'documents'),
         columns=columns,
@@ -124,8 +125,8 @@ if installed:
     backend.execute(sql, params)
 
     # Example 2: Insert vector data
-    # Use Literal with .cast(PostgresVectorType(self.dialect)) for type-safe vector insertion.
-    insert_expr = InsertExpression(
+    # Use CastExpression over a Literal for type-safe vector insertion.
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'documents'),
         columns=["content", "embedding"],
@@ -134,19 +135,31 @@ if installed:
             [
                 [
                     Literal(dialect, "cat"),
-                    Literal(dialect, "[1.0, 0.5, 0.2]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[1.0, 0.5, 0.2]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "dog"),
-                    Literal(dialect, "[0.9, 0.6, 0.3]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.9, 0.6, 0.3]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "car"),
-                    Literal(dialect, "[0.1, 0.2, 0.9]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.1, 0.2, 0.9]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
                 [
                     Literal(dialect, "bicycle"),
-                    Literal(dialect, "[0.15, 0.25, 0.85]").cast(PostgresVectorType(dialect)),
+                    CastExpression(
+                        dialect, Literal(dialect, "[0.15, 0.25, 0.85]"),
+                        PostgresVectorType(dialect),
+                    ),
                 ],
             ],
         ),
@@ -222,7 +235,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

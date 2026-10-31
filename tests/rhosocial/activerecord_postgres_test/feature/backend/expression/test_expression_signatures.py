@@ -8,27 +8,25 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.impl.postgres.expression.ilike import (
-    ILIKEExpression,
-)
+from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
-    EnumTypeNameExpression,
-    EnumValuesExpression,
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    AlterEnumAddValueExpression,
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
+    PostgresCreateEnumTypeExpression,
+    PostgresDropEnumTypeExpression,
+    PostgresAlterEnumAddValueExpression,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
-    CreateMultirangeTypeExpression,
-    MultirangeAggFunctionExpression,
+    PostgresCreateMultirangeTypeExpression,
+    PostgresMultirangeAggFunctionExpression,
 )
 
 
 class TestILIKEExpression:
-    """Tests for ILIKEExpression."""
+    """Tests for ILikePredicate."""
 
     def test_basic_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "name"),
             pattern="%foo%",
@@ -38,7 +36,7 @@ class TestILIKEExpression:
         assert params == ('%foo%',)
 
     def test_negated_ilike(self, postgres_dialect):
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "name"),
             pattern="%bar%",
@@ -49,8 +47,8 @@ class TestILIKEExpression:
         assert params == ('%bar%',)
 
     def test_ilike_dispatches_to_postgres_format(self, postgres_dialect):
-        """Verify ILIKEExpression.to_sql() dispatches to format_ilike_expression."""
-        expr = ILIKEExpression(
+        """Verify ILikePredicate.to_sql() dispatches to format_ilike_predicate."""
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "col"),
             pattern="pat",
@@ -61,7 +59,7 @@ class TestILIKEExpression:
 
     def test_ilike_generates_native_ilike_not_lower(self, postgres_dialect):
         """Verify generated SQL uses native ILIKE, not LOWER() LIKE LOWER()."""
-        expr = ILIKEExpression(
+        expr = ILikePredicate(
             postgres_dialect,
             column=Column(postgres_dialect, "c"),
             pattern="%x%",
@@ -72,42 +70,42 @@ class TestILIKEExpression:
 
 
 class TestEnumTypeNameExpression:
-    """Tests for EnumTypeNameExpression."""
+    """Tests for PostgresEnumTypeNameExpression."""
 
     def test_name_without_schema(self, postgres_dialect):
-        expr = EnumTypeNameExpression(postgres_dialect, name="status")
+        expr = PostgresEnumTypeNameExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
         assert sql == '"status"'
         assert params == ()
 
     def test_name_with_schema(self, postgres_dialect):
-        expr = EnumTypeNameExpression(postgres_dialect, name="status", schema="app")
+        expr = PostgresEnumTypeNameExpression(postgres_dialect, name="status", schema="app")
         sql, params = expr.to_sql()
         assert sql == '"app"."status"'
         assert params == ()
 
 
 class TestEnumValuesExpression:
-    """Tests for EnumValuesExpression."""
+    """Tests for PostgresEnumValuesExpression."""
 
     def test_single_value(self, postgres_dialect):
-        expr = EnumValuesExpression(postgres_dialect, values=["active"])
+        expr = PostgresEnumValuesExpression(postgres_dialect, values=["active"])
         sql, params = expr.to_sql()
         assert sql == "'active'"
         assert params == ()
 
     def test_multiple_values(self, postgres_dialect):
-        expr = EnumValuesExpression(postgres_dialect, values=["a", "b", "c"])
+        expr = PostgresEnumValuesExpression(postgres_dialect, values=["a", "b", "c"])
         sql, params = expr.to_sql()
         assert sql == "'a', 'b', 'c'"
         assert params == ()
 
 
 class TestCreateEnumTypeExpression:
-    """Tests for CreateEnumTypeExpression."""
+    """Tests for PostgresCreateEnumTypeExpression."""
 
     def test_basic_create(self, postgres_dialect):
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             postgres_dialect, name="status", values=["active", "inactive"],
         )
         sql, params = expr.to_sql()
@@ -115,7 +113,7 @@ class TestCreateEnumTypeExpression:
         assert params == ()
 
     def test_create_if_not_exists_fails_fast(self, postgres_dialect):
-        expr = CreateEnumTypeExpression(
+        expr = PostgresCreateEnumTypeExpression(
             postgres_dialect,
             name="priority",
             values=["low", "high"],
@@ -127,16 +125,16 @@ class TestCreateEnumTypeExpression:
 
 
 class TestDropEnumTypeExpression:
-    """Tests for DropEnumTypeExpression."""
+    """Tests for PostgresDropEnumTypeExpression."""
 
     def test_basic_drop(self, postgres_dialect):
-        expr = DropEnumTypeExpression(postgres_dialect, name="status")
+        expr = PostgresDropEnumTypeExpression(postgres_dialect, name="status")
         sql, params = expr.to_sql()
         assert sql == "DROP TYPE \"status\""
         assert params == ()
 
     def test_drop_with_if_exists_and_cascade(self, postgres_dialect):
-        expr = DropEnumTypeExpression(
+        expr = PostgresDropEnumTypeExpression(
             postgres_dialect, name="status", schema="app",
             if_exists=True, cascade=True,
         )
@@ -146,10 +144,10 @@ class TestDropEnumTypeExpression:
 
 
 class TestAlterEnumAddValueExpression:
-    """Tests for AlterEnumAddValueExpression."""
+    """Tests for PostgresAlterEnumAddValueExpression."""
 
     def test_basic_add_value(self, postgres_dialect):
-        expr = AlterEnumAddValueExpression(
+        expr = PostgresAlterEnumAddValueExpression(
             postgres_dialect, type_name="status", new_value="archived",
         )
         sql, params = expr.to_sql()
@@ -157,7 +155,7 @@ class TestAlterEnumAddValueExpression:
         assert params == ()
 
     def test_add_value_with_before_after(self, postgres_dialect):
-        expr = AlterEnumAddValueExpression(
+        expr = PostgresAlterEnumAddValueExpression(
             postgres_dialect, type_name="status", new_value="pending",
             schema="app", before="active",
         )
@@ -168,7 +166,7 @@ class TestAlterEnumAddValueExpression:
 
 class TestCreateMultirangeTypeExpression:
     def test_explicit_multirange_ddl_fails_fast(self, postgres_dialect):
-        expr = CreateMultirangeTypeExpression(
+        expr = PostgresCreateMultirangeTypeExpression(
             postgres_dialect,
             name="my_multirange",
             range_type="my_range",
@@ -178,10 +176,10 @@ class TestCreateMultirangeTypeExpression:
 
 
 class TestMultirangeAggFunctionExpression:
-    """Tests for MultirangeAggFunctionExpression."""
+    """Tests for PostgresMultirangeAggFunctionExpression."""
 
     def test_basic_agg(self, postgres_dialect):
-        expr = MultirangeAggFunctionExpression(
+        expr = PostgresMultirangeAggFunctionExpression(
             postgres_dialect, range_column="period", table_name="events",
         )
         sql, params = expr.to_sql()
@@ -189,7 +187,7 @@ class TestMultirangeAggFunctionExpression:
         assert params == ()
 
     def test_agg_with_where_and_schema(self, postgres_dialect):
-        expr = MultirangeAggFunctionExpression(
+        expr = PostgresMultirangeAggFunctionExpression(
             postgres_dialect, range_column="period", table_name="events",
             where_clause="status = 'active'", schema="public",
         )

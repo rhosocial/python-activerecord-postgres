@@ -27,12 +27,12 @@ class PostgresArrayEnhancedMixin:
 
     def supports_array_fill(self) -> bool:
         """Whether array_fill function is supported (PostgreSQL 8.4+)."""
-        return self.version >= (8, 4, 0)
+        return self.version_at_least((8, 4, 0))
 
     def supports_array_position(self) -> bool:
         """Whether array_position / array_positions are supported (PostgreSQL 9.5+)."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_domain_arrays(self) -> bool:
         """Whether arrays over domain types are supported (PostgreSQL 11+)."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))

@@ -14,20 +14,21 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     ValuesSource,
-    DeleteExpression,
+    DeleteStatement,
     ReturningClause,
     Column,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
@@ -42,7 +43,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,
@@ -51,16 +52,16 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     columns=[
         ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(ColumnConstraintType.NOT_NULL),
+            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
         ColumnDefinition('email', 'VARCHAR(200)'),
     ],
@@ -70,7 +71,7 @@ sql, params = create_table.to_sql()
 backend.execute(sql, params)
 
 # Insert sample data
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'users'),
     columns=['name', 'email'],
@@ -88,7 +89,7 @@ backend.execute(sql, params)
 # ============================================================
 
 # 1. Simple DELETE with WHERE
-delete_expr = DeleteExpression(
+delete_expr = DeleteStatement(
     dialect=dialect,
     tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
@@ -110,7 +111,7 @@ result = backend.execute(sql, params)
 print(f"Affected rows: {result.affected_rows}")
 
 # 2. DELETE with RETURNING clause
-delete_returning = DeleteExpression(
+delete_returning = DeleteStatement(
     dialect=dialect,
     tables=Table(dialect, 'users'),
     where=ComparisonPredicate(
@@ -131,7 +132,7 @@ print(f"Affected rows: {result.affected_rows}")
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
     if_exists=True,

@@ -20,20 +20,21 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.dialect.mixins import ViewMixin
 from rhosocial.activerecord.backend.expression import (
     Column,
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    QueryExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    Literal,
+    QueryStatement,
+    RefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    MaterializedViewAlterAction,
-    PostgresAlterMaterializedViewExpression,
+    PostgresMaterializedViewAlterAction,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -62,7 +63,7 @@ def _dialect(version=PG_15):
 
 
 def _source_query(dialect):
-    return QueryExpression(
+    return QueryStatement(
         dialect=dialect,
         select=[Column(dialect, "product_id")],
         from_=Table(dialect, "sales"),
@@ -74,7 +75,7 @@ def _create(dialect, **kwargs):
     schema = kwargs.pop("schema", None)
     name = kwargs.pop("view_name", "sales_summary")
     kwargs.setdefault("query", _source_query(dialect))
-    return CreateMaterializedViewExpression(
+    return CreateMaterializedViewStatement(
         dialect=dialect,
         view=MaterializedView(dialect, name, schema_name=schema),
         **kwargs,
@@ -99,7 +100,7 @@ class TestMaterializedViewMixinResolution:
         dialect = _dialect()
         owner = dialect.format_drop_materialized_view_statement.__qualname__
         assert owner.startswith("PostgresMaterializedViewMixin.")
-        sql, _ = DropMaterializedViewExpression(
+        sql, _ = DropMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), if_exists=True, cascade=True
         ).to_sql()
         assert sql == 'DROP MATERIALIZED VIEW IF EXISTS "sales_summary" CASCADE'
@@ -204,7 +205,7 @@ class TestDropMaterializedViewFormatting:
 
     def test_drop_plain(self):
         dialect = _dialect()
-        sql, params = DropMaterializedViewExpression(
+        sql, params = DropMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary')
         ).to_sql()
         assert sql == 'DROP MATERIALIZED VIEW "sales_summary"'
@@ -212,7 +213,7 @@ class TestDropMaterializedViewFormatting:
 
     def test_drop_if_exists_cascade(self):
         dialect = _dialect()
-        sql, _ = DropMaterializedViewExpression(
+        sql, _ = DropMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), if_exists=True, cascade=True
         ).to_sql()
         assert sql == 'DROP MATERIALIZED VIEW IF EXISTS "sales_summary" CASCADE'
@@ -220,14 +221,14 @@ class TestDropMaterializedViewFormatting:
     def test_drop_restrict_renders_standard_token(self):
         """The RESTRICT spelling of the pair reaches the PostgreSQL formatter."""
         dialect = _dialect()
-        sql, _ = DropMaterializedViewExpression(
+        sql, _ = DropMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), restrict=True
         ).to_sql()
         assert sql == 'DROP MATERIALIZED VIEW "sales_summary" RESTRICT'
 
     def test_drop_neither_cascade_nor_restrict_omits_token(self):
         dialect = _dialect()
-        sql, _ = DropMaterializedViewExpression(
+        sql, _ = DropMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary')
         ).to_sql()
         assert "CASCADE" not in sql
@@ -239,7 +240,7 @@ class TestRefreshMaterializedViewFormatting:
 
     def test_refresh_plain(self):
         dialect = _dialect()
-        sql, params = RefreshMaterializedViewExpression(
+        sql, params = RefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary')
         ).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "sales_summary"'
@@ -252,14 +253,14 @@ class TestRefreshMaterializedViewFormatting:
     )
     def test_refresh_data_variants(self, kwargs, expected):
         dialect = _dialect()
-        sql, _ = RefreshMaterializedViewExpression(
+        sql, _ = RefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), **kwargs
         ).to_sql()
         assert sql == f'REFRESH MATERIALIZED VIEW "sales_summary"{expected}'
 
     def test_refresh_without_with_data_omits_clause(self):
         dialect = _dialect()
-        sql, _ = RefreshMaterializedViewExpression(
+        sql, _ = RefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary')
         ).to_sql()
         assert "WITH DATA" not in sql
@@ -268,7 +269,7 @@ class TestRefreshMaterializedViewFormatting:
     def test_refresh_concurrently_allowed_since_94(self, version):
         """T-12: CONCURRENTLY is emitted from PG 9.4 onwards."""
         dialect = _dialect(version)
-        sql, _ = RefreshMaterializedViewExpression(
+        sql, _ = RefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrent=True
         ).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW CONCURRENTLY "sales_summary"'
@@ -277,7 +278,7 @@ class TestRefreshMaterializedViewFormatting:
         """T-13: the generic expression must refuse CONCURRENTLY before PG 9.4."""
         dialect = _dialect(PG_93)
         with pytest.raises(UnsupportedFeatureError) as exc:
-            RefreshMaterializedViewExpression(
+            RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrent=True
             ).to_sql()
         assert "CONCURRENTLY" in str(exc.value)
@@ -286,13 +287,13 @@ class TestRefreshMaterializedViewFormatting:
         """T-15: the PostgreSQL expression is gated identically."""
         dialect = _dialect(PG_93)
         with pytest.raises(UnsupportedFeatureError):
-            PostgresRefreshMaterializedViewExpression(
+            PostgresRefreshMaterializedViewPgStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrently=True
             ).to_sql()
 
     def test_pg_expression_renders_concurrently_since_94(self):
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewExpression(
+        sql, _ = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrently=True, with_data=True
         ).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW CONCURRENTLY "sales_summary" WITH DATA'
@@ -316,7 +317,7 @@ class TestRefreshMaterializedViewFormatting:
         """T-16: version gate matrix across MV features."""
         dialect = _dialect(version)
         build = {
-            "concurrent": lambda: RefreshMaterializedViewExpression(
+            "concurrent": lambda: RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrent=True
             ),
             "if_not_exists": lambda: PostgresCreateMaterializedViewExpression(
@@ -354,14 +355,14 @@ class TestMaterializedViewSchemaQualification:
     def test_refresh_schema_qualified_and_quoted(self):
         """T-17."""
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewExpression(
+        sql, _ = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect, view=MaterializedView(dialect, 'mv_sales', schema_name='reporting')).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "reporting"."mv_sales"'
 
     def test_mixed_case_and_reserved_word_quoted(self):
         """T-18: the previous bare f-string concatenation broke here."""
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewExpression(
+        sql, _ = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect, view=MaterializedView(dialect, 'Order Summary', schema_name='Reporting')).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "Reporting"."Order Summary"'
 
@@ -446,10 +447,10 @@ class TestMaterializedViewExceptionContract:
     @pytest.mark.parametrize(
         "build",
         [
-            lambda dialect: RefreshMaterializedViewExpression(
+            lambda dialect: RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrent=True
             ),
-            lambda dialect: PostgresRefreshMaterializedViewExpression(
+            lambda dialect: PostgresRefreshMaterializedViewPgStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrently=True
             ),
             lambda dialect: PostgresCreateMaterializedViewExpression(
@@ -469,7 +470,7 @@ class TestMaterializedViewExceptionContract:
         """T-26."""
         dialect = _dialect(PG_93)
         with pytest.raises(UnsupportedFeatureError) as exc:
-            RefreshMaterializedViewExpression(
+            RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrent=True
             ).to_sql()
         message = str(exc.value)
@@ -487,7 +488,7 @@ class TestAlterMaterializedView:
     def _alter(self, dialect, *actions, **kwargs):
         schema = kwargs.pop("schema", None)
         name = kwargs.pop("view_name", "sales_summary")
-        return PostgresAlterMaterializedViewExpression(
+        return PostgresAlterMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, name, schema_name=schema),
             actions=list(actions),
@@ -597,14 +598,14 @@ class TestAlterMaterializedView:
     def test_requires_at_least_one_action(self):
         dialect = _dialect()
         with pytest.raises(ValueError):
-            PostgresAlterMaterializedViewExpression(
+            PostgresAlterMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), actions=[]
             )
 
     def test_rejects_non_action_objects(self):
         dialect = _dialect()
         with pytest.raises(TypeError):
-            PostgresAlterMaterializedViewExpression(
+            PostgresAlterMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), actions=[object()]
             )
 
@@ -641,11 +642,11 @@ class TestAlterMaterializedView:
     def test_rejects_unknown_action(self):
         dialect = _dialect()
 
-        class RogueAction(MaterializedViewAlterAction):
+        class RogueAction(PostgresMaterializedViewAlterAction):
             action_kind = "rogue"
 
         with pytest.raises(UnsupportedFeatureError):
-            dialect.format_materialized_view_alter_action(RogueAction(dialect))
+            dialect.format_postgres_materialized_view_alter_action(RogueAction(dialect))
 
 
 class TestPostgresStorageParameterEnum:
@@ -776,10 +777,10 @@ class TestMaterializedViewProtocolAndSurface:
             "supports_alter_materialized_view",
             "format_create_materialized_view_statement",
             "format_drop_materialized_view_statement",
-            "format_refresh_materialized_view_statement",
+            "format_refresh_materialized_view_pg_statement",
             "format_refresh_materialized_view_pg_statement",
             "format_alter_materialized_view_statement",
-            "format_materialized_view_alter_action",
+            "format_postgres_materialized_view_alter_action",
         ):
             assert hasattr(_dialect(), name), name
             assert hasattr(PostgresMaterializedViewSupport, name), name
@@ -791,14 +792,14 @@ class TestMaterializedViewProtocolAndSurface:
         for name in (
             "PostgresCreateMaterializedViewExpression",
             "PostgresDropMaterializedViewExpression",
-            "PostgresRefreshMaterializedViewExpression",
-            "PostgresAlterMaterializedViewExpression",
+            "PostgresRefreshMaterializedViewPgStatement",
+            "PostgresAlterMaterializedViewStatement",
             "PostgresRenameMaterializedViewAction",
             "PostgresSetMaterializedViewSchemaAction",
             "PostgresSetMaterializedViewPropertiesAction",
             "PostgresResetMaterializedViewPropertiesAction",
             "PostgresChangeMaterializedViewOwnerAction",
-            "MaterializedViewAlterAction",
+            "PostgresMaterializedViewAlterAction",
         ):
             assert name in pg_expression.__all__, name
             assert hasattr(pg_expression, name), name
@@ -812,11 +813,11 @@ class TestMaterializedViewProtocolAndSurface:
             PostgresCreateMaterializedViewExpression(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), query=query
             ),
-            DropMaterializedViewExpression(dialect=dialect, view=MaterializedView(dialect, 'mv')),
+            DropMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
             PostgresDropMaterializedViewExpression(dialect=dialect, view=MaterializedView(dialect, 'mv')),
-            RefreshMaterializedViewExpression(dialect=dialect, view=MaterializedView(dialect, 'mv')),
-            PostgresRefreshMaterializedViewExpression(dialect=dialect, view=MaterializedView(dialect, 'mv')),
-            PostgresAlterMaterializedViewExpression(
+            RefreshMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
+            PostgresRefreshMaterializedViewPgStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
+            PostgresAlterMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
                 actions=[PostgresRenameMaterializedViewAction(dialect, "mv2")],
@@ -830,7 +831,7 @@ class TestMaterializedViewProtocolAndSurface:
         """T-40: examples rely on the name=/concurrently= aliases."""
         dialect = _dialect()
         view = MaterializedView(dialect, "sales_summary", schema_name="reporting")
-        expression = PostgresRefreshMaterializedViewExpression(
+        expression = PostgresRefreshMaterializedViewPgStatement(
             dialect=dialect, view=view, concurrently=True
         )
         assert expression.name == view.name == "sales_summary"
@@ -861,5 +862,45 @@ class TestMaterializedViewProtocolAndSurface:
         """T-04 (refresh half): CONCURRENTLY gating lives in the PG mixin."""
         dialect = _dialect()
         assert dialect.supports_materialized_view_concurrent_refresh() is True
-        owner = dialect.format_refresh_materialized_view_statement.__qualname__
+        owner = dialect.format_refresh_materialized_view_pg_statement.__qualname__
         assert owner.startswith("PostgresMaterializedViewMixin.")
+
+
+class TestCreateMaterializedViewRefusesBoundParameters:
+    """G9: a materialized view's definition may not bind.
+
+    PostgreSQL's own words, measured on 19beta4: "materialized views may not
+    be defined using bound parameters". The reason is not a parser quirk --
+    the definition is stored and run again later, where a bound value has no
+    meaning -- so the statement is refused by name, with the way out named,
+    rather than rendered for the server to reject.
+
+    Both directions are pinned: a body that binds is refused, and the same
+    body with an inlined literal renders. A case that only ever exercised the
+    working side could not notice the refusal going away.
+    """
+
+    def test_a_binding_body_is_refused_by_name(self):
+        dialect = _dialect()
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Literal(dialect, 1)],
+            from_=Table(dialect, "sales"),
+        )
+        expr = _create(dialect, query=query)
+        with pytest.raises(UnsupportedFeatureError) as excinfo:
+            expr.to_sql()
+        message = str(excinfo.value)
+        assert "CREATE MATERIALIZED VIEW with bound parameters" in message, message
+        assert "inlined literal" in message, message
+
+    def test_an_inlined_body_renders(self):
+        dialect = _dialect()
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Literal(dialect, 1, inline=True)],
+            from_=Table(dialect, "sales"),
+        )
+        sql, params = _create(dialect, query=query).to_sql()
+        assert "SELECT 1" in sql, sql
+        assert params == ()

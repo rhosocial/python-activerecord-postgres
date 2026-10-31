@@ -9,8 +9,8 @@ from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..expression.ddl import (
-        PostgresAlterMaterializedViewExpression,
-        PostgresRefreshMaterializedViewExpression,
+        PostgresAlterMaterializedViewStatement,
+        PostgresRefreshMaterializedViewPgStatement,
     )
 
 
@@ -35,6 +35,24 @@ class PostgresMaterializedViewSupport(Protocol):
 
     Documentation: https://www.postgresql.org/docs/current/sql-creatematerializedview.html
     """
+
+    def supports_materialized_view_bind_parameters(self) -> bool:
+        """Whether this statement's body may carry bind parameters.
+
+        Defaults to ``False``: a DDL statement carries no bind parameters
+        unless the dialect says it can, so a dialect that does not answer
+        refuses rather than emitting a statement the engine may reject. A
+        dialect whose engine accepts them returns ``True``.
+        """
+        ...  # pragma: no cover
+
+    def supports_materialized_view_introspection(self) -> bool:
+        """Whether materialized views can be read back from ``pg_matviews``.
+
+        The ``introspect materialized-views`` family, declared beside the
+        statements that render the REFRESH path.
+        """
+        ...  # pragma: no cover
 
     def supports_materialized_view(self) -> bool:
         """Whether materialized views are supported (PostgreSQL 9.3+)."""
@@ -92,7 +110,7 @@ class PostgresMaterializedViewSupport(Protocol):
         WITH (storage_options), TABLESPACE, and WITH DATA / WITH NO DATA.
 
         Args:
-            expr: CreateMaterializedViewExpression instance
+            expr: CreateMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -105,7 +123,7 @@ class PostgresMaterializedViewSupport(Protocol):
         Supports schema qualification, IF EXISTS and CASCADE.
 
         Args:
-            expr: DropMaterializedViewExpression instance
+            expr: DropMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -116,7 +134,7 @@ class PostgresMaterializedViewSupport(Protocol):
         """Format REFRESH MATERIALIZED VIEW statement, gating CONCURRENTLY on PG 9.4+.
 
         Args:
-            expr: RefreshMaterializedViewExpression instance
+            expr: RefreshMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -124,12 +142,12 @@ class PostgresMaterializedViewSupport(Protocol):
         ...
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "PostgresRefreshMaterializedViewExpression"
+        self, expr: "PostgresRefreshMaterializedViewPgStatement"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: PostgresRefreshMaterializedViewExpression containing all options
+            expr: PostgresRefreshMaterializedViewPgStatement containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -137,7 +155,7 @@ class PostgresMaterializedViewSupport(Protocol):
         ...
 
     def format_alter_materialized_view_statement(
-        self, expr: "PostgresAlterMaterializedViewExpression"
+        self, expr: "PostgresAlterMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER MATERIALIZED VIEW statement.
 
@@ -145,21 +163,21 @@ class PostgresMaterializedViewSupport(Protocol):
         Multiple actions are joined with ``";\\n"``.
 
         Args:
-            expr: PostgresAlterMaterializedViewExpression with the actions to apply
+            expr: PostgresAlterMaterializedViewStatement with the actions to apply
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
         ...
 
-    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Storage parameter names must come from
         :class:`~....storage_parameters.PostgresStorageParameter`.
 
         Args:
-            expr: A ``MaterializedViewAlterAction`` subclass instance.
+            expr: A ``PostgresMaterializedViewAlterAction`` subclass instance.
 
         Returns:
             A ``(sql, params)`` tuple whose ``sql`` is the action body without the

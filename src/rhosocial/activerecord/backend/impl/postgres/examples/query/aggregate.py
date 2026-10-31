@@ -9,16 +9,17 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    InsertStatement,
     ValuesSource,
-    DropTableExpression,
+    DropTableStatement,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -34,7 +35,7 @@ backend = PostgresBackend(connection_config=config)
 backend.connect()
 dialect = backend.dialect
 
-drop_table = DropTableExpression(
+drop_table = DropTableStatement(
     dialect=dialect,
     table=Table(dialect, 'sales'),
     if_exists=True,
@@ -43,7 +44,7 @@ drop_table = DropTableExpression(
 sql, params = drop_table.to_sql()
 backend.execute(sql, params)
 
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, 'sales'),
     columns=[
@@ -51,8 +52,8 @@ create_table = CreateTableExpression(
             'id',
             'SERIAL',
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
-                ColumnConstraint(ColumnConstraintType.NOT_NULL),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition('product', 'VARCHAR(100)'),
@@ -63,7 +64,7 @@ create_table = CreateTableExpression(
 )
 backend.execute(*create_table.to_sql())
 
-insert_expr = InsertExpression(
+insert_expr = InsertStatement(
     dialect=dialect,
     into=Table(dialect, 'sales'),
     columns=['product', 'quantity', 'price', 'region'],
@@ -84,18 +85,19 @@ backend.execute(*insert_expr.to_sql())
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression, Column, GroupByHavingClause,
+    QueryStatement, Column, GroupByHavingClause,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression import functions as F  # noqa: E402
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-query = QueryExpression(
+query = QueryStatement(
     dialect=dialect,
     select=[
         Column(dialect, 'product'),
-        FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')).as_('total_qty'),
-        FunctionCall(dialect, 'AVG', Column(dialect, 'price')).as_('avg_price'),
+        F.sum_(dialect, Column(dialect, 'quantity')).as_('total_qty'),
+        F.avg(dialect, Column(dialect, 'price')).as_('avg_price'),
     ],
     from_=Table(dialect, 'sales'),
     group_by_having=GroupByHavingClause(
@@ -104,7 +106,7 @@ query = QueryExpression(
         having=ComparisonPredicate(
             dialect,
             '>',
-            FunctionCall(dialect, 'SUM', Column(dialect, 'quantity')),
+            F.sum_(dialect, Column(dialect, 'quantity')),
             Literal(dialect, 10),
         ),
     ),

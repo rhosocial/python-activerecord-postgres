@@ -29,11 +29,11 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeType,
     TimestampType,
     VarCharType,
+    UUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBitType,
-    PostgresByteaType,
     PostgresHalfvecType,
     PostgresInetType,
     PostgresJsonPathType,
@@ -41,7 +41,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
     PostgresSparsevecType,
     PostgresTsRangeType,
-    PostgresUUIDType,
     PostgresVarBitType,
     PostgresVectorType,
 )
@@ -155,9 +154,7 @@ def test_supports_data_types_includes_postgres_types(dialect):
 
     # Verify a representative sample of postgres-specific types
     postgres_expected = {
-        "postgres_bytea": PostgresByteaType,
         "postgres_serial": PostgresSerialType,
-        "postgres_uuid": PostgresUUIDType,
         "postgres_vector": PostgresVectorType,
         "postgres_tsrange": PostgresTsRangeType,
         "postgres_inet": PostgresInetType,
@@ -452,14 +449,88 @@ def test_signedness_is_part_of_identity(dialect, klass, kwargs, signed_sql):
     assert klass(dialect, **kwargs) == signed
 
 
-def test_unsigned_is_type_checked(dialect):
+#: ``unsigned`` values that are not booleans, with the way a truth test would
+#: misread each one -- which is the whole reason the shape is checked instead of
+#: the value.  ``1`` would be refused as if it said ``True``, ``"yes"`` likewise,
+#: and ``0`` and ``None`` would slip past the gate entirely and render a signed
+#: column while reporting success.
+NON_BOOL_UNSIGNED = [
+    pytest.param(1, id="int-1"),
+    pytest.param(0, id="int-0"),
+    pytest.param("yes", id="str-yes"),
+    pytest.param(None, id="None"),
+]
+
+#: Every concept on this backend whose ``unsigned`` reaches a formatter, on both
+#: sides of the two private helpers: the integer widths go through
+#: ``_refuse_unsigned_integer``, the exact fixed-point and floating-point ones
+#: through ``_refuse_unsigned_numeric``.
+SIGNEDNESS_CONCEPTS = [
+    (SmallIntType, {}),
+    (IntegerType, {}),
+    (BigIntType, {}),
+    (DecimalType, {}),
+    (FloatType, {}),
+    (DoubleType, {}),
+]
+
+
+@pytest.mark.parametrize("klass,kwargs", SIGNEDNESS_CONCEPTS,
+                         ids=[k.__name__ for k, _kw in SIGNEDNESS_CONCEPTS])
+def test_unsigned_is_collected_not_judged(dialect, klass, kwargs):
+    """The expression collects ``unsigned``; it does not rule on it.
+
+    Which backend will have to honour the flag is a question only the formatter
+    can answer, so the constructor takes the value as given.  What the value
+    *means* is decided at the rendering end -- see
+    :func:`test_unsigned_is_type_checked`.
+    """
+    declared = klass(dialect, unsigned=True, **kwargs)
+    assert declared.unsigned is True
+
+
+@pytest.mark.parametrize("klass,kwargs", SIGNEDNESS_CONCEPTS,
+                         ids=[k.__name__ for k, _kw in SIGNEDNESS_CONCEPTS])
+@pytest.mark.parametrize("wrong", NON_BOOL_UNSIGNED)
+def test_unsigned_is_type_checked(dialect, klass, kwargs, wrong):
     """It becomes a type modifier in the rendered DDL, so ``1`` is not a
-    truthy ``True`` and ``"yes"`` is not a spelling of one."""
-    for klass, kwargs in ((DecimalType, {}), (FloatType, {}), (DoubleType, {})):
-        with pytest.raises(TypeError, match="unsigned must be a bool"):
-            klass(dialect, unsigned=1, **kwargs)
-        with pytest.raises(TypeError, match="unsigned must be a bool"):
-            klass(dialect, unsigned="yes", **kwargs)
+    truthy ``True``, ``"yes"`` is not a spelling of one, and ``0`` is not a
+    polite ``False``.
+
+    The check lives at the rendering end rather than in the constructor: the
+    expression collects its parameters without judging them, because only the
+    formatter knows this backend has to honour the flag.  So the dirty value is
+    carried all the way here and then named -- a truth test would let
+    ``unsigned="yes"`` down the same branch as ``True`` and ``unsigned=0``
+    straight past the gate, rendering a signed column and reporting success,
+    which is exactly what the refusal below exists to prevent.
+    """
+    declared = klass(dialect, unsigned=wrong, **kwargs)
+    assert declared.unsigned is wrong, (
+        f"{klass.__name__} must collect unsigned verbatim; judging it is the "
+        f"formatter's job, not the constructor's"
+    )
+    with pytest.raises(TypeError, match="unsigned must be a bool"):
+        dialect.format_data_type(declared)
+
+
+@pytest.mark.parametrize("klass,kwargs", SIGNEDNESS_CONCEPTS,
+                         ids=[k.__name__ for k, _kw in SIGNEDNESS_CONCEPTS])
+def test_unsigned_true_is_still_refused_after_the_shape_check(dialect, klass,
+                                                              kwargs):
+    """The shape check is not a softener: a genuine ``True`` still gets the
+    backend's own answer, and still gets it as ``UnsupportedFeatureError``.
+
+    Two failures have to stay distinguishable -- ``TypeError`` for a value that
+    is not a signedness at all, ``UnsupportedFeatureError`` for a signedness
+    PostgreSQL cannot express -- because they call for different fixes and the
+    two exceptions share no base class.
+    """
+    with pytest.raises(UnsupportedFeatureError) as excinfo:
+        dialect.format_data_type(klass(dialect, unsigned=True, **kwargs))
+    assert not isinstance(excinfo.value, TypeError)
+    assert "unsigned" in str(excinfo.value)
+    assert excinfo.value.suggestion, "the refusal must carry a route forward"
 
 
 def test_the_scale_and_precision_checks_are_untouched_by_the_new_refusal(
@@ -583,16 +654,17 @@ class TestParseRoundTripSweep:
     #: formatter names; bare ``FLOAT`` renders ``REAL``, which is the
     #: RealType concept; the ``datetime`` concept renders ``TIMESTAMP``,
     #: which is the storage both it and the timestamp concept share; and
-    #: the bytea/uuid/xml/array renderings are the backend's own classes
-    #: for those storages.
+    #: the array rendering is the backend's own class for that storage.
+    #: ``BlobType``/``UUIDType``/``XmlType`` are absent because they no longer
+    #: need an answer: each had a second class rendering the identical SQL,
+    #: which parse_type returned instead of the concept -- so a declaration and
+    #: the catalog row it produced compared unequal. With one class each they
+    #: come back to themselves.
     WIDENING_ANSWERS = {
         "ArrayType": "PostgresArrayType",
-        "BlobType": "PostgresByteaType",
         "DateTimeType": "TimestampType",
         "TinyIntType": "SmallIntType",
         "FloatType": "RealType",
-        "UUIDType": "PostgresUUIDType",
-        "XmlType": "PostgresXMLType",
     }
 
     @pytest.fixture(scope="class")
@@ -617,7 +689,7 @@ class TestParseRoundTripSweep:
         return registry
 
     def test_every_rendered_type_parses_back_coherently(self, dialect, registry):
-        from rhosocial.activerecord.testsuite.utils.parse_contract import (
+        from expression_roundtrip_harness import (
             parse_roundtrip_failures,
         )
 

@@ -8,15 +8,15 @@ import pytest
 
 
 class TestPostgresCreateExtensionExpression:
-    """Tests for PostgresCreateExtensionExpression."""
+    """Tests for PostgresCreateExtensionStatement."""
 
     def test_create_extension_basic(self, postgres_dialect):
         """Test basic CREATE EXTENSION with IF NOT EXISTS."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="uuid-ossp",
             if_not_exists=True,
@@ -29,10 +29,10 @@ class TestPostgresCreateExtensionExpression:
     def test_create_extension_with_schema(self, postgres_dialect):
         """Test CREATE EXTENSION with schema specification."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="hstore",
             schema="public",
@@ -46,10 +46,10 @@ class TestPostgresCreateExtensionExpression:
     def test_create_extension_with_version(self, postgres_dialect):
         """Test CREATE EXTENSION with version."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="postgis",
             version="3.4.0",
@@ -63,10 +63,10 @@ class TestPostgresCreateExtensionExpression:
     def test_create_extension_with_cascade(self, postgres_dialect):
         """Test CREATE EXTENSION with CASCADE."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="postgis",
             if_not_exists=False,
@@ -80,10 +80,10 @@ class TestPostgresCreateExtensionExpression:
     def test_create_extension_no_if_not_exists(self, postgres_dialect):
         """Test CREATE EXTENSION without IF NOT EXISTS."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="hstore",
             if_not_exists=False,
@@ -96,10 +96,10 @@ class TestPostgresCreateExtensionExpression:
     def test_create_extension_full_options(self, postgres_dialect):
         """Test CREATE EXTENSION with all options."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=postgres_dialect,
             name="uuid-ossp",
             schema="extensions",
@@ -114,15 +114,15 @@ class TestPostgresCreateExtensionExpression:
 
 
 class TestPostgresDropExtensionExpression:
-    """Tests for PostgresDropExtensionExpression."""
+    """Tests for PostgresDropExtensionStatement."""
 
     def test_drop_extension_basic(self, postgres_dialect):
         """Test basic DROP EXTENSION with IF EXISTS."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresDropExtensionExpression,
+            PostgresDropExtensionStatement,
         )
 
-        expr = PostgresDropExtensionExpression(
+        expr = PostgresDropExtensionStatement(
             dialect=postgres_dialect,
             name="uuid-ossp",
             if_exists=True,
@@ -135,10 +135,10 @@ class TestPostgresDropExtensionExpression:
     def test_drop_extension_with_cascade(self, postgres_dialect):
         """Test DROP EXTENSION with CASCADE."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresDropExtensionExpression,
+            PostgresDropExtensionStatement,
         )
 
-        expr = PostgresDropExtensionExpression(
+        expr = PostgresDropExtensionStatement(
             dialect=postgres_dialect,
             name="hstore",
             if_exists=False,
@@ -152,10 +152,10 @@ class TestPostgresDropExtensionExpression:
     def test_drop_extension_with_restrict(self, postgres_dialect):
         """Test DROP EXTENSION with RESTRICT."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresDropExtensionExpression,
+            PostgresDropExtensionStatement,
         )
 
-        expr = PostgresDropExtensionExpression(
+        expr = PostgresDropExtensionStatement(
             dialect=postgres_dialect,
             name="hstore",
             if_exists=False,
@@ -169,10 +169,10 @@ class TestPostgresDropExtensionExpression:
     def test_drop_extension_no_if_exists(self, postgres_dialect):
         """Test DROP EXTENSION without IF EXISTS."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresDropExtensionExpression,
+            PostgresDropExtensionStatement,
         )
 
-        expr = PostgresDropExtensionExpression(
+        expr = PostgresDropExtensionStatement(
             dialect=postgres_dialect,
             name="hstore",
             if_exists=False,
@@ -185,10 +185,10 @@ class TestPostgresDropExtensionExpression:
     def test_drop_extension_full_options(self, postgres_dialect):
         """Test DROP EXTENSION with all options."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresDropExtensionExpression,
+            PostgresDropExtensionStatement,
         )
 
-        expr = PostgresDropExtensionExpression(
+        expr = PostgresDropExtensionStatement(
             dialect=postgres_dialect,
             name="uuid-ossp",
             if_exists=True,
@@ -206,8 +206,8 @@ class TestExtensionExpressionExecution:
     def test_create_and_drop_extension(self, postgres_backend_single):
         """Test CREATE EXTENSION and DROP EXTENSION execution."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
-            PostgresDropExtensionExpression,
+            PostgresCreateExtensionStatement,
+            PostgresDropExtensionStatement,
         )
 
         dialect = postgres_backend_single.dialect
@@ -219,7 +219,7 @@ class TestExtensionExpressionExecution:
 
         if not already_exists:
             # Create extension
-            create_expr = PostgresCreateExtensionExpression(
+            create_expr = PostgresCreateExtensionStatement(
                 dialect=dialect,
                 name="uuid-ossp",
                 if_not_exists=True,
@@ -232,7 +232,7 @@ class TestExtensionExpressionExecution:
             assert dialect.is_extension_installed("uuid-ossp")
 
             # Drop extension
-            drop_expr = PostgresDropExtensionExpression(
+            drop_expr = PostgresDropExtensionStatement(
                 dialect=dialect,
                 name="uuid-ossp",
                 if_exists=True,
@@ -247,14 +247,14 @@ class TestExtensionExpressionExecution:
     def test_create_extension_idempotent(self, postgres_backend_single):
         """Test that CREATE EXTENSION IF NOT EXISTS is idempotent."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
         dialect = postgres_backend_single.dialect
         backend = postgres_backend_single
 
         # Execute twice - should not fail
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=dialect,
             name="pg_trgm",
             if_not_exists=True,
@@ -270,7 +270,7 @@ class TestExtensionExpressionExecution:
     def test_create_extension_without_if_not_exists_fails_on_duplicate(self, postgres_backend_single):
         """Test that CREATE EXTENSION without IF NOT EXISTS fails if extension exists."""
         from rhosocial.activerecord.backend.impl.postgres.expression import (
-            PostgresCreateExtensionExpression,
+            PostgresCreateExtensionStatement,
         )
 
         dialect = postgres_backend_single.dialect
@@ -282,7 +282,7 @@ class TestExtensionExpressionExecution:
             pytest.skip("pg_trgm not installed, skipping duplicate test")
 
         # Try to create again without IF NOT EXISTS - should fail
-        expr = PostgresCreateExtensionExpression(
+        expr = PostgresCreateExtensionStatement(
             dialect=dialect,
             name="pg_trgm",
             if_not_exists=False,

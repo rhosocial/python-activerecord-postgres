@@ -8,7 +8,7 @@ defines the interface for PostgreSQL's native CLUSTER command.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.cluster import PostgresClusterExpression
+    from ...expression.ddl.cluster import PostgresClusterStatement
 
 
 @runtime_checkable
@@ -29,12 +29,12 @@ class PostgresClusterSupport(Protocol):
         ...
 
     def format_cluster_statement(
-        self, expr: "PostgresClusterExpression"
+        self, expr: "PostgresClusterStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CLUSTER`` statement.
 
         Args:
-            expr: ``PostgresClusterExpression``.
+            expr: ``PostgresClusterStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

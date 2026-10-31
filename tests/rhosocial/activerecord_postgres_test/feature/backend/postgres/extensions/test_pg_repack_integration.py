@@ -26,7 +26,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_repack import (
     repack_version,
 )
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -78,7 +78,7 @@ class TestPgRepackIntegration:
 
         try:
             version_func = repack_version(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[version_func.as_("version")],
             )
@@ -146,7 +146,7 @@ class TestAsyncPgRepackIntegration:
 
         try:
             version_func = repack_version(dialect)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[version_func.as_("version")],
             )

@@ -6,16 +6,16 @@ PostgreSQL 后端支持与核心库相同的类型安全 DDL 表达式，并具�
 
 | 操作 | PostgreSQL 支持 | 备注 |
 |----------|-------------------|-------|
-| `CreateTableExpression` | ✅ 完整 | PRIMARY KEY, NOT NULL, UNIQUE 等 |
-| `DropTableExpression` | ✅ 完整 | IF EXISTS, CASCADE, RESTRICT |
-| `AlterTableExpression` | ✅ 完整 | ADD/DROP COLUMN, ALTER COLUMN |
-| `CreateIndexExpression` | ✅ 完整 | 索引类型 (BTREE, HASH, GIN, GiST, BRIN) |
-| `DropIndexExpression` | ✅ 完整 | |
-| `CreateViewExpression` | ✅ 完整 | |
-| `DropViewExpression` | ✅ 完整 | |
+| `CreateTableStatement` | ✅ 完整 | PRIMARY KEY, NOT NULL, UNIQUE 等 |
+| `DropTableStatement` | ✅ 完整 | IF EXISTS, CASCADE, RESTRICT |
+| `AlterTableStatement` | ✅ 完整 | ADD/DROP COLUMN, ALTER COLUMN |
+| `CreateIndexStatement` | ✅ 完整 | 索引类型 (BTREE, HASH, GIN, GiST, BRIN) |
+| `DropIndexStatement` | ✅ 完整 | |
+| `CreateViewStatement` | ✅ 完整 | |
+| `DropViewStatement` | ✅ 完整 | |
 | `PostgresCreateMaterializedViewExpression` | ✅ 完整 | IF NOT EXISTS、TABLESPACE、存储参数（见[物化视图](./materialized_view.md)） |
-| `PostgresRefreshMaterializedViewExpression` | ✅ 完整 | CONCURRENTLY（PG 9.4+，要求存在 UNIQUE 索引） |
-| `PostgresAlterMaterializedViewExpression` | ✅ 完整 | RENAME TO、SET SCHEMA、SET/RESET 存储参数、OWNER TO |
+| `PostgresRefreshMaterializedViewPgStatement` | ✅ 完整 | CONCURRENTLY（PG 9.4+，要求存在 UNIQUE 索引） |
+| `PostgresAlterMaterializedViewStatement` | ✅ 完整 | RENAME TO、SET SCHEMA、SET/RESET 存储参数、OWNER TO |
 | `PostgresDropMaterializedViewExpression` | ✅ 完整 | IF EXISTS、CASCADE |
 | `CreatePartitionExpression` | ✅ 完整 | RANGE, LIST, HASH 分区（PG 10+） |
 | `AttachPartitionExpression` | ✅ 完整 | 支持标准 ATTACH PARTITION；不支持 `CONCURRENTLY` |
@@ -31,11 +31,11 @@ PostgreSQL 10+ 支持声明式分区，详见 [分区文档](../postgres_specifi
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression, PostgresAttachPartitionExpression,
+    PostgresCreatePartitionStatement, PostgresAttachPartitionStatement,
 )
 
 # 创建子分区
-partition = PostgresCreatePartitionExpression(
+partition = PostgresCreatePartitionStatement(
     dialect, parent_table="orders", partition_name="orders_2024_q1",
     partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
 )
@@ -51,19 +51,19 @@ PG 后端支持高级索引操作：
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
-    PostgresAlterIndexExpression, PostgresAlterIndexActionType,
-    PostgresReindexExpression,
+    PostgresAlterIndexStatement, PostgresAlterIndexActionType,
+    PostgresReindexStatement,
 )
 
 # ALTER INDEX ... RENAME TO
-alter = PostgresAlterIndexExpression(
+alter = PostgresAlterIndexStatement(
     dialect, index_name="idx_old",
     action=PostgresAlterIndexActionType.RENAME_TO("idx_new"),
 )
 # sql: 'ALTER INDEX "idx_old" RENAME TO "idx_new"'
 
 # REINDEX
-reindex = PostgresReindexExpression(
+reindex = PostgresReindexStatement(
     dialect, target_type="INDEX", target_name="idx_corrupted",
     concurrently=True,
 )
@@ -75,7 +75,7 @@ reindex = PostgresReindexExpression(
 PostgreSQL 支持多种索引类型：
 
 ```python
-create_idx = CreateIndexExpression(
+create_idx = CreateIndexStatement(
     dialect,
     index_name="idx_users_name",
     table_name="users",
@@ -91,7 +91,7 @@ PostgreSQL 支持带 WHERE 子句的局部索引：
 ```python
 from rhosocial.activerecord.backend.expression import Column, Literal
 
-create_idx = CreateIndexExpression(
+create_idx = CreateIndexStatement(
     dialect,
     index_name="idx_active_users",
     table_name="users",
@@ -105,7 +105,7 @@ create_idx = CreateIndexExpression(
 PostgreSQL 支持 schema：
 
 ```python
-create_table = CreateTableExpression(
+create_table = CreateTableStatement(
     dialect,
     table_name="schema_name.users",
     columns=columns

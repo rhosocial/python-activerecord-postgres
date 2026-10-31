@@ -12,21 +12,21 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression import (
-        JSONDocumentExpression,
-        JSONTextExpression,
+        JSONDocumentValue,
+        JSONTextValue,
     )
 
     #: What both formatters below accept. Core used to have one class for both
     #: JSON access operators; it now has two, one per operator, and this dialect
     #: renders either from the same code path -- so the parameter is a union.
     #:
-    #: The union is spelled out even though ``JSONTextExpression`` subclasses
-    #: ``JSONDocumentExpression`` and a checker would collapse it. That
+    #: The union is spelled out even though ``JSONTextValue`` subclasses
+    #: ``JSONDocumentValue`` and a checker would collapse it. That
     #: inheritance exists so ``->>`` keeps the accessors that let a path chain
     #: continue; it is not a claim that ``->>`` yields a document. Annotating
     #: only the document class would type a text node as a document, which is
     #: the confusion the split was made to remove.
-    JSONPathNode = Union["JSONDocumentExpression", "JSONTextExpression"]
+    JSONPathNode = Union["JSONDocumentValue", "JSONTextValue"]
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ class PostgresJSONBEnhancedMixin:
         return any(
             wanted in {name.lower() for name in names}
             for introduced, names in self._JSON_FUNCTIONS_BY_VERSION
-            if self.version >= introduced
+            if self.version_at_least(introduced)
         )
 
     def format_json_expression(self, expr: "JSONPathNode") -> Tuple[str, tuple]:
@@ -353,9 +353,9 @@ class PostgresJSONBEnhancedMixin:
 
         Args:
             expr: The JSON path node -- a
-                :class:`~rhosocial.activerecord.backend.expression.JSONDocumentExpression`
+                :class:`~rhosocial.activerecord.backend.expression.JSONDocumentValue`
                 for ``->`` or a
-                :class:`~rhosocial.activerecord.backend.expression.JSONTextExpression`
+                :class:`~rhosocial.activerecord.backend.expression.JSONTextValue`
                 for ``->>``. Either is accepted; see ``JSONPathNode``.
 
         Returns:
@@ -369,7 +369,7 @@ class PostgresJSONBEnhancedMixin:
         """
         from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
 
-        mode: JSONPathMode = getattr(expr, "mode", JSONPathMode.AUTO)
+        mode: JSONPathMode = expr.mode
 
         if mode is JSONPathMode.ARROW:
             return self.format_json_arrow_expression(expr)
@@ -550,11 +550,11 @@ class PostgresJSONBEnhancedMixin:
 
     def supports_json_type(self) -> bool:
         """JSON is supported since PostgreSQL 9.2."""
-        return self.version >= (9, 2, 0)
+        return self.version_at_least((9, 2, 0))
 
     def supports_jsonb(self) -> bool:
         """Check if PostgreSQL version supports JSONB type (introduced in 9.4)."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_json_path(self) -> bool:
         """Whether a JSON path can be read at all. PostgreSQL 9.3+.
@@ -570,7 +570,7 @@ class PostgresJSONBEnhancedMixin:
         refused to render a path the server answers, behind two probes that
         both said PostgreSQL had JSON.
         """
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_sql_json_path(self) -> bool:
         """Whether the SQL/JSON path language is available. PostgreSQL 12.0+.
@@ -584,7 +584,7 @@ class PostgresJSONBEnhancedMixin:
         had a path read since 9.3 and the language since 12.0, and a caller that
         asks the only versioned question gets a refusal it cannot act on.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_json_table(self) -> bool:
         """PostgreSQL has no ``JSON_TABLE`` function, so this is always False.
@@ -629,4 +629,4 @@ class PostgresJSONBEnhancedMixin:
 
     def supports_infinity_numeric_infinity_jsonb(self) -> bool:
         """Whether numeric infinity values are allowed in JSONB (PostgreSQL 17+)."""
-        return self.version >= (17, 0, 0)
+        return self.version_at_least((17, 0, 0))

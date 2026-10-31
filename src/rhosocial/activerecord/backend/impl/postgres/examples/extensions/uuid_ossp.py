@@ -4,7 +4,7 @@ uuid-ossp extension - UUID generation functions.
 
 This example demonstrates:
 1. Check if uuid-ossp extension is available
-2. Create extension using PostgresCreateExtensionExpression
+2. Create extension using PostgresCreateExtensionStatement
 3. Generate UUIDs using various algorithms with expression-based API
 """
 
@@ -33,7 +33,7 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     uuid_generate_v1,
@@ -44,7 +44,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
     uuid_nil,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -58,7 +58,7 @@ print(f"Extension: uuid-ossp available = {available}, installed = {installed}")
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="uuid-ossp",
     )
@@ -76,7 +76,7 @@ if installed:
     # Example 1: Generate UUID v1 (time-based, MAC address)
     # uuid_generate_v1() returns a FunctionCall expression
     uuid_v1_expr = uuid_generate_v1(dialect).as_("uuid_v1")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[uuid_v1_expr],
     )
@@ -88,7 +88,7 @@ if installed:
 
     # Example 2: Generate UUID v1mc (time-based, random multicast MAC)
     uuid_v1mc_expr = uuid_generate_v1mc(dialect).as_("uuid_v1mc")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[uuid_v1mc_expr],
     )
@@ -100,7 +100,7 @@ if installed:
 
     # Example 3: Generate UUID v4 (random, most common)
     uuid_v4_expr = uuid_generate_v4(dialect).as_("uuid_v4")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[uuid_v4_expr],
     )
@@ -114,7 +114,7 @@ if installed:
     # uuid_generate_v5 takes a UUID namespace and a name as parameters
     # Use uuid_ns_dns() to get the DNS namespace UUID constant
     uuid_v5_expr = uuid_generate_v5(dialect, uuid_ns_dns(dialect), "example.com").as_("uuid_v5")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[uuid_v5_expr],
     )
@@ -126,7 +126,7 @@ if installed:
     print(f"Generated UUID v5 (dns, example.com): {result.data}")
 
     # Example 5: Generate multiple UUIDs in one query
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             uuid_generate_v1(dialect).as_("v1"),
@@ -141,7 +141,7 @@ if installed:
     print(f"Results: {result.data}")
 
     # Example 6: Nil UUID constant
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[
             uuid_nil(dialect).as_("nil_uuid"),

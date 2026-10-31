@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PostgresCreateFunctionExpression",
-    "PostgresDropFunctionExpression",
-    "PostgresCreateAggregateExpression",
-    "PostgresDropAggregateExpression",
+    "PostgresCreateFunctionDdlStatement",
+    "PostgresDropFunctionDdlStatement",
+    "PostgresCreateAggregateDdlStatement",
+    "PostgresDropAggregateDdlStatement",
 ]
 
 
-class PostgresCreateFunctionExpression(BaseExpression):
+class PostgresCreateFunctionDdlStatement(BaseExpression):
     """PostgreSQL CREATE FUNCTION statement expression.
 
     Attributes:
@@ -85,7 +85,7 @@ class PostgresCreateFunctionExpression(BaseExpression):
         return "format_create_function_ddl_statement"
 
 
-class PostgresDropFunctionExpression(BaseExpression):
+class PostgresDropFunctionDdlStatement(BaseExpression):
     """PostgreSQL DROP FUNCTION statement expression.
 
     Attributes:
@@ -124,7 +124,7 @@ class PostgresDropFunctionExpression(BaseExpression):
         return "format_drop_function_ddl_statement"
 
 
-class PostgresCreateAggregateExpression(BaseExpression):
+class PostgresCreateAggregateDdlStatement(BaseExpression):
     """PostgreSQL CREATE AGGREGATE statement expression (minimal).
 
     Attributes:
@@ -161,7 +161,7 @@ class PostgresCreateAggregateExpression(BaseExpression):
         return "format_create_aggregate_ddl_statement"
 
 
-class PostgresDropAggregateExpression(BaseExpression):
+class PostgresDropAggregateDdlStatement(BaseExpression):
     """PostgreSQL DROP AGGREGATE statement expression.
 
     Attributes:

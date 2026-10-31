@@ -104,7 +104,7 @@ class TestSyncPostgreSQLStatusIntrospector:
         # port should exist and have a value
         port_item = next((i for i in items if i.name == "port"), None)
         if port_item:
-            # PostgreSQL's _parse_setting_value preserves string values
+            # PostgreSQL's parse_setting_value preserves string values
             assert port_item.value is not None
 
     def test_list_performance_metrics(self, postgres_backend_single):
@@ -251,35 +251,35 @@ class TestPostgreSQLStatusIntrospectorMixin:
     """Tests for PostgreSQLStatusIntrospectorMixin helper methods."""
 
     def test_parse_setting_value_int(self, postgres_backend_single):
-        """Test _parse_setting_value handles integers."""
+        """Test parse_setting_value handles integers."""
         status = postgres_backend_single.introspector.status
 
-        # _parse_setting_value returns int if input is int, otherwise str
-        result = status._parse_setting_value(42)
+        # parse_setting_value returns int if input is int, otherwise str
+        result = status.parse_setting_value(42)
         assert result == 42
         assert isinstance(result, int)
 
         # String "42" is not converted to int
-        result_str = status._parse_setting_value("42")
+        result_str = status.parse_setting_value("42")
         assert result_str == "42"
         assert isinstance(result_str, str)
 
     def test_parse_setting_value_str(self, postgres_backend_single):
-        """Test _parse_setting_value preserves non-integer strings."""
+        """Test parse_setting_value preserves non-integer strings."""
         status = postgres_backend_single.introspector.status
 
-        result = status._parse_setting_value("utf8")
+        result = status.parse_setting_value("utf8")
         assert result == "utf8"
         assert isinstance(result, str)
 
     def test_parse_setting_value_on_off(self, postgres_backend_single):
-        """Test _parse_setting_value handles on/off values."""
+        """Test parse_setting_value handles on/off values."""
         status = postgres_backend_single.introspector.status
 
-        result_on = status._parse_setting_value("on")
+        result_on = status.parse_setting_value("on")
         assert result_on is True
 
-        result_off = status._parse_setting_value("off")
+        result_off = status.parse_setting_value("off")
         assert result_off is False
 
     def test_create_status_item(self, postgres_backend_single):
@@ -297,7 +297,7 @@ class TestPostgreSQLStatusIntrospectorMixin:
 
         assert isinstance(item, StatusItem)
         assert item.name == "test_param"
-        # PostgreSQL's _parse_setting_value preserves string "42"
+        # PostgreSQL's parse_setting_value preserves string "42"
         assert item.value == "42"
         assert item.category == StatusCategory.CONFIGURATION
         assert item.description == "Test parameter"
@@ -549,25 +549,25 @@ class TestAsyncPostgreSQLStatusIntrospectorMixin:
 
     @pytest.mark.asyncio
     async def test_parse_setting_value_int(self, async_postgres_backend_single):
-        """Test _parse_setting_value handles integers."""
+        """Test parse_setting_value handles integers."""
         status = async_postgres_backend_single.introspector.status
 
-        # _parse_setting_value returns int if input is int, otherwise str
-        result = status._parse_setting_value(42)
+        # parse_setting_value returns int if input is int, otherwise str
+        result = status.parse_setting_value(42)
         assert result == 42
         assert isinstance(result, int)
 
         # String "42" is not converted to int
-        result_str = status._parse_setting_value("42")
+        result_str = status.parse_setting_value("42")
         assert result_str == "42"
         assert isinstance(result_str, str)
 
     @pytest.mark.asyncio
     async def test_parse_setting_value_str(self, async_postgres_backend_single):
-        """Test _parse_setting_value preserves non-integer strings."""
+        """Test parse_setting_value preserves non-integer strings."""
         status = async_postgres_backend_single.introspector.status
 
-        result = status._parse_setting_value("utf8")
+        result = status.parse_setting_value("utf8")
         assert result == "utf8"
         assert isinstance(result, str)
 

@@ -61,14 +61,19 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 __all__ = [
-    "PostgresAlterIndexExpression",
+    "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
-    "PostgresReindexExpression",
+    "PostgresReindexStatement",
 ]
 
 
-class PostgresAlterIndexActionType(Enum):
+class PostgresAlterIndexActionType(str, Enum):
     """Action types for ALTER INDEX statement."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     RENAME_TO = "RENAME TO"
     SET_TABLESPACE = "SET TABLESPACE"
@@ -78,7 +83,7 @@ class PostgresAlterIndexActionType(Enum):
     ALL_IN_TABLESPACE = "ALL IN TABLESPACE"
 
 
-class PostgresAlterIndexExpression(BaseExpression):
+class PostgresAlterIndexStatement(BaseExpression):
     """PostgreSQL ALTER INDEX statement expression.
 
     Supports all ALTER INDEX operations:
@@ -92,7 +97,7 @@ class PostgresAlterIndexExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Rename index
-        >>> expr = PostgresAlterIndexExpression(
+        >>> expr = PostgresAlterIndexStatement(
         ...     dialect, "idx_old",
         ...     action_type=PostgresAlterIndexActionType.RENAME_TO,
         ...     new_name="idx_new",
@@ -138,7 +143,7 @@ class PostgresAlterIndexExpression(BaseExpression):
         return "format_alter_index_statement"
 
 
-class PostgresReindexExpression(BaseExpression):
+class PostgresReindexStatement(BaseExpression):
     """PostgreSQL REINDEX statement expression.
 
     Rebuilt indexes to eliminate bloat, update statistics, and recover from corruption.
@@ -156,7 +161,7 @@ class PostgresReindexExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Reindex a specific index
-        >>> reindex = PostgresReindexExpression(
+        >>> reindex = PostgresReindexStatement(
         ...     dialect=dialect,
         ...     target_type="INDEX",
         ...     name="users_pkey",
@@ -166,7 +171,7 @@ class PostgresReindexExpression(BaseExpression):
         "REINDEX INDEX users_pkey"
 
         >>> # Reindex all indexes in a table concurrently (PG 12+)
-        >>> reindex = PostgresReindexExpression(
+        >>> reindex = PostgresReindexStatement(
         ...     dialect=dialect,
         ...     target_type="TABLE",
         ...     name="orders",
@@ -175,7 +180,7 @@ class PostgresReindexExpression(BaseExpression):
         ... )
 
         >>> # Reindex database with new tablespace (PG 14+)
-        >>> reindex = PostgresReindexExpression(
+        >>> reindex = PostgresReindexStatement(
         ...     dialect=dialect,
         ...     target_type="DATABASE",
         ...     name="mydb",

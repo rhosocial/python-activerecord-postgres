@@ -290,6 +290,14 @@ class TestProtocolNonOverlap:
             assert len(members) > 0, f"Protocol {name} has no members defined"
 
         excluded_overlaps = {
+
+            # The CTAS bind-parameter probe: the backend's table protocol
+
+            # derives from the generic CTAS protocol, so both declare it.
+
+            ('CreateTableAsSupport', 'PostgresTableSupport'),
+
+            ('PostgresTableSupport', 'CreateTableAsSupport'),
             # Generic -> Postgres derivation pairs (expected overlap)
             ('NamespaceSupport', 'PostgresNamespaceSupport'),
             ('PostgresNamespaceSupport', 'NamespaceSupport'),
@@ -529,7 +537,7 @@ class TestPostgresExpressionDialectSeparation:
     """
 
     EXPRESSION_DIALECT_PAIRS = [
-        ("PostgresRefreshMaterializedViewExpression",
+        ("PostgresRefreshMaterializedViewPgStatement",
          "format_refresh_materialized_view_pg_statement"),
         ("PostgresCreateEnumTypeExpression", "format_create_type_statement"),
         ("PostgresDropEnumTypeExpression", "format_drop_type_statement"),
@@ -537,26 +545,26 @@ class TestPostgresExpressionDialectSeparation:
         ("PostgresAlterEnumTypeAddValueExpression", "format_alter_type_statement"),
         ("PostgresAlterEnumTypeRenameValueExpression", "format_alter_type_statement"),
         ("PostgresCreateRangeTypeExpression", "format_create_type_statement"),
-        ("PostgresVacuumExpression", "format_vacuum_statement"),
-        ("PostgresAnalyzeExpression", "format_analyze_statement"),
-        ("PostgresReindexExpression", "format_reindex_statement"),
-        ("PostgresCommentExpression", "format_comment_statement"),
-        ("PostgresCreateExtensionExpression", "format_create_extension"),
-        ("PostgresDropExtensionExpression", "format_drop_extension"),
-        ("PostgresAdvisoryLockExpression", "format_advisory_lock"),
-        ("PostgresAdvisoryUnlockExpression", "format_advisory_unlock"),
-        ("PostgresAdvisoryUnlockAllExpression", "format_advisory_unlock_all"),
-        ("PostgresTryAdvisoryLockExpression", "format_try_advisory_lock"),
-        ("PostgresCreatePartitionExpression", "format_create_partition_statement"),
-        ("PostgresDetachPartitionExpression", "format_detach_partition_statement"),
-        ("PostgresAttachPartitionExpression", "format_attach_partition_statement"),
-        ("PostgresPartitionMetadataExpression", "format_partition_metadata_query"),
-        ("PostgresCreateStatisticsExpression", "format_create_statistics_statement"),
-        ("PostgresDropStatisticsExpression", "format_drop_statistics_statement"),
-         ("PostgresAlterIndexExpression", "format_alter_index_statement"),
-         ("PostgresCopyToExpression", "format_copy_to_statement"),
-         ("PostgresCopyFromExpression", "format_copy_from_statement"),
-         ("PostgresRepackExpression", "format_repack_statement"),
+        ("PostgresVacuumStatement", "format_vacuum_statement"),
+        ("PostgresAnalyzeStatement", "format_analyze_statement"),
+        ("PostgresReindexStatement", "format_reindex_statement"),
+        ("PostgresCommentOnStatement", "format_comment_on_statement"),
+        ("PostgresCreateExtensionStatement", "format_create_extension_statement"),
+        ("PostgresDropExtensionStatement", "format_drop_extension_statement"),
+        ("PostgresAdvisoryLockExpression", "format_advisory_lock_expression"),
+        ("PostgresAdvisoryUnlockExpression", "format_advisory_unlock_expression"),
+        ("PostgresAdvisoryUnlockAllExpression", "format_advisory_unlock_all_expression"),
+        ("PostgresTryAdvisoryLockExpression", "format_try_advisory_lock_expression"),
+        ("PostgresCreatePartitionStatement", "format_create_partition_statement"),
+        ("PostgresDetachPartitionStatement", "format_detach_partition_statement"),
+        ("PostgresAttachPartitionStatement", "format_attach_partition_statement"),
+        ("PostgresPartitionMetadataQueryStatement", "format_partition_metadata_query_statement"),
+        ("PostgresCreateStatisticsStatement", "format_create_statistics_statement"),
+        ("PostgresDropStatisticsStatement", "format_drop_statistics_statement"),
+         ("PostgresAlterIndexStatement", "format_alter_index_statement"),
+         ("PostgresCopyToStatement", "format_copy_to_statement"),
+         ("PostgresCopyFromStatement", "format_copy_from_statement"),
+         ("PostgresRepackStatement", "format_repack_statement"),
 
     ]
 
@@ -718,11 +726,11 @@ class TestProtocolMethodSignatureConformance:
         # override carries the CONCURRENTLY gate the generic one lacks.
         ('MaterializedViewSupport', 'format_create_materialized_view_statement'),
         ('MaterializedViewSupport', 'format_drop_materialized_view_statement'),
-        ('MaterializedViewSupport', 'format_refresh_materialized_view_statement'),
+        ('MaterializedViewSupport', 'format_refresh_materialized_view_pg_statement'),
         # ExplainSupport: Mixin uses different signature
         ('ExplainSupport', 'format_explain_statement'),
         # ILIKESupport: Mixin uses expr-based signature instead of named params
-        ('ILIKESupport', 'format_ilike_expression'),
+        ('ILIKESupport', 'format_ilike_predicate'),
     }
 
     @pytest.fixture
@@ -853,4 +861,44 @@ class TestProtocolMixinReverseCoverage:
         assert not undeclared, (
             f"{mixin.__name__} implements these methods not declared in "
             f"{protocol.__name__}: {undeclared}"
+        )
+
+
+class TestTheBackendOwnAnswersAreTheEffectiveOnes:
+    """A backend mixin's method must resolve to a backend class.
+
+    The other checks in this file are about the *declaration*: the mixin
+    declares the method, and the protocol declares it too. This one is
+    about the *resolution*. A core class that wins the MRO makes the
+    backend's implementation dead code, and the answer a caller gets is
+    core's rather than the backend's -- so the backend never says what it
+    means about itself, and nothing else in the suite notices: the
+    declaration is there either way.
+
+    A protocol class is a declaration rather than an implementation (its
+    body is ``...``), so a core class may legitimately precede it; only
+    the mixins are held to this.
+    """
+
+    def test_no_backend_method_is_shadowed_by_a_core_class(self):
+        mro = type(postgres_dialect.PostgresDialect()).__mro__
+        own = "rhosocial.activerecord.backend.impl.postgres"
+        shadowed = []
+        for klass in mro:
+            if not klass.__module__.startswith(own):
+                continue
+            if not klass.__name__.endswith("Mixin"):
+                continue
+            for name in vars(klass):
+                if not name.startswith(("format_", "supports_", "get_")):
+                    continue
+                if not callable(vars(klass)[name]):
+                    continue
+                winner = next((k for k in mro if name in k.__dict__), None)
+                if winner is None or winner.__module__.startswith(own):
+                    continue
+                shadowed.append(f"{klass.__name__}.{name} -> {winner.__name__}")
+        assert not shadowed, (
+            "a core class wins these backend methods, so the backend's "
+            f"implementation is dead code: {shadowed}"
         )

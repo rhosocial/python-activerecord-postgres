@@ -34,10 +34,10 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -53,7 +53,7 @@ print(f"Extension check: pgaudit available = {available}, installed = {installed
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pgaudit",
     )
@@ -71,7 +71,7 @@ if installed:
 
     # Example 1: Set the pgaudit role for auditing
     role_func = pgaudit_set_role(dialect, "audit_role")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[role_func.as_("set_config_result")],
     )
@@ -86,7 +86,7 @@ if installed:
 
     # Example 2: Set the pgaudit log level
     level_func = pgaudit_log_level(dialect, "log")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[level_func.as_("set_config_result")],
     )

@@ -14,11 +14,11 @@ PostgreSQL 自 10 版本起支持声明式分区，11+ 版本功能显著增强�
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression, PartitionValue,
+    PostgresCreatePartitionStatement, PostgresPartitionValue,
 )
 
 # 创建子分区
-partition = PostgresCreatePartitionExpression(
+partition = PostgresCreatePartitionStatement(
     dialect,
     parent_table="orders",
     partition_name="orders_2024_q1",
@@ -37,18 +37,18 @@ PostgreSQL 不支持 `ATTACH PARTITION CONCURRENTLY`。PostgreSQL 14+ 支持
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresAttachPartitionExpression, PostgresDetachPartitionExpression,
+    PostgresAttachPartitionStatement, PostgresDetachPartitionStatement,
 )
 
 # 附加分区
-attach = PostgresAttachPartitionExpression(
+attach = PostgresAttachPartitionStatement(
     dialect, parent_table="orders", partition_name="orders_new",
     partition_type="RANGE", bounds="FROM ('2024-07-01') TO ('2024-10-01')",
 )
 # sql: 'ALTER TABLE "orders" ATTACH PARTITION "orders_new" FOR VALUES FROM ('2024-07-01') TO ('2024-10-01')'
 
 # 分离分区（PG 14+ 支持 CONCURRENTLY）
-detach = PostgresDetachPartitionExpression(
+detach = PostgresDetachPartitionStatement(
     dialect, parent_table="orders", partition_name="orders_old",
     concurrently=True,
 )

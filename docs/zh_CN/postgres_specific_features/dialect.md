@@ -138,14 +138,14 @@ sql, params = expr.to_sql()
 ### CREATE TABLE ... LIKE
 
 PostgreSQL 渲染为子句形式 `CREATE TABLE t (LIKE src [INCLUDING ...])`，
-由 `CreateTableLikeExpression` 建模。
+由 `CreateTableLikeStatement` 建模。
 
 ```python
-from rhosocial.activerecord.backend.expression import CreateTableLikeExpression
+from rhosocial.activerecord.backend.expression import CreateTableLikeStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
 # 基本用法 - 复制表结构
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -153,7 +153,7 @@ expr = CreateTableLikeExpression(
 # 生成: CREATE TABLE "users_copy" (LIKE "users")
 
 # 带 INCLUDING 选项（字典格式 - 推荐）
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -166,7 +166,7 @@ expr = CreateTableLikeExpression(
 #        INCLUDING CONSTRAINTS INCLUDING INDEXES EXCLUDING COMMENTS)
 
 # 带模式限定的源表
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table=('public', 'users'),
@@ -174,7 +174,7 @@ expr = CreateTableLikeExpression(
 # 生成: CREATE TABLE "users_copy" (LIKE "public"."users")
 
 # 带临时表和 IF NOT EXISTS
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="temp_users",
     like_table="users",
@@ -184,7 +184,7 @@ expr = CreateTableLikeExpression(
 # 生成: CREATE TEMPORARY TABLE IF NOT EXISTS "temp_users" (LIKE "users")
 
 # 包含所有内容
-expr = CreateTableLikeExpression(
+expr = CreateTableLikeStatement(
     PostgresDialect(),
     table="users_copy",
     like_table="users",
@@ -205,7 +205,7 @@ expr = CreateTableLikeExpression(
 - `ALL` - 复制所有内容
 
 **重要说明：**
-- `CreateTableLikeExpression` 只携带目标表和源 `like_table`
+- `CreateTableLikeStatement` 只携带目标表和源 `like_table`
 - `like_options` 支持字典（`including`/`excluding`）、字符串列表（视为
   `INCLUDING`）以及 `(action, feature)` 元组列表
 - 只有 `temporary` 和 `if_not_exists` 标志会被考虑
@@ -304,7 +304,7 @@ if dialect.supports_collate_expression():
 ```python
 from rhosocial.activerecord.backend.expression.datetime import (
     ExtractExpression, DateTimeField, IntervalExpression, IntervalUnit,
-    DateTimeAddExpression, DateTimeSubtractExpression, DateTimeDiffExpression,
+    DatetimeAddExpression, DatetimeSubtractExpression, DatetimeDiffExpression,
 )
 
 # EXTRACT
@@ -320,12 +320,12 @@ interval = IntervalExpression(dialect, 7, IntervalUnit.DAY)
 # 生成: INTERVAL '7' DAY
 
 # 日期 + 间隔
-expr = DateTimeAddExpression(dialect, Column(dialect, "created_at"),
+expr = DatetimeAddExpression(dialect, Column(dialect, "created_at"),
                              IntervalExpression(dialect, 30, IntervalUnit.DAY))
 # 生成: "created_at" + INTERVAL '30' DAY
 
 # 日期差
-expr = DateTimeDiffExpression(dialect, DateTimeField.DAY,
+expr = DatetimeDiffExpression(dialect, DateTimeField.DAY,
                               Column(dialect, "start"), Column(dialect, "end"))
 # 生成: EXTRACT(EPOCH FROM "end" - "start") / 86400
 ```

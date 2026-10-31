@@ -10,7 +10,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import SchemaObject, Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresCreateStatisticsExpression, PostgresDropStatisticsExpression
+    from ...expression.ddl import PostgresCreateStatisticsStatement, PostgresDropStatisticsStatement
 
 
 class PostgresExtendedStatisticsMixin:
@@ -22,21 +22,21 @@ class PostgresExtendedStatisticsMixin:
 
     def supports_create_statistics(self) -> bool:
         """CREATE STATISTICS is supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_dependencies(self) -> bool:
         """Functional dependencies statistics are supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_ndistinct(self) -> bool:
         """NDistinct statistics are supported since PostgreSQL 10."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_mcv(self) -> bool:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
-    def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsExpression") -> Tuple[str, tuple]:
+    def format_create_statistics_statement(self, expr: "PostgresCreateStatisticsStatement") -> Tuple[str, tuple]:
         """Format CREATE STATISTICS statement for extended statistics.
 
         - ``expr.schema`` — optional schema qualifier.
@@ -47,7 +47,7 @@ class PostgresExtendedStatisticsMixin:
         - ``expr.columns`` — list of column names.
 
         Args:
-            expr: PostgresCreateStatisticsExpression instance
+            expr: PostgresCreateStatisticsStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -86,7 +86,7 @@ class PostgresExtendedStatisticsMixin:
 
         return sql, ()
 
-    def format_drop_statistics_statement(self, expr: "PostgresDropStatisticsExpression") -> Tuple[str, tuple]:
+    def format_drop_statistics_statement(self, expr: "PostgresDropStatisticsStatement") -> Tuple[str, tuple]:
         """Format DROP STATISTICS statement.
 
         - ``expr.schema`` — optional schema qualifier.
@@ -94,7 +94,7 @@ class PostgresExtendedStatisticsMixin:
         - ``expr.if_exists`` — add ``IF EXISTS``.
 
         Args:
-            expr: PostgresDropStatisticsExpression instance
+            expr: PostgresDropStatisticsStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)

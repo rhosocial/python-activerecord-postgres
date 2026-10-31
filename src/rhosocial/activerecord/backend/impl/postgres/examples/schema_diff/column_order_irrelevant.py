@@ -16,8 +16,11 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression, DropTableExpression, ColumnDefinition,
-    ColumnConstraint, ColumnConstraintType,
+    CreateTableStatement,
+    DropTableStatement,
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import (
     IntegerType, VarCharType,
@@ -26,7 +29,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterTableExpression, AddColumn, DropColumn,
+    AlterTableStatement, AddColumnAction, DropColumnAction,
 )
 
 config = PostgresConnectionConfig(
@@ -41,14 +44,14 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-drop_demo = DropTableExpression(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
+drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
 sql, params = drop_demo.to_sql()
 backend.execute(sql, params)
 
-demo_table = CreateTableExpression(
+demo_table = CreateTableStatement(
     dialect=dialect, table=Table(dialect, 'demo'), columns=[
         ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(constraint_type=ColumnConstraintType.PRIMARY_KEY)]),
+            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
         ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ColumnDefinition(dialect, "email", VarCharType(dialect, length=200)),
     ]
@@ -71,15 +74,15 @@ snapshot_before = builder.build(schema="public")
 
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
-    AddColumn(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
+add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
+    AddColumnAction(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
 ])
 sql, params = add_age.to_sql()
 backend.execute(sql, params)
 
 # Now drop it — column set is identical
-drop_age = AlterTableExpression(dialect, Table(dialect, 'demo'), [
-    DropColumn(dialect, "age")
+drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
+    DropColumnAction(dialect, "age")
 ])
 sql, params = drop_age.to_sql()
 backend.execute(sql, params)

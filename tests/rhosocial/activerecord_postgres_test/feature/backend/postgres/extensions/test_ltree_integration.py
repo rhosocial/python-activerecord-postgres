@@ -19,22 +19,26 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
-    CreateIndexExpression,
+    CreateIndexStatement,
     OrderByClause,
-    RawSQLExpression,
+    RawSQL,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+from rhosocial.activerecord.backend.expression import cast
+from rhosocial.activerecord.backend.expression.predicates import (
+    ComparisonPredicate,
+    LogicalPredicate,
+)
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression.types import (
@@ -59,12 +63,12 @@ def ltree_env(postgres_backend_single):
     # Clean up residual tables from previous runs
     for table in ["test_ltree", "test_ltree_tree", "test_ltree_func",
                        "test_ltree_idx", "test_ltree_txtq"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
     # Setup: create test_ltree table
-    create_ltree = CreateTableExpression(
+    create_ltree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree'),
         columns=[
@@ -72,7 +76,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -83,18 +87,18 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert data into test_ltree
-    insert_ltree = InsertExpression(
+    insert_ltree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -102,7 +106,7 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Setup: create test_ltree_tree table
-    create_tree = CreateTableExpression(
+    create_tree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_tree'),
         columns=[
@@ -110,7 +114,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -122,18 +126,30 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert data into test_ltree_tree
-    insert_tree = InsertExpression(
+    insert_tree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_tree'),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
-                [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
-                [Literal(dialect, "root.level1.level2a").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")],
-                [Literal(dialect, "root.level1.level2b").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")],
-                [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
+                [cast(dialect, Literal(dialect, "root"), PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [
+                    cast(dialect, Literal(dialect, "root.level1"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 1")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 2a")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 2b")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.other"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Other branch")
+                ],
             ],
         ),
     )
@@ -141,7 +157,7 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Setup: create test_ltree_func table
-    create_func = CreateTableExpression(
+    create_func = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_func'),
         columns=[
@@ -149,7 +165,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -160,20 +176,20 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert data into test_ltree_func
-    insert_func = InsertExpression(
+    insert_func = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_func'),
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "A.B.C.D").cast(PostgresLtreeType(dialect))]],
+            [[cast(dialect, Literal(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
     backend.execute(sql, params)
 
     # Setup: create test_ltree_idx table
-    create_idx_table = CreateTableExpression(
+    create_idx_table = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_idx'),
         columns=[
@@ -181,7 +197,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -192,16 +208,16 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert data into test_ltree_idx
-    insert_idx = InsertExpression(
+    insert_idx = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_idx'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "a.b.c").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "a.b.d").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "x.y.z").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "a.b.c"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "a.b.d"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "x.y.z"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -209,7 +225,7 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Create GiST index on test_ltree_idx
-    create_index = CreateIndexExpression(
+    create_index = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_ltree_path'),
         table=Table(dialect, 'test_ltree_idx'),
@@ -221,7 +237,7 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Setup: create test_ltree_txtq table
-    create_txtq = CreateTableExpression(
+    create_txtq = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_txtq'),
         columns=[
@@ -229,7 +245,7 @@ def ltree_env(postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -240,16 +256,16 @@ def ltree_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Insert data into test_ltree_txtq
-    insert_txtq = InsertExpression(
+    insert_txtq = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_txtq'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -266,7 +282,7 @@ def ltree_env(postgres_backend_single):
         "test_ltree_idx",
         "test_ltree_txtq",
     ]:
-        drop_expr = DropTableExpression(
+        drop_expr = DropTableStatement(
             dialect=dialect,
             table=Table(dialect, table),
             if_exists=True,
@@ -285,17 +301,17 @@ class TestLtreeIntegration:
 
         # Test @> (ancestor) operator: does 'Top.Science' contain 'Top.Science.Astronomy'?
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "'Top.Science'::ltree @> path AS is_ancestor"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[ancestor_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -305,17 +321,17 @@ class TestLtreeIntegration:
 
         # 'Top.History' does not contain 'Top.Science.Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        not_ancestor_expr = RawSQLExpression(
+        not_ancestor_expr = RawSQL(
             dialect, "'Top.History'::ltree @> path AS is_ancestor"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[not_ancestor_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -325,17 +341,17 @@ class TestLtreeIntegration:
 
         # Test <@ (descendant) operator
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'Top.Science'::ltree AS is_descendant"
         )
-        query3 = QueryExpression(
+        query3 = QueryStatement(
             dialect=dialect,
             select=[descendant_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -346,10 +362,10 @@ class TestLtreeIntegration:
         # Test ~ (lquery match) operator: find paths matching pattern
         # Use Literal in SELECT to compute the match, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path ~ 'Top.Science.*'::lquery AS matches"
         )
-        query4 = QueryExpression(
+        query4 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
             from_=Table(dialect, "test_ltree"),
@@ -372,10 +388,10 @@ class TestLtreeIntegration:
         # Find all ancestors of 'root.level1.level2a'
         # Use @> operator via Literal in SELECT, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "path @> 'root.level1.level2a'::ltree AS is_ancestor"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), ancestor_expr],
             from_=Table(dialect, "test_ltree_tree"),
@@ -392,10 +408,10 @@ class TestLtreeIntegration:
 
         # Find all descendants of 'root.level1'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'root.level1'::ltree AS is_descendant"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), descendant_expr],
             from_=Table(dialect, "test_ltree_tree"),
@@ -420,7 +436,7 @@ class TestLtreeIntegration:
         nlevel_func = FunctionCall(
             dialect, "nlevel", Column(dialect, "path")
         ).as_("depth")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[nlevel_func],
             from_=Table(dialect, "test_ltree_func"),
@@ -442,7 +458,7 @@ class TestLtreeIntegration:
             Literal(dialect, 0),
             Literal(dialect, 2),
         ).as_("sub")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[subpath_func],
             from_=Table(dialect, "test_ltree_func"),
@@ -464,7 +480,7 @@ class TestLtreeIntegration:
             Column(dialect, "path"),
             Literal(dialect, 2),
         ).as_("sub")
-        query3 = QueryExpression(
+        query3 = QueryStatement(
             dialect=dialect,
             select=[subpath_func2],
             from_=Table(dialect, "test_ltree_func"),
@@ -487,12 +503,12 @@ class TestLtreeIntegration:
 
         # Verify index exists
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
-            select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
+            select=[RawSQL(dialect, "COUNT(*) AS cnt")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(
-                dialect, "AND",
+            where=LogicalPredicate(
+            dialect, "AND",
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "tablename"),
@@ -512,10 +528,10 @@ class TestLtreeIntegration:
 
         # Insert data and query using index - use Literal for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), descendant_expr],
             from_=Table(dialect, "test_ltree_idx"),
@@ -534,10 +550,10 @@ class TestLtreeIntegration:
 
         # @ operator with ltxtquery: paths matching 'Science & Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path @ 'Science & Astronomy'::ltxtquery AS matches"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
             from_=Table(dialect, "test_ltree_txtq"),
@@ -565,12 +581,12 @@ async def async_ltree_env(async_postgres_backend_single):
     for table in ["test_ltree_async", "test_ltree_tree_async",
                        "test_ltree_func_async", "test_ltree_idx_async",
                        "test_ltree_txtq_async"]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
     # Setup: create test_ltree_async table
-    create_ltree = CreateTableExpression(
+    create_ltree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_async'),
         columns=[
@@ -578,7 +594,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -589,18 +605,18 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert data into test_ltree_async
-    insert_ltree = InsertExpression(
+    insert_ltree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -608,7 +624,7 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Setup: create test_ltree_tree_async table
-    create_tree = CreateTableExpression(
+    create_tree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_tree_async'),
         columns=[
@@ -616,7 +632,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -628,18 +644,30 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert data into test_ltree_tree_async
-    insert_tree = InsertExpression(
+    insert_tree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_tree_async'),
         columns=["path", "label"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "root").cast(PostgresLtreeType(dialect)), Literal(dialect, "Root")],
-                [Literal(dialect, "root.level1").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 1")],
-                [Literal(dialect, "root.level1.level2a").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2a")],
-                [Literal(dialect, "root.level1.level2b").cast(PostgresLtreeType(dialect)), Literal(dialect, "Level 2b")],
-                [Literal(dialect, "root.other").cast(PostgresLtreeType(dialect)), Literal(dialect, "Other branch")],
+                [cast(dialect, Literal(dialect, "root"), PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [
+                    cast(dialect, Literal(dialect, "root.level1"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 1")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 2a")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Level 2b")
+                ],
+                [
+                    cast(dialect, Literal(dialect, "root.other"), PostgresLtreeType(dialect)),
+                    Literal(dialect, "Other branch")
+                ],
             ],
         ),
     )
@@ -647,7 +675,7 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Setup: create test_ltree_func_async table
-    create_func = CreateTableExpression(
+    create_func = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_func_async'),
         columns=[
@@ -655,7 +683,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -666,20 +694,20 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert data into test_ltree_func_async
-    insert_func = InsertExpression(
+    insert_func = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_func_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "A.B.C.D").cast(PostgresLtreeType(dialect))]],
+            [[cast(dialect, Literal(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
     await backend.execute(sql, params)
 
     # Setup: create test_ltree_idx_async table
-    create_idx_table = CreateTableExpression(
+    create_idx_table = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_idx_async'),
         columns=[
@@ -687,7 +715,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -698,16 +726,16 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert data into test_ltree_idx_async
-    insert_idx = InsertExpression(
+    insert_idx = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_idx_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "a.b.c").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "a.b.d").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "x.y.z").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "a.b.c"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "a.b.d"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "x.y.z"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -715,7 +743,7 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Create GiST index on test_ltree_idx_async
-    create_index = CreateIndexExpression(
+    create_index = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_ltree_path_async'),
         table=Table(dialect, 'test_ltree_idx_async'),
@@ -727,7 +755,7 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Setup: create test_ltree_txtq_async table
-    create_txtq = CreateTableExpression(
+    create_txtq = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_ltree_txtq_async'),
         columns=[
@@ -735,7 +763,7 @@ async def async_ltree_env(async_postgres_backend_single):
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="path", data_type=PostgresLtreeType(dialect=dialect)),
@@ -746,16 +774,16 @@ async def async_ltree_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Insert data into test_ltree_txtq_async
-    insert_txtq = InsertExpression(
+    insert_txtq = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_ltree_txtq_async'),
         columns=["path"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.Science.Physics").cast(PostgresLtreeType(dialect))],
-                [Literal(dialect, "Top.History").cast(PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -772,7 +800,7 @@ async def async_ltree_env(async_postgres_backend_single):
         "test_ltree_idx_async",
         "test_ltree_txtq_async",
     ]:
-        drop_expr = DropTableExpression(
+        drop_expr = DropTableStatement(
             dialect=dialect,
             table=Table(dialect, table),
             if_exists=True,
@@ -792,17 +820,17 @@ class TestAsyncLtreeIntegration:
 
         # Test @> (ancestor) operator: does 'Top.Science' contain 'Top.Science.Astronomy'?
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "'Top.Science'::ltree @> path AS is_ancestor"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[ancestor_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -812,17 +840,17 @@ class TestAsyncLtreeIntegration:
 
         # 'Top.History' does not contain 'Top.Science.Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        not_ancestor_expr = RawSQLExpression(
+        not_ancestor_expr = RawSQL(
             dialect, "'Top.History'::ltree @> path AS is_ancestor"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[not_ancestor_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -832,17 +860,17 @@ class TestAsyncLtreeIntegration:
 
         # Test <@ (descendant) operator
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'Top.Science'::ltree AS is_descendant"
         )
-        query3 = QueryExpression(
+        query3 = QueryStatement(
             dialect=dialect,
             select=[descendant_expr, Column(dialect, "path")],
             from_=Table(dialect, "test_ltree_async"),
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                Literal(dialect, "Top.Science.Astronomy").cast(PostgresLtreeType(dialect)),
+                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -852,10 +880,10 @@ class TestAsyncLtreeIntegration:
 
         # Test ~ (lquery match) operator: find paths matching pattern
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path ~ 'Top.Science.*'::lquery AS matches"
         )
-        query4 = QueryExpression(
+        query4 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
             from_=Table(dialect, "test_ltree_async"),
@@ -878,10 +906,10 @@ class TestAsyncLtreeIntegration:
 
         # Find all ancestors of 'root.level1.level2a'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        ancestor_expr = RawSQLExpression(
+        ancestor_expr = RawSQL(
             dialect, "path @> 'root.level1.level2a'::ltree AS is_ancestor"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), ancestor_expr],
             from_=Table(dialect, "test_ltree_tree_async"),
@@ -898,10 +926,10 @@ class TestAsyncLtreeIntegration:
 
         # Find all descendants of 'root.level1'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'root.level1'::ltree AS is_descendant"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), Column(dialect, "label"), descendant_expr],
             from_=Table(dialect, "test_ltree_tree_async"),
@@ -927,7 +955,7 @@ class TestAsyncLtreeIntegration:
         nlevel_func = FunctionCall(
             dialect, "nlevel", Column(dialect, "path")
         ).as_("depth")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[nlevel_func],
             from_=Table(dialect, "test_ltree_func_async"),
@@ -949,7 +977,7 @@ class TestAsyncLtreeIntegration:
             Literal(dialect, 0),
             Literal(dialect, 2),
         ).as_("sub")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[subpath_func],
             from_=Table(dialect, "test_ltree_func_async"),
@@ -971,7 +999,7 @@ class TestAsyncLtreeIntegration:
             Column(dialect, "path"),
             Literal(dialect, 2),
         ).as_("sub")
-        query3 = QueryExpression(
+        query3 = QueryStatement(
             dialect=dialect,
             select=[subpath_func2],
             from_=Table(dialect, "test_ltree_func_async"),
@@ -995,12 +1023,12 @@ class TestAsyncLtreeIntegration:
 
         # Verify index exists
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
-            select=[RawSQLExpression(dialect, "COUNT(*) AS cnt")],
+            select=[RawSQL(dialect, "COUNT(*) AS cnt")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(
-                dialect, "AND",
+            where=LogicalPredicate(
+            dialect, "AND",
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "tablename"),
@@ -1020,10 +1048,10 @@ class TestAsyncLtreeIntegration:
 
         # Insert data and query using index - use Literal for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        descendant_expr = RawSQLExpression(
+        descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"
         )
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), descendant_expr],
             from_=Table(dialect, "test_ltree_idx_async"),
@@ -1043,10 +1071,10 @@ class TestAsyncLtreeIntegration:
 
         # @ operator with ltxtquery: paths matching 'Science & Astronomy'
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
-        match_expr = RawSQLExpression(
+        match_expr = RawSQL(
             dialect, "path @ 'Science & Astronomy'::ltxtquery AS matches"
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "path"), match_expr],
             from_=Table(dialect, "test_ltree_txtq_async"),

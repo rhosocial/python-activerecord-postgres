@@ -288,32 +288,44 @@ class TestPostgreSQLFunctionSupportVersionDependent:
             assert result.get(func).supported, f"{func} should be always available"
 
 
-class TestPostgreSQLFunctionSupportPrivateMethod:
-    """Tests for the private _is_postgres_function_supported method."""
+class TestPostgreSQLCheckFunctionSupport:
+    """Tests for the private _check_function_support method.
 
-    def test_unknown_function_returns_true(self):
-        """Test that unknown functions return True (no restriction)."""
+    This replaces the tests for ``_is_postgres_function_supported``, which was a
+    boolean fork of this method with no production caller -- it duplicated the
+    version and extension checks and answered with a bare True/False. The
+    assertions below run against the implementation ``supports_functions()``
+    actually uses, and they pin the *reason* as well as the verdict, so a check
+    that starts failing for a different cause fails here rather than reading as
+    the same answer.
+    """
+
+    def test_unknown_function_defaults_to_supported(self):
+        """An unregistered function has no restriction to fail."""
         dialect = PostgresDialect((13, 0, 0))
-        result = dialect._is_postgres_function_supported("unknown_function_xyz")
-        assert result is True
+        info = dialect._check_function_support("unknown_function_xyz")
+        assert info.supported is True
+        assert info.reason is None
 
     def test_version_restricted_function_below_minimum(self):
-        """Test that version-restricted function returns False below minimum."""
+        """A version-gated function is refused, and says why."""
         dialect = PostgresDialect(version=(11, 0, 0))
-        result = dialect._is_postgres_function_supported("jsonb_path_query")
-        assert result is False
+        info = dialect._check_function_support("jsonb_path_query")
+        assert info.supported is False
+        assert info.reason == "pg_version_too_low"
 
     def test_version_restricted_function_at_minimum(self):
-        """Test that version-restricted function returns True at minimum."""
+        """At the minimum version the gate opens with no reason attached."""
         dialect = PostgresDialect(version=(12, 0, 0))
-        result = dialect._is_postgres_function_supported("jsonb_path_query")
-        assert result is True
+        info = dialect._check_function_support("jsonb_path_query")
+        assert info.supported is True
+        assert info.reason is None
 
     def test_version_restricted_function_above_minimum(self):
-        """Test that version-restricted function returns True above minimum."""
+        """The gate stays open above the minimum too."""
         dialect = PostgresDialect(version=(15, 0, 0))
-        result = dialect._is_postgres_function_supported("jsonb_path_query")
-        assert result is True
+        info = dialect._check_function_support("jsonb_path_query")
+        assert info.supported is True
 
 
 class TestPostgreSQLFunctionSupportIntegration:

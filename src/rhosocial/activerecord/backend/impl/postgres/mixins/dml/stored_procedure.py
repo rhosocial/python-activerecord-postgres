@@ -30,15 +30,15 @@ class PostgresStoredProcedureMixin:
 
     def supports_call_statement(self) -> bool:
         """CALL statement is supported since PostgreSQL 11."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_stored_procedure_transaction_control(self) -> bool:
         """Transaction control within procedures is supported since PostgreSQL 11."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_sql_body_functions(self) -> bool:
         """SQL-standard function body syntax is supported since PostgreSQL 14."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def format_create_procedure_statement(
         self,

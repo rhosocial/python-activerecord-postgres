@@ -9,23 +9,23 @@ from __future__ import annotations
 from typing import Tuple
 
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 
 
-def drop_table(dialect, table_name: str) -> DropTableExpression:
+def drop_table(dialect, table_name: str) -> DropTableStatement:
     """Build a ``DROP TABLE IF EXISTS table_name CASCADE`` expression."""
-    return DropTableExpression(
+    return DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         if_exists=True,
     )
 
 
-def create_table_sql(expr: CreateTableExpression) -> Tuple[str, tuple]:
-    """Generate canonical PostgreSQL DDL for a :class:`CreateTableExpression`.
+def create_table_sql(expr: CreateTableStatement) -> Tuple[str, tuple]:
+    """Generate canonical PostgreSQL DDL for a :class:`CreateTableStatement`.
 
     For PostgreSQL no post-processing is required (unlike MySQL where storage
     option quotes must be stripped).  This pass-through wrapper exists so the

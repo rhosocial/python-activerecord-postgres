@@ -22,9 +22,9 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.policy import (
     AlterPolicyMode,
-    PostgresAlterPolicyExpression,
-    PostgresCreatePolicyExpression,
-    PostgresDropPolicyExpression,
+    PostgresAlterPolicyStatement,
+    PostgresCreatePolicyStatement,
+    PostgresDropPolicyStatement,
     PolicyCommand,
     PolicyType,
 )
@@ -128,7 +128,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_basic_create(self, dialect):
         """Bare statement — only name + table required."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect, name="p1", table_name="orders"
         )
         sql, params = expr.to_sql()
@@ -137,7 +137,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_with_schema(self, dialect):
         """Schema-qualified table reference."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect, name="p1", table_name="orders", schema="analytics"
         )
         sql, _ = expr.to_sql()
@@ -146,7 +146,7 @@ class TestFormatCreatePolicyStatement:
     def test_create_permissive_implicit_omitted_on_95(self):
         """AS PERMISSIVE keyword must be silently omitted on PG 9.5."""
         d = PostgresDialect((9, 5, 0))
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             d, name="p1", table_name="t1", policy_type=PolicyType.PERMISSIVE
         )
         sql, _ = expr.to_sql()
@@ -156,7 +156,7 @@ class TestFormatCreatePolicyStatement:
     def test_create_permissive_keyword_emitted_on_10(self):
         """AS PERMISSIVE keyword emitted on PG 10+."""
         d = PostgresDialect((10, 0, 0))
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             d, name="p1", table_name="t1", policy_type=PolicyType.PERMISSIVE
         )
         sql, _ = expr.to_sql()
@@ -165,7 +165,7 @@ class TestFormatCreatePolicyStatement:
     def test_create_restrictive_requires_10(self):
         """RESTRICTIVE rejects on PG 9.5."""
         d = PostgresDialect((9, 5, 0))
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             d, name="p1", table_name="t1", policy_type=PolicyType.RESTRICTIVE
         )
         with pytest.raises(UnsupportedFeatureError) as ei:
@@ -175,7 +175,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_restrictive_ok_10(self, dialect):
         """RESTRICTIVE allowed on PG 10+."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect, name="p1", table_name="t1", policy_type=PolicyType.RESTRICTIVE
         )
         sql, _ = expr.to_sql()
@@ -189,7 +189,7 @@ class TestFormatCreatePolicyStatement:
         (PolicyCommand.DELETE, "FOR DELETE"),
     ])
     def test_create_all_commands(self, dialect, cmd, expected_kw):
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect, name="p1", table_name="t1", command=cmd
         )
         sql, _ = expr.to_sql()
@@ -197,7 +197,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_roles_identifiers_quoted(self, dialect):
         """Plain role names are identifiers — wrapped by format_identifier."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect, name="p1", table_name="t1", roles=["analyst", "reporter"]
         )
         sql, _ = expr.to_sql()
@@ -205,7 +205,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_roles_reserved_keywords_verbatim(self, dialect):
         """PUBLIC / CURRENT_USER / SESSION_USER emitted verbatim (no quoting)."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             roles=["PUBLIC", "CURRENT_USER", "SESSION_USER"],
@@ -219,7 +219,7 @@ class TestFormatCreatePolicyStatement:
     def test_create_roles_current_role_requires_15(self):
         """CURRENT_ROLE keyword requires PG 15; rejected on 14."""
         d = PostgresDialect((14, 0, 0))
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             d, name="p1", table_name="t1", roles=["CURRENT_ROLE"]
         )
         with pytest.raises(UnsupportedFeatureError) as ei:
@@ -229,7 +229,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_using_with_param_passing(self, dialect):
         """USING expression parameters are passed through to_sql()."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.SELECT,
@@ -242,7 +242,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_with_check(self, dialect):
         """WITH CHECK expression for UPDATE."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.UPDATE,
@@ -254,7 +254,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_insert_with_using_rejected(self, dialect):
         """INSERT command + USING is invalid (INSERT has no USING semantics)."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.INSERT,
@@ -265,7 +265,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_select_with_check_rejected(self, dialect):
         """SELECT command + WITH CHECK is invalid (SELECT has no new rows)."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.SELECT,
@@ -276,7 +276,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_delete_with_check_rejected(self, dialect):
         """DELETE command + WITH CHECK is invalid (DELETE has no new rows)."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="p1", table_name="t1",
             command=PolicyCommand.DELETE,
@@ -287,7 +287,7 @@ class TestFormatCreatePolicyStatement:
 
     def test_create_full_combination(self, dialect):
         """Full statement with all clauses."""
-        expr = PostgresCreatePolicyExpression(
+        expr = PostgresCreatePolicyStatement(
             dialect,
             name="user_select_own",
             table_name="orders",
@@ -313,7 +313,7 @@ class TestFormatCreatePolicyStatement:
     def test_create_rejected_on_94(self):
         """Whole CREATE POLICY statement rejected before PG 9.5."""
         d = PostgresDialect((9, 4, 0))
-        expr = PostgresCreatePolicyExpression(d, name="p1", table_name="t1")
+        expr = PostgresCreatePolicyStatement(d, name="p1", table_name="t1")
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 
@@ -330,7 +330,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_rename(self, dialect):
         """Form 1: RENAME TO."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1", new_name="p1_v2"
         )
         assert expr.mode is AlterPolicyMode.RENAME
@@ -339,7 +339,7 @@ class TestFormatAlterPolicyStatement:
         assert params == ()
 
     def test_alter_rename_with_schema(self, dialect):
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1",
             schema="my_schema", new_name="p1_v2",
         )
@@ -348,7 +348,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_rename_rejects_replace_clauses(self, dialect):
         """new_name is mutually exclusive with roles/using/with_check."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1", new_name="p1_v2",
             roles=["app_user"],
         )
@@ -357,7 +357,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_replace_roles_only(self, dialect):
         """Form 2: only TO clause replaced."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1", roles=["app_user", "PUBLIC"]
         )
         assert expr.mode is AlterPolicyMode.REPLACE
@@ -366,7 +366,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_replace_using_only(self, dialect):
         """Form 2: only USING clause replaced."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1",
             using=ComparisonPredicate(dialect, "=", Column(dialect, "user_id"), Literal(dialect, 42)),
         )
@@ -376,7 +376,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_replace_with_check_only(self, dialect):
         """Form 2: only WITH CHECK clause replaced."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1",
             with_check=ComparisonPredicate(dialect, "=", Column(dialect, "status"), Literal(dialect, "active")),
         )
@@ -386,7 +386,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_replace_full(self, dialect):
         """Form 2: all three clauses (TO/USING/WITH CHECK) replaced."""
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             dialect, name="p1", table_name="t1",
             roles=["app_user"],
             using=ComparisonPredicate(dialect, "=", Column(dialect, "a"), Literal(dialect, 1)),
@@ -400,7 +400,7 @@ class TestFormatAlterPolicyStatement:
 
     def test_alter_replace_no_clause_rejected(self, dialect):
         """Form 2 requires at least one of TO/USING/WITH CHECK."""
-        expr = PostgresAlterPolicyExpression(dialect, name="p1", table_name="t1")
+        expr = PostgresAlterPolicyStatement(dialect, name="p1", table_name="t1")
         assert expr.mode is AlterPolicyMode.REPLACE
         with pytest.raises(ValueError, match="requires at least one"):
             expr.to_sql()
@@ -408,7 +408,7 @@ class TestFormatAlterPolicyStatement:
     def test_alter_rejected_on_94(self):
         """ALTER POLICY totally rejected before PG 9.5."""
         d = PostgresDialect((9, 4, 0))
-        expr = PostgresAlterPolicyExpression(
+        expr = PostgresAlterPolicyStatement(
             d, name="p1", table_name="t1", new_name="p2"
         )
         with pytest.raises(UnsupportedFeatureError):
@@ -426,7 +426,7 @@ class TestFormatDropPolicyStatement:
         return PostgresDialect((14, 0, 0))
 
     def test_drop_basic(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1"
         )
         sql, params = expr.to_sql()
@@ -434,35 +434,35 @@ class TestFormatDropPolicyStatement:
         assert params == ()
 
     def test_drop_with_schema(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1", schema="rhosocial"
         )
         sql, _ = expr.to_sql()
         assert sql == 'DROP POLICY "p1" ON "rhosocial"."t1"'
 
     def test_drop_if_exists(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1", if_exists=True
         )
         sql, _ = expr.to_sql()
         assert "DROP POLICY IF EXISTS" in sql
 
     def test_drop_cascade(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1", cascade=True
         )
         sql, _ = expr.to_sql()
         assert sql.endswith("CASCADE")
 
     def test_drop_restrict(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1", restrict=True
         )
         sql, _ = expr.to_sql()
         assert sql.endswith("RESTRICT")
 
     def test_drop_cascade_and_restrict_mutually_exclusive(self, dialect):
-        expr = PostgresDropPolicyExpression(
+        expr = PostgresDropPolicyStatement(
             dialect, name="p1", table_name="t1",
             cascade=True, restrict=True,
         )
@@ -471,7 +471,7 @@ class TestFormatDropPolicyStatement:
 
     def test_drop_rejected_on_94(self):
         d = PostgresDialect((9, 4, 0))
-        expr = PostgresDropPolicyExpression(d, name="p1", table_name="t1")
+        expr = PostgresDropPolicyStatement(d, name="p1", table_name="t1")
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 

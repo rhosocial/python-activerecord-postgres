@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression import (
     ComparisonPredicate,
     Literal,
     LogicalPredicate,
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.functions import (
@@ -130,7 +130,7 @@ def _category_created_filter(dialect):
 
 
 def _datetime_expression_query(dialect):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[
             Column(dialect, "id"),
@@ -175,7 +175,7 @@ class TestSyncPostgresDateTimeIntervalExplainExamples:
     ):
         dialect = temporal_indexed_backend.dialect
         result = temporal_indexed_backend.explain(
-            QueryExpression(
+            QueryStatement(
                 dialect,
                 select=[Column(dialect, "id"), Column(dialect, "created_at")],
                 from_=Table(dialect, "explain_temporal_events"),
@@ -201,7 +201,7 @@ class TestSyncPostgresDateTimeIntervalExplainExamples:
         temporal_indexed_backend.execute("SET enable_seqscan = off")
         try:
             result = temporal_indexed_backend.explain(
-                QueryExpression(
+                QueryStatement(
                     dialect,
                     select=[
                         Column(dialect, "id"),
@@ -253,7 +253,7 @@ class TestAsyncPostgresDateTimeIntervalExplainExamples:
         await async_temporal_indexed_backend.execute("SET enable_seqscan = off")
         try:
             result = await async_temporal_indexed_backend.explain(
-                QueryExpression(
+                QueryStatement(
                     dialect,
                     select=[
                         Column(dialect, "id"),

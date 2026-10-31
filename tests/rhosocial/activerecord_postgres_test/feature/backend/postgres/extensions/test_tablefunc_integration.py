@@ -26,13 +26,13 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -65,14 +65,14 @@ def tablefunc_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="month", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
-    create_sales = CreateTableExpression(
+    create_sales = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_sales'),
         columns=sales_columns,
@@ -90,7 +90,7 @@ def tablefunc_env(postgres_backend_single):
         [Literal(dialect, "Mar"), Literal(dialect, "Electronics"), Literal(dialect, 120)],
         [Literal(dialect, "Mar"), Literal(dialect, "Clothing"), Literal(dialect, 180)],
     ]
-    insert_sales = InsertExpression(
+    insert_sales = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_tf_sales'),
         columns=["month", "category", "amount"],
@@ -105,13 +105,13 @@ def tablefunc_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="node_name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="parent_id", data_type=IntegerType(dialect=dialect)),
     ]
-    create_tree = CreateTableExpression(
+    create_tree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_tree'),
         columns=tree_columns,
@@ -127,7 +127,7 @@ def tablefunc_env(postgres_backend_single):
         [Literal(dialect, "child2"), Literal(dialect, 1)],
         [Literal(dialect, "grandchild"), Literal(dialect, 2)],
     ]
-    insert_tree = InsertExpression(
+    insert_tree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_tf_tree'),
         columns=["node_name", "parent_id"],
@@ -138,8 +138,8 @@ def tablefunc_env(postgres_backend_single):
 
     yield backend, dialect
 
-    # Teardown: drop both tables using DropTableExpression
-    drop_sales = DropTableExpression(
+    # Teardown: drop both tables using DropTableStatement
+    drop_sales = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_sales'),
         if_exists=True,
@@ -147,7 +147,7 @@ def tablefunc_env(postgres_backend_single):
     sql, params = drop_sales.to_sql()
     backend.execute(sql, params)
 
-    drop_tree = DropTableExpression(
+    drop_tree = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_tree'),
         if_exists=True,
@@ -165,7 +165,7 @@ class TestTablefuncIntegration:
 
         # Generate 5 random values with mean=100.0 and stddev=15.0
         rand_func = normal_rand(dialect, 5, 100.0, 15.0)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[rand_func.as_("random_value")],
         )
@@ -343,14 +343,14 @@ async def async_tablefunc_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="month", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="category", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="amount", data_type=IntegerType(dialect=dialect)),
     ]
-    create_sales = CreateTableExpression(
+    create_sales = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_sales_async'),
         columns=sales_columns,
@@ -368,7 +368,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
         [Literal(dialect, "Mar"), Literal(dialect, "Electronics"), Literal(dialect, 120)],
         [Literal(dialect, "Mar"), Literal(dialect, "Clothing"), Literal(dialect, 180)],
     ]
-    insert_sales = InsertExpression(
+    insert_sales = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_tf_sales_async'),
         columns=["month", "category", "amount"],
@@ -383,13 +383,13 @@ async def async_tablefunc_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="node_name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="parent_id", data_type=IntegerType(dialect=dialect)),
     ]
-    create_tree = CreateTableExpression(
+    create_tree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_tree_async'),
         columns=tree_columns,
@@ -405,7 +405,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
         [Literal(dialect, "child2"), Literal(dialect, 1)],
         [Literal(dialect, "grandchild"), Literal(dialect, 2)],
     ]
-    insert_tree = InsertExpression(
+    insert_tree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_tf_tree_async'),
         columns=["node_name", "parent_id"],
@@ -416,8 +416,8 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     yield backend, dialect
 
-    # Teardown: drop both tables using DropTableExpression
-    drop_sales = DropTableExpression(
+    # Teardown: drop both tables using DropTableStatement
+    drop_sales = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_sales_async'),
         if_exists=True,
@@ -425,7 +425,7 @@ async def async_tablefunc_env(async_postgres_backend_single):
     sql, params = drop_sales.to_sql()
     await backend.execute(sql, params)
 
-    drop_tree = DropTableExpression(
+    drop_tree = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_tf_tree_async'),
         if_exists=True,
@@ -444,7 +444,7 @@ class TestAsyncTablefuncIntegration:
 
         # Generate 5 random values with mean=100.0 and stddev=15.0
         rand_func = normal_rand(dialect, 5, 100.0, 15.0)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[rand_func.as_("random_value")],
         )

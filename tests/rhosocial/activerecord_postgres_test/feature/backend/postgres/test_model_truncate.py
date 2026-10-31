@@ -3,7 +3,7 @@
 
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
-    TruncateExpression,
+    TruncateStatement,
 )
 
 
@@ -12,14 +12,14 @@ TABLE = "model_truncate_events"
 
 class TestSyncModelTruncate:
     def test_truncate_expression_renders_postgres_options(self, postgres_backend):
-        expression = TruncateExpression(
+        expression = TruncateStatement(
             postgres_backend.dialect,
             Table(postgres_backend.dialect, TABLE),
             restart_identity=True,
             cascade=True,
         )
 
-        assert isinstance(expression, TruncateExpression)
+        assert isinstance(expression, TruncateStatement)
         assert expression.table.name == TABLE
         assert expression.restart_identity is True
         assert expression.cascade is True
@@ -34,14 +34,14 @@ class TestAsyncModelTruncate:
         self,
         async_postgres_backend,
     ):
-        expression = TruncateExpression(
+        expression = TruncateStatement(
             async_postgres_backend.dialect,
             Table(async_postgres_backend.dialect, TABLE),
             restart_identity=True,
             cascade=True,
         )
 
-        assert isinstance(expression, TruncateExpression)
+        assert isinstance(expression, TruncateStatement)
         assert expression.table.name == TABLE
         assert expression.restart_identity is True
         assert expression.cascade is True

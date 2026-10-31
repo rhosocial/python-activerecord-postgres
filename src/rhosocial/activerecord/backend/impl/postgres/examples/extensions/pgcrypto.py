@@ -4,7 +4,7 @@ pgcrypto extension - cryptographic functions.
 
 This example demonstrates:
 1. Check if pgcrypto extension is available
-2. CREATE EXTENSION using PostgresCreateExtensionExpression
+2. CREATE EXTENSION using PostgresCreateExtensionStatement
 3. Use crypt + gen_salt for password hashing
 4. Use digest for data integrity
 5. Use hmac for message authentication
@@ -36,10 +36,10 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
     FunctionCall,
     Literal,
 )
@@ -53,7 +53,7 @@ print(f"Extension check: pgcrypto available = {available}, installed = {installe
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pgcrypto",
     )
@@ -79,7 +79,7 @@ if installed:
     crypt_call = FunctionCall(
         dialect, "crypt", Literal(dialect, "my_secret_password"), gen_salt_call
     ).as_("hashed_password")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[crypt_call],
     )
@@ -100,7 +100,7 @@ if installed:
         verify_crypt = FunctionCall(
             dialect, "crypt", Literal(dialect, "my_secret_password"), Literal(dialect, stored_hash)
         ).as_("rehashed")
-        verify_query = QueryExpression(
+        verify_query = QueryStatement(
             dialect=dialect,
             select=[verify_crypt],
         )
@@ -125,7 +125,7 @@ if installed:
     encode_call = FunctionCall(
         dialect, "encode", digest_call, Literal(dialect, "hex")
     ).as_("sha256_digest")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[encode_call],
     )
@@ -152,7 +152,7 @@ if installed:
         FunctionCall(dialect, "digest", Literal(dialect, "test data"), Literal(dialect, "sha256")),
         Literal(dialect, "hex"),
     ).as_("sha256")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[md5_call, sha1_call, sha256_call],
     )
@@ -174,7 +174,7 @@ if installed:
     encode_hmac = FunctionCall(
         dialect, "encode", hmac_call, Literal(dialect, "hex")
     ).as_("hmac_sha256")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[encode_hmac],
     )
@@ -192,7 +192,7 @@ if installed:
         Literal(dialect, "sensitive data"),
         Literal(dialect, "encryption_key"),
     ).as_("encrypted")
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[encrypt_call],
     )
@@ -211,7 +211,7 @@ if installed:
             Literal(dialect, encrypted),
             Literal(dialect, "encryption_key"),
         ).as_("decrypted")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[decrypt_call],
         )

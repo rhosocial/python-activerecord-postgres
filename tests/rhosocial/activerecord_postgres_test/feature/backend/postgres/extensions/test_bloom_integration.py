@@ -17,15 +17,15 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
-    CreateIndexExpression,
+    CreateIndexStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -55,7 +55,7 @@ def bloom_env(postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         backend.execute(sql, params)
 
@@ -65,13 +65,13 @@ def bloom_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         columns=columns,
@@ -87,7 +87,7 @@ def bloom_env(postgres_backend_single):
             Literal(dialect, f"user{i}"),
             Literal(dialect, f"user{i}@example.com"),
         ])
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, TABLE_NAME),
         columns=["name", "email"],
@@ -97,7 +97,7 @@ def bloom_env(postgres_backend_single):
     backend.execute(sql, params)
 
     # Setup: create bloom index using expression
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_bloom_test'),
         table=Table(dialect, TABLE_NAME),
@@ -111,7 +111,7 @@ def bloom_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         if_exists=True,
@@ -129,7 +129,7 @@ class TestBloomIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Type C: pg_indexes query kept as raw SQL (system catalog view)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -145,7 +145,7 @@ class TestBloomIntegration:
         backend, dialect = bloom_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, TABLE_NAME),
@@ -169,12 +169,12 @@ class TestBloomIntegration:
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="code", data_type=TextType(dialect=dialect)),
         ]
-        create_expr = CreateTableExpression(
+        create_expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'test_bloom_opts'),
             columns=columns,
@@ -187,7 +187,7 @@ class TestBloomIntegration:
         rows = []
         for i in range(50):
             rows.append([Literal(dialect, f"CODE{i}")])
-        insert_expr = InsertExpression(
+        insert_expr = InsertStatement(
             dialect=dialect,
             into=Table(dialect, 'test_bloom_opts'),
             columns=["code"],
@@ -203,7 +203,7 @@ class TestBloomIntegration:
         )
         try:
             opts = ExecutionOptions(stmt_type=StatementType.DQL)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
@@ -216,7 +216,7 @@ class TestBloomIntegration:
             index_names = [r['indexname'] for r in result.data]
             assert "idx_bloom_opts" in index_names
         finally:
-            drop_expr = DropTableExpression(
+            drop_expr = DropTableStatement(
                 dialect=dialect,
                 table=Table(dialect, 'test_bloom_opts'),
                 if_exists=True,
@@ -234,7 +234,7 @@ async def async_bloom_env(async_postgres_backend_single):
 
     # Clean up residual tables from previous runs
     for table in [ASYNC_TABLE_NAME]:
-        drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table), if_exists=True)
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True)
         sql, params = drop_expr.to_sql()
         await backend.execute(sql, params)
 
@@ -244,13 +244,13 @@ async def async_bloom_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="email", data_type=TextType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
@@ -266,7 +266,7 @@ async def async_bloom_env(async_postgres_backend_single):
             Literal(dialect, f"user{i}"),
             Literal(dialect, f"user{i}@example.com"),
         ])
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["name", "email"],
@@ -276,7 +276,7 @@ async def async_bloom_env(async_postgres_backend_single):
     await backend.execute(sql, params)
 
     # Setup: create bloom index using expression
-    create_idx = CreateIndexExpression(
+    create_idx = CreateIndexStatement(
         dialect=dialect,
         index=Index(dialect, 'idx_bloom_test_async'),
         table=Table(dialect, ASYNC_TABLE_NAME),
@@ -290,7 +290,7 @@ async def async_bloom_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
@@ -308,7 +308,7 @@ class TestAsyncBloomIntegration:
         backend, dialect = async_bloom_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -325,7 +325,7 @@ class TestAsyncBloomIntegration:
         backend, dialect = async_bloom_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "email")],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -348,12 +348,12 @@ class TestAsyncBloomIntegration:
                 dialect, name="id",
                 data_type=PostgresSerialType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ],
             ),
             ColumnDefinition(dialect, name="code", data_type=TextType(dialect=dialect)),
         ]
-        create_expr = CreateTableExpression(
+        create_expr = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, 'test_bloom_opts_async'),
             columns=columns,
@@ -365,7 +365,7 @@ class TestAsyncBloomIntegration:
         rows = []
         for i in range(50):
             rows.append([Literal(dialect, f"CODE{i}")])
-        insert_expr = InsertExpression(
+        insert_expr = InsertStatement(
             dialect=dialect,
             into=Table(dialect, 'test_bloom_opts_async'),
             columns=["code"],
@@ -380,7 +380,7 @@ class TestAsyncBloomIntegration:
         )
         try:
             opts = ExecutionOptions(stmt_type=StatementType.DQL)
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
@@ -393,7 +393,7 @@ class TestAsyncBloomIntegration:
             index_names = [r['indexname'] for r in result.data]
             assert "idx_bloom_opts_async" in index_names
         finally:
-            drop_expr = DropTableExpression(
+            drop_expr = DropTableStatement(
                 dialect=dialect,
                 table=Table(dialect, 'test_bloom_opts_async'),
                 if_exists=True,

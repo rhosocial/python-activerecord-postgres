@@ -23,19 +23,21 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    BinaryExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
     OrderByClause,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
+from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -68,13 +70,13 @@ def _setup_intarray_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -83,16 +85,16 @@ def _setup_intarray_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect))],
-                [Literal(dialect, "{10,20,30}").cast(_int_array(dialect))],
-                [Literal(dialect, "{3,4}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{10,20,30}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect))],
             ],
         ),
     )
@@ -107,13 +109,13 @@ def _setup_intarray_overlap_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -122,16 +124,16 @@ def _setup_intarray_overlap_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3}").cast(_int_array(dialect))],
-                [Literal(dialect, "{4,5,6}").cast(_int_array(dialect))],
-                [Literal(dialect, "{3,4}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{4,5,6}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect))],
             ],
         ),
     )
@@ -146,13 +148,13 @@ def _setup_intarray_contained_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -161,16 +163,16 @@ def _setup_intarray_contained_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2}").cast(_int_array(dialect))],
-                [Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect))],
-                [Literal(dialect, "{10,20}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{10,20}"), _int_array(dialect))],
             ],
         ),
     )
@@ -185,13 +187,13 @@ def _setup_intarray_idx_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -200,13 +202,13 @@ def _setup_intarray_idx_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{10,20,30,40}").cast(_int_array(dialect))]],
+            [[cast(dialect, Literal(dialect, "{10,20,30,40}"), _int_array(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -224,13 +226,13 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -246,13 +248,13 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
         f"ON {table} USING gin (tags gin__int_ops)"
     )
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{1,5,10}").cast(_int_array(dialect))]],
+            [[cast(dialect, Literal(dialect, "{1,5,10}"), _int_array(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -261,7 +263,7 @@ def _setup_intarray_gin_table(backend, dialect, table, index_name):
 
 def _teardown_table(backend, dialect, table):
     """Drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -277,13 +279,13 @@ async def _async_setup_intarray_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -292,16 +294,16 @@ async def _async_setup_intarray_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect))],
-                [Literal(dialect, "{10,20,30}").cast(_int_array(dialect))],
-                [Literal(dialect, "{3,4}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{10,20,30}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect))],
             ],
         ),
     )
@@ -316,13 +318,13 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -331,16 +333,16 @@ async def _async_setup_intarray_overlap_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2,3}").cast(_int_array(dialect))],
-                [Literal(dialect, "{4,5,6}").cast(_int_array(dialect))],
-                [Literal(dialect, "{3,4}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{4,5,6}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect))],
             ],
         ),
     )
@@ -355,13 +357,13 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -370,16 +372,16 @@ async def _async_setup_intarray_contained_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "{1,2}").cast(_int_array(dialect))],
-                [Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect))],
-                [Literal(dialect, "{10,20}").cast(_int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect))],
+                [cast(dialect, Literal(dialect, "{10,20}"), _int_array(dialect))],
             ],
         ),
     )
@@ -394,13 +396,13 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -409,13 +411,13 @@ async def _async_setup_intarray_idx_table(backend, dialect, table):
     sql, params = create_expr.to_sql()
     await backend.execute(sql, params)
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{10,20,30,40}").cast(_int_array(dialect))]],
+            [[cast(dialect, Literal(dialect, "{10,20,30,40}"), _int_array(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -433,13 +435,13 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             dialect, name="tags", data_type=_int_array(dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         columns=columns,
@@ -454,13 +456,13 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
         f"ON {table} USING gin (tags gin__int_ops)"
     )
 
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, table),
         columns=["tags"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "{1,5,10}").cast(_int_array(dialect))]],
+            [[cast(dialect, Literal(dialect, "{1,5,10}"), _int_array(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -469,7 +471,7 @@ async def _async_setup_intarray_gin_table(backend, dialect, table, index_name):
 
 async def _async_teardown_table(backend, dialect, table):
     """Async: drop a test table using expression."""
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table),
         if_exists=True,
@@ -534,13 +536,13 @@ class TestIntarrayIntegration:
         # SELECT id, tags @> '{3,4}'::integer[] AS contains FROM test_intarray
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
         ).as_("contains")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_INTARRAY),
@@ -563,13 +565,13 @@ class TestIntarrayIntegration:
         # SELECT id, tags && '{3,4}'::integer[] AS overlaps FROM test_intarray_overlap
         overlap_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "&&",
+            BinaryExpression(
+            dialect, '&&',
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
         ).as_("overlaps")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), overlap_expr],
             from_=Table(dialect, T_INTARRAY_OVERLAP),
@@ -593,13 +595,13 @@ class TestIntarrayIntegration:
         # FROM test_intarray_contained
         contained_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "<@",
+            BinaryExpression(
+            dialect, '<@',
                 Column(dialect, "tags"),
-                Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect)),
             ),
         ).as_("contained")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contained_expr],
             from_=Table(dialect, T_INTARRAY_CONTAINED),
@@ -631,7 +633,7 @@ class TestIntarrayIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[idx_func],
             from_=Table(dialect, T_INTARRAY_IDX),
@@ -648,7 +650,7 @@ class TestIntarrayIntegration:
             Column(dialect, "tags"),
             Literal(dialect, 99),
         ).as_("pos")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[idx_func2],
             from_=Table(dialect, T_INTARRAY_IDX),
@@ -665,7 +667,7 @@ class TestIntarrayIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Verify index exists via pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -684,13 +686,13 @@ class TestIntarrayIntegration:
         # Query using the GIN index with @> operator via Literal
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
-                Literal(dialect, "{5}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{5}"), _int_array(dialect)),
             ),
         ).as_("contains")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_INTARRAY_GIN),
@@ -743,13 +745,13 @@ class TestAsyncIntarrayIntegration:
 
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
         ).as_("contains")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_INTARRAY_ASYNC),
@@ -772,13 +774,13 @@ class TestAsyncIntarrayIntegration:
 
         overlap_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "&&",
+            BinaryExpression(
+            dialect, '&&',
                 Column(dialect, "tags"),
-                Literal(dialect, "{3,4}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{3,4}"), _int_array(dialect)),
             ),
         ).as_("overlaps")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), overlap_expr],
             from_=Table(dialect, T_INTARRAY_OVERLAP_ASYNC),
@@ -801,13 +803,13 @@ class TestAsyncIntarrayIntegration:
 
         contained_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "<@",
+            BinaryExpression(
+            dialect, '<@',
                 Column(dialect, "tags"),
-                Literal(dialect, "{1,2,3,4,5}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{1,2,3,4,5}"), _int_array(dialect)),
             ),
         ).as_("contained")
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contained_expr],
             from_=Table(dialect, T_INTARRAY_CONTAINED_ASYNC),
@@ -839,7 +841,7 @@ class TestAsyncIntarrayIntegration:
             Column(dialect, "id"),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[idx_func],
             from_=Table(dialect, T_INTARRAY_IDX_ASYNC),
@@ -856,7 +858,7 @@ class TestAsyncIntarrayIntegration:
             Column(dialect, "tags"),
             Literal(dialect, 99),
         ).as_("pos")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[idx_func2],
             from_=Table(dialect, T_INTARRAY_IDX_ASYNC),
@@ -874,7 +876,7 @@ class TestAsyncIntarrayIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Verify index exists via pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -893,13 +895,13 @@ class TestAsyncIntarrayIntegration:
         # Query using the GIN index with @> operator via Literal
         contains_expr = Subquery(
             dialect,
-            ComparisonPredicate(
-                dialect, "@>",
+            BinaryExpression(
+            dialect, '@>',
                 Column(dialect, "tags"),
-                Literal(dialect, "{5}").cast(_int_array(dialect)),
+                cast(dialect, Literal(dialect, "{5}"), _int_array(dialect)),
             ),
         ).as_("contains")
-        query2 = QueryExpression(
+        query2 = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "id"), contains_expr],
             from_=Table(dialect, T_INTARRAY_GIN_ASYNC),

@@ -10,17 +10,19 @@ from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
+from ...expression.ddl import PostgresCreateIndexExpression
+
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
-        PostgresAlterIndexExpression,
-        PostgresReindexExpression,
+        PostgresAlterIndexStatement,
+        PostgresReindexStatement,
     )
     from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-        CreateIndexExpression,
-        DropIndexExpression,
+        CreateIndexStatement,
+        DropIndexStatement,
     )
     from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
-        FulltextMatchExpression,
+        FulltextMatch,
     )
 
 
@@ -32,35 +34,35 @@ class PostgresIndexMixin:
 
     def supports_safe_hash_index(self) -> bool:
         """Hash index WAL logging is native feature, PG 10+."""
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_parallel_create_index(self) -> bool:
         """Parallel index build is native feature, PG 11+."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_gist_include(self) -> bool:
         """GiST INCLUDE is native feature, PG 12+."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_reindex_concurrently(self) -> bool:
         """REINDEX CONCURRENTLY is native feature, PG 12+."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_btree_deduplication(self) -> bool:
         """B-tree deduplication is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     def supports_brin_multivalue(self) -> bool:
         """BRIN multivalue is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_brin_bloom(self) -> bool:
         """BRIN bloom filter is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_spgist_include(self) -> bool:
         """SP-GiST INCLUDE is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     # =========================================================================
     # Extended Statistics Support (PostgreSQL 10+)
@@ -76,7 +78,7 @@ class PostgresIndexMixin:
             True if CREATE STATISTICS is supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_mcv(self) -> bool:
         """MCV (Most Common Values) statistics are supported since PostgreSQL 12.
@@ -88,7 +90,7 @@ class PostgresIndexMixin:
             True if MCV statistics are supported
 
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_statistics_dependencies(self) -> bool:
         """Statistics dependencies are supported since PostgreSQL 10.
@@ -100,7 +102,7 @@ class PostgresIndexMixin:
             True if statistics dependencies are supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_statistics_ndistinct(self) -> bool:
         """NDistinct statistics are supported since PostgreSQL 10.
@@ -111,7 +113,7 @@ class PostgresIndexMixin:
             True if ndistinct statistics are supported
 
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     # =========================================================================
     # PostgreSQL 16+ Index Features
@@ -124,7 +126,7 @@ class PostgresIndexMixin:
             True if supported
 
         """
-        return self.version >= (16, 0, 0)
+        return self.version_at_least((16, 0, 0))
 
     # =========================================================================
     # PostgreSQL 18+ Index Features
@@ -139,7 +141,7 @@ class PostgresIndexMixin:
             True if supported
 
         """
-        return self.version >= (18, 0, 0)
+        return self.version_at_least((18, 0, 0))
 
     # =========================================================================
     # IndexObjectSupport Protocol Overrides (all supported by PostgreSQL)
@@ -159,7 +161,7 @@ class PostgresIndexMixin:
 
     def supports_index_if_not_exists(self) -> bool:
         """IF NOT EXISTS is supported since PostgreSQL 9.5."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_index_if_exists(self) -> bool:
         """DROP INDEX IF EXISTS is supported in all versions."""
@@ -183,7 +185,7 @@ class PostgresIndexMixin:
 
     def supports_index_include(self) -> bool:
         """PostgreSQL supports INCLUDE clause (PG 11+ for btree, PG 12+ for GiST, PG 14+ for SP-GiST)."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_index_tablespace(self) -> bool:
         """PostgreSQL supports TABLESPACE for indexes."""
@@ -195,7 +197,7 @@ class PostgresIndexMixin:
         Note: CONCURRENTLY-only features may have higher version requirements
         (e.g., CONCURRENTLY + NULLS NOT DISTINCT requires PG 16+).
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def get_supported_index_types(self) -> List[str]:
         """Return all index access methods supported by PostgreSQL."""
@@ -244,14 +246,14 @@ class PostgresIndexMixin:
         return False
 
     def format_fulltext_match(
-        self, expr: "FulltextMatchExpression"
+        self, expr: "FulltextMatch"
     ) -> Tuple[str, Tuple]:
         """Format tsvector @@ tsquery expression for PostgreSQL full-text search.
 
         Produces: to_tsvector('config', col1 || ' ' || col2) @@ tsquery_func(search_term)
 
         Args:
-            expr: FulltextMatchExpression node carrying columns, search_term, and mode.
+            expr: FulltextMatch node carrying columns, search_term, and mode.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -288,7 +290,7 @@ class PostgresIndexMixin:
         PostgreSQL GIN index on to_tsvector().
 
         Args:
-            expr: CreateFulltextIndexExpression object
+            expr: CreateFulltextIndexStatement object
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -303,12 +305,12 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"CreateFulltextIndexExpression.index must be an Index, "
+                f"CreateFulltextIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateFulltextIndexExpression.table must be a Table, "
+                f"CreateFulltextIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         config = self._FT_DEFAULT_CONFIG
@@ -336,7 +338,7 @@ class PostgresIndexMixin:
         including GIN indexes used for full-text search.
 
         Args:
-            expr: DropFulltextIndexExpression object
+            expr: DropFulltextIndexStatement object
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -346,7 +348,7 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"DropFulltextIndexExpression.index must be an Index, "
+                f"DropFulltextIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         parts = ["DROP INDEX"]
@@ -358,12 +360,12 @@ class PostgresIndexMixin:
         # still checked, because a caller who set it meant something by it.
         if expr.table is not None and not isinstance(expr.table, Table):
             raise TypeError(
-                f"DropFulltextIndexExpression.table must be a Table, "
+                f"DropFulltextIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         return " ".join(parts), ()
 
-    def format_create_index_statement(self, expr: "CreateIndexExpression") -> Tuple[str, tuple]:
+    def format_create_index_statement(self, expr: "CreateIndexStatement") -> Tuple[str, tuple]:
         """Format CREATE INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_create_index_statement to support:
@@ -381,12 +383,12 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"CreateIndexExpression.index must be an Index, "
+                f"CreateIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         if not isinstance(expr.table, Table):
             raise TypeError(
-                f"CreateIndexExpression.table must be a Table, "
+                f"CreateIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         all_params = []
@@ -411,8 +413,17 @@ class PostgresIndexMixin:
         if expr.index_type:
             parts.append(f"USING {expr.index_type}")
 
-        # Columns with optional operator classes
-        opclasses = getattr(expr, "opclasses", None) or {}
+        # Columns with optional operator classes. The PostgreSQL-only fields
+        # exist only on the PostgreSQL subclass; the core node has no such
+        # fields and asks for none of them.
+        if isinstance(expr, PostgresCreateIndexExpression):
+            opclasses = expr.opclasses
+            nulls_not_distinct = expr.nulls_not_distinct
+            with_options = expr.with_options
+        else:
+            opclasses = {}
+            nulls_not_distinct = False
+            with_options = {}
         col_parts = []
         for col in expr.columns:
             if isinstance(col, ToSQLProtocol):
@@ -440,7 +451,7 @@ class PostgresIndexMixin:
             parts.append(f"INCLUDE ({include_cols})")
 
         # NULLS NOT DISTINCT (PG 15+, requires UNIQUE)
-        if getattr(expr, "nulls_not_distinct", False):
+        if nulls_not_distinct:
             if not expr.unique:
                 raise ValueError("NULLS NOT DISTINCT is only valid for UNIQUE indexes")
             if expr.concurrent and not self.supports_concurrent_unique_nulls_not_distinct():
@@ -452,7 +463,6 @@ class PostgresIndexMixin:
             parts.append("NULLS NOT DISTINCT")
 
         # WITH options via typed fields
-        with_options = getattr(expr, "with_options", None) or {}
         if with_options:
             opts = ", ".join(f"{k} = {v}" for k, v in with_options.items())
             parts.append(f"WITH ({opts})")
@@ -467,7 +477,7 @@ class PostgresIndexMixin:
 
         return " ".join(parts), tuple(all_params)
 
-    def format_drop_index_statement(self, expr: "DropIndexExpression") -> Tuple[str, tuple]:
+    def format_drop_index_statement(self, expr: "DropIndexStatement") -> Tuple[str, tuple]:
         """Format DROP INDEX statement with PostgreSQL-specific options.
 
         Extends the generic format_drop_index_statement to support:
@@ -479,12 +489,12 @@ class PostgresIndexMixin:
         """
         if not isinstance(expr.index, Index):
             raise TypeError(
-                f"DropIndexExpression.index must be an Index, "
+                f"DropIndexStatement.index must be an Index, "
                 f"got {type(expr.index).__name__}"
             )
         parts = ["DROP INDEX"]
 
-        if getattr(expr, "concurrent", False):
+        if expr.concurrent:
             if not self.supports_streaming_btree_index_build():
                 raise ValueError("DROP INDEX CONCURRENTLY requires PostgreSQL 18+")
             parts.append("CONCURRENTLY")
@@ -500,13 +510,13 @@ class PostgresIndexMixin:
         # the check is on kind, not on presence, so leaving it unset is fine.
         if expr.table is not None and not isinstance(expr.table, Table):
             raise TypeError(
-                f"DropIndexExpression.table must be a Table, "
+                f"DropIndexStatement.table must be a Table, "
                 f"got {type(expr.table).__name__}"
             )
         return " ".join(parts), ()
 
     def format_alter_index_statement(
-        self, expr: "PostgresAlterIndexExpression"
+        self, expr: "PostgresAlterIndexStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER INDEX statement with PostgreSQL-specific operations.
 
@@ -523,7 +533,7 @@ class PostgresIndexMixin:
           ``expr.target_tablespace``.
 
         Args:
-            expr: PostgresAlterIndexExpression instance
+            expr: PostgresAlterIndexStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -597,7 +607,7 @@ class PostgresIndexMixin:
 
         return " ".join(parts), ()
 
-    def format_reindex_statement(self, expr: "PostgresReindexExpression") -> Tuple[str, tuple]:
+    def format_reindex_statement(self, expr: "PostgresReindexStatement") -> Tuple[str, tuple]:
         """Format REINDEX statement with PostgreSQL-specific options.
 
         Supports target types: ``INDEX``, ``TABLE``, ``SCHEMA``, ``DATABASE``, ``SYSTEM``.
@@ -608,7 +618,7 @@ class PostgresIndexMixin:
         - ``expr.verbose`` — add ``VERBOSE``.
 
         Args:
-            expr: PostgresReindexExpression instance
+            expr: PostgresReindexStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)

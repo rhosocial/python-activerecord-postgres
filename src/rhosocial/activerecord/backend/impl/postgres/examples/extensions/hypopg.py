@@ -34,9 +34,9 @@ backend.introspect_and_adapt()
 dialect = backend.dialect
 
 # Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 
@@ -44,15 +44,15 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    InsertExpression,
-    QueryExpression,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -72,7 +72,7 @@ print(f"Extension check: hypopg available = {available}, installed = {installed}
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="hypopg",
     )
@@ -92,7 +92,7 @@ if installed:
             name="id",
             data_type="SERIAL",
             constraints=[
-                ColumnConstraint(ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(name="name", data_type="TEXT"),
@@ -100,7 +100,7 @@ if installed:
         ColumnDefinition(name="price", data_type="NUMERIC(10,2)"),
     ]
 
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'products'),
         columns=columns,
@@ -119,7 +119,7 @@ if installed:
         [Literal(dialect, "Chair"), Literal(dialect, "Furniture"), Literal(dialect, 199.99)],
         [Literal(dialect, "Monitor"), Literal(dialect, "Electronics"), Literal(dialect, 499.99)],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'products'),
         columns=["name", "category", "price"],
@@ -135,7 +135,7 @@ if installed:
         dialect,
         "CREATE INDEX ON products USING btree (category)",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[create_func.as_("index_id")],
     )
@@ -151,7 +151,7 @@ if installed:
 
         # Example 3: Estimate the size of the hypothetical index
         size_func = hypopg_estimate_size(dialect, index_id)
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[size_func.as_("estimated_size")],
         )
@@ -163,7 +163,7 @@ if installed:
 
     # Example 4: List all hypothetical indexes
     show_func = hypopg_show_indexes(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[show_func.as_("index_info")],
     )
@@ -175,7 +175,7 @@ if installed:
 
     # Example 5: Reset all hypothetical indexes
     reset_func = hypopg_reset(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[reset_func],
     )
@@ -192,7 +192,7 @@ else:
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
-drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
 sql, params = drop_expr.to_sql()
 backend.execute(sql, params)
 backend.disconnect()

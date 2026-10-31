@@ -13,31 +13,31 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
     ComparisonPredicate,
-    CreateTableExpression,
-    DropTableExpression,
-    InsertExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
     Literal,
     LogicalPredicate,
-    QueryExpression,
+    QueryStatement,
     ValuesSource,
-    WildcardExpression,
+    AllColumnsWildcard,
+    ColumnNotNullConstraint,
+    TablePrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
-    ExplainExpression,
+    ExplainStatement,
     ExplainFormat,
     ExplainOptions,
     PartitionClause,
     PartitionStrategy,
     TableConstraint,
-    TableConstraintType,
 )
 from rhosocial.activerecord.backend.expression.types import BigIntType, TextType, TimestampType
 from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreatePartitionExpression,
+    PostgresCreatePartitionStatement,
 )
 
 PARTITION_EXPLAIN_TABLE = "ar_pg_partition_explain_events"
@@ -61,28 +61,25 @@ def _iter_partitions():
 
 
 def _drop_table_sql(dialect, table_name: str):
-    return DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True).to_sql()
+    return DropTableStatement(dialect=dialect, table=Table(dialect, table_name), if_exists=True).to_sql()
 
 
 def _create_parent_table_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, PARTITION_EXPLAIN_TABLE),
         if_not_exists=False,
         columns=[
             ColumnDefinition(dialect, "id", BigIntType(dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "created_at", TimestampType(precision=6, dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "tenant_id", BigIntType(dialect=dialect),
-                             constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                             constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
         table_constraints=[
-            TableConstraint(
-                dialect, TableConstraintType.PRIMARY_KEY,
-                columns=["id", "created_at"],
-            ),
+            TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -93,7 +90,7 @@ def _create_parent_table_expression(dialect):
 
 
 def _create_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PARTITION_EXPLAIN_TABLE,
@@ -109,7 +106,7 @@ def _seed_rows_expression(dialect):
         [2, datetime(2026, 2, 15), 100, "feb"],
         [3, datetime(2026, 3, 15), 200, "mar"],
     ]
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, PARTITION_EXPLAIN_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
@@ -121,9 +118,9 @@ def _seed_rows_expression(dialect):
 
 
 def _range_query_expression(dialect, start, end):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[WildcardExpression(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
         where=LogicalPredicate(
             dialect,
@@ -135,15 +132,15 @@ def _range_query_expression(dialect, start, end):
 
 
 def _full_scan_query_expression(dialect):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[WildcardExpression(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PARTITION_EXPLAIN_TABLE),
     )
 
 
 def _json_explain_sql(dialect, query_expr):
-    expr = ExplainExpression(
+    expr = ExplainStatement(
         dialect,
         query_expr,
         options=ExplainOptions(format=ExplainFormat.JSON),
@@ -338,7 +335,7 @@ class TestPostgresPartitionExplain:
             datetime(2026, 1, 1),
             datetime(2026, 2, 1),
         )
-        verbose_expr = ExplainExpression(
+        verbose_expr = ExplainStatement(
             dialect,
             query,
             options=ExplainOptions(verbose=True),
@@ -413,7 +410,7 @@ class TestAsyncPostgresPartitionExplain:
             datetime(2026, 1, 1),
             datetime(2026, 2, 1),
         )
-        verbose_expr = ExplainExpression(
+        verbose_expr = ExplainStatement(
             dialect,
             query,
             options=ExplainOptions(verbose=True),

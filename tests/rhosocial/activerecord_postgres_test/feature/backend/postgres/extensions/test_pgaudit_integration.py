@@ -17,7 +17,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pgaudit import (
     pgaudit_set_role,
@@ -48,7 +48,7 @@ class TestPgauditIntegration:
         try:
             # Set the pgaudit role for auditing
             role_func = pgaudit_set_role(dialect, "audit_role")
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[role_func.as_("set_config_result")],
             )
@@ -69,7 +69,7 @@ class TestPgauditIntegration:
         try:
             # Set the pgaudit log level
             level_func = pgaudit_log_level(dialect, "log")
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[level_func.as_("set_config_result")],
             )
@@ -105,7 +105,7 @@ class TestAsyncPgauditIntegration:
         try:
             # Set the pgaudit role for auditing
             role_func = pgaudit_set_role(dialect, "audit_role")
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[role_func.as_("set_config_result")],
             )
@@ -127,7 +127,7 @@ class TestAsyncPgauditIntegration:
         try:
             # Set the pgaudit log level
             level_func = pgaudit_log_level(dialect, "log")
-            query = QueryExpression(
+            query = QueryStatement(
                 dialect=dialect,
                 select=[level_func.as_("set_config_result")],
             )

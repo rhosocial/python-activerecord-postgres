@@ -15,34 +15,36 @@ from rhosocial.activerecord.backend.errors import IntegrityError
 from rhosocial.activerecord.backend.expression import (
     Column,
     ComparisonPredicate,
-    CreateIndexExpression,
-    DeleteExpression,
+    CreateIndexStatement,
+    DeleteStatement,
     FunctionCall,
-    InsertExpression,
+    InsertStatement,
     Literal,
     LogicalPredicate,
     OrderByClause,
-    QualifiedIdentifierExpression,
-    QueryExpression,
+    QualifiedIdentifier,
+    QueryStatement,
     ValuesSource,
-    WildcardExpression,
+    AllColumnsWildcard,
+    RowCountWildcard,
+    ColumnNotNullConstraint,
+    TablePrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
     PartitionClause,
     PartitionStrategy,
     TableConstraint,
-    TableConstraintType,
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresAttachPartitionStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
     PostgresPgPartmanCreateParentExpression,
     PostgresPgPartmanDeleteConfigExpression,
     PostgresPgPartmanRunMaintenanceExpression,
@@ -57,7 +59,7 @@ from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 
 
@@ -80,7 +82,7 @@ def _qualified(table_name: str) -> str:
 
 
 def _create_partitioned_parent_sql(dialect, table_name: str):
-    expr = CreateTableExpression(
+    expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         columns=[
@@ -89,7 +91,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
                 "id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -97,7 +99,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
                 "created_at",
                 TimestampType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
@@ -112,7 +114,7 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
 
 
 def _create_range_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -123,7 +125,7 @@ def _create_range_partition_sql(dialect, partition_name: str, from_value: str, t
 
 
 def _create_default_partition_sql(dialect, partition_name: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -134,7 +136,7 @@ def _create_default_partition_sql(dialect, partition_name: str):
 
 
 def _delete_partition_events_for_range_expression(dialect, start, end):
-    return DeleteExpression(
+    return DeleteStatement(
         dialect=dialect,
         tables=Table(dialect, 'ar_partition_events'),
         where=LogicalPredicate(
@@ -151,7 +153,7 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
 
 
 def _insert_partition_events_expression(dialect, rows):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'ar_partition_events'),
         columns=["id", "created_at", "payload"],
@@ -163,7 +165,7 @@ def _insert_partition_events_expression(dialect, rows):
 
 
 def _detach_partition_sql(dialect, partition_name: str):
-    expr = PostgresDetachPartitionExpression(
+    expr = PostgresDetachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -172,7 +174,7 @@ def _detach_partition_sql(dialect, partition_name: str):
 
 
 def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresAttachPartitionExpression(
+    expr = PostgresAttachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table="ar_partition_events",
@@ -183,7 +185,7 @@ def _attach_partition_sql(dialect, partition_name: str, from_value: str, to_valu
 
 
 def _drop_table_sql(dialect, table_name: str):
-    expr = DropTableExpression(
+    expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         if_exists=True,
@@ -193,7 +195,7 @@ def _drop_table_sql(dialect, table_name: str):
 
 
 def _truncate_table_sql(dialect, table_name: str):
-    expr = TruncateExpression(
+    expr = TruncateStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
     )
@@ -201,7 +203,7 @@ def _truncate_table_sql(dialect, table_name: str):
 
 
 def _partition_metadata_sql(dialect, table_name: str):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=table_name,
     )
@@ -226,7 +228,7 @@ PRODUCTION_PARTITIONS = (
 
 
 def _create_production_parent_sql(dialect):
-    expr = CreateTableExpression(
+    expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=[
@@ -235,7 +237,7 @@ def _create_production_parent_sql(dialect):
                 "id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -243,7 +245,7 @@ def _create_production_parent_sql(dialect):
                 "created_at",
                 TimestampType(precision=6, dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -251,7 +253,7 @@ def _create_production_parent_sql(dialect):
                 "tenant_id",
                 BigIntType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
             ColumnDefinition(
@@ -259,15 +261,12 @@ def _create_production_parent_sql(dialect):
                 "payload",
                 TextType(dialect=dialect),
                 constraints=[
-                    ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))
                 ],
             ),
         ],
         table_constraints=[
-            TableConstraint(
-                dialect, TableConstraintType.PRIMARY_KEY,
-                columns=["id", "created_at"],
-            ),
+            TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -279,7 +278,7 @@ def _create_production_parent_sql(dialect):
 
 
 def _create_production_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -290,7 +289,7 @@ def _create_production_partition_sql(dialect, partition_name: str, from_value: s
 
 
 def _detach_production_partition_sql(dialect, partition_name: str):
-    expr = PostgresDetachPartitionExpression(
+    expr = PostgresDetachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -299,7 +298,7 @@ def _detach_production_partition_sql(dialect, partition_name: str):
 
 
 def _attach_production_partition_sql(dialect, partition_name: str, from_value: str, to_value: str):
-    expr = PostgresAttachPartitionExpression(
+    expr = PostgresAttachPartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=PRODUCTION_PARTITION_TABLE,
@@ -310,7 +309,7 @@ def _attach_production_partition_sql(dialect, partition_name: str, from_value: s
 
 
 def _create_production_index_sql(dialect, table_name: str):
-    expr = CreateIndexExpression(
+    expr = CreateIndexStatement(
         dialect,
         Index(dialect, f'idx_{table_name}_tenant_created_at'),
         Table(dialect, table_name),
@@ -321,7 +320,7 @@ def _create_production_index_sql(dialect, table_name: str):
 
 
 def _insert_production_events_expression(dialect, rows):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, PRODUCTION_PARTITION_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
@@ -348,7 +347,7 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
             ),
             predicate,
         )
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[Column(dialect, "payload")],
         from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
@@ -358,9 +357,9 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
 
 
 def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[WildcardExpression(dialect)],
+        select=[AllColumnsWildcard(dialect)],
         from_=Table(dialect, PRODUCTION_PARTITION_TABLE),
         where=LogicalPredicate(
             dialect,
@@ -383,15 +382,15 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
 
 
 def _select_count_expression(dialect, table_name: str):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
-        select=[FunctionCall(dialect, "COUNT", WildcardExpression(dialect)).as_("count")],
+        select=[FunctionCall(dialect, "COUNT", RowCountWildcard(dialect)).as_("count")],
         from_=Table(dialect, table_name),
     )
 
 
 def _production_partition_metadata_sql(dialect):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=PRODUCTION_PARTITION_TABLE,
     )
@@ -553,7 +552,7 @@ def _pg_partman_delete_config_sql(dialect, partman_schema: str):
 
 
 def _pg_partman_config_table_sql(dialect, partman_schema: str) -> str:
-    sql, _ = QualifiedIdentifierExpression(
+    sql, _ = QualifiedIdentifier(
         dialect=dialect,
         schema=partman_schema,
         name="part_config",
@@ -1264,7 +1263,7 @@ class TestPostgreSQLProductionTimePartitionOperations:
         
                 Steps: insert rows across yearly, quarterly, monthly, and weekly
                 partitions, query `[2027-02-01, 2027-05-08)` for `tenant_id=10`, and run
-                EXPLAIN for the same QueryExpression.
+                EXPLAIN for the same QueryStatement.
         
                 Assertions: the query returns only target-tenant rows in the continuous
                 range; the plan includes target partitions and excludes the 2026 cold
@@ -1500,7 +1499,7 @@ class TestAsyncPostgreSQLProductionTimePartitionOperations:
         
                 Steps: insert rows across yearly, quarterly, monthly, and weekly
                 partitions, query `[2027-02-01, 2027-05-08)` for `tenant_id=10`, and run
-                EXPLAIN for the same QueryExpression.
+                EXPLAIN for the same QueryStatement.
         
                 Assertions: the query returns only target-tenant rows in the continuous
                 range; the plan includes target partitions and excludes the 2026 cold

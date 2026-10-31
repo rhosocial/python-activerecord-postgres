@@ -31,8 +31,13 @@ __all__ = [
 ]
 
 
-class PostgresColumnStorage(Enum):
+class PostgresColumnStorage(str, Enum):
     """PostgreSQL TOAST ``STORAGE`` strategies."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     PLAIN = "PLAIN"
     EXTERNAL = "EXTERNAL"

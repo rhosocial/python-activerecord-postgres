@@ -19,8 +19,8 @@ class PostgresAlterColumnModifierMixin:
 
     The qualifiers are vendor extensions (not in ISO/IEC 9075-2 §11.10);
     applications opt in by passing ``if_not_exists`` / ``if_exists`` on
-    the corresponding ``AddColumn`` / ``DropColumn`` /
-    ``DropTableConstraint`` actions. ``None`` (default) means "no
+    the corresponding ``AddColumnAction`` / ``DropColumnAction`` /
+    ``DropTableConstraintAction`` actions. ``None`` (default) means "no
     qualifier", matching the SQL standard form.
     """
 
@@ -64,10 +64,10 @@ class PostgresAlterColumnModifierMixin:
         ``SET DATA TYPE``). PostgreSQL additionally supports an optional
         ``USING (conversion_expression)`` on ``SET DATA TYPE`` — an
         extension the core dialect does not emit. This override injects it
-        from the PostgreSQL ``PostgresAlterColumn`` typed ``using`` field.
+        from the PostgreSQL ``PostgresAlterColumnAction`` typed ``using`` field.
 
         Args:
-            action: An ``AlterColumn`` action (core ``ddl_alter`` module).
+            action: An ``AlterColumnAction`` action (core ``ddl_alter`` module).
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -123,7 +123,9 @@ class PostgresAlterColumnModifierMixin:
                     f"{self.format_identifier(name, expr.name_need_quote)}"
                 )
             else:
-                col_sql = f"{self.format_identifier(table, expr.table_need_quote)}.{self.format_identifier(name, expr.name_need_quote)}"
+                table_sql = self.format_identifier(table, expr.table_need_quote)
+                name_sql = self.format_identifier(name, expr.name_need_quote)
+                col_sql = f"{table_sql}.{name_sql}"
         else:
             col_sql = self.format_identifier(name, expr.name_need_quote)
 

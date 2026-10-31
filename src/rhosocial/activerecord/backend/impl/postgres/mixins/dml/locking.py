@@ -16,19 +16,19 @@ class PostgresLockingMixin:
 
     def supports_for_no_key_update(self) -> bool:
         """FOR NO KEY UPDATE is native feature, PG 9.0+."""
-        return self.version >= (9, 0, 0)
+        return self.version_at_least((9, 0, 0))
 
     def supports_for_share(self) -> bool:
         """FOR SHARE is native feature, PG 9.0+."""
-        return self.version >= (9, 0, 0)
+        return self.version_at_least((9, 0, 0))
 
     def supports_for_key_share(self) -> bool:
         """FOR KEY SHARE is native feature, PG 9.3+."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_for_update_skip_locked(self) -> bool:
         """FOR UPDATE SKIP LOCKED is native feature, PG 9.5+."""
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def format_for_update_clause(self, clause) -> Tuple[str, tuple]:
         """Format PostgreSQL-specific FOR UPDATE clause.
@@ -70,8 +70,11 @@ class PostgresLockingMixin:
                 self.name, f"{strength.value} (unsupported lock strength)"
             )
 
-        # Use the strength value directly (e.g., "FOR UPDATE", "FOR SHARE")
-        sql_parts = [strength.value]
+        # The strength's *word* travels in the artifact; the clause it writes
+        # is a spelling, and ``phrase`` is where core keeps it (``FOR UPDATE``
+        # &c.). Interpolating the word instead rendered a bare ``update``,
+        # which the server rejects (#14 C).
+        sql_parts = [strength.phrase]
 
         # Handle OF columns if specified
         if clause.of_columns:
@@ -120,9 +123,9 @@ class PostgresLockingMixin:
         if strength == LockStrength.UPDATE:
             return True  # All PostgreSQL versions support FOR UPDATE
         elif strength == LockStrength.NO_KEY_UPDATE:
-            return self.version >= (9, 0, 0)
+            return self.version_at_least((9, 0, 0))
         elif strength == LockStrength.SHARE:
-            return self.version >= (9, 0, 0)
+            return self.version_at_least((9, 0, 0))
         elif strength == LockStrength.KEY_SHARE:
-            return self.version >= (9, 3, 0)
+            return self.version_at_least((9, 3, 0))
         return False

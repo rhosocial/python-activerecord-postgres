@@ -7,7 +7,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     LimitOffsetClause,
     OrderByClause,
-    OrderByExpression,
+    OrderByItem,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
@@ -29,6 +29,6 @@ def test_nulls_first_last_supported():
     assert dialect.supports_nulls_first_last() is True
     sql, _ = OrderByClause(
         dialect,
-        expressions=[OrderByExpression(dialect, Column(dialect, "name"), nulls_last=True)],
+        expressions=[OrderByItem(dialect, Column(dialect, "name"), nulls="last")],
     ).to_sql()
     assert "NULLS LAST" in sql

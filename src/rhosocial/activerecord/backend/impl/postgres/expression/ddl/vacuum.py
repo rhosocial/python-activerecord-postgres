@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresVacuumExpression", "PostgresAnalyzeExpression"]
+__all__ = ["PostgresVacuumStatement", "PostgresAnalyzeStatement"]
 
 
-class PostgresVacuumExpression(BaseExpression):
+class PostgresVacuumStatement(BaseExpression):
     """PostgreSQL VACUUM statement expression.
 
     Reclaims storage space and updates statistics for a database.
@@ -48,7 +48,7 @@ class PostgresVacuumExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> vacuum = PostgresVacuumExpression(
+        >>> vacuum = PostgresVacuumStatement(
         ...     dialect=dialect,
         ...     table_name="users",
         ...     analyze=True,
@@ -59,7 +59,7 @@ class PostgresVacuumExpression(BaseExpression):
         "VACUUM (ANALYZE, VERBOSE) users"
 
         >>> # Full vacuum with parallel workers (PG 13+)
-        >>> vacuum = PostgresVacuumExpression(
+        >>> vacuum = PostgresVacuumStatement(
         ...     dialect=dialect,
         ...     table_name="orders",
         ...     full=True,
@@ -104,7 +104,7 @@ class PostgresVacuumExpression(BaseExpression):
         return "format_vacuum_statement"
 
 
-class PostgresAnalyzeExpression(BaseExpression):
+class PostgresAnalyzeStatement(BaseExpression):
     """PostgreSQL ANALYZE statement expression.
 
     Collects statistics about the contents of tables in the database.
@@ -120,7 +120,7 @@ class PostgresAnalyzeExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> analyze = PostgresAnalyzeExpression(
+        >>> analyze = PostgresAnalyzeStatement(
         ...     dialect=dialect,
         ...     table_name="users",
         ...     verbose=True,
@@ -130,7 +130,7 @@ class PostgresAnalyzeExpression(BaseExpression):
         "ANALYZE VERBOSE users"
 
         >>> # Analyze specific columns (PG 16+)
-        >>> analyze = PostgresAnalyzeExpression(
+        >>> analyze = PostgresAnalyzeStatement(
         ...     dialect=dialect,
         ...     table_name="orders",
         ...     columns=["status", "created_at"],

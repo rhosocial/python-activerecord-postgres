@@ -17,8 +17,8 @@ from rhosocial.activerecord.backend.expression.objects import (
     Table,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
-    CreateSchemaExpression,
-    DropSchemaExpression,
+    CreateSchemaStatement,
+    DropSchemaStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
@@ -103,29 +103,29 @@ class TestSchemaDDLFormatting:
         return Schema(self._dialect(), "app")
 
     def test_create_schema(self):
-        sql, params = CreateSchemaExpression(self._dialect(), self._schema()).to_sql()
+        sql, params = CreateSchemaStatement(self._dialect(), self._schema()).to_sql()
         assert sql == 'CREATE SCHEMA "app"'
         assert params == ()
 
     def test_create_schema_if_not_exists(self):
-        sql, _ = CreateSchemaExpression(
+        sql, _ = CreateSchemaStatement(
             self._dialect(), self._schema(), if_not_exists=True
         ).to_sql()
         assert sql == 'CREATE SCHEMA IF NOT EXISTS "app"'
 
     def test_create_schema_authorization(self):
-        sql, _ = CreateSchemaExpression(
+        sql, _ = CreateSchemaStatement(
             self._dialect(), self._schema(), authorization="app_user"
         ).to_sql()
         assert sql == 'CREATE SCHEMA "app" AUTHORIZATION "app_user"'
 
     def test_drop_schema(self):
-        sql, params = DropSchemaExpression(self._dialect(), self._schema()).to_sql()
+        sql, params = DropSchemaStatement(self._dialect(), self._schema()).to_sql()
         assert sql == 'DROP SCHEMA "app"'
         assert params == ()
 
     def test_drop_schema_if_exists_cascade(self):
-        sql, _ = DropSchemaExpression(
+        sql, _ = DropSchemaStatement(
             self._dialect(), self._schema(), if_exists=True, cascade=True
         ).to_sql()
         assert sql == 'DROP SCHEMA IF EXISTS "app" CASCADE'

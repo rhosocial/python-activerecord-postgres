@@ -9,10 +9,10 @@ class PostgresGroupingMixin:
     """
 
     def supports_rollup(self) -> bool:
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_cube(self) -> bool:
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))
 
     def supports_grouping_sets(self) -> bool:
-        return self.version >= (9, 5, 0)
+        return self.version_at_least((9, 5, 0))

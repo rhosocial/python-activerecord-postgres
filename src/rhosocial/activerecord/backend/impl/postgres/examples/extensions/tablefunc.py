@@ -4,7 +4,7 @@ tablefunc extension - pivot tables, tree traversal, and random data.
 
 This example demonstrates:
 1. Check if tablefunc extension is available
-2. Create extension using PostgresCreateExtensionExpression
+2. Create extension using PostgresCreateExtensionStatement
 3. Create table with sales data and hierarchical tree data
 4. Use normal_rand() to generate normally distributed random values
 5. Use crosstab() to produce pivot table displays
@@ -32,11 +32,11 @@ backend.connect()
 backend.introspect_and_adapt()
 dialect = backend.dialect
 
-# Clean up using DropTableExpression
-from rhosocial.activerecord.backend.expression import DropTableExpression
+# Clean up using DropTableStatement
+from rhosocial.activerecord.backend.expression import DropTableStatement
 
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
@@ -44,15 +44,15 @@ for table_name in ["monthly_sales", "org_tree"]:
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    InsertExpression,
-    QueryExpression,
+    InsertStatement,
+    QueryStatement,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -72,7 +72,7 @@ print(f"Extension: tablefunc available = {available}, installed = {installed}")
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="tablefunc",
     )
@@ -95,13 +95,13 @@ if installed:
         ColumnDefinition(
             name="id",
             data_type="SERIAL",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
         ),
         ColumnDefinition(name="month", data_type="TEXT"),
         ColumnDefinition(name="category", data_type="TEXT"),
         ColumnDefinition(name="amount", data_type="INT"),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'monthly_sales'),
         columns=columns,
@@ -112,7 +112,7 @@ if installed:
     backend.execute(sql, params)
 
     # Insert sales data
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'monthly_sales'),
         columns=["month", "category", "amount"],
@@ -140,12 +140,12 @@ if installed:
         ColumnDefinition(
             name="id",
             data_type="SERIAL",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
         ),
         ColumnDefinition(name="name", data_type="TEXT"),
         ColumnDefinition(name="parent_id", data_type="INT"),
     ]
-    create_tree = CreateTableExpression(
+    create_tree = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'org_tree'),
         columns=tree_columns,
@@ -156,7 +156,7 @@ if installed:
     backend.execute(sql, params)
 
     # Insert hierarchical data (CEO -> VP Engineering, VP Sales -> Engineers)
-    insert_tree = InsertExpression(
+    insert_tree = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'org_tree'),
         columns=["name", "parent_id"],
@@ -181,7 +181,7 @@ if installed:
     # normal_rand(num_values, mean, stddev) returns a set of random values
     # following a normal (Gaussian) distribution
     rand_func = normal_rand(dialect, 5, 100.0, 15.0)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[rand_func.as_("random_value")],
     )
@@ -202,7 +202,7 @@ if installed:
         dialect,
         "SELECT month, category, amount FROM monthly_sales ORDER BY 1",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[crosstab_func.as_("pivot_row")],
     )
@@ -220,7 +220,7 @@ if installed:
         "SELECT month, category, amount FROM monthly_sales ORDER BY 1",
         "SELECT DISTINCT category FROM monthly_sales ORDER BY 1",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[crosstab_func2.as_("pivot_row")],
     )
@@ -242,7 +242,7 @@ if installed:
         "1",
         max_depth=3,
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[connectby_func.as_("tree_row")],
     )
@@ -264,7 +264,7 @@ if installed:
         max_depth=3,
         branch_delim="~",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[connectby_func2.as_("tree_row")],
     )
@@ -282,7 +282,7 @@ else:
 # SECTION: Teardown (necessary for execution, reference only)
 # ============================================================
 for table_name in ["monthly_sales", "org_tree"]:
-    drop_expr = DropTableExpression(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, table_name), if_exists=True)
     sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 backend.disconnect()

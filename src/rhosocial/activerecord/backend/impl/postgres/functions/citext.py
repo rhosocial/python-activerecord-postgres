@@ -62,7 +62,7 @@ def citext_literal(
         # Produces: 'Hello World'::citext
     """
     converted = value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)
-    return converted.cast(PostgresCitextType(dialect))
+    return core.CastExpression(dialect, converted, PostgresCitextType(dialect))
 
 
 __all__ = [

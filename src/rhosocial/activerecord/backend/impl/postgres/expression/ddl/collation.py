@@ -19,10 +19,10 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-__all__ = ["PostgresCreateCollationExpression", "PostgresDropCollationExpression"]
+__all__ = ["PostgresCreateCollationStatement", "PostgresDropCollationStatement"]
 
 
-class PostgresCreateCollationExpression(BaseExpression):
+class PostgresCreateCollationStatement(BaseExpression):
     """PostgreSQL CREATE COLLATION statement expression.
 
     Defines a new collation object, typically from an OS locale.
@@ -64,10 +64,10 @@ class PostgresCreateCollationExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_create_collation_ddl_statement"
+        return "format_create_collation_statement"
 
 
-class PostgresDropCollationExpression(BaseExpression):
+class PostgresDropCollationStatement(BaseExpression):
     """PostgreSQL DROP COLLATION statement expression.
 
     Attributes:
@@ -99,4 +99,4 @@ class PostgresDropCollationExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_drop_collation_ddl_statement"
+        return "format_drop_collation_statement"

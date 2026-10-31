@@ -4,13 +4,13 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.datetime import DateTimeDiffExpression
+    from rhosocial.activerecord.backend.expression.datetime import DatetimeDiffExpression
 
 
 class PostgresDateTimeMixin:
     """PostgreSQL datetime diff expression formatting."""
 
-    def format_datetime_diff_expression(self, expr: "DateTimeDiffExpression") -> Tuple[str, tuple]:
+    def format_datetime_diff_expression(self, expr: "DatetimeDiffExpression") -> Tuple[str, tuple]:
         start_sql, start_params = expr.start.to_sql()
         end_sql, end_params = expr.end.to_sql()
         seconds_sql = f"EXTRACT(EPOCH FROM ({end_sql} - {start_sql}))"

@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.statements import (
-        CreateTableLikeExpression,
+        CreateTableLikeStatement,
     )
 
 
@@ -44,6 +44,16 @@ class PostgresTableSupport(
     PostgreSQL official distribution.
     """
 
+    def supports_create_table_as_bind_parameters(self) -> bool:
+        """Whether this statement's body may carry bind parameters.
+
+        Defaults to ``False``: a DDL statement carries no bind parameters
+        unless the dialect says it can, so a dialect that does not answer
+        refuses rather than emitting a statement the engine may reject. A
+        dialect whose engine accepts them returns ``True``.
+        """
+        ...  # pragma: no cover
+
     def supports_table_inheritance(self) -> bool:
         """Whether table inheritance (INHERITS) is supported.
 
@@ -58,7 +68,7 @@ class PostgresTableSupport(
 
         UNLOGGED tables skip WAL writes (9.6+), trading crash safety for
         speed; callers opt in via ``PostgresCreateTableOptions(unlogged=True)``
-        on ``CreateTableExpression``.
+        on ``CreateTableStatement``.
         """
         ...
 
@@ -70,7 +80,7 @@ class PostgresTableSupport(
         """
         ...
 
-    def format_create_table_like_statement(self, expr: "CreateTableLikeExpression") -> tuple:
+    def format_create_table_like_statement(self, expr: "CreateTableLikeStatement") -> tuple:
         """Format CREATE TABLE (LIKE ...) statement."""
 
     def format_column_definition(self, col_def) -> tuple:

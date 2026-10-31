@@ -36,10 +36,10 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -54,7 +54,7 @@ print(f"Extension check: pg_walinspect available = {available}, installed = {ins
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pg_walinspect",
     )
@@ -71,7 +71,7 @@ if installed:
     opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
     # Example 1: Get current WAL LSN position
-    current_lsn_query = QueryExpression(
+    current_lsn_query = QueryStatement(
         dialect=dialect,
         select=[dialect.parse_expression("pg_current_wal_lsn()").as_("current_lsn")],
     )
@@ -93,7 +93,7 @@ if installed:
             current_lsn,
             current_lsn,
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[wal_func.as_("wal_records")],
         )

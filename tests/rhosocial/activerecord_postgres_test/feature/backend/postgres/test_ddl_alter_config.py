@@ -8,37 +8,37 @@ including materialized view refresh, comment, and partition expressions.
 import pytest
 
 from rhosocial.activerecord.backend.expression import (
-    BinaryArithmeticExpression,
+    ArithmeticOperation,
     Column,
     ComparisonPredicate,
     Literal,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    AddColumn,
+    AddColumnAction,
     ColumnDefinition,
-    DropColumn,
-    DropTableConstraint,
+    DropColumnAction,
+    DropTableConstraintAction,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresVacuumExpression,  # noqa: F401
-    PostgresAnalyzeExpression,  # noqa: F401
+    PostgresVacuumStatement,  # noqa: F401
+    PostgresAnalyzeStatement,  # noqa: F401
     LoggingMode,
     RlsConfigurationMode,
-    PostgresAlterTableRlsExpression,
-    PostgresForceRlsExpression,
-    PostgresAlterTableSettingsExpression,
-    PostgresClusterExpression,
-    PostgresAlterColumn,
+    PostgresAlterTableRlsStatement,
+    PostgresForceRlsStatement,
+    PostgresAlterTableSettingsStatement,
+    PostgresClusterStatement,
+    PostgresAlterColumnAction,
 )
 from rhosocial.activerecord.backend.expression.types import (
     TextType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint, ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
@@ -53,45 +53,45 @@ class TestPostgresRlsConfigExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_enable(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY'
 
     def test_disable(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.DISABLE
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" DISABLE ROW LEVEL SECURITY'
 
     def test_enable_always(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE, always=True
         ).to_sql()
         assert sql == 'ALTER TABLE "orders" ENABLE ALWAYS ROW LEVEL SECURITY'
 
     def test_schema_qualify(self, dialect):
-        sql, _ = PostgresAlterTableRlsExpression(
+        sql, _ = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.ENABLE, schema="app"
         ).to_sql()
         assert sql == 'ALTER TABLE "app"."orders" ENABLE ROW LEVEL SECURITY'
 
     def test_force(self, dialect):
-        sql, _ = PostgresForceRlsExpression(dialect, "orders").to_sql()
+        sql, _ = PostgresForceRlsStatement(dialect, "orders").to_sql()
         assert sql == 'ALTER TABLE "orders" FORCE ROW LEVEL SECURITY'
 
     def test_no_force(self, dialect):
-        sql, _ = PostgresForceRlsExpression(dialect, "orders", force=False).to_sql()
+        sql, _ = PostgresForceRlsStatement(dialect, "orders", force=False).to_sql()
         assert sql == 'ALTER TABLE "orders" NO FORCE ROW LEVEL SECURITY'
 
     def test_version_gate_94(self):
         d = PostgresDialect(version=(9, 4, 0))
-        expr = PostgresAlterTableRlsExpression(d, "orders", RlsConfigurationMode.ENABLE)
+        expr = PostgresAlterTableRlsStatement(d, "orders", RlsConfigurationMode.ENABLE)
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 
     def test_disable_with_always_raises(self, dialect):
-        expr = PostgresAlterTableRlsExpression(
+        expr = PostgresAlterTableRlsStatement(
             dialect, "orders", RlsConfigurationMode.DISABLE, always=True
         )
         with pytest.raises(ValueError, match="ALWAYS"):
@@ -100,7 +100,7 @@ class TestPostgresRlsConfigExpression:
     def test_force_version_gate_94(self):
         d = PostgresDialect(version=(9, 4, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresForceRlsExpression(d, "orders").to_sql()
+            PostgresForceRlsStatement(d, "orders").to_sql()
 
 
 class TestPostgresAlterTableSettingsExpression:
@@ -111,36 +111,36 @@ class TestPostgresAlterTableSettingsExpression:
         return PostgresDialect(version=(15, 0, 0))
 
     def test_unlogged(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", mode=LoggingMode.UNLOGGED
         ).to_sql()
         assert sql == 'ALTER TABLE "t" SET UNLOGGED'
 
     def test_logged_schema(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", schema="s", mode=LoggingMode.LOGGED
         ).to_sql()
         assert sql == 'ALTER TABLE "s"."t" SET LOGGED'
 
     def test_access_method(self, dialect):
-        sql, _ = PostgresAlterTableSettingsExpression(
+        sql, _ = PostgresAlterTableSettingsStatement(
             dialect, "t", access_method="heap"
         ).to_sql()
         assert sql == 'ALTER TABLE "t" SET ACCESS METHOD "heap"'
 
     def test_access_method_requires_15(self):
         d = PostgresDialect(version=(14, 0, 0))
-        expr = PostgresAlterTableSettingsExpression(d, "t", access_method="heap")
+        expr = PostgresAlterTableSettingsStatement(d, "t", access_method="heap")
         with pytest.raises(UnsupportedFeatureError):
             expr.to_sql()
 
     def test_no_clause_raises(self, dialect):
-        expr = PostgresAlterTableSettingsExpression(dialect, "t")
+        expr = PostgresAlterTableSettingsStatement(dialect, "t")
         with pytest.raises(ValueError):
             expr.to_sql()
 
     def test_both_clauses_raises(self, dialect):
-        expr = PostgresAlterTableSettingsExpression(
+        expr = PostgresAlterTableSettingsStatement(
             dialect, "t", mode=LoggingMode.UNLOGGED, access_method="heap"
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
@@ -148,7 +148,7 @@ class TestPostgresAlterTableSettingsExpression:
 
     def test_logging_version_gate_96(self):
         d = PostgresDialect(version=(9, 5, 0))
-        expr = PostgresAlterTableSettingsExpression(
+        expr = PostgresAlterTableSettingsStatement(
             d, "t", mode=LoggingMode.LOGGED
         )
         with pytest.raises(UnsupportedFeatureError):
@@ -163,35 +163,35 @@ class TestPostgresClusterExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_full(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", schema="public",
             using_index="orders_pkey", verbose=True,
         ).to_sql()
         assert sql == 'CLUSTER VERBOSE "public"."orders" USING "orders_pkey"'
 
     def test_bare(self, dialect):
-        sql, _ = PostgresClusterExpression(dialect, verbose=True).to_sql()
+        sql, _ = PostgresClusterStatement(dialect, verbose=True).to_sql()
         assert sql == "CLUSTER VERBOSE"
 
     def test_version_gate_95(self):
         d = PostgresDialect(version=(9, 5, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresClusterExpression(d, "t").to_sql()
+            PostgresClusterStatement(d, "t").to_sql()
 
     def test_without_verbose(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", using_index="orders_pkey"
         ).to_sql()
         assert sql == 'CLUSTER "orders" USING "orders_pkey"'
 
     def test_without_index(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", verbose=True
         ).to_sql()
         assert sql == 'CLUSTER VERBOSE "orders"'
 
     def test_verbose_false_schema(self, dialect):
-        sql, _ = PostgresClusterExpression(
+        sql, _ = PostgresClusterStatement(
             dialect, "orders", schema="app", verbose=False
         ).to_sql()
         assert sql == 'CLUSTER "app"."orders"'
@@ -205,12 +205,12 @@ class TestPostgresAlterColumnUsingExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_using_clause(self, dialect):
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=BinaryArithmeticExpression(dialect, "+", Column(dialect, "price"), Literal(dialect, 1)),
+            using=ArithmeticOperation(dialect, "add", Column(dialect, "price"), Literal(dialect, 1)),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -218,7 +218,7 @@ class TestPostgresAlterColumnUsingExpression:
         assert serialized == (1,)
 
     def test_using_clause_with_cascade(self, dialect):
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -233,7 +233,7 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_using_rejected_for_non_set_data_type(self, dialect):
         """USING is only valid on SET DATA TYPE."""
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DEFAULT",
@@ -245,7 +245,7 @@ class TestPostgresAlterColumnUsingExpression:
 
     def test_without_using_unaffected(self, dialect):
         """No USING -> output matches the standard form."""
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
@@ -271,41 +271,41 @@ class TestPostgresAlterColumnModifierMixin:
         column = ColumnDefinition(
             dialect,
             "email", TextType(dialect),
-            constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)],
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
         )
-        add = AddColumn(dialect, column)
+        add = AddColumnAction(dialect, column)
         sql, params = add.to_sql()
         assert sql == 'ADD COLUMN "email" TEXT NOT NULL'
         assert params == ()
 
     def test_add_column_if_not_exists(self, dialect):
         column = ColumnDefinition(dialect, "email", TextType(dialect))
-        add = AddColumn(dialect, column, if_not_exists=True)
+        add = AddColumnAction(dialect, column, if_not_exists=True)
         sql, _ = add.to_sql()
         assert sql == 'ADD COLUMN IF NOT EXISTS "email" TEXT'
 
     def test_drop_column(self, dialect):
-        drop = DropColumn(dialect, "email")
+        drop = DropColumnAction(dialect, "email")
         sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN "email"'
 
     def test_drop_column_if_exists(self, dialect):
-        drop = DropColumn(dialect, "email", if_exists=True)
+        drop = DropColumnAction(dialect, "email", if_exists=True)
         sql, _ = drop.to_sql()
         assert sql == 'DROP COLUMN IF EXISTS "email"'
 
     def test_drop_constraint(self, dialect):
-        drop = DropTableConstraint(dialect, "user_email_key")
+        drop = DropTableConstraintAction(dialect, "user_email_key")
         sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT "user_email_key"'
 
     def test_drop_constraint_if_exists(self, dialect):
-        drop = DropTableConstraint(dialect, "user_email_key", if_exists=True)
+        drop = DropTableConstraintAction(dialect, "user_email_key", if_exists=True)
         sql, _ = drop.to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "user_email_key"'
 
     def test_drop_constraint_if_exists_cascade(self, dialect):
-        drop = DropTableConstraint(
+        drop = DropTableConstraintAction(
             dialect, "user_email_key", if_exists=True, cascade=True
         )
         sql, _ = drop.to_sql()
@@ -323,6 +323,116 @@ class TestPostgresConstraintCapabilities:
         assert dialect.supports_constraint_novalidate() is True
         assert dialect.supports_exclude_constraint() is True
         assert dialect.supports_drop_constraint_if_exists() is True
+
+
+class TestPostgresConstraintDeferral:
+    """``DEFERRABLE`` / ``INITIALLY`` is not an all-kinds grant.
+
+    The ``column_constraint`` / ``table_constraint`` grammar figures draw
+    ``[DEFERRABLE ...]`` as a tail property shared by every branch; the
+    server contradicts that for CHECK and NOT NULL.  Values below are the
+    measured accept surface of PostgreSQL 19beta4
+    (``192.168.1.3:16690/test_db``), per "backend facts win over
+    documentation".  SQLSTATEs are recorded on each switch's docstring.
+    """
+
+    def test_deferrable_is_not_all_kinds(self):
+        dialect = PostgresDialect((19, 0, 0))
+        # PostgreSQL does support DEFERRABLE -- but not for every kind.
+        assert dialect.supports_deferrable_constraint() is True
+        assert dialect.supports_deferrable_primary_key_constraint() is True
+        assert dialect.supports_deferrable_unique_constraint() is True
+        assert dialect.supports_deferrable_foreign_key_constraint() is True
+        assert dialect.supports_deferrable_exclude_constraint() is True
+        # The two kinds the grammar figure wrongly implies:
+        # CHECK at both levels, NOT NULL at column level.
+        assert dialect.supports_deferrable_check_constraint() is False
+        assert dialect.supports_deferrable_not_null_constraint() is False
+
+    def test_enable_disable_constraint_is_not_postgresql_syntax(self):
+        dialect = PostgresDialect((19, 0, 0))
+        assert dialect.supports_enable_disable_constraint() is False
+
+    def test_validate_constraint_is_accepted_including_not_valid(self):
+        dialect = PostgresDialect((14, 0, 0))
+        assert dialect.supports_validate_constraint() is True
+
+    def test_enforced_is_check_and_fk_only(self):
+        """The probe is a version gate; the kinds are the formatter's narrowing.
+
+        Measured on 19beta4: CHECK and FOREIGN KEY render ``[NOT] ENFORCED``;
+        PRIMARY KEY and UNIQUE come back with ``0A000: PRIMARY KEY/UNIQUE
+        constraints cannot be marked NOT ENFORCED``.  The probe answers only
+        "is the clause in the grammar", so the per-kind answer lives where the
+        clause is rendered -- ``format_table_constraint`` ->
+        ``_require_constraint_enforced``.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            Column,
+            ComparisonPredicate,
+            Literal,
+            TableCheckConstraint,
+            TableConstraint,
+            TableForeignKeyConstraint,
+            TablePrimaryKeyConstraint,
+            TableUniqueConstraint,
+        )
+        from rhosocial.activerecord.backend.expression.objects import Table
+
+        for version, expected in (((17, 0, 0), False), ((18, 0, 0), True), ((19, 0, 0), True)):
+            assert PostgresDialect(version).supports_constraint_enforced() is expected
+
+        dialect = PostgresDialect((19, 0, 0))
+        condition = ComparisonPredicate(
+            dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
+        )
+        check = TableConstraint(dialect, branch=TableCheckConstraint(dialect, condition), not_enforced=True)
+        fk = TableConstraint(
+            dialect,
+            branch=TableForeignKeyConstraint(dialect, ["parent_id"], (Table(dialect, "people"), ["id"])),
+            not_enforced=True,
+        )
+        assert "NOT ENFORCED" in check.to_sql()[0]
+        assert "NOT ENFORCED" in fk.to_sql()[0]
+        for branch in (
+            TablePrimaryKeyConstraint(dialect, ["id"]),
+            TableUniqueConstraint(dialect, ["id"]),
+        ):
+            with pytest.raises(UnsupportedFeatureError, match="NOT ENFORCED"):
+                TableConstraint(dialect, branch=branch, not_enforced=True).to_sql()
+
+    def test_alter_constraint_enforced_splits_by_kind_and_version(self):
+        """The ALTER path splits where the ADD path does not.
+
+        Measured: ``ADD CONSTRAINT ... NOT ENFORCED`` works for a CHECK from
+        18 on, while ``ALTER CONSTRAINT ... NOT ENFORCED`` on the same CHECK
+        is refused with ``42809`` on 180006 and accepted on 190000.  So
+        FOREIGN KEY is PG18 and CHECK is PG19 on this statement only.
+        """
+        from rhosocial.activerecord.backend.expression.statements import (
+            TableCheckConstraint,
+            TableForeignKeyConstraint,
+        )
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+            PostgresAlterConstraintAction,
+        )
+
+        for version, fk_ok, check_ok in (
+            ((17, 0, 0), False, False),
+            ((18, 0, 0), True, False),
+            ((19, 0, 0), True, True),
+        ):
+            dialect = PostgresDialect(version)
+            assert dialect.supports_alter_constraint_enforced() is (version >= (18, 0, 0))
+            for branch, expected in ((TableForeignKeyConstraint, fk_ok), (TableCheckConstraint, check_ok)):
+                action = PostgresAlterConstraintAction(
+                    dialect, "c", not_enforced=True, constraint_kind=branch
+                )
+                if expected:
+                    assert action.to_sql()[0] == 'ALTER CONSTRAINT "c" NOT ENFORCED'
+                else:
+                    with pytest.raises(UnsupportedFeatureError):
+                        action.to_sql()
 
 
 class TestPostgresTypeDDL:
@@ -370,41 +480,43 @@ class TestPostgresTypeDDL:
 
 class TestPostgresConstraintEnforcement:
     def test_capability_versions(self):
-        from rhosocial.activerecord.backend.expression import TableConstraintType
+        """The two enforcement probes are grammar gates with no kind in them.
 
+        Measured: ``NOT ENFORCED`` enters the grammar in 18 on both statements,
+        so ``supports_alter_constraint_enforced()`` is ``True`` on 18 as well
+        -- the kind split on that statement (FOREIGN KEY 18, CHECK 19) belongs
+        to ``_require_enforceable_constraint``, not to the probe.
+        """
         assert PostgresDialect((17, 0, 0)).supports_constraint_enforced() is False
         assert PostgresDialect((18, 0, 0)).supports_constraint_enforced() is True
-        pg18 = PostgresDialect((18, 0, 0))
-        assert pg18.supports_alter_constraint_enforced() is False
-        assert pg18.supports_alter_constraint_enforced(TableConstraintType.FOREIGN_KEY) is True
-        assert pg18.supports_alter_constraint_enforced(TableConstraintType.CHECK) is False
-        pg19 = PostgresDialect((19, 0, 0))
-        assert pg19.supports_alter_constraint_enforced(TableConstraintType.FOREIGN_KEY) is True
-        assert pg19.supports_alter_constraint_enforced(TableConstraintType.CHECK) is True
+        assert PostgresDialect((17, 0, 0)).supports_alter_constraint_enforced() is False
+        assert PostgresDialect((18, 0, 0)).supports_alter_constraint_enforced() is True
+        assert PostgresDialect((19, 0, 0)).supports_alter_constraint_enforced() is True
         assert PostgresDialect((14, 0, 0)).supports_validate_constraint() is True
 
     def test_create_and_add_check_fk_enforcement(self):
         from rhosocial.activerecord.backend.expression import (
-            AddTableConstraint,
+            AddTableConstraintAction,
             Column,
+            ColumnCheckConstraint,
             ColumnConstraint,
-            ColumnConstraintType,
             ColumnDefinition,
             ComparisonPredicate,
             ForeignKeyConstraint,
             Literal,
+            TableCheckConstraint,
             TableConstraint,
-            TableConstraintType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
 
         dialect = PostgresDialect((18, 0, 0))
-        condition = ComparisonPredicate(dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True))
+        condition = ComparisonPredicate(
+            dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
+        )
         check = TableConstraint(
             dialect,
-            TableConstraintType.CHECK,
-            name="age_check",
-            check_condition=condition,
+            branch=TableCheckConstraint(dialect, condition),
+            name='age_check',
             not_enforced=True,
         )
         fk = ForeignKeyConstraint(
@@ -414,31 +526,30 @@ class TestPostgresConstraintEnforcement:
             foreign_key_columns=["id"],
             enforced=True,
         )
-        column_check = ColumnConstraint(
-            dialect,
-            ColumnConstraintType.CHECK,
-            check_condition=condition,
-            not_enforced=True,
-        )
+        column_check = ColumnConstraint(dialect, branch=ColumnCheckConstraint(dialect, condition), not_enforced=True)
 
         assert check.to_sql()[0] == 'CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
         assert fk.to_sql()[0] == (
             'FOREIGN KEY ("parent_id") REFERENCES "people"("id") ENFORCED'
         )
-        assert ColumnDefinition(
-            dialect, "age", IntegerType(dialect), [column_check]
-        ).to_sql()[0] == '"age" INTEGER CHECK ("age" > 0) NOT ENFORCED'
-        assert AddTableConstraint(dialect, check).to_sql()[0] == (
+        # Measured: the column-level clause is a parse error for every kind on
+        # every version -- ``42601: misplaced NOT ENFORCED clause`` -- so the
+        # column form refuses rather than rendering.
+        with pytest.raises(UnsupportedFeatureError, match="CHECK NOT ENFORCED on a column constraint"):
+            ColumnDefinition(dialect, "age", IntegerType(dialect), [column_check]).to_sql()
+        assert AddTableConstraintAction(dialect, check).to_sql()[0] == (
             'ADD CONSTRAINT "age_check" CHECK ("age" > 0) NOT ENFORCED'
         )
 
     def test_not_valid_is_limited_to_check_and_fk(self):
-        from rhosocial.activerecord.backend.expression import AddTableConstraint
+        from rhosocial.activerecord.backend.expression import AddTableConstraintAction
         from rhosocial.activerecord.backend.expression.statements import (
             ConstraintValidation,
             ForeignKeyConstraint,
+            TableCheckConstraint,
             TableConstraint,
-            TableConstraintType,
+            TablePrimaryKeyConstraint,
+            TableUniqueConstraint,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
 
@@ -450,82 +561,105 @@ class TestPostgresConstraintEnforcement:
             foreign_key_columns=["id"],
             validation=ConstraintValidation.NOVALIDATE,
         )
-        assert AddTableConstraint(dialect, constraint).to_sql()[0].endswith("NOT VALID")
-        string_constraint = TableConstraint(
-            dialect,
-            " check ",
-            check_condition=ComparisonPredicate(
-                dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline_literals=True)
-            ),
-            validation=" not valid ",
-        )
-        assert AddTableConstraint(dialect, string_constraint).to_sql()[0].endswith("NOT VALID")
-        assert "NOT VALID" not in string_constraint.to_sql()[0]
-        for constraint_type in (TableConstraintType.PRIMARY_KEY, TableConstraintType.UNIQUE):
-            table_constraint = TableConstraint(
+        assert AddTableConstraintAction(dialect, constraint).to_sql()[0].endswith("NOT VALID")
+        # The kind is a branch class now, and ``validation`` is a
+        # ``ConstraintValidation`` member: a spelling is a type question and is
+        # answered with a TypeError, at construction rather than at render.
+        with pytest.raises(TypeError):
+            TableConstraint(
                 dialect,
-                constraint_type,
-                columns=["id"],
-                validation=ConstraintValidation.NOVALIDATE,
+                " check ",
+                check_condition=ComparisonPredicate(
+                    dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
+                ),
+                validation=" not valid ",
             )
+        with pytest.raises(TypeError):
+            AddTableConstraintAction(
+                dialect,
+                TableConstraint(
+                    dialect,
+                    branch=TableCheckConstraint(
+                        dialect,
+                        ComparisonPredicate(
+                            dialect,
+                            ">",
+                            Column(dialect, "age"),
+                            Literal(dialect, 0, inline=True),
+                        ),
+                    ),
+                    validation=" not valid ",
+                ),
+            ).to_sql()
+        for branch in (TablePrimaryKeyConstraint, TableUniqueConstraint):
             with pytest.raises(ValueError, match="NOT VALID"):
-                AddTableConstraint(dialect, table_constraint).to_sql()
+                AddTableConstraintAction(
+                    dialect,
+                    TableConstraint(
+                        dialect,
+                        branch=branch(dialect, ["id"]),
+                        validation=ConstraintValidation.NOVALIDATE,
+                    ),
+                ).to_sql()
         exclude = PostgresExcludeConstraint(
             dialect,
             elements=[("range", "&&")],
             validation=ConstraintValidation.NOVALIDATE,
         )
         with pytest.raises(ValueError, match="NOT VALID"):
-            AddTableConstraint(dialect, exclude).to_sql()
+            AddTableConstraintAction(dialect, exclude).to_sql()
 
     def test_alter_and_validate_actions(self):
-        from rhosocial.activerecord.backend.expression import (
-            ColumnConstraintType,
-            TableConstraintType,
+        from rhosocial.activerecord.backend.expression.statements import (
+            TableCheckConstraint,
+            TableForeignKeyConstraint,
+        )
+        from rhosocial.activerecord.backend.expression.statements import (
+            ValidateConstraintAction,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterConstraint,
-            PostgresValidateConstraint,
+            PostgresAlterConstraintAction,
         )
 
         pg18 = PostgresDialect((18, 0, 0))
-        fk_action = PostgresAlterConstraint(
+        fk_action = PostgresAlterConstraintAction(
             pg18,
             "parent_fk",
             not_enforced=True,
-            constraint_type=ColumnConstraintType.FOREIGN_KEY,
+            constraint_kind=TableForeignKeyConstraint,
         )
-        assert fk_action.constraint_type is TableConstraintType.FOREIGN_KEY
+        assert fk_action.constraint_branch is TableForeignKeyConstraint
         assert fk_action.to_sql()[0] == (
             'ALTER CONSTRAINT "parent_fk" NOT ENFORCED'
         )
+        # Measured: CHECK is PG19 on the ALTER path (180006 answers 42809).
         with pytest.raises(UnsupportedFeatureError):
-            PostgresAlterConstraint(
+            PostgresAlterConstraintAction(
                 pg18,
                 "age_check",
                 not_enforced=True,
-                constraint_type=TableConstraintType.CHECK,
+                constraint_kind=TableCheckConstraint,
             ).to_sql()
-        assert PostgresValidateConstraint(pg18, "age_check").to_sql()[0] == (
+        assert ValidateConstraintAction(pg18, "age_check").to_sql()[0] == (
             'VALIDATE CONSTRAINT "age_check"'
         )
 
         pg19 = PostgresDialect((19, 0, 0))
-        assert PostgresAlterConstraint(
+        assert PostgresAlterConstraintAction(
             pg19,
             "age_check",
             not_enforced=True,
-            constraint_type=TableConstraintType.CHECK,
+            constraint_kind=TableCheckConstraint,
         ).to_sql()[0] == 'ALTER CONSTRAINT "age_check" NOT ENFORCED'
         with pytest.raises(TypeError):
-            PostgresAlterConstraint(pg19, "age_check", not_enforced=True)
+            PostgresAlterConstraintAction(pg19, "age_check", not_enforced=True)
 
     def test_exclude_create_and_add(self):
         from rhosocial.activerecord.backend.expression import (
-            AddTableConstraint,
+            AddTableConstraintAction,
             Column,
             ColumnDefinition,
-            CreateTableExpression,
+            CreateTableStatement,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
@@ -538,7 +672,7 @@ class TestPostgresConstraintEnforcement:
             name="range_ex",
             elements=[("range", "&&")],
         )
-        create = CreateTableExpression(
+        create = CreateTableStatement(
             dialect,
             Table(dialect, 'ranges'),
             [ColumnDefinition(dialect, "range", IntegerType(dialect))],
@@ -548,23 +682,27 @@ class TestPostgresConstraintEnforcement:
             'CREATE TABLE "ranges" ("range" INTEGER, CONSTRAINT "range_ex" '
             'EXCLUDE USING gist ("range" WITH &&))'
         )
-        assert AddTableConstraint(dialect, exclude).to_sql()[0] == (
+        assert AddTableConstraintAction(dialect, exclude).to_sql()[0] == (
             'ADD CONSTRAINT "range_ex" EXCLUDE USING gist ("range" WITH &&)'
         )
 
         from rhosocial.activerecord.backend.expression.statements import (
             ConstraintValidation,
+            TableCheckConstraint,
             TableConstraint,
-            TableConstraintType,
         )
 
         not_valid_check = TableConstraint(
             dialect,
-            TableConstraintType.CHECK,
-            check_condition=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 0)),
+            branch=TableCheckConstraint(
+                dialect,
+                ComparisonPredicate(
+                    dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
+                ),
+            ),
             validation=ConstraintValidation.NOVALIDATE,
         )
-        invalid_create = CreateTableExpression(
+        invalid_create = CreateTableStatement(
             dialect,
             Table(dialect, 'invalid_checks'),
             [ColumnDefinition(dialect, "id", IntegerType(dialect))],
@@ -579,7 +717,7 @@ class TestPostgresConstraintEnforcement:
             ComparisonPredicate,
             FunctionCall,
             Literal,
-            RawSQLExpression,
+            RawSQL,
             RawSQLPredicate,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -595,7 +733,7 @@ class TestPostgresConstraintEnforcement:
                 )
             ],
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline_literals=True)
+                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline=True)
             ),
         )
 
@@ -618,12 +756,12 @@ class TestPostgresConstraintEnforcement:
         with pytest.raises(ValueError, match="unbalanced"):
             PostgresExcludeConstraint(
                 dialect,
-                elements=[(RawSQLExpression(dialect, "lower(name"), "=")],
+                elements=[(RawSQL(dialect, "lower(name"), "=")],
             ).to_sql()
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             PostgresExcludeConstraint(
                 dialect,
-                elements=[(RawSQLExpression(dialect, "lower(name)", ("x",)), "=")],
+                elements=[(RawSQL(dialect, "lower(name)", ("x",)), "=")],
             ).to_sql()
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             PostgresExcludeConstraint(

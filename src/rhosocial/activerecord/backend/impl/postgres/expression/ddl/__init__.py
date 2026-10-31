@@ -24,7 +24,7 @@ Directory structure:
 
 PostgreSQL index expressions
 ============================
-The generic ``CreateIndexExpression`` / ``DropIndexExpression`` (from
+The generic ``CreateIndexStatement`` / ``DropIndexStatement`` (from
 ``rhosocial.activerecord.backend.expression.statements.ddl_index``) carry all
 common parameters.
 
@@ -60,31 +60,30 @@ Example::
 
 from ..copy import (
     PostgresCopyFormat,
-    PostgresCopyFromExpression,
+    PostgresCopyFromStatement,
     PostgresCopyLogVerbosity,
     PostgresCopyOnError,
-    PostgresCopyToExpression,
+    PostgresCopyToStatement,
 )
-from .vacuum import PostgresVacuumExpression, PostgresAnalyzeExpression
+from .vacuum import PostgresVacuumStatement, PostgresAnalyzeStatement
 from .table_options import PostgresCreateTableOptions
 from .column import (
     PostgresColumnStorage,
     PostgresColumnDefinition,
     PostgresColumnOptions,
 )
-from .alter_column import PostgresAlterColumn
+from .alter_column import PostgresAlterColumnAction
 from .partition import (
-    PartitionValue,
-    PostgresPartitionClause,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresAttachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresPartitionValue,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresAttachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
 )
 from .index import (
-    PostgresAlterIndexExpression,
+    PostgresAlterIndexStatement,
     PostgresAlterIndexActionType,
-    PostgresReindexExpression,
+    PostgresReindexStatement,
 )
 from .index_definition import (
     PostgresCreateIndexExpression,
@@ -92,28 +91,19 @@ from .index_definition import (
     PostgresDropIndexExpression,
 )
 from .exclude_constraint import PostgresExcludeConstraint
-from .constraint import (
-    PostgresAlterConstraint,
-    PostgresValidateConstraint,
-    PostgresAlterConstraintAction,
-    PostgresValidateConstraintAction,
-    PostgresAlterConstraintExpression,
-    PostgresValidateConstraintExpression,
-    PostgresAlterTableConstraint,
-    PostgresValidateTableConstraint,
-)
+from .constraint import PostgresAlterConstraintAction
 from .statistics import (
-    PostgresCreateStatisticsExpression,
-    PostgresDropStatisticsExpression,
+    PostgresCreateStatisticsStatement,
+    PostgresDropStatisticsStatement,
 )
-from .comment import PostgresCommentExpression
+from .comment import PostgresCommentOnStatement
 from .mv import (
-    MaterializedViewAlterAction,
-    PostgresAlterMaterializedViewExpression,
+    PostgresMaterializedViewAlterAction,
+    PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -143,16 +133,13 @@ from .type import (
     PostgresSetTypePropertiesAction,
     PostgresSetTypeSchemaAction,
     PostgresShellTypeDefinition,
-    AlterEnumAddValueExpression,
-    CreateEnumTypeExpression,
-    DropEnumTypeExpression,
-    EnumTypeNameExpression,
-    EnumValuesExpression,
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
 )
-from .extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
+from .extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
 from .multirange import (
-    CreateMultirangeTypeExpression,
-    MultirangeAggFunctionExpression,
+    PostgresCreateMultirangeTypeExpression,
+    PostgresMultirangeAggFunctionExpression,
 )
 from .pg_partman import (
     PostgresPgPartmanCreateParentExpression,
@@ -164,21 +151,21 @@ from .policy import (
     AlterPolicyMode,
     PolicyCommand,
     PolicyType,
-    PostgresCreatePolicyExpression,
-    PostgresAlterPolicyExpression,
-    PostgresDropPolicyExpression,
+    PostgresCreatePolicyStatement,
+    PostgresAlterPolicyStatement,
+    PostgresDropPolicyStatement,
 )
 from .rls_config import (
     RlsConfigurationMode,
-    PostgresAlterTableRlsExpression,
-    PostgresForceRlsExpression,
+    PostgresAlterTableRlsStatement,
+    PostgresForceRlsStatement,
 )
 from .table_settings import (
     LoggingMode,
-    PostgresAlterTableSettingsExpression,
+    PostgresAlterTableSettingsStatement,
 )
-from .cluster import PostgresClusterExpression
-from .repack import PostgresRepackExpression
+from .cluster import PostgresClusterStatement
+from .repack import PostgresRepackStatement
 from .domain import (
     AlterDomainActionType,
     DomainCheckConstraint,
@@ -195,78 +182,70 @@ from .domain import (
     PostgresValidateDomainConstraintAction,
 )
 from .collation import (
-    PostgresCreateCollationExpression,
-    PostgresDropCollationExpression,
+    PostgresCreateCollationStatement,
+    PostgresDropCollationStatement,
 )
 from .foreign_table import (
-    PostgresCreateForeignTableExpression,
-    PostgresDropForeignTableExpression,
+    PostgresCreateForeignTableStatement,
+    PostgresDropForeignTableStatement,
 )
 from .routine import (
-    PostgresCreateFunctionExpression,
-    PostgresDropFunctionExpression,
-    PostgresCreateAggregateExpression,
-    PostgresDropAggregateExpression,
+    PostgresCreateFunctionDdlStatement,
+    PostgresDropFunctionDdlStatement,
+    PostgresCreateAggregateDdlStatement,
+    PostgresDropAggregateDdlStatement,
 )
 from .publication import (
-    PostgresCreatePublicationExpression,
-    PostgresDropPublicationExpression,
-    PostgresCreateSubscriptionExpression,
-    PostgresDropSubscriptionExpression,
+    PostgresCreatePublicationStatement,
+    PostgresDropPublicationStatement,
+    PostgresCreateSubscriptionStatement,
+    PostgresDropSubscriptionStatement,
 )
 
 __all__ = [
     # copy
     "PostgresCopyFormat",
-    "PostgresCopyFromExpression",
+    "PostgresCopyFromStatement",
     "PostgresCopyLogVerbosity",
     "PostgresCopyOnError",
-    "PostgresCopyToExpression",
+    "PostgresCopyToStatement",
     # vacuum
-    "PostgresVacuumExpression",
-    "PostgresAnalyzeExpression",
+    "PostgresVacuumStatement",
+    "PostgresAnalyzeStatement",
     # table options
     "PostgresCreateTableOptions",
     # column
     "PostgresColumnStorage",
     "PostgresColumnDefinition",
     "PostgresColumnOptions",
-    "PostgresAlterColumn",
+    "PostgresAlterColumnAction",
     # partition
-    "PartitionValue",
-    "PostgresPartitionClause",
-    "PostgresCreatePartitionExpression",
-    "PostgresDetachPartitionExpression",
-    "PostgresAttachPartitionExpression",
-    "PostgresPartitionMetadataExpression",
+    "PostgresPartitionValue",
+    "PostgresCreatePartitionStatement",
+    "PostgresDetachPartitionStatement",
+    "PostgresAttachPartitionStatement",
+    "PostgresPartitionMetadataQueryStatement",
     # index
-    "PostgresAlterIndexExpression",
+    "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
-    "PostgresReindexExpression",
+    "PostgresReindexStatement",
     "PostgresCreateIndexExpression",
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",
-    "PostgresAlterConstraint",
-    "PostgresValidateConstraint",
     "PostgresAlterConstraintAction",
-    "PostgresValidateConstraintAction",
-    "PostgresAlterConstraintExpression",
-    "PostgresValidateConstraintExpression",
-    "PostgresAlterTableConstraint",
-    "PostgresValidateTableConstraint",
     # statistics
-    "PostgresCreateStatisticsExpression",
-    "PostgresDropStatisticsExpression",
+    "PostgresCreateStatisticsStatement",
+    "PostgresDropStatisticsStatement",
     # comment
-    "PostgresCommentExpression",
+    "PostgresCommentOnStatement",
     # mv
-    "MaterializedViewAlterAction",
-    "PostgresAlterMaterializedViewExpression",
+    "PostgresMaterializedViewAlterAction",
+    "PostgresAlterMaterializedViewStatement",
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
     "PostgresDropMaterializedViewExpression",
-    "PostgresRefreshMaterializedViewExpression",
+    "PostgresRefreshMaterializedViewPgStatement",
     "PostgresRenameMaterializedViewAction",
     "PostgresResetMaterializedViewPropertiesAction",
     "PostgresSetMaterializedViewPropertiesAction",
@@ -295,17 +274,14 @@ __all__ = [
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
-    "EnumTypeNameExpression",
-    "EnumValuesExpression",
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
+    "PostgresEnumTypeNameExpression",
+    "PostgresEnumValuesExpression",
     # multirange
-    "CreateMultirangeTypeExpression",
-    "MultirangeAggFunctionExpression",
+    "PostgresCreateMultirangeTypeExpression",
+    "PostgresMultirangeAggFunctionExpression",
     # extension
-    "PostgresCreateExtensionExpression",
-    "PostgresDropExtensionExpression",
+    "PostgresCreateExtensionStatement",
+    "PostgresDropExtensionStatement",
     "PostgresPgPartmanCreateParentExpression",
     "PostgresPgPartmanRunMaintenanceExpression",
     "PostgresPgPartmanUpdateConfigExpression",
@@ -314,19 +290,19 @@ __all__ = [
     "PolicyType",
     "PolicyCommand",
     "AlterPolicyMode",
-    "PostgresCreatePolicyExpression",
-    "PostgresAlterPolicyExpression",
-    "PostgresDropPolicyExpression",
+    "PostgresCreatePolicyStatement",
+    "PostgresAlterPolicyStatement",
+    "PostgresDropPolicyStatement",
     # rls_config
     "RlsConfigurationMode",
-    "PostgresAlterTableRlsExpression",
-    "PostgresForceRlsExpression",
+    "PostgresAlterTableRlsStatement",
+    "PostgresForceRlsStatement",
     # table_settings
     "LoggingMode",
-    "PostgresAlterTableSettingsExpression",
+    "PostgresAlterTableSettingsStatement",
     # cluster
-    "PostgresClusterExpression",
-    "PostgresRepackExpression",
+    "PostgresClusterStatement",
+    "PostgresRepackStatement",
     # domain
     "AlterDomainActionType",
     "DomainNullability",
@@ -342,19 +318,19 @@ __all__ = [
     "PostgresAlterDomainExpression",
     "PostgresDropDomainExpression",
     # collation
-    "PostgresCreateCollationExpression",
-    "PostgresDropCollationExpression",
+    "PostgresCreateCollationStatement",
+    "PostgresDropCollationStatement",
     # foreign_table
-    "PostgresCreateForeignTableExpression",
-    "PostgresDropForeignTableExpression",
+    "PostgresCreateForeignTableStatement",
+    "PostgresDropForeignTableStatement",
     # routine
-    "PostgresCreateFunctionExpression",
-    "PostgresDropFunctionExpression",
-    "PostgresCreateAggregateExpression",
-    "PostgresDropAggregateExpression",
+    "PostgresCreateFunctionDdlStatement",
+    "PostgresDropFunctionDdlStatement",
+    "PostgresCreateAggregateDdlStatement",
+    "PostgresDropAggregateDdlStatement",
     # publication
-    "PostgresCreatePublicationExpression",
-    "PostgresDropPublicationExpression",
-    "PostgresCreateSubscriptionExpression",
-    "PostgresDropSubscriptionExpression",
+    "PostgresCreatePublicationStatement",
+    "PostgresDropPublicationStatement",
+    "PostgresCreateSubscriptionStatement",
+    "PostgresDropSubscriptionStatement",
 ]

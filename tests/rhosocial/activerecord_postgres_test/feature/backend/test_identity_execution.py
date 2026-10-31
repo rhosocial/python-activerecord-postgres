@@ -33,11 +33,11 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     AutoIncrementClause,
     ColumnConstraint,
-    ColumnConstraintType,
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
     IdentityClause,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -119,7 +119,7 @@ class TestIdentityProbeDeclaration:
 
 
 def _identity_table(dialect, table_name, **identity_kwargs):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         columns=[
@@ -134,7 +134,7 @@ def _identity_table(dialect, table_name, **identity_kwargs):
 
 
 def _auto_increment_table(dialect, table_name):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         columns=[
@@ -145,8 +145,7 @@ def _auto_increment_table(dialect, table_name):
                 constraints=[
                     ColumnConstraint(
                         dialect,
-                        ColumnConstraintType.PRIMARY_KEY,
-                        is_auto_increment=True,
+                        branch=ColumnPrimaryKeyConstraint(dialect, is_auto_increment=True),
                     )
                 ],
             )
@@ -155,7 +154,7 @@ def _auto_increment_table(dialect, table_name):
 
 
 def _serial_table(dialect, table_name, data_type):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, table_name),
         columns=[ColumnDefinition(dialect, "id", data_type(dialect=dialect))],
@@ -168,7 +167,7 @@ def _confirm(backend, expression, table_name):
         backend,
         expression,
         teardown=[
-            DropTableExpression(dialect, Table(dialect, table_name), if_exists=True)
+            DropTableStatement(dialect, Table(dialect, table_name), if_exists=True)
         ],
     )
 

@@ -43,17 +43,102 @@ class PostgresExpressionMixin:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, params
 
-    def format_binary_operator(self, expr) -> Tuple[str, tuple]:
+    def format_binary_expression(self, expr) -> Tuple[str, tuple]:
         """Format binary operator with psycopg placeholder escaping.
 
         psycopg uses %s as parameter placeholder. When the SQL operator itself
         contains % (e.g., pg_trgm similarity operator), it must be escaped as %%
         to prevent psycopg from interpreting it as a placeholder prefix.
+
+        The operator is spelled through ``.symbol`` when the node carries the
+        comparison vocabulary: §13.1 split the word from the character, and the
+        word (``EQ``, ``NE``...) is what the artifact holds. A plain string
+        operator -- the pg_trgm and range operators are their own symbols and
+        have no word -- is used as it is.
         """
+        from rhosocial.activerecord.backend.expression.predicates import (
+            ComparisonOperator,
+        )
+
         left_sql, left_params = expr.left.to_sql()
         right_sql, right_params = expr.right.to_sql()
         op = expr.op
+        if isinstance(op, ComparisonOperator):
+            op = op.symbol
         # Escape % in operators for psycopg compatibility
         escaped_op = op.replace('%', '%%') if '%' in op else op
         sql = f"{left_sql} {escaped_op} {right_sql}"
         return sql, left_params + right_params
+
+    def format_row_count_wildcard(self, expr) -> Tuple[str, tuple]:
+        """Format ``PostgresRowCountWildcard``: ``*`` or ``t.*``.
+
+        Core's bare ``*`` is right for ``COUNT(*)`` and is left alone; the override
+        exists for the qualified form, which core's ``RowCountWildcard``
+        deliberately does not carry because standard SQL has no use for it.
+
+        The check is a class test, not a missing-attribute probe: core's node
+        has no ``relation`` at all, and asking for one anyway is exactly the
+        reflection rule 9.8 forbids. Anything that is not this backend's
+        qualified form renders the bare asterisk.
+
+        Args:
+            expr: :class:`~...expression.wildcard.PostgresRowCountWildcard`.
+
+        Returns:
+            A ``(sql, params)`` tuple; ``params`` is empty.
+
+        Raises:
+            TypeError: ``relation`` is set but is not a ``NamedRelationRef``.
+        """
+        from rhosocial.activerecord.backend.impl.postgres.expression.wildcard import (
+            PostgresRowCountWildcard,
+        )
+
+        if not isinstance(expr, PostgresRowCountWildcard):
+            return "*", ()
+        relation = expr.relation
+        if relation is None:
+            return "*", ()
+        from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+        if not isinstance(relation, NamedRelationRef):
+            raise TypeError(
+                f"PostgresRowCountWildcard.relation must be a NamedRelationRef, "
+                f"got {type(relation).__name__}"
+            )
+        if relation.alias:
+            qualifier = self.format_identifier(relation.alias, relation.alias_need_quote)
+        else:
+            qualifier, _ = relation.relation.to_sql()
+        return f"{qualifier}.*", ()
+
+    def format_truncate_function(self, expr) -> Tuple[str, tuple]:
+        """Format ``TRUNC`` -- PostgreSQL's spelling of the core's TRUNCATE node.
+
+        The core's :class:`~...expression.functions.math.TruncateFunction`
+        writes the SQL-standard ``TRUNCATE``; in PostgreSQL that word is the
+        DDL statement that empties a table, and the numeric function is
+        spelled ``TRUNC``. Measured live 2026-10-18 against 17.11 (Debian
+        17.11-1.pgdg13+2): ``SELECT TRUNC(3.716, 2)`` answers ``3.71`` while
+        ``SELECT TRUNCATE(3.716)`` is refused with ``UndefinedFunction:
+        function truncate(numeric) does not exist``. The node and its operand
+        list are unchanged; only the spelled name differs, which is exactly
+        the spelling override the one-to-one rule allows.
+
+        Args:
+            expr: :class:`~...expression.functions.math.TruncateFunction`.
+
+        Returns:
+            A ``(sql, params)`` tuple.
+        """
+        parts_sql, parts_params = [], []
+        for operand in expr.arguments:
+            operand_sql, operand_params = operand.to_sql()
+            parts_sql.append(operand_sql)
+            parts_params.extend(operand_params)
+        joined_sql = ", ".join(parts_sql)
+        sql = f"TRUNC({joined_sql})"
+        if expr.alias:
+            sql = f"{sql} AS {self.format_identifier(expr.alias)}"
+        return sql, tuple(parts_params)

@@ -10,33 +10,34 @@ from rhosocial.activerecord.backend.dialect.mixins.ddl_domain import DomainMixin
 from rhosocial.activerecord.backend.expression.objects import Domain
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AddDomainCheckAction,
-    AlterDomainExpression,
-    CreateDomainExpression,
+    AlterDomainStatement,
+    CreateDomainStatement,
     DomainAlterAction,
     DomainCheckConstraint,
     DomainNullability,
     DomainValueExpression,
     DropDomainCheckAction,
     DropDomainDefaultAction,
-    DropDomainExpression,
+    DropDomainStatement,
     DropDomainNotNullAction,
     RenameDomainAction,
     SetDomainDefaultAction,
     SetDomainNotNullAction,
 )
 from ...expression.ddl.domain import (
-    _UnsupportedDomainAction,
+    _PostgresUnsupportedDomainAction,
     PostgresAddDomainCheckAction,
     PostgresChangeDomainOwnerAction,
     PostgresCreateDomainExpression,
     PostgresDropDomainCheckAction,
+    PostgresDropDomainExpression,
     PostgresRenameDomainConstraintAction,
     PostgresSetDomainSchemaAction,
     PostgresValidateDomainConstraintAction,
 )
 
 if TYPE_CHECKING:
-    from ...expression.ddl.domain import _LegacySqlExpression
+    from ...expression.ddl.domain import PostgresLegacySqlExpression
 
 
 __all__ = ["PostgresDomainMixin"]
@@ -84,7 +85,7 @@ class PostgresDomainMixin(DomainMixin):
         return ""
 
     def supports_domains(self) -> bool:
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_create_domain(self) -> bool:
         return self.supports_domains()
@@ -141,7 +142,7 @@ class PostgresDomainMixin(DomainMixin):
 
     def format_create_domain_statement(
         self,
-        expr: CreateDomainExpression,
+        expr: CreateDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``CREATE DOMAIN``, with the PostgreSQL-only options.
 
@@ -151,7 +152,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"CreateDomainExpression.domain must be a Domain, "
+                f"CreateDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_create_domain():
@@ -198,18 +199,29 @@ class PostgresDomainMixin(DomainMixin):
             clause_sql, clause_params = clause.to_sql()
             parts.append(clause_sql)
             params.extend(clause_params)
-        if expr.nullability is not DomainNullability.UNSPECIFIED:
-            if not self.supports_domain_nullability(expr.nullability):
+        nullability = expr.nullability
+        if not isinstance(nullability, DomainNullability):
+            # An artifact carries the word; resolve it to the member so the
+            # capability probe (which matches members) still answers.
+            try:
+                nullability = DomainNullability(str(nullability))
+            except ValueError:
+                raise ValueError(
+                    f"unknown DOMAIN nullability {expr.nullability!r}; the members "
+                    f"are {[m.value for m in DomainNullability]}"
+                ) from None
+        if nullability is not DomainNullability.UNSPECIFIED:
+            if not self.supports_domain_nullability(nullability):
                 raise UnsupportedFeatureError(
                     self.name,
-                    f"DOMAIN {expr.nullability.value}",
+                    f"DOMAIN {nullability}",
                 )
-            parts.append(expr.nullability.value)
+            parts.append(str(nullability))
         return " ".join(parts), tuple(params)
 
     def format_alter_domain_statement(
         self,
-        expr: AlterDomainExpression,
+        expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``ALTER DOMAIN``.
 
@@ -218,7 +230,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"AlterDomainExpression.domain must be a Domain, "
+                f"AlterDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_alter_domain():
@@ -232,7 +244,7 @@ class PostgresDomainMixin(DomainMixin):
         action_parts: List[str] = []
         action_params: List[Any] = []
         for action in expr.actions:
-            if not isinstance(action, _UnsupportedDomainAction) and not self.supports_alter_domain_action(
+            if not isinstance(action, _PostgresUnsupportedDomainAction) and not self.supports_alter_domain_action(
                 type(action)
             ):
                 raise UnsupportedFeatureError(
@@ -249,13 +261,13 @@ class PostgresDomainMixin(DomainMixin):
 
     def format_postgres_alter_domain_statement(
         self,
-        expr: AlterDomainExpression,
+        expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
         return self.format_alter_domain_statement(expr)
 
     def format_drop_domain_statement(
         self,
-        expr: DropDomainExpression,
+        expr: DropDomainStatement,
     ) -> Tuple[str, tuple]:
         """Render ``DROP DOMAIN``, with the PostgreSQL-only options.
 
@@ -264,7 +276,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"DropDomainExpression.domain must be a Domain, "
+                f"DropDomainStatement.domain must be a Domain, "
                 f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_drop_domain():
@@ -273,9 +285,16 @@ class PostgresDomainMixin(DomainMixin):
                 "DROP DOMAIN",
                 suggestion="requires PostgreSQL 9.6+",
             )
-        if_exists = getattr(expr, "if_exists", False)
-        cascade = getattr(expr, "cascade", False)
-        restrict = getattr(expr, "restrict", False)
+        # The PostgreSQL-only options exist only on the PostgreSQL subclass;
+        # the core node has no such fields and asks for none of them.
+        if isinstance(expr, PostgresDropDomainExpression):
+            if_exists = expr.if_exists
+            cascade = expr.cascade
+            restrict = expr.restrict
+        else:
+            if_exists = False
+            cascade = False
+            restrict = False
         if if_exists and not self.supports_drop_domain_if_exists():
             raise UnsupportedFeatureError(self.name, "DROP DOMAIN IF EXISTS")
         if cascade and not self.supports_drop_domain_cascade():
@@ -380,17 +399,17 @@ class PostgresDomainMixin(DomainMixin):
             return f"RENAME TO {self.format_identifier(expr.new_name)}", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"ALTER DOMAIN action {getattr(expr, 'action_kind', type(expr).__name__)}",
+            f"ALTER DOMAIN action {expr.action_kind}",
         )
 
-    def _format_postgres_legacy_sql_expression(
+    def format_legacy_sql_expression(
         self,
-        expr: "_LegacySqlExpression",
+        expr: "PostgresLegacySqlExpression",
     ) -> Tuple[str, tuple]:
         return expr.sql, ()
 
-    def _format_postgres_unsupported_domain_action(
+    def format_postgres_unsupported_domain_action(
         self,
-        expr: "_UnsupportedDomainAction",
+        expr: "_PostgresUnsupportedDomainAction",
     ) -> Tuple[str, tuple]:
         raise ValueError(f"Unsupported ALTER DOMAIN action: {expr.action}")

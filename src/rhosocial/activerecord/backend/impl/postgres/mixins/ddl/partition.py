@@ -6,22 +6,20 @@ PostgreSQL table partitioning operations including RANGE, LIST, and HASH
 partitioning with support for various PostgreSQL versions.
 """
 
-from copy import copy
 from typing import Any, List, Optional, Tuple, TYPE_CHECKING  # noqa: F401
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
     from ...expression.ddl import (
-        PartitionValue,
-        PostgresCreatePartitionExpression,
-        PostgresDetachPartitionExpression,
-        PostgresAttachPartitionExpression,
-        PostgresPartitionMetadataExpression,
+        PostgresPartitionValue,
+        PostgresCreatePartitionStatement,
+        PostgresDetachPartitionStatement,
+        PostgresAttachPartitionStatement,
+        PostgresPartitionMetadataQueryStatement,
     )
 
 
@@ -52,7 +50,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 10.
         """
-        return self.version >= (10, 0, 0)
+        return self.version_at_least((10, 0, 0))
 
     def supports_partitioned_table_creation(self) -> bool:
         """Check if CREATE TABLE can create partitioned parent tables.
@@ -215,8 +213,7 @@ class PostgresPartitionMixin:
         for key in expr.keys:
             if key.dialect is not self:
                 raise ValueError("partition key expressions must use the PostgreSQL dialect")
-            bound_key = self._inline_partition_expression(key)
-            key_sql, key_params = bound_key.to_sql()
+            key_sql, key_params = key.to_sql()
             if key_params:
                 raise ValueError("partition key expressions must not contain bind parameters")
             key_parts.append(key_sql)
@@ -230,7 +227,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_default_partition(self) -> bool:
         """Check if DEFAULT partition is supported.
@@ -241,7 +238,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_partition_key_update(self) -> bool:
         """Check if partition key update row movement is supported.
@@ -252,7 +249,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_concurrent_detach(self) -> bool:
         """Check if CONCURRENTLY DETACH is supported.
@@ -263,7 +260,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 14.
         """
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_concurrent_attach(self) -> bool:
         """Check if CONCURRENTLY ATTACH is exposed by this implementation.
@@ -282,7 +279,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 12.
         """
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_partitionwise_join(self) -> bool:
         """Check if partitionwise join optimization is supported.
@@ -293,7 +290,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_partitionwise_aggregate(self) -> bool:
         """Check if partitionwise aggregate optimization is supported.
@@ -304,51 +301,9 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
-    def _inline_partition_expression(
-        self,
-        value: Any,
-        memo: Optional[dict] = None,
-    ) -> Any:
-        if memo is None:
-            memo = {}
-        identity = id(value)
-        if identity in memo:
-            return memo[identity]
-        if isinstance(value, Literal):
-            bound = copy(value)
-            bound.dialect = self
-            bound.inline_literals = True
-            memo[identity] = bound
-            return bound
-        if isinstance(value, BaseExpression):
-            bound = copy(value)
-            bound.dialect = self
-            memo[identity] = bound
-            for name, child in vars(value).items():
-                if name == "_dialect":
-                    continue
-                setattr(bound, name, self._inline_partition_expression(child, memo))
-            return bound
-        if isinstance(value, list):
-            bound_list = [self._inline_partition_expression(child, memo) for child in value]
-            memo[identity] = bound_list
-            return bound_list
-        if isinstance(value, tuple):
-            bound_tuple = tuple(self._inline_partition_expression(child, memo) for child in value)
-            memo[identity] = bound_tuple
-            return bound_tuple
-        if isinstance(value, dict):
-            bound_dict = {
-                key: self._inline_partition_expression(child, memo)
-                for key, child in value.items()
-            }
-            memo[identity] = bound_dict
-            return bound_dict
-        return value
-
-    def format_partition_value(self, expr: "PartitionValue") -> Tuple[str, tuple]:
+    def format_partition_value(self, expr: "PostgresPartitionValue") -> Tuple[str, tuple]:
         """Format a PostgreSQL partition bound value."""
         if not self.supports_table_partitioning():
             raise UnsupportedFeatureError(
@@ -369,8 +324,10 @@ class PostgresPartitionMixin:
                     "partition bound expressions",
                     "Partition bound expressions require PostgreSQL 12+.",
                 )
-            bound_value = self._inline_partition_expression(value)
-            value_sql, value_params = bound_value.to_sql()
+            # The tree renders as the caller composed it; a literal inside a
+            # DDL position is the caller's to mark ``inline=True``, and one
+            # that still binds is refused by name here.
+            value_sql, value_params = value.to_sql()
             if value_params:
                 raise ValueError("partition bound expressions must not contain bind parameters")
             return value_sql, ()
@@ -423,12 +380,12 @@ class PostgresPartitionMixin:
                 "nested rows are not supported"
             )
 
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         value_sql_parts = []
         params: List[Any] = []
         for value in values:
-            value_sql, value_params = PartitionValue(
+            value_sql, value_params = PostgresPartitionValue(
                 self,
                 value,
                 partition_type="LIST",
@@ -439,7 +396,7 @@ class PostgresPartitionMixin:
 
     def format_create_partition_statement(
         self,
-        expr: "PostgresCreatePartitionExpression",
+        expr: "PostgresCreatePartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format CREATE TABLE ... PARTITION OF for PostgreSQL."""
         if not self.supports_table_partitioning():
@@ -482,7 +439,7 @@ class PostgresPartitionMixin:
         parts.append(f"PARTITION OF {parent_name}")
 
         params: List[Any] = []
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")
@@ -500,7 +457,7 @@ class PostgresPartitionMixin:
             from_sql_parts = []
             to_sql_parts = []
             for value in from_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -508,7 +465,7 @@ class PostgresPartitionMixin:
                 from_sql_parts.append(value_sql)
                 params.extend(value_params)
             for value in to_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -560,7 +517,7 @@ class PostgresPartitionMixin:
 
     def format_detach_partition_statement(
         self,
-        expr: "PostgresDetachPartitionExpression",
+        expr: "PostgresDetachPartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format ALTER TABLE ... DETACH PARTITION statement from expression.
 
@@ -571,7 +528,7 @@ class PostgresPartitionMixin:
         - ``expr.finalize`` — add ``FINALIZE`` (valid only with CONCURRENTLY).
 
         Args:
-            expr: PostgresDetachPartitionExpression instance
+            expr: PostgresDetachPartitionStatement instance
 
         Returns:
             Tuple of (SQL string, empty params tuple)
@@ -611,7 +568,7 @@ class PostgresPartitionMixin:
 
     def format_attach_partition_statement(
         self,
-        expr: "PostgresAttachPartitionExpression",
+        expr: "PostgresAttachPartitionStatement",
     ) -> Tuple[str, tuple]:
         """Format ALTER TABLE ... ATTACH PARTITION for PostgreSQL."""
         if not self.supports_table_partitioning():
@@ -656,7 +613,7 @@ class PostgresPartitionMixin:
         parts.extend((parent_name, "ATTACH PARTITION", partition_name))
 
         params: List[Any] = []
-        from ...expression.ddl import PartitionValue
+        from ...expression.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")
@@ -674,7 +631,7 @@ class PostgresPartitionMixin:
             from_sql_parts = []
             to_sql_parts = []
             for value in from_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -682,7 +639,7 @@ class PostgresPartitionMixin:
                 from_sql_parts.append(value_sql)
                 params.extend(value_params)
             for value in to_values:
-                value_sql, value_params = PartitionValue(
+                value_sql, value_params = PostgresPartitionValue(
                     self,
                     value,
                     partition_type="RANGE",
@@ -723,7 +680,9 @@ class PostgresPartitionMixin:
         return " ".join(parts), tuple(params)
 
 
-    def format_partition_metadata_query(self, expr: "PostgresPartitionMetadataExpression") -> Tuple[str, tuple]:
+    def format_partition_metadata_query_statement(
+        self, expr: "PostgresPartitionMetadataQueryStatement"
+    ) -> Tuple[str, tuple]:
         """Format pg_catalog query for partition metadata introspection.
 
         Builds a parameterised query against pg_catalog to inspect a partitioned
@@ -739,7 +698,7 @@ class PostgresPartitionMixin:
         the WHERE clause omits the namespace filter.
 
         Args:
-            expr: PostgresPartitionMetadataExpression with parent table details.
+            expr: PostgresPartitionMetadataQueryStatement with parent table details.
 
         Returns:
             Tuple of (SQL string with %s placeholders, params tuple).

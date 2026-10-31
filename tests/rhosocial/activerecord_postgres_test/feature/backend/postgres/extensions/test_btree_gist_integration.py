@@ -24,14 +24,14 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
@@ -66,14 +66,14 @@ def btree_gist_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="created_at", data_type=TimestampType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gist'),
         columns=columns,
@@ -89,7 +89,7 @@ def btree_gist_env(postgres_backend_single):
         [Literal(dialect, "Event C"), Literal(dialect, "2024-06-10 09:00:00"), Literal(dialect, 30)],
         [Literal(dialect, "Event D"), Literal(dialect, "2024-09-05 16:45:00"), Literal(dialect, 40)],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_btree_gist'),
         columns=["name", "created_at", "value"],
@@ -101,7 +101,7 @@ def btree_gist_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gist'),
         if_exists=True,
@@ -132,7 +132,7 @@ class TestBtreeGistIntegration:
         backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -163,7 +163,7 @@ class TestBtreeGistIntegration:
         backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -195,7 +195,7 @@ class TestBtreeGistIntegration:
 
         # Query with range condition using ComparisonPredicate
         # Find events where created_at > '2024-03-01'
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name"), Column(dialect, "created_at")],
             from_=Table(dialect, "test_btree_gist"),
@@ -230,14 +230,14 @@ async def async_btree_gist_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="created_at", data_type=TimestampType(dialect=dialect)),
         ColumnDefinition(dialect, name="value", data_type=IntegerType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gist_async'),
         columns=columns,
@@ -253,7 +253,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
         [Literal(dialect, "Event C"), Literal(dialect, "2024-06-10 09:00:00"), Literal(dialect, 30)],
         [Literal(dialect, "Event D"), Literal(dialect, "2024-09-05 16:45:00"), Literal(dialect, 40)],
     ]
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'test_btree_gist_async'),
         columns=["name", "created_at", "value"],
@@ -265,7 +265,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'test_btree_gist_async'),
         if_exists=True,
@@ -297,7 +297,7 @@ class TestAsyncBtreeGistIntegration:
         await backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -331,7 +331,7 @@ class TestAsyncBtreeGistIntegration:
         await backend.execute(sql, params)
 
         # Verify index exists by querying pg_indexes
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
@@ -366,7 +366,7 @@ class TestAsyncBtreeGistIntegration:
 
         # Query with range condition using ComparisonPredicate
         # Find events where created_at > '2024-03-01'
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[Column(dialect, "name"), Column(dialect, "created_at")],
             from_=Table(dialect, "test_btree_gist_async"),

@@ -1,6 +1,6 @@
 """
 DDL Test Script for PostgreSQL Backend
-Tests CreateTableExpression, DropTableExpression, AlterTableExpression, etc.
+Tests CreateTableStatement, DropTableStatement, AlterTableStatement, etc.
 """
 
 import sys
@@ -13,15 +13,16 @@ from rhosocial.activerecord.base import FieldProxy
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
-    CreateTableExpression,
-    DropTableExpression,
-    AlterTableExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    AlterTableStatement,
     AddColumn,
     DropColumn,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
-    ColumnConstraintType,
 )
 
 
@@ -66,21 +67,21 @@ def main():
         ColumnDefinition(
             "id",
             "INTEGER",
-            constraints=[ColumnConstraint(ColumnConstraintType.PRIMARY_KEY)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]
         ),
         ColumnDefinition(
             "name",
             "VARCHAR(100)",
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]
         ),
         ColumnDefinition(
             "email",
             "VARCHAR(255)",
-            constraints=[ColumnConstraint(ColumnConstraintType.NOT_NULL)]
+            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]
         ),
     ]
 
-    create = CreateTableExpression(
+    create = CreateTableStatement(
         dialect=dialect,
         table_name="ddl_test_users",
         columns=columns,
@@ -102,7 +103,7 @@ def main():
     # Test 2: Create Table with IF NOT EXISTS
     # ============================================================
     print("=== Test 2: Create Table with IF NOT EXISTS ===")
-    create2 = CreateTableExpression(
+    create2 = CreateTableStatement(
         dialect=dialect,
         table_name="ddl_test_users",
         columns=columns,
@@ -122,7 +123,7 @@ def main():
     # Test 3: Alter Table - Add Column
     # ============================================================
     print("=== Test 3: Alter Table - Add Column ===")
-    alter = AlterTableExpression(
+    alter = AlterTableStatement(
         dialect,
         table_name="ddl_test_users",
         actions=[
@@ -148,7 +149,7 @@ def main():
     # ============================================================
     print("=== Test 4: Alter Table - Drop Column ===")
     # First add a column to drop
-    alter_add = AlterTableExpression(
+    alter_add = AlterTableStatement(
         dialect,
         table_name="ddl_test_users",
         actions=[AddColumn(ColumnDefinition("temp_field", "TEXT"))]
@@ -156,7 +157,7 @@ def main():
     sql_str, params_str = alter_add.to_sql()
     backend.execute(sql_str, params_str)
 
-    alter_drop = AlterTableExpression(
+    alter_drop = AlterTableStatement(
         dialect,
         table_name="ddl_test_users",
         actions=[DropColumn("temp_field")]
@@ -178,7 +179,7 @@ def main():
     # Test 5: Drop Table
     # ============================================================
     print("=== Test 5: Drop Table ===")
-    drop = DropTableExpression(
+    drop = DropTableStatement(
         dialect,
         table_name="ddl_test_users",
         if_exists=True,

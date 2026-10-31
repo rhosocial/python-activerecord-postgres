@@ -15,7 +15,7 @@ the complete Row-Level Security ecosystem.
 """
 
 from enum import Enum
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -25,28 +25,33 @@ if TYPE_CHECKING:
 
 __all__ = [
     "RlsConfigurationMode",
-    "PostgresAlterTableRlsExpression",
-    "PostgresForceRlsExpression",
+    "PostgresAlterTableRlsStatement",
+    "PostgresForceRlsStatement",
 ]
 
 
-class RlsConfigurationMode(Enum):
+class RlsConfigurationMode(str, Enum):
     """The ``ENABLE``/``DISABLE`` forms of row-level security on a table.
 
     PostgreSQL maps these onto ``ALTER TABLE ... ENABLE ROW LEVEL SECURITY``
     / ``ALTER TABLE ... DISABLE ROW LEVEL SECURITY``.
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     ENABLE = "ENABLE"
     DISABLE = "DISABLE"
 
 
-class PostgresAlterTableRlsExpression(BaseExpression):
+class PostgresAlterTableRlsStatement(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... {ENABLE|DISABLE} ROW LEVEL SECURITY``.
 
     A single expression drives both states through the ``mode`` field. The
     ``ENABLE ALWAYS`` variant is a separate keyword on the same statement and
-    is produced by :attr:`always` (see class :class:`PostgresForceRlsExpression`
+    is produced by :attr:`always` (see class :class:`PostgresForceRlsStatement`
     for the related ``FORCE`` forms).
 
     Attributes:
@@ -59,7 +64,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresAlterTableRlsExpression(
+        >>> expr = PostgresAlterTableRlsStatement(
         ...     dialect, table_name="orders", mode=RlsConfigurationMode.ENABLE
         ... )
         >>> sql, params = expr.to_sql()  # doctest: +SKIP
@@ -89,7 +94,7 @@ class PostgresAlterTableRlsExpression(BaseExpression):
         return "format_alter_table_rls_statement"
 
 
-class PostgresForceRlsExpression(BaseExpression):
+class PostgresForceRlsStatement(BaseExpression):
     """PostgreSQL ``ALTER TABLE ... {FORCE|NO FORCE} ROW LEVEL SECURITY``.
 
     ``FORCE ROW LEVEL SECURITY`` causes the table owner to also be subject to

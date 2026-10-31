@@ -11,32 +11,33 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     ColumnDefinition,
     ComparisonPredicate,
-    CreateTableExpression,
-    DropTableExpression,
-    ExplainExpression,
+    CreateTableStatement,
+    DropTableStatement,
+    ExplainStatement,
     ExplainFormat,
     ExplainOptions,
-    InsertExpression,
+    InsertStatement,
     Literal,
     LogicalPredicate,
-    QueryExpression,
-    RawSQLExpression,
-    UpdateExpression,
+    QueryStatement,
+    RawSQL,
+    UpdateStatement,
     ValuesSource,
+    ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause, PartitionStrategy
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresAttachPartitionExpression,
-    PostgresCreatePartitionExpression,
-    PostgresDetachPartitionExpression,
-    PostgresPartitionMetadataExpression,
+    PostgresAttachPartitionStatement,
+    PostgresCreatePartitionStatement,
+    PostgresDetachPartitionStatement,
+    PostgresPartitionMetadataQueryStatement,
 )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType, TextType, TimestampType,
 )
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraint, ColumnConstraintType,
+    ColumnConstraint,
 )
 
 
@@ -57,17 +58,17 @@ SCHEMA_CHILD = "partition_events_p2026"
 
 def _drop_table_expression(dialect, table_name: str, *, schema: str | None = None):
     table = Table(dialect, table_name, schema_name=schema)
-    return DropTableExpression(dialect=dialect, table=table, if_exists=True, cascade=True)
+    return DropTableStatement(dialect=dialect, table=table, if_exists=True, cascade=True)
 
 
 def _create_list_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, LIST_PARENT),
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -78,7 +79,7 @@ def _create_list_parent_expression(dialect):
 
 
 def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[str]):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=LIST_PARENT,
@@ -89,13 +90,13 @@ def _create_list_partition_sql(dialect, partition_name: str, values: Iterable[st
 
 
 def _create_hash_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, HASH_PARENT),
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "bucket", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "bucket", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -106,7 +107,7 @@ def _create_hash_parent_expression(dialect):
 
 
 def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=HASH_PARENT,
@@ -117,13 +118,13 @@ def _create_hash_partition_sql(dialect, partition_name: str, remainder: int):
 
 
 def _create_range_parent_expression(dialect):
-    return CreateTableExpression(
+    return CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, RANGE_PARENT),
         columns=[
-            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+            ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
         partition=PartitionClause(
             dialect=dialect,
@@ -134,7 +135,7 @@ def _create_range_parent_expression(dialect):
 
 
 def _create_range_partition_sql(dialect, partition_name: str, start: str, end: str):
-    expr = PostgresCreatePartitionExpression(
+    expr = PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=RANGE_PARENT,
@@ -145,7 +146,7 @@ def _create_range_partition_sql(dialect, partition_name: str, start: str, end: s
 
 
 def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: list[list[Any]]):
-    return InsertExpression(
+    return InsertStatement(
         dialect=dialect,
         into=Table(dialect, table_name),
         columns=columns,
@@ -157,10 +158,10 @@ def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: 
 
 
 def _select_tableoid_payload_expression(dialect, table_name: str):
-    return QueryExpression(
+    return QueryStatement(
         dialect,
         select=[
-            RawSQLExpression(dialect, "tableoid::regclass::text AS partition_name"),
+            RawSQL(dialect, "tableoid::regclass::text AS partition_name"),
             Column(dialect, "payload"),
         ],
         from_=Table(dialect, table_name),
@@ -168,7 +169,7 @@ def _select_tableoid_payload_expression(dialect, table_name: str):
 
 
 def _metadata_sql(dialect, parent_table: str, *, schema: str | None = None, include_partitions: bool = True):
-    expr = PostgresPartitionMetadataExpression(
+    expr = PostgresPartitionMetadataQueryStatement(
         dialect=dialect,
         parent_table=parent_table,
         schema=schema,
@@ -178,7 +179,7 @@ def _metadata_sql(dialect, parent_table: str, *, schema: str | None = None, incl
 
 
 def _json_explain_sql(dialect, query):
-    expr = ExplainExpression(
+    expr = ExplainStatement(
         dialect,
         statement=query,
         options=ExplainOptions(format=ExplainFormat.JSON),
@@ -319,20 +320,20 @@ class TestPostgreSQLAdvancedPartitionOperations:
         default_partition_name = "ar_partition_adv_default"
 
         # Create a table with matching structure for DEFAULT attachment
-        create_default = CreateTableExpression(
+        create_default = CreateTableStatement(
             dialect=dialect,
             table=Table(dialect, default_partition_name),
             columns=[
-                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-                ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ],
         )
         postgres_backend.execute(*create_default.to_sql())
 
         try:
             # Attach as DEFAULT partition
-            attach = PostgresAttachPartitionExpression(
+            attach = PostgresAttachPartitionStatement(
                 dialect=dialect,
                 partition_name=default_partition_name,
                 parent_table=RANGE_PARENT,
@@ -352,7 +353,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
             assert default_partition_name in names
 
             # Detach it back
-            detach = PostgresDetachPartitionExpression(
+            detach = PostgresDetachPartitionStatement(
                 dialect=dialect,
                 partition_name=default_partition_name,
                 parent_table=RANGE_PARENT,
@@ -379,12 +380,12 @@ class TestPostgreSQLAdvancedPartitionOperations:
             postgres_backend.execute(f'CREATE SCHEMA "{schema}"')
         try:
             for schema in (SCHEMA_A, SCHEMA_B):
-                parent = CreateTableExpression(
+                parent = CreateTableStatement(
                     dialect=dialect,
                     table=Table(dialect, SCHEMA_PARENT, schema_name=schema),
                     columns=[
-                        ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
-                        ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, ColumnConstraintType.NOT_NULL)]),
+                        ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
+                        ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
                     ],
                     partition=PartitionClause(
                         dialect=dialect,
@@ -393,7 +394,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                     ),
                 )
                 postgres_backend.execute(*parent.to_sql())
-                child = PostgresCreatePartitionExpression(
+                child = PostgresCreatePartitionStatement(
                     dialect=dialect,
                     partition_name=SCHEMA_CHILD,
                     parent_table=SCHEMA_PARENT,
@@ -433,7 +434,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"]],
             ).to_sql()
         )
-        update = UpdateExpression(
+        update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},
@@ -446,7 +447,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         )
         assert row["partition_name"] == RANGE_FEB
 
-        invalid_update = UpdateExpression(
+        invalid_update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-03-15")},
@@ -470,7 +471,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"], [2, "2026-02-15", "feb"]],
             ).to_sql()
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "payload")],
             from_=Table(dialect, RANGE_PARENT),
@@ -496,7 +497,7 @@ class TestPostgreSQLAdvancedPartitionOperations:
         dialect = postgres_backend.dialect
         if not dialect.supports_concurrent_detach():
             pytest.skip("DETACH CONCURRENTLY requires PostgreSQL 14+")
-        sql, params = PostgresDetachPartitionExpression(
+        sql, params = PostgresDetachPartitionStatement(
             dialect=dialect,
             partition_name=RANGE_JAN,
             parent_table=RANGE_PARENT,
@@ -558,7 +559,7 @@ class TestAsyncPostgreSQLAdvancedPartitionOperations:
                 [[1, "2026-01-15", "jan"]],
             ).to_sql()
         )
-        update = UpdateExpression(
+        update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
             assignments={"created_at": Literal(dialect, "2026-02-15")},

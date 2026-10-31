@@ -20,27 +20,27 @@ class PostgresDataTypeMixin:
 
     def supports_multirange_type(self) -> bool:
         """Multirange is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_domain_arrays(self) -> bool:
         """Domain arrays are native feature, PG 11+."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_composite_domains(self) -> bool:
         """Composite domains are native feature, PG 11+."""
-        return self.version >= (11, 0, 0)
+        return self.version_at_least((11, 0, 0))
 
     def supports_numeric_infinity(self) -> bool:
         """Numeric Infinity is native feature, PG 14+."""
-        return self.version >= (14, 0, 0)
+        return self.version_at_least((14, 0, 0))
 
     def supports_nondeterministic_collation(self) -> bool:
         """Nondeterministic ICU collation is native feature, PG 12+."""
-        return self.version >= (12, 0, 0)
+        return self.version_at_least((12, 0, 0))
 
     def supports_xid8_type(self) -> bool:
         """xid8 type is native feature, PG 13+."""
-        return self.version >= (13, 0, 0)
+        return self.version_at_least((13, 0, 0))
 
     # =========================================================================
     # PostgreSQL 17+ Data Type Features

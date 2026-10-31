@@ -32,8 +32,8 @@ class PostgresHstoreAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(PostgresHstore, str)
-        self._register_type(dict, str)
+        self.register_type(PostgresHstore, str)
+        self.register_type(dict, str)
 
     def _do_to_database(
         self,

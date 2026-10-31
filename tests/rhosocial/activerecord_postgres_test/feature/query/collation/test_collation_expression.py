@@ -6,6 +6,7 @@ Tests for expression-level COLLATE support on PostgreSQL.
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression.collation import collate
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.collation import PostgresCollation
 
@@ -25,7 +26,10 @@ class TestPostgresCollationExpression:
         assert params == ()
 
     def test_literal_collate_preserves_parameter_binding(self, dialect):
-        expr = Literal(dialect, "Alice").collate(PostgresCollation.POSIX)
+        # A Literal is a value node and carries no operation surface of its
+        # own (rules §4.3), so COLLATE is composed with the collate factory
+        # over it rather than as a chain on the literal.
+        expr = collate(Literal(dialect, "Alice"), PostgresCollation.POSIX)
 
         sql, params = expr.to_sql()
 

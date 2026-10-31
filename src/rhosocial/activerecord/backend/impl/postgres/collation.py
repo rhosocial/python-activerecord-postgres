@@ -7,8 +7,13 @@ from enum import Enum
 from typing import Optional, Tuple
 
 
-class PostgresCollation(Enum):
+class PostgresCollation(str, Enum):
     """Common PostgreSQL collations for expression-level COLLATE."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     C = "C"
     POSIX = "POSIX"

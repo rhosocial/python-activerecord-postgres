@@ -11,9 +11,9 @@ from typing import Any, Dict, Mapping, Optional, Sequence, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
-    DropTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
+    DropTypeStatement,
     TypeAlterAction,
     TypeDefinition,
 )
@@ -47,11 +47,8 @@ __all__ = [
     "PostgresAlterEnumTypeAddValueExpression",
     "PostgresAlterEnumTypeRenameValueExpression",
     "PostgresCreateRangeTypeExpression",
-    "EnumTypeNameExpression",
-    "EnumValuesExpression",
-    "CreateEnumTypeExpression",
-    "DropEnumTypeExpression",
-    "AlterEnumAddValueExpression",
+    "PostgresEnumTypeNameExpression",
+    "PostgresEnumValuesExpression",
 ]
 
 
@@ -92,12 +89,21 @@ def _coerce_legacy_data_type(
         DeprecationWarning,
         stacklevel=3,
     )
-    return DataType.parse_data_type_str(dialect, value)
+    return DataType.as_type(dialect, value)
 
 
 @dataclass
 class PostgresCompositeTypeAttribute:
-    """One attribute in a PostgreSQL composite TYPE definition."""
+    """One attribute in a PostgreSQL composite TYPE definition.
+
+    Not a node: it is a record the caller builds, and a node would have to
+    declare a kind and a formatter for a shape ``CREATE TYPE`` only ever
+    reads. What it has instead is a plain spelling -- :meth:`as_params` and
+    :meth:`from_params` -- because a constructor parameter has to be able to
+    travel in an artifact, and a dataclass instance has no language-neutral
+    encoding of its own (rules §10: two parameter shapes, scalars and nodes;
+    a host object with no wire form is the third, and it is refused).
+    """
 
     name: str
     data_type: DataType
@@ -109,6 +115,42 @@ class PostgresCompositeTypeAttribute:
         if self.collation is not None:
             _validate_qualified_name(self.collation, "collation")
 
+    def as_params(self) -> Dict[str, Any]:
+        """This attribute as the plain mapping an artifact carries."""
+        return {
+            "name": self.name,
+            "data_type": self.data_type,
+            "collation": self.collation,
+        }
+
+    @classmethod
+    def from_params(cls, params: Mapping[str, Any]) -> "PostgresCompositeTypeAttribute":
+        """Rebuild an attribute from the mapping :meth:`as_params` wrote.
+
+        The wide entry is the point: an artifact arrives as a mapping and a
+        call site hands over a dataclass, while the stored form is the
+        dataclass either way (rules §10, "the entry may be wide, the storage is
+        normalized"). ``__post_init__`` validates, so a mapping missing a
+        field or carrying an unknown one fails here by name rather than
+        somewhere downstream.
+        """
+        unexpected = sorted(set(params) - {"name", "data_type", "collation"})
+        if unexpected:
+            raise TypeError(
+                f"a composite type attribute carries no field(s) {unexpected}; "
+                f"it declares 'name', 'data_type' and 'collation'"
+            )
+        missing = sorted({"name", "data_type"} - set(params))
+        if missing:
+            raise TypeError(
+                f"a composite type attribute is missing required field(s) {missing}"
+            )
+        return cls(
+            name=params["name"],
+            data_type=params["data_type"],
+            collation=params.get("collation"),
+        )
+
 
 class PostgresCompositeTypeDefinition(TypeDefinition):
     """Composite TYPE definition."""
@@ -118,13 +160,32 @@ class PostgresCompositeTypeDefinition(TypeDefinition):
     def __init__(
         self,
         dialect: "SQLDialectBase",
-        attributes: Sequence[PostgresCompositeTypeAttribute],
+        attributes: Sequence[Union[PostgresCompositeTypeAttribute, Mapping[str, Any]]],
     ) -> None:
         super().__init__(dialect)
-        items = list(attributes or [])
+        items = [
+            attribute
+            if isinstance(attribute, PostgresCompositeTypeAttribute)
+            else PostgresCompositeTypeAttribute.from_params(attribute)
+            for attribute in (attributes or [])
+        ]
         if any(not isinstance(item, PostgresCompositeTypeAttribute) for item in items):
             raise TypeError("attributes must contain PostgresCompositeTypeAttribute instances")
         self.attributes = items
+
+    def get_params(self) -> Dict[str, Any]:
+        """The inherited parameter view, with ``attributes`` in its wire shape.
+
+        The inherited version reads ``self.attributes`` off by name and hands
+        back the dataclass instances, which the artifact codec cannot write: a
+        dataclass is a host object with no language-neutral spelling, and the
+        codec refuses it by name rather than inventing one. Converting here
+        keeps the conversion on the node that owns the parameter -- its
+        constructor is where a mapping becomes an attribute again.
+        """
+        params = super().get_params()
+        params["attributes"] = [item.as_params() for item in self.attributes]
+        return params
 
 
 class PostgresEnumTypeDefinition(TypeDefinition):
@@ -182,8 +243,19 @@ class PostgresRangeTypeDefinition(TypeDefinition):
         self.multirange_type_name = multirange_type_name
 
 
-class _UnsetValue(Enum):
+class _UnsetValue(str, Enum):
+    """The "this TYPE clause was not supplied" sentinel, as a writable enum.
+
+    ``str`` as the base and ``str.__str__`` as the spelling, because that is
+    what makes it an artifact value rather than a host object the codec has no
+    wire form for: a plain ``Enum`` is refused by name on the way out, and a
+    ``str`` member travels as ``string_value`` in every language's reader
+    without a second spelling to reimplement (rules §11.3).
+    """
+
     TOKEN = "UNSET"
+
+    __str__ = str.__str__
 
 
 _UNSET = _UnsetValue.TOKEN
@@ -256,6 +328,21 @@ class PostgresBaseTypeDefinition(TypeDefinition):
             _require_data_type(element, "element")
         if delimiter is not None and not isinstance(delimiter, str):
             raise TypeError("delimiter must be a string")
+        # The sentinel is this parameter's "not supplied" spelling, and an
+        # artifact carries it as the text "UNSET" -- the enum is a ``str``, so
+        # that is the same fact in a form every language's reader can parse.
+        # The constructor is where the wire form becomes the stored form again
+        # (rules §10, "the conversion happens in the constructor"); leaving the
+        # text in place would make ``has_default`` answer True for a TYPE that
+        # declared no default at all.
+        #
+        # The boundary this costs: a bare Python string ``"UNSET"`` passed as
+        # the default is read as "not supplied". There is one spelling on the
+        # wire, so the two cannot both have it; naming the sentinel after the
+        # SQL keyword it stands for is worth more than the one pathological
+        # DEFAULT it makes unreachable.
+        if default == _UNSET:
+            default = _UNSET
         self.input_function = input_function
         self.output_function = output_function
         self.receive_function = receive_function
@@ -489,7 +576,7 @@ class PostgresSetTypePropertiesAction(TypeAlterAction):
         self.properties = normalized
 
 
-class PostgresDropTypeExpression(DropTypeExpression):
+class PostgresDropTypeExpression(DropTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -504,7 +591,7 @@ class PostgresDropTypeExpression(DropTypeExpression):
         self.restrict = restrict
 
 
-class PostgresCreateEnumTypeExpression(CreateTypeExpression):
+class PostgresCreateEnumTypeExpression(CreateTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -546,7 +633,7 @@ class PostgresDropEnumTypeExpression(PostgresDropTypeExpression):
         self.schema = schema
 
 
-class PostgresAlterEnumAddValueExpression(AlterTypeExpression):
+class PostgresAlterEnumAddValueExpression(AlterTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -587,7 +674,7 @@ class PostgresAlterEnumTypeAddValueExpression(PostgresAlterEnumAddValueExpressio
     pass
 
 
-class PostgresAlterEnumTypeRenameValueExpression(AlterTypeExpression):
+class PostgresAlterEnumTypeRenameValueExpression(AlterTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -617,7 +704,7 @@ class PostgresAlterEnumTypeRenameValueExpression(AlterTypeExpression):
         self.schema = schema
 
 
-class PostgresCreateRangeTypeExpression(CreateTypeExpression):
+class PostgresCreateRangeTypeExpression(CreateTypeStatement):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -657,7 +744,7 @@ class PostgresCreateRangeTypeExpression(CreateTypeExpression):
         self.multirange_type_name = multirange_type_name
 
 
-class EnumTypeNameExpression(BaseExpression):
+class PostgresEnumTypeNameExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -670,10 +757,10 @@ class EnumTypeNameExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_enum_type_name_expression"
+        return "format_postgres_enum_type_name_expression"
 
 
-class EnumValuesExpression(BaseExpression):
+class PostgresEnumValuesExpression(BaseExpression):
     def __init__(
         self,
         dialect: "SQLDialectBase",
@@ -684,16 +771,5 @@ class EnumValuesExpression(BaseExpression):
 
     @property
     def format_method(self) -> str:
-        return "format_enum_values_expression"
+        return "format_postgres_enum_values_expression"
 
-
-class CreateEnumTypeExpression(PostgresCreateEnumTypeExpression):
-    pass
-
-
-class DropEnumTypeExpression(PostgresDropEnumTypeExpression):
-    pass
-
-
-class AlterEnumAddValueExpression(PostgresAlterEnumAddValueExpression):
-    pass

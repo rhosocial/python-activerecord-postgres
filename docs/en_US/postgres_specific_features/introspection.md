@@ -428,10 +428,6 @@ Supports configuration via command-line arguments or environment variables:
 ### Querying Table Details
 
 ```bash
-# Get complete table info (columns, indexes, foreign keys)
-python -m rhosocial.activerecord.backend.impl.postgres introspect table users \
-  --database mydb --user postgres
-
 # Query only column information
 python -m rhosocial.activerecord.backend.impl.postgres introspect columns users \
   --database mydb --user postgres
@@ -461,24 +457,35 @@ PostgreSQL supports schema parameter:
 # Specify schema to query tables
 python -m rhosocial.activerecord.backend.impl.postgres introspect tables \
   --database mydb --user postgres --schema auth
-
-# Query table details in specific schema
-python -m rhosocial.activerecord.backend.impl.postgres introspect table users \
-  --database mydb --user postgres --schema analytics
 ```
 
 ### Introspection Types
 
-| Type | Description | Table Name Required |
-|------|-------------|---------------------|
-| `tables` | List all tables | No |
-| `views` | List all views | No |
-| `database` | Database information | No |
-| `table` | Complete table details (columns, indexes, foreign keys) | Yes |
-| `columns` | Column information | Yes |
-| `indexes` | Index information | Yes |
-| `foreign-keys` | Foreign key information | Yes |
-| `triggers` | Trigger information | Optional |
+| Type | Description | NAME |
+|------|-------------|------|
+| `tables` | List every base table | Refused |
+| `views` | List ordinary views, or one by name | Optional: a view name |
+| `columns` | One table's columns | Required: a table name |
+| `indexes` | One table's indexes | Required: a table name |
+| `foreign-keys` | One table's foreign keys | Required: a table name |
+| `triggers` | Triggers, optionally narrowed to one table | Optional: a table name |
+| `database` | Server version, charset, and the databases visible to this role | Refused |
+| `extensions` | Installed extensions, or one by name | Optional: an extension name |
+| `materialized-views` | Materialized views, or one by name | Optional: a view name |
+| `sequences` | Sequences, or one by name | Optional: a sequence name |
+
+`NAME` selects the object the type answers for, and each type has exactly one
+answer to whether it takes one. `columns`, `indexes` and `foreign-keys` name the
+table they belong to and require it; `triggers` accepts a table name and lists
+every trigger when it gets none; `views`, `materialized-views`, `sequences` and
+`extensions` accept an object name and list the family when they get none.
+`tables` and `database` take no name: a name there is an error rather than a
+filter, so a question aimed at one object cannot quietly return the whole family.
+
+A run exits `1` when it could not finish -- the connection failed, a query
+failed, or the object a name asked for is not there -- and `2` when the request
+cannot be served here: an unknown type, a name the type does not take, or a
+family this server cannot answer.
 
 ### Output Formats
 

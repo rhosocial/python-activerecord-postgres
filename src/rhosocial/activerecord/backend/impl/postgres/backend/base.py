@@ -64,9 +64,9 @@ class PostgresBackendMixin:
 
     def create_expression(self, expression_str: str):
         """Create an expression object for raw SQL expressions."""
-        from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+        from rhosocial.activerecord.backend.expression.operators import RawSQL
 
-        return RawSQLExpression(self.dialect, expression_str)
+        return RawSQL(self.dialect, expression_str)
 
     @property
     def threadsafety(self) -> int:

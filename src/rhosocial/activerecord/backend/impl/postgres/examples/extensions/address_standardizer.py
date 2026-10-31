@@ -4,7 +4,7 @@ address_standardizer extension - address parsing and standardization.
 
 This example demonstrates:
 1. Check if address_standardizer extension is available
-2. CREATE EXTENSION using PostgresCreateExtensionExpression
+2. CREATE EXTENSION using PostgresCreateExtensionStatement
 3. Use standardize_address() to normalize an address string
 4. Use parse_address() to decompose an address into components
 
@@ -36,9 +36,9 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
-from rhosocial.activerecord.backend.expression import QueryExpression
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -59,7 +59,7 @@ print(f"Extension: address_standardizer available = {addr_available}, installed 
 
 # Create extensions if needed
 if postgis_available and not postgis_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="postgis",
     )
@@ -70,7 +70,7 @@ if postgis_available and not postgis_installed:
     backend.introspect_and_adapt()
 
 if addr_available and not addr_installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="address_standardizer",
     )
@@ -90,7 +90,7 @@ if addr_installed:
         dialect,
         Literal(dialect, "123 Main St, Springfield, IL 62701"),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[std_func.as_("std_addr")],
     )
@@ -107,7 +107,7 @@ if addr_installed:
         dialect,
         Literal(dialect, "123 Main St, Springfield, IL 62701"),
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[parse_func.as_("parsed_addr")],
     )

@@ -10,7 +10,7 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.table_settings import (
-        PostgresAlterTableSettingsExpression,
+        PostgresAlterTableSettingsStatement,
     )
 
 
@@ -37,12 +37,12 @@ class PostgresAlterTableSettingsSupport(Protocol):
         ...
 
     def format_alter_table_settings_statement(
-        self, expr: "PostgresAlterTableSettingsExpression"
+        self, expr: "PostgresAlterTableSettingsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... SET`` table-level settings.
 
         Args:
-            expr: ``PostgresAlterTableSettingsExpression``.
+            expr: ``PostgresAlterTableSettingsStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

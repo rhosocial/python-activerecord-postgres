@@ -17,14 +17,14 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     async_ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import (
-    CreateTableExpression,
+    CreateTableStatement,
     ColumnDefinition,
     ColumnConstraint,
-    ColumnConstraintType,
-    DropTableExpression,
-    InsertExpression,
-    QueryExpression,
+    DropTableStatement,
+    InsertStatement,
+    QueryStatement,
     Column,
+    ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -92,13 +92,13 @@ def raster_env(postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="rast", data_type=PostgresRasterType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         columns=columns,
@@ -109,7 +109,7 @@ def raster_env(postgres_backend_single):
 
     # Setup: insert raster data using ST_MakeEmptyRaster expression
     rast_expr = _make_empty_raster(dialect)
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, TABLE_NAME),
         columns=["name", "rast"],
@@ -129,7 +129,7 @@ def raster_env(postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, TABLE_NAME),
         if_exists=True,
@@ -146,7 +146,7 @@ class TestPostgisRasterIntegration:
         backend, dialect = raster_env
 
         summary_func = st_summary(dialect, Column(dialect, "rast"))
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[summary_func.as_("summary")],
             from_=Table(dialect, TABLE_NAME),
@@ -173,7 +173,7 @@ class TestPostgisRasterIntegration:
             Literal(dialect, 1),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[value_func.as_("pixel_value")],
             from_=Table(dialect, TABLE_NAME),
@@ -211,13 +211,13 @@ async def async_raster_env(async_postgres_backend_single):
             dialect, name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
-                ColumnConstraint(dialect, ColumnConstraintType.PRIMARY_KEY),
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
         ColumnDefinition(dialect, name="rast", data_type=PostgresRasterType(dialect=dialect)),
     ]
-    create_expr = CreateTableExpression(
+    create_expr = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         columns=columns,
@@ -228,7 +228,7 @@ async def async_raster_env(async_postgres_backend_single):
 
     # Setup: insert raster data using ST_MakeEmptyRaster expression
     rast_expr = _make_empty_raster(dialect)
-    insert_expr = InsertExpression(
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, ASYNC_TABLE_NAME),
         columns=["name", "rast"],
@@ -248,7 +248,7 @@ async def async_raster_env(async_postgres_backend_single):
     yield backend, dialect
 
     # Teardown: drop table using expression
-    drop_expr = DropTableExpression(
+    drop_expr = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, ASYNC_TABLE_NAME),
         if_exists=True,
@@ -266,7 +266,7 @@ class TestAsyncPostgisRasterIntegration:
         backend, dialect = async_raster_env
 
         summary_func = st_summary(dialect, Column(dialect, "rast"))
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[summary_func.as_("summary")],
             from_=Table(dialect, ASYNC_TABLE_NAME),
@@ -294,7 +294,7 @@ class TestAsyncPostgisRasterIntegration:
             Literal(dialect, 1),
             Literal(dialect, 1),
         )
-        query = QueryExpression(
+        query = QueryStatement(
             dialect=dialect,
             select=[value_func.as_("pixel_value")],
             from_=Table(dialect, ASYNC_TABLE_NAME),

@@ -5,9 +5,9 @@ from unittest.mock import patch, PropertyMock
 
 from rhosocial.activerecord.backend.expression import (
     Column,
-    QueryExpression,
-    CreateViewExpression,
-    DropViewExpression,
+    QueryStatement,
+    CreateViewStatement,
+    DropViewStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect

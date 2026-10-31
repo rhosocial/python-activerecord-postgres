@@ -23,7 +23,7 @@ and the call site still matches the function.
 
 from typing import Callable, TypeVar
 
-from rhosocial.activerecord.backend.expression.core import SQLValueExpression
+from rhosocial.activerecord.backend.expression.core import SQLValue
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.mixins import (
     AliasableMixin,
@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import hstore as _hs
 from rhosocial.activerecord.backend.impl.postgres.functions import ltree as _ltree
 from rhosocial.activerecord.backend.impl.postgres.functions import network as _network
 from rhosocial.activerecord.backend.impl.postgres.functions import range as _range
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
 from rhosocial.activerecord.backend.expression.types import BigIntType, IntegerType
 
 
@@ -77,10 +77,10 @@ def _typed_element(dialect, element_type, element):
     # "integer" or a PostgreSQL one named "postgres_int4", and both mean the
     # same width. Only the width matters here, not which module declared it.
     if name in ("postgres_int4", "integer", "int4", "int"):
-        return Literal(dialect, element).cast(IntegerType(dialect))
+        return CastExpression(dialect, Literal(dialect, element), IntegerType(dialect))
 
     if name in ("postgres_int8", "bigint", "int8"):
-        return Literal(dialect, element).cast(BigIntType(dialect))
+        return CastExpression(dialect, Literal(dialect, element), BigIntType(dialect))
     return element
 
 
@@ -108,25 +108,25 @@ class NetworkResultMixin(_ResultMixinBase):
     reachable on it.
     """
 
-    def as_inet(self) -> "NetworkValueExpression":
+    def as_inet(self) -> "PostgresNetworkValue":
         """This yields an inet or cidr, whatever the data turns out to be."""
-        return self._retype(NetworkValueExpression)
+        return self._retype(PostgresNetworkValue)
 
-    def as_cidr(self) -> "NetworkValueExpression":
+    def as_cidr(self) -> "PostgresNetworkValue":
         """This yields a cidr specifically."""
-        return self._retype(NetworkValueExpression)
+        return self._retype(PostgresNetworkValue)
 
 
 class RangeResultMixin(_ResultMixinBase):
     """State that an expression yields a PostgreSQL range or multirange."""
 
-    def as_range(self) -> "RangeValueExpression":
+    def as_range(self) -> "PostgresRangeValue":
         """This yields a range, so containment and overlap apply."""
-        return self._retype(RangeValueExpression)
+        return self._retype(PostgresRangeValue)
 
-    def as_multirange(self) -> "RangeValueExpression":
+    def as_multirange(self) -> "PostgresRangeValue":
         """This yields a multirange, whose containment is a different operator."""
-        return self._retype(RangeValueExpression)
+        return self._retype(PostgresRangeValue)
 
 
 class HstoreResultMixin(_ResultMixinBase):
@@ -137,47 +137,47 @@ class HstoreResultMixin(_ResultMixinBase):
     be a type error.
     """
 
-    def as_hstore(self) -> "HstoreValueExpression":
+    def as_hstore(self) -> "PostgresHstoreValue":
         """This yields an hstore, so the key and value accessors apply."""
-        return self._retype(HstoreValueExpression)
+        return self._retype(PostgresHstoreValue)
 
 
 class LtreeResultMixin(_ResultMixinBase):
     """State that an expression yields an ltree path or one of its patterns."""
 
-    def as_ltree(self) -> "LtreeValueExpression":
+    def as_ltree(self) -> "PostgresLtreeValue":
         """This yields an ltree, so the path operations apply."""
-        return self._retype(LtreeValueExpression)
+        return self._retype(PostgresLtreeValue)
 
-    def as_lquery(self) -> "LtreeValueExpression":
+    def as_lquery(self) -> "PostgresLtreeValue":
         """This yields an lquery, the pattern an ltree is matched against."""
-        return self._retype(LtreeValueExpression)
+        return self._retype(PostgresLtreeValue)
 
-    def as_ltxtquery(self) -> "LtreeValueExpression":
+    def as_ltxtquery(self) -> "PostgresLtreeValue":
         """This yields an ltxtquery, the label-matching pattern."""
-        return self._retype(LtreeValueExpression)
+        return self._retype(PostgresLtreeValue)
 
 
-class NetworkValueExpression(
+class PostgresNetworkValue(
     NetworkResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``inet`` or ``cidr`` address.
 
     Carries the address operations, so ``col.network()`` is still an address
     and can be masked or merged -- the chain does not stop at the first call.
 
-    No family is declared, and that is deliberate rather than missing.
-    The core's type casting re-types by class -- ``as_text``, ``as_number``
-    and friends -- and an inet address is not among the classes it names,
-    so declaring "network" here would be a claim nothing reports. The range,
-    hstore and ltree expressions below take the same
-    view. What identifies an address is its class and the operations on it, not
-    a tag the core would drop.
+    No data-type family is declared, and that is deliberate rather than
+    missing. The core's type casting re-types by class -- ``as_text``,
+    ``as_number`` and friends -- and an inet address is not among the classes it
+    names, so declaring "network" here would be a claim nothing reports. The
+    range, hstore and ltree expressions below take the same view. What
+    identifies an address is its class and the operations on it, not a tag the
+    core would drop.
     """
 
     @property
@@ -190,10 +190,9 @@ class NetworkValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):
@@ -229,59 +228,59 @@ class NetworkValueExpression(
 
     # --- parts of an address ---
 
-    def network(self) -> "NetworkValueExpression":
+    def network(self) -> "PostgresNetworkValue":
         """The network part. ``NETWORK(addr)``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_network))
 
-    def netmask(self) -> "NetworkValueExpression":
+    def netmask(self) -> "PostgresNetworkValue":
         """The netmask. ``NETMASK(addr)``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_netmask))
 
-    def masklen(self) -> "SQLValueExpression":
+    def masklen(self) -> "SQLValue":
         """The netmask length in bits. ``MASKLEN(addr)`` -> integer"""
         return self._network_op(_network.inet_masklen)
 
-    def set_mask(self, mask_len: int) -> "NetworkValueExpression":
+    def set_mask(self, mask_len: int) -> "PostgresNetworkValue":
         """Re-mask to *mask_len* bits. ``SET_MASKLEN(addr, n)``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_set_mask, mask_len))
 
     # --- set operations ---
 
-    def merge(self, other) -> "NetworkValueExpression":
+    def merge(self, other) -> "PostgresNetworkValue":
         """The smallest network containing both. ``NETMERGE(a, b)``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_merge, other))
 
-    def and_mask(self, other) -> "NetworkValueExpression":
+    def and_mask(self, other) -> "PostgresNetworkValue":
         """Bitwise AND of two addresses. ``a & b``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_and, other))
 
-    def or_mask(self, other) -> "NetworkValueExpression":
+    def or_mask(self, other) -> "PostgresNetworkValue":
         """Bitwise OR of two addresses. ``a | b``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inet_or, other))
 
-    def invert(self) -> "NetworkValueExpression":
+    def invert(self) -> "PostgresNetworkValue":
         """The complement. ``~addr``"""
-        return NetworkValueExpression(
+        return PostgresNetworkValue(
             self._dialect, self._network_op(_network.inetnot))
 
-    def abbrev(self) -> "SQLValueExpression":
+    def abbrev(self) -> "SQLValue":
         """The abbreviated first-octet form. ``ABBREV(addr)``"""
         return self._network_op(_network.inet_show)
 
 
-class RangeValueExpression(
+class PostgresRangeValue(
     RangeResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """A range or multirange value.
 
@@ -294,10 +293,9 @@ class RangeValueExpression(
     an element comparison has to be typed against.
     """
 
-    def __init__(self, dialect, call, family=None, element_type=None):
+    def __init__(self, dialect, call, element_type=None):
         super().__init__(dialect)
         self.call = call
-        self._family = family
         #: The range's element type. Needed because a Python int binds as
         #: smallint, and ``int4range @> smallint`` does not exist.
         self.element_type = element_type
@@ -367,7 +365,7 @@ class RangeValueExpression(
         """Entirely above *other*. ``range_strictly_right_of(r1, r2)``"""
         return self._range_op(_range.range_strictly_right_of, other)
 
-    def merge(self) -> "SQLValueExpression":
+    def merge(self) -> "SQLValue":
         """The smallest range covering every range in a multirange.
 
         ``range_merge(mr)`` collapses a multirange to one range; it is not a
@@ -378,7 +376,7 @@ class RangeValueExpression(
         """
         return self._range_op(_range.range_merge)
 
-    def union(self, other) -> "SQLValueExpression":
+    def union(self, other) -> "SQLValue":
         """The union of two ranges. ``range_union(r1, r2)``"""
         return self._range_op(_range.range_union, other)
 
@@ -401,7 +399,7 @@ class RangeBoundMixin:
     ``contained_by`` and ``strictly_right_of`` read backwards from the method
     name in the underlying functions: the function puts the range second, so a
     wrapper that put it first would not compile against it. They live apart
-    from :class:`RangeValueExpression` because they belong on the value being
+    from :class:`PostgresRangeValue` because they belong on the value being
     compared, not on the range -- ``3 <@ r`` is a question about 3.
     """
 
@@ -414,13 +412,13 @@ class RangeBoundMixin:
         return _range.range_strictly_right_of(self._dialect, range_value, self)
 
 
-class HstoreValueExpression(
+class PostgresHstoreValue(
     HstoreResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``hstore`` key/value document.
 
@@ -440,10 +438,9 @@ class HstoreValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):
@@ -472,7 +469,7 @@ class HstoreValueExpression(
         """
         return factory(self._dialect, self, *args)
 
-    def keys(self) -> "SQLValueExpression":
+    def keys(self) -> "SQLValue":
         """The keys, as an array. ``akeys(h)``
 
         An array of text rather than a document: nothing can be looked up in it,
@@ -480,19 +477,19 @@ class HstoreValueExpression(
         """
         return self._hstore_op(_hstore.hstore_akeys)
 
-    def values(self) -> "SQLValueExpression":
+    def values(self) -> "SQLValue":
         """The values, as an array. ``avals(h)``"""
         return self._hstore_op(_hstore.hstore_avals)
 
-    def get(self, key: str) -> "SQLValueExpression":
+    def get(self, key: str) -> "SQLValue":
         """The value at *key*, or NULL. ``hstore_get_value(h, k)``"""
         return self._hstore_op(_hstore.hstore_get_value, key)
 
-    def get_as_text(self, key: str) -> "SQLValueExpression":
+    def get_as_text(self, key: str) -> "SQLValue":
         """The value at *key*, as text. ``->(h, k)``"""
         return self._hstore_op(_hstore.hstore_get_value_as_text, key)
 
-    def subscript(self, key: str) -> "SQLValueExpression":
+    def subscript(self, key: str) -> "SQLValue":
         """The value at *key*. ``h -> k``"""
         return self._hstore_op(_hstore.hstore_subscript_get, key)
 
@@ -508,18 +505,18 @@ class HstoreValueExpression(
         """Whether *key* is present and non-NULL. ``hstore_key_exists(h, k)``"""
         return self._hstore_op(_hstore.hstore_key_exists, key)
 
-    def to_json(self) -> "SQLValueExpression":
+    def to_json(self) -> "SQLValue":
         """The document as json. ``hstore_to_json(h)``"""
         return self._hstore_op(_hstore.hstore_to_json)
 
 
-class LtreeValueExpression(
+class PostgresLtreeValue(
     LtreeResultMixin,
     AliasableMixin,
     ComparisonMixin,
     StringPatternPredicateMixin,
     TypeCastingMixin,
-    SQLValueExpression,
+    SQLValue,
 ):
     """An ``ltree`` label path, or the pattern types that match one.
 
@@ -539,10 +536,9 @@ class LtreeValueExpression(
         """
         return "format_function_call"
 
-    def __init__(self, dialect, call, family=None):
+    def __init__(self, dialect, call):
         super().__init__(dialect)
         self.call = call
-        self._family = family
 
     @property
     def args(self):
@@ -595,31 +591,31 @@ class LtreeValueExpression(
         """This path matches an ``ltxtquery``. ``ltree_text_search(l, q)``"""
         return self._ltree_op(_ltree.ltree_text_search, query)
 
-    def nlevel(self) -> "SQLValueExpression":
+    def nlevel(self) -> "SQLValue":
         """The number of labels. ``nlevel(l)`` -> integer"""
         return self._ltree_op(_ltree.ltree_nlevel)
 
-    def subpath(self, start: int, length=None) -> "LtreeValueExpression":
+    def subpath(self, start: int, length=None) -> "PostgresLtreeValue":
         """A slice of the path. ``subpath(l, off[, len])``"""
-        return LtreeValueExpression(
+        return PostgresLtreeValue(
             self._dialect, self._ltree_op(_ltree.ltree_subpath, start, length))
 
-    def concat(self, other) -> "LtreeValueExpression":
+    def concat(self, other) -> "PostgresLtreeValue":
         """Append *other*. ``l || r``"""
-        return LtreeValueExpression(
+        return PostgresLtreeValue(
             self._dialect, self._ltree_op(_ltree.ltree_concat, other))
 
-    def lca(self, paths) -> "SQLValueExpression":
+    def lca(self, paths) -> "SQLValue":
         """The longest common ancestor of the given paths."""
         return self._ltree_op(_ltree.ltree_lca, paths)
 
 
 __all__ = [
-    "NetworkValueExpression",
-    "RangeValueExpression",
+    "PostgresNetworkValue",
+    "PostgresRangeValue",
     "RangeBoundMixin",
-    "HstoreValueExpression",
-    "LtreeValueExpression",
+    "PostgresHstoreValue",
+    "PostgresLtreeValue",
 ]
 
 # ---------------------------------------------------------------------------
@@ -630,14 +626,14 @@ __all__ = [
 #: dispatch key, which is what a DataType declares, so a type added here needs
 #: no registration elsewhere.
 _OPERATION_EXPRESSIONS = {
-    "postgres_cidr": NetworkValueExpression,
-    "postgres_inet": NetworkValueExpression,
-    "postgres_macaddr": NetworkValueExpression,
-    "postgres_macaddr8": NetworkValueExpression,
-    "postgres_hstore": HstoreValueExpression,
-    "postgres_ltree": LtreeValueExpression,
-    "postgres_lquery": LtreeValueExpression,
-    "postgres_ltxtquery": LtreeValueExpression,
+    "postgres_cidr": PostgresNetworkValue,
+    "postgres_inet": PostgresNetworkValue,
+    "postgres_macaddr": PostgresNetworkValue,
+    "postgres_macaddr8": PostgresNetworkValue,
+    "postgres_hstore": PostgresHstoreValue,
+    "postgres_ltree": PostgresLtreeValue,
+    "postgres_lquery": PostgresLtreeValue,
+    "postgres_ltxtquery": PostgresLtreeValue,
 }
 for _range_name in (
     "postgres_int4range", "postgres_int8range", "postgres_numrange",
@@ -646,7 +642,7 @@ for _range_name in (
     "postgres_nummultirange", "postgres_tsmultirange",
     "postgres_tstzmultirange", "postgres_datemultirange",
 ):
-    _OPERATION_EXPRESSIONS[_range_name] = RangeValueExpression
+    _OPERATION_EXPRESSIONS[_range_name] = PostgresRangeValue
 
 
 def value_expression_for(data_type, dialect):

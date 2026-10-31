@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PostgresCreatePublicationExpression",
-    "PostgresDropPublicationExpression",
-    "PostgresCreateSubscriptionExpression",
-    "PostgresDropSubscriptionExpression",
+    "PostgresCreatePublicationStatement",
+    "PostgresDropPublicationStatement",
+    "PostgresCreateSubscriptionStatement",
+    "PostgresDropSubscriptionStatement",
 ]
 
 
-class PostgresCreatePublicationExpression(BaseExpression):
+class PostgresCreatePublicationStatement(BaseExpression):
     """PostgreSQL CREATE PUBLICATION statement expression.
 
     Attributes:
@@ -64,7 +64,7 @@ class PostgresCreatePublicationExpression(BaseExpression):
         return "format_create_publication_statement"
 
 
-class PostgresDropPublicationExpression(BaseExpression):
+class PostgresDropPublicationStatement(BaseExpression):
     """PostgreSQL DROP PUBLICATION statement expression.
 
     Attributes:
@@ -93,7 +93,7 @@ class PostgresDropPublicationExpression(BaseExpression):
         return "format_drop_publication_statement"
 
 
-class PostgresCreateSubscriptionExpression(BaseExpression):
+class PostgresCreateSubscriptionStatement(BaseExpression):
     """PostgreSQL CREATE SUBSCRIPTION statement expression.
 
     Attributes:
@@ -124,7 +124,7 @@ class PostgresCreateSubscriptionExpression(BaseExpression):
         return "format_create_subscription_statement"
 
 
-class PostgresDropSubscriptionExpression(BaseExpression):
+class PostgresDropSubscriptionStatement(BaseExpression):
     """PostgreSQL DROP SUBSCRIPTION statement expression.
 
     Attributes:

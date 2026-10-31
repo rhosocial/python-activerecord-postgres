@@ -5,8 +5,11 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.transaction import (
-        BeginTransactionExpression,
-        SetTransactionExpression,
+        BeginTransactionStatement,
+        SetTransactionStatement,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+        PostgresSetConstraintsStatement,
     )
 
 
@@ -26,8 +29,8 @@ class PostgresTransactionSupport(Protocol):
 
     def supports_savepoint(self)-> bool: ...
 
-    def format_begin_transaction(
-        self, expr: "BeginTransactionExpression"
+    def format_begin_transaction_statement(
+        self, expr: "BeginTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format BEGIN TRANSACTION with PostgreSQL inline options.
 
@@ -37,20 +40,36 @@ class PostgresTransactionSupport(Protocol):
                   [ { NOT DEFERRABLE | DEFERRABLE } ]
 
         Args:
-            expr: BeginTransactionExpression carrying isolation level and mode.
+            expr: BeginTransactionStatement carrying isolation level and mode.
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
         """
         ...
 
-    def format_set_transaction(
-        self, expr: "SetTransactionExpression"
+    def format_set_transaction_statement(
+        self, expr: "SetTransactionStatement"
     ) -> Tuple[str, tuple]:
         """Format SET TRANSACTION / SET SESSION CHARACTERISTICS statement.
 
         Args:
-            expr: SetTransactionExpression carrying transaction characteristics.
+            expr: SetTransactionStatement carrying transaction characteristics.
+
+        Returns:
+            Tuple of (SQL statement, parameters tuple)
+        """
+        ...
+
+    def format_postgres_set_constraints_statement(
+        self, expr: "PostgresSetConstraintsStatement"
+    ) -> Tuple[str, tuple]:
+        """Format ``SET CONSTRAINTS <name> DEFERRED``.
+
+        The constraint name is an identifier and is rendered through the
+        dialect's identifier quoting.
+
+        Args:
+            expr: Set-constraints statement carrying the constraint name.
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

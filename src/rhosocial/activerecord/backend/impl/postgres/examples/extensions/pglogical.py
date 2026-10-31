@@ -34,10 +34,10 @@ dialect = backend.dialect
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionExpression,
+    PostgresCreateExtensionStatement,
 )
 from rhosocial.activerecord.backend.expression import (
-    QueryExpression,
+    QueryStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -53,7 +53,7 @@ print(f"Extension check: pglogical available = {available}, installed = {install
 
 # Create extension using expression
 if available and not installed:
-    create_ext = PostgresCreateExtensionExpression(
+    create_ext = PostgresCreateExtensionStatement(
         dialect=dialect,
         name="pglogical",
     )
@@ -75,7 +75,7 @@ if installed:
         "provider_node",
         "host=localhost dbname=test",
     )
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[node_func.as_("node_result")],
     )
@@ -90,7 +90,7 @@ if installed:
 
     # Example 2: Show subscription status
     status_func = pglogical_show_subscription_status(dialect)
-    query = QueryExpression(
+    query = QueryStatement(
         dialect=dialect,
         select=[status_func.as_("subscription_status")],
     )

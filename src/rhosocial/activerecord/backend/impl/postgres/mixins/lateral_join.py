@@ -9,4 +9,4 @@ class PostgresLateralJoinMixin:
     """
 
     def supports_lateral_join(self) -> bool:
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))

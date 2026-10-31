@@ -9,4 +9,4 @@ class PostgresFilterMixin:
     """
 
     def supports_filter_clause(self) -> bool:
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))

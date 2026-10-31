@@ -29,7 +29,7 @@ class JsonToStringAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(dict, str)
+        self.register_type(dict, str)
 
     def _do_to_database(self, value: Dict, target_type: type, options: Optional[Dict[str, Any]] = None) -> Optional[str]:  # noqa: E501
         if value is None:

@@ -20,7 +20,7 @@ from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression,
+    PostgresCreatePartitionStatement,
 )
 
 
@@ -30,10 +30,10 @@ def create_next_monthly_partition(
     schema: Optional[str] = None,
     reference_date: Optional[str] = None,
     lead_months: int = 1,
-) -> PostgresCreatePartitionExpression:
+) -> PostgresCreatePartitionStatement:
     """Create the next monthly RANGE partition for a partitioned table.
 
-    Generates a ``PostgresCreatePartitionExpression`` for a monthly RANGE
+    Generates a ``PostgresCreatePartitionStatement`` for a monthly RANGE
     partition whose start boundary is computed from the reference date
     (or today) advanced by ``lead_months``.
 
@@ -49,7 +49,7 @@ def create_next_monthly_partition(
             ``1`` (default) creates next month's partition.
 
     Returns:
-        PostgresCreatePartitionExpression for the monthly partition.
+        PostgresCreatePartitionStatement for the monthly partition.
 
     Raises:
         ValueError: If reference_date is not a valid date string.
@@ -90,7 +90,7 @@ def create_next_monthly_partition(
 
     partition_name = f"{parent_table}_{target_year}_{target_month:02d}"
 
-    return PostgresCreatePartitionExpression(
+    return PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=parent_table,
@@ -106,10 +106,10 @@ def create_range_partition_for_month(
     year: int,
     month: int,
     schema: Optional[str] = None,
-) -> PostgresCreatePartitionExpression:
+) -> PostgresCreatePartitionStatement:
     """Create a monthly RANGE partition for a specific year and month.
 
-    Generates a ``PostgresCreatePartitionExpression`` for a single monthly
+    Generates a ``PostgresCreatePartitionStatement`` for a single monthly
     RANGE partition covering the given year-month.
 
     Partition naming convention: ``<parent_table>_YYYY_MM``.
@@ -122,7 +122,7 @@ def create_range_partition_for_month(
         schema: Optional schema name for the partition.
 
     Returns:
-        PostgresCreatePartitionExpression for the specified month.
+        PostgresCreatePartitionStatement for the specified month.
 
     Raises:
         ValueError: If month is not in 1..12.
@@ -148,7 +148,7 @@ def create_range_partition_for_month(
 
     partition_name = f"{parent_table}_{year}_{month:02d}"
 
-    return PostgresCreatePartitionExpression(
+    return PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=parent_table,
@@ -164,10 +164,10 @@ def create_range_partition_for_quarter(
     year: int,
     quarter: int,
     schema: Optional[str] = None,
-) -> PostgresCreatePartitionExpression:
+) -> PostgresCreatePartitionStatement:
     """Create a quarterly RANGE partition for a specific year and quarter.
 
-    Generates a ``PostgresCreatePartitionExpression`` for a quarterly RANGE
+    Generates a ``PostgresCreatePartitionStatement`` for a quarterly RANGE
     partition covering the given year-quarter.
 
     Partition naming convention: ``<parent_table>_YYYY_Q<quarter>``.
@@ -180,7 +180,7 @@ def create_range_partition_for_quarter(
         schema: Optional schema name for the partition.
 
     Returns:
-        PostgresCreatePartitionExpression for the specified quarter.
+        PostgresCreatePartitionStatement for the specified quarter.
 
     Raises:
         ValueError: If quarter is not in 1..4.
@@ -207,7 +207,7 @@ def create_range_partition_for_quarter(
 
     partition_name = f"{parent_table}_{year}_q{quarter}"
 
-    return PostgresCreatePartitionExpression(
+    return PostgresCreatePartitionStatement(
         dialect=dialect,
         partition_name=partition_name,
         parent_table=parent_table,
@@ -227,7 +227,7 @@ def create_range_partitions_for_interval(
 ) -> Tuple[BaseExpression, ...]:
     """Create multiple RANGE partitions covering a date interval.
 
-    Generates a tuple of ``PostgresCreatePartitionExpression`` objects,
+    Generates a tuple of ``PostgresCreatePartitionStatement`` objects,
     one for each unit (month or quarter) in the interval from
     ``from_date`` to ``to_date``.
 
@@ -245,7 +245,7 @@ def create_range_partitions_for_interval(
         schema: Optional schema name.
 
     Returns:
-        Tuple of PostgresCreatePartitionExpression instances, one per
+        Tuple of PostgresCreatePartitionStatement instances, one per
         interval unit.
 
     Raises:

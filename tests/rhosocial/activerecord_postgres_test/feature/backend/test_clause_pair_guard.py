@@ -25,7 +25,7 @@ Two deliberate shapes are pinned separately:
   (``UnsupportedFeatureError``) -- never render a token the server rejects and
   never drop the clause. ``TestRefusedSpellingsFailClosed`` covers these, and
   names the measured server evidence for each.
-* ``AlterConstraint.enforced`` is mandatory in the action's grammar: "neither"
+* ``AlterConstraintAction.enforced`` is mandatory in the action's grammar: "neither"
   is refused as well as "both".
 
 The render evidence in this file is produced offline by the dialect. The
@@ -49,50 +49,52 @@ from rhosocial.activerecord.backend.expression.objects import (
     Type,
     View,
 )
-from rhosocial.activerecord.backend.expression.pivot import UnpivotExpression
+from rhosocial.activerecord.backend.expression.pivot import Unpivot
 from rhosocial.activerecord.backend.expression.query_sources import (
-    CTEExpression,
-    SetOperationExpression,
+    CTEClause,
+    SetOperation,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AlterConstraint,
+    AlterConstraintAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_function import (
-    DropFunctionExpression,
+    DropFunctionStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
-    DropSchemaExpression,
+    DropSchemaStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
-    AlterSequenceExpression,
-    CreateSequenceExpression,
+    AlterSequenceStatement,
+    CreateSequenceStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraint,
-    ColumnConstraintType,
-    CreateTableAsExpression,
-    DropTableExpression,
+    CreateTableAsStatement,
+    DropTableStatement,
     IdentityClause,
     TableConstraint,
-    TableConstraintType,
+    ColumnCheckConstraint,
+    ColumnForeignKeyConstraint,
+    TableCheckConstraint,
+    TableForeignKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
-    TruncateExpression,
+    TruncateStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_view import (
-    CreateMaterializedViewExpression,
-    DropMaterializedViewExpression,
-    DropViewExpression,
-    RefreshMaterializedViewExpression,
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    DropViewStatement,
+    RefreshMaterializedViewStatement,
 )
-from rhosocial.activerecord.backend.expression.statements.dql import QueryExpression
+from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 from rhosocial.activerecord.backend.expression.transaction import (
-    BeginTransactionExpression,
-    SetTransactionExpression,
+    BeginTransactionStatement,
+    SetTransactionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
-    PostgresCopyToExpression,
+    PostgresCopyToStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins import (
     PostgresCTEMixin,
@@ -104,13 +106,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constra
     PostgresExcludeConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresRefreshMaterializedViewExpression,
+    PostgresRefreshMaterializedViewPgStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     PostgresDropTypeExpression,
 )
 
 PG16 = (16, 0, 0)
+PG18 = (18, 0, 0)
 PG19 = (19, 0, 0)
 
 
@@ -123,19 +126,11 @@ def _table(d, name="t"):
 
 
 def _query(d):
-    return QueryExpression(d, select=[Column(d, "id")], from_=_table(d))
+    return QueryStatement(d, select=[Column(d, "id")], from_=_table(d))
 
 
 def _fk(d, **kw):
-    return TableConstraint(
-        d,
-        TableConstraintType.FOREIGN_KEY,
-        name="fk",
-        columns=["a"],
-        foreign_key_table=_table(d, "t2"),
-        foreign_key_columns=["b"],
-        **kw,
-    )
+    return TableConstraint(d, branch=TableForeignKeyConstraint(d, ["a"], (_table(d, "t2"), ["b"])), name="fk", **kw)
 
 
 def _check(d, **kw):
@@ -144,22 +139,15 @@ def _check(d, **kw):
     )
 
     return TableConstraint(
-        d,
-        TableConstraintType.CHECK,
-        name="ck",
-        check_condition=ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b")),
-        **kw,
-    )
+               d,
+               branch=TableCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
 
 
 def _column_fk(d, **kw):
-    return ColumnConstraint(
-        d,
-        ColumnConstraintType.FOREIGN_KEY,
-        name="fk",
-        foreign_key_reference=(_table(d, "t2"), ["b"]),
-        **kw,
-    )
+    return ColumnConstraint(d, branch=ColumnForeignKeyConstraint(d, (_table(d, "t2"), ["b"])), name="fk", **kw)
 
 
 def _column_check(d, **kw):
@@ -168,12 +156,11 @@ def _column_check(d, **kw):
     )
 
     return ColumnConstraint(
-        d,
-        ColumnConstraintType.CHECK,
-        name="ck",
-        check_condition=ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b")),
-        **kw,
-    )
+               d,
+               branch=ColumnCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
 
 
 def _exclude(d, **kw):
@@ -237,16 +224,16 @@ class PairCase:
 
 PAIR_CASES = (
     PairCase(
-        "CreateSequenceExpression.cycle",
-        lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+        "CreateSequenceStatement.cycle",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
         "cycle",
         "no_cycle",
         r"(?<!NO )CYCLE\b",
         r"NO CYCLE\b",
     ),
     PairCase(
-        "CreateSequenceExpression.cache",
-        lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+        "CreateSequenceStatement.cache",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
         "cache",
         "no_cache",
         r"CACHE 10\b",
@@ -255,16 +242,16 @@ PAIR_CASES = (
         b_refusal="SEQUENCE NO CACHE",
     ),
     PairCase(
-        "AlterSequenceExpression.cycle",
-        lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+        "AlterSequenceStatement.cycle",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
         "cycle",
         "no_cycle",
         r"(?<!NO )CYCLE\b",
         r"NO CYCLE\b",
     ),
     PairCase(
-        "AlterSequenceExpression.cache",
-        lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+        "AlterSequenceStatement.cache",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
         "cache",
         "no_cache",
         r"CACHE 10\b",
@@ -291,64 +278,64 @@ PAIR_CASES = (
         b_refusal="IDENTITY NO CACHE",
     ),
     PairCase(
-        "DropSchemaExpression.cascade",
-        lambda d, **kw: DropSchemaExpression(d, Schema(d, "s"), **kw),
+        "DropSchemaStatement.cascade",
+        lambda d, **kw: DropSchemaStatement(d, Schema(d, "s"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropViewExpression.cascade",
-        lambda d, **kw: DropViewExpression(d, View(d, "v"), **kw),
+        "DropViewStatement.cascade",
+        lambda d, **kw: DropViewStatement(d, View(d, "v"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropMaterializedViewExpression.cascade",
-        lambda d, **kw: DropMaterializedViewExpression(d, MaterializedView(d, "mv"), **kw),
+        "DropMaterializedViewStatement.cascade",
+        lambda d, **kw: DropMaterializedViewStatement(d, MaterializedView(d, "mv"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropFunctionExpression.cascade",
-        lambda d, **kw: DropFunctionExpression(d, Function(d, "f"), **kw),
+        "DropFunctionStatement.cascade",
+        lambda d, **kw: DropFunctionStatement(d, Function(d, "f"), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "DropTableExpression.cascade",
-        lambda d, **kw: DropTableExpression(d, _table(d), **kw),
+        "DropTableStatement.cascade",
+        lambda d, **kw: DropTableStatement(d, _table(d), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "TruncateExpression.cascade",
-        lambda d, **kw: TruncateExpression(d, _table(d), **kw),
+        "TruncateStatement.cascade",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
         "cascade",
         "restrict",
         r"CASCADE\b",
         r"RESTRICT\b",
     ),
     PairCase(
-        "TruncateExpression.restart_identity",
-        lambda d, **kw: TruncateExpression(d, _table(d), **kw),
+        "TruncateStatement.restart_identity",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
         "restart_identity",
         "continue_identity",
         r"RESTART IDENTITY\b",
         r"CONTINUE IDENTITY\b",
     ),
     PairCase(
-        "CreateMaterializedViewExpression.with_data",
-        lambda d, **kw: CreateMaterializedViewExpression(
+        "CreateMaterializedViewStatement.with_data",
+        lambda d, **kw: CreateMaterializedViewStatement(
             d, MaterializedView(d, "mv"), _query(d), **kw
         ),
         "with_data",
@@ -357,8 +344,8 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "RefreshMaterializedViewExpression.with_data",
-        lambda d, **kw: RefreshMaterializedViewExpression(
+        "RefreshMaterializedViewStatement.with_data",
+        lambda d, **kw: RefreshMaterializedViewStatement(
             d, MaterializedView(d, "mv"), **kw
         ),
         "with_data",
@@ -367,8 +354,8 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "PostgresRefreshMaterializedViewExpression.with_data",
-        lambda d, **kw: PostgresRefreshMaterializedViewExpression(
+        "PostgresRefreshMaterializedViewPgStatement.with_data",
+        lambda d, **kw: PostgresRefreshMaterializedViewPgStatement(
             d, MaterializedView(d, "mv"), **kw
         ),
         "with_data",
@@ -377,16 +364,16 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "CreateTableAsExpression.with_data",
-        lambda d, **kw: CreateTableAsExpression(d, _table(d), _query(d), **kw),
+        "CreateTableAsStatement.with_data",
+        lambda d, **kw: CreateTableAsStatement(d, _table(d), _query(d), **kw),
         "with_data",
         "no_data",
         r"WITH DATA\b",
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "CTEExpression.materialized",
-        lambda d, **kw: CTEExpression(d, "c", _query(d), **kw),
+        "CTEClause.materialized",
+        lambda d, **kw: CTEClause(d, "c", _query(d), **kw),
         "materialized",
         "not_materialized",
         r"(?<!NOT )MATERIALIZED\b",
@@ -434,55 +421,16 @@ PAIR_CASES = (
         r"INITIALLY IMMEDIATE\b",
     ),
     PairCase(
-        "ColumnConstraint.enforced",
-        _column_check,
-        "enforced",
-        "not_enforced",
-        r"(?<!NOT )ENFORCED\b",
-        r"NOT ENFORCED\b",
-        version=PG19,
-    ),
-    PairCase(
-        "PostgresExcludeConstraint.deferrable",
-        _exclude,
+        "BeginTransactionStatement.deferrable",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
         "deferrable",
         "not_deferrable",
         r"(?<!NOT )DEFERRABLE\b",
         r"NOT DEFERRABLE\b",
     ),
     PairCase(
-        "PostgresExcludeConstraint.initially_deferred",
-        _exclude,
-        "initially_deferred",
-        "initially_immediate",
-        r"INITIALLY DEFERRED\b",
-        r"INITIALLY IMMEDIATE\b",
-    ),
-    PairCase(
-        "SetOperationExpression.all_",
-        lambda d, **kw: SetOperationExpression(
-            d,
-            left=QueryExpression(d, select=[Column(d, "a")], from_=_table(d, "t1")),
-            right=QueryExpression(d, select=[Column(d, "a")], from_=_table(d, "t2")),
-            operation="UNION",
-            **kw,
-        ),
-        "all_",
-        "distinct",
-        r"\bALL\b",
-        r"\bDISTINCT\b",
-    ),
-    PairCase(
-        "BeginTransactionExpression.deferrable",
-        lambda d, **kw: BeginTransactionExpression(d, **kw),
-        "deferrable",
-        "not_deferrable",
-        r"(?<!NOT )DEFERRABLE\b",
-        r"NOT DEFERRABLE\b",
-    ),
-    PairCase(
-        "SetTransactionExpression.deferrable",
-        lambda d, **kw: SetTransactionExpression(d, **kw),
+        "SetTransactionStatement.deferrable",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
         "deferrable",
         "not_deferrable",
         r"(?<!NOT )DEFERRABLE\b",
@@ -492,8 +440,8 @@ PAIR_CASES = (
     # must refuse by name through supports_transaction_wait() rather than be
     # silently dropped; both spellings are refused here.
     PairCase(
-        "BeginTransactionExpression.wait",
-        lambda d, **kw: BeginTransactionExpression(d, **kw),
+        "BeginTransactionStatement.wait",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
         "wait",
         "no_wait",
         r"(?<!NO )WAIT\b",
@@ -502,8 +450,8 @@ PAIR_CASES = (
         b_refusal="NO WAIT",
     ),
     PairCase(
-        "SetTransactionExpression.wait",
-        lambda d, **kw: SetTransactionExpression(d, **kw),
+        "SetTransactionStatement.wait",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
         "wait",
         "no_wait",
         r"(?<!NO )WAIT\b",
@@ -512,20 +460,20 @@ PAIR_CASES = (
         b_refusal="NO WAIT",
     ),
     PairCase(
-        "AlterConstraint.enforced",
-        lambda d, **kw: AlterConstraint(
-            d, "c", constraint_type=TableConstraintType.CHECK, **kw
+        "AlterConstraintAction.enforced",
+        lambda d, **kw: AlterConstraintAction(
+            d, "c", constraint_kind=TableCheckConstraint, **kw
         ),
         "enforced",
         "not_enforced",
         r"(?<!NOT )ENFORCED\b",
         r"NOT ENFORCED\b",
         version=PG19,
-        neither_error="AlterConstraint requires exactly one of",
+        neither_error="AlterConstraintAction requires exactly one of",
     ),
     PairCase(
-        "PostgresCopyToExpression.force_array",
-        lambda d, **kw: PostgresCopyToExpression(
+        "PostgresCopyToStatement.force_array",
+        lambda d, **kw: PostgresCopyToStatement(
             d, table_name="t", format="json", **kw
         ),
         "force_array",
@@ -601,6 +549,68 @@ class TestFourStatesArePairwiseDistinguishable:
             case.render(**{case.a: case.a_value, case.b: case.b_value})
 
 
+class TestColumnEnforcementTraitIsRefusedAtEveryVersion:
+    """``[NOT] ENFORCED`` has no column-level form on PostgreSQL at all.
+
+    Measured on all three instances: at column level the clause is a parse
+    error for every kind -- ``42601: misplaced NOT ENFORCED clause`` on 18 and
+    19, and ``42601: syntax error at or near "ENFORCED"`` on 17, where it is
+    not in the grammar at all.  So neither spelling of the pair can be
+    rendered, at any version, for any branch: there is no pair to distinguish
+    and the answer is a refusal that names the clause.
+    """
+
+    @pytest.mark.parametrize(
+        "version", [PG16, PG18, PG19], ids=["pg16", "pg18", "pg19"]
+    )
+    @pytest.mark.parametrize(
+        "kwargs", [{"enforced": True}, {"not_enforced": True}], ids=["enforced", "not_enforced"]
+    )
+    def test_both_spellings_are_refused(self, version, kwargs):
+        with pytest.raises(
+            UnsupportedFeatureError, match="CHECK NOT ENFORCED on a column constraint"
+        ):
+            _column_check(_dialect(version), **kwargs).to_sql()
+
+
+class TestExcludeConstraintTraitsAreRefusedAtConstruction:
+    """EXCLUDE carries neither the deferral nor the enforcement trait.
+
+    PostgreSQL 19beta4 accepts ``EXCLUDE ... DEFERRABLE``
+    (:meth:`supports_deferrable_exclude_constraint` records the measurement)
+    and refuses ``NOT ENFORCED`` with ``0A000: EXCLUDE constraints cannot be
+    marked NOT ENFORCED``.  The core branch whitelist -- an expression-layer
+    contract a backend does not get to widen -- says the same thing from the
+    other end: ``DEFERRABLE``/``INITIALLY`` ride PRIMARY KEY, UNIQUE and
+    FOREIGN KEY, and ``ENFORCED`` rides those plus CHECK.  EXCLUDE is in
+    neither list, so the request cannot be written at all and is a
+    ``ValueError`` at construction rather than SQL the server would answer at
+    execution time.  These two cases are therefore not pair guards -- there is
+    no pair to distinguish, because neither spelling is reachable.
+    """
+
+    @pytest.mark.parametrize(
+        "kwargs,message",
+        [
+            ({"deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"not_deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_deferred": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_immediate": True}, "DEFERRABLE / INITIALLY cannot ride"),
+        ],
+        ids=["deferrable", "not_deferrable", "initially_deferred", "initially_immediate"],
+    )
+    def test_deferral_trait_is_refused(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            _exclude(_dialect(), **kwargs)
+
+    def test_enforcement_trait_is_not_even_a_parameter(self):
+        """``enforced=`` is a TypeError, not a silently dropped keyword."""
+        with pytest.raises(TypeError):
+            PostgresExcludeConstraint(
+                _dialect(), elements=[("range", "&&")], enforced=True
+            )
+
+
 class TestRefusedSpellingsFailClosed:
     """Spellings PostgreSQL cannot express refuse by name, never drop."""
 
@@ -608,13 +618,13 @@ class TestRefusedSpellingsFailClosed:
         "case_id,builder,feature",
         [
             (
-                "CreateSequenceExpression.order",
-                lambda d, **kw: CreateSequenceExpression(d, Sequence(d, "s"), **kw),
+                "CreateSequenceStatement.order",
+                lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
                 "SEQUENCE ORDER",
             ),
             (
-                "AlterSequenceExpression.order",
-                lambda d, **kw: AlterSequenceExpression(d, Sequence(d, "s"), **kw),
+                "AlterSequenceStatement.order",
+                lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
                 "ALTER SEQUENCE ORDER",
             ),
             (
@@ -634,10 +644,71 @@ class TestRefusedSpellingsFailClosed:
     def test_unpivot_is_refused_before_its_pair_is_read(self):
         """PostgreSQL declares no UNPIVOT formatter; the refusal is the answer."""
         dialect = _dialect()
-        with pytest.raises(UnsupportedFeatureError, match="format_unpivot_expression"):
-            UnpivotExpression(
+        with pytest.raises(UnsupportedFeatureError, match="format_unpivot"):
+            Unpivot(
                 dialect, value_column="v", pivot_column="k", columns=["a", "b"]
             ).to_sql()
+
+
+class TestSetOperationWordsAreClosed:
+    """``UNION`` / ``UNION ALL`` are two words of one closed set, not two flags.
+
+    The node no longer carries an ``all_``/``distinct`` parameter pair, so the
+    pair this file used to guard is gone: the alternative is spelled in ``op``
+    itself. That trades the four-state rule for a closed word set, which must
+    hold the same ground — each word renders its own spelling, and anything
+    outside the set is refused **where it is written**, at construction, not at
+    render time where a typo would silently fall back.
+    """
+
+    @staticmethod
+    def _sides(dialect, op):
+        return SetOperation(
+            dialect,
+            op=op,
+            left=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t1")),
+            right=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t2")),
+        )
+
+    #: The complement check as operator-aware patterns, not substrings:
+    #: ``UNION`` is contained in ``UNION ALL``, so the bare-UNION test has to
+    #: say "a UNION not followed by ALL", or every ``union_all`` render would
+    #: fail its own assertion.
+    _FORBIDDEN = {
+        "UNION": r"UNION(?! ALL)",
+        "UNION ALL": r"UNION ALL",
+        "INTERSECT": r"INTERSECT",
+        "EXCEPT": r"EXCEPT",
+    }
+
+    @pytest.mark.parametrize(
+        ("op", "expected"),
+        [
+            ("union", "UNION"),
+            ("UNION", "UNION"),
+            ("union_all", "UNION ALL"),
+            ("Union_All", "UNION ALL"),
+            ("intersect", "INTERSECT"),
+            ("except", "EXCEPT"),
+        ],
+        ids=["union", "union-upper", "union_all", "union_all-mixed", "intersect", "except"],
+    )
+    def test_each_word_renders_its_own_spelling(self, op, expected):
+        sql, _params = self._sides(_dialect(), op).to_sql()
+        assert expected in sql, sql
+        for spelling, pattern in self._FORBIDDEN.items():
+            if spelling == expected:
+                continue
+            assert re.search(pattern, sql) is None, (op, spelling, sql)
+
+    @pytest.mark.parametrize(
+        "op",
+        ["UNION DISTINCT", "union distinct", "minus", "union all", "", "nonsense"],
+        ids=["sql-tokens", "sql-tokens-lower", "oracle-minus", "spaced", "empty", "nonsense"],
+    )
+    def test_a_word_outside_the_set_is_refused_at_construction(self, op):
+        with pytest.raises(ValueError, match="op must be one of"):
+            self._sides(_dialect(), op)
 
 
 class TestGuardIsNotVacuous:
@@ -654,39 +725,35 @@ class TestGuardIsNotVacuous:
 
     def test_expected_pairs_are_covered(self):
         expected = {
-            "CreateSequenceExpression.cycle",
-            "CreateSequenceExpression.cache",
-            "AlterSequenceExpression.cycle",
-            "AlterSequenceExpression.cache",
+            "CreateSequenceStatement.cycle",
+            "CreateSequenceStatement.cache",
+            "AlterSequenceStatement.cycle",
+            "AlterSequenceStatement.cache",
             "IdentityClause.cycle",
             "IdentityClause.cache",
-            "DropSchemaExpression.cascade",
-            "DropViewExpression.cascade",
-            "DropMaterializedViewExpression.cascade",
-            "DropFunctionExpression.cascade",
-            "DropTableExpression.cascade",
-            "TruncateExpression.cascade",
-            "TruncateExpression.restart_identity",
-            "CreateMaterializedViewExpression.with_data",
-            "RefreshMaterializedViewExpression.with_data",
-            "PostgresRefreshMaterializedViewExpression.with_data",
-            "CreateTableAsExpression.with_data",
-            "CTEExpression.materialized",
+            "DropSchemaStatement.cascade",
+            "DropViewStatement.cascade",
+            "DropMaterializedViewStatement.cascade",
+            "DropFunctionStatement.cascade",
+            "DropTableStatement.cascade",
+            "TruncateStatement.cascade",
+            "TruncateStatement.restart_identity",
+            "CreateMaterializedViewStatement.with_data",
+            "RefreshMaterializedViewStatement.with_data",
+            "PostgresRefreshMaterializedViewPgStatement.with_data",
+            "CreateTableAsStatement.with_data",
+            "CTEClause.materialized",
             "TableConstraint.deferrable",
             "TableConstraint.initially_deferred",
             "TableConstraint.enforced",
             "ColumnConstraint.deferrable",
             "ColumnConstraint.initially_deferred",
-            "ColumnConstraint.enforced",
-            "PostgresExcludeConstraint.deferrable",
-            "PostgresExcludeConstraint.initially_deferred",
-            "SetOperationExpression.all_",
-            "BeginTransactionExpression.deferrable",
-            "BeginTransactionExpression.wait",
-            "SetTransactionExpression.deferrable",
-            "SetTransactionExpression.wait",
-            "AlterConstraint.enforced",
-            "PostgresCopyToExpression.force_array",
+            "BeginTransactionStatement.deferrable",
+            "BeginTransactionStatement.wait",
+            "SetTransactionStatement.deferrable",
+            "SetTransactionStatement.wait",
+            "AlterConstraintAction.enforced",
+            "PostgresCopyToStatement.force_array",
             "PostgresDropTypeExpression.cascade/restrict",
         }
         covered = {case.case_id for case in PAIR_CASES}
@@ -726,17 +793,17 @@ class TestMasterProbesAreDeclared:
     def test_materialized_cte_refuses_before_pg12(self):
         dialect = _dialect((11, 0, 0))
         with pytest.raises(UnsupportedFeatureError, match="MATERIALIZED CTE"):
-            CTEExpression(dialect, "c", _query(dialect), materialized=True).to_sql()
+            CTEClause(dialect, "c", _query(dialect), materialized=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NOT MATERIALIZED CTE"):
-            CTEExpression(dialect, "c", _query(dialect), not_materialized=True).to_sql()
+            CTEClause(dialect, "c", _query(dialect), not_materialized=True).to_sql()
 
     def test_materialized_cte_renders_from_pg12(self):
         dialect = _dialect((12, 0, 0))
-        sql, _params = CTEExpression(
+        sql, _params = CTEClause(
             dialect, "c", _query(dialect), materialized=True
         ).to_sql()
         assert "AS MATERIALIZED " in sql, sql
-        sql, _params = CTEExpression(
+        sql, _params = CTEClause(
             dialect, "c", _query(dialect), not_materialized=True
         ).to_sql()
         assert "AS NOT MATERIALIZED " in sql, sql
@@ -777,52 +844,52 @@ class TestMasterProbesGateTheirConsumers:
         assert d.supports_with_data_clause() is False
         cases = (
             (
-                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: CreateTableAsExpression(dd, _table(dd), _query(dd), **kw),
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
                 {"no_data": True},
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: CreateMaterializedViewExpression(
+                lambda dd, **kw: CreateMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), _query(dd), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: CreateMaterializedViewExpression(
+                lambda dd, **kw: CreateMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), _query(dd), **kw
                 ),
                 {"no_data": True},
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: RefreshMaterializedViewExpression(
+                lambda dd, **kw: RefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: RefreshMaterializedViewExpression(
+                lambda dd, **kw: RefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"no_data": True},
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewExpression(
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"no_data": True},
@@ -837,15 +904,15 @@ class TestMasterProbesGateTheirConsumers:
         d = self._NoTruncate(version=PG16)
         assert d.supports_truncate() is False
         with pytest.raises(UnsupportedFeatureError, match="TRUNCATE"):
-            TruncateExpression(d, _table(d)).to_sql()
+            TruncateStatement(d, _table(d)).to_sql()
 
     def test_wait_pair_refuses_by_name_on_postgres(self):
         d = _dialect(PG16)
         with pytest.raises(UnsupportedFeatureError, match="WAIT"):
-            BeginTransactionExpression(d, wait=True).to_sql()
+            BeginTransactionStatement(d, wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
-            BeginTransactionExpression(d, no_wait=True).to_sql()
+            BeginTransactionStatement(d, no_wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="WAIT"):
-            SetTransactionExpression(d, wait=True).to_sql()
+            SetTransactionStatement(d, wait=True).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
-            SetTransactionExpression(d, no_wait=True).to_sql()
+            SetTransactionStatement(d, no_wait=True).to_sql()

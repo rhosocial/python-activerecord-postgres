@@ -7,7 +7,7 @@ Why this file exists
 
 A statement now holds the object it acts on, and ``to_sql()`` dispatches through
 *that object's* ``format_method``. So
-``CreateIndexExpression(dialect, Index(dialect, "i"), View(dialect, "v"))``
+``CreateIndexStatement(dialect, Index(dialect, "i"), View(dialect, "v"))``
 rendered ``CREATE INDEX i ON v (...)`` -- well-formed SQL naming the wrong kind of
 object, with no error and no warning. Before objects carried names as strings,
 ``format_identifier`` accepted anything and a wrong type raised; switching to
@@ -52,7 +52,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import objects as objects_mod
-from rhosocial.activerecord.testsuite.utils.expression import (
+from expression_roundtrip_harness import (
     collect_expression_classes,
     make_instance,
 )
@@ -171,7 +171,7 @@ def _build_probes(dialect):
 
     Only statements whose *unmodified* instance renders are probed. A statement
     that already fails for an unrelated reason -- the property-graph statements,
-    which PostgreSQL does not support at all, and ``CreateTriggerExpression``,
+    which PostgreSQL does not support at all, and ``CreateTriggerStatement``,
     whose introspective construction supplies a string where an enum belongs --
     cannot demonstrate anything about a slot: it raises either way. Including them
     would make the table look broader while proving less, which is exactly the
@@ -249,6 +249,57 @@ def test_skipped_statements_are_still_the_ones_we_think():
         )
 
 
+def _swapped(instance, cls, dialect, slot, value):
+    """The probe instance with *slot* carrying *value*.
+
+    A declared parameter may be a read-only property over storage that lives on
+    a child node -- ``ForeignKeyConstraint.foreign_key_table`` is a view onto
+    the branch's ``references`` tuple -- and a property has no setter to swap
+    through. The storage is found instead: the holder is the node itself or one
+    of its child nodes, and a value held inside a tuple is rewritten as a new
+    tuple, because a tuple cannot be mutated in place. Everything else about
+    the instance stays exactly as the constructor built it, so the only thing
+    a refusal can be about is the slot under test.
+    """
+    original = getattr(instance, slot)
+    swapped = copy.copy(instance)
+    try:
+        object.__setattr__(swapped, slot, value)
+        return swapped
+    except AttributeError:
+        pass
+    from rhosocial.activerecord.backend.expression.bases import BaseExpression
+
+    # The instance was shallow-copied, so a child node found this way is still
+    # the original's: copy the child too before writing to it, and hang the
+    # copy where the original child was found.
+    holders = [(swapped, None, None)] + [
+        (child, name, swapped)
+        for name, child in vars(swapped).items()
+        if isinstance(child, BaseExpression)
+    ]
+    for holder, holder_name, parent in holders:
+        writable = holder if parent is None else copy.copy(holder)
+        for name, current in vars(holder).items():
+            if current is original:
+                object.__setattr__(writable, name, value)
+            elif isinstance(current, tuple) and original in current:
+                object.__setattr__(
+                    writable,
+                    name,
+                    tuple(value if item is original else item for item in current),
+                )
+            else:
+                continue
+            if parent is not None:
+                object.__setattr__(parent, holder_name, writable)
+            return swapped
+    raise AssertionError(
+        f"{cls.__name__}.{slot} is a read-only property whose storage could "
+        f"not be found; the probe needs updating for the new shape"
+    )
+
+
 @pytest.mark.parametrize(
     "fqn,slot,required_name,impostor_name", PROBES, ids=_IDS
 )
@@ -269,8 +320,7 @@ def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
     instance, source = make_instance(cls, dialect)
     assert instance is not None, f"{fqn}: could not be constructed ({source})"
     impostor = getattr(objects_mod, impostor_name)
-    swapped = copy.copy(instance)
-    object.__setattr__(swapped, slot, impostor(dialect, "wrongkind"))
+    swapped = _swapped(instance, cls, dialect, slot, impostor(dialect, "wrongkind"))
     try:
         swapped.to_sql()
     except TypeError as exc:

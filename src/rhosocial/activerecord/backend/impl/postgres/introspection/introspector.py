@@ -11,12 +11,12 @@ Architecture:
   - SQL generation: Delegated to PostgresIntrospectionCapabilityMixin.format_*_query()
     methods in the Dialect layer via Expression.to_sql()
   - Query execution: Handled by IntrospectorExecutor
-  - Result parsing: _parse_* methods in this module (pure Python, no I/O)
+  - Result parsing: parse_* methods in this module (pure Python, no I/O)
 
 Key behaviours:
   - Queries pg_catalog system tables (pg_class, pg_attribute, pg_index,
     pg_constraint, pg_trigger, pg_proc, etc.)
-  - _parse_* methods are pure Python — shared by sync and async introspectors
+  - parse_* methods are pure Python — shared by sync and async introspectors
   - Default schema is 'public'
 
 Design principle: Sync and Async are separate and cannot coexist.
@@ -24,38 +24,49 @@ Design principle: Sync and Async are separate and cannot coexist.
 - AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
     SyncAbstractIntrospector,
     AsyncAbstractIntrospector,
 )
+from rhosocial.activerecord.backend.introspection.cache import IntrospectionCache
 from rhosocial.activerecord.backend.introspection.executor import (
     SyncIntrospectorExecutor,
     AsyncIntrospectorExecutor,
 )
+from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from rhosocial.activerecord.backend.introspection.types import (
-    ColumnInfo,
+    IntrospectionColumnInfo,
     ColumnNullable,
-    DatabaseInfo,
-    ForeignKeyInfo,
+    IntrospectionDatabaseInfo,
+    IntrospectionForeignKeyInfo,
     IndexColumnInfo,
     IndexInfo,
     IndexType,
     IntrospectionScope,
     ReferentialAction,
-    TableInfo,
+    IntrospectionTableInfo,
     TableType,
-    TriggerInfo,
-    ViewInfo,
+    IntrospectionTriggerInfo,
+    IntrospectionViewInfo,
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
     SyncPostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
+from .types import SequenceInfo
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ..expression.introspection import (
+        PostgresMaterializedViewInfoQueryStatement,
+        PostgresMaterializedViewListQueryStatement,
+        PostgresSequenceInfoQueryStatement,
+        PostgresSequenceListQueryStatement,
+    )
+    from ..expression.status import PostgresExtensionListQuery
 
 
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
@@ -64,15 +75,16 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     Both SyncPostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
     from this mixin to share:
     - Default schema handling
-    - _parse_* implementations
+    - parse_* implementations
     - Trigger decoding helpers
 
     SQL generation is delegated to the Dialect layer via Expression.to_sql()
     which calls PostgresIntrospectionCapabilityMixin.format_*_query() methods.
     """
 
-    def _get_default_schema(self) -> str:
-        """Return the actual schema from backend config or search_path.
+    @property
+    def default_schema(self) -> str:
+        """The actual schema from backend config or search_path.
 
         Priority:
         1. config.default_schema
@@ -81,10 +93,10 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         """
         config = getattr(self._backend, "config", None) if hasattr(self, "_backend") else None
         if config is not None:
-            if hasattr(config, "default_schema") and getattr(config, "default_schema"):
-                return str(getattr(config, "default_schema"))
-            if hasattr(config, "search_path") and getattr(config, "search_path"):
-                sp = str(getattr(config, "search_path"))
+            if config.default_schema:
+                return str(config.default_schema)
+            if config.search_path:
+                sp = str(config.search_path)
                 first = sp.split(",")[0].strip().strip('"').strip("'")
                 if first:
                     return first
@@ -100,43 +112,56 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # Parse methods — pure Python, no I/O
     # ------------------------------------------------------------------ #
 
-    def _parse_database_info(self, rows: List[Dict[str, Any]]) -> DatabaseInfo:
-        db_row = rows[0] if rows else {}
-        db_name = self._get_database_name()
-        # Dialect returns 'version' column from format_database_info_query()
-        version_str = db_row.get("version", "PostgreSQL 11.0")
-        match = re.search(r"PostgreSQL (\d+)\.(\d+)(?:\.(\d+))?", version_str)
-        version_tuple = (
-            (
-                int(match.group(1)),
-                int(match.group(2)),
-                int(match.group(3)) if match.group(3) else 0,
-            )
-            if match
-            else (11, 0, 0)
-        )
+    def parse_database_info(self, rows: List[Dict[str, Any]]) -> IntrospectionDatabaseInfo:
+        """Turn the one database row into a record.
 
-        return DatabaseInfo(
-            name=db_name,
-            version=version_str,
-            version_tuple=version_tuple,
+        The version comes from :attr:`server_version`, not from the strict
+        ``dialect.version``: a parser has no connection to ask, and refusing to
+        describe a database until ``introspect_and_adapt()`` has run would make
+        the answer depend on a step the caller did not need. Unknown is
+        reported as the literal ``"unknown"`` with ``(0, 0, 0)``, which is
+        distinguishable from a server that really is version 0.0.0.
+
+        ``size_bytes`` is the size column the statement selects. ``table_count``
+        is the count the statement selects; a missing or unreadable cell is
+        reported as ``None`` -- unknown -- rather than allowed to raise past the
+        rest of the answer, which is already known.
+        """
+        db_row = rows[0] if rows else {}
+        version = self.server_version
+        try:
+            table_count = int(db_row.get("table_count"))
+        except (TypeError, ValueError):
+            table_count = None
+        return IntrospectionDatabaseInfo(
+            name=self._get_database_name(),
+            version=".".join(str(part) for part in version) if version else "unknown",
+            version_tuple=tuple(version) if version else (0, 0, 0),
             vendor="PostgreSQL",
             encoding=db_row.get("encoding"),
             collation=db_row.get("collation"),  # Dialect returns 'collation' (not 'datcollate')
             size_bytes=db_row.get("size"),
+            table_count=table_count,
         )
 
-    def _parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[TableInfo]:
-        target_schema = schema if schema is not None else self._get_default_schema()
+    def parse_tables(self, rows: List[Dict[str, Any]], schema: Optional[str]) -> List[IntrospectionTableInfo]:
+        """Turn a table listing into records.
+
+        Every kind the catalog names gets its own :class:`TableType`: the
+        catalog distinguished them, and collapsing a materialized view or a
+        partitioned table back into ``BASE_TABLE`` would lose that at the only
+        layer that saw it.
+        """
+        target_schema = schema if schema is not None else self.default_schema
         table_type_map = {
             "BASE TABLE": TableType.BASE_TABLE,
             "VIEW": TableType.VIEW,
-            "MATERIALIZED VIEW": TableType.BASE_TABLE,
-            "FOREIGN TABLE": TableType.EXTERNAL,
-            "PARTITIONED TABLE": TableType.BASE_TABLE,
+            "MATERIALIZED VIEW": TableType.MATERIALIZED_VIEW,
+            "FOREIGN TABLE": TableType.FOREIGN_TABLE,
+            "PARTITIONED TABLE": TableType.PARTITIONED_TABLE,
         }
         return [
-            TableInfo(
+            IntrospectionTableInfo(
                 name=row["table_name"],
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
@@ -148,7 +173,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ColumnInfo]:
+    def parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []
         for row in rows:
             data_type = row.get("data_type", "")
@@ -156,7 +181,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             base_type = data_type.split("[")[0].split("(")[0].strip()
             parsed = DataType.parse_data_type_str(self._backend.dialect, data_type)
             columns.append(
-                ColumnInfo(
+                IntrospectionColumnInfo(
                     name=row["column_name"],
                     table_name=table_name,
                     schema=schema,
@@ -168,11 +193,19 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     default_value=row.get("default_value"),
                     is_primary_key=row.get("is_primary_key", False),
                     comment=row.get("comment"),
+                    # The four shape attributes information_schema.columns
+                    # derives from atttypmod. They are absent for a relation
+                    # that view does not list, which is why they are read
+                    # with .get() rather than indexed.
+                    character_maximum_length=row.get("character_maximum_length"),
+                    numeric_precision=row.get("numeric_precision"),
+                    numeric_scale=row.get("numeric_scale"),
+                    datetime_precision=row.get("datetime_precision"),
                 )
             )
         return columns
 
-    def _parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
+    def parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
         index_type_map = {
             "btree": IndexType.BTREE,
             "hash": IndexType.HASH,
@@ -204,7 +237,9 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             )
         return list(index_map.values())
 
-    def _parse_foreign_keys(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[ForeignKeyInfo]:
+    def parse_foreign_keys(
+        self, rows: List[Dict[str, Any]], table_name: str, schema: str
+    ) -> List[IntrospectionForeignKeyInfo]:
         # PostgreSQL uses single-char codes for referential actions
         action_map = {
             "a": ReferentialAction.NO_ACTION,
@@ -213,11 +248,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             "n": ReferentialAction.SET_NULL,
             "d": ReferentialAction.SET_DEFAULT,
         }
-        fk_map: Dict[str, ForeignKeyInfo] = {}
+        fk_map: Dict[str, IntrospectionForeignKeyInfo] = {}
         for row in rows:
             fk_name = row["constraint_name"]
             if fk_name not in fk_map:
-                fk_map[fk_name] = ForeignKeyInfo(
+                fk_map[fk_name] = IntrospectionForeignKeyInfo(
                     name=fk_name,
                     table_name=table_name,
                     schema=schema,
@@ -232,9 +267,9 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             fk_map[fk_name].referenced_columns.append(row.get("referenced_column", ""))
         return list(fk_map.values())
 
-    def _parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[ViewInfo]:
+    def parse_views(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionViewInfo]:
         return [
-            ViewInfo(
+            IntrospectionViewInfo(
                 name=row.get("view_name", ""),
                 schema=schema,
                 definition=row.get("definition"),
@@ -243,11 +278,13 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             for row in rows
         ]
 
-    def _parse_view_info(self, rows: List[Dict[str, Any]], view_name: str, schema: str) -> Optional[ViewInfo]:
+    def parse_view_info(
+        self, rows: List[Dict[str, Any]], view_name: str, schema: str
+    ) -> Optional[IntrospectionViewInfo]:
         if not rows:
             return None
         row = rows[0]
-        return ViewInfo(
+        return IntrospectionViewInfo(
             name=row.get("view_name", view_name),
             schema=schema,
             definition=row.get("definition"),
@@ -255,14 +292,16 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_materialized_view(row: Dict[str, Any], default_schema: str, default_name: str = "") -> ViewInfo:
-        """Build a ViewInfo for a materialized view.
+    def parse_materialized_view(
+        row: Dict[str, Any], default_schema: str, default_name: str = ""
+    ) -> IntrospectionViewInfo:
+        """Build a IntrospectionViewInfo for a materialized view.
 
         Materialized views are never updatable/insertable; ``extra`` carries the
         PostgreSQL specific state: ``is_materialized``, ``is_populated`` and
         ``has_unique_index`` (the prerequisite for a CONCURRENTLY refresh).
         """
-        return ViewInfo(
+        return IntrospectionViewInfo(
             name=row.get("view_name") or default_name,
             schema=row.get("schema_name") or default_schema,
             definition=row.get("definition"),
@@ -277,44 +316,44 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         )
 
     @staticmethod
-    def _parse_materialized_views(
+    def parse_materialized_views(
         rows: List[Dict[str, Any]], schema: str
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         return [
-            PostgreSQLIntrospectorMixin._parse_materialized_view(row, schema) for row in rows
+            PostgreSQLIntrospectorMixin.parse_materialized_view(row, schema) for row in rows
         ]
 
     @staticmethod
-    def _parse_materialized_view_info(
+    def parse_materialized_view_info(
         rows: List[Dict[str, Any]], view_name: str, schema: str
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         if not rows:
             return None
-        return PostgreSQLIntrospectorMixin._parse_materialized_view(
+        return PostgreSQLIntrospectorMixin.parse_materialized_view(
             rows[0], schema, view_name
         )
 
-    def _build_materialized_view_list_sql(
-        self, schema: Optional[str], include_system: bool
-    ) -> Tuple[str, tuple]:
-        from ..expression.introspection import PostgresMaterializedViewListExpression
+    def materialized_view_list_statement(
+        self, *, schema: Optional[str], include_system: bool
+    ) -> "PostgresMaterializedViewListQueryStatement":
+        """Return the statement that lists materialized views in one schema."""
+        from ..expression.introspection import PostgresMaterializedViewListQueryStatement
 
-        target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewListExpression(self.dialect).schema(
-            target_schema
-        ).include_system(include_system)
-        return expr.to_sql()
-
-    def _build_materialized_view_info_sql(
-        self, view_name: str, schema: Optional[str]
-    ) -> Tuple[str, tuple]:
-        from ..expression.introspection import PostgresMaterializedViewInfoExpression
-
-        target_schema = schema if schema is not None else self._get_default_schema()
-        expr = PostgresMaterializedViewInfoExpression(self.dialect, view_name).schema(
-            target_schema
+        target_schema = schema if schema is not None else self.default_schema
+        return PostgresMaterializedViewListQueryStatement(
+            self.dialect, schema=target_schema, include_system=include_system
         )
-        return expr.to_sql()
+
+    def materialized_view_info_statement(
+        self, *, view_name: str, schema: Optional[str]
+    ) -> "PostgresMaterializedViewInfoQueryStatement":
+        """Return the statement that asks for one materialized view."""
+        from ..expression.introspection import PostgresMaterializedViewInfoQueryStatement
+
+        target_schema = schema if schema is not None else self.default_schema
+        return PostgresMaterializedViewInfoQueryStatement(
+            self.dialect, view_name, schema=target_schema
+        )
 
     def _materialized_view_cache_key(
         self, schema: Optional[str], view_name: Optional[str] = None, include_system: bool = False
@@ -324,14 +363,158 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         Materialized views share ``IntrospectionScope.VIEW`` with regular views,
         so the key is namespaced to avoid cross-contamination.
         """
-        return self._make_cache_key(
+        return self._cache.key(
             IntrospectionScope.VIEW,
             view_name or "*",
             schema=schema,
             extra=f"matviews:{include_system}",
         )
 
-    def _parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[TriggerInfo]:
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    def _server_has_pg_sequences(self) -> bool:
+        """Whether the connected server has the ``pg_sequences`` catalog view.
+
+        The view arrived in PostgreSQL 10. A server older than that answers
+        the widened question with ``relation does not exist``, so the caller
+        asks the narrower one and reports the two columns ``pg_sequences``
+        would have carried as absent.
+
+        The version is :attr:`server_version`, which reads the cache
+        ``introspect_and_adapt()`` keeps and falls back to the dialect without
+        raising. An unknown version answers the narrower question: a server
+        this backend never learned to speak to is not one to assume carries
+        the newest catalog.
+        """
+        version = self.server_version
+        if not version:
+            return False
+        return tuple(version) >= (10, 0, 0)
+
+    def _resolve_include_pg_sequences(self, include_pg_sequences: Optional[bool]) -> bool:
+        """``None`` asks the server; an explicit flag is taken as given."""
+        if include_pg_sequences is None:
+            return self._server_has_pg_sequences()
+        return include_pg_sequences
+
+    @staticmethod
+    def parse_sequence(
+        row: Dict[str, Any], default_schema: str, default_name: str = ""
+    ) -> SequenceInfo:
+        """Build a SequenceInfo from one ``information_schema.sequences`` row.
+
+        ``cycle_option`` is the server's ``YES``/``NO`` text, not a boolean,
+        and ``last_value`` is ``None`` for a sequence that never handed out a
+        value -- neither of which the caller should have to normalise.
+        """
+        cycle = row.get("cycle")
+        return SequenceInfo(
+            name=row.get("sequence_name") or default_name,
+            schema=row.get("schema_name") or default_schema,
+            data_type=row.get("data_type") or "",
+            start_value=row.get("start_value"),
+            minimum_value=row.get("minimum_value"),
+            maximum_value=row.get("maximum_value"),
+            increment=row.get("increment"),
+            cycle=str(cycle).strip().upper() == "YES" if cycle is not None else False,
+            cache_size=row.get("cache_size"),
+            last_value=row.get("last_value"),
+        )
+
+    @staticmethod
+    def parse_sequences(rows: List[Dict[str, Any]], schema: str) -> List[SequenceInfo]:
+        return [
+            PostgreSQLIntrospectorMixin.parse_sequence(row, schema) for row in rows
+        ]
+
+    @staticmethod
+    def parse_sequence_info(
+        rows: List[Dict[str, Any]], sequence_name: str, schema: str
+    ) -> Optional[SequenceInfo]:
+        if not rows:
+            return None
+        return PostgreSQLIntrospectorMixin.parse_sequence(rows[0], schema, sequence_name)
+
+    def sequence_list_statement(
+        self, *, schema: Optional[str], include_pg_sequences: bool
+    ) -> "PostgresSequenceListQueryStatement":
+        """Return the statement that lists the sequences in one schema."""
+        from ..expression.introspection import PostgresSequenceListQueryStatement
+
+        return PostgresSequenceListQueryStatement(
+            self.dialect, schema=schema, include_pg_sequences=include_pg_sequences
+        )
+
+    def sequence_info_statement(
+        self, *, sequence_name: str, schema: Optional[str], include_pg_sequences: bool
+    ) -> "PostgresSequenceInfoQueryStatement":
+        """Return the statement that asks for one sequence."""
+        from ..expression.introspection import PostgresSequenceInfoQueryStatement
+
+        return PostgresSequenceInfoQueryStatement(
+            self.dialect,
+            sequence_name,
+            schema=schema,
+            include_pg_sequences=include_pg_sequences,
+        )
+
+    def _sequence_cache_key(
+        self,
+        schema: Optional[str],
+        sequence_name: Optional[str] = None,
+        include_pg_sequences: bool = True,
+    ) -> str:
+        """Build the cache key for sequence introspection results.
+
+        A 9.x server answers a different question than a 10+ one -- the two
+        columns ``pg_sequences`` carries are simply absent -- so the flag
+        is part of the key rather than assumed constant for a connection.
+        """
+        return self._cache.key(
+            IntrospectionScope.SEQUENCE,
+            sequence_name or "*",
+            schema=schema,
+            extra=str(include_pg_sequences),
+        )
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def parse_extensions(rows: List[Dict[str, Any]]) -> List[ExtensionInfo]:
+        """Build the ExtensionInfo list from a ``pg_extension`` listing."""
+        return [
+            ExtensionInfo(
+                name=row.get("name") or "",
+                version=row.get("version"),
+                schema=row.get("schema"),
+                description=row.get("description"),
+            )
+            for row in rows
+        ]
+
+    def extension_list_statement(self) -> "PostgresExtensionListQuery":
+        """Return the statement that lists the installed extensions."""
+        from ..expression.status import PostgresExtensionListQuery
+
+        return PostgresExtensionListQuery(self.dialect)
+
+    def _extension_cache_key(self) -> str:
+        """Build the cache key for the installed-extension listing.
+
+        Extensions have no scope of their own, and the one closest in
+        meaning is the schema: an extension is a named object published
+        into a schema. The ``extra`` keeps the family apart from any other
+        schema-listing that comes later.
+        """
+        return self._cache.key(
+            IntrospectionScope.SCHEMA, "*", extra="extensions"
+        )
+
+    def parse_triggers(self, rows: List[Dict[str, Any]], schema: str) -> List[IntrospectionTriggerInfo]:
         triggers = []
         for row in rows:
             # Dialect returns 'timing' column already decoded
@@ -346,7 +529,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             function_name = row.get("function_name")
 
             triggers.append(
-                TriggerInfo(
+                IntrospectionTriggerInfo(
                     name=row["trigger_name"],
                     table_name=row["table_name"],
                     schema=schema,
@@ -411,8 +594,13 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         cols   = backend.introspector.list_columns("users")
     """
 
-    def __init__(self, backend: Any, executor: SyncIntrospectorExecutor) -> None:
-        super().__init__(backend, executor)
+    def __init__(
+        self,
+        backend: Any,
+        executor: SyncIntrospectorExecutor,
+        cache: Optional[IntrospectionCache] = None,
+    ) -> None:
+        super().__init__(backend, executor, cache)
         self._status_instance: Optional[SyncPostgreSQLStatusIntrospector] = None
 
     @property
@@ -426,7 +614,7 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
         self,
         schema: Optional[str] = None,
         include_system: bool = False,
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         """List materialized views in the given schema.
 
         Each entry carries ``extra['is_populated']`` (false for a view created
@@ -438,21 +626,23 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             include_system: Whether to include system objects.
 
         Returns:
-            List of ViewInfo describing each materialized view.
+            List of IntrospectionViewInfo describing each materialized view.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, include_system=include_system)
-        cached = self._get_cached(key)
+        cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_list_sql(schema, include_system)
-        result = self._parse_materialized_views(self._executor.execute(sql, params), target)
-        self._set_cached(key, result)
+        sql, params = self.materialized_view_list_statement(
+            schema=schema, include_system=include_system
+        ).to_sql()
+        result = self.parse_materialized_views(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
         return result
 
     def get_materialized_view_info(
         self, view_name: str, schema: Optional[str] = None
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         """Return information for a single materialized view, or None if absent.
 
         Args:
@@ -460,24 +650,142 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
             schema: Schema to inspect. Defaults to the connection default schema.
 
         Returns:
-            ViewInfo, or None when the materialized view does not exist.
+            IntrospectionViewInfo, or None when the materialized view does not exist.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, view_name=view_name)
-        cached = self._get_cached(key)
+        cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_info_sql(view_name, schema)
-        result = self._parse_materialized_view_info(
+        sql, params = self.materialized_view_info_statement(
+            view_name=view_name, schema=schema
+        ).to_sql()
+        result = self.parse_materialized_view_info(
             self._executor.execute(sql, params), view_name, target
         )
         if result is not None:
-            self._set_cached(key, result)
+            self._cache.set(key, result)
         return result
 
     def materialized_view_exists(self, view_name: str, schema: Optional[str] = None) -> bool:
         """Return True when the named materialized view exists."""
         return self.get_materialized_view_info(view_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    def list_sequences(
+        self,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> List[SequenceInfo]:
+        """List the sequences in one schema.
+
+        The object list comes from ``information_schema.sequences``, the SQL
+        standard view; ``pg_sequences`` is joined beside it for the runtime
+        state the standard view omits (``cache_size`` and ``last_value``)
+        whenever the server has it.
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+                ``None`` (the default) detects it from the server version.
+
+        Returns:
+            List of SequenceInfo, ordered by sequence name.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self.default_schema
+        sql, params = self.sequence_list_statement(
+            schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
+        result = self.parse_sequences(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_sequence_info(
+        self,
+        sequence_name: str,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> Optional[SequenceInfo]:
+        """Return information for one sequence, or None when absent.
+
+        Args:
+            sequence_name: Name of the sequence to read.
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            SequenceInfo, or None when the sequence does not exist.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, sequence_name=sequence_name, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self.default_schema
+        sql, params = self.sequence_info_statement(
+            sequence_name=sequence_name, schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
+        result = self.parse_sequence_info(
+            self._executor.execute(sql, params), sequence_name, target
+        )
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    def sequence_exists(
+        self, sequence_name: str, schema: Optional[str] = None
+    ) -> bool:
+        """Return True when the named sequence exists."""
+        return self.get_sequence_info(sequence_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    def list_extensions(self) -> List[ExtensionInfo]:
+        """List the extensions installed in this database, by name.
+
+        The listing is the catalog's own: ``pg_extension`` joined to
+        ``pg_namespace`` for the schema each extension published its objects
+        into. Extensions live in the schema introspector rather than the
+        status introspector because they are schema objects, not position
+        in a status report; ``status.get_overview()`` keeps its own call for
+        the overview it builds.
+
+        Returns:
+            List of ExtensionInfo, ordered by extension name.
+        """
+        key = self._extension_cache_key()
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.extension_list_statement().to_sql()
+        result = self.parse_extensions(self._executor.execute(sql, params))
+        self._cache.set(key, result)
+        return result
+
+    def get_extension_info(self, name: str) -> Optional[ExtensionInfo]:
+        """Return information for one installed extension, or None.
+
+        The catalog is asked for the whole family once and filtered here,
+        so a caller asking about a single extension pays one query rather
+        than one per call.
+        """
+        return next(
+            (ext for ext in self.list_extensions() if ext.name == name), None
+        )
+
+    def extension_exists(self, name: str) -> bool:
+        """Return True when the named extension is installed."""
+        return self.get_extension_info(name) is not None
 
 
 class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntrospector):
@@ -496,8 +804,13 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         cols   = await backend.introspector.list_columns("users")
     """
 
-    def __init__(self, backend: Any, executor: AsyncIntrospectorExecutor) -> None:
-        super().__init__(backend, executor)
+    def __init__(
+        self,
+        backend: Any,
+        executor: AsyncIntrospectorExecutor,
+        cache: Optional[IntrospectionCache] = None,
+    ) -> None:
+        super().__init__(backend, executor, cache)
         self._status_instance: Optional[AsyncPostgreSQLStatusIntrospector] = None
 
     @property
@@ -511,7 +824,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         self,
         schema: Optional[str] = None,
         include_system: bool = False,
-    ) -> List[ViewInfo]:
+    ) -> List[IntrospectionViewInfo]:
         """List materialized views in the given schema (async counterpart).
 
         Args:
@@ -519,22 +832,24 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
             include_system: Whether to include system objects.
 
         Returns:
-            List of ViewInfo describing each materialized view.
+            List of IntrospectionViewInfo describing each materialized view.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, include_system=include_system)
-        cached = self._get_cached(key)
+        cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_list_sql(schema, include_system)
+        sql, params = self.materialized_view_list_statement(
+            schema=schema, include_system=include_system
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
-        result = self._parse_materialized_views(rows, target)
-        self._set_cached(key, result)
+        result = self.parse_materialized_views(rows, target)
+        self._cache.set(key, result)
         return result
 
     async def get_materialized_view_info(
         self, view_name: str, schema: Optional[str] = None
-    ) -> Optional[ViewInfo]:
+    ) -> Optional[IntrospectionViewInfo]:
         """Return information for a single materialized view, or None (async).
 
         Args:
@@ -542,18 +857,20 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
             schema: Schema to inspect. Defaults to the connection default schema.
 
         Returns:
-            ViewInfo, or None when the materialized view does not exist.
+            IntrospectionViewInfo, or None when the materialized view does not exist.
         """
-        target = schema if schema is not None else self._get_default_schema()
+        target = schema if schema is not None else self.default_schema
         key = self._materialized_view_cache_key(schema, view_name=view_name)
-        cached = self._get_cached(key)
+        cached = self._cache.get(key)
         if cached is not None:
             return cached
-        sql, params = self._build_materialized_view_info_sql(view_name, schema)
+        sql, params = self.materialized_view_info_statement(
+            view_name=view_name, schema=schema
+        ).to_sql()
         rows = await self._executor.execute(sql, params)
-        result = self._parse_materialized_view_info(rows, view_name, target)
+        result = self.parse_materialized_view_info(rows, view_name, target)
         if result is not None:
-            self._set_cached(key, result)
+            self._cache.set(key, result)
         return result
 
     async def materialized_view_exists(
@@ -561,3 +878,102 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
     ) -> bool:
         """Return True when the named materialized view exists (async)."""
         return await self.get_materialized_view_info(view_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Sequence introspection
+    # ------------------------------------------------------------------ #
+
+    async def list_sequences(
+        self,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> List[SequenceInfo]:
+        """List the sequences in one schema (async counterpart).
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            List of SequenceInfo, ordered by sequence name.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self.default_schema
+        sql, params = self.sequence_list_statement(
+            schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_sequences(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_sequence_info(
+        self,
+        sequence_name: str,
+        schema: Optional[str] = None,
+        include_pg_sequences: Optional[bool] = None,
+    ) -> Optional[SequenceInfo]:
+        """Return information for one sequence, or None when absent (async).
+
+        Args:
+            sequence_name: Name of the sequence to read.
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_pg_sequences: Ask for the PostgreSQL 10+ columns as well.
+
+        Returns:
+            SequenceInfo, or None when the sequence does not exist.
+        """
+        with_pg = self._resolve_include_pg_sequences(include_pg_sequences)
+        key = self._sequence_cache_key(schema, sequence_name=sequence_name, include_pg_sequences=with_pg)
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        target = schema if schema is not None else self.default_schema
+        sql, params = self.sequence_info_statement(
+            sequence_name=sequence_name, schema=schema, include_pg_sequences=with_pg
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_sequence_info(rows, sequence_name, target)
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    async def sequence_exists(
+        self, sequence_name: str, schema: Optional[str] = None
+    ) -> bool:
+        """Return True when the named sequence exists (async)."""
+        return await self.get_sequence_info(sequence_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Extension introspection
+    # ------------------------------------------------------------------ #
+
+    async def list_extensions(self) -> List[ExtensionInfo]:
+        """List the extensions installed in this database, by name (async).
+
+        Returns:
+            List of ExtensionInfo, ordered by extension name.
+        """
+        key = self._extension_cache_key()
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.extension_list_statement().to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_extensions(rows)
+        self._cache.set(key, result)
+        return result
+
+    async def get_extension_info(self, name: str) -> Optional[ExtensionInfo]:
+        """Return information for one installed extension, or None (async)."""
+        return next(
+            (ext for ext in await self.list_extensions() if ext.name == name), None
+        )
+
+    async def extension_exists(self, name: str) -> bool:
+        """Return True when the named extension is installed (async)."""
+        return await self.get_extension_info(name) is not None

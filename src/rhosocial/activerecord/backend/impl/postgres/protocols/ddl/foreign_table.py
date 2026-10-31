@@ -9,8 +9,8 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.foreign_table import (
-        PostgresCreateForeignTableExpression,
-        PostgresDropForeignTableExpression,
+        PostgresCreateForeignTableStatement,
+        PostgresDropForeignTableStatement,
     )
 
 
@@ -33,12 +33,12 @@ class PostgresForeignTableDDLSupport(Protocol):
         ...
 
     def format_create_foreign_table_statement(
-        self, expr: "PostgresCreateForeignTableExpression"
+        self, expr: "PostgresCreateForeignTableStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``CREATE FOREIGN TABLE`` statement.
 
         Args:
-            expr: ``PostgresCreateForeignTableExpression``.
+            expr: ``PostgresCreateForeignTableStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -49,12 +49,12 @@ class PostgresForeignTableDDLSupport(Protocol):
         ...
 
     def format_drop_foreign_table_statement(
-        self, expr: "PostgresDropForeignTableExpression"
+        self, expr: "PostgresDropForeignTableStatement"
     ) -> Tuple[str, tuple]:
         """Format a ``DROP FOREIGN TABLE`` statement.
 
         Args:
-            expr: ``PostgresDropForeignTableExpression``.
+            expr: ``PostgresDropForeignTableStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

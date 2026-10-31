@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ....expression.statements.explain import ExplainExpression
+    from ....expression.statements.explain import ExplainStatement
 
 
 class PostgresExplainMixin:
@@ -21,7 +21,7 @@ class PostgresExplainMixin:
         supported_formats = ["TEXT", "XML", "JSON", "YAML"]
         return format_type_upper in supported_formats
 
-    def format_explain_statement(self, expr: "ExplainExpression") -> Tuple[str, tuple]:
+    def format_explain_statement(self, expr: "ExplainStatement") -> Tuple[str, tuple]:
         """Build the PostgreSQL EXPLAIN SQL string and return (sql, params).
 
         PostgreSQL syntax: ``EXPLAIN [ ( option [, ...] ) ] statement``

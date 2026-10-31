@@ -14,6 +14,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import (
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.serialization import (
+    default_registry,
     deserialize,
     deserialize_json,
     deserialize_xml,
@@ -22,8 +23,8 @@ from rhosocial.activerecord.backend.expression.serialization import (
     serialize_xml,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
-    AlterDomainExpression,
-    CreateDomainExpression,
+    AlterDomainStatement,
+    CreateDomainStatement,
     DomainCheckConstraint,
     DomainNullability,
     DomainValueExpression,
@@ -34,13 +35,13 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     SetDomainNotNullAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
-    AlterTypeExpression,
-    CreateTypeExpression,
+    AlterTypeStatement,
+    CreateTypeStatement,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType, TextType
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresVacuumExpression,  # noqa: F401
-    PostgresAnalyzeExpression,  # noqa: F401
+    PostgresVacuumStatement,  # noqa: F401
+    PostgresAnalyzeStatement,  # noqa: F401
     AlterDomainActionType,
     PostgresAddDomainCheckAction,
     PostgresAddEnumValueAction,
@@ -71,22 +72,40 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresValidateDomainConstraintAction,
     PostgresAlterDomainExpression,
     PostgresDropDomainExpression,
-    PostgresCreateCollationExpression,
-    PostgresDropCollationExpression,
-    PostgresCreateForeignTableExpression,
-    PostgresDropForeignTableExpression,
-    PostgresCreateFunctionExpression,
-    PostgresDropFunctionExpression,
-    PostgresCreateAggregateExpression,
-    PostgresDropAggregateExpression,
-    PostgresCreatePublicationExpression,
-    PostgresDropPublicationExpression,
-    PostgresCreateSubscriptionExpression,
-    PostgresDropSubscriptionExpression,
+    PostgresCreateCollationStatement,
+    PostgresDropCollationStatement,
+    PostgresCreateForeignTableStatement,
+    PostgresDropForeignTableStatement,
+    PostgresCreateFunctionDdlStatement,
+    PostgresDropFunctionDdlStatement,
+    PostgresCreateAggregateDdlStatement,
+    PostgresDropAggregateDdlStatement,
+    PostgresCreatePublicationStatement,
+    PostgresDropPublicationStatement,
+    PostgresCreateSubscriptionStatement,
+    PostgresDropSubscriptionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics import (
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
+
+# The kind whitelist is an assembly decision (core commit ee5f4b55): the
+# default registry is populated by walking the core, sqlite and dummy
+# expression packages, so a backend's own kinds are entered by whoever reads
+# them back. These tests deserialize the two TYPE definitions below, so those
+# two go into the default registry here. Registration is idempotent:
+# registering the same class again is a no-op, and a same-named different
+# class is a hard error either way.
+#
+# Only the two node kinds are registered. The composite definition's attribute
+# dataclass and the base definition's ``UNSET`` sentinel used to be registered
+# through their own tables (``register_dataclass`` / ``register_enum``); core
+# dropped both, because an artifact is plain JSON now and neither carries a
+# class path any more.
+_PG_ROUNDTRIP_REGISTRY = default_registry()
+_PG_ROUNDTRIP_REGISTRY.register_node(PostgresBaseTypeDefinition)
+_PG_ROUNDTRIP_REGISTRY.register_node(PostgresCompositeTypeDefinition)
+
 
 class TestPostgresDomainExpression:
     """CREATE / ALTER / DROP DOMAIN."""
@@ -95,9 +114,20 @@ class TestPostgresDomainExpression:
     def dialect(self):
         return PostgresDialect(version=(14, 0, 0))
 
+    @staticmethod
+    def _numeric(dialect):
+        """The domain's type, said the way a type is said now: with a node.
+
+        A node is rendered by the dialect in its own spelling, so ``DECIMAL``
+        is what a ``DecimalType`` is written as.
+        """
+        from rhosocial.activerecord.backend.expression.types import DecimalType
+
+        return DecimalType(dialect)
+
     def test_create(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC",
+            dialect, "posint", self._numeric(dialect),
             default="0", constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
         assert sql == "CREATE DOMAIN \"posint\" AS DECIMAL DEFAULT 0 CHECK (VALUE > 0)"
@@ -122,14 +152,15 @@ class TestPostgresDomainExpression:
 
     def test_create_with_schema_and_collation(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC",
+            dialect, "posint", self._numeric(dialect),
             schema="app", collation="C",
         ).to_sql()
         assert sql == 'CREATE DOMAIN "app"."posint" AS DECIMAL COLLATE "C"'
 
     def test_create_without_default(self, dialect):
         sql, _ = PostgresCreateDomainExpression(
-            dialect, "posint", "NUMERIC", constraints=["CHECK (VALUE > 0)"]
+            dialect, "posint", self._numeric(dialect),
+            constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
         assert sql == 'CREATE DOMAIN "posint" AS DECIMAL CHECK (VALUE > 0)'
 
@@ -178,7 +209,7 @@ class TestPostgresDomainExpression:
 
     def test_typed_create_with_schema_and_all_clauses(self, dialect):
         value = DomainValueExpression(dialect)
-        condition = value > Literal(dialect, 0, inline_literals=True)
+        condition = value > Literal(dialect, 0, inline=True)
         check = DomainCheckConstraint(dialect, condition, name="positive")
         sql, params = PostgresCreateDomainExpression(
             dialect,
@@ -203,7 +234,7 @@ class TestPostgresDomainExpression:
         # trip without a get_params() override. See
         # test_domain_expression_roundtrip.py for the full round-trip proof.
         value = DomainValueExpression(dialect)
-        condition = value > Literal(dialect, 0, inline_literals=True)
+        condition = value > Literal(dialect, 0, inline=True)
         legacy = PostgresCreateDomainExpression(
             dialect,
             "legacy",
@@ -225,13 +256,13 @@ class TestPostgresDomainExpression:
 
     def test_new_core_expression_rejects_raw_data_type(self, dialect):
         with pytest.raises(TypeError, match="DataType"):
-            CreateDomainExpression(dialect, Domain(dialect, 'raw_domain'), "INTEGER")
+            CreateDomainStatement(dialect, Domain(dialect, 'raw_domain'), "INTEGER")
 
     def test_all_domain_actions(self, dialect):
         value = DomainValueExpression(dialect)
         check = DomainCheckConstraint(
             dialect,
-            value > Literal(dialect, 0, inline_literals=True),
+            value > Literal(dialect, 0, inline=True),
             name="positive",
         )
         cases = [
@@ -279,7 +310,7 @@ class TestPostgresDomainExpression:
             assert params == ()
 
     def test_domain_actions_are_not_combinable(self, dialect):
-        expression = AlterDomainExpression(
+        expression = AlterDomainStatement(
             dialect,
             Domain(dialect, 'amount'),
             [DropDomainDefaultAction(dialect), SetDomainNotNullAction(dialect)],
@@ -336,6 +367,62 @@ class TestPostgresTypeDDLExpressions:
         )
         assert all(item.get_params() == definition.get_params() for item in restored)
 
+    def test_composite_attributes_travel_as_plain_mappings(self, dialect):
+        """The attribute record is written, not the dataclass instance.
+
+        An artifact is plain JSON (rules §10), and a dataclass has no
+        language-neutral spelling of its own, so ``get_params`` emits the
+        attribute as a mapping -- and the constructor takes that mapping back,
+        which is what makes the round trip above possible at all. The stored
+        form stays the dataclass either way, so the formatter is untouched.
+        """
+        definition = PostgresCompositeTypeDefinition(
+            dialect,
+            [PostgresCompositeTypeAttribute("id", IntegerType(dialect))],
+        )
+        assert definition.get_params()["attributes"] == [
+            {"name": "id", "data_type": IntegerType(dialect), "collation": None}
+        ]
+        assert serialize(definition)["params"]["attributes"][0]["name"] == "id"
+
+        from_mapping = PostgresCompositeTypeDefinition(
+            dialect,
+            [{"name": "id", "data_type": IntegerType(dialect), "collation": None}],
+        )
+        assert isinstance(from_mapping.attributes[0], PostgresCompositeTypeAttribute)
+        assert from_mapping.get_params() == definition.get_params()
+
+    def test_composite_attribute_mapping_is_validated_by_name(self, dialect):
+        """A mapping with a missing or unknown field fails where it is read."""
+        with pytest.raises(TypeError, match="missing required field"):
+            PostgresCompositeTypeDefinition(dialect, [{"name": "id"}])
+        with pytest.raises(TypeError, match="carries no field"):
+            PostgresCompositeTypeDefinition(
+                dialect,
+                [{"name": "id", "data_type": IntegerType(dialect), "extra": 1}],
+            )
+
+    def test_base_unset_reads_back_as_unset_not_as_a_default(self, dialect):
+        """The sentinel's wire text means "not supplied" again.
+
+        ``_UnsetValue`` is a ``str`` enum precisely so the sentinel travels as
+        ``"UNSET"``; without the constructor normalising it back, a definition
+        that declared no DEFAULT would come back claiming one.
+        """
+        wire = serialize(PostgresBaseTypeDefinition(
+            dialect, input_function="box_in", output_function="box_out"
+        ))
+        assert wire["params"]["default"] == "UNSET"
+
+        restored = deserialize(wire, dialect)
+        assert restored.has_default is False
+        assert PostgresBaseTypeDefinition(
+            dialect,
+            input_function="box_in",
+            output_function="box_out",
+            default="UNSET",
+        ).has_default is False
+
     def test_compatibility_wrapper_params(self, dialect):
         create = PostgresCreateEnumTypeExpression(
             dialect,
@@ -370,7 +457,7 @@ class TestPostgresTypeDDLExpressions:
                 ),
             ],
         )
-        sql, params = CreateTypeExpression(
+        sql, params = CreateTypeStatement(
             dialect,
             Type(dialect, 'address', schema_name='app'),
             definition,
@@ -386,7 +473,7 @@ class TestPostgresTypeDDLExpressions:
             dialect,
             ["ready", "O'Reilly", ""],
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'status'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'status'), definition).to_sql()
         assert sql == "CREATE TYPE \"status\" AS ENUM ('ready', 'O''Reilly', '')"
         assert params == ()
 
@@ -398,7 +485,7 @@ class TestPostgresTypeDDLExpressions:
             canonical_function="public.canonical",
             multirange_type_name="app.span_multirange",
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'span', schema_name='app'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'span', schema_name='app'), definition).to_sql()
         assert sql == (
             'CREATE TYPE "app"."span" AS RANGE (SUBTYPE = INTEGER, '
             'SUBTYPE_OPCLASS = "public"."int_ops", CANONICAL = "public"."canonical", '
@@ -417,7 +504,7 @@ class TestPostgresTypeDDLExpressions:
             UnsupportedFeatureError,
             match="CREATE TYPE MULTIRANGE_TYPE_NAME",
         ):
-            CreateTypeExpression(dialect, Type(dialect, 'span'), definition).to_sql()
+            CreateTypeStatement(dialect, Type(dialect, 'span'), definition).to_sql()
 
     def test_base_definition(self, dialect):
         definition = PostgresBaseTypeDefinition(
@@ -430,7 +517,7 @@ class TestPostgresTypeDDLExpressions:
             default=0,
             element=IntegerType(dialect),
         )
-        sql, params = CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+        sql, params = CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
         assert sql == (
             'CREATE TYPE "box" (INPUT = "public"."box_in", '
             'OUTPUT = "public"."box_out", INTERNALLENGTH = 16, PASSEDBYVALUE, '
@@ -446,7 +533,7 @@ class TestPostgresTypeDDLExpressions:
             )
 
     def test_shell_definition(self, dialect):
-        sql, params = CreateTypeExpression(
+        sql, params = CreateTypeStatement(
             dialect,
             Type(dialect, 'pending_box', schema_name='public'),
             PostgresShellTypeDefinition(dialect),
@@ -457,14 +544,14 @@ class TestPostgresTypeDDLExpressions:
     def test_create_type_unsupported_clauses_fail_fast(self, dialect):
         enum = PostgresEnumTypeDefinition(dialect, ["active"])
         with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE IF NOT EXISTS"):
-            CreateTypeExpression(
+            CreateTypeStatement(
                 dialect,
                 Type(dialect, 'status'),
                 enum,
                 if_not_exists=True,
             ).to_sql()
         with pytest.raises(UnsupportedFeatureError, match="CREATE OR REPLACE TYPE"):
-            CreateTypeExpression(
+            CreateTypeStatement(
                 dialect,
                 Type(dialect, 'status'),
                 enum,
@@ -561,7 +648,7 @@ class TestPostgresTypeDDLExpressions:
             ),
         ]
         for action, expected in cases:
-            sql, params = AlterTypeExpression(
+            sql, params = AlterTypeStatement(
                 dialect,
                 Type(dialect, 'status', schema_name='app'),
                 [action],
@@ -574,7 +661,7 @@ class TestPostgresTypeDDLExpressions:
             PostgresAddTypeAttributeAction(dialect, "active", IntegerType(dialect)),
             PostgresDropTypeAttributeAction(dialect, "legacy"),
         ]
-        sql, params = AlterTypeExpression(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
+        sql, params = AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
         assert sql == (
             'ALTER TYPE "app"."address" ADD ATTRIBUTE "active" INTEGER, '
             'DROP ATTRIBUTE "legacy"'
@@ -587,7 +674,7 @@ class TestPostgresTypeDDLExpressions:
             PostgresRenameTypeAction(dialect, "new_address"),
         ]
         with pytest.raises(UnsupportedFeatureError, match="multiple ALTER TYPE actions"):
-            AlterTypeExpression(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
+            AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
 
     def test_type_version_boundaries(self):
         enum = PostgresEnumTypeDefinition(PostgresDialect(version=(9, 6, 0)), ["a"])
@@ -597,12 +684,12 @@ class TestPostgresTypeDDLExpressions:
             "b",
         )
         with pytest.raises(UnsupportedFeatureError, match="RENAME VALUE"):
-            AlterTypeExpression(
+            AlterTypeStatement(
                 PostgresDialect(version=(9, 6, 0)),
                 Type(PostgresDialect(version=(9, 6, 0)), 'status'),
                 [rename],
             ).to_sql()
-        sql, _ = AlterTypeExpression(
+        sql, _ = AlterTypeStatement(
             PostgresDialect(version=(10, 0, 0)),
             Type(PostgresDialect(version=(10, 0, 0)), 'status'),
             [PostgresRenameEnumValueAction(
@@ -613,7 +700,7 @@ class TestPostgresTypeDDLExpressions:
         ).to_sql()
         assert sql == 'ALTER TYPE "status" RENAME VALUE \'a\' TO \'b\''
         with pytest.raises(UnsupportedFeatureError, match="SET properties"):
-            AlterTypeExpression(
+            AlterTypeStatement(
                 PostgresDialect(version=(12, 0, 0)),
                 Type(PostgresDialect(version=(12, 0, 0)), 'box'),
                 [PostgresSetTypePropertiesAction(
@@ -634,9 +721,9 @@ class TestPostgresTypeDDLExpressions:
             )
             if version < (14, 0, 0):
                 with pytest.raises(UnsupportedFeatureError, match="SUBSCRIPT"):
-                    CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+                    CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
             else:
-                sql, _ = CreateTypeExpression(dialect, Type(dialect, 'box'), definition).to_sql()
+                sql, _ = CreateTypeStatement(dialect, Type(dialect, 'box'), definition).to_sql()
                 assert 'SUBSCRIPT = "box_subscript"' in sql
 
 
@@ -648,25 +735,25 @@ class TestPostgresCollationDDLExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_create(self, dialect):
-        sql, _ = PostgresCreateCollationExpression(
+        sql, _ = PostgresCreateCollationStatement(
             dialect, "enloc", locale="en_US.UTF-8", provider="libc"
         ).to_sql()
         assert sql == 'CREATE COLLATION "enloc" (LOCALE = en_US.UTF-8, PROVIDER = libc)'
 
     def test_create_if_not_exists(self, dialect):
-        sql, _ = PostgresCreateCollationExpression(
+        sql, _ = PostgresCreateCollationStatement(
             dialect, "myloc", if_not_exists=True, lc_collate="en_US",
         ).to_sql()
         assert sql == 'CREATE COLLATION IF NOT EXISTS "myloc" (LC_COLLATE = en_US)'
 
     def test_drop(self, dialect):
-        sql, _ = PostgresDropCollationExpression(
+        sql, _ = PostgresDropCollationStatement(
             dialect, "enloc", if_exists=True
         ).to_sql()
         assert sql == 'DROP COLLATION IF EXISTS "enloc"'
 
     def test_create_with_schema_and_all_params(self, dialect):
-        sql, _ = PostgresCreateCollationExpression(
+        sql, _ = PostgresCreateCollationStatement(
             dialect, "custom", schema="app", if_not_exists=True,
             locale="en_US.UTF-8", lc_collate="en_US", lc_ctype="en_US",
             provider="icu", version="153.14",
@@ -678,23 +765,23 @@ class TestPostgresCollationDDLExpression:
         )
 
     def test_create_without_params(self, dialect):
-        sql, _ = PostgresCreateCollationExpression(dialect, "bare").to_sql()
+        sql, _ = PostgresCreateCollationStatement(dialect, "bare").to_sql()
         assert sql == 'CREATE COLLATION "bare"'
 
     def test_drop_restrict_with_schema(self, dialect):
-        sql, _ = PostgresDropCollationExpression(
+        sql, _ = PostgresDropCollationStatement(
             dialect, "enloc", schema="app", restrict=True
         ).to_sql()
         assert sql == 'DROP COLLATION "app"."enloc" RESTRICT'
 
     def test_drop_cascade(self, dialect):
-        sql, _ = PostgresDropCollationExpression(
+        sql, _ = PostgresDropCollationStatement(
             dialect, "enloc", cascade=True
         ).to_sql()
         assert sql == 'DROP COLLATION "enloc" CASCADE'
 
     def test_drop_cascade_and_restrict_raises(self, dialect):
-        expr = PostgresDropCollationExpression(
+        expr = PostgresDropCollationStatement(
             dialect, "enloc", cascade=True, restrict=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
@@ -703,9 +790,9 @@ class TestPostgresCollationDDLExpression:
     def test_version_gate_96(self):
         d = PostgresDialect(version=(9, 5, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateCollationExpression(d, "c").to_sql()
+            PostgresCreateCollationStatement(d, "c").to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropCollationExpression(d, "c").to_sql()
+            PostgresDropCollationStatement(d, "c").to_sql()
 
 
 class TestPostgresForeignTableDDLExpression:
@@ -716,7 +803,7 @@ class TestPostgresForeignTableDDLExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_create(self, dialect):
-        sql, _ = PostgresCreateForeignTableExpression(
+        sql, _ = PostgresCreateForeignTableStatement(
             dialect, "ft", "srv", columns=["a integer", "b text"],
             options=["host 'h'"],
         ).to_sql()
@@ -726,13 +813,13 @@ class TestPostgresForeignTableDDLExpression:
         )
 
     def test_drop(self, dialect):
-        sql, _ = PostgresDropForeignTableExpression(
+        sql, _ = PostgresDropForeignTableStatement(
             dialect, "ft", if_exists=True, cascade=True
         ).to_sql()
         assert sql == 'DROP FOREIGN TABLE IF EXISTS "ft" CASCADE'
 
     def test_create_if_not_exists_schema(self, dialect):
-        sql, _ = PostgresCreateForeignTableExpression(
+        sql, _ = PostgresCreateForeignTableStatement(
             dialect, "ft", "srv", schema="app", if_not_exists=True,
             columns=["a integer"],
         ).to_sql()
@@ -742,19 +829,19 @@ class TestPostgresForeignTableDDLExpression:
         )
 
     def test_create_without_columns_or_options(self, dialect):
-        sql, _ = PostgresCreateForeignTableExpression(
+        sql, _ = PostgresCreateForeignTableStatement(
             dialect, "bar_ft", "fdw_bar"
         ).to_sql()
         assert sql == 'CREATE FOREIGN TABLE "bar_ft" SERVER "fdw_bar"'
 
     def test_drop_restrict_with_schema(self, dialect):
-        sql, _ = PostgresDropForeignTableExpression(
+        sql, _ = PostgresDropForeignTableStatement(
             dialect, "ft", schema="app", restrict=True
         ).to_sql()
         assert sql == 'DROP FOREIGN TABLE "app"."ft" RESTRICT'
 
     def test_drop_cascade_and_restrict_raises(self, dialect):
-        expr = PostgresDropForeignTableExpression(
+        expr = PostgresDropForeignTableStatement(
             dialect, "ft", cascade=True, restrict=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
@@ -763,9 +850,9 @@ class TestPostgresForeignTableDDLExpression:
     def test_version_gate_96(self):
         d = PostgresDialect(version=(9, 5, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateForeignTableExpression(d, "ft", "srv").to_sql()
+            PostgresCreateForeignTableStatement(d, "ft", "srv").to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropForeignTableExpression(d, "ft").to_sql()
+            PostgresDropForeignTableStatement(d, "ft").to_sql()
 
 
 class TestPostgresRoutineDDLExpression:
@@ -776,7 +863,7 @@ class TestPostgresRoutineDDLExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_create_function(self, dialect):
-        sql, _ = PostgresCreateFunctionExpression(
+        sql, _ = PostgresCreateFunctionDdlStatement(
             dialect, "add", "integer", "int 1;",
             args=["a integer"], strict=True, security="DEFINER",
         ).to_sql()
@@ -786,25 +873,25 @@ class TestPostgresRoutineDDLExpression:
         )
 
     def test_drop_function(self, dialect):
-        sql, _ = PostgresDropFunctionExpression(
+        sql, _ = PostgresDropFunctionDdlStatement(
             dialect, "add", args=["integer"], cascade=True
         ).to_sql()
         assert sql == 'DROP FUNCTION "add" (integer) CASCADE'
 
     def test_create_aggregate(self, dialect):
-        sql, _ = PostgresCreateAggregateExpression(
+        sql, _ = PostgresCreateAggregateDdlStatement(
             dialect, "mysum", "sum", "integer", initcond="0"
         ).to_sql()
         assert sql == 'CREATE AGGREGATE "mysum" (SFUNC=sum, STYPE=integer, INITCOND=0)'
 
     def test_drop_aggregate(self, dialect):
-        sql, _ = PostgresDropAggregateExpression(
+        sql, _ = PostgresDropAggregateDdlStatement(
             dialect, "mysum", "integer", if_exists=True
         ).to_sql()
         assert sql == 'DROP AGGREGATE IF EXISTS "mysum" (integer)'
 
     def test_create_function_full_options(self, dialect):
-        sql, _ = PostgresCreateFunctionExpression(
+        sql, _ = PostgresCreateFunctionDdlStatement(
             dialect, "add", "integer", "int 1;", schema="app",
             args=["a integer", "b integer"], or_replace=True,
             security="INVOKER", cost=10.0, rows=50,
@@ -816,7 +903,7 @@ class TestPostgresRoutineDDLExpression:
         assert "ROWS 50" in sql
 
     def test_create_function_no_args_no_strict(self, dialect):
-        sql, _ = PostgresCreateFunctionExpression(
+        sql, _ = PostgresCreateFunctionDdlStatement(
             dialect, "now", "timestamptz", "SELECT now();", language="sql"
         ).to_sql()
         assert sql == (
@@ -825,33 +912,33 @@ class TestPostgresRoutineDDLExpression:
         )
 
     def test_create_function_invalid_security(self, dialect):
-        expr = PostgresCreateFunctionExpression(
+        expr = PostgresCreateFunctionDdlStatement(
             dialect, "f", "integer", "int 1;", security="OWNER"
         )
         with pytest.raises(ValueError, match="DEFINER"):
             expr.to_sql()
 
     def test_drop_function_restrict(self, dialect):
-        sql, _ = PostgresDropFunctionExpression(
+        sql, _ = PostgresDropFunctionDdlStatement(
             dialect, "add", schema="app", if_exists=True, restrict=True
         ).to_sql()
         assert sql == 'DROP FUNCTION IF EXISTS "app"."add" RESTRICT'
 
     def test_drop_function_without_args(self, dialect):
-        sql, _ = PostgresDropFunctionExpression(
+        sql, _ = PostgresDropFunctionDdlStatement(
             dialect, "add", schema="app"
         ).to_sql()
         assert sql == 'DROP FUNCTION "app"."add"'
 
     def test_drop_function_cascade_and_restrict_raises(self, dialect):
-        expr = PostgresDropFunctionExpression(
+        expr = PostgresDropFunctionDdlStatement(
             dialect, "add", cascade=True, restrict=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
             expr.to_sql()
 
     def test_create_aggregate_full(self, dialect):
-        sql, _ = PostgresCreateAggregateExpression(
+        sql, _ = PostgresCreateAggregateDdlStatement(
             dialect, "mysum", "sum", "integer", schema="app",
             finalfunc="mysum_final",
         ).to_sql()
@@ -861,19 +948,19 @@ class TestPostgresRoutineDDLExpression:
         )
 
     def test_drop_aggregate_cascade(self, dialect):
-        sql, _ = PostgresDropAggregateExpression(
+        sql, _ = PostgresDropAggregateDdlStatement(
             dialect, "mysum", "integer", schema="app", cascade=True
         ).to_sql()
         assert sql == 'DROP AGGREGATE "app"."mysum" (integer) CASCADE'
 
     def test_drop_aggregate_restrict(self, dialect):
-        sql, _ = PostgresDropAggregateExpression(
+        sql, _ = PostgresDropAggregateDdlStatement(
             dialect, "mysum", "integer", if_exists=True, restrict=True
         ).to_sql()
         assert sql == 'DROP AGGREGATE IF EXISTS "mysum" (integer) RESTRICT'
 
     def test_drop_aggregate_cascade_and_restrict_raises(self, dialect):
-        expr = PostgresDropAggregateExpression(
+        expr = PostgresDropAggregateDdlStatement(
             dialect, "mysum", "integer", cascade=True, restrict=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
@@ -882,15 +969,15 @@ class TestPostgresRoutineDDLExpression:
     def test_routine_version_gate_96(self):
         d = PostgresDialect(version=(9, 5, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateFunctionExpression(
+            PostgresCreateFunctionDdlStatement(
                 d, "f", "integer", "int 1;"
             ).to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropFunctionExpression(d, "f").to_sql()
+            PostgresDropFunctionDdlStatement(d, "f").to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateAggregateExpression(d, "s", "sum", "integer").to_sql()
+            PostgresCreateAggregateDdlStatement(d, "s", "sum", "integer").to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropAggregateExpression(d, "s", "integer").to_sql()
+            PostgresDropAggregateDdlStatement(d, "s", "integer").to_sql()
 
 
 class TestPostgresPublicationExpression:
@@ -901,13 +988,13 @@ class TestPostgresPublicationExpression:
         return PostgresDialect(version=(14, 0, 0))
 
     def test_create_publication_tables(self, dialect):
-        sql, _ = PostgresCreatePublicationExpression(
+        sql, _ = PostgresCreatePublicationStatement(
             dialect, "pub1", tables=["orders", "users"]
         ).to_sql()
         assert sql == 'CREATE PUBLICATION "pub1" FOR TABLE "orders", "users"'
 
     def test_create_publication_all_tables(self, dialect):
-        sql, _ = PostgresCreatePublicationExpression(
+        sql, _ = PostgresCreatePublicationStatement(
             dialect, "pub_all", all_tables=True,
             options=["publish='insert'"],
         ).to_sql()
@@ -916,13 +1003,13 @@ class TestPostgresPublicationExpression:
         )
 
     def test_drop_publication(self, dialect):
-        sql, _ = PostgresDropPublicationExpression(
+        sql, _ = PostgresDropPublicationStatement(
             dialect, "pub1", if_exists=True
         ).to_sql()
         assert sql == 'DROP PUBLICATION IF EXISTS "pub1"'
 
     def test_create_subscription(self, dialect):
-        sql, _ = PostgresCreateSubscriptionExpression(
+        sql, _ = PostgresCreateSubscriptionStatement(
             dialect, "sub1", "host=db port=5432", ["pub1"]
         ).to_sql()
         assert sql == (
@@ -931,11 +1018,11 @@ class TestPostgresPublicationExpression:
         )
 
     def test_drop_subscription(self, dialect):
-        sql, _ = PostgresDropSubscriptionExpression(dialect, "sub1", cascade=True).to_sql()
+        sql, _ = PostgresDropSubscriptionStatement(dialect, "sub1", cascade=True).to_sql()
         assert sql == 'DROP SUBSCRIPTION "sub1" CASCADE'
 
     def test_create_publication_tables_options(self, dialect):
-        sql, _ = PostgresCreatePublicationExpression(
+        sql, _ = PostgresCreatePublicationStatement(
             dialect, "pub1", tables=["orders"],
             options=["publish='insert'"],
         ).to_sql()
@@ -945,44 +1032,44 @@ class TestPostgresPublicationExpression:
         )
 
     def test_create_publication_tables_and_all_raises(self, dialect):
-        expr = PostgresCreatePublicationExpression(
+        expr = PostgresCreatePublicationStatement(
             dialect, "pub1", tables=["orders"], all_tables=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
             expr.to_sql()
 
     def test_create_publication_neither_raises(self, dialect):
-        expr = PostgresCreatePublicationExpression(dialect, "pub1")
+        expr = PostgresCreatePublicationStatement(dialect, "pub1")
         with pytest.raises(ValueError, match="requires either"):
             expr.to_sql()
 
     def test_drop_publication_cascade(self, dialect):
-        sql, _ = PostgresDropPublicationExpression(
+        sql, _ = PostgresDropPublicationStatement(
             dialect, "pub1", cascade=True
         ).to_sql()
         assert sql == 'DROP PUBLICATION "pub1" CASCADE'
 
     def test_drop_publication_restrict(self, dialect):
-        sql, _ = PostgresDropPublicationExpression(
+        sql, _ = PostgresDropPublicationStatement(
             dialect, "pub1", restrict=True
         ).to_sql()
         assert sql == 'DROP PUBLICATION "pub1" RESTRICT'
 
     def test_drop_publication_cascade_and_restrict_raises(self, dialect):
-        expr = PostgresDropPublicationExpression(
+        expr = PostgresDropPublicationStatement(
             dialect, "pub1", cascade=True, restrict=True
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
             expr.to_sql()
 
     def test_drop_publication_if_exists(self, dialect):
-        sql, _ = PostgresDropPublicationExpression(
+        sql, _ = PostgresDropPublicationStatement(
             dialect, "pub1", if_exists=True
         ).to_sql()
         assert sql == 'DROP PUBLICATION IF EXISTS "pub1"'
 
     def test_create_subscription_options(self, dialect):
-        sql, _ = PostgresCreateSubscriptionExpression(
+        sql, _ = PostgresCreateSubscriptionStatement(
             dialect, "sub2", "host=db port=5432", ["pub1", "pub2"],
             options=["copy_data = false"],
         ).to_sql()
@@ -992,7 +1079,7 @@ class TestPostgresPublicationExpression:
         )
 
     def test_drop_subscription_if_exists(self, dialect):
-        sql, _ = PostgresDropSubscriptionExpression(
+        sql, _ = PostgresDropSubscriptionStatement(
             dialect, "sub1", if_exists=True
         ).to_sql()
         assert sql == 'DROP SUBSCRIPTION IF EXISTS "sub1"'
@@ -1000,13 +1087,13 @@ class TestPostgresPublicationExpression:
     def test_pubsub_version_gate_10(self):
         d = PostgresDialect(version=(9, 6, 0))
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreatePublicationExpression(
+            PostgresCreatePublicationStatement(
                 d, "pub1", tables=["orders"]
             ).to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropPublicationExpression(d, "pub1").to_sql()
+            PostgresDropPublicationStatement(d, "pub1").to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateSubscriptionExpression(d, "s", "conn", ["p"]).to_sql()
+            PostgresCreateSubscriptionStatement(d, "s", "conn", ["p"]).to_sql()
         with pytest.raises(UnsupportedFeatureError):
-            PostgresDropSubscriptionExpression(d, "s").to_sql()
+            PostgresDropSubscriptionStatement(d, "s").to_sql()
 

@@ -32,6 +32,7 @@ from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
     PostgresChangeMaterializedViewOwnerAction,
+    PostgresCreateMaterializedViewExpression,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -40,10 +41,10 @@ from ..expression.ddl.mv import (
 from ..storage_parameters import resolve_storage_parameter
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateMaterializedViewExpression
+    from ....expression.statements.ddl_view import CreateMaterializedViewStatement
     from ..expression.ddl.mv import (
-        PostgresAlterMaterializedViewExpression,
-        PostgresRefreshMaterializedViewExpression,
+        PostgresAlterMaterializedViewStatement,
+        PostgresRefreshMaterializedViewPgStatement,
     )
 
 
@@ -55,33 +56,50 @@ class PostgresMaterializedViewMixin(ViewMixin):
     in ``PostgresDialect``'s base list so its formatters win.
     """
 
+    def supports_materialized_view_introspection(self) -> bool:
+        """PostgreSQL answers for its materialized views from ``pg_matviews``.
+
+        The capability for the ``introspect materialized-views`` family,
+        declared beside the statements that render the REFRESH path.
+        """
+        return True
+
     def supports_materialized_view(self) -> bool:
         """Materialized views require PostgreSQL 9.3+."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
+
+    def supports_materialized_view_bind_parameters(self) -> bool:
+        """PostgreSQL refuses bind parameters in a materialized view body.
+
+        Measured on 19beta4: "materialized views may not be defined using
+        bound parameters". The definition is stored and run again later,
+        where a bound value has no meaning.
+        """
+        return False
     def supports_refresh_materialized_view(self) -> bool:
         """REFRESH MATERIALIZED VIEW requires PostgreSQL 9.3+."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_concurrent_refresh(self) -> bool:
         """CONCURRENTLY is supported since PostgreSQL 9.4."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_materialized_view_if_not_exists(self) -> bool:
         """CREATE MATERIALIZED VIEW IF NOT EXISTS is supported since PostgreSQL 9.4."""
-        return self.version >= (9, 4, 0)
+        return self.version_at_least((9, 4, 0))
 
     def supports_materialized_view_tablespace(self) -> bool:
         """TABLESPACE on CREATE MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_storage_options(self) -> bool:
         """WITH (storage_parameter) is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_alter_materialized_view(self) -> bool:
         """ALTER MATERIALIZED VIEW is supported since PostgreSQL 9.3."""
-        return self.version >= (9, 3, 0)
+        return self.version_at_least((9, 3, 0))
 
     def supports_materialized_view_restrict(self) -> bool:
         """``DROP MATERIALIZED VIEW ... RESTRICT`` is in the synopsis.
@@ -167,7 +185,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
     # Formatters
     # ------------------------------------------------------------------
 
-    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewExpression") -> Tuple[str, tuple]:
+    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewStatement") -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 
         Follows the PostgreSQL grammar order:
@@ -187,7 +205,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
           construction).
 
         Args:
-            expr: CreateMaterializedViewExpression instance
+            expr: CreateMaterializedViewStatement instance
 
         Returns:
             Tuple of (SQL string, params tuple)
@@ -203,7 +221,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """
         if not isinstance(expr.view, MaterializedView):
             raise TypeError(
-                f"CreateMaterializedViewExpression.view must be a MaterializedView, "
+                f"CreateMaterializedViewStatement.view must be a MaterializedView, "
                 f"got {type(expr.view).__name__}"
             )
         if not self.supports_materialized_view():
@@ -212,7 +230,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         parts = ["CREATE MATERIALIZED VIEW"]
 
-        if getattr(expr, "if_not_exists", False):
+        # IF NOT EXISTS exists only on the PostgreSQL subclass; the core
+        # node has no such field and asks for none of it.
+        if isinstance(expr, PostgresCreateMaterializedViewExpression) and expr.if_not_exists:
             if not self.supports_materialized_view_if_not_exists():
                 raise UnsupportedFeatureError(
                     self.name,
@@ -234,6 +254,8 @@ class PostgresMaterializedViewMixin(ViewMixin):
             parts.append(f"TABLESPACE {self.format_identifier(expr.tablespace)}")
 
         query_sql, query_params = expr.query.to_sql()
+        if query_params and not self.supports_materialized_view_bind_parameters():
+            self.refuse_ddl_bind_parameters("CREATE MATERIALIZED VIEW with bound parameters")
         parts.append(f"AS {query_sql}")
 
         if expr.with_data:
@@ -284,7 +306,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
     def format_refresh_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW, gating CONCURRENTLY on PG 9.4+.
 
-        The generic ``RefreshMaterializedViewExpression`` routes here, so the
+        The generic ``RefreshMaterializedViewStatement`` routes here, so the
         version gate also protects callers that do not use the PostgreSQL
         specific expression.
         """
@@ -292,12 +314,12 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return super().format_refresh_materialized_view_statement(expr)
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "PostgresRefreshMaterializedViewExpression"
+        self, expr: "PostgresRefreshMaterializedViewPgStatement"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: PostgresRefreshMaterializedViewExpression containing all options
+            expr: PostgresRefreshMaterializedViewPgStatement containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)
@@ -327,7 +349,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return " ".join(parts), ()
 
     def format_alter_materialized_view_statement(
-        self, expr: "PostgresAlterMaterializedViewExpression"
+        self, expr: "PostgresAlterMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
         """Format ALTER MATERIALIZED VIEW statement.
 
@@ -335,7 +357,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         statement; multiple actions are joined with ``";\\n"``.
 
         Args:
-            expr: PostgresAlterMaterializedViewExpression with the actions to apply
+            expr: PostgresAlterMaterializedViewStatement with the actions to apply
 
         Returns:
             Tuple of (SQL statement, parameters tuple); ``params`` is always empty.
@@ -350,13 +372,13 @@ class PostgresMaterializedViewMixin(ViewMixin):
         target = self._format_materialized_view_name(expr)
         rendered = []
         for action in expr.actions:
-            action_sql, action_params = self.format_materialized_view_alter_action(
+            action_sql, action_params = self.format_postgres_materialized_view_alter_action(
                 action
             )
             rendered.append(f"ALTER MATERIALIZED VIEW {target} {action_sql}")
         return ";\n".join(rendered), ()
 
-    def format_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Returns the ``(sql, params)`` tuple every ``format_*`` method returns.
@@ -368,7 +390,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         someone treated it as the documented tuple.
 
         Args:
-            expr: A ``MaterializedViewAlterAction`` subclass instance.
+            expr: A ``PostgresMaterializedViewAlterAction`` subclass instance.
 
         Returns:
             A ``(sql, params)`` tuple whose ``sql`` is the action body without
@@ -396,7 +418,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
             return f"OWNER TO {self.format_identifier(expr.new_owner)}", ()
         raise UnsupportedFeatureError(
             self.name,
-            f"ALTER MATERIALIZED VIEW action {getattr(expr, 'action_kind', type(expr).__name__)}",
+            f"ALTER MATERIALIZED VIEW action {expr.action_kind}",
         )
 
     # ------------------------------------------------------------------
@@ -405,7 +427,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
     def _check_concurrent_refresh_support(self, expr: Any) -> None:
         """Raise when CONCURRENTLY is requested but unsupported by the server version."""
-        if getattr(expr, "concurrent", False) and not self.supports_materialized_view_concurrent_refresh():
+        if expr.concurrent and not self.supports_materialized_view_concurrent_refresh():
             raise UnsupportedFeatureError(
                 self.name,
                 "REFRESH MATERIALIZED VIEW CONCURRENTLY",

@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
-from rhosocial.activerecord.backend.expression.operators import RawSQLExpression
+from rhosocial.activerecord.backend.expression.operators import RawSQL
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
@@ -29,31 +29,22 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "PartitionValue",
-    "PostgresPartitionClause",
-    "PostgresCreatePartitionExpression",
-    "PostgresDetachPartitionExpression",
-    "PostgresAttachPartitionExpression",
-    "PostgresPartitionMetadataExpression",
+    "PostgresPartitionValue",
+    "PostgresCreatePartitionStatement",
+    "PostgresDetachPartitionStatement",
+    "PostgresAttachPartitionStatement",
+    "PostgresPartitionMetadataQueryStatement",
 ]
 
-
-class PostgresPartitionClause(PartitionClause):
-    """PostgreSQL ``PARTITION BY {RANGE|LIST|HASH} (...)`` clause.
-
-    PostgreSQL's declarative partitioning shares the generic clause shape, so
-    this subclass currently adds no fields; it exists as the PostgreSQL-owned
-    clause type (for capability gating and future PG-only partition parameters)
-    and to distinguish PG-declared candidates during backend selection.
-
-    Concrete partitions are **not** declared inline: PostgreSQL creates them
-    through the separate ``CREATE TABLE ... PARTITION OF`` statement
-    (``PostgresCreatePartitionExpression``). This class therefore remains
-    clause-only and never carries ``PartitionDefinition`` values.
-    """
+# ``PARTITION BY {RANGE|LIST|HASH} (...)`` is core's clause: PostgreSQL's
+# declarative partitioning shares the generic shape and adds no field, so the
+# backend re-exports ``PartitionClause`` instead of declaring an empty subclass
+# under its own kind (rules §3: a backend-prefixed shell with no new field is a
+# distinction the artifact cannot act on, and two kinds for one concept make a
+# reader choose between them for no reason).
 
 
-class PartitionValue(BaseExpression):
+class PostgresPartitionValue(BaseExpression):
     """Represents a partition bound value in PostgreSQL DDL.
 
     Handles the formatting of partition boundary values used in
@@ -63,7 +54,7 @@ class PartitionValue(BaseExpression):
     - ``None`` renders as ``NULL``.
     - RANGE ``MINVALUE`` and ``MAXVALUE`` render as keywords.
     - LIST renders those strings as quoted values.
-    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQLExpression`` values
+    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQL`` values
       delegate through their own formatters and retain their parameters.
     - Other scalar values use a whitelist; arbitrary objects are rejected.
 
@@ -76,13 +67,13 @@ class PartitionValue(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> PartitionValue(dialect=dialect, value=None).to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value=None).to_sql()
         ('NULL', ())
-        >>> PartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value='MAXVALUE').to_sql()
         ('MAXVALUE', ())
-        >>> PartitionValue(dialect=dialect, value='2024-01-01').to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value='2024-01-01').to_sql()
         ("'2024-01-01'", ())
-        >>> PartitionValue(dialect=dialect, value=42).to_sql()
+        >>> PostgresPartitionValue(dialect=dialect, value=42).to_sql()
         ('42', ())
     """
 
@@ -115,19 +106,19 @@ class PartitionValue(BaseExpression):
                 seen.add(identity)
                 if current.dialect is not dialect:
                     raise ValueError(
-                        "partition value expressions must use the same dialect as PartitionValue"
+                        "partition value expressions must use the same dialect as PostgresPartitionValue"
                     )
                 if isinstance(current, FunctionCall):
                     if current.alias is not None:
                         raise ValueError("partition value expressions must not have aliases")
                     pending.extend(current.args)
-                elif isinstance(current, (Literal, RawSQLExpression)):
+                elif isinstance(current, (Literal, RawSQL)):
                     if getattr(current, "alias", None) is not None:
                         raise ValueError("partition value expressions must not have aliases")
                 else:
                     raise TypeError(
                         "partition value expressions must be FunctionCall, Literal, "
-                        "or RawSQLExpression"
+                        "or RawSQL"
                     )
         else:
             if isinstance(value, bool):
@@ -150,7 +141,7 @@ class PartitionValue(BaseExpression):
         return "format_partition_value"
 
 
-class PostgresCreatePartitionExpression(BaseExpression):
+class PostgresCreatePartitionStatement(BaseExpression):
     """PostgreSQL CREATE TABLE ... PARTITION OF statement expression.
 
     Creates a new partition as a child of a partitioned table.
@@ -172,7 +163,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # RANGE partition
-        >>> partition = PostgresCreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",
@@ -181,10 +172,10 @@ class PostgresCreatePartitionExpression(BaseExpression):
         ... )
         >>> sql, params = partition.to_sql()
         >>> sql
-        "CREATE TABLE orders_2024_q1 PARTITION OF orders RANGE ('2024-01-01', '2024-04-01')"
+        'CREATE TABLE "orders_2024_q1" PARTITION OF "orders" FOR VALUES FROM (\'2024-01-01\') TO (\'2024-04-01\')'
 
         >>> # LIST partition
-        >>> partition = PostgresCreatePartitionExpression(
+        >>> partition = PostgresCreatePartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_active",
         ...     parent_table="orders",
@@ -229,7 +220,7 @@ class PostgresCreatePartitionExpression(BaseExpression):
         return "format_create_partition_statement"
 
 
-class PostgresDetachPartitionExpression(BaseExpression):
+class PostgresDetachPartitionStatement(BaseExpression):
     """PostgreSQL ALTER TABLE ... DETACH PARTITION statement expression.
 
     Detaches a partition from its parent table without dropping the data.
@@ -245,7 +236,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> detach = PostgresDetachPartitionExpression(
+        >>> detach = PostgresDetachPartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2023",
         ...     parent_table="orders",
@@ -281,7 +272,7 @@ class PostgresDetachPartitionExpression(BaseExpression):
         return "format_detach_partition_statement"
 
 
-class PostgresAttachPartitionExpression(BaseExpression):
+class PostgresAttachPartitionStatement(BaseExpression):
     """PostgreSQL ALTER TABLE ... ATTACH PARTITION statement expression.
 
     Attaches an existing table as a partition of a partitioned table.
@@ -301,7 +292,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
-        >>> attach = PostgresAttachPartitionExpression(
+        >>> attach = PostgresAttachPartitionStatement(
         ...     dialect=dialect,
         ...     partition_name="orders_2024_q1",
         ...     parent_table="orders",
@@ -340,7 +331,7 @@ class PostgresAttachPartitionExpression(BaseExpression):
         return "format_attach_partition_statement"
 
 
-class PostgresPartitionMetadataExpression(BaseExpression):
+class PostgresPartitionMetadataQueryStatement(BaseExpression):
     """PostgreSQL partition metadata query expression.
 
     This expression builds the public metadata query used by tests and provider
@@ -367,4 +358,4 @@ class PostgresPartitionMetadataExpression(BaseExpression):
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
-        return "format_partition_metadata_query"
+        return "format_partition_metadata_query_statement"

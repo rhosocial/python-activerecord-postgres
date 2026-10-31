@@ -36,7 +36,7 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
 
     def __init__(self):
         super().__init__()
-        self._register_type(dict, Jsonb)
+        self.register_type(dict, Jsonb)
 
     def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
         return Jsonb(value)

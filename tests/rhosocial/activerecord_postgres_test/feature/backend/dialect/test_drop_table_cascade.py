@@ -9,7 +9,7 @@ contract so a future override that drops support is caught early.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import DropTableExpression
+from rhosocial.activerecord.backend.expression import DropTableStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.objects import Table
 
@@ -25,20 +25,20 @@ class TestPostgresDropTableCascade:
         assert dialect.supports_drop_table_restrict() is True
 
     def test_cascade_renders_standard_token(self, dialect):
-        expr = DropTableExpression(dialect, table=Table(dialect, 'users'), cascade=True)
+        expr = DropTableStatement(dialect, table=Table(dialect, 'users'), cascade=True)
         sql, params = expr.to_sql()
         assert sql.endswith(" CASCADE")
         assert "CASCADE CONSTRAINTS" not in sql
         assert params == ()
 
     def test_restrict_renders_standard_token(self, dialect):
-        expr = DropTableExpression(dialect, table=Table(dialect, 'users'), restrict=True)
+        expr = DropTableStatement(dialect, table=Table(dialect, 'users'), restrict=True)
         sql, params = expr.to_sql()
         assert sql.endswith(" RESTRICT")
         assert params == ()
 
     def test_neither_cascade_nor_restrict_omits_token(self, dialect):
-        expr = DropTableExpression(dialect, table=Table(dialect, 'users'))
+        expr = DropTableStatement(dialect, table=Table(dialect, 'users'))
         sql, params = expr.to_sql()
         assert "CASCADE" not in sql
         assert "RESTRICT" not in sql
@@ -48,12 +48,12 @@ class TestPostgresDropTableCascade:
         with pytest.raises(
             ValueError, match="cascade and restrict are mutually exclusive options"
         ):
-            DropTableExpression(
+            DropTableStatement(
                 dialect, table=Table(dialect, 'users'), cascade=True, restrict=True
             )
 
     def test_if_exists_combined_with_cascade(self, dialect):
-        expr = DropTableExpression(
+        expr = DropTableStatement(
             dialect, table=Table(dialect, 'users'), if_exists=True, cascade=True
         )
         sql, params = expr.to_sql()

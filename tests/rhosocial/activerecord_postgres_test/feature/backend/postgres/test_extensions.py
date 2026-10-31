@@ -15,7 +15,7 @@ from unittest.mock import MagicMock  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression import core, operators, Literal
-from rhosocial.activerecord.backend.expression.operators import BinaryArithmeticExpression
+from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
     ltree_literal,
     lquery_literal,
@@ -242,7 +242,7 @@ class TestPgvectorFunctions:
         """Test vector cosine distance."""
         dialect = PostgresDialect((14, 0, 0))
         result = vector_cosine_distance(dialect, 'embedding', '[1,2,3]')
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<=>" in sql
 
@@ -250,7 +250,7 @@ class TestPgvectorFunctions:
         """Test vector L2 distance."""
         dialect = PostgresDialect((14, 0, 0))
         result = vector_l2_distance(dialect, 'embedding', '[1,2,3]')
-        assert isinstance(result, BinaryArithmeticExpression)
+        assert isinstance(result, BinaryExpression)
         sql, params = result.to_sql()
         assert "<->" in sql
 

@@ -81,7 +81,11 @@ rhosocial = ["**/*.pyi", "**/*.py"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q -p rhosocial.activerecord.testsuite.conftest"
+# --dist=loadgroup is the only distribution mode (expression-dialect §12.1):
+# an explicit xdist_group is the only thing that serialises a case, and the
+# worker count is the caller's (-n). The expression directory pins the same
+# mode for its own runs; see its conftest.
+addopts = "-ra -q -p rhosocial.activerecord.testsuite.conftest --dist=loadgroup"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = [
@@ -100,7 +104,7 @@ markers = [
     "benchmark_read: marks read benchmark tests",
     "feature: category label for feature-area tests; changes collection grouping only, not ordering",
     "benchmark_relation: marks relation benchmarks; changes collection grouping only, not ordering",
-
+    "xdist_group(name): schedules the marked tests onto one xdist worker; the suite runs with --dist=loadgroup, so this is the only marker that actually serialises anything",
 ]
 
 [tool.coverage.run]

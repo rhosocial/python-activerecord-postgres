@@ -7,26 +7,31 @@ except ImportError:
 
 from rhosocial.activerecord.backend.expression.core import Column, Literal
 from rhosocial.activerecord.backend.expression.statements import (
-    ColumnConstraintType,
+    ColumnDefaultConstraint,
     ColumnDefinition,
-    CreateTableExpression,
-    GeneratedColumnExpression,
+    ColumnGeneratedConstraint,
+    ColumnNotNullConstraint,
+    ColumnPrimaryKeyConstraint,
+    ColumnUniqueConstraint,
+    CreateTableStatement,
     GeneratedColumnType,
     IndexDefinition,
+    PartitionClause,
     PartitionStrategy,
     StorageOptionsExpression,
     TableConstraint,
-    TableConstraintType,
+    TableForeignKeyConstraint,
+    TablePrimaryKeyConstraint,
+    TableUniqueConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.types import UUIDType
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresColumnOptions,
     PostgresColumnStorage,
-    PostgresPartitionClause,
-    PostgresUUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateTableOptions,
@@ -50,17 +55,17 @@ from rhosocial.activerecord.model import ActiveRecord, AsyncActiveRecord
 
 
 DIALECT = PostgresDialect((16, 2, 0))
-SQL_TYPE = PostgresUUIDType()
+SQL_TYPE = UUIDType()
 FALLBACK_SQL_TYPE = TextType()
 SQL_TYPE_MARKER = UseSqlType(SQL_TYPE, FALLBACK_SQL_TYPE)
-DEFAULT_VALUE = Literal(DIALECT, "new", inline_literals=True)
+DEFAULT_VALUE = Literal(DIALECT, "new", inline=True)
 DEFAULT_CONSTRAINT = UseConstraint(
-    ColumnConstraintType.DEFAULT,
+    ColumnDefaultConstraint,
     name="df_status_default",
-    default_value=DEFAULT_VALUE,
+    value=DEFAULT_VALUE,
 )
 UNIQUE_CONSTRAINT = UseConstraint(
-    ColumnConstraintType.UNIQUE,
+    ColumnUniqueConstraint,
     name="uq_status",
 )
 COLLATION = CollationAttribute(name="C.UTF-8")
@@ -77,7 +82,7 @@ FIRST_INDEX = UseIndex(
     tablespace="fastspace",
 )
 SECOND_INDEX = UseIndex("idx_display_label_suffix", type="BTREE")
-GENERATED = GeneratedColumnExpression(
+GENERATED = ColumnGeneratedConstraint(
     DIALECT,
     Column(DIALECT, "order_id"),
     GeneratedColumnType.STORED,
@@ -95,18 +100,10 @@ SECOND_COLUMN_OPTION = PostgresColumnOptions(
 TABLE_CONSTRAINTS = [
     TableConstraint(
         DIALECT,
-        TableConstraintType.FOREIGN_KEY,
+        branch=TableForeignKeyConstraint(DIALECT, ["tenant_id"], (Table(DIALECT, "tenant"), ["id"])),
         name="fk_order_tenant",
-        columns=["tenant_id"],
-        foreign_key_table=Table(DIALECT, "tenant"),
-        foreign_key_columns=["id"],
     ),
-    TableConstraint(
-        DIALECT,
-        TableConstraintType.UNIQUE,
-        name="uq_order_pair",
-        columns=["tenant_id", "order_id"],
-    ),
+    TableConstraint(DIALECT, branch=TableUniqueConstraint(DIALECT, ["tenant_id", "order_id"]), name="uq_order_pair"),
 ]
 TABLE_INDEXES = [
     IndexDefinition(
@@ -125,7 +122,7 @@ TABLE_OPTIONS = [
 STORAGE_OPTIONS = [
     StorageOptionsExpression(DIALECT, {"fillfactor": 70}),
 ]
-TABLE_PARTITION = PostgresPartitionClause(
+TABLE_PARTITION = PartitionClause(
     DIALECT,
     PartitionStrategy.RANGE,
     [Column(DIALECT, "display_label")],
@@ -230,7 +227,7 @@ class AsyncDDLSource(DDLDeclarations, AsyncActiveRecord):
     pass
 
 
-SINGLE_SQL_TYPE = PostgresUUIDType()
+SINGLE_SQL_TYPE = UUIDType()
 SINGLE_SQL_TYPE_MARKER = UseSqlType(SINGLE_SQL_TYPE)
 
 
@@ -277,11 +274,11 @@ def test_field_markers_preserve_declared_objects_and_order():
     constraints = SyncDDLSource.column_constraints("status")
     assert constraints[0] is DEFAULT_CONSTRAINT.constraint
     assert constraints[1] is UNIQUE_CONSTRAINT.constraint
-    assert constraints[0].default_value is DEFAULT_VALUE
-    assert [item.constraint_type for item in constraints] == [
-        ColumnConstraintType.DEFAULT,
-        ColumnConstraintType.UNIQUE,
-        ColumnConstraintType.NOT_NULL,
+    assert constraints[0].branch.value is DEFAULT_VALUE
+    assert [type(item.branch) for item in constraints] == [
+        ColumnDefaultConstraint,
+        ColumnUniqueConstraint,
+        ColumnNotNullConstraint,
     ]
 
     attributes = SyncDDLSource.column_attributes("status")
@@ -310,7 +307,7 @@ def test_field_markers_preserve_declared_objects_and_order():
 def test_backend_types_and_column_options_are_collected_without_dialect_selection():
     sql_type = SyncDDLSource.column_data_type("tenant_id")
     assert isinstance(sql_type, UseSqlType)
-    assert isinstance(sql_type.data_type, PostgresUUIDType)
+    assert isinstance(sql_type.data_type, UUIDType)
     assert sql_type.data_types[1] is FALLBACK_SQL_TYPE
 
     option = SyncDDLSource.column_options("option_one")
@@ -333,18 +330,18 @@ def test_primary_keys_use_physical_column_names_and_declaration_order():
     }
 
     for field in ("tenant_id", "order_id"):
-        constraint_types = [
-            item.constraint_type for item in SyncDDLSource.column_constraints(field)
+        branches = [
+            type(item.branch) for item in SyncDDLSource.column_constraints(field)
         ]
-        assert ColumnConstraintType.PRIMARY_KEY not in constraint_types
-        assert ColumnConstraintType.NOT_NULL in constraint_types
+        assert ColumnPrimaryKeyConstraint not in branches
+        assert ColumnNotNullConstraint in branches
 
-    single_types = [
-        item.constraint_type for item in SyncSingleKey.column_constraints("record_id")
+    single_branches = [
+        type(item.branch) for item in SyncSingleKey.column_constraints("record_id")
     ]
-    assert single_types == [
-        ColumnConstraintType.PRIMARY_KEY,
-        ColumnConstraintType.NOT_NULL,
+    assert single_branches == [
+        ColumnPrimaryKeyConstraint,
+        ColumnNotNullConstraint,
     ]
     assert SyncSingleKey.columns_name() == {"record_id": "record_pk"}
     assert SyncSingleKey.column_data_type("record_id") is SINGLE_SQL_TYPE_MARKER
@@ -356,12 +353,12 @@ def test_table_declarations_preserve_identity_order_and_composite_primary_key():
     assert constraints is not TABLE_CONSTRAINTS
     assert constraints[0] is TABLE_CONSTRAINTS[0]
     assert constraints[1] is TABLE_CONSTRAINTS[1]
-    assert [item.constraint_type for item in constraints] == [
-        TableConstraintType.FOREIGN_KEY,
-        TableConstraintType.UNIQUE,
-        TableConstraintType.PRIMARY_KEY,
+    assert [type(item.branch) for item in constraints] == [
+        TableForeignKeyConstraint,
+        TableUniqueConstraint,
+        TablePrimaryKeyConstraint,
     ]
-    assert constraints[2].columns == ["tenant_key", "order_key"]
+    assert constraints[2].branch.columns == ["tenant_key", "order_key"]
     assert len(TABLE_CONSTRAINTS) == 2
 
     indexes = SyncDDLSource.table_indexes()
@@ -382,7 +379,7 @@ def test_table_declarations_preserve_identity_order_and_composite_primary_key():
 
 def test_collected_table_options_render_with_postgres_dialect():
     table_options = SyncDDLSource.table_options()
-    expression = CreateTableExpression(
+    expression = CreateTableStatement(
         DIALECT,
         Table(DIALECT, 'ddl_source_orders'),
         [ColumnDefinition(DIALECT, "id", IntegerType(DIALECT))],
@@ -438,8 +435,8 @@ def test_sync_and_async_sources_collect_the_same_declarations():
     async_constraints = AsyncDDLSource.column_constraints("status")
     assert sync_constraints[0] is async_constraints[0]
     assert sync_constraints[1] is async_constraints[1]
-    assert [item.constraint_type for item in async_constraints] == [
-        item.constraint_type for item in sync_constraints
+    assert [type(item.branch) for item in async_constraints] == [
+        type(item.branch) for item in sync_constraints
     ]
 
     sync_indexes = SyncDDLSource.column_indexes("label")
@@ -460,12 +457,12 @@ def test_sync_and_async_sources_collect_the_same_declarations():
     async_table_constraints = AsyncDDLSource.table_constraints()
     assert sync_table_constraints[0] is async_table_constraints[0]
     assert sync_table_constraints[1] is async_table_constraints[1]
-    assert async_table_constraints[2].columns == ["tenant_key", "order_key"]
+    assert async_table_constraints[2].branch.columns == ["tenant_key", "order_key"]
 
     for model in (SyncSingleKey, AsyncSingleKey):
-        assert [item.constraint_type for item in model.column_constraints("record_id")] == [
-            ColumnConstraintType.PRIMARY_KEY,
-            ColumnConstraintType.NOT_NULL,
+        assert [type(item.branch) for item in model.column_constraints("record_id")] == [
+            ColumnPrimaryKeyConstraint,
+            ColumnNotNullConstraint,
         ]
         assert model.column_name("record_id") == "record_pk"
         assert model.column_data_type("record_id") is SINGLE_SQL_TYPE_MARKER

@@ -17,7 +17,7 @@ from ...expression.ddl.table_settings import LoggingMode
 
 if TYPE_CHECKING:
     from ...expression.ddl.table_settings import (
-        PostgresAlterTableSettingsExpression,
+        PostgresAlterTableSettingsStatement,
     )
 
 
@@ -29,11 +29,11 @@ class PostgresAlterTableSettingsMixin:
     # ------------------------------------------------------------------ #
     def supports_table_logging_switch(self) -> bool:
         """``SET LOGGED/UNLOGGED`` requires PostgreSQL 9.6+ (since 9.5)."""
-        return self.version >= (9, 6, 0)
+        return self.version_at_least((9, 6, 0))
 
     def supports_table_set_access_method(self) -> bool:
         """``SET ACCESS METHOD`` requires PostgreSQL 15+."""
-        return self.version >= (15, 0, 0)
+        return self.version_at_least((15, 0, 0))
 
     # ------------------------------------------------------------------ #
     # Helpers
@@ -54,12 +54,12 @@ class PostgresAlterTableSettingsMixin:
     # Statement
     # ------------------------------------------------------------------ #
     def format_alter_table_settings_statement(
-        self, expr: "PostgresAlterTableSettingsExpression"
+        self, expr: "PostgresAlterTableSettingsStatement"
     ) -> Tuple[str, tuple]:
         """Format an ALTER TABLE ... SET table-level settings statement.
 
         Args:
-            expr: :class:`PostgresAlterTableSettingsExpression`.
+            expr: :class:`PostgresAlterTableSettingsStatement`.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -93,10 +93,20 @@ class PostgresAlterTableSettingsMixin:
                     "ALTER TABLE SET LOGGED/UNLOGGED",
                     suggestion="requires PostgreSQL 9.6+",
                 )
-            if expr.mode is LoggingMode.LOGGED:
+            # Compare the *word*, not the member: the artifact carries the word
+            # (JSON has no enum) and the constructor keeps whatever it was
+            # handed, so an identity test against the member silently answered
+            # "not LOGGED" for a round-tripped "LOGGED" and rendered the
+            # opposite setting.
+            if str(expr.mode) == LoggingMode.LOGGED:
                 setting = "SET LOGGED"
-            else:
+            elif str(expr.mode) == LoggingMode.UNLOGGED:
                 setting = "SET UNLOGGED"
+            else:
+                raise ValueError(
+                    f"ALTER TABLE settings: unknown mode {expr.mode!r}; "
+                    f"expected LOGGED or UNLOGGED"
+                )
         else:
             if not self.supports_table_set_access_method():
                 raise UnsupportedFeatureError(

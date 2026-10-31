@@ -7,18 +7,18 @@ PostgreSQL supports the vendor extensions since 9.6:
   - DROP CONSTRAINT IF EXISTS
 
 The qualifiers are opt-in via ``if_not_exists`` / ``if_exists`` on the
-``AddColumn`` / ``DropColumn`` / ``DropTableConstraint`` actions; ``None``
-(the default) renders the plain SQL-standard form.
+``AddColumnAction`` / ``DropColumnAction`` / ``DropTableConstraintAction``
+actions; ``None`` (the default) renders the plain SQL-standard form.
 """
 
 import pytest
 
 from rhosocial.activerecord.backend.expression.statements import ColumnDefinition
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AddColumn,
-    AlterTableExpression,
-    DropColumn,
-    DropTableConstraint,
+    AddColumnAction,
+    AlterTableStatement,
+    DropColumnAction,
+    DropTableConstraintAction,
 )
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -39,7 +39,7 @@ class TestPostgresAlterTableModifierCapabilities:
 
 class TestPostgresAddColumnIfNotExists:
     def test_if_not_exists_renders_qualifier(self, dialect):
-        action = AddColumn(
+        action = AddColumnAction(
             dialect,
             ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
@@ -49,19 +49,19 @@ class TestPostgresAddColumnIfNotExists:
         assert params == ()
 
     def test_none_renders_plain_form(self, dialect):
-        action = AddColumn(dialect, ColumnDefinition(dialect, "content", TextType(dialect=dialect)))
+        action = AddColumnAction(dialect, ColumnDefinition(dialect, "content", TextType(dialect=dialect)))
         sql, params = action.to_sql()
         assert 'ADD COLUMN "content" TEXT' == sql
         assert "IF NOT EXISTS" not in sql
         assert params == ()
 
     def test_inside_alter_table(self, dialect):
-        action = AddColumn(
+        action = AddColumnAction(
             dialect,
             ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
             if_not_exists=True,
         )
-        expr = AlterTableExpression(
+        expr = AlterTableStatement(
             dialect, table=Table(dialect, 'users'), actions=[action]
         )
         sql, params = expr.to_sql()
@@ -72,13 +72,13 @@ class TestPostgresAddColumnIfNotExists:
 
 class TestPostgresDropColumnIfExists:
     def test_if_exists_renders_qualifier(self, dialect):
-        action = DropColumn(dialect, column_name="x", if_exists=True)
+        action = DropColumnAction(dialect, column_name="x", if_exists=True)
         sql, params = action.to_sql()
         assert 'DROP COLUMN IF EXISTS "x"' == sql
         assert params == ()
 
     def test_none_renders_plain_form(self, dialect):
-        action = DropColumn(dialect, column_name="x")
+        action = DropColumnAction(dialect, column_name="x")
         sql, params = action.to_sql()
         assert 'DROP COLUMN "x"' == sql
         assert "IF EXISTS" not in sql
@@ -87,7 +87,7 @@ class TestPostgresDropColumnIfExists:
 
 class TestPostgresDropConstraintIfExists:
     def test_if_exists_renders_qualifier(self, dialect):
-        action = DropTableConstraint(
+        action = DropTableConstraintAction(
             dialect, constraint_name="fkey", if_exists=True
         )
         sql, params = action.to_sql()
@@ -95,7 +95,7 @@ class TestPostgresDropConstraintIfExists:
         assert params == ()
 
     def test_if_exists_with_cascade(self, dialect):
-        action = DropTableConstraint(
+        action = DropTableConstraintAction(
             dialect, constraint_name="fkey", if_exists=True, cascade=True
         )
         sql, params = action.to_sql()
@@ -103,7 +103,7 @@ class TestPostgresDropConstraintIfExists:
         assert params == ()
 
     def test_none_renders_plain_form(self, dialect):
-        action = DropTableConstraint(dialect, constraint_name="fkey")
+        action = DropTableConstraintAction(dialect, constraint_name="fkey")
         sql, params = action.to_sql()
         assert 'DROP CONSTRAINT "fkey"' == sql
         assert "IF EXISTS" not in sql
@@ -124,10 +124,10 @@ class TestPostgresAlterColumnTypeAndUsing:
 
     def test_set_data_type_plain(self, dialect):
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect, "price", "SET DATA TYPE", new_value="NUMERIC(10,2)"
         )
         sql, params = action.to_sql()
@@ -137,19 +137,19 @@ class TestPostgresAlterColumnTypeAndUsing:
     def test_set_data_type_with_using(self, dialect):
         from rhosocial.activerecord.backend.expression import Column, Literal
         from rhosocial.activerecord.backend.expression.operators import (
-            BinaryArithmeticExpression,
+            ArithmeticOperation,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=BinaryArithmeticExpression(
-                dialect, "+", Column(dialect, "price"), Literal(dialect, 1)
+            using=ArithmeticOperation(
+                dialect, "add", Column(dialect, "price"), Literal(dialect, 1)
             ),
         )
         sql, serialized = action.to_sql()
@@ -160,10 +160,10 @@ class TestPostgresAlterColumnTypeAndUsing:
     def test_set_data_type_using_rejected_for_other_ops(self, dialect):
         from rhosocial.activerecord.backend.expression import Column
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-            PostgresAlterColumn,
+            PostgresAlterColumnAction,
         )
 
-        action = PostgresAlterColumn(
+        action = PostgresAlterColumnAction(
             dialect,
             "price",
             "SET DEFAULT",
@@ -179,10 +179,10 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameObject,
+            RenameColumnAction,
         )
 
-        sql, params = RenameObject(
+        sql, params = RenameColumnAction(
             dialect, old_name="id", new_name="order_id"
         ).to_sql()
         assert 'RENAME COLUMN "id" TO "order_id"' == sql
@@ -190,13 +190,13 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_column_inside_alter_table(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameObject,
+            RenameColumnAction,
         )
 
-        expr = AlterTableExpression(
+        expr = AlterTableStatement(
             dialect,
             table=Table(dialect, 'orders'),
-            actions=[RenameObject(dialect, old_name="id", new_name="order_id")],
+            actions=[RenameColumnAction(dialect, old_name="id", new_name="order_id")],
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "orders"' in sql
@@ -205,10 +205,10 @@ class TestPostgresRenameColumnAndTable:
 
     def test_rename_table(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-            RenameTable,
+            RenameTableAction,
         )
 
-        sql, params = RenameTable(
+        sql, params = RenameTableAction(
             dialect, old_name="orders", new_name="orders2"
         ).to_sql()
         assert 'RENAME TO "orders2"' == sql
@@ -220,7 +220,7 @@ class TestPostgresRenameColumnAndTable:
 
 
 class TestPostgresCreateUnloggedTable:
-    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableExpression."""
+    """CREATE UNLOGGED TABLE via CreateTableOptions on CreateTableStatement."""
 
     @staticmethod
     def _options(dialect):
@@ -231,10 +231,10 @@ class TestPostgresCreateUnloggedTable:
 
     def test_unlogged_renders_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -246,10 +246,10 @@ class TestPostgresCreateUnloggedTable:
 
     def test_plain_omits_qualifier(self, dialect):
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -263,10 +263,10 @@ class TestPostgresCreateUnloggedTable:
             UnsupportedFeatureError,
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
 
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             dialect,
             table=Table(dialect, 'audit'),
             columns=[ColumnDefinition(dialect, "id", TextType(dialect=dialect))],
@@ -281,14 +281,14 @@ class TestPostgresCreateUnloggedTable:
             UnsupportedFeatureError,
         )
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-            CreateTableExpression,
+            CreateTableStatement,
         )
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
             PostgresCreateTableOptions,
         )
 
         low = PostgresDialect(version=(9, 4, 0))
-        expr = CreateTableExpression(
+        expr = CreateTableStatement(
             low,
             table=Table(low, 'audit'),
             columns=[ColumnDefinition(low, "id", TextType(dialect=low))],

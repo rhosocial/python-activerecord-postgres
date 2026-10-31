@@ -13,8 +13,8 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...expression.ddl.rls_config import (
-        PostgresAlterTableRlsExpression,
-        PostgresForceRlsExpression,
+        PostgresAlterTableRlsStatement,
+        PostgresForceRlsStatement,
     )
 
 
@@ -46,12 +46,12 @@ class PostgresRlsConfigSupport(Protocol):
         ...
 
     def format_alter_table_rls_statement(
-        self, expr: "PostgresAlterTableRlsExpression"
+        self, expr: "PostgresAlterTableRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... ENABLE/DISABLE ROW LEVEL SECURITY``.
 
         Args:
-            expr: ``PostgresAlterTableRlsExpression``.
+            expr: ``PostgresAlterTableRlsStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).
@@ -63,12 +63,12 @@ class PostgresRlsConfigSupport(Protocol):
         ...
 
     def format_force_rls_statement(
-        self, expr: "PostgresForceRlsExpression"
+        self, expr: "PostgresForceRlsStatement"
     ) -> Tuple[str, tuple]:
         """Format ``ALTER TABLE ... FORCE/NO FORCE ROW LEVEL SECURITY``.
 
         Args:
-            expr: ``PostgresForceRlsExpression``.
+            expr: ``PostgresForceRlsStatement``.
 
         Returns:
             Tuple of (SQL string, empty params tuple).

@@ -8,7 +8,7 @@ that are not part of the SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresVacuumExpression, PostgresAnalyzeExpression
+    from ...expression.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
 
 
 @runtime_checkable
@@ -57,22 +57,22 @@ class PostgresVacuumSupport(Protocol):
         """
         ...
 
-    def format_vacuum_statement(self, expr: "PostgresVacuumExpression") -> Tuple[str, tuple]:
-        """Format VACUUM statement from PostgresVacuumExpression.
+    def format_vacuum_statement(self, expr: "PostgresVacuumStatement") -> Tuple[str, tuple]:
+        """Format VACUUM statement from PostgresVacuumStatement.
 
         Args:
-            expr: PostgresVacuumExpression containing all VACUUM options
+            expr: PostgresVacuumStatement containing all VACUUM options
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...
 
-    def format_analyze_statement(self, expr: "PostgresAnalyzeExpression") -> Tuple[str, tuple]:
-        """Format ANALYZE statement from PostgresAnalyzeExpression.
+    def format_analyze_statement(self, expr: "PostgresAnalyzeStatement") -> Tuple[str, tuple]:
+        """Format ANALYZE statement from PostgresAnalyzeStatement.
 
         Args:
-            expr: PostgresAnalyzeExpression containing all ANALYZE options
+            expr: PostgresAnalyzeStatement containing all ANALYZE options
 
         Returns:
             Tuple of (SQL string, parameters tuple)

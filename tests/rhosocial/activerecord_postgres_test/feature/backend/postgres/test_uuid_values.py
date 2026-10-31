@@ -15,7 +15,7 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import (
     Literal,
-    UUIDCastExpression,
+    UUIDCastFunction,
     UUIDConstantExpression,
     UUIDGenerationExpression,
 )
@@ -146,11 +146,11 @@ def test_constant_alias_lands_after_the_cast():
 def test_cast_uses_postgres_shorthand():
     """PostgreSQL has ``::uuid``, so it needs no CAST() wrapper."""
     dialect = _dialect()
-    expr = UUIDCastExpression(dialect, Literal(dialect, "not-a-uuid"))
+    expr = UUIDCastFunction(dialect, Literal(dialect, "not-a-uuid"))
     assert expr.to_sql() == ("%s::uuid", ("not-a-uuid",))
 
 
 def test_cast_preserves_nested_parameters():
     dialect = _dialect()
-    inner = UUIDCastExpression(dialect, UUIDConstantExpression(dialect, "nil"))
+    inner = UUIDCastFunction(dialect, UUIDConstantExpression(dialect, "nil"))
     assert inner.to_sql() == ("'00000000-0000-0000-0000-000000000000'::uuid::uuid", ())

@@ -11,7 +11,7 @@ from .base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
-    from ..expression.ddl.extension import PostgresCreateExtensionExpression, PostgresDropExtensionExpression
+    from ..expression.ddl.extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
 
 
 @runtime_checkable
@@ -39,6 +39,15 @@ class PostgresExtensionSupport(Protocol):
 
     Version requirement: PostgreSQL 9.1+ supports CREATE EXTENSION
     """
+
+    def supports_extension_introspection(self) -> bool:
+        """Whether the installed extensions can be read back.
+
+        The ``introspect extensions`` family, declared beside the extension
+        detection it describes: a caller can ask which extensions exist rather
+        than assume the catalogue is answerable.
+        """
+        ...
 
     def detect_extensions(self, connection) -> Dict[str, "PostgresExtensionInfo"]:
         """Detect all installed and available extensions.
@@ -128,22 +137,22 @@ class PostgresExtensionSupport(Protocol):
         """
         ...
 
-    def format_create_extension(self, expr: "PostgresCreateExtensionExpression") -> "SQLQueryAndParams":
+    def format_create_extension_statement(self, expr: "PostgresCreateExtensionStatement") -> "SQLQueryAndParams":
         """Format CREATE EXTENSION expression.
 
         Args:
-            expr: PostgresCreateExtensionExpression instance
+            expr: PostgresCreateExtensionStatement instance
 
         Returns:
             Tuple of (SQL string, params)
         """
         ...
 
-    def format_drop_extension(self, expr: "PostgresDropExtensionExpression") -> "SQLQueryAndParams":
+    def format_drop_extension_statement(self, expr: "PostgresDropExtensionStatement") -> "SQLQueryAndParams":
         """Format DROP EXTENSION expression.
 
         Args:
-            expr: PostgresDropExtensionExpression instance
+            expr: PostgresDropExtensionStatement instance
 
         Returns:
             Tuple of (SQL string, params)

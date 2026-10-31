@@ -22,7 +22,6 @@ from typing import List, Optional, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import (
     BaseExpression,
     SQLPredicate,
-    SQLQueryAndParams,
 )
 
 if TYPE_CHECKING:
@@ -33,21 +32,31 @@ __all__ = [
     "PolicyType",
     "PolicyCommand",
     "AlterPolicyMode",
-    "PostgresCreatePolicyExpression",
-    "PostgresAlterPolicyExpression",
-    "PostgresDropPolicyExpression",
+    "PostgresCreatePolicyStatement",
+    "PostgresAlterPolicyStatement",
+    "PostgresDropPolicyStatement",
 ]
 
 
-class PolicyType(Enum):
+class PolicyType(str, Enum):
     """Row-Level Security policy type."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     PERMISSIVE = "PERMISSIVE"
     RESTRICTIVE = "RESTRICTIVE"
 
 
-class PolicyCommand(Enum):
+class PolicyCommand(str, Enum):
     """SQL command a policy applies to."""
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     ALL = "ALL"
     SELECT = "SELECT"
@@ -56,18 +65,23 @@ class PolicyCommand(Enum):
     DELETE = "DELETE"
 
 
-class AlterPolicyMode(Enum):
+class AlterPolicyMode(str, Enum):
     """The two syntactic forms of ALTER POLICY.
 
     REPLACE: alter roles / USING / WITH CHECK (several may be omitted).
     RENAME: ALTER POLICY name ON table RENAME TO new_name.
     """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
 
     REPLACE = "REPLACE"
     RENAME = "RENAME"
 
 
-class PostgresCreatePolicyExpression(BaseExpression):
+class PostgresCreatePolicyStatement(BaseExpression):
     """PostgreSQL CREATE POLICY statement expression.
 
     Defines a new row-level security policy for a table.
@@ -93,7 +107,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect((14, 0, 0))
-        >>> expr = PostgresCreatePolicyExpression(
+        >>> expr = PostgresCreatePolicyStatement(
         ...     dialect=dialect,
         ...     name="user_select_own",
         ...     table_name="orders",
@@ -132,7 +146,7 @@ class PostgresCreatePolicyExpression(BaseExpression):
         return "format_create_policy_statement"
 
 
-class PostgresAlterPolicyExpression(BaseExpression):
+class PostgresAlterPolicyStatement(BaseExpression):
     """PostgreSQL ALTER POLICY statement expression.
 
     PostgreSQL supports two syntactic forms:
@@ -194,7 +208,7 @@ class PostgresAlterPolicyExpression(BaseExpression):
         return "format_alter_policy_statement"
 
 
-class PostgresDropPolicyExpression(BaseExpression):
+class PostgresDropPolicyStatement(BaseExpression):
     """PostgreSQL DROP POLICY statement expression.
 
     Removes a row-level security policy from a table.

@@ -14,10 +14,10 @@ PostgreSQL supports declarative partitioning from version 10 onward, with signif
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresCreatePartitionExpression,
+    PostgresCreatePartitionStatement,
 )
 
-partition = PostgresCreatePartitionExpression(
+partition = PostgresCreatePartitionStatement(
     dialect, parent_table="orders", partition_name="orders_2024_q1",
     partition_type="RANGE", bounds="FROM ('2024-01-01') TO ('2024-04-01')",
 )
@@ -30,17 +30,17 @@ PostgreSQL does not support `ATTACH PARTITION CONCURRENTLY`. PostgreSQL 14+ supp
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
-    PostgresAttachPartitionExpression, PostgresDetachPartitionExpression,
+    PostgresAttachPartitionStatement, PostgresDetachPartitionStatement,
 )
 
 # ATTACH PARTITION
-attach = PostgresAttachPartitionExpression(
+attach = PostgresAttachPartitionStatement(
     dialect, parent_table="orders", partition_name="orders_new",
     partition_type="RANGE", bounds="FROM ('2024-07-01') TO ('2024-10-01')",
 )
 
 # DETACH PARTITION CONCURRENTLY (PG 14+)
-detach = PostgresDetachPartitionExpression(
+detach = PostgresDetachPartitionStatement(
     dialect, parent_table="orders", partition_name="orders_old",
     concurrently=True,
 )
