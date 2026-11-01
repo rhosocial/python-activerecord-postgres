@@ -1,6 +1,4 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/conftest.py
-import asyncio
-import sys
 import pytest
 import pytest_asyncio
 import yaml
@@ -11,14 +9,6 @@ from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import A
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
-
-def ensure_compatible_event_loop():
-    if sys.platform == "win32":
-        policy = asyncio.get_event_loop_policy()
-        if not isinstance(policy, asyncio.WindowsSelectorEventLoopPolicy):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-ensure_compatible_event_loop()
 
 # --- Scenario Loading Logic ---
 

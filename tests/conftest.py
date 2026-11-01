@@ -8,19 +8,35 @@ implementations (Providers) defined within this project.
 """
 import asyncio
 import os
+import selectors
 import sys
 
 import pytest
 
 
-def ensure_compatible_event_loop():
-    if sys.platform == "win32":
-        policy = asyncio.get_event_loop_policy()
-        if not isinstance(policy, asyncio.WindowsSelectorEventLoopPolicy):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+if sys.platform == "win32":
 
+    def pytest_asyncio_loop_factories(config, item):
+        """Give async tests the event loop psycopg's async mode requires.
 
-ensure_compatible_event_loop()
+        On Windows the platform default is the ProactorEventLoop, which does
+        not implement the ``add_reader``/``add_writer`` methods psycopg
+        waits on (psycopg/waiting.py), so every async backend test would
+        fail at connect. A selector loop is what the driver can use, and
+        this hook is how pytest-asyncio (1.x) is told to build one -- the
+        supported replacement for the deprecated
+        ``WindowsSelectorEventLoopPolicy``, which also had the drawback of
+        switching the loop for the whole process.
+
+        The hook exists only on Windows, and pytest-asyncio requires a
+        non-empty mapping from it -- so it cannot answer "nothing" on other
+        platforms to keep them untouched; not defining it is how that is
+        said. Elsewhere the default loop is already selector-based, and the
+        async tests' node ids stay exactly as they were.
+        """
+        return {
+            "selector": lambda: asyncio.SelectorEventLoop(selectors.SelectSelector())
+        }
 
 
 # Set the environment variable that the testsuite uses to locate the provider registry.

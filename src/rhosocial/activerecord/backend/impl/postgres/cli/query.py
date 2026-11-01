@@ -5,10 +5,10 @@ query requires connection arguments, output arguments, and --log-level.
 """
 
 import argparse
-import asyncio
 import logging
 import sys
 
+from rhosocial.activerecord.backend.impl.postgres.async_support import run_coroutine
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
@@ -142,7 +142,7 @@ def handle(args):
 
     if args.is_async:
         backend = AsyncPostgresBackend(connection_config=config)
-        asyncio.run(_execute_query_async(sql_source, backend, provider, **kwargs))
+        run_coroutine(_execute_query_async(sql_source, backend, provider, **kwargs))
     else:
         backend = PostgresBackend(connection_config=config)
         _execute_query_sync(sql_source, backend, provider, **kwargs)
