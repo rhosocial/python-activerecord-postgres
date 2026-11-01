@@ -2,7 +2,7 @@
 """
 Tests for PostgreSQL status introspector.
 
-This module tests the SyncPostgreSQLStatusIntrospector functionality
+This module tests the PostgreSQLStatusIntrospector functionality
 for retrieving server status information via pg_settings, pg_stat_activity,
 and other system views.
 """
@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.impl.postgres.introspection.status_types imp
 )
 
 
-class TestSyncPostgreSQLStatusIntrospector:
+class TestPostgreSQLStatusIntrospector:
     """Tests for synchronous PostgreSQL status introspector."""
 
     def test_get_overview(self, postgres_backend_single):

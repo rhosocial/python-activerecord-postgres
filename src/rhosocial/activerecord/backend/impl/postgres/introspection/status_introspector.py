@@ -6,7 +6,7 @@ Provides server status information by querying PostgreSQL's pg_settings,
 pg_stat_activity, and other system views.
 
 Design principle: Sync and Async are separate and cannot coexist.
-- SyncPostgreSQLStatusIntrospector: for synchronous backends
+- PostgreSQLStatusIntrospector: for synchronous backends
 - AsyncPostgreSQLStatusIntrospector: for asynchronous backends
 """
 
@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.introspection.status import (
     StorageInfo,
     SessionInfo,
     ExtensionInfo,
-    SyncAbstractStatusIntrospector,
+    AbstractStatusIntrospector,
     AsyncAbstractStatusIntrospector,
 )
 from ..expression.status import (
@@ -118,7 +118,7 @@ POSTGRES_STATUS_VARIABLES = [
 class PostgreSQLStatusIntrospectorMixin:
     """Mixin providing shared PostgreSQL status introspection logic.
 
-    Both SyncPostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
+    Both PostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
     inherit from this mixin to share:
     - Query execution helpers
     - parse_* implementations
@@ -272,8 +272,8 @@ class PostgreSQLStatusIntrospectorMixin:
         )
 
 
-class SyncPostgreSQLStatusIntrospector(
-    PostgreSQLStatusIntrospectorMixin, SyncAbstractStatusIntrospector
+class PostgreSQLStatusIntrospector(
+    PostgreSQLStatusIntrospectorMixin, AbstractStatusIntrospector
 ):
     """Synchronous PostgreSQL status introspector.
 

@@ -45,7 +45,7 @@ from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin, PostgresConcurrencyMixin
 from ..protocols import PostgresExtensionInfo
 from ..transaction import PostgresTransactionManager
-from ..introspection import SyncPostgreSQLIntrospector
+from ..introspection import PostgreSQLIntrospector
 
 if TYPE_CHECKING:
     from ..expression import PostgresCopyFromStatement, PostgresCopyToStatement
@@ -165,10 +165,10 @@ class PostgresBackend(
         self.log(logging.INFO, "PostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
-        """Create and return a SyncPostgreSQLIntrospector with a sync executor."""
-        from rhosocial.activerecord.backend.introspection.executor import SyncIntrospectorExecutor
+        """Create and return a PostgreSQLIntrospector with a sync executor."""
+        from rhosocial.activerecord.backend.introspection.executor import IntrospectorExecutor
 
-        return SyncPostgreSQLIntrospector(self, SyncIntrospectorExecutor(self))
+        return PostgreSQLIntrospector(self, IntrospectorExecutor(self))
 
     @property
     def dialect(self) -> PostgresDialect:

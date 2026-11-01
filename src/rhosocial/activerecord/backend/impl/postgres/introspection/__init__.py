@@ -1,10 +1,10 @@
 # src/rhosocial/activerecord/backend/impl/postgres/introspection/__init__.py
 from .introspector import (
-    SyncPostgreSQLIntrospector,
+    PostgreSQLIntrospector,
     AsyncPostgreSQLIntrospector,
 )
 from .status_introspector import (
-    SyncPostgreSQLStatusIntrospector,
+    PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
 from .status_types import (
@@ -16,9 +16,9 @@ from .status_types import (
 )
 
 __all__ = [
-    "SyncPostgreSQLIntrospector",
+    "PostgreSQLIntrospector",
     "AsyncPostgreSQLIntrospector",
-    "SyncPostgreSQLStatusIntrospector",
+    "PostgreSQLStatusIntrospector",
     "AsyncPostgreSQLStatusIntrospector",
     # PostgreSQL's own status families, taken back from core
     "WALInfo",

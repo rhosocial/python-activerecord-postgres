@@ -2,7 +2,7 @@
 """
 PostgreSQL concrete introspectors.
 
-Implements SyncAbstractIntrospector and AsyncAbstractIntrospector for PostgreSQL
+Implements AbstractIntrospector and AsyncAbstractIntrospector for PostgreSQL
 databases using pg_catalog system tables for metadata queries.
 
 The introspectors are exposed via ``backend.introspector``.
@@ -20,7 +20,7 @@ Key behaviours:
   - Default schema is 'public'
 
 Design principle: Sync and Async are separate and cannot coexist.
-- SyncPostgreSQLIntrospector: for synchronous backends
+- PostgreSQLIntrospector: for synchronous backends
 - AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
@@ -28,12 +28,12 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
-    SyncAbstractIntrospector,
+    AbstractIntrospector,
     AsyncAbstractIntrospector,
 )
 from rhosocial.activerecord.backend.introspection.cache import IntrospectionCache
 from rhosocial.activerecord.backend.introspection.executor import (
-    SyncIntrospectorExecutor,
+    IntrospectorExecutor,
     AsyncIntrospectorExecutor,
 )
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
@@ -54,7 +54,7 @@ from rhosocial.activerecord.backend.introspection.types import (
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
-    SyncPostgreSQLStatusIntrospector,
+    PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
 from .types import SequenceInfo
@@ -72,7 +72,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     """Mixin providing shared PostgreSQL-specific introspection logic.
 
-    Both SyncPostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
+    Both PostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
     from this mixin to share:
     - Default schema handling
     - parse_* implementations
@@ -621,7 +621,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         return events if events else ["UPDATE"]
 
 
-class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntrospector):
+class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
     """Synchronous introspector for PostgreSQL backends.
 
     Uses pg_catalog system tables rather than information_schema for
@@ -640,17 +640,17 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
     def __init__(
         self,
         backend: Any,
-        executor: SyncIntrospectorExecutor,
+        executor: IntrospectorExecutor,
         cache: Optional[IntrospectionCache] = None,
     ) -> None:
         super().__init__(backend, executor, cache)
-        self._status_instance: Optional[SyncPostgreSQLStatusIntrospector] = None
+        self._status_instance: Optional[PostgreSQLStatusIntrospector] = None
 
     @property
-    def status(self) -> SyncPostgreSQLStatusIntrospector:
+    def status(self) -> PostgreSQLStatusIntrospector:
         """PostgreSQL status introspector (lazily created)."""
         if self._status_instance is None:
-            self._status_instance = SyncPostgreSQLStatusIntrospector(self._backend)
+            self._status_instance = PostgreSQLStatusIntrospector(self._backend)
         return self._status_instance
 
     def list_materialized_views(

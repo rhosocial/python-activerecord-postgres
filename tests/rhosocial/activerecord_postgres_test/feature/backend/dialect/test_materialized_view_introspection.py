@@ -22,7 +22,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.introspection impor
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
     AsyncPostgreSQLIntrospector,
     PostgreSQLIntrospectorMixin,
-    SyncPostgreSQLIntrospector,
+    PostgreSQLIntrospector,
 )
 
 
@@ -141,12 +141,12 @@ class TestMaterializedViewIntrospectionSurface:
         "method", ["list_materialized_views", "get_materialized_view_info", "materialized_view_exists"]
     )
     def test_sync_and_async_expose_same_methods(self, method):
-        assert hasattr(SyncPostgreSQLIntrospector, method)
+        assert hasattr(PostgreSQLIntrospector, method)
         assert hasattr(AsyncPostgreSQLIntrospector, method)
 
     def test_cache_keys_are_namespaced(self):
         """MV lookups must not collide with regular view lookups."""
-        introspector = SyncPostgreSQLIntrospector.__new__(SyncPostgreSQLIntrospector)
+        introspector = PostgreSQLIntrospector.__new__(PostgreSQLIntrospector)
         introspector._cache = InMemoryIntrospectionCache()
         list_key = introspector._materialized_view_cache_key("public", include_system=False)
         single_key = introspector._materialized_view_cache_key(

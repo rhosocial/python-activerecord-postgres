@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
     AsyncPostgreSQLIntrospector,
     PostgreSQLIntrospectorMixin,
-    SyncPostgreSQLIntrospector,
+    PostgreSQLIntrospector,
 )
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from rhosocial.activerecord.backend.introspection.types import TableType
@@ -224,11 +224,11 @@ class TestDatabaseInfoParsing:
         # The statement is the dialect's and the parser is the mixin's, so
         # neither path can drift into reading a different shape.
         assert (
-            SyncPostgreSQLIntrospector.parse_database_info
+            PostgreSQLIntrospector.parse_database_info
             is AsyncPostgreSQLIntrospector.parse_database_info
         )
         assert (
-            SyncPostgreSQLIntrospector.parse_database_info
+            PostgreSQLIntrospector.parse_database_info
             is PostgreSQLIntrospectorMixin.parse_database_info
         )
 

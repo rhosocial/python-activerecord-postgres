@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.introspection import (
-    SyncPostgreSQLIntrospector,
+    PostgreSQLIntrospector,
 )
 
 
@@ -30,9 +30,9 @@ def make_config(**overrides) -> PostgresConnectionConfig:
     return PostgresConnectionConfig(**params)
 
 
-def make_introspector(config: PostgresConnectionConfig) -> SyncPostgreSQLIntrospector:
+def make_introspector(config: PostgresConnectionConfig) -> PostgreSQLIntrospector:
     backend = PostgresBackend(connection_config=config)
-    return SyncPostgreSQLIntrospector(backend, executor=object())
+    return PostgreSQLIntrospector(backend, executor=object())
 
 
 class TestIntrospectorDefaultSchema:
