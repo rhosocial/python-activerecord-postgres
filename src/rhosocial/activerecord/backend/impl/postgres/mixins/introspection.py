@@ -745,7 +745,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression import ComparisonPredicate
 
         params = expr.get_params()
-        table_name = params.get("object_name", "")
+        table_name = params.get("table_name", "")
         schema = params.get("schema") or self.default_schema
 
         return self._catalog_select(
@@ -798,7 +798,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
         params = expr.get_params()
-        table_name = params.get("object_name", "")
+        table_name = params.get("table_name", "")
         include_hidden = params.get("include_hidden", False)
         schema = params.get("schema") or self.default_schema
 
@@ -1002,7 +1002,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression.advanced_functions import AnyPredicate
 
         params = expr.get_params()
-        table_name = params.get("object_name", "")
+        table_name = params.get("table_name", "")
         schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
@@ -1133,7 +1133,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression.types import TextType
 
         params = expr.get_params()
-        table_name = params.get("object_name", "")
+        table_name = params.get("table_name", "")
         schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
