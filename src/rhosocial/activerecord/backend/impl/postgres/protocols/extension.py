@@ -46,6 +46,12 @@ class PostgresExtensionSupport(Protocol):
         The ``introspect extensions`` family, declared beside the extension
         detection it describes: a caller can ask which extensions exist rather
         than assume the catalogue is answerable.
+
+        The core protocol's ``supports_extensions`` names the same capability
+        and is deliberately *not* declared here: two protocols declaring one
+        method reads as two answers unless one derives from the other, which
+        is exactly the split this pair exists to close. The mixin implements
+        both, and the core name is where a cross-engine caller asks.
         """
         ...
 

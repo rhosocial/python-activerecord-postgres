@@ -144,6 +144,23 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         """
         return True
 
+    def supports_extensions(self) -> bool:
+        """The core name for the extension family PostgreSQL answers.
+
+        Declared here rather than on the extension mixin because this is the
+        introspection capability mixin: the cross-engine probes live together
+        here, and `PostgresExtensionSupport` -- the protocol the extension
+        mixin is paired with -- must not declare a method the core
+        `IntrospectionSupport` already names, or one capability reads as two
+        answers again.
+
+        It delegates rather than re-declaring `True` so the answer is one
+        fact: `supports_extension_introspection` on the extension mixin is
+        where PostgreSQL's extensions are actually read from `pg_extension`,
+        and a caller asking through either spelling gets the same reply.
+        """
+        return self.supports_extension_introspection()
+
     def supports_table_stats(self) -> bool:
         """PostgreSQL answers per-table usage counters from pg_stat_user_tables.
 
