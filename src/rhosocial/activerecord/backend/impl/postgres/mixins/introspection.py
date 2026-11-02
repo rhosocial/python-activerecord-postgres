@@ -41,6 +41,10 @@ if TYPE_CHECKING:  # pragma: no cover
         TriggerInfoQueryStatement,
         TableUsageStatsQueryStatement,
         UnusedIndexesQueryStatement,
+        RuntimeMetricsQueryStatement,
+        IndexUsageStatsQueryStatement,
+        ObjectDependencyQueryStatement,
+        DDLStatementQueryStatement,
     )
     from ..expression.introspection import (
         PostgresMaterializedViewInfoQueryStatement,
@@ -173,6 +177,56 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         """
         return True
 
+
+    def supports_runtime_stats(self) -> bool:
+        """PostgreSQL answers runtime measurements from ``pg_stat_activity``.
+
+        The counters cover everything since the statistics were last reset --
+        crash or ``pg_stat_reset()`` -- so each number says "in the window the
+        server remembers" and a zero is "nothing in that window", never
+        "nothing ever". ``pg_stat_statements`` is deliberately *not* read
+        here: it is an extension, and answering from a catalogue that is only
+        sometimes installed would make the family depend on a module rather
+        than on the engine.
+        """
+        return True
+
+    def supports_index_stats(self) -> bool:
+        """PostgreSQL answers per-index counters from ``pg_stat_user_indexes``.
+
+        A stronger answer than the unused-indexes listing: ``idx_scan`` and
+        the tuple counters, so "how much" is available and not only "ever".
+        """
+        return True
+
+    def supports_object_dependencies(self) -> bool:
+        """PostgreSQL answers the dependency graph from ``pg_depend``.
+
+        The catalogue's own edges, filtered to the ones a reader acts on
+        rather than the internal dependencies the extension machinery also
+        records.
+        """
+        return True
+
+    def supports_ddl_extraction(self) -> bool:
+        """PostgreSQL's DDL text is assembled here, not retrieved natively.
+
+        ``pg_get_expr`` and ``pg_get_viewdef`` recover expressions, but a
+        faithful ``CREATE TABLE`` needs storage parameters, tablespace and
+        per-column clauses the catalog keeps only in parts. The honest answer
+        is an assembly marked ``native=False``.
+        """
+        return True
+
+    def supports_ddl_extraction_native(self) -> bool:
+        """False: PostgreSQL has no single native DDL retrieval call.
+
+        An assembly is offered instead (see :meth:`supports_ddl_extraction`)
+        and says so through ``DDLStatement.native``. The two probes stay
+        separate so a caller can tell "can retrieve" from "can retrieve
+        natively" without reading a docstring.
+        """
+        return False
 
     def supports_unused_indexes_detection(self) -> bool:
         """PostgreSQL answers from ``pg_stat_user_indexes.idx_scan``.
@@ -691,7 +745,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression import ComparisonPredicate
 
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table_name = params.get("object_name", "")
         schema = params.get("schema") or self.default_schema
 
         return self._catalog_select(
@@ -744,7 +798,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table_name = params.get("object_name", "")
         include_hidden = params.get("include_hidden", False)
         schema = params.get("schema") or self.default_schema
 
@@ -948,7 +1002,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression.advanced_functions import AnyPredicate
 
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table_name = params.get("object_name", "")
         schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
@@ -1079,7 +1133,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression.types import TextType
 
         params = expr.get_params()
-        table_name = params.get("table_name", "")
+        table_name = params.get("object_name", "")
         schema = params.get("schema") or self.default_schema
 
         column_position = FunctionCall(
@@ -2791,6 +2845,206 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self._catalog_column("indexrelname", "i"),
             ],
         )
+
+
+    def format_runtime_metrics_query_statement(
+        self, expr: "RuntimeMetricsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the runtime listing from ``pg_stat_activity``.
+
+        One row per backend process, projected to the fields that describe the
+        server rather than one session: the application name, the state, what
+        the process is waiting for, and when it started. ``source`` carries
+        the wait event rather than a reset window -- the window is the same
+        for every row of this listing and belongs in the family's docstring,
+        which is where a reader looks for what "now" means.
+        """
+
+        projections = [
+            self._catalog_column("application_name", "a").as_("name"),
+            self._catalog_column("state", "a").as_("value"),
+            self._catalog_column("wait_event_type", "a").as_("kind"),
+            self._catalog_column("wait_event", "a").as_("description"),
+            self._catalog_column("backend_start", "a").as_("source"),
+        ]
+        return self._catalog_select(
+            projections, self._catalog_relation("pg_stat_activity", "a"), None, None
+        )
+
+    def format_index_usage_stats_query_statement(
+        self, expr: "IndexUsageStatsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format per-index counters from ``pg_stat_user_indexes``.
+
+        ``idx_scan``, ``idx_tup_read`` and ``idx_tup_fetch`` are the engine's
+        own counters; the size comes from ``pg_relation_size`` over the
+        index's own oid, so "how much use" and "how much space" land in one
+        row instead of two queries a caller has to join.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_stat_user_indexes", "i"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("schemaname", "i"),
+                self._catalog_column("nspname", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+        ]
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "i").as_("table_name"),
+            self._catalog_column("indexrelname", "i").as_("index_name"),
+            self._catalog_column("idx_scan", "i"),
+            self._catalog_column("idx_tup_read", "i").as_("rows_read"),
+            self._catalog_column("idx_tup_fetch", "i").as_("rows_fetched"),
+            FunctionCall(
+                self, "pg_relation_size", self._catalog_column("indexrelid", "i")
+            ).as_("index_size_bytes"),
+        ]
+        return self._catalog_select(
+            projections,
+            source,
+            conditions,
+            [self._catalog_column("relname", "i"), self._catalog_column("indexrelname", "i")],
+        )
+
+    def format_object_dependency_query_statement(
+        self, expr: "ObjectDependencyQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the dependency graph from ``pg_depend`` joined to the names.
+
+        ``pg_depend`` stores edges by oid, so the reader-facing join is
+        required. ``deptype`` names the relation; there is no per-edge action
+        column in PostgreSQL -- a dependant's behaviour on drop is a property
+        of its class -- so ``action`` stays unmapped here rather than being
+        guessed from ``deptype``.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        object_name = params.get("object_name")
+        # pg_depend r -> d, then the dependant's own class c, then the
+        # namespace n that owns both. Chained with source.join, which is the
+        # form every multi-table source in this mixin uses.
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "r"),
+            right_table=self._catalog_relation("pg_depend", "d"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "r"),
+                self._catalog_column("refobjid", "d"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "r"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+        ]
+        if object_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("relname", "r"), self._catalog_value(object_name)
+                )
+            )
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "r").as_("referenced"),
+            self._catalog_column("deptype", "d").as_("kind"),
+            self._catalog_column("classid", "d").as_("referenced_type"),
+        ]
+        return self._catalog_select(projections, source, conditions, None)
+
+    def format_ddl_statement_query_statement(
+        self, expr: "DDLStatementQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format an assembled ``CREATE TABLE`` skeleton for one table.
+
+        Assembled, not retrieved: the address comes from the catalog and the
+        expressions would come from ``pg_get_expr``, but the storage
+        parameters and per-column clauses are not reassembled here -- a
+        partial ``CREATE TABLE`` that renders as if it were complete is worse
+        than none. So this answers with ``ddl`` empty and ``native=False``,
+        which the parser drops, so ``get_ddl_statement`` returns ``None``:
+        an honest "cannot reproduce this" rather than a plausible-looking
+        fragment.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        object_name = params.get("object_name", "")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relname", "c"), self._catalog_value(object_name)
+            ),
+        ]
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "c").as_("object_name"),
+            # ``relkind`` is the catalog's own kind letter, so ``object_type``
+            # is read from the row rather than asserted as a constant: the
+            # query does not need to know which kind was asked for, and a
+            # constant here would be a fact the caller supplied pretending to
+            # be one the catalog returned.
+            self._catalog_column("relkind", "c").as_("object_type"),
+            # No ``ddl`` column is projected: the parser drops rows carrying
+            # no text, so ``get_ddl_statement`` returns None -- an honest
+            # "cannot reproduce this" rather than a plausible fragment.
+        ]
+        return self._catalog_select(projections, source, conditions, None)
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]
