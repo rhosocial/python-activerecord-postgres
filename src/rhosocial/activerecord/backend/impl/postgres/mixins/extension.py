@@ -26,8 +26,23 @@ class PostgresExtensionMixin:
         The capability for the ``introspect extensions`` family. Declared
         beside the extension detection it describes, so a caller can ask
         which extensions are installed rather than assuming.
+
+        This is PostgreSQL's own spelling, not the core one: ``extension``
+        means a ``CREATE EXTENSION`` package here, and no engine's flavor of
+        the concept is interchangeable with it.
         """
         return True
+
+    def supports_extensions(self) -> bool:
+        """The same capability under the core name.
+
+        ``True`` so a consumer asking the shared protocol gets the answer,
+        instead of the split this closes: ``supports_extensions`` (core) said
+        ``False`` by default while this dialect's own
+        ``supports_extension_introspection`` said ``True``, and a caller
+        could be told "unsupported" by whichever name it happened to use.
+        """
+        return self.supports_extension_introspection()
 
     KNOWN_EXTENSIONS = {
         # Spatial/Geospatial
