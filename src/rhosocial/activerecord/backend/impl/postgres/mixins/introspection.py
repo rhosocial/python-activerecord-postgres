@@ -39,6 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover
         ViewInfoQueryStatement,
         TriggerListQueryStatement,
         TriggerInfoQueryStatement,
+        TableUsageStatsQueryStatement,
     )
     from ..expression.introspection import (
         PostgresMaterializedViewInfoQueryStatement,
@@ -141,6 +142,19 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         with an empty row.
         """
         return True
+
+    def supports_table_stats(self) -> bool:
+        """PostgreSQL answers per-table usage counters from pg_stat_user_tables.
+
+        The counters are the statistics collector's, reset on crash or by
+        ``pg_stat_reset()`` -- so "since the last reset" is the only tense the
+        numbers have, and a zero is "no access in the window". The view also
+        carries facts with no common name (dead tuples, last-access times);
+        those are real, but they are not projected here, and where they go is
+        the backend reader's decision, not the common shape's.
+        """
+        return True
+
 
     def get_supported_introspection_scopes(self) -> List[IntrospectionScope]:
         """Get list of supported introspection scopes."""
@@ -2629,6 +2643,54 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             source,
             conditions,
             [self._catalog_column("enumsortorder", "e")],
+        )
+
+
+    def format_table_usage_stats_query_statement(
+        self, expr: "TableUsageStatsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the per-table usage-counter listing from pg_stat_user_tables.
+
+        One row per table the collector has seen in the schema, projected from
+        its own columns: ``seq_scan`` / ``idx_scan`` for the reads,
+        ``n_tup_ins`` / ``n_tup_upd`` / ``n_tup_del`` for the writes,
+        ``n_live_tup`` for the row estimate the counters were measured
+        against. The view's other facts -- ``n_dead_tup``, the ``last_*``
+        access times -- are real and useful but have no common name, so they
+        are not projected: this listing is the common shape, and the engine's
+        extras belong on a backend reader beside it.
+
+        A table with no statistics row yet is simply absent from
+        ``pg_stat_user_tables``; the listing answers for the tables the
+        collector has seen, which is the honest scope rather than a
+        zero-filled one.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        source = self._catalog_relation("pg_stat_user_tables", "s")
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("schemaname", "s"), self._catalog_value(schema)
+            ),
+        ]
+        projections = [
+            self._catalog_column("schemaname", "s"),
+            self._catalog_column("relname", "s"),
+            self._catalog_column("seq_scan", "s"),
+            self._catalog_column("idx_scan", "s"),
+            self._catalog_column("n_tup_ins", "s"),
+            self._catalog_column("n_tup_upd", "s"),
+            self._catalog_column("n_tup_del", "s"),
+            self._catalog_column("n_live_tup", "s"),
+        ]
+        return self._catalog_select(
+            projections, source, conditions, [self._catalog_column("relname", "s")]
         )
 
 
