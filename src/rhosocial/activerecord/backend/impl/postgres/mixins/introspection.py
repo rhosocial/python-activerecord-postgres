@@ -40,6 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover
         TriggerListQueryStatement,
         TriggerInfoQueryStatement,
         TableUsageStatsQueryStatement,
+        UnusedIndexesQueryStatement,
     )
     from ..expression.introspection import (
         PostgresMaterializedViewInfoQueryStatement,
@@ -152,6 +153,18 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         carries facts with no common name (dead tuples, last-access times);
         those are real, but they are not projected here, and where they go is
         the backend reader's decision, not the common shape's.
+        """
+        return True
+
+
+    def supports_unused_indexes_detection(self) -> bool:
+        """PostgreSQL answers from ``pg_stat_user_indexes.idx_scan``.
+
+        A zero counter means "no index scan since the statistics were last
+        reset", which is PostgreSQL's tense for this family and a weaker
+        claim than MySQL's ``sys.schema_unused_indexes``: an index untouched
+        since a crash, or since a ``pg_stat_reset()``, reports zero. The
+        answer is "worth reviewing", never "safe to drop".
         """
         return True
 
@@ -2691,6 +2704,75 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         ]
         return self._catalog_select(
             projections, source, conditions, [self._catalog_column("relname", "s")]
+        )
+
+
+    def format_unused_indexes_query_statement(
+        self, expr: "UnusedIndexesQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the unused-indexes listing from ``pg_stat_user_indexes``.
+
+        PostgreSQL ships no vendor view for this, so the family is computed
+        from the counters: ``idx_scan = 0`` over valid indexes in the
+        requested schema. Only ``idx_scan`` speaks -- an index is what makes
+        a scan indexed, so the other counters do not apply -- and
+        ``indisvalid`` filters the indexes the planner would never choose.
+
+        What the listing is not: proof. It reports "no index scan in the
+        window the statistics remember", and that window ends at the last
+        crash or ``pg_stat_reset()``.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            Literal,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("idx_scan", "i"), Literal(self, 0)
+            ),
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("indisvalid", "i"),
+                Literal(self, True, inline=True),
+            ),
+        ]
+
+        indexes = self._catalog_relation("pg_stat_user_indexes", "i")
+        source = JoinClause(
+            self,
+            left_table=indexes,
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("schemaname", "i"),
+                self._catalog_column("nspname", "n"),
+            ),
+        )
+
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "i").as_("table_name"),
+            self._catalog_column("indexrelname", "i").as_("index_name"),
+        ]
+        return self._catalog_select(
+            projections,
+            source,
+            conditions,
+            [
+                self._catalog_column("relname", "i"),
+                self._catalog_column("indexrelname", "i"),
+            ],
         )
 
 
