@@ -281,12 +281,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     def _lower_of(current: Any, candidate: Any) -> Any:
         """The smaller of two statistics values, when they can be compared.
 
-        A histogram endpoint arrives in the column's own type (a ``date``,
-        a ``Decimal``) while a most-common value arrives as JSON (a string,
-        an ``int``). Comparing across those families would be misleading, so
-        only like kinds are reconciled: two numbers, or two strings -- the
-        latter covering text, and dates and uuids in their ISO spellings.
-        Everything else keeps the endpoint, and the docstring says so.
+        Both sides come out of ``to_jsonb``, so the shapes are JSON's: numbers,
+        strings, booleans and null. Only like kinds are reconciled -- two
+        numbers, or two strings, the latter covering text, and dates and uuids
+        in their ISO spellings -- because a JSON string and a JSON number have
+        no meaningful order between them.
         """
         if current is None:
             return candidate
@@ -350,6 +349,14 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         was collected, and a ``pg_stat_reset()`` erases that time while
         leaving the statistics in place. Saying ``UNKNOWN`` keeps the two
         facts from being silently conflated.
+
+        ``min_value``/``max_value`` are the histogram's endpoints merged with
+        the retained most-common values, because ANALYZE's histogram excludes
+        what it kept as common. Both arrive as JSON scalars: a number is a
+        number, while a date or a UUID is its text form. ``pg_stats`` is
+        declared over ``anyarray`` and cannot be subscripted or aggregated, so
+        a typed endpoint is not obtainable -- see the dialect's
+        ``_histogram_projection``.
         """
         from .types import PostgresColumnDataProfile
 
@@ -386,8 +393,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 for value in self._stats_list(row.get("most_common_freqs"))
                 if isinstance(value, (int, float))
             ]
+            bounds = self._stats_list(row.get("histogram_bounds"))
             min_value, max_value = self._merged_bounds(
-                row.get("min_value"), row.get("max_value"), most_common
+                bounds[0] if bounds else None,
+                bounds[-1] if bounds else None,
+                most_common,
             )
 
             collected_at = row.get("last_analyze") or row.get("last_autoanalyze")

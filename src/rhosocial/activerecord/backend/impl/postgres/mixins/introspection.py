@@ -3167,42 +3167,32 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
         return source
 
-    def _histogram_endpoints(self):
-        """``(min, max)`` as the first and last histogram bound.
+    def _histogram_projection(self):
+        """``histogram_bounds`` as JSON, which is the only readable shape.
 
-        Element access rather than an aggregate over ``unnest``: subscripting
-        an array that is NULL yields NULL, so both expressions are NULL-safe
-        without a CASE, and -- unlike ``MIN(anyelement)`` -- they do not
-        require the column's type to have a btree opclass. A ``json`` column
-        has statistics with no histogram, and a ``MIN()`` formulation would
-        refuse to plan for it while this one simply returns NULL.
+        ``pg_stats.histogram_bounds`` is declared ``anyarray`` -- a pseudo-type
+        standing for "an array of whatever this column is" -- and PostgreSQL
+        refuses to subscript it (``cannot subscript type anyarray``) as well as
+        ``MIN(anyelement)`` over it, since a type without a btree opclass has no
+        aggregate. ``array_to_json`` is declared over ``anyarray``, so that is
+        the one call that accepts it as it is: the array travels as JSON and
+        the parser takes its endpoints.
 
-        ``histogram_bounds`` excludes the values kept as ``most_common_vals``,
-        so its endpoints are the extremes of the *non-MCV* values. The parser
-        merges the MCV list back in; keeping that reconciliation out of SQL is
-        what lets it compare values the catalog returned in their real types.
+        The cost is that a bound arrives as a JSON scalar rather than the
+        driver's own object: numbers stay numbers, while a date, a timestamp or
+        a UUID reads as its text form. That is a limit of ``pg_stats`` rather
+        than a choice -- nothing in the catalog can hand back a typed endpoint
+        without knowing the column's type at plan time -- and it is stated
+        where a reader will look.
         """
-        from rhosocial.activerecord.backend.expression.advanced_functions import ArrayOperation
-        from rhosocial.activerecord.backend.expression.functions.array import (
-            ArrayLengthFunction,
-        )
+        from rhosocial.activerecord.backend.expression import FunctionCall
 
-        bounds = self._catalog_column("histogram_bounds", "s")
-        first = ArrayOperation(
+        return FunctionCall(
             self,
-            "ACCESS",
-            base_expr=bounds,
-            index_expr=self._catalog_literal(1),
-            alias="min_value",
+            "array_to_json",
+            self._catalog_column("histogram_bounds", "s"),
+            alias="histogram_bounds",
         )
-        last = ArrayOperation(
-            self,
-            "ACCESS",
-            base_expr=bounds,
-            index_expr=ArrayLengthFunction(self, bounds, 1),
-            alias="max_value",
-        )
-        return first, last
 
     def format_column_data_profile_query_statement(
         self, expr: "ColumnDataProfileQueryStatement"
@@ -3220,10 +3210,12 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         comparison between two columns, not a constant -- and the conversion
         belongs next to the row estimate it uses.
 
-        The most-common arrays travel as JSON. They are ``anyarray``: their
-        element type is the profiled column's own, so any cast to a common type
-        would either fail to plan or lose the value; ``to_jsonb`` yields typed
-        JSON scalars, which is the one shape that survives all of them.
+        The three arrays all travel as JSON, for the same reason: ``anyarray``
+        is a pseudo-type whose element type is the profiled column's own, so no
+        common cast exists and no aggregate is defined over it.
+        ``array_to_json`` yields typed JSON scalars, which is the one shape that
+        survives every element type; see :meth:`_histogram_projection` for what
+        that costs min/max.
 
         A column with no statistics row simply is not in the answer, and a
         never-analysed table answers with no rows at all -- "not measured" as
@@ -3247,25 +3239,23 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self, "eq", self._catalog_column("relname", "c"), self._catalog_value(table_name)
             ),
         ]
-        min_value, max_value = self._histogram_endpoints()
         projections = [
             self._catalog_column("attname", "s", alias="column_name"),
             self._catalog_column("schemaname", "s", alias="schema_name"),
             self._catalog_column("null_frac", "s", alias="null_fraction"),
             self._catalog_column("n_distinct", "s"),
-            min_value,
-            max_value,
+            self._histogram_projection(),
             self._catalog_column("reltuples", "c", alias="row_count"),
             self._catalog_column("correlation", "s"),
             FunctionCall(
                 self,
-                "to_jsonb",
+                "array_to_json",
                 self._catalog_column("most_common_vals", "s"),
                 alias="most_common_vals",
             ),
             FunctionCall(
                 self,
-                "to_jsonb",
+                "array_to_json",
                 self._catalog_column("most_common_freqs", "s"),
                 alias="most_common_freqs",
             ),
@@ -3319,13 +3309,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         projections = [
             FunctionCall(
                 self,
-                "to_jsonb",
+                "array_to_json",
                 self._catalog_column("most_common_vals", "s"),
                 alias="most_common_vals",
             ),
             FunctionCall(
                 self,
-                "to_jsonb",
+                "array_to_json",
                 self._catalog_column("most_common_freqs", "s"),
                 alias="most_common_freqs",
             ),

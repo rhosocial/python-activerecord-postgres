@@ -67,6 +67,12 @@ class PostgresColumnDataProfile(ColumnDataProfile):
     ``min_value``/``max_value`` are the true extremes: the parser merges the
     histogram's endpoints with the most-common values, since ANALYZE's
     histogram excludes the values it kept as MCVs.
+
+    They arrive as JSON scalars, not as the driver's own objects. ``pg_stats``
+    is declared over ``anyarray``, a pseudo-type PostgreSQL refuses to
+    subscript or aggregate, so the array is read through ``to_jsonb``: a number
+    stays a number, while a date, a timestamp or a UUID reads as its ISO text.
+    Everything else on the profile is still native.
     """
 
     #: Agreement between physical row order and the column's ordering.
