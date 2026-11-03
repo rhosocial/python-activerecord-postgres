@@ -129,7 +129,10 @@ from typing import Dict
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.dialect.exceptions import (
+    ProtocolNotImplementedError,
+    UnsupportedFeatureError,
+)
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
     CaseExpression,
@@ -1223,6 +1226,17 @@ def _no_such_formatter(formatter_name: str) -> str:
     return f"does not support the '{formatter_name}' statement"
 
 LEGITIMATE_NON_RENDERS = {
+    # ---- core data-profile families this dialect does not answer ----
+    #  `pg_stats` answers the profile but not cleanly: `n_distinct` is negative when it means a *fraction* of the row count, and min/max exist only inside `histogram_bounds`, a text array whose elements need per-type casting. Reporting those as-is would put a negative distinct count and a string min in slots that promise otherwise, so the family is left unclaimed until the negative-`n_distinct` and histogram-to-bound conversions are written.
+    "rhosocial.activerecord.backend.expression.introspection.ColumnDataProfileQueryStatement": (
+        ProtocolNotImplementedError, 'does not implement ',
+    ),
+    "rhosocial.activerecord.backend.expression.introspection.ColumnValueSampleQueryStatement": (
+        ProtocolNotImplementedError, 'does not implement ',
+    ),
+    "rhosocial.activerecord.backend.expression.introspection.JoinCoverageQueryStatement": (
+        ProtocolNotImplementedError, 'does not implement ',
+    ),
     # ---- a marker class that exists in order to refuse ------------------
     # ``_PostgresUnsupportedDomainAction`` is constructed precisely so an ALTER DOMAIN
     # action PostgreSQL cannot express gets a message naming the action. The
