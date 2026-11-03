@@ -25,6 +25,12 @@ most-common value and no histogram at all, so a five-row table would test one
 branch of the min/max merge. A thousand rows guarantees the histogram exists
 for the unique columns and the MCV list exists for the low-cardinality one, so
 both branches are exercised.
+
+Coverage is measured against two small tables instead. Unlike the profile it
+reads no statistics at all -- it counts the rows -- so there is nothing to
+``ANALYZE`` and nothing to sample, and hand-sized domains are exactly what
+makes the expected fractions checkable by eye: left ``{1,2,3,4}`` against right
+``{2,3,4,5,6}`` must answer three quarters and three fifths.
 """
 
 import pytest
@@ -188,3 +194,116 @@ class TestColumnValueSample:
             assert all(item.value is not None for item in samples)
         finally:
             _teardown(postgres_backend)
+
+
+LEFT_TABLE = "intro_coverage_left"
+RIGHT_TABLE = "intro_coverage_right"
+
+
+def _coverage_setup(backend, left_values, right_values):
+    """Two one-column tables, filled with the values the case was written for."""
+    for table in (LEFT_TABLE, RIGHT_TABLE):
+        backend.execute(f"DROP TABLE IF EXISTS {table}")
+    backend.execute(f"CREATE TABLE {LEFT_TABLE} (code integer)")
+    backend.execute(f"CREATE TABLE {RIGHT_TABLE} (code integer)")
+    backend.execute_many(
+        f"INSERT INTO {LEFT_TABLE} (code) VALUES (%s)",
+        [(value,) for value in left_values],
+    )
+    backend.execute_many(
+        f"INSERT INTO {RIGHT_TABLE} (code) VALUES (%s)",
+        [(value,) for value in right_values],
+    )
+
+
+def _coverage_teardown(backend):
+    for table in (LEFT_TABLE, RIGHT_TABLE):
+        backend.execute(f"DROP TABLE IF EXISTS {table}")
+
+
+def _coverage(backend):
+    return backend.introspector.estimate_join_coverage(
+        LEFT_TABLE, "code", RIGHT_TABLE, "code"
+    )
+
+
+class TestJoinCoverage:
+    """How far two columns' distinct value domains overlap.
+
+    Every expectation is arithmetic rather than a recorded run: ``left`` has
+    ``{1,2,3,4}`` and ``right`` has ``{2,3,4,5,6}``, so three of the four left
+    values are matched and three of the five right ones are. The two figures
+    are different on purpose -- an implementation that answered the same number
+    twice, or averaged them, would still look plausible.
+    """
+
+    def test_both_fractions_match_a_hand_count(self, postgres_backend):
+        _coverage_setup(postgres_backend, range(1, 5), range(2, 7))
+        try:
+            coverage = _coverage(postgres_backend)
+            assert coverage is not None
+            assert coverage.left_coverage == pytest.approx(3 / 4)
+            assert coverage.right_coverage == pytest.approx(3 / 5)
+        finally:
+            _coverage_teardown(postgres_backend)
+
+    def test_values_are_counted_not_rows(self, postgres_backend):
+        """A repeated key that matches once is one covered value, not three.
+
+        The left table holds four rows but only two distinct values, and the
+        repeated value is the matched one: counting rows would answer 3/4 where
+        the share of values is 1/2.
+        """
+        _coverage_setup(postgres_backend, (2, 2, 2, 1), (2, 3))
+        try:
+            coverage = _coverage(postgres_backend)
+            assert coverage is not None
+            assert coverage.left_coverage == pytest.approx(1 / 2)
+            assert coverage.right_coverage == pytest.approx(1 / 2)
+        finally:
+            _coverage_teardown(postgres_backend)
+
+    def test_no_overlap_is_zero_not_none(self, postgres_backend):
+        """Disjoint domains are a measurement: both sides really are uncovered.
+
+        ``None`` means "the engine could not measure", which is a different
+        answer from "nothing matched", and a caller deciding whether a join is
+        worth writing has to be able to tell them apart.
+        """
+        _coverage_setup(postgres_backend, (1, 2, 3), (10, 11))
+        try:
+            coverage = _coverage(postgres_backend)
+            assert coverage is not None
+            assert coverage.left_coverage == 0.0
+            assert coverage.right_coverage == 0.0
+        finally:
+            _coverage_teardown(postgres_backend)
+
+    def test_a_side_with_no_value_answers_no_fraction(self, postgres_backend):
+        """A column of nothing but NULLs has no share to report.
+
+        NULLs are excluded from the divisors as well as the numerators, and
+        ``NULLIF`` turns the empty denominator into NULL. So the left side --
+        which has no value at all -- answers ``None``, while the right side,
+        which has values that simply did not match, answers a real zero.
+        """
+        _coverage_setup(postgres_backend, (None, None), (1, 2))
+        try:
+            coverage = _coverage(postgres_backend)
+            assert coverage is not None
+            assert coverage.left_coverage is None
+            assert coverage.right_coverage == 0.0
+        finally:
+            _coverage_teardown(postgres_backend)
+
+    def test_neither_side_having_a_value_is_no_measurement(self, postgres_backend):
+        """When both fractions are NULL the parser reports nothing measured.
+
+        That is what keeps an all-NULL pair from reading as "zero overlap":
+        there was no overlap to measure, and the answer says exactly that.
+        """
+        _coverage_setup(postgres_backend, (None,), (None,))
+        try:
+            assert _coverage(postgres_backend) is None
+        finally:
+            _coverage_teardown(postgres_backend)

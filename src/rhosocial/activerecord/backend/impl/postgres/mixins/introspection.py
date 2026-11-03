@@ -37,6 +37,7 @@ if TYPE_CHECKING:  # pragma: no cover
         ColumnInfoQueryStatement,
         IndexInfoQueryStatement,
         ForeignKeyQueryStatement,
+        JoinCoverageQueryStatement,
         ViewListQueryStatement,
         ViewInfoQueryStatement,
         TriggerListQueryStatement,
@@ -269,17 +270,21 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
 
     def supports_join_coverage(self) -> bool:
-        """False: the two-sided statement is not written for PostgreSQL yet.
+        """PostgreSQL measures overlap by counting distinct values on both sides.
 
-        The engine can measure the overlap -- scan both columns, intersect the
-        distinct domains -- so this is a missing statement rather than a
-        missing capability. Answering True would promise a formatter that does
-        not exist, which is precisely the "declared but not rendered" shape the
-        roundtrip walk rejects; the probe stays False until the statement is
-        written. Note that the measurement is a double scan, so it belongs
-        behind an explicit call rather than in any automatic pass.
+        The engine can read its own rows, so the probe answers ``True``: what
+        is expensive is the *statement*, not the capability, and pricing the
+        question into a ``False`` would claim PostgreSQL cannot answer at all.
+        There is no catalogue shortcut here either -- ``pg_stats`` keeps a
+        bounded, sampled most-common list per column, so an overlap computed
+        from it would be a guess dressed as a measurement, while counting the
+        values is exact.
+
+        That exactness is paid for: the measurement is a double scan plus an
+        intersection, which is why it belongs behind an explicit call and never
+        in any automatic pass. The statement's docstring states the rest.
         """
-        return False
+        return True
 
 
     def get_supported_introspection_scopes(self) -> List[IntrospectionScope]:
@@ -3323,6 +3328,176 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         return self._catalog_select(
             projections, self._catalog_relation("pg_stats", "s"), conditions, None
         )
+
+    def _user_relation(self, table_name: str, alias: str, schema: str):
+        """A user table as a FROM source, quoted by the dialect.
+
+        The opposite of :meth:`_catalog_relation`: ``pg_catalog`` spells its
+        own names lower-case and never quoted, while a user table is whatever
+        its owner declared -- mixed case, a space, a reserved word -- so the
+        name, its schema and the alias are all left to the dialect's identifier
+        renderer. The alias is what tells the two sides of a coverage
+        measurement apart, and it is quoted for the same reason.
+        """
+        from rhosocial.activerecord.backend.expression.objects import Table
+        from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+        return NamedRelationRef(
+            self,
+            Table(self, table_name, schema_name=schema),
+            alias=alias,
+        )
+
+    def _coverage_fraction(self, column, source, other_column, other_source):
+        """One side of the overlap: the share of *column* the other side holds.
+
+        The numerator counts the *distinct* values of *column* that also occur
+        in *other_column*, as ``COUNT(*)`` over a derived table of those
+        distinct values; the denominator counts *column*'s distinct non-NULL
+        values. Distinct on both sides is what makes the figure a coverage of
+        values rather than of rows -- a key repeated a thousand times that
+        matches once would otherwise read as well covered.
+
+        ``IS NOT NULL`` is written on both halves rather than relied upon. In
+        the numerator it is load-bearing: ``SELECT DISTINCT`` treats a NULL as
+        one value, so counting it would credit the tested side with a match it
+        does not have. In the divisor ``COUNT(DISTINCT ...)`` skips NULLs on
+        its own, but the statement says so explicitly, because the share is of
+        the values that could join and that is the fact being measured.
+        ``NULLIF(..., 0)`` then makes a column with no value at all answer NULL
+        rather than 0, which the parser reads as "no fraction": the difference
+        between "nothing matched" and "nothing to match" survives to the
+        caller.
+
+        ``* 1.0`` is load-bearing on this engine: PostgreSQL divides integers
+        by truncation, so ``COUNT(*) / COUNT(...)`` would answer 0 for every
+        share below one.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            FunctionCall,
+            InPredicate,
+            Literal,
+            LogicalPredicate,
+            QueryStatement,
+            RowCountWildcard,
+            SelectModifier,
+            Subquery,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+        from rhosocial.activerecord.backend.expression.sources import DerivedTableSource
+
+        overlap = QueryStatement(
+            self,
+            select=[column],
+            from_=source,
+            where=WhereClause(
+                self,
+                LogicalPredicate(
+                    self,
+                    "AND",
+                    column.is_not_null(),
+                    InPredicate(
+                        self,
+                        column,
+                        Subquery(
+                            self,
+                            QueryStatement(
+                                self,
+                                select=[other_column],
+                                from_=other_source,
+                                where=WhereClause(self, other_column.is_not_null()),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            select_modifier=SelectModifier.DISTINCT,
+        )
+        covered = Subquery(
+            self,
+            QueryStatement(
+                self,
+                select=[CountFunction(self, RowCountWildcard(self))],
+                from_=DerivedTableSource(self, overlap, alias="covered"),
+            ),
+        )
+        total = Subquery(
+            self,
+            QueryStatement(
+                self,
+                select=[
+                    FunctionCall(
+                        self,
+                        "NULLIF",
+                        CountFunction(self, column, distinct=True),
+                        Literal(self, 0, inline=True),
+                    )
+                ],
+                from_=source,
+                where=WhereClause(self, column.is_not_null()),
+            ),
+        )
+        return (covered * Literal(self, 1.0, inline=True)) / total
+
+    def format_join_coverage_query_statement(
+        self, expr: "JoinCoverageQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format a two-sided measurement of two columns' value domains.
+
+        Unlike every other statement in this module, this one names two user
+        tables rather than one catalogue relation: the question is a relation
+        between two objects, so both sides are carried explicitly and their
+        identifiers are the dialect's to quote (see :meth:`_user_relation`).
+        ``_catalog_column`` is deliberately not used here -- it writes names
+        the way ``pg_catalog`` spells them, which is not how a user's table is
+        spelled.
+
+        The row carries both fractions because neither is meaningful alone. A
+        left share of 1.0 beside a right share of 0.2 says every tested value
+        exists on the other side while most of that other domain is
+        unaccounted for; a single similarity score would average the two and
+        describe neither. A caller deciding whether a join is worth writing
+        needs to know which direction is incomplete.
+
+        Both figures are counted over *distinct* values, with NULLs excluded
+        from the numerators and the denominators alike -- a NULL is not a value
+        that could ever join, so it belongs in neither half of the fraction.
+        The denominators are ``NULLIF``-guarded so a column with nothing to
+        match answers NULL, which the parser reports as "no measurement"
+        instead of a zero overlap that would read as a real answer. See
+        :meth:`_coverage_fraction` for both rules in place.
+
+        The cost is the two sides read for their distinct domains plus an
+        intersection of the two -- a double scan, and the reason the probe
+        belongs behind an explicit call rather than in any automatic pass.
+
+        Collations are not reconciled. PostgreSQL compares the two columns
+        under whichever collation applies, so values that the database would
+        treat as equal may be counted as distinct here, and the fractions are
+        a *lower* bound across mismatched collations -- never an upper one.
+        """
+        from rhosocial.activerecord.backend.expression import Column, QueryStatement
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        left_source = self._user_relation(params.get("left_table"), "l", schema)
+        right_source = self._user_relation(params.get("right_table"), "r", schema)
+        left_column = Column(self, params.get("left_column"), table="l")
+        right_column = Column(self, params.get("right_column"), table="r")
+
+        return QueryStatement(
+            self,
+            select=[
+                self._coverage_fraction(
+                    left_column, left_source, right_column, right_source
+                ).as_("left_coverage"),
+                self._coverage_fraction(
+                    right_column, right_source, left_column, left_source
+                ).as_("right_coverage"),
+            ],
+        ).to_sql()
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]

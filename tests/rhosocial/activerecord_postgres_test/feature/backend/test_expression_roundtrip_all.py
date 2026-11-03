@@ -129,10 +129,7 @@ from typing import Dict
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.exceptions import (
-    ProtocolNotImplementedError,
-    UnsupportedFeatureError,
-)
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
     CaseExpression,
@@ -1226,15 +1223,6 @@ def _no_such_formatter(formatter_name: str) -> str:
     return f"does not support the '{formatter_name}' statement"
 
 LEGITIMATE_NON_RENDERS = {
-    # ---- the one data-profile family this dialect does not answer ----
-    #  The profile and the value listing are now rendered (see
-    #  ``format_column_data_profile_query_statement`` and its sample twin), so
-    #  only the two-sided coverage measurement remains unclaimed: it is a
-    #  double scan rather than a catalogue read, and the statement has not been
-    #  written for PostgreSQL yet.
-    "rhosocial.activerecord.backend.expression.introspection.JoinCoverageQueryStatement": (
-        ProtocolNotImplementedError, 'does not implement ',
-    ),
     # ---- a marker class that exists in order to refuse ------------------
     # ``_PostgresUnsupportedDomainAction`` is constructed precisely so an ALTER DOMAIN
     # action PostgreSQL cannot express gets a message naming the action. The
