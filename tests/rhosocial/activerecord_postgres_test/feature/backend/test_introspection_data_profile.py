@@ -107,14 +107,23 @@ class TestColumnDataProfile:
             _teardown(postgres_backend)
 
     def test_every_profile_carries_its_provenance(self, postgres_backend):
-        """An estimate must say it is one, and when it was taken."""
+        """An estimate carries its vintage, and an unknown one admits it.
+
+        The invariant is the pair, not one value: ``ESTIMATE`` means the age is
+        known and recorded, ``UNKNOWN`` means the figures are there but their
+        age is not. Right after ``ANALYZE`` the second is what answers -- the
+        statistics collector records ``last_analyze`` asynchronously, so the
+        timestamp is usually still empty when the profile is read.
+        """
         _setup(postgres_backend)
         try:
             profiles = postgres_backend.introspector.list_column_data_profiles(TABLE)
             assert profiles
             for profile in profiles:
-                assert profile.source == "estimate"
-                assert profile.collected_at, "an estimate must carry its vintage"
+                assert profile.source in ("estimate", "unknown")
+                assert (profile.source == "estimate") == (
+                    profile.collected_at is not None
+                ), "ESTIMATE must carry a vintage, UNKNOWN must not claim one"
                 assert profile.row_count == 1000
         finally:
             _teardown(postgres_backend)

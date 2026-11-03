@@ -249,10 +249,10 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         and ``correlation`` are one row per column, so profiling a table costs
         one catalog query however large the table is. The price is that every
         figure is an *estimate* of the last ``ANALYZE``, which is why the
-        parser labels the family ``ESTIMATE`` and carries the analysis time
-        beside it. A table that was never analysed has no ``pg_stats`` row and
-        therefore no profile -- an honest empty answer rather than fabricated
-        zeros.
+        parser labels the family ``ESTIMATE`` when the analysis time is
+        recorded and ``UNKNOWN`` when it is not -- see its docstring. A table
+        that was never analysed has no ``pg_stats`` row and therefore no
+        profile: an honest empty answer rather than fabricated zeros.
         """
         return True
 

@@ -346,9 +346,12 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         ``source`` is ``ESTIMATE`` whenever the vintage is known and
         ``UNKNOWN`` when it is not: the figures are estimates either way, but
         the rule for this family is that an estimate must carry the time it
-        was collected, and a ``pg_stat_reset()`` erases that time while
-        leaving the statistics in place. Saying ``UNKNOWN`` keeps the two
-        facts from being silently conflated.
+        was collected. Two things can leave that time unrecorded, and neither
+        is an error: a ``pg_stat_reset()`` erases it while the statistics stay,
+        and the statistics collector records ``last_analyze`` asynchronously,
+        so a profile read immediately after ``ANALYZE`` usually finds no
+        timestamp yet. Saying ``UNKNOWN`` keeps a figure whose age is unknown
+        from claiming an age it does not have.
 
         ``min_value``/``max_value`` are the histogram's endpoints merged with
         the retained most-common values, because ANALYZE's histogram excludes
