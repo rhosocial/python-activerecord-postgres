@@ -1226,14 +1226,12 @@ def _no_such_formatter(formatter_name: str) -> str:
     return f"does not support the '{formatter_name}' statement"
 
 LEGITIMATE_NON_RENDERS = {
-    # ---- core data-profile families this dialect does not answer ----
-    #  `pg_stats` answers the profile but not cleanly: `n_distinct` is negative when it means a *fraction* of the row count, and min/max exist only inside `histogram_bounds`, a text array whose elements need per-type casting. Reporting those as-is would put a negative distinct count and a string min in slots that promise otherwise, so the family is left unclaimed until the negative-`n_distinct` and histogram-to-bound conversions are written.
-    "rhosocial.activerecord.backend.expression.introspection.ColumnDataProfileQueryStatement": (
-        ProtocolNotImplementedError, 'does not implement ',
-    ),
-    "rhosocial.activerecord.backend.expression.introspection.ColumnValueSampleQueryStatement": (
-        ProtocolNotImplementedError, 'does not implement ',
-    ),
+    # ---- the one data-profile family this dialect does not answer ----
+    #  The profile and the value listing are now rendered (see
+    #  ``format_column_data_profile_query_statement`` and its sample twin), so
+    #  only the two-sided coverage measurement remains unclaimed: it is a
+    #  double scan rather than a catalogue read, and the statement has not been
+    #  written for PostgreSQL yet.
     "rhosocial.activerecord.backend.expression.introspection.JoinCoverageQueryStatement": (
         ProtocolNotImplementedError, 'does not implement ',
     ),

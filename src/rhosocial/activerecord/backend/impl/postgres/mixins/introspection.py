@@ -29,6 +29,8 @@ from rhosocial.activerecord.backend.introspection.types import IntrospectionScop
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.introspection import (
+        ColumnDataProfileQueryStatement,
+        ColumnValueSampleQueryStatement,
         DatabaseInfoQueryStatement,
         TableListQueryStatement,
         TableInfoQueryStatement,
@@ -238,6 +240,46 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         answer is "worth reviewing", never "safe to drop".
         """
         return True
+
+
+    def supports_column_data_profile(self) -> bool:
+        """PostgreSQL answers the profile from ``pg_stats`` without reading rows.
+
+        The cheapest profile of any engine here: ``null_frac``, ``n_distinct``
+        and ``correlation`` are one row per column, so profiling a table costs
+        one catalog query however large the table is. The price is that every
+        figure is an *estimate* of the last ``ANALYZE``, which is why the
+        parser labels the family ``ESTIMATE`` and carries the analysis time
+        beside it. A table that was never analysed has no ``pg_stats`` row and
+        therefore no profile -- an honest empty answer rather than fabricated
+        zeros.
+        """
+        return True
+
+
+    def supports_column_value_sample(self) -> bool:
+        """PostgreSQL answers it from the kept ``most_common_vals`` list.
+
+        Also free, and also bounded: ANALYZE keeps at most ``statistics_target``
+        values (100 by default), so a low-cardinality column's listing is
+        usually complete while a high-cardinality one is a sample of the head.
+        Fewer values than requested is the normal answer, not a truncated one.
+        """
+        return True
+
+
+    def supports_join_coverage(self) -> bool:
+        """False: the two-sided statement is not written for PostgreSQL yet.
+
+        The engine can measure the overlap -- scan both columns, intersect the
+        distinct domains -- so this is a missing statement rather than a
+        missing capability. Answering True would promise a formatter that does
+        not exist, which is precisely the "declared but not rendered" shape the
+        roundtrip walk rejects; the probe stays False until the statement is
+        written. Note that the measurement is a double scan, so it belongs
+        behind an explicit call rather than in any automatic pass.
+        """
+        return False
 
 
     def get_supported_introspection_scopes(self) -> List[IntrospectionScope]:
@@ -3045,6 +3087,252 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             # "cannot reproduce this" rather than a plausible fragment.
         ]
         return self._catalog_select(projections, source, conditions, None)
+
+
+    # ========== Data Profiles (row-shaped answers) ==========
+    #
+    # The catalog answers these, not the rows: `pg_stats` holds one row per
+    # analysed column, so the whole family costs one query per table however
+    # large the table is. Everything it reports is an estimate of the last
+    # ANALYZE, which is why the parser labels it `ESTIMATE` and carries the
+    # analysis time beside the numbers.
+
+    def _stats_source(self, table_name):
+        """The catalog chain a per-column statistics query reads.
+
+        ``pg_stats`` names its table by name, not by oid, so the relation has
+        to be joined back through ``pg_namespace``/``pg_class`` to reach the
+        row estimate (``reltuples``) and to read the analysis time from
+        ``pg_stat_all_tables``. That last join is a LEFT one: a table the
+        statistics collector has never seen is still a table, and its profile
+        should come back with an unknown vintage rather than vanish.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            LogicalPredicate,
+        )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_stats", "s"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("schemaname", "s"),
+                    self._catalog_column("nspname", "n"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("tablename", "s"),
+                    self._catalog_column("relname", "c"),
+                ),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_stat_all_tables", "st"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("schemaname", "st"),
+                    self._catalog_column("schemaname", "s"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "st"),
+                    self._catalog_column("tablename", "s"),
+                ),
+            ),
+        )
+        return source
+
+    def _histogram_endpoints(self):
+        """``(min, max)`` as the first and last histogram bound.
+
+        Element access rather than an aggregate over ``unnest``: subscripting
+        an array that is NULL yields NULL, so both expressions are NULL-safe
+        without a CASE, and -- unlike ``MIN(anyelement)`` -- they do not
+        require the column's type to have a btree opclass. A ``json`` column
+        has statistics with no histogram, and a ``MIN()`` formulation would
+        refuse to plan for it while this one simply returns NULL.
+
+        ``histogram_bounds`` excludes the values kept as ``most_common_vals``,
+        so its endpoints are the extremes of the *non-MCV* values. The parser
+        merges the MCV list back in; keeping that reconciliation out of SQL is
+        what lets it compare values the catalog returned in their real types.
+        """
+        from rhosocial.activerecord.backend.expression.advanced_functions import ArrayOperation
+        from rhosocial.activerecord.backend.expression.functions.array import (
+            ArrayLengthFunction,
+        )
+
+        bounds = self._catalog_column("histogram_bounds", "s")
+        first = ArrayOperation(
+            self,
+            "ACCESS",
+            base_expr=bounds,
+            index_expr=self._catalog_literal(1),
+            alias="min_value",
+        )
+        last = ArrayOperation(
+            self,
+            "ACCESS",
+            base_expr=bounds,
+            index_expr=ArrayLengthFunction(self, bounds, 1),
+            alias="max_value",
+        )
+        return first, last
+
+    def format_column_data_profile_query_statement(
+        self, expr: "ColumnDataProfileQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the per-column profile from ``pg_stats``.
+
+        One row per analysed column, projected from the statistics the last
+        ``ANALYZE`` left: ``null_frac``, ``n_distinct``, the histogram's
+        endpoints, the kept most-common values, and the moment the figures
+        were collected.
+
+        ``n_distinct`` is projected raw rather than converted here because its
+        sign carries the meaning: a negative value is the *fraction* of rows
+        that are distinct, so turning it into a count needs ``reltuples`` -- a
+        comparison between two columns, not a constant -- and the conversion
+        belongs next to the row estimate it uses.
+
+        The most-common arrays travel as JSON. They are ``anyarray``: their
+        element type is the profiled column's own, so any cast to a common type
+        would either fail to plan or lose the value; ``to_jsonb`` yields typed
+        JSON scalars, which is the one shape that survives all of them.
+
+        A column with no statistics row simply is not in the answer, and a
+        never-analysed table answers with no rows at all -- "not measured" as
+        an absence, not as a zero-filled profile.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        table_name = params.get("table_name")
+
+        source = self._stats_source(table_name)
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relname", "c"), self._catalog_value(table_name)
+            ),
+        ]
+        min_value, max_value = self._histogram_endpoints()
+        projections = [
+            self._catalog_column("attname", "s", alias="column_name"),
+            self._catalog_column("schemaname", "s", alias="schema_name"),
+            self._catalog_column("null_frac", "s", alias="null_fraction"),
+            self._catalog_column("n_distinct", "s"),
+            min_value,
+            max_value,
+            self._catalog_column("reltuples", "c", alias="row_count"),
+            self._catalog_column("correlation", "s"),
+            FunctionCall(
+                self,
+                "to_jsonb",
+                self._catalog_column("most_common_vals", "s"),
+                alias="most_common_vals",
+            ),
+            FunctionCall(
+                self,
+                "to_jsonb",
+                self._catalog_column("most_common_freqs", "s"),
+                alias="most_common_freqs",
+            ),
+            self._catalog_column("last_analyze", "st"),
+            self._catalog_column("last_autoanalyze", "st"),
+        ]
+        return self._catalog_select(
+            projections, source, conditions, [self._catalog_column("attname", "s")]
+        )
+
+    def format_column_value_sample_query_statement(
+        self, expr: "ColumnValueSampleQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format a value listing as the two arrays ``pg_stats`` already keeps.
+
+        ANALYZE stores the most common values and their frequencies in
+        lockstep, so the listing is a projection and not an aggregate -- the
+        one engine where this probe is as cheap as the profile.
+
+        The pair is projected whole and paired by position in the parser
+        rather than unnested in SQL: the two arrays are of different element
+        types, and keeping them side by side means the caller gets the values
+        in the column's own types instead of a cast-to-text union.
+
+        The requested ``limit`` is applied on the parser side, because what
+        arrives is a fixed-size list -- ANALYZE kept at most
+        ``statistics_target`` entries and there is nothing to slice in SQL
+        without unnesting.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        table_name = params.get("table_name")
+        column_name = params.get("column_name")
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("schemaname", "s"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("tablename", "s"), self._catalog_value(table_name)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("attname", "s"), self._catalog_value(column_name)
+            ),
+        ]
+        projections = [
+            FunctionCall(
+                self,
+                "to_jsonb",
+                self._catalog_column("most_common_vals", "s"),
+                alias="most_common_vals",
+            ),
+            FunctionCall(
+                self,
+                "to_jsonb",
+                self._catalog_column("most_common_freqs", "s"),
+                alias="most_common_freqs",
+            ),
+        ]
+        return self._catalog_select(
+            projections, self._catalog_relation("pg_stats", "s"), conditions, None
+        )
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]
