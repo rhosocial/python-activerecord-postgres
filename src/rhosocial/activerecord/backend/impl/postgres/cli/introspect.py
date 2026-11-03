@@ -3,7 +3,11 @@
 
 PostgreSQL introspect includes the 'extensions' type in addition to
 the standard types, plus the two schema-object families this backend
-answers for on its own: materialized views and sequences.
+answers for on its own: materialized views and sequences. The families the
+catalog and the statistics collector answer beside the schema structure --
+unused indexes, usage counters, runtime metrics, dependencies, DDL and the
+data profiles -- are offered too: the dialect declares it can answer them,
+so the CLI has to be able to ask.
 
 A type either lists a family or, when it names a single catalogue object,
 answers for that one object; ``NAME`` is required, optional or refused
@@ -35,9 +39,11 @@ OUTPUT_CHOICES = ["table", "json", "csv", "tsv"]
 #: than run and answered with an empty list: "this server cannot report
 #: sequences" and "this database has no sequences" are different answers.
 #:
-#: One entry per family the catalog reports independently. Partition metadata
-#: has a switch too, but no introspector question of its own -- it is read as
-#: part of the DDL a partitioned table carries -- so it is not a type here.
+#: One entry per family this backend answers independently, whether the answer
+#: comes from the catalog, from the statistics collector or from the rows
+#: themselves. Partition metadata has a switch too, but no introspector
+#: question of its own -- it is read as part of the DDL a partitioned table
+#: carries -- so it is not a type here.
 _TYPE_CAPABILITIES = {
     "tables": "supports_table_introspection",
     "views": "supports_view_introspection",
@@ -53,6 +59,24 @@ _TYPE_CAPABILITIES = {
     # figures ride the listing's projection, and this type asks it for one
     # name rather than making the caller read the whole listing.
     "table-storage": "supports_table_storage_introspection",
+    # The operational families, read from the statistics collector rather
+    # than the catalog: how the server is behaving, not what it contains.
+    # They are listings over the connection's scope, so none takes a name --
+    # ``dependencies`` may be narrowed to one object's edges but answers the
+    # whole graph without one.
+    "unused-indexes": "supports_unused_indexes_detection",
+    "table-stats": "supports_table_stats",
+    "runtime": "supports_runtime_stats",
+    "index-stats": "supports_index_stats",
+    "dependencies": "supports_object_dependencies",
+    # The one-object families: the DDL that recreates a named table, and the
+    # data profiles of one table or one column of it. They read the catalog,
+    # pg_stats or the rows themselves, and every answer carries how it was
+    # produced so the caller need not assume which.
+    "ddl": "supports_ddl_extraction",
+    "column-profiles": "supports_column_data_profile",
+    "value-samples": "supports_column_value_sample",
+    "join-coverage": "supports_join_coverage",
 }
 
 INTROSPECT_TYPES = list(_TYPE_CAPABILITIES)
@@ -93,6 +117,54 @@ def _refuse_name(args: argparse.Namespace, hint: str) -> None:
     """
     print(f"Error: '{args.type}' does not take an object name; {hint}", file=sys.stderr)
     sys.exit(2)
+
+
+def _refuse_unused_arguments(args: argparse.Namespace) -> None:
+    """Refuse a flag the chosen type has no question for.
+
+    The same defect as a silently dropped name, one flag over: ``--column``
+    beside ``introspect tables`` would be ignored and the listing printed as
+    if the column had been part of the question. Only the families whose
+    probe takes a column read the flag, so only they may be given it.
+
+    The flags are read with ``getattr`` because the handler is also driven
+    with hand-built namespaces (the offline tests), which carry no flags at
+    all -- an absent attribute is "not given", not an error.
+    """
+    column = getattr(args, "column", None)
+    right_table = getattr(args, "right_table", None)
+    right_column = getattr(args, "right_column", None)
+
+    if column is not None and args.type not in ("value-samples", "join-coverage"):
+        print(
+            f"Error: '{args.type}' does not take --column; "
+            "use 'value-samples' or 'join-coverage'",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if (right_table is not None or right_column is not None) and args.type != "join-coverage":
+        print(
+            f"Error: '{args.type}' does not take --right-table or --right-column; "
+            "use 'join-coverage'",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def _display_ddl(provider, statement, args) -> None:
+    """Show a DDL statement in the form that stays readable.
+
+    A ``CREATE TABLE`` is text: a one-row table folds it into a cell that
+    wraps at the terminal width and interleaves with the other columns. Table
+    output therefore prints the statement itself, while the structured
+    formats keep the whole row so JSON and CSV still carry ``object_type``
+    and ``native`` beside the text.
+    """
+    if args.output == "table":
+        print(statement.ddl or "")
+        return
+    data = _serialize_for_output([statement])
+    provider.display_results(data, title=f"DDL of {statement.object_name}")
 
 
 def create_parser(subparsers):
@@ -139,6 +211,29 @@ def create_parser(subparsers):
   # Get one table's storage split (total, data, index bytes; row estimate)
   %(prog)s table-storage orders --database mydb
 
+  # Indexes no query has used since the statistics were reset, and the
+  # per-index counters that say how much the rest are used
+  %(prog)s unused-indexes --database mydb
+  %(prog)s index-stats --database mydb
+
+  # Per-table usage counters and live runtime measurements
+  %(prog)s table-stats --database mydb
+  %(prog)s runtime --database mydb
+
+  # The dependency graph, or one object's dependants
+  %(prog)s dependencies --database mydb
+  %(prog)s dependencies orders --database mydb
+
+  # The DDL that recreates one table
+  %(prog)s ddl orders --database mydb
+
+  # Profile every column of a table from its data, and sample one column
+  %(prog)s column-profiles orders --database mydb
+  %(prog)s value-samples orders --column status --database mydb
+
+  # Measure how two columns' value domains overlap
+  %(prog)s join-coverage orders --column buyer_id --right-table users --right-column id
+
   # Output as JSON
   %(prog)s tables --database mydb -o json
 
@@ -180,11 +275,32 @@ def create_parser(subparsers):
         "name",
         nargs="?",
         default=None,
-        help="Object name. Required for columns, indexes, foreign-keys "
-        "(the table they belong to) and table-storage (the table itself); "
-        "optional for triggers (a table) "
+        help="Object name. Required for columns, indexes, foreign-keys, "
+        "table-storage, ddl and column-profiles (the table they belong to), "
+        "and for value-samples and join-coverage (the left table); "
+        "optional for triggers (a table), dependencies (one object) "
         "and for views, materialized-views, sequences and extensions "
         "(one object); refused for tables and database",
+    )
+    # The three families that ask about a column or a second table carry the
+    # names the probe needs. They stay flags rather than more positionals
+    # because ``name`` already means "the table" everywhere else, and
+    # ``value-samples orders.email`` would read as a dotted object name.
+    parser.add_argument(
+        "--column",
+        default=None,
+        help="Column name: the column to sample for value-samples, and the "
+        "left column for join-coverage",
+    )
+    parser.add_argument(
+        "--right-table",
+        default=None,
+        help="Right-hand table for join-coverage",
+    )
+    parser.add_argument(
+        "--right-column",
+        default=None,
+        help="Right-hand column for join-coverage",
     )
     parser.add_argument(
         "--include-system",
@@ -274,6 +390,7 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
         # question was read.
         backend.introspect_and_adapt()
         _require_capability(backend, args)
+        _refuse_unused_arguments(args)
 
         introspector = backend.introspector
 
@@ -406,6 +523,124 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             data = _serialize_for_output([info])
             provider.display_results(data, title=f"Table storage {args.name}")
 
+        # ---- the operational families -------------------------------------
+        # These read the statistics collector, not the catalog: each one is a
+        # listing of the whole connection's scope, so none takes a name (the
+        # dependency graph may be narrowed to one object, and answers the
+        # whole graph without it).
+
+        elif args.type == "unused-indexes":
+            indexes = introspector.list_unused_indexes(schema=None)
+            data = _serialize_for_output(indexes)
+            provider.display_results(data, title="Unused Indexes")
+
+        elif args.type == "table-stats":
+            stats = introspector.list_table_usage_stats(schema=None)
+            data = _serialize_for_output(stats)
+            provider.display_results(data, title="Table Usage Stats")
+
+        elif args.type == "runtime":
+            metrics = introspector.list_runtime_metrics(schema=None)
+            data = _serialize_for_output(metrics)
+            provider.display_results(data, title="Runtime Metrics")
+
+        elif args.type == "index-stats":
+            stats = introspector.list_index_usage_stats(schema=None)
+            data = _serialize_for_output(stats)
+            provider.display_results(data, title="Index Usage Stats")
+
+        elif args.type == "dependencies":
+            # A name narrows the graph to the edges that object carries --
+            # "what breaks if I drop this" -- rather than asking a different
+            # family, so it is optional here the way a trigger's table is.
+            dependencies = introspector.list_object_dependencies(object_name=args.name, schema=None)
+            data = _serialize_for_output(dependencies)
+            title = f"Dependencies of {args.name}" if args.name else "Object Dependencies"
+            provider.display_results(data, title=title)
+
+        # ---- the one-object families --------------------------------------
+        # The DDL that recreates a table, and the profiles of one table or one
+        # column of it: the name is the table and the column is named on its
+        # own flag.
+
+        elif args.type == "ddl":
+            if not args.name:
+                print("Error: Table name is required for 'ddl' introspection", file=sys.stderr)
+                sys.exit(1)
+            statement = introspector.get_ddl_statement(args.name, object_type=None, schema=None)
+            if statement is None:
+                # Not "no such table": the object exists, and PostgreSQL
+                # answers with no text rather than an assembled fragment that
+                # would read as authoritative. The two are worth telling
+                # apart, so this exits without printing an empty row.
+                print(f"Error: no DDL available for '{args.name}'", file=sys.stderr)
+                sys.exit(1)
+            _display_ddl(provider, statement, args)
+
+        elif args.type == "column-profiles":
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'column-profiles' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            profiles = introspector.list_column_data_profiles(args.name, schema=None)
+            data = _serialize_for_output(profiles)
+            provider.display_results(data, title=f"Column profiles of {args.name}")
+
+        elif args.type == "value-samples":
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'value-samples' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.column:
+                print(
+                    "Error: --column is required for 'value-samples' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            samples = introspector.sample_column_values(args.name, args.column, schema=None)
+            data = _serialize_for_output(samples)
+            provider.display_results(data, title=f"Values of {args.name}.{args.column}")
+
+        elif args.type == "join-coverage":
+            if not args.name:
+                print(
+                    "Error: Left table name is required for 'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.column:
+                print(
+                    "Error: --column is required for 'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.right_table or not args.right_column:
+                print(
+                    "Error: --right-table and --right-column are required for "
+                    "'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            coverage = introspector.estimate_join_coverage(
+                args.name, args.column, args.right_table, args.right_column, schema=None
+            )
+            if coverage is None:
+                # A column with nothing to match answers "no measurement",
+                # which is not zero overlap; printing a row of nulls would
+                # read as a measured zero.
+                print(
+                    f"Error: no coverage could be measured for {args.name}.{args.column} "
+                    f"and {args.right_table}.{args.right_column}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            data = _serialize_for_output([coverage])
+            provider.display_results(data, title="Join Coverage")
+
     except ConnectionError as e:
         provider.display_connection_error(e)
         sys.exit(1)
@@ -428,6 +663,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
         # before a capability switch -- or a formatter -- can answer.
         await backend.introspect_and_adapt()
         _require_capability(backend, args)
+        _refuse_unused_arguments(args)
 
         introspector = backend.introspector
 
@@ -558,6 +794,113 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 sys.exit(1)
             data = _serialize_for_output([info])
             provider.display_results(data, title=f"Table storage {args.name}")
+
+        # The async twins of the nine branches above: same method, same
+        # argument and same title, awaited. They are written out rather than
+        # shared with the sync chain because the executor is the only thing
+        # that differs, and a shared body would have to carry an ``await``
+        # flag that reads worse than the duplicate.
+
+        elif args.type == "unused-indexes":
+            indexes = await introspector.list_unused_indexes(schema=None)
+            data = _serialize_for_output(indexes)
+            provider.display_results(data, title="Unused Indexes")
+
+        elif args.type == "table-stats":
+            stats = await introspector.list_table_usage_stats(schema=None)
+            data = _serialize_for_output(stats)
+            provider.display_results(data, title="Table Usage Stats")
+
+        elif args.type == "runtime":
+            metrics = await introspector.list_runtime_metrics(schema=None)
+            data = _serialize_for_output(metrics)
+            provider.display_results(data, title="Runtime Metrics")
+
+        elif args.type == "index-stats":
+            stats = await introspector.list_index_usage_stats(schema=None)
+            data = _serialize_for_output(stats)
+            provider.display_results(data, title="Index Usage Stats")
+
+        elif args.type == "dependencies":
+            dependencies = await introspector.list_object_dependencies(
+                object_name=args.name, schema=None
+            )
+            data = _serialize_for_output(dependencies)
+            title = f"Dependencies of {args.name}" if args.name else "Object Dependencies"
+            provider.display_results(data, title=title)
+
+        elif args.type == "ddl":
+            if not args.name:
+                print("Error: Table name is required for 'ddl' introspection", file=sys.stderr)
+                sys.exit(1)
+            statement = await introspector.get_ddl_statement(
+                args.name, object_type=None, schema=None
+            )
+            if statement is None:
+                print(f"Error: no DDL available for '{args.name}'", file=sys.stderr)
+                sys.exit(1)
+            _display_ddl(provider, statement, args)
+
+        elif args.type == "column-profiles":
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'column-profiles' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            profiles = await introspector.list_column_data_profiles(args.name, schema=None)
+            data = _serialize_for_output(profiles)
+            provider.display_results(data, title=f"Column profiles of {args.name}")
+
+        elif args.type == "value-samples":
+            if not args.name:
+                print(
+                    "Error: Table name is required for 'value-samples' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.column:
+                print(
+                    "Error: --column is required for 'value-samples' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            samples = await introspector.sample_column_values(args.name, args.column, schema=None)
+            data = _serialize_for_output(samples)
+            provider.display_results(data, title=f"Values of {args.name}.{args.column}")
+
+        elif args.type == "join-coverage":
+            if not args.name:
+                print(
+                    "Error: Left table name is required for 'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.column:
+                print(
+                    "Error: --column is required for 'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if not args.right_table or not args.right_column:
+                print(
+                    "Error: --right-table and --right-column are required for "
+                    "'join-coverage' introspection",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            coverage = await introspector.estimate_join_coverage(
+                args.name, args.column, args.right_table, args.right_column, schema=None
+            )
+            if coverage is None:
+                print(
+                    f"Error: no coverage could be measured for {args.name}.{args.column} "
+                    f"and {args.right_table}.{args.right_column}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            data = _serialize_for_output([coverage])
+            provider.display_results(data, title="Join Coverage")
 
     except ConnectionError as e:
         provider.display_connection_error(e)
