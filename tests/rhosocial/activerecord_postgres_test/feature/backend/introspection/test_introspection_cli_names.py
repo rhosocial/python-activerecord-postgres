@@ -6,6 +6,13 @@ that answer for one object take a name -- optional, selecting that object --
 and the ones that list a family refuse it. Nothing here needs a server: the
 fake backend says what the catalogue would answer, so these tests pin the
 dispatch rather than PostgreSQL's own bookkeeping.
+
+The rule itself is a table, ``_NAME_RULE``, and the tests below pin it two
+ways: once as data, so a change to any one type's answer is a visible edit
+rather than a drift, and once as behaviour, so the table is what the run
+actually applies. The set-level assertion is the third: a type advertised
+without a rule is a type whose NAME decision nobody has made, which is the
+failure the table exists to prevent.
 """
 
 import argparse
@@ -236,6 +243,10 @@ class TestNameIsRefused:
         [
             (["introspect", "tables", "users"], "'tables'"),
             (["introspect", "database", "mydb"], "'database'"),
+            (["introspect", "unused-indexes", "users"], "'unused-indexes'"),
+            (["introspect", "table-stats", "users"], "'table-stats'"),
+            (["introspect", "runtime", "users"], "'runtime'"),
+            (["introspect", "index-stats", "users"], "'index-stats'"),
         ],
     )
     def test_a_family_listing_refuses_a_name(self, run_cli, argv, marker):
@@ -246,4 +257,125 @@ class TestNameIsRefused:
 
     def test_a_refused_name_never_reaches_the_catalogue(self, run_cli):
         run_cli(["introspect", "tables", "users", "--database", "mydb"])
+        assert FakeBackend.last_instance.introspector.calls == []
+
+
+class TestTheNameRuleTable:
+    """The table, pinned: as data, and as the rule the run applies.
+
+    A table nobody asserts is text nobody guarantees. The first test is the
+    guard the cross-repository clause of ``.claude/rules/constants.md`` asks
+    for -- a private name is legitimate because the module reads it in
+    several places, and the test is what makes the reading checkable. The
+    second is the set-level half: a new type cannot be added without
+    deciding what its NAME means.
+    """
+
+    def test_every_advertised_type_has_a_rule(self):
+        assert set(introspect_mod._NAME_RULE) == set(introspect_mod.INTROSPECT_TYPES)
+
+    def test_the_table_says_what_each_types_name_means(self):
+        assert introspect_mod._NAME_RULE == {
+            "tables": "forbidden",
+            "views": "optional",
+            "columns": "required",
+            "indexes": "required",
+            "foreign-keys": "required",
+            "triggers": "optional",
+            "database": "forbidden",
+            "extensions": "optional",
+            "materialized-views": "optional",
+            "sequences": "optional",
+            "table-storage": "required",
+            "unused-indexes": "forbidden",
+            "table-stats": "forbidden",
+            "runtime": "forbidden",
+            "index-stats": "forbidden",
+            "dependencies": "optional",
+            "ddl": "required",
+            "column-profiles": "required",
+            "value-samples": "required",
+            "join-coverage": "required",
+        }
+
+    def test_the_table_covers_no_type_the_parser_does_not_offer(self):
+        assert set(introspect_mod._NAME_RULE) - set(introspect_mod.INTROSPECT_TYPES) == set()
+
+    @pytest.mark.parametrize(
+        "type_",
+        [
+            "tables",
+            "database",
+            "unused-indexes",
+            "table-stats",
+            "runtime",
+            "index-stats",
+        ],
+    )
+    def test_a_refused_type_is_refused_by_the_table(self, type_, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            introspect_mod._validate_name(argparse.Namespace(type=type_, name="users"))
+
+        assert excinfo.value.code == 2
+        assert f"'{type_}' does not take an object name" in capsys.readouterr().err
+
+    @pytest.mark.parametrize(
+        "type_",
+        [
+            "columns",
+            "indexes",
+            "foreign-keys",
+            "table-storage",
+            "ddl",
+            "column-profiles",
+            "value-samples",
+            "join-coverage",
+        ],
+    )
+    def test_a_required_name_is_required_by_the_table(self, type_, capsys):
+        """A missing required NAME is an incomplete invocation, not a refusal.
+
+        It exits 1 like a missing ``--database``; 2 is reserved for a request
+        this command declines to serve.
+        """
+        with pytest.raises(SystemExit) as excinfo:
+            introspect_mod._validate_name(argparse.Namespace(type=type_, name=None))
+
+        assert excinfo.value.code == 1
+        assert f"Table name is required for '{type_}'" in capsys.readouterr().err
+
+    @pytest.mark.parametrize(
+        "type_",
+        [
+            "views",
+            "triggers",
+            "extensions",
+            "materialized-views",
+            "sequences",
+            "dependencies",
+        ],
+    )
+    def test_an_optional_name_may_be_given_or_not(self, type_):
+        introspect_mod._validate_name(argparse.Namespace(type=type_, name=None))
+        introspect_mod._validate_name(argparse.Namespace(type=type_, name="orders"))
+
+
+class TestANameIsRequiredEndToEnd:
+    """The required rule, applied by a run rather than read off the table."""
+
+    @pytest.mark.parametrize(
+        "type_",
+        [
+            "columns",
+            "indexes",
+            "foreign-keys",
+            "table-storage",
+            "ddl",
+            "column-profiles",
+        ],
+    )
+    def test_a_run_without_the_name_exits_one_and_asks_nothing(self, run_cli, type_, capsys):
+        _, err, exc = run_cli(["introspect", type_, "--database", "mydb"])
+        assert exc is not None and exc.code == 1
+        assert f"Table name is required for '{type_}'" in err
         assert FakeBackend.last_instance.introspector.calls == []
