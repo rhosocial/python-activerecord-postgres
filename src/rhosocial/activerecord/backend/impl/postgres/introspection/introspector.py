@@ -34,6 +34,7 @@ from rhosocial.activerecord.backend.introspection.base import (
     AsyncAbstractIntrospector,
 )
 from rhosocial.activerecord.backend.introspection.cache import IntrospectionCache
+from rhosocial.activerecord.backend.introspection.defaults import VALUE_SAMPLE_LIMIT
 from rhosocial.activerecord.backend.introspection.executor import (
     IntrospectorExecutor,
     AsyncIntrospectorExecutor,
@@ -53,6 +54,7 @@ from rhosocial.activerecord.backend.introspection.types import (
     TableType,
     IntrospectionTriggerInfo,
     IntrospectionViewInfo,
+    ProfileSource,
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
@@ -414,7 +416,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     min_value=min_value,
                     max_value=max_value,
                     row_count=row_count,
-                    source="estimate" if collected_at is not None else "unknown",
+                    source=(
+                        ProfileSource.ESTIMATE
+                        if collected_at is not None
+                        else ProfileSource.UNKNOWN
+                    ),
                     collected_at=str(collected_at) if collected_at is not None else None,
                     correlation=(
                         float(row["correlation"])
@@ -864,7 +870,7 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         self,
         table_name: str,
         column_name: str,
-        limit: int = 100,
+        limit: int = VALUE_SAMPLE_LIMIT,
         schema: Optional[str] = None,
     ):
         """List a column's most frequent values, at most ``limit`` of them.
@@ -1251,7 +1257,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         self,
         table_name: str,
         column_name: str,
-        limit: int = 100,
+        limit: int = VALUE_SAMPLE_LIMIT,
         schema: Optional[str] = None,
     ):
         """List a column's most frequent values, at most ``limit``; async twin.

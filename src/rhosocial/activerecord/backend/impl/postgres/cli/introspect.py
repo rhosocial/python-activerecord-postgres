@@ -27,9 +27,7 @@ from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 
 from .connection import add_connection_args, resolve_connection_config_from_args
-from .output import create_provider
-
-OUTPUT_CHOICES = ["table", "json", "csv", "tsv"]
+from .output import OUTPUT_CHOICES, create_provider
 
 #: CLI type -> the dialect capability switch that answers for it.
 #:
