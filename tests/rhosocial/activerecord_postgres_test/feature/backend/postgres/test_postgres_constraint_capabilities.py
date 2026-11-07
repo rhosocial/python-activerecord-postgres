@@ -2,14 +2,14 @@
 """PostgreSQL constraint capability switches, pinned to live measurements.
 
 Every value asserted here was measured against the instances
-``tests/config/postgres_scenarios.yaml`` names, all on ``192.168.1.3``,
+``tests/config/postgres_scenarios.yaml`` names, each on its own host``,
 through psycopg 3.3.6, each probe inside a transaction that was rolled back:
 
-* ``postgres_19beta4`` -- port 16690, ``server_version_num`` 190000,
+* ``postgres_19beta4`` -- ``server_version_num`` 190000,
   ``PostgreSQL 19beta4 (Debian 19~beta4-1.pgdg13+1) on
   aarch64-unknown-linux-gnu``
-* ``postgres_18`` -- port 16689, ``server_version_num`` 180006
-* ``postgres_17`` -- port 16688, ``server_version_num`` 170011
+* ``postgres_18`` -- ``server_version_num`` 180006
+* ``postgres_17`` -- ``server_version_num`` 170011
 
 The statements and the server's own SQLSTATEs are recorded in the docstrings of
 ``rhosocial.activerecord.backend.impl.postgres.mixins.ddl.constraint``; this

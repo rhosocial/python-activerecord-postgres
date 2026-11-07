@@ -43,8 +43,8 @@ def main():
     from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
     config = PostgresConnectionConfig(
-        host="db-dev-1-n.rho.im",
-        port=15432,
+        host="localhost",
+        port=5432,
         database="test_db",
         username="root",
         password="password",

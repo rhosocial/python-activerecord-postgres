@@ -332,7 +332,7 @@ class TestPostgresConstraintDeferral:
     ``[DEFERRABLE ...]`` as a tail property shared by every branch; the
     server contradicts that for CHECK and NOT NULL.  Values below are the
     measured accept surface of PostgreSQL 19beta4
-    (``192.168.1.3:16690/test_db``), per "backend facts win over
+    (the ``postgres_19beta4`` scenario server), per "backend facts win over
     documentation".  SQLSTATEs are recorded on each switch's docstring.
     """
 

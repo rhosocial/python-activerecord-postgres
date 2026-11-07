@@ -11,8 +11,8 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 def postgres_18(database: str = "test_db"):
     """PostgreSQL 18 development server connection."""
     return PostgresConnectionConfig(
-        host="db-dev-1-n.rho.im",
-        port=15441,
+        host="localhost",
+        port=5432,
         database=database,
         username="root",
         password="password",
@@ -25,8 +25,8 @@ def postgres_18_with_pool(pool_size: int = 5):
     if isinstance(pool_size, str):
         pool_size = int(pool_size)
     return PostgresConnectionConfig(
-        host="db-dev-1-n.rho.im",
-        port=15441,
+        host="localhost",
+        port=5432,
         database="test_db",
         username="root",
         password="password",
@@ -38,8 +38,8 @@ def postgres_18_with_pool(pool_size: int = 5):
 def postgres_18_readonly():
     """PostgreSQL 18 read-only connection (shorter timeout)."""
     return PostgresConnectionConfig(
-        host="db-dev-1-n.rho.im",
-        port=15441,
+        host="localhost",
+        port=5432,
         database="test_db",
         username="root",
         password="password",
