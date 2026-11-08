@@ -296,7 +296,7 @@ for idx in indexes:
 
 ## 运维内省
 
-声明层回答服务器*是什么*。这里的六个族回答它*一直在做什么*，它们读取统计收集器的视图，而不是 `pg_catalog` 本身。时态是 PostgreSQL 的：每个计数都是自统计上次被重置以来——一次崩溃或一次 `pg_stat_reset()`——所以零表示窗口内什么都没发生，永远不是“从来没有”。一个没有这句话的数字不是事实，因此这里为每个族都写明时态。
+声明层回答服务器*是什么*。这里的六个族中有五个回答它*一直在做什么*，它们读取统计收集器的视图，而不是 `pg_catalog` 本身。第六个是 DDL，它在两方面都是例外：它读取 `pg_catalog`，回答的是一个对象被声明成了什么。这五个族的时态是 PostgreSQL 的：每个计数都是自统计上次被重置以来——一次崩溃或一次 `pg_stat_reset()`——所以零表示窗口内什么都没发生，永远不是“从来没有”。一个没有这句话的计数不是事实，因此这里为这五个族逐一写明时态。
 
 | 方法 | 读取 | 返回 |
 |------|------|------|
@@ -335,7 +335,7 @@ PostgreSQL 没有为未使用索引提供厂商视图，所以该列表由计数
 
 ## 列数据剖析
 
-三个数据族读取 `pg_stats`，也就是 `ANALYZE` 留下的逐列统计，而不是行本身。`pg_stats` 每个已分析列一行，所以无论表多大，剖析本身都只花一条目录查询——这是一次目录读取，而不是对行的遍历，核心在此之前还会先读一次廉价的列清单。代价是每个数字都是上一次 `ANALYZE` 的估计，这也是答案要携带来源与收集时间的原因。
+三个数据族中有两个读取 `pg_stats`，也就是 `ANALYZE` 留下的逐列统计，而不是行本身：剖析与值采样。`pg_stats` 每个已分析列一行，所以无论表多大，剖析本身都只花一条目录查询——这是一次目录读取，而不是对行的遍历，核心在此之前还会先读一次廉价的列清单。代价是每个数字都是上一次 `ANALYZE` 的估计，这也是答案要携带来源与收集时间的原因。连接覆盖率是例外：它读取两张表的行，因为 `pg_stats` 只保留每列的一个有界样本，用该样本算出的重叠只会是披着测量的猜测。
 
 | 方法 | 读取 | 返回 |
 |------|------|------|
@@ -461,14 +461,9 @@ backend.introspector.invalidate_cache(
 
 ## 版本兼容性
 
-不同 PostgreSQL 版本的内省行为差异：
+本页上只有一个内省答案取决于服务器版本。`pg_sequences` 在 PostgreSQL 10 才出现，所以 `list_sequences()` 仅在 `server_version` 至少为 `(10, 0, 0)` 时才读取它；在更旧的服务器上，语句会略去该视图，`cache_size` 与 `last_value` 缺席，这是“未测量”而不是零。版本未知时同样采用较窄的形式：内省器不会假定一个它尚未识别的服务器带有更新的目录。
 
-| 功能 | PostgreSQL 12+ | PostgreSQL 11 及以下 |
-|------|----------------|---------------------|
-| 物化视图信息 | 完整支持 | 基础支持 |
-| 分区表信息 | 完整支持 | 有限支持 |
-| 生成列 | 支持 | 不支持 |
-| 存储过程触发器 | 支持 | 不支持 |
+本页其余语句都没有版本门控。`supports_partition_info` 在任何版本上都是 `False`，不只是旧版本：版本差异改变的是分区 DDL，那是另一个协议族，而不是给分区表打标签的内省列表。
 
 ## 最佳实践
 
@@ -713,7 +708,7 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect table-storage 
 | `value-samples` | 一列保留的值与频率 | 必填：表名；`--column` 必填 |
 | `join-coverage` | 两列值域的重叠 | 必填：左表；`--column`、`--right-table`、`--right-column` 必填 |
 
-这里的十个类型是本页此前列出的十个之外新增的；其中九个就是上文那些族。`table-storage` 向声明层询问一张表的存储拆分；`unused-indexes`、`table-stats`、`runtime`、`index-stats`、`dependencies` 与 `ddl` 是六个运维族；`column-profiles`、`value-samples` 与 `join-coverage` 是三个数据族。每个类型都被提供，因为 `_TYPE_CAPABILITIES` 中命名的探针开关在适配后的服务器上回答 `True`；开关为 `False` 的类型会以 `2` 退出并提示 "not supported by this server"，而不是返回空列表。
+这里的十个类型是本页此前列出的十个之外新增的；其中九个就是上文那些族。`table-storage` 向声明层询问一张表的存储拆分；`unused-indexes`、`table-stats`、`runtime`、`index-stats`、`dependencies` 与 `ddl` 是六个运维族；`column-profiles`、`value-samples` 与 `join-coverage` 是三个数据族。每个类型都在 `_TYPE_CAPABILITIES` 中指明决定连接服务器能否回答它的探针开关；对外列出的类型清单本身是静态的，开关在方言适配到服务器之后才被询问。开关为 `False` 的类型会以 `2` 退出并提示 "not supported by this server"，而不是返回空列表。
 
 `NAME` 指明该类型要回答的对象，每种类型对“是否接受名称”只有一个答案。`columns`、`indexes`、`foreign-keys`、`table-storage`、`ddl`、`column-profiles`、`value-samples` 与 `join-coverage` 的名称是它们所涉及的表，必须给出——对 `join-coverage` 而言是左表。`triggers` 接受表名，`dependencies` 接受对象名，`views`、`materialized-views`、`sequences`、`extensions` 接受对象名；不给名称时各自列出整族。`tables`、`database`、`unused-indexes`、`table-stats`、`runtime` 与 `index-stats` 不接受名称：在那里给名称是错误而不是过滤条件，因为这些计数列表回答的是连接的可见范围，而不是单个对象。
 

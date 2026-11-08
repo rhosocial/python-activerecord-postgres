@@ -327,12 +327,14 @@ for idx in indexes:
 
 ## Operational Introspection
 
-The declaration layer answers what the server *is*. The six families here answer
-what it has *been doing*, and they read the statistics collector's views rather
-than `pg_catalog` proper. The tense is PostgreSQL's: every counter is since the
+The declaration layer answers what the server *is*. Five of the six families
+here answer what it has *been doing*, and they read the statistics collector's
+views rather than `pg_catalog` proper. The sixth, DDL, is the exception in both
+directions: it reads `pg_catalog`, and what it answers is what an object was
+declared as. The tense for the five is PostgreSQL's: every counter is since the
 statistics were last reset — a crash or a `pg_stat_reset()` — so a zero means
-nothing happened in the window, never nothing ever. A number without that
-sentence is not a fact, which is why the tense is stated here for every family.
+nothing happened in the window, never nothing ever. A counter without that
+sentence is not a fact, which is why the tense is stated for each of the five.
 
 | Method | Reads | Returns |
 |--------|-------|---------|
@@ -424,12 +426,16 @@ an empty row, because a row with no text would read as an answer.
 
 ## Column Data Profiles
 
-The three data families read `pg_stats`, the per-column statistics `ANALYZE`
-leaves, not the rows themselves. `pg_stats` holds one row per analysed column,
-so the profile costs one catalogue query however large the table is — a catalogue
-read rather than a pass over the rows, after the cheap column listing core reads
-first. The price is that every figure is an estimate of the last `ANALYZE`, which
-is why the answer carries its source and the time it was collected.
+Two of the three data families read `pg_stats`, the per-column statistics
+`ANALYZE` leaves, not the rows themselves: the profile and the value sample.
+`pg_stats` holds one row per analysed column, so the profile costs one catalogue
+query however large the table is — a catalogue read rather than a pass over the
+rows, after the cheap column listing core reads first. The price is that every
+figure is an estimate of the last `ANALYZE`, which is why the answer carries its
+source and the time it was collected. Join coverage is the exception: it reads
+the rows of both tables, because `pg_stats` keeps only a bounded sample of each
+column, and an overlap computed from that sample would be a guess dressed as a
+measurement.
 
 | Method | Reads | Returns |
 |--------|-------|---------|
@@ -637,14 +643,17 @@ backend.introspector.invalidate_cache(
 
 ## Version Compatibility
 
-Introspection behavior differences across PostgreSQL versions:
+One answer on this page depends on the server's version. `pg_sequences` arrived
+in PostgreSQL 10, so `list_sequences()` reads it only when `server_version` is
+at least `(10, 0, 0)`; on an older server the statement omits the view and
+`cache_size` and `last_value` are absent, which is "not measured" rather than
+zero. An unknown version takes the narrower form too: the introspector does not
+assume a server it has not identified carries the newer catalogue.
 
-| Feature | PostgreSQL 12+ | PostgreSQL 11 and below |
-|---------|----------------|------------------------|
-| Materialized view info | Full support | Basic support |
-| Partitioned table info | Full support | Limited support |
-| Generated columns | Supported | Not supported |
-| Stored procedure triggers | Supported | Not supported |
+Every other statement on this page has no version gate. `supports_partition_info`
+is `False` at every version, not only on old ones: what the version differences
+change is partition DDL, which is a separate protocol family, not the listing
+that labels a partitioned table.
 
 ## Best Practices
 
@@ -895,10 +904,12 @@ Ten rows here are new relative to the ten types this page listed before; nine of
 them are the families above. `table-storage` asks the declaration layer for one
 table's storage split; `unused-indexes`, `table-stats`, `runtime`, `index-stats`,
 `dependencies` and `ddl` are the six operational families; `column-profiles`,
-`value-samples` and `join-coverage` are the three data families. Each is offered
-because the probe switch named in `_TYPE_CAPABILITIES` answers `True` on the
-adapted server; a type whose switch is `False` exits `2` with "not supported by
-this server" rather than returning an empty list.
+`value-samples` and `join-coverage` are the three data families. Each type names,
+in `_TYPE_CAPABILITIES`, the probe switch that decides whether the connected
+server can answer it; the advertised list itself is static, and the switch is
+asked after the dialect has been adapted to the server. A type whose switch is
+`False` exits `2` with "not supported by this server" rather than returning an
+empty list.
 
 `NAME` selects the object the type answers for, and each type has exactly one
 answer to whether it takes one. `columns`, `indexes`, `foreign-keys`,
