@@ -279,3 +279,57 @@ Product.query().where("attributes ? 'brand'", ())
 ```
 
 💡 *AI Prompt:* "How do PostgreSQL's ILIKE and standard LIKE differ in performance?"
+
+## Date/Time Interval Expressions
+
+PostgreSQL renders the temporal expression nodes with the standard spellings
+(`EXTRACT`, `DATE_TRUNC` and `INTERVAL`):
+
+```python
+from rhosocial.activerecord.backend.expression import Column
+from rhosocial.activerecord.backend.expression.functions import (
+    date_add, date_diff, date_trunc, extract,
+)
+
+expr = extract(dialect, "year", Column(dialect, "created_at"))
+# Generates: EXTRACT(YEAR FROM "created_at")
+
+expr = date_trunc(dialect, "month", Column(dialect, "created_at"))
+# Generates: DATE_TRUNC('month', "created_at")
+
+expr = date_add(dialect, Column(dialect, "created_at"), 30, "day")
+# Generates: "created_at" + INTERVAL '30' DAY
+
+expr = date_diff(
+    dialect, "day", Column(dialect, "started_at"), Column(dialect, "ended_at")
+)
+# Generates: (EXTRACT(EPOCH FROM ("ended_at" - "started_at")) / 86400)
+```
+
+`date_diff` counts whole units crossed. To measure elapsed time as a signed,
+fractional number of seconds, use `seconds_between`:
+
+```python
+from rhosocial.activerecord.backend.expression import Column, seconds_between
+
+elapsed = seconds_between(
+    dialect,
+    Column(dialect, "queued_at"),
+    Column(dialect, "started_at"),
+).as_("queue_seconds")
+# Generates: EXTRACT(EPOCH FROM ("started_at" - "queued_at")) AS "queue_seconds"
+```
+
+The result is always `end - start` in seconds:
+
+| Case | Result |
+|------|--------|
+| `end` later than `start` | positive |
+| `end` earlier than `start` | negative |
+| same instant | `0` |
+| a sub-second difference | the fraction is kept |
+
+`EXTRACT(EPOCH FROM interval)` returns a PostgreSQL `numeric`, so the value
+keeps the microseconds stored in the timestamp; round it explicitly if whole
+seconds are wanted. `started_at.seconds_between(ended_at)` asks the same
+question from a timestamp column.
