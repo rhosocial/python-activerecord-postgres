@@ -79,6 +79,7 @@ from .partition import (
     PostgresDetachPartitionStatement,
     PostgresAttachPartitionStatement,
     PostgresPartitionMetadataQueryStatement,
+    PostgresPartitionTreeQueryStatement,
 )
 from .index import (
     PostgresAlterIndexStatement,
@@ -225,6 +226,7 @@ __all__ = [
     "PostgresDetachPartitionStatement",
     "PostgresAttachPartitionStatement",
     "PostgresPartitionMetadataQueryStatement",
+    "PostgresPartitionTreeQueryStatement",
     # index
     "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",

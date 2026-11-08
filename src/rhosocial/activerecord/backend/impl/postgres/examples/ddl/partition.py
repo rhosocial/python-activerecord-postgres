@@ -2,9 +2,9 @@
 Table partitioning - PostgreSQL 10+.
 
 This example demonstrates:
-1. CREATE TABLE ... PARTITION BY RANGE
-2. Creating individual partitions
-3. Inserting data into partitioned table
+1. CREATE TABLE ... PARTITION BY RANGE with expression nodes
+2. Creating individual partitions (CREATE TABLE ... PARTITION OF)
+3. Inserting data into a partitioned table
 4. Querying partitioned tables
 """
 
@@ -14,17 +14,25 @@ This example demonstrates:
 import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreatePartitionStatement,
+    PostgresSerialType,
 )
 from rhosocial.activerecord.backend.expression import (
+    ColumnDefinition,
+    ColumnConstraint,
+    ColumnNotNullConstraint,
+    CreateTableStatement,
     DropTableStatement,
     InsertStatement,
+    PartitionClause,
+    PartitionStrategy,
     ValuesSource,
     QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
+from rhosocial.activerecord.backend.expression.types import DateType, DecimalType, VarCharType
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -55,17 +63,37 @@ backend.execute(sql, params)
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
 
-# 1. Create partitioned parent table using raw SQL
-# (Expression API does not yet support PARTITION BY syntax)
-parent_sql = """
-CREATE TABLE orders (
-    id SERIAL,
-    order_date DATE NOT NULL,
-    customer_name VARCHAR(100),
-    amount NUMERIC(10,2)
-) PARTITION BY RANGE (order_date)
-"""
-backend.execute(parent_sql)
+# 1. Create the partitioned parent table with the expression API.
+#    PARTITION BY is a clause node on CreateTableStatement; the SQL is the
+#    dialect's, not the caller's.
+parent_expr = CreateTableStatement(
+    dialect=dialect,
+    table=Table(dialect, 'orders'),
+    columns=[
+        ColumnDefinition(
+            dialect, 'id', PostgresSerialType(dialect=dialect),
+        ),
+        ColumnDefinition(
+            dialect, 'order_date', DateType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ],
+        ),
+        ColumnDefinition(
+            dialect, 'customer_name', VarCharType(length=100, dialect=dialect),
+        ),
+        ColumnDefinition(
+            dialect, 'amount', DecimalType(precision=10, scale=2, dialect=dialect),
+        ),
+    ],
+    partition=PartitionClause(
+        dialect=dialect,
+        method=PartitionStrategy.RANGE,
+        keys=[Column(dialect, 'order_date')],
+    ),
+)
+sql, params = parent_expr.to_sql()
+backend.execute(sql, params)
 print("Created partitioned table: orders")
 
 # 2. Create individual partitions using raw SQL
@@ -149,8 +177,13 @@ backend.disconnect()
 # Key points:
 # 1. Requires PostgreSQL 10+ for declarative partitioning
 # 2. PARTITION BY RANGE is the most common strategy
-# 3. Other strategies: PARTITION BY LIST, PARTITION BY HASH
+# 3. Other strategies: PARTITION BY LIST, PARTITION BY HASH (PG 11+)
 # 4. PostgreSQL automatically routes INSERT to correct partition
 # 5. Queries on parent table are transparent across all partitions
 # 6. Individual partitions can be queried directly for performance
-# 7. Expression API does not yet support PARTITION BY - use raw SQL
+# 7. Nested partitioning is supported: a partition created with
+#    PostgresCreatePartitionStatement(partition_clause=...) is itself
+#    PARTITION BY <strategy>; PostgreSQL lets each HASH branch choose its own
+#    child strategy. See PostgresPartitionPlan for the tree-maintenance API.
+# 8. A partitioned table's primary key must include every level's partition
+#    key, otherwise the server rejects the child that is itself partitioned.

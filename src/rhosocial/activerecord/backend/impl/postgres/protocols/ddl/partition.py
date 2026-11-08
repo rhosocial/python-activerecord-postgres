@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         PostgresDetachPartitionStatement,
         PostgresAttachPartitionStatement,
         PostgresPartitionMetadataQueryStatement,
+        PostgresPartitionTreeQueryStatement,
     )
 
 
@@ -206,5 +207,22 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
 
         Raises:
             UnsupportedFeatureError: If PostgreSQL version < 10.
+        """
+        ...
+
+    def format_partition_tree_query_statement(
+        self, expr: "PostgresPartitionTreeQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the recursive pg_catalog query for a partition subtree.
+
+        Starts at the root table named by ``expr.qualified_name`` and walks
+        ``pg_inherits`` to every descendant, carrying the server's bound text,
+        the child strategy, the tree level and optional size estimates.
+
+        Args:
+            expr: PostgresPartitionTreeQueryStatement instance.
+
+        Returns:
+            Tuple of (SQL string with one ``%s`` placeholder, params tuple).
         """
         ...
