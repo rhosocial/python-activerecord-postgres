@@ -11,9 +11,11 @@ edited it would be lying about what the server reported.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-__all__ = ["SequenceInfo"]
+from rhosocial.activerecord.backend.introspection.types import ColumnDataProfile
+
+__all__ = ["SequenceInfo", "PostgresColumnDataProfile"]
 
 
 @dataclass(frozen=True)
@@ -44,3 +46,38 @@ class SequenceInfo:
     cache_size: Optional[int] = None
     last_value: Optional[int] = None
     extra: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class PostgresColumnDataProfile(ColumnDataProfile):
+    """A column profile carrying the extra facts ``pg_stats`` supplies.
+
+    Named fields rather than ``extra`` entries: these are PostgreSQL's own
+    statistics, and a consumer that knows it asked PostgreSQL should be able to
+    read them off the object instead of guessing at dictionary keys.
+
+    ``correlation`` is the physical/logical ordering agreement the planner
+    uses -- 1.0 means a scan reads the table in index order, near 0 means it
+    does not. It is not a quality measure and not a hint. ``most_common_vals``
+    and ``most_common_freqs`` are the kept value list and its shares, in
+    lockstep; both are also what :meth:`sample_column_values` returns, and they
+    are kept here because the profile is where a caller looks to decide whether
+    asking for them is worth it.
+
+    ``min_value``/``max_value`` are the true extremes: the parser merges the
+    histogram's endpoints with the most-common values, since ANALYZE's
+    histogram excludes the values it kept as MCVs.
+
+    They arrive as JSON scalars, not as the driver's own objects. ``pg_stats``
+    is declared over ``anyarray``, a pseudo-type PostgreSQL refuses to
+    subscript or aggregate, so the array is read through ``to_jsonb``: a number
+    stays a number, while a date, a timestamp or a UUID reads as its ISO text.
+    Everything else on the profile is still native.
+    """
+
+    #: Agreement between physical row order and the column's ordering.
+    correlation: Optional[float] = None
+    #: The most common values ANALYZE kept, in the column's own types.
+    most_common_vals: List[Any] = field(default_factory=list)
+    #: Their shares of the rows, in lockstep with ``most_common_vals``.
+    most_common_freqs: List[float] = field(default_factory=list)

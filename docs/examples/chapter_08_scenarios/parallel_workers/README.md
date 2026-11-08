@@ -96,7 +96,7 @@ python setup_db.py --async  # 异步初始化（效果相同）
 ```text
 === 同步初始化模式 ===
 连接信息：
-  主机：db-dev-1-n.rho.im:15432
+  主机：localhost:5432
   数据库：test_db
   用户：postgres
 

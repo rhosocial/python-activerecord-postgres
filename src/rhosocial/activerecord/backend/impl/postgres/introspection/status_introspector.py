@@ -6,7 +6,7 @@ Provides server status information by querying PostgreSQL's pg_settings,
 pg_stat_activity, and other system views.
 
 Design principle: Sync and Async are separate and cannot coexist.
-- SyncPostgreSQLStatusIntrospector: for synchronous backends
+- PostgreSQLStatusIntrospector: for synchronous backends
 - AsyncPostgreSQLStatusIntrospector: for asynchronous backends
 """
 
@@ -15,18 +15,13 @@ from typing import Any, Dict, List, Optional
 from rhosocial.activerecord.backend.introspection.status import (
     StatusItem,
     StatusCategory,
-    ServerOverview,
     DatabaseBriefInfo,
     UserInfo,
     ConnectionInfo,
     StorageInfo,
     SessionInfo,
-    WALInfo,
-    ReplicationInfo,
-    ArchiveInfo,
-    SecurityInfo,
     ExtensionInfo,
-    SyncAbstractStatusIntrospector,
+    AbstractStatusIntrospector,
     AsyncAbstractStatusIntrospector,
 )
 from ..expression.status import (
@@ -51,6 +46,13 @@ from ..expression.status import (
     PostgresReplicationLagQuery,
     PostgresArchiveStatsQuery,
     PostgresExtensionListQuery,
+)
+from .status_types import (
+    ArchiveInfo,
+    PostgreSQLServerOverview,
+    ReplicationInfo,
+    SecurityInfo,
+    WALInfo,
 )
 
 
@@ -116,7 +118,7 @@ POSTGRES_STATUS_VARIABLES = [
 class PostgreSQLStatusIntrospectorMixin:
     """Mixin providing shared PostgreSQL status introspection logic.
 
-    Both SyncPostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
+    Both PostgreSQLStatusIntrospector and AsyncPostgreSQLStatusIntrospector
     inherit from this mixin to share:
     - Query execution helpers
     - parse_* implementations
@@ -244,9 +246,15 @@ class PostgreSQLStatusIntrospectorMixin:
         archive: Optional[ArchiveInfo] = None,
         security: Optional[SecurityInfo] = None,
         extensions: Optional[List[ExtensionInfo]] = None,
-    ) -> ServerOverview:
-        """Build ServerOverview from collected data."""
-        return ServerOverview(
+    ) -> PostgreSQLServerOverview:
+        """Build the PostgreSQL overview from collected data.
+
+        The overview is a ``PostgreSQLServerOverview``: the four engine-level
+        families this server answers are typed fields on it, and ``get_overview``
+        still returns what core declares because the subclass is a legal
+        covariant return.
+        """
+        return PostgreSQLServerOverview(
             server_version=self._get_version_string(),
             server_vendor=self._get_vendor_name(),
             session=session,
@@ -264,8 +272,8 @@ class PostgreSQLStatusIntrospectorMixin:
         )
 
 
-class SyncPostgreSQLStatusIntrospector(
-    PostgreSQLStatusIntrospectorMixin, SyncAbstractStatusIntrospector
+class PostgreSQLStatusIntrospector(
+    PostgreSQLStatusIntrospectorMixin, AbstractStatusIntrospector
 ):
     """Synchronous PostgreSQL status introspector.
 
@@ -284,7 +292,7 @@ class SyncPostgreSQLStatusIntrospector(
         """Execute a SQL query synchronously."""
         return self._backend.execute(sql, params).data or []
 
-    def get_overview(self) -> ServerOverview:
+    def get_overview(self) -> PostgreSQLServerOverview:
         """Get complete PostgreSQL status overview."""
         configuration = self.list_configuration()
         performance = self.list_performance_metrics()
@@ -813,7 +821,7 @@ class AsyncPostgreSQLStatusIntrospector(
         result = await self._backend.execute(sql, params)
         return result.data if result else []
 
-    async def get_overview(self) -> ServerOverview:
+    async def get_overview(self) -> PostgreSQLServerOverview:
         """Get complete PostgreSQL status overview."""
         configuration = await self.list_configuration()
         performance = await self.list_performance_metrics()

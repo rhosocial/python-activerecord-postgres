@@ -2,7 +2,7 @@
 """
 PostgreSQL concrete introspectors.
 
-Implements SyncAbstractIntrospector and AsyncAbstractIntrospector for PostgreSQL
+Implements AbstractIntrospector and AsyncAbstractIntrospector for PostgreSQL
 databases using pg_catalog system tables for metadata queries.
 
 The introspectors are exposed via ``backend.introspector``.
@@ -20,20 +20,23 @@ Key behaviours:
   - Default schema is 'public'
 
 Design principle: Sync and Async are separate and cannot coexist.
-- SyncPostgreSQLIntrospector: for synchronous backends
+- PostgreSQLIntrospector: for synchronous backends
 - AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+import json
+
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
-    SyncAbstractIntrospector,
+    AbstractIntrospector,
     AsyncAbstractIntrospector,
 )
 from rhosocial.activerecord.backend.introspection.cache import IntrospectionCache
+from rhosocial.activerecord.backend.introspection.defaults import VALUE_SAMPLE_LIMIT
 from rhosocial.activerecord.backend.introspection.executor import (
-    SyncIntrospectorExecutor,
+    IntrospectorExecutor,
     AsyncIntrospectorExecutor,
 )
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
@@ -51,10 +54,11 @@ from rhosocial.activerecord.backend.introspection.types import (
     TableType,
     IntrospectionTriggerInfo,
     IntrospectionViewInfo,
+    ProfileSource,
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
-    SyncPostgreSQLStatusIntrospector,
+    PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
 from .types import SequenceInfo
@@ -72,7 +76,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     """Mixin providing shared PostgreSQL-specific introspection logic.
 
-    Both SyncPostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
+    Both PostgreSQLIntrospector and AsyncPostgreSQLIntrospector inherit
     from this mixin to share:
     - Default schema handling
     - parse_* implementations
@@ -151,6 +155,26 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         catalog distinguished them, and collapsing a materialized view or a
         partitioned table back into ``BASE_TABLE`` would lose that at the only
         layer that saw it.
+
+        The storage slots are filled from the trio the listing projects:
+        ``size_bytes`` is the total footprint, ``data_size_bytes`` the heap and
+        ``index_size_bytes`` the index side of it -- the two PostgreSQL keeps
+        apart and a total cannot separate. A missing or unreadable cell is
+        reported as ``None`` rather than allowed to raise past the rest of the
+        answer, which is already known.
+
+        **Which row estimate answers ``row_count``.** The listing carries two:
+        ``reltuples``, the planner's estimate, and ``live_row_count``, the
+        statistics view's ``n_live_tup``. The planner's is preferred, because it
+        is the number the server itself plans with and it is refreshed by
+        ``ANALYZE``/``VACUUM`` for exactly that purpose -- a value it holds is
+        the server's best current estimate of the relation's size. The
+        statistics view's is the fallback, taken only when the planner has
+        none: PostgreSQL 14+ reports ``-1`` for a relation that has never been
+        analyzed, which is the absence of an estimate rather than an empty
+        table, and in that case a live-row estimate says more than nothing does.
+        Neither is ever presented as exact, and neither is invented: a relation
+        with neither estimate reports ``None``.
         """
         target_schema = schema if schema is not None else self.default_schema
         table_type_map = {
@@ -166,12 +190,35 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 schema=target_schema,
                 table_type=table_type_map.get(row.get("table_type", "BASE TABLE"), TableType.BASE_TABLE),
                 comment=row.get("comment"),
-                # PostgreSQL 14+ returns -1 for unanalyzed tables, convert to None for consistency
-                row_count=row.get("row_count") if row.get("row_count") != -1 else None,
+                row_count=self.parse_row_count(row),
                 size_bytes=row.get("size_bytes"),
+                data_size_bytes=row.get("data_size_bytes"),
+                index_size_bytes=row.get("index_size_bytes"),
             )
             for row in rows
         ]
+
+    @staticmethod
+    def parse_row_count(row: Dict[str, Any]) -> Optional[int]:
+        """The row estimate a catalog row answers with, or ``None``.
+
+        Two estimates arrive and one is chosen. ``reltuples`` is the planner's
+        and wins when it holds a value; ``n_live_tup`` (``live_row_count``) is
+        the statistics view's and answers only when the planner has none.
+
+        PostgreSQL 14+ reports ``-1`` for a never-analyzed relation, which is
+        "no estimate" rather than "zero rows", so that value is normalized to
+        ``None`` here and the fallback is consulted; ``0`` from either source is
+        a real estimate and passes through unchanged. Anything unreadable is
+        ``None``: unknown is an answer, and guessing one would be worse.
+        """
+        reltuples = row.get("row_count")
+        if reltuples is not None and reltuples != -1:
+            return int(reltuples)
+        live_rows = row.get("live_row_count")
+        if live_rows is not None and live_rows != -1:
+            return int(live_rows)
+        return None
 
     def parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []
@@ -204,6 +251,215 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 )
             )
         return columns
+
+    # ------------------------------------------------------------------ #
+    # Data profiles -- what the rows hold, as pg_stats estimates it
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _stats_list(value: Any) -> List[Any]:
+        """A ``pg_stats`` array as a list, whichever shape the driver gave.
+
+        The formatters project these as ``to_jsonb``, so psycopg may hand back
+        a decoded list or the raw JSON text depending on how its json adapter
+        is registered. Both are the same fact, and the parser should not care
+        which arrived; anything else is "no list".
+        """
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        if isinstance(value, (bytes, bytearray)):
+            value = value.decode("utf-8", "replace")
+        if isinstance(value, str):
+            try:
+                decoded = json.loads(value)
+            except (ValueError, TypeError):
+                return []
+            return decoded if isinstance(decoded, list) else []
+        return []
+
+    @staticmethod
+    def _lower_of(current: Any, candidate: Any) -> Any:
+        """The smaller of two statistics values, when they can be compared.
+
+        Both sides come out of ``to_jsonb``, so the shapes are JSON's: numbers,
+        strings, booleans and null. Only like kinds are reconciled -- two
+        numbers, or two strings, the latter covering text, and dates and uuids
+        in their ISO spellings -- because a JSON string and a JSON number have
+        no meaningful order between them.
+        """
+        if current is None:
+            return candidate
+        both_numbers = isinstance(current, (int, float)) and isinstance(
+            candidate, (int, float)
+        )
+        both_strings = isinstance(current, str) and isinstance(candidate, str)
+        if not (both_numbers or both_strings):
+            return current
+        return candidate if candidate < current else current
+
+    def _merged_bounds(
+        self, min_value: Any, max_value: Any, most_common: List[Any]
+    ) -> "tuple":
+        """The true extremes, histogram endpoints merged with the kept values.
+
+        ``histogram_bounds`` deliberately excludes the values ANALYZE kept as
+        most-common, so its first and last elements are the extremes of what
+        is left. When the extreme value happens to be a frequent one -- a
+        status column whose minimum is also its most common value -- the
+        endpoint alone understates the range, and merging the retained values
+        back in is what makes ``min``/``max`` mean what the slot promises.
+        """
+        for value in most_common:
+            if value is None:
+                continue
+            min_value = self._lower_of(min_value, value)
+            if max_value is None:
+                max_value = value
+            else:
+                both_numbers = isinstance(max_value, (int, float)) and isinstance(
+                    value, (int, float)
+                )
+                both_strings = isinstance(max_value, str) and isinstance(value, str)
+                if (both_numbers or both_strings) and value > max_value:
+                    max_value = value
+        return min_value, max_value
+
+    def parse_column_data_profiles(
+        self,
+        rows: List[Dict[str, Any]],
+        schema: str,
+        table_name: str,
+    ) -> List[Any]:
+        """Project ``pg_stats`` rows into profiles, converting what it encodes.
+
+        Three conversions live here because each needs the whole row:
+
+        * ``n_distinct`` is negative when it means a *fraction* of the rows, so
+          the count is ``-n_distinct * reltuples``; a positive value is already
+          a count and a zero is "not computed, but not zero rows either".
+        * ``null_frac`` is ``-1`` on a column ANALYZE has not measured since
+          the statistics were reset, which is "unknown" rather than a negative
+          fraction.
+        * ``reltuples`` is ``-1`` for a relation never scanned by the planner,
+          which is likewise unknown rather than minus one row.
+
+        ``source`` is ``ESTIMATE`` whenever the vintage is known and
+        ``UNKNOWN`` when it is not: the figures are estimates either way, but
+        the rule for this family is that an estimate must carry the time it
+        was collected. Two things can leave that time unrecorded, and neither
+        is an error: a ``pg_stat_reset()`` erases it while the statistics stay,
+        and the statistics collector records ``last_analyze`` asynchronously,
+        so a profile read immediately after ``ANALYZE`` usually finds no
+        timestamp yet. Saying ``UNKNOWN`` keeps a figure whose age is unknown
+        from claiming an age it does not have.
+
+        ``min_value``/``max_value`` are the histogram's endpoints merged with
+        the retained most-common values, because ANALYZE's histogram excludes
+        what it kept as common. Both arrive as JSON scalars: a number is a
+        number, while a date or a UUID is its text form. ``pg_stats`` is
+        declared over ``anyarray`` and cannot be subscripted or aggregated, so
+        a typed endpoint is not obtainable -- see the dialect's
+        ``_histogram_projection``.
+        """
+        from .types import PostgresColumnDataProfile
+
+        profiles: List[Any] = []
+        for row in rows or []:
+            column_name = row.get("column_name")
+            if not column_name:
+                continue
+
+            row_count = row.get("row_count")
+            if row_count is not None and row_count < 0:
+                row_count = None
+            elif row_count is not None:
+                row_count = int(row_count)
+
+            n_distinct = row.get("n_distinct")
+            distinct_count: Optional[int] = None
+            if n_distinct is not None:
+                if n_distinct >= 0:
+                    distinct_count = int(n_distinct)
+                elif row_count:
+                    # Negative means "this fraction of the rows are distinct".
+                    distinct_count = int(round(-float(n_distinct) * row_count))
+
+            null_fraction = row.get("null_fraction")
+            if null_fraction is not None:
+                null_fraction = float(null_fraction)
+                if null_fraction < 0:
+                    null_fraction = None
+
+            most_common = self._stats_list(row.get("most_common_vals"))
+            frequencies = [
+                float(value)
+                for value in self._stats_list(row.get("most_common_freqs"))
+                if isinstance(value, (int, float))
+            ]
+            bounds = self._stats_list(row.get("histogram_bounds"))
+            min_value, max_value = self._merged_bounds(
+                bounds[0] if bounds else None,
+                bounds[-1] if bounds else None,
+                most_common,
+            )
+
+            collected_at = row.get("last_analyze") or row.get("last_autoanalyze")
+            profiles.append(
+                PostgresColumnDataProfile(
+                    schema=row.get("schema_name") or schema,
+                    table_name=table_name,
+                    column_name=str(column_name),
+                    null_fraction=null_fraction,
+                    distinct_count=distinct_count,
+                    min_value=min_value,
+                    max_value=max_value,
+                    row_count=row_count,
+                    source=(
+                        ProfileSource.ESTIMATE
+                        if collected_at is not None
+                        else ProfileSource.UNKNOWN
+                    ),
+                    collected_at=str(collected_at) if collected_at is not None else None,
+                    correlation=(
+                        float(row["correlation"])
+                        if row.get("correlation") is not None
+                        else None
+                    ),
+                    most_common_vals=most_common,
+                    most_common_freqs=frequencies,
+                )
+            )
+        return profiles
+
+    def parse_column_value_samples(self, rows: List[Dict[str, Any]]) -> List[Any]:
+        """Pair the two ``pg_stats`` arrays into value/frequency rows.
+
+        Position is the pairing: ANALYZE writes the values and their shares in
+        lockstep, so the i-th frequency belongs to the i-th value. A missing
+        frequency is left ``None`` rather than guessed, and a value of ``NULL``
+        is kept because NULL is a legitimate member of a column's domain.
+        """
+        from rhosocial.activerecord.backend.introspection.types import (
+            ColumnValueFrequency,
+        )
+
+        found: List[Any] = []
+        for row in rows or []:
+            values = self._stats_list(row.get("most_common_vals"))
+            frequencies = self._stats_list(row.get("most_common_freqs"))
+            for position, value in enumerate(values):
+                frequency = (
+                    float(frequencies[position])
+                    if position < len(frequencies)
+                    and isinstance(frequencies[position], (int, float))
+                    else None
+                )
+                found.append(
+                    ColumnValueFrequency(value=value, frequency=frequency)
+                )
+        return found
 
     def parse_indexes(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IndexInfo]:
         index_type_map = {
@@ -578,7 +834,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         return events if events else ["UPDATE"]
 
 
-class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntrospector):
+class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
     """Synchronous introspector for PostgreSQL backends.
 
     Uses pg_catalog system tables rather than information_schema for
@@ -597,18 +853,37 @@ class SyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, SyncAbstractIntros
     def __init__(
         self,
         backend: Any,
-        executor: SyncIntrospectorExecutor,
+        executor: IntrospectorExecutor,
         cache: Optional[IntrospectionCache] = None,
     ) -> None:
         super().__init__(backend, executor, cache)
-        self._status_instance: Optional[SyncPostgreSQLStatusIntrospector] = None
+        self._status_instance: Optional[PostgreSQLStatusIntrospector] = None
 
     @property
-    def status(self) -> SyncPostgreSQLStatusIntrospector:
+    def status(self) -> PostgreSQLStatusIntrospector:
         """PostgreSQL status introspector (lazily created)."""
         if self._status_instance is None:
-            self._status_instance = SyncPostgreSQLStatusIntrospector(self._backend)
+            self._status_instance = PostgreSQLStatusIntrospector(self._backend)
         return self._status_instance
+
+    def sample_column_values(
+        self,
+        table_name: str,
+        column_name: str,
+        limit: int = VALUE_SAMPLE_LIMIT,
+        schema: Optional[str] = None,
+    ):
+        """List a column's most frequent values, at most ``limit`` of them.
+
+        The catalog hands back its whole retained list -- ANALYZE keeps at most
+        ``statistics_target`` entries -- so the bound is applied here rather
+        than in SQL, where unnesting two arrays to pair them would cost more
+        than the slice. Returning fewer than ``limit`` is correct: the engine
+        kept what it kept.
+        """
+        return super().sample_column_values(
+            table_name, column_name, limit=limit, schema=schema
+        )[:limit]
 
     def list_materialized_views(
         self,
@@ -977,3 +1252,20 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
     async def extension_exists(self, name: str) -> bool:
         """Return True when the named extension is installed (async)."""
         return await self.get_extension_info(name) is not None
+
+    async def sample_column_values(
+        self,
+        table_name: str,
+        column_name: str,
+        limit: int = VALUE_SAMPLE_LIMIT,
+        schema: Optional[str] = None,
+    ):
+        """List a column's most frequent values, at most ``limit``; async twin.
+
+        Same slice as the synchronous one, for the same reason: the retained
+        list is fixed-size and the bound belongs after it arrives.
+        """
+        samples = await super().sample_column_values(
+            table_name, column_name, limit=limit, schema=schema
+        )
+        return samples[:limit]

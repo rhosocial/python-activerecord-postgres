@@ -11,7 +11,7 @@ import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.introspection.types import IntrospectionDatabaseInfo
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
-from rhosocial.activerecord.backend.introspection.base import SyncAbstractIntrospector
+from rhosocial.activerecord.backend.introspection.base import AbstractIntrospector
 
 
 class TestIntrospectionSupport:
@@ -23,8 +23,8 @@ class TestIntrospectionSupport:
         assert postgres_backend_single.introspector is not None
 
     def test_introspector_is_abstract_introspector(self, postgres_backend_single):
-        """Test that introspector is a SyncAbstractIntrospector instance."""
-        assert isinstance(postgres_backend_single.introspector, SyncAbstractIntrospector)
+        """Test that introspector is a AbstractIntrospector instance."""
+        assert isinstance(postgres_backend_single.introspector, AbstractIntrospector)
 
     def test_backend_is_introspector_mixin(self, postgres_backend_single):
         """Test that backend uses IntrospectorBackendMixin."""

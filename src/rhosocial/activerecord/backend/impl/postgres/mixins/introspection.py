@@ -29,16 +29,25 @@ from rhosocial.activerecord.backend.introspection.types import IntrospectionScop
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.introspection import (
+        ColumnDataProfileQueryStatement,
+        ColumnValueSampleQueryStatement,
         DatabaseInfoQueryStatement,
         TableListQueryStatement,
         TableInfoQueryStatement,
         ColumnInfoQueryStatement,
         IndexInfoQueryStatement,
         ForeignKeyQueryStatement,
+        JoinCoverageQueryStatement,
         ViewListQueryStatement,
         ViewInfoQueryStatement,
         TriggerListQueryStatement,
         TriggerInfoQueryStatement,
+        TableUsageStatsQueryStatement,
+        UnusedIndexesQueryStatement,
+        RuntimeMetricsQueryStatement,
+        IndexUsageStatsQueryStatement,
+        ObjectDependencyQueryStatement,
+        DDLStatementQueryStatement,
     )
     from ..expression.introspection import (
         PostgresMaterializedViewInfoQueryStatement,
@@ -47,6 +56,9 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresSequenceListQueryStatement,
         PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryStatement,
+        PostgresIndexesSizeFunction,
+        PostgresRelationSizeFunction,
+        PostgresTableStorageQueryStatement,
     )
     from ..expression.status import (
         PostgresSettingsQuery,
@@ -123,6 +135,157 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
     def supports_trigger_introspection(self) -> bool:
         """PostgreSQL supports trigger introspection via pg_trigger."""
         return True
+
+    def supports_table_storage_introspection(self) -> bool:
+        """PostgreSQL reports each table's storage split.
+
+        PostgreSQL's storage is row-plus-index shaped, so the narrow slots of
+        ``IntrospectionTableInfo`` can all be answered: ``size_bytes`` from
+        ``pg_total_relation_size``, ``data_size_bytes`` from
+        ``pg_relation_size`` and ``index_size_bytes`` from ``pg_indexes_size``.
+        Declaring the family is what lets the table listing project the trio and
+        what a CLI checks before offering it; core defaults the probe to False
+        because an engine whose storage answers no part of that has nothing to
+        say, and an unanswered family must stay unoffered rather than answered
+        with an empty row.
+        """
+        return True
+
+    def supports_extensions(self) -> bool:
+        """The core name for the extension family PostgreSQL answers.
+
+        Declared here rather than on the extension mixin because this is the
+        introspection capability mixin: the cross-engine probes live together
+        here, and `PostgresExtensionSupport` -- the protocol the extension
+        mixin is paired with -- must not declare a method the core
+        `IntrospectionSupport` already names, or one capability reads as two
+        answers again.
+
+        It delegates rather than re-declaring `True` so the answer is one
+        fact: `supports_extension_introspection` on the extension mixin is
+        where PostgreSQL's extensions are actually read from `pg_extension`,
+        and a caller asking through either spelling gets the same reply.
+        """
+        return self.supports_extension_introspection()
+
+    def supports_table_stats(self) -> bool:
+        """PostgreSQL answers per-table usage counters from pg_stat_user_tables.
+
+        The counters are the statistics collector's, reset on crash or by
+        ``pg_stat_reset()`` -- so "since the last reset" is the only tense the
+        numbers have, and a zero is "no access in the window". The view also
+        carries facts with no common name (dead tuples, last-access times);
+        those are real, but they are not projected here, and where they go is
+        the backend reader's decision, not the common shape's.
+        """
+        return True
+
+
+    def supports_runtime_stats(self) -> bool:
+        """PostgreSQL answers runtime measurements from ``pg_stat_activity``.
+
+        The counters cover everything since the statistics were last reset --
+        crash or ``pg_stat_reset()`` -- so each number says "in the window the
+        server remembers" and a zero is "nothing in that window", never
+        "nothing ever". ``pg_stat_statements`` is deliberately *not* read
+        here: it is an extension, and answering from a catalogue that is only
+        sometimes installed would make the family depend on a module rather
+        than on the engine.
+        """
+        return True
+
+    def supports_index_stats(self) -> bool:
+        """PostgreSQL answers per-index counters from ``pg_stat_user_indexes``.
+
+        A stronger answer than the unused-indexes listing: ``idx_scan`` and
+        the tuple counters, so "how much" is available and not only "ever".
+        """
+        return True
+
+    def supports_object_dependencies(self) -> bool:
+        """PostgreSQL answers the dependency graph from ``pg_depend``.
+
+        The catalogue's own edges, filtered to the ones a reader acts on
+        rather than the internal dependencies the extension machinery also
+        records.
+        """
+        return True
+
+    def supports_ddl_extraction(self) -> bool:
+        """PostgreSQL's DDL text is assembled here, not retrieved natively.
+
+        ``pg_get_expr`` and ``pg_get_viewdef`` recover expressions, but a
+        faithful ``CREATE TABLE`` needs storage parameters, tablespace and
+        per-column clauses the catalog keeps only in parts. The honest answer
+        is an assembly marked ``native=False``.
+        """
+        return True
+
+    def supports_ddl_extraction_native(self) -> bool:
+        """False: PostgreSQL has no single native DDL retrieval call.
+
+        An assembly is offered instead (see :meth:`supports_ddl_extraction`)
+        and says so through ``DDLStatement.native``. The two probes stay
+        separate so a caller can tell "can retrieve" from "can retrieve
+        natively" without reading a docstring.
+        """
+        return False
+
+    def supports_unused_indexes_detection(self) -> bool:
+        """PostgreSQL answers from ``pg_stat_user_indexes.idx_scan``.
+
+        A zero counter means "no index scan since the statistics were last
+        reset", which is PostgreSQL's tense for this family and a weaker
+        claim than MySQL's ``sys.schema_unused_indexes``: an index untouched
+        since a crash, or since a ``pg_stat_reset()``, reports zero. The
+        answer is "worth reviewing", never "safe to drop".
+        """
+        return True
+
+
+    def supports_column_data_profile(self) -> bool:
+        """PostgreSQL answers the profile from ``pg_stats`` without reading rows.
+
+        The cheapest profile of any engine here: ``null_frac``, ``n_distinct``
+        and ``correlation`` are one row per column, so profiling a table costs
+        one catalog query however large the table is. The price is that every
+        figure is an *estimate* of the last ``ANALYZE``, which is why the
+        parser labels the family ``ESTIMATE`` when the analysis time is
+        recorded and ``UNKNOWN`` when it is not -- see its docstring. A table
+        that was never analysed has no ``pg_stats`` row and therefore no
+        profile: an honest empty answer rather than fabricated zeros.
+        """
+        return True
+
+
+    def supports_column_value_sample(self) -> bool:
+        """PostgreSQL answers it from the kept ``most_common_vals`` list.
+
+        Also free, and also bounded: ANALYZE keeps at most ``statistics_target``
+        values (100 by default), so a low-cardinality column's listing is
+        usually complete while a high-cardinality one is a sample of the head.
+        Fewer values than requested is the normal answer, not a truncated one.
+        """
+        return True
+
+
+    def supports_join_coverage(self) -> bool:
+        """PostgreSQL measures overlap by counting distinct values on both sides.
+
+        The engine can read its own rows, so the probe answers ``True``: what
+        is expensive is the *statement*, not the capability, and pricing the
+        question into a ``False`` would claim PostgreSQL cannot answer at all.
+        There is no catalogue shortcut here either -- ``pg_stats`` keeps a
+        bounded, sampled most-common list per column, so an overlap computed
+        from it would be a guess dressed as a measurement, while counting the
+        values is exact.
+
+        That exactness is paid for: the measurement is a double scan plus an
+        intersection, which is why it belongs behind an explicit call and never
+        in any automatic pass. The statement's docstring states the rest.
+        """
+        return True
+
 
     def get_supported_introspection_scopes(self) -> List[IntrospectionScope]:
         """Get list of supported introspection scopes."""
@@ -326,8 +489,41 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             alias=alias,
         )
 
+    def _relation_size_call(self, function_name: str, alias: str):
+        """One of the three size calls, each measured on the relation's own OID.
+
+        ``pg_total_relation_size`` reports the total footprint;
+        ``pg_relation_size`` and ``pg_indexes_size`` report the heap and the
+        index side of it -- the split the total cannot separate, which is why
+        all three are asked for rather than derived from one. The argument is
+        the same column in all three: the ``oid`` of the row being read.
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        return FunctionCall(self, function_name, self._catalog_column("oid", "c"), alias=alias)
+
     def _relation_projection(self) -> "list":
-        """The five columns a table listing and a single-table read both report."""
+        """The columns a table listing and a single-table read both report.
+
+        Three of them are the storage trio: ``size_bytes`` (the total, from
+        ``pg_total_relation_size``) with ``data_size_bytes`` and
+        ``index_size_bytes`` beside it. They are here because
+        :meth:`supports_table_storage_introspection` answers True for this
+        engine -- PostgreSQL's storage is row-plus-index shaped, so the narrow
+        slots of ``IntrospectionTableInfo`` carry the split instead of staying
+        empty.
+
+        The row count travels as two signals, not one. ``reltuples`` is the
+        planner's estimate of the relation, maintained by ANALYZE; ``n_live_tup``
+        is the statistics view's estimate of its live rows, maintained by the
+        stats collector. The two go stale by different routes and at different
+        times -- a freshly loaded table has neither, a table ANALYZEd long ago
+        may have a reliable ``reltuples`` and a decayed ``n_live_tup``, and a
+        table that has only ever been written through DML may have the reverse
+        -- so the projection carries both and the parser chooses. Both are cast
+        to ``bigint``, the type each is already stored as: the row shape states
+        it rather than leaving the driver to decide.
+        """
         from rhosocial.activerecord.backend.expression import FunctionCall
         from rhosocial.activerecord.backend.expression.types import BigIntType
 
@@ -338,12 +534,10 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self, "obj_description", self._catalog_column("oid", "c"), alias="comment"
             ),
             self._catalog_column("reltuples", "c").cast(BigIntType(self)).as_("row_count"),
-            FunctionCall(
-                self,
-                "pg_total_relation_size",
-                self._catalog_column("oid", "c"),
-                alias="size_bytes",
-            ),
+            self._catalog_column("n_live_tup", "s").cast(BigIntType(self)).as_("live_row_count"),
+            self._relation_size_call("pg_total_relation_size", "size_bytes"),
+            self._relation_size_call("pg_relation_size", "data_size_bytes"),
+            self._relation_size_call("pg_indexes_size", "index_size_bytes"),
         ]
 
     def _pg_class_join(self):
@@ -360,6 +554,28 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 "eq",
                 self._catalog_column("relnamespace", "c"),
                 self._catalog_column("oid", "n"),
+            ),
+        )
+
+    def _relation_source(self):
+        """``pg_class c JOIN pg_namespace n ... LEFT JOIN pg_stat_user_tables s ...``.
+
+        The statistics join is what makes ``n_live_tup`` readable beside the
+        planner's ``reltuples``. It is a LEFT JOIN because that view lists only
+        the relations the stats collector has a row for: a relation it does not
+        list must still be reported, with the live-row column absent rather than
+        the whole row missing.
+        """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+
+        return self._pg_class_join().join(
+            self._catalog_relation("pg_stat_user_tables", "s"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relid", "s"),
+                self._catalog_column("oid", "c"),
             ),
         )
 
@@ -557,7 +773,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         return self._catalog_select(
             self._relation_projection(),
-            self._pg_class_join(),
+            self._relation_source(),
             conditions,
             [self._catalog_column("relname", "c")],
         )
@@ -581,7 +797,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         return self._catalog_select(
             self._relation_projection(),
-            self._pg_class_join(),
+            self._relation_source(),
             [
                 ComparisonPredicate(
                     self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
@@ -1830,6 +2046,89 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ],
         ).to_sql()
 
+    # ------------------------------------------------------------------
+    # The per-table storage trio. The table listing asks the same three
+    # calls in its projection (``_relation_size_call``); these formatters
+    # answer them for one relation whose OID a caller already holds.
+    # ------------------------------------------------------------------
+
+    def format_postgres_relation_size_function(
+        self, expr: "PostgresRelationSizeFunction"
+    ) -> Tuple[str, tuple]:
+        """Format the ``pg_relation_size(relid)`` call.
+
+        The relation's OID names a catalog row the caller already read, so it is
+        a bound value: PostgreSQL reads an ``oid`` where the function's
+        ``regclass`` argument is expected without a cast, and nothing about the
+        relation is spelled into the text.
+
+        Args:
+            expr: Relation size function expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        params = expr.get_params()
+        return FunctionCall(
+            self, "pg_relation_size", self._catalog_value(params.get("relid"))
+        ).to_sql()
+
+    def format_postgres_indexes_size_function(
+        self, expr: "PostgresIndexesSizeFunction"
+    ) -> Tuple[str, tuple]:
+        """Format the ``pg_indexes_size(relid)`` call.
+
+        The index side of the split, bound for the same reason the heap side is:
+        the OID is data. Together they are the two narrow slots
+        ``pg_total_relation_size`` cannot separate.
+
+        Args:
+            expr: Indexes size function expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        params = expr.get_params()
+        return FunctionCall(
+            self, "pg_indexes_size", self._catalog_value(params.get("relid"))
+        ).to_sql()
+
+    def format_table_storage_query_statement(
+        self, expr: "PostgresTableStorageQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the query that reports one relation's storage split.
+
+        The two calls in one statement, aliased to the slot names the parser
+        fills: the row shape is the contract, and asking both in one round trip
+        is what makes the split a single answer rather than two numbers read at
+        two different moments. The OID binds once per call.
+
+        Args:
+            expr: Table storage query expression with the relation's OID.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall, QueryStatement
+
+        params = expr.get_params()
+        relid = params.get("relid")
+        return QueryStatement(
+            self,
+            select=[
+                FunctionCall(
+                    self, "pg_relation_size", self._catalog_value(relid), alias="data_size_bytes"
+                ),
+                FunctionCall(
+                    self, "pg_indexes_size", self._catalog_value(relid), alias="index_size_bytes"
+                ),
+            ],
+        ).to_sql()
+
 
     # ------------------------------------------------------------------
     # Status and enum queries (org guide §16.2: the SQL text is the
@@ -2476,6 +2775,729 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             conditions,
             [self._catalog_column("enumsortorder", "e")],
         )
+
+
+    def format_table_usage_stats_query_statement(
+        self, expr: "TableUsageStatsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the per-table usage-counter listing from pg_stat_user_tables.
+
+        One row per table the collector has seen in the schema, projected from
+        its own columns: ``seq_scan`` / ``idx_scan`` for the reads,
+        ``n_tup_ins`` / ``n_tup_upd`` / ``n_tup_del`` for the writes,
+        ``n_live_tup`` for the row estimate the counters were measured
+        against. The view's other facts -- ``n_dead_tup``, the ``last_*``
+        access times -- are real and useful but have no common name, so they
+        are not projected: this listing is the common shape, and the engine's
+        extras belong on a backend reader beside it.
+
+        A table with no statistics row yet is simply absent from
+        ``pg_stat_user_tables``; the listing answers for the tables the
+        collector has seen, which is the honest scope rather than a
+        zero-filled one.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        source = self._catalog_relation("pg_stat_user_tables", "s")
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("schemaname", "s"), self._catalog_value(schema)
+            ),
+        ]
+        projections = [
+            self._catalog_column("schemaname", "s"),
+            self._catalog_column("relname", "s"),
+            self._catalog_column("seq_scan", "s"),
+            self._catalog_column("idx_scan", "s"),
+            self._catalog_column("n_tup_ins", "s"),
+            self._catalog_column("n_tup_upd", "s"),
+            self._catalog_column("n_tup_del", "s"),
+            self._catalog_column("n_live_tup", "s"),
+        ]
+        return self._catalog_select(
+            projections, source, conditions, [self._catalog_column("relname", "s")]
+        )
+
+
+    def format_unused_indexes_query_statement(
+        self, expr: "UnusedIndexesQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the unused-indexes listing from ``pg_stat_user_indexes``.
+
+        PostgreSQL ships no vendor view for this, so the family is computed
+        from the counters: ``idx_scan = 0`` over valid indexes in the
+        requested schema. Only ``idx_scan`` speaks -- an index is what makes
+        a scan indexed, so the other counters do not apply -- and
+        ``indisvalid`` filters the indexes the planner would never choose.
+
+        What the listing is not: proof. It reports "no index scan in the
+        window the statistics remember", and that window ends at the last
+        crash or ``pg_stat_reset()``.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            Literal,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("idx_scan", "i"), Literal(self, 0)
+            ),
+            ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("indisvalid", "i"),
+                Literal(self, True, inline=True),
+            ),
+        ]
+
+        indexes = self._catalog_relation("pg_stat_user_indexes", "i")
+        source = JoinClause(
+            self,
+            left_table=indexes,
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("schemaname", "i"),
+                self._catalog_column("nspname", "n"),
+            ),
+        )
+
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "i").as_("table_name"),
+            self._catalog_column("indexrelname", "i").as_("index_name"),
+        ]
+        return self._catalog_select(
+            projections,
+            source,
+            conditions,
+            [
+                self._catalog_column("relname", "i"),
+                self._catalog_column("indexrelname", "i"),
+            ],
+        )
+
+
+    def format_runtime_metrics_query_statement(
+        self, expr: "RuntimeMetricsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the runtime listing from ``pg_stat_activity``.
+
+        One row per backend process, projected to the fields that describe the
+        server rather than one session: the application name, the state, what
+        the process is waiting for, and when it started. ``source`` carries
+        the wait event rather than a reset window -- the window is the same
+        for every row of this listing and belongs in the family's docstring,
+        which is where a reader looks for what "now" means.
+        """
+
+        projections = [
+            self._catalog_column("application_name", "a").as_("name"),
+            self._catalog_column("state", "a").as_("value"),
+            self._catalog_column("wait_event_type", "a").as_("kind"),
+            self._catalog_column("wait_event", "a").as_("description"),
+            self._catalog_column("backend_start", "a").as_("source"),
+        ]
+        return self._catalog_select(
+            projections, self._catalog_relation("pg_stat_activity", "a"), None, None
+        )
+
+    def format_index_usage_stats_query_statement(
+        self, expr: "IndexUsageStatsQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format per-index counters from ``pg_stat_user_indexes``.
+
+        ``idx_scan``, ``idx_tup_read`` and ``idx_tup_fetch`` are the engine's
+        own counters; the size comes from ``pg_relation_size`` over the
+        index's own oid, so "how much use" and "how much space" land in one
+        row instead of two queries a caller has to join.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_stat_user_indexes", "i"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("schemaname", "i"),
+                self._catalog_column("nspname", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+        ]
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "i").as_("table_name"),
+            self._catalog_column("indexrelname", "i").as_("index_name"),
+            self._catalog_column("idx_scan", "i"),
+            self._catalog_column("idx_tup_read", "i").as_("rows_read"),
+            self._catalog_column("idx_tup_fetch", "i").as_("rows_fetched"),
+            FunctionCall(
+                self, "pg_relation_size", self._catalog_column("indexrelid", "i")
+            ).as_("index_size_bytes"),
+        ]
+        return self._catalog_select(
+            projections,
+            source,
+            conditions,
+            [self._catalog_column("relname", "i"), self._catalog_column("indexrelname", "i")],
+        )
+
+    def format_object_dependency_query_statement(
+        self, expr: "ObjectDependencyQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the dependency graph from ``pg_depend`` joined to the names.
+
+        ``pg_depend`` stores edges by oid, so the reader-facing join is
+        required. ``deptype`` names the relation; there is no per-edge action
+        column in PostgreSQL -- a dependant's behaviour on drop is a property
+        of its class -- so ``action`` stays unmapped here rather than being
+        guessed from ``deptype``.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        object_name = params.get("object_name")
+        # pg_depend r -> d, then the dependant's own class c, then the
+        # namespace n that owns both. Chained with source.join, which is the
+        # form every multi-table source in this mixin uses.
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "r"),
+            right_table=self._catalog_relation("pg_depend", "d"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "r"),
+                self._catalog_column("refobjid", "d"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "r"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+        ]
+        if object_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("relname", "r"), self._catalog_value(object_name)
+                )
+            )
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "r").as_("referenced"),
+            self._catalog_column("deptype", "d").as_("kind"),
+            self._catalog_column("classid", "d").as_("referenced_type"),
+        ]
+        return self._catalog_select(projections, source, conditions, None)
+
+    def format_ddl_statement_query_statement(
+        self, expr: "DDLStatementQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format an assembled ``CREATE TABLE`` skeleton for one table.
+
+        Assembled, not retrieved: the address comes from the catalog and the
+        expressions would come from ``pg_get_expr``, but the storage
+        parameters and per-column clauses are not reassembled here -- a
+        partial ``CREATE TABLE`` that renders as if it were complete is worse
+        than none. So this answers with ``ddl`` empty and ``native=False``,
+        which the parser drops, so ``get_ddl_statement`` returns ``None``:
+        an honest "cannot reproduce this" rather than a plausible-looking
+        fragment.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        object_name = params.get("object_name", "")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relname", "c"), self._catalog_value(object_name)
+            ),
+        ]
+        projections = [
+            self._catalog_column("nspname", "n").as_("schema_name"),
+            self._catalog_column("relname", "c").as_("object_name"),
+            # ``relkind`` is the catalog's own kind letter, so ``object_type``
+            # is read from the row rather than asserted as a constant: the
+            # query does not need to know which kind was asked for, and a
+            # constant here would be a fact the caller supplied pretending to
+            # be one the catalog returned.
+            self._catalog_column("relkind", "c").as_("object_type"),
+            # No ``ddl`` column is projected: the parser drops rows carrying
+            # no text, so ``get_ddl_statement`` returns None -- an honest
+            # "cannot reproduce this" rather than a plausible fragment.
+        ]
+        return self._catalog_select(projections, source, conditions, None)
+
+
+    # ========== Data Profiles (row-shaped answers) ==========
+    #
+    # The catalog answers these, not the rows: `pg_stats` holds one row per
+    # analysed column, so the whole family costs one query per table however
+    # large the table is. Everything it reports is an estimate of the last
+    # ANALYZE, which is why the parser labels it `ESTIMATE` and carries the
+    # analysis time beside the numbers.
+
+    def _stats_source(self, table_name):
+        """The catalog chain a per-column statistics query reads.
+
+        ``pg_stats`` names its table by name, not by oid, so the relation has
+        to be joined back through ``pg_namespace``/``pg_class`` to reach the
+        row estimate (``reltuples``) and to read the analysis time from
+        ``pg_stat_all_tables``. That last join is a LEFT one: a table the
+        statistics collector has never seen is still a table, and its profile
+        should come back with an unknown vintage rather than vanish.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            JoinClause,
+            LogicalPredicate,
+        )
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_stats", "s"),
+            join_type="JOIN",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("schemaname", "s"),
+                    self._catalog_column("nspname", "n"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("tablename", "s"),
+                    self._catalog_column("relname", "c"),
+                ),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_stat_all_tables", "st"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("schemaname", "st"),
+                    self._catalog_column("schemaname", "s"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "st"),
+                    self._catalog_column("tablename", "s"),
+                ),
+            ),
+        )
+        return source
+
+    def _histogram_projection(self):
+        """``histogram_bounds`` as JSON, which is the only readable shape.
+
+        ``pg_stats.histogram_bounds`` is declared ``anyarray`` -- a pseudo-type
+        standing for "an array of whatever this column is" -- and PostgreSQL
+        refuses to subscript it (``cannot subscript type anyarray``) as well as
+        ``MIN(anyelement)`` over it, since a type without a btree opclass has no
+        aggregate. ``array_to_json`` is declared over ``anyarray``, so that is
+        the one call that accepts it as it is: the array travels as JSON and
+        the parser takes its endpoints.
+
+        The cost is that a bound arrives as a JSON scalar rather than the
+        driver's own object: numbers stay numbers, while a date, a timestamp or
+        a UUID reads as its text form. That is a limit of ``pg_stats`` rather
+        than a choice -- nothing in the catalog can hand back a typed endpoint
+        without knowing the column's type at plan time -- and it is stated
+        where a reader will look.
+        """
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        return FunctionCall(
+            self,
+            "array_to_json",
+            self._catalog_column("histogram_bounds", "s"),
+            alias="histogram_bounds",
+        )
+
+    def format_column_data_profile_query_statement(
+        self, expr: "ColumnDataProfileQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the per-column profile from ``pg_stats``.
+
+        One row per analysed column, projected from the statistics the last
+        ``ANALYZE`` left: ``null_frac``, ``n_distinct``, the histogram's
+        endpoints, the kept most-common values, and the moment the figures
+        were collected.
+
+        ``n_distinct`` is projected raw rather than converted here because its
+        sign carries the meaning: a negative value is the *fraction* of rows
+        that are distinct, so turning it into a count needs ``reltuples`` -- a
+        comparison between two columns, not a constant -- and the conversion
+        belongs next to the row estimate it uses.
+
+        The three arrays all travel as JSON, for the same reason: ``anyarray``
+        is a pseudo-type whose element type is the profiled column's own, so no
+        common cast exists and no aggregate is defined over it.
+        ``array_to_json`` yields typed JSON scalars, which is the one shape that
+        survives every element type; see :meth:`_histogram_projection` for what
+        that costs min/max.
+
+        A column with no statistics row simply is not in the answer, and a
+        never-analysed table answers with no rows at all -- "not measured" as
+        an absence, not as a zero-filled profile.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        table_name = params.get("table_name")
+
+        source = self._stats_source(table_name)
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relname", "c"), self._catalog_value(table_name)
+            ),
+        ]
+        projections = [
+            self._catalog_column("attname", "s", alias="column_name"),
+            self._catalog_column("schemaname", "s", alias="schema_name"),
+            self._catalog_column("null_frac", "s", alias="null_fraction"),
+            self._catalog_column("n_distinct", "s"),
+            self._histogram_projection(),
+            self._catalog_column("reltuples", "c", alias="row_count"),
+            self._catalog_column("correlation", "s"),
+            FunctionCall(
+                self,
+                "array_to_json",
+                self._catalog_column("most_common_vals", "s"),
+                alias="most_common_vals",
+            ),
+            FunctionCall(
+                self,
+                "array_to_json",
+                self._catalog_column("most_common_freqs", "s"),
+                alias="most_common_freqs",
+            ),
+            self._catalog_column("last_analyze", "st"),
+            self._catalog_column("last_autoanalyze", "st"),
+        ]
+        return self._catalog_select(
+            projections, source, conditions, [self._catalog_column("attname", "s")]
+        )
+
+    def format_column_value_sample_query_statement(
+        self, expr: "ColumnValueSampleQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format a value listing as the two arrays ``pg_stats`` already keeps.
+
+        ANALYZE stores the most common values and their frequencies in
+        lockstep, so the listing is a projection and not an aggregate -- the
+        one engine where this probe is as cheap as the profile.
+
+        The pair is projected whole and paired by position in the parser
+        rather than unnested in SQL: the two arrays are of different element
+        types, and keeping them side by side means the caller gets the values
+        in the column's own types instead of a cast-to-text union.
+
+        The requested ``limit`` is applied on the parser side, because what
+        arrives is a fixed-size list -- ANALYZE kept at most
+        ``statistics_target`` entries and there is nothing to slice in SQL
+        without unnesting.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        table_name = params.get("table_name")
+        column_name = params.get("column_name")
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("schemaname", "s"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("tablename", "s"), self._catalog_value(table_name)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("attname", "s"), self._catalog_value(column_name)
+            ),
+        ]
+        projections = [
+            FunctionCall(
+                self,
+                "array_to_json",
+                self._catalog_column("most_common_vals", "s"),
+                alias="most_common_vals",
+            ),
+            FunctionCall(
+                self,
+                "array_to_json",
+                self._catalog_column("most_common_freqs", "s"),
+                alias="most_common_freqs",
+            ),
+        ]
+        return self._catalog_select(
+            projections, self._catalog_relation("pg_stats", "s"), conditions, None
+        )
+
+    def _user_relation(self, table_name: str, alias: str, schema: str):
+        """A user table as a FROM source, quoted by the dialect.
+
+        The opposite of :meth:`_catalog_relation`: ``pg_catalog`` spells its
+        own names lower-case and never quoted, while a user table is whatever
+        its owner declared -- mixed case, a space, a reserved word -- so the
+        name, its schema and the alias are all left to the dialect's identifier
+        renderer. The alias is what tells the two sides of a coverage
+        measurement apart, and it is quoted for the same reason.
+        """
+        from rhosocial.activerecord.backend.expression.objects import Table
+        from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+        return NamedRelationRef(
+            self,
+            Table(self, table_name, schema_name=schema),
+            alias=alias,
+        )
+
+    def _coverage_fraction(self, column, source, other_column, other_source):
+        """One side of the overlap: the share of *column* the other side holds.
+
+        The numerator counts the *distinct* values of *column* that also occur
+        in *other_column*, as ``COUNT(*)`` over a derived table of those
+        distinct values; the denominator counts *column*'s distinct non-NULL
+        values. Distinct on both sides is what makes the figure a coverage of
+        values rather than of rows -- a key repeated a thousand times that
+        matches once would otherwise read as well covered.
+
+        ``IS NOT NULL`` is written on both halves rather than relied upon. In
+        the numerator it is load-bearing: ``SELECT DISTINCT`` treats a NULL as
+        one value, so counting it would credit the tested side with a match it
+        does not have. In the divisor ``COUNT(DISTINCT ...)`` skips NULLs on
+        its own, but the statement says so explicitly, because the share is of
+        the values that could join and that is the fact being measured.
+        ``NULLIF(..., 0)`` then makes a column with no value at all answer NULL
+        rather than 0, which the parser reads as "no fraction": the difference
+        between "nothing matched" and "nothing to match" survives to the
+        caller.
+
+        ``* 1.0`` is load-bearing on this engine: PostgreSQL divides integers
+        by truncation, so ``COUNT(*) / COUNT(...)`` would answer 0 for every
+        share below one.
+        """
+        from rhosocial.activerecord.backend.expression import (
+            FunctionCall,
+            InPredicate,
+            Literal,
+            LogicalPredicate,
+            QueryStatement,
+            RowCountWildcard,
+            SelectModifier,
+            Subquery,
+            WhereClause,
+        )
+        from rhosocial.activerecord.backend.expression.functions import CountFunction
+        from rhosocial.activerecord.backend.expression.sources import DerivedTableSource
+
+        overlap = QueryStatement(
+            self,
+            select=[column],
+            from_=source,
+            where=WhereClause(
+                self,
+                LogicalPredicate(
+                    self,
+                    "AND",
+                    column.is_not_null(),
+                    InPredicate(
+                        self,
+                        column,
+                        Subquery(
+                            self,
+                            QueryStatement(
+                                self,
+                                select=[other_column],
+                                from_=other_source,
+                                where=WhereClause(self, other_column.is_not_null()),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            select_modifier=SelectModifier.DISTINCT,
+        )
+        covered = Subquery(
+            self,
+            QueryStatement(
+                self,
+                select=[CountFunction(self, RowCountWildcard(self))],
+                from_=DerivedTableSource(self, overlap, alias="covered"),
+            ),
+        )
+        total = Subquery(
+            self,
+            QueryStatement(
+                self,
+                select=[
+                    FunctionCall(
+                        self,
+                        "NULLIF",
+                        CountFunction(self, column, distinct=True),
+                        Literal(self, 0, inline=True),
+                    )
+                ],
+                from_=source,
+                where=WhereClause(self, column.is_not_null()),
+            ),
+        )
+        return (covered * Literal(self, 1.0, inline=True)) / total
+
+    def format_join_coverage_query_statement(
+        self, expr: "JoinCoverageQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format a two-sided measurement of two columns' value domains.
+
+        Unlike every other statement in this module, this one names two user
+        tables rather than one catalogue relation: the question is a relation
+        between two objects, so both sides are carried explicitly and their
+        identifiers are the dialect's to quote (see :meth:`_user_relation`).
+        ``_catalog_column`` is deliberately not used here -- it writes names
+        the way ``pg_catalog`` spells them, which is not how a user's table is
+        spelled.
+
+        The row carries both fractions because neither is meaningful alone. A
+        left share of 1.0 beside a right share of 0.2 says every tested value
+        exists on the other side while most of that other domain is
+        unaccounted for; a single similarity score would average the two and
+        describe neither. A caller deciding whether a join is worth writing
+        needs to know which direction is incomplete.
+
+        Both figures are counted over *distinct* values, with NULLs excluded
+        from the numerators and the denominators alike -- a NULL is not a value
+        that could ever join, so it belongs in neither half of the fraction.
+        The denominators are ``NULLIF``-guarded so a column with nothing to
+        match answers NULL, which the parser reports as "no measurement"
+        instead of a zero overlap that would read as a real answer. See
+        :meth:`_coverage_fraction` for both rules in place.
+
+        The cost is the two sides read for their distinct domains plus an
+        intersection of the two -- a double scan, and the reason the probe
+        belongs behind an explicit call rather than in any automatic pass.
+
+        Collations are not reconciled. PostgreSQL compares the two columns
+        under whichever collation applies, so values that the database would
+        treat as equal may be counted as distinct here, and the fractions are
+        a *lower* bound across mismatched collations -- never an upper one.
+        """
+        from rhosocial.activerecord.backend.expression import Column, QueryStatement
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+
+        left_source = self._user_relation(params.get("left_table"), "l", schema)
+        right_source = self._user_relation(params.get("right_table"), "r", schema)
+        left_column = Column(self, params.get("left_column"), table="l")
+        right_column = Column(self, params.get("right_column"), table="r")
+
+        return QueryStatement(
+            self,
+            select=[
+                self._coverage_fraction(
+                    left_column, left_source, right_column, right_source
+                ).as_("left_coverage"),
+                self._coverage_fraction(
+                    right_column, right_source, left_column, left_source
+                ).as_("right_coverage"),
+            ],
+        ).to_sql()
 
 
 __all__ = ["PostgresIntrospectionCapabilityMixin"]

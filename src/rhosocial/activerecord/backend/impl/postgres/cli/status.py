@@ -6,21 +6,19 @@ Extensions sections in addition to the standard sections.
 """
 
 import argparse
-import asyncio
 import json
 import sys
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from typing import Any
 
+from rhosocial.activerecord.backend.impl.postgres.async_support import run_coroutine
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 
 from .connection import add_connection_args, resolve_connection_config_from_args
-from .output import create_provider, RICH_AVAILABLE
-
-OUTPUT_CHOICES = ['table', 'json', 'csv', 'tsv']
+from .output import OUTPUT_CHOICES, create_provider, RICH_AVAILABLE
 
 STATUS_TYPES = ["all", "config", "performance", "connections", "storage", "databases", "users"]
 
@@ -113,7 +111,7 @@ def handle(args):
 
     if args.is_async:
         backend = AsyncPostgresBackend(connection_config=config)
-        asyncio.run(_handle_status_async(args, backend, provider))
+        run_coroutine(_handle_status_async(args, backend, provider))
     else:
         backend = PostgresBackend(connection_config=config)
         _handle_status_sync(args, backend, provider)

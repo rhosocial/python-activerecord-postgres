@@ -5,8 +5,6 @@ Pytest configuration for connection pool tests.
 This module provides fixtures for testing connection pools with PostgreSQL backends.
 """
 
-import asyncio
-import sys
 import os
 from typing import Dict, Any, Generator
 
@@ -23,16 +21,6 @@ from rhosocial.activerecord.connection.pool import (
     AsyncBackendPool,
 )
 
-
-def ensure_compatible_event_loop():
-    if sys.platform == "win32":
-        policy = asyncio.get_event_loop_policy()
-        if not isinstance(policy, asyncio.WindowsSelectorEventLoopPolicy):
-            new_policy = asyncio.WindowsSelectorEventLoopPolicy()
-            asyncio.set_event_loop_policy(new_policy)
-
-
-ensure_compatible_event_loop()
 
 # --- Scenario Loading Logic ---
 

@@ -2,7 +2,7 @@
 """
 Tests for PostgreSQL status introspector.
 
-This module tests the SyncPostgreSQLStatusIntrospector functionality
+This module tests the PostgreSQLStatusIntrospector functionality
 for retrieving server status information via pg_settings, pg_stat_activity,
 and other system views.
 """
@@ -17,15 +17,18 @@ from rhosocial.activerecord.backend.introspection.status import (
     UserInfo,
     ConnectionInfo,
     StorageInfo,
-    WALInfo,
-    ReplicationInfo,
-    ArchiveInfo,
-    SecurityInfo,
     ExtensionInfo,
+)
+from rhosocial.activerecord.backend.impl.postgres.introspection.status_types import (
+    ArchiveInfo,
+    PostgreSQLServerOverview,
+    ReplicationInfo,
+    SecurityInfo,
+    WALInfo,
 )
 
 
-class TestSyncPostgreSQLStatusIntrospector:
+class TestPostgreSQLStatusIntrospector:
     """Tests for synchronous PostgreSQL status introspector."""
 
     def test_get_overview(self, postgres_backend_single):
@@ -35,6 +38,9 @@ class TestSyncPostgreSQLStatusIntrospector:
         overview = status.get_overview()
 
         assert isinstance(overview, ServerOverview)
+        # The engine-level families ride this backend's own subclass, so the
+        # cross-dialect entry point still accepts what PostgreSQL answers.
+        assert isinstance(overview, PostgreSQLServerOverview)
         assert overview.server_vendor == "PostgreSQL"
         assert overview.server_version is not None
         assert isinstance(overview.configuration, list)
@@ -363,6 +369,9 @@ class TestAsyncPostgreSQLStatusIntrospector:
         overview = await status.get_overview()
 
         assert isinstance(overview, ServerOverview)
+        # The engine-level families ride this backend's own subclass, so the
+        # cross-dialect entry point still accepts what PostgreSQL answers.
+        assert isinstance(overview, PostgreSQLServerOverview)
         assert overview.server_vendor == "PostgreSQL"
         assert overview.server_version is not None
         assert isinstance(overview.configuration, list)

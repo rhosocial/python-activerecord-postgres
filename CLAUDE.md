@@ -35,6 +35,30 @@ This project is under active development. Key features implemented:
 
 This project adheres to the same version control, branching, commit message, and changelog management standards as the main `python-activerecord` project.
 
+## Async Backend and the Windows Event Loop
+
+psycopg's async mode waits on the libpq socket with `loop.add_reader` /
+`loop.add_writer`, which on Windows the platform default event loop
+(`ProactorEventLoop`, since 3.8) does not implement. Therefore:
+
+- The sync path is unaffected everywhere.
+- `AsyncPostgresBackend` requires a selector-based event loop on Windows
+  (`SelectorEventLoop(SelectSelector())`). psycopg 3.3+ detects the
+  mismatch at connect time and raises with the fix named; older versions
+  surface asyncio's raw `NotImplementedError`.
+- To run async code on Windows, use the helper this backend ships:
+  `run_coroutine(coro)` from
+  `rhosocial.activerecord.backend.impl.postgres.async_support` -- it
+  constructs the required loop and gives it `asyncio.run`-grade
+  lifecycle (cancel on `KeyboardInterrupt`, shutdown of async generators,
+  close, detach). It may only be called when no loop is running.
+- The CLI's `--async` modes (`introspect`, `query`, `status`) already use
+  it, so they work on Windows out of the box.
+- Do NOT "fix" this by switching the global event loop policy:
+  `WindowsSelectorEventLoopPolicy` is deprecated for removal in Python
+  3.16, and a selector loop on Windows cannot serve asyncio subprocess or
+  pipe I/O, which would break other parts of the process.
+
 ## Search Scope
 
 - Use `rg` for repository searches; never use `grep`.

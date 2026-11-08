@@ -127,8 +127,8 @@ class TestPostgresNamedConnectionsIntegration:
             {},
         )
         assert isinstance(config, PostgresConnectionConfig)
-        assert config.host == "db-dev-1-n.rho.im"
-        assert config.port == 15441
+        assert config.host == "localhost"
+        assert config.port == 5432
         assert config.database == "test_db"
         assert config.sslmode == "prefer"
 

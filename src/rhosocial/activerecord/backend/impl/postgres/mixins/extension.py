@@ -26,6 +26,13 @@ class PostgresExtensionMixin:
         The capability for the ``introspect extensions`` family. Declared
         beside the extension detection it describes, so a caller can ask
         which extensions are installed rather than assuming.
+
+        This is PostgreSQL's own spelling, not the core one: ``extension``
+        means a ``CREATE EXTENSION`` package here, and no engine's flavour of
+        the concept is interchangeable with it. The core spelling lives beside
+        the other cross-engine probes, on the introspection capability mixin,
+        and delegates here -- one capability, one answer, two admissible
+        spellings, neither protocol declaring the other's method.
         """
         return True
 
