@@ -4,11 +4,14 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.datetime import DatetimeDiffExpression
+    from rhosocial.activerecord.backend.expression.datetime import (
+        DatetimeDiffExpression,
+        SecondsBetweenExpression,
+    )
 
 
 class PostgresDateTimeMixin:
-    """PostgreSQL datetime diff expression formatting."""
+    """PostgreSQL datetime diff and elapsed-seconds formatting."""
 
     def format_datetime_diff_expression(self, expr: "DatetimeDiffExpression") -> Tuple[str, tuple]:
         start_sql, start_params = expr.start.to_sql()
@@ -39,3 +42,21 @@ class PostgresDateTimeMixin:
             )
             params = end_params + start_params
         return self.apply_alias(sql, params, expr)
+
+    def format_seconds_between_expression(
+        self, expr: "SecondsBetweenExpression"
+    ) -> Tuple[str, tuple]:
+        """Render signed, fractional seconds from ``start`` to ``end``.
+
+        ``EXTRACT(EPOCH FROM interval)`` is a ``numeric``, so the subtraction
+        keeps microseconds and the sign is whatever ``end - start`` yields:
+        an end before the start is negative, equal instants are exactly zero.
+
+        The SQL writes ``end`` first, so its bind parameters are collected
+        first as well -- bind order follows the SQL, not the constructor's
+        argument order.
+        """
+        start_sql, start_params = expr.start.to_sql()
+        end_sql, end_params = expr.end.to_sql()
+        sql = f"EXTRACT(EPOCH FROM ({end_sql} - {start_sql}))"
+        return self.apply_alias(sql, end_params + start_params, expr)

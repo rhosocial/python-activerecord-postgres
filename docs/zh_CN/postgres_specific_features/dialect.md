@@ -324,11 +324,30 @@ expr = DatetimeAddExpression(dialect, Column(dialect, "created_at"),
                              IntervalExpression(dialect, 30, IntervalUnit.DAY))
 # 生成: "created_at" + INTERVAL '30' DAY
 
-# 日期差
+# 日期差（按整天计数）
 expr = DatetimeDiffExpression(dialect, DateTimeField.DAY,
                               Column(dialect, "start"), Column(dialect, "end"))
 # 生成: EXTRACT(EPOCH FROM "end" - "start") / 86400
 ```
+
+`date_diff` 按指定的整数单位计数。如果需要带符号、保留小数的秒数，使用
+`seconds_between`：
+
+```python
+from rhosocial.activerecord.backend.expression import Column, seconds_between
+
+elapsed = seconds_between(
+    dialect,
+    Column(dialect, "queued_at"),
+    Column(dialect, "started_at"),
+).as_("queue_seconds")
+# 生成: EXTRACT(EPOCH FROM ("started_at" - "queued_at")) AS "queue_seconds"
+```
+
+结果始终是 `end - start` 的秒数：`end` 晚于 `start` 为正，早于 `start` 为负，
+同一时刻为 `0`。PostgreSQL 的 `EXTRACT(EPOCH FROM interval)` 返回 `numeric`，
+因此时间戳中的微秒部分会保留；需要整数秒时请调用方显式取整。
+`started_at.seconds_between(ended_at)` 在时间戳列上提出同一个问题。
 
 ## SQL/XML 标准表达式
 
