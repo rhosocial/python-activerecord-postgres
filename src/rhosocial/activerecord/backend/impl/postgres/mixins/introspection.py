@@ -54,6 +54,12 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresMaterializedViewListQueryStatement,
         PostgresSequenceInfoQueryStatement,
         PostgresSequenceListQueryStatement,
+        PostgresPartitionListQueryStatement,
+        PostgresRoutineListQueryStatement,
+        PostgresTypeListQueryStatement,
+        PostgresOperatorListQueryStatement,
+        PostgresOperatorClassListQueryStatement,
+        PostgresOperatorFamilyListQueryStatement,
         PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryStatement,
         PostgresIndexesSizeFunction,
@@ -136,6 +142,44 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         """PostgreSQL supports trigger introspection via pg_trigger."""
         return True
 
+    def supports_partition_introspection(self) -> bool:
+        """PostgreSQL answers child partitions from ``pg_inherits``.
+
+        Declarative partitioning arrived in PostgreSQL 10, which is also when
+        the catalog began carrying ``pg_get_partkeydef`` and
+        ``relpartbound`` for it. Before that a partitioned table cannot exist,
+        so the family is absent rather than empty.
+        """
+        return self.supports_table_partitioning()
+
+    def supports_partition_info(self) -> bool:
+        """Core's name for the partition family, delegating to PostgreSQL's.
+
+        Core declares the probe; this backend answers it. Kept as a delegation
+        rather than a second ``True`` so both spellings are one fact.
+        """
+        return self.supports_partition_introspection()
+
+    def supports_routine_introspection(self) -> bool:
+        """PostgreSQL supports routine introspection via ``pg_proc``."""
+        return True
+
+    def supports_type_introspection(self) -> bool:
+        """PostgreSQL supports type introspection via ``pg_type``/``pg_enum``."""
+        return True
+
+    def supports_operator_introspection(self) -> bool:
+        """PostgreSQL supports operator introspection via ``pg_operator``."""
+        return True
+
+    def supports_operator_class_introspection(self) -> bool:
+        """PostgreSQL supports operator-class introspection via ``pg_opclass``."""
+        return True
+
+    def supports_operator_family_introspection(self) -> bool:
+        """PostgreSQL supports operator-family introspection via ``pg_opfamily``."""
+        return True
+
     def supports_table_storage_introspection(self) -> bool:
         """PostgreSQL reports each table's storage split.
 
@@ -212,14 +256,17 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         return True
 
     def supports_ddl_extraction(self) -> bool:
-        """PostgreSQL's DDL text is assembled here, not retrieved natively.
+        """False: no DDL text is produced for an ordinary PostgreSQL table.
 
         ``pg_get_expr`` and ``pg_get_viewdef`` recover expressions, but a
         faithful ``CREATE TABLE`` needs storage parameters, tablespace and
-        per-column clauses the catalog keeps only in parts. The honest answer
-        is an assembly marked ``native=False``.
+        per-column clauses the catalog keeps only in parts. This backend does
+        not reassemble them yet, so advertising the family would promise text
+        the answer cannot produce. The probe stays False until a real
+        assembly exists; a caller then gets a refusal rather than a successful
+        run with nothing in it.
         """
-        return True
+        return False
 
     def supports_ddl_extraction_native(self) -> bool:
         """False: PostgreSQL has no single native DDL retrieval call.
@@ -920,6 +967,20 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             self._catalog_column("numeric_scale", "ic", alias="numeric_scale"),
             self._catalog_column("datetime_precision", "ic", alias="datetime_precision"),
         ]
+        # Identity columns arrived in PostgreSQL 10 and generated columns in
+        # 12. A 9.x server has neither catalog column, and asking for it would
+        # fail the whole query; the columns are therefore projected only when
+        # the server in front of us has them. The parser reads an absent
+        # column as "no identity/generation" -- which on those releases is the
+        # truth, because the feature does not exist there.
+        if self.version_at_least((10, 0, 0)):
+            projection.append(
+                self._catalog_column("attidentity", "a", alias="identity_kind")
+            )
+        if self.version_at_least((12, 0, 0)):
+            projection.append(
+                self._catalog_column("attgenerated", "a", alias="generated_kind")
+            )
 
         attribute_join = JoinClause(
             self,
@@ -1664,61 +1725,48 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         )
 
     def _sequence_source(self, include_pg_sequences: bool = True):
-        """``information_schema.sequences s`` with ``pg_sequences p`` beside it.
+        """The relation the sequence listing reads its objects from.
 
-        The standard view is the object list: it exists on every server this
-        backend supports. ``pg_sequences`` carries the state the standard view
-        omits, and arrived in PostgreSQL 10, so it is joined only when the
-        caller says the server has it. The join is a LEFT JOIN because
-        ``pg_sequences`` omits sequences the current role cannot read; those
-        rows must still be listed, with the withheld columns as NULL.
+        ``pg_sequences`` is both the object list and the attribute source on
+        PostgreSQL 10+: it lists identity sequences, which
+        ``information_schema.sequences`` does not. On 9.x the catalog view does
+        not exist and identity columns do not either, so the SQL-standard view
+        is the object list; the runtime columns are reported absent rather
+        than guessed.
         """
-        from rhosocial.activerecord.backend.expression import (
-            ComparisonPredicate,
-            JoinClause,
-            LogicalPredicate,
-        )
-
-        sequences = self._catalog_relation("sequences", "s", schema="information_schema")
-        if not include_pg_sequences:
-            return sequences
-
-        return JoinClause(
-            self,
-            left_table=sequences,
-            right_table=self._catalog_relation("pg_sequences", "p"),
-            join_type="LEFT JOIN",
-            condition=LogicalPredicate(
-                self,
-                "AND",
-                ComparisonPredicate(
-                    self,
-                    "eq",
-                    self._catalog_column("sequence_schema", "s"),
-                    self._catalog_column("schemaname", "p"),
-                ),
-                ComparisonPredicate(
-                    self,
-                    "eq",
-                    self._catalog_column("sequence_name", "s"),
-                    self._catalog_column("sequencename", "p"),
-                ),
-            ),
-        )
+        if include_pg_sequences:
+            return self._catalog_relation("pg_sequences", "p")
+        return self._catalog_relation("sequences", "s", schema="information_schema")
 
     def _sequence_projection(self, include_pg_sequences: bool = True) -> "list":
-        """The sequence row shape.
+        """The sequence row shape, in the columns the chosen source has.
 
-        ``information_schema`` reports the numeric attributes as
-        ``character_data``, so each is cast to ``bigint`` -- the type the
-        server actually stores -- rather than left for the caller to parse.
+        ``pg_sequences`` already types its numeric columns as ``bigint``; the
+        standard view reports them as ``character_data``, so on 9.x each is
+        cast to ``bigint`` -- the type the server actually stores -- rather
+        than left for the caller to parse. The projection aliases both shapes
+        to the same names, which is what lets one parser read either row.
         """
         from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        if include_pg_sequences:
+            return [
+                self._catalog_column("schemaname", "p", alias="schema_name"),
+                self._catalog_column("sequencename", "p", alias="sequence_name"),
+                self._catalog_column("data_type", "p", alias="data_type"),
+                self._catalog_column("start_value", "p", alias="start_value"),
+                self._catalog_column("min_value", "p", alias="minimum_value"),
+                self._catalog_column("max_value", "p", alias="maximum_value"),
+                self._catalog_column("increment_by", "p", alias="increment"),
+                self._catalog_column("cycle", "p", alias="cycle"),
+                self._catalog_column("cache_size", "p", alias="cache_size"),
+                self._catalog_column("last_value", "p", alias="last_value"),
+            ]
 
         def numeric(name: str):
             return self._catalog_column(name, "s").cast(BigIntType(self))
 
-        projection = [
+        return [
             self._catalog_column("sequence_schema", "s", alias="schema_name"),
             self._catalog_column("sequence_name", "s", alias="sequence_name"),
             self._catalog_column("data_type", "s", alias="data_type"),
@@ -1728,14 +1776,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             numeric("increment").as_("increment"),
             self._catalog_column("cycle_option", "s", alias="cycle"),
         ]
+
+    @staticmethod
+    def _sequence_identity_columns(include_pg_sequences: bool) -> "tuple":
+        """The schema/name columns and their alias for the chosen source."""
         if include_pg_sequences:
-            projection.extend(
-                [
-                    self._catalog_column("cache_size", "p", alias="cache_size"),
-                    self._catalog_column("last_value", "p", alias="last_value"),
-                ]
-            )
-        return projection
+            return "p", "schemaname", "sequencename"
+        return "s", "sequence_schema", "sequence_name"
 
     def format_sequence_list_query_statement(
         self, expr: "PostgresSequenceListQueryStatement"
@@ -1753,6 +1800,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         params = expr.get_params()
         schema = params.get("schema") or self.default_schema
         include_pg_sequences = params.get("include_pg_sequences", True)
+        alias, schema_column, name_column = self._sequence_identity_columns(
+            include_pg_sequences
+        )
 
         return self._catalog_select(
             self._sequence_projection(include_pg_sequences),
@@ -1761,11 +1811,11 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 ComparisonPredicate(
                     self,
                     "eq",
-                    self._catalog_column("sequence_schema", "s"),
+                    self._catalog_column(schema_column, alias),
                     self._catalog_value(schema),
                 )
             ],
-            [self._catalog_column("sequence_name", "s")],
+            [self._catalog_column(name_column, alias)],
         )
 
     def format_sequence_info_query_statement(
@@ -1785,6 +1835,9 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         sequence_name = params.get("sequence_name", "")
         schema = params.get("schema") or self.default_schema
         include_pg_sequences = params.get("include_pg_sequences", True)
+        alias, schema_column, name_column = self._sequence_identity_columns(
+            include_pg_sequences
+        )
 
         return self._catalog_select(
             self._sequence_projection(include_pg_sequences),
@@ -1793,13 +1846,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 ComparisonPredicate(
                     self,
                     "eq",
-                    self._catalog_column("sequence_schema", "s"),
+                    self._catalog_column(schema_column, alias),
                     self._catalog_value(schema),
                 ),
                 ComparisonPredicate(
                     self,
                     "eq",
-                    self._catalog_column("sequence_name", "s"),
+                    self._catalog_column(name_column, alias),
                     self._catalog_value(sequence_name),
                 ),
             ],
@@ -3034,6 +3087,859 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             self._catalog_column("classid", "d").as_("referenced_type"),
         ]
         return self._catalog_select(projections, source, conditions, None)
+
+    # ========== Schema-object families (partitions, routines, types, operators)
+    #
+    # Every statement below is built from the same catalog node helpers the
+    # families above use: ``_catalog_relation`` for the relation, ``_catalog_column``
+    # for the column, ``_catalog_value`` for caller data and ``_catalog_literal``
+    # for a catalog fact. The projection aliases are the parser's contract.
+
+    @staticmethod
+    def _type_name_call(
+        mixin,
+        oid_column,
+        alias: Optional[str] = None,
+        typmod_column=None,
+    ):
+        """``pg_catalog.format_type(oid, typmod)`` for one catalog row."""
+        from rhosocial.activerecord.backend.expression import FunctionCall
+
+        args = [oid_column]
+        args.append(typmod_column if typmod_column is not None else mixin._catalog_literal(None))
+        return FunctionCall(mixin, "pg_catalog.format_type", *args, alias=alias)
+
+    @staticmethod
+    def _optional_type_name_call(
+        mixin,
+        oid_column,
+        alias: Optional[str] = None,
+    ):
+        """``format_type(oid, NULL)``, or NULL when the OID position is absent.
+
+        An operator's left or right operand type is OID 0 when the operator
+        has no operand there. ``format_type(0, NULL)`` would answer with a
+        made-up type, so the absence is kept as NULL.
+        """
+        from rhosocial.activerecord.backend.expression import ComparisonPredicate
+        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+
+        return CaseExpression(
+            mixin,
+            cases=[
+                (
+                    ComparisonPredicate(
+                        mixin, "eq", oid_column, mixin._catalog_literal(0)
+                    ),
+                    mixin._catalog_literal(None),
+                )
+            ],
+            else_result=mixin._type_name_call(mixin, oid_column),
+            alias=alias,
+        )
+
+    def format_partition_list_query_statement(
+        self, expr: "PostgresPartitionListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the child-partition listing for one partitioned table.
+
+        The parent is named by the caller; ``pg_get_partkeydef`` names its
+        strategy and key, and ``pg_get_expr(relpartbound)`` spells each child's
+        bound. A partitioned parent is ``relkind = 'p'``; ordinary inheritance
+        (``relkind = 'r'``) is not declarative partitioning and is deliberately
+        not listed here.
+
+        Args:
+            expr: Partition list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+
+        Raises:
+            UnsupportedFeatureError: The connected server predates PostgreSQL 10.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+        from rhosocial.activerecord.backend.expression.types import BigIntType
+
+        if not self.supports_table_partitioning():
+            raise UnsupportedFeatureError(
+                self.name,
+                "partition introspection",
+                "Partition introspection requires PostgreSQL 10+.",
+            )
+
+        params = expr.get_params()
+        table_name = params.get("table_name", "")
+        schema = params.get("schema") or self.default_schema
+        include_partitions = params.get("include_partitions", True)
+        include_statistics = params.get("include_statistics", True)
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "pc"),
+            right_table=self._catalog_relation("pg_namespace", "pn"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "pc"),
+                self._catalog_column("oid", "pn"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_inherits", "i"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("inhparent", "i"),
+                self._catalog_column("oid", "pc"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_class", "ch"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "ch"),
+                self._catalog_column("inhrelid", "i"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("relname", "pc", alias="parent_table"),
+            FunctionCall(
+                self,
+                "pg_get_partkeydef",
+                self._catalog_column("oid", "pc"),
+                alias="partition_key",
+            ),
+        ]
+        if include_partitions:
+            projection.extend(
+                [
+                    self._catalog_column("relname", "ch", alias="name"),
+                    FunctionCall(
+                        self,
+                        "pg_get_expr",
+                        self._catalog_column("relpartbound", "ch"),
+                        self._catalog_column("oid", "ch"),
+                        alias="bound",
+                    ),
+                    FunctionCall(
+                        self,
+                        "pg_catalog.obj_description",
+                        self._catalog_column("oid", "ch"),
+                        alias="comment",
+                    ),
+                ]
+            )
+            if include_statistics:
+                projection.extend(
+                    [
+                        self._catalog_column("reltuples", "ch")
+                        .cast(BigIntType(self))
+                        .as_("row_count"),
+                        FunctionCall(
+                            self,
+                            "pg_total_relation_size",
+                            self._catalog_column("oid", "ch"),
+                            alias="size_bytes",
+                        ),
+                    ]
+                )
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relname", "pc"), self._catalog_value(table_name)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "pn"), self._catalog_value(schema)
+            ),
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("relkind", "pc"), self._catalog_literal("p")
+            ),
+        ]
+        order_by = [self._catalog_column("relname", "ch")] if include_partitions else None
+        return self._catalog_select(projection, source, conditions, order_by)
+
+    def format_routine_list_query_statement(
+        self, expr: "PostgresRoutineListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the routine listing from ``pg_proc``.
+
+        ``prokind`` distinguishes functions, procedures, aggregates and window
+        functions; ``pg_get_function_identity_arguments`` is the overload
+        identity, and ``pg_get_function_result`` the return type. The language
+        is joined from ``pg_language`` because the catalog stores its OID.
+
+        Args:
+            expr: Routine list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        routine_name = params.get("routine_name")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_proc", "p"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("pronamespace", "p"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_language", "l"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("prolang", "p"),
+                self._catalog_column("oid", "l"),
+            ),
+        )
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            )
+        ]
+        if routine_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("proname", "p"),
+                    self._catalog_value(routine_name),
+                )
+            )
+
+        if self.version_at_least((11, 0, 0)):
+            kind_projection = self._catalog_column("prokind", "p", alias="kind")
+        else:
+            # ``prokind`` arrived in PostgreSQL 11; before it the same fact
+            # was two booleans. A procedure cannot exist on those releases,
+            # so the two old flags answer the whole question they had.
+            from rhosocial.activerecord.backend.expression.advanced_functions import (
+                CaseExpression,
+            )
+
+            kind_projection = CaseExpression(
+                self,
+                cases=[
+                    (
+                        self._catalog_column("proiswindow", "p"),
+                        self._catalog_literal("w"),
+                    ),
+                    (
+                        self._catalog_column("proisagg", "p"),
+                        self._catalog_literal("a"),
+                    ),
+                ],
+                else_result=self._catalog_literal("f"),
+                alias="kind",
+            )
+
+        projection = [
+            self._catalog_column("proname", "p", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            kind_projection,
+            FunctionCall(
+                self,
+                "pg_get_function_identity_arguments",
+                self._catalog_column("oid", "p"),
+                alias="identity_arguments",
+            ),
+            FunctionCall(
+                self,
+                "pg_get_function_result",
+                self._catalog_column("oid", "p"),
+                alias="result_type",
+            ),
+            self._catalog_column("lanname", "l", alias="language"),
+            self._catalog_column("provolatile", "p", alias="volatility"),
+            self._catalog_column("prosecdef", "p", alias="security_definer"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "p"),
+                self._catalog_literal("pg_proc"),
+                alias="comment",
+            ),
+        ]
+        return self._catalog_select(
+            projection,
+            source,
+            conditions,
+            [
+                self._catalog_column("nspname", "n"),
+                self._catalog_column("proname", "p"),
+                self._catalog_column("oid", "p"),
+            ],
+        )
+
+    def format_type_list_query_statement(
+        self, expr: "PostgresTypeListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the user-type listing (enum, domain, composite, range).
+
+        One query answers the whole family: ``pg_type.typtype`` names the kind,
+        ``pg_enum`` supplies the labels in their declared order, and
+        ``pg_attribute`` supplies a composite's fields. The joins are LEFT
+        joins because a type has labels *or* fields, never both, and the parser
+        groups the rows back into one record per type.
+
+        A multirange's subtype lives on the row whose ``rngmultitypid`` points
+        at it, a column that arrived in PostgreSQL 14; the join is written for
+        the server in front of us and omits that edge on older releases.
+
+        Args:
+            expr: Type list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+        )
+        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.predicates import InPredicate
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        type_name = params.get("type_name")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_type", "t"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("typnamespace", "t"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_enum", "e"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("enumtypid", "e"),
+                self._catalog_column("oid", "t"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_attribute", "a"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "a"),
+                    self._catalog_column("typrelid", "t"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "gt",
+                    self._catalog_column("attnum", "a"),
+                    self._catalog_literal(0),
+                ),
+                LogicalPredicate(self, "NOT", self._catalog_column("attisdropped", "a")),
+            ),
+        )
+        has_range_types = self.version_at_least((9, 2, 0))
+        if has_range_types:
+            if self.supports_multirange_type():
+                range_condition = LogicalPredicate(
+                    self,
+                    "OR",
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("rngtypid", "r"),
+                        self._catalog_column("oid", "t"),
+                    ),
+                    ComparisonPredicate(
+                        self,
+                        "eq",
+                        self._catalog_column("rngmultitypid", "r"),
+                        self._catalog_column("oid", "t"),
+                    ),
+                )
+            else:
+                range_condition = ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("rngtypid", "r"),
+                    self._catalog_column("oid", "t"),
+                )
+            source = source.join(
+                self._catalog_relation("pg_range", "r"),
+                join_type="LEFT",
+                condition=range_condition,
+            )
+        source = source.join(
+            self._catalog_relation("pg_class", "c"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "c"),
+                self._catalog_column("typrelid", "t"),
+            ),
+        )
+
+        base_type_cases = [
+            (
+                ComparisonPredicate(
+                    self, "eq", self._catalog_column("typtype", "t"), self._catalog_literal("d")
+                ),
+                self._type_name_call(
+                    self,
+                    self._catalog_column("typbasetype", "t"),
+                    typmod_column=self._catalog_column("typtypmod", "t"),
+                ),
+            ),
+        ]
+        if has_range_types:
+            base_type_cases.append(
+                (
+                    InPredicate(
+                        self,
+                        self._catalog_column("typtype", "t"),
+                        self._catalog_literal(("r", "m")),
+                    ),
+                    self._type_name_call(
+                        self,
+                        self._catalog_column("rngsubtype", "r"),
+                    ),
+                )
+            )
+        base_type = CaseExpression(
+            self,
+            cases=base_type_cases,
+            else_result=self._catalog_literal(None),
+            alias="base_type",
+        )
+
+        projection = [
+            self._catalog_column("typname", "t", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("typtype", "t", alias="type_code"),
+            self._catalog_column("enumlabel", "e", alias="label"),
+            self._catalog_column("enumsortorder", "e", alias="label_order"),
+            self._catalog_column("attname", "a", alias="field_name"),
+            self._catalog_column("attnum", "a", alias="field_order"),
+            base_type,
+            CaseExpression(
+                self,
+                cases=[
+                    (
+                        ComparisonPredicate(
+                            self,
+                            "eq",
+                            self._catalog_column("typtype", "t"),
+                            self._catalog_literal("d"),
+                        ),
+                        self._catalog_column("typnotnull", "t"),
+                    )
+                ],
+                else_result=self._catalog_literal(None),
+                alias="domain_not_null",
+            ),
+            self._catalog_column("typdefault", "t", alias="domain_default"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "t"),
+                self._catalog_literal("pg_type"),
+                alias="comment",
+            ),
+            self._catalog_column("relkind", "c", alias="relation_kind"),
+            self._catalog_column("relname", "c", alias="relation_name"),
+        ]
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            ),
+            InPredicate(
+                self,
+                self._catalog_column("typtype", "t"),
+                self._catalog_literal(
+                    ("e", "d", "c", "r", "m")
+                    if self.supports_multirange_type()
+                    else ("e", "d", "c", "r")
+                ),
+            ),
+        ]
+        if type_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("typname", "t"),
+                    self._catalog_value(type_name),
+                )
+            )
+
+        return self._catalog_select(
+            projection,
+            source,
+            conditions,
+            [
+                self._catalog_column("nspname", "n"),
+                self._catalog_column("typname", "t"),
+                self._catalog_column("enumsortorder", "e"),
+                self._catalog_column("attnum", "a"),
+            ],
+        )
+
+    def format_operator_list_query_statement(
+        self, expr: "PostgresOperatorListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the operator listing from ``pg_operator``.
+
+        ``oprkind`` names the shape (binary/prefix/postfix); an operand the
+        operator does not have is OID 0 and is reported as NULL rather than
+        formatted as a type. The implementing function is joined by OID and
+        the owner from ``pg_roles``.
+
+        Args:
+            expr: Operator list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        operator_name = params.get("operator_name")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_operator", "o"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oprnamespace", "o"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_proc", "p"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oprcode", "o"),
+                self._catalog_column("oid", "p"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_roles", "r"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oprowner", "o"),
+                self._catalog_column("oid", "r"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("oprname", "o", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("oprkind", "o", alias="operator_kind"),
+            self._optional_type_name_call(
+                self, self._catalog_column("oprleft", "o"), alias="left_type"
+            ),
+            self._optional_type_name_call(
+                self, self._catalog_column("oprright", "o"), alias="right_type"
+            ),
+            self._type_name_call(
+                self, self._catalog_column("oprresult", "o"), alias="result_type"
+            ),
+            self._catalog_column("proname", "p", alias="function_name"),
+            self._catalog_column("rolname", "r", alias="owner"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "o"),
+                self._catalog_literal("pg_operator"),
+                alias="comment",
+            ),
+        ]
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            )
+        ]
+        if operator_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("oprname", "o"),
+                    self._catalog_value(operator_name),
+                )
+            )
+
+        return self._catalog_select(
+            projection,
+            source,
+            conditions,
+            [
+                self._catalog_column("nspname", "n"),
+                self._catalog_column("oprname", "o"),
+                self._catalog_column("oid", "o"),
+            ],
+        )
+
+    def format_operator_class_list_query_statement(
+        self, expr: "PostgresOperatorClassListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the operator-class listing from ``pg_opclass``.
+
+        ``opcmethod`` is the index access method (btree, gist, ...), joined
+        through ``pg_am``; ``opcintype`` is the input type and ``opckeytype``
+        the storage key type, absent when zero.
+
+        Args:
+            expr: Operator-class list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        operator_class_name = params.get("operator_class_name")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_opclass", "oc"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opcnamespace", "oc"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_am", "am"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opcmethod", "oc"),
+                self._catalog_column("oid", "am"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_opfamily", "f"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opcfamily", "oc"),
+                self._catalog_column("oid", "f"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_roles", "r"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opcowner", "oc"),
+                self._catalog_column("oid", "r"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("opcname", "oc", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("amname", "am", alias="method"),
+            self._type_name_call(
+                self, self._catalog_column("opcintype", "oc"), alias="input_type"
+            ),
+            self._optional_type_name_call(
+                self, self._catalog_column("opckeytype", "oc"), alias="key_type"
+            ),
+            self._catalog_column("opcdefault", "oc", alias="is_default"),
+            self._catalog_column("opfname", "f", alias="family"),
+            self._catalog_column("rolname", "r", alias="owner"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "oc"),
+                self._catalog_literal("pg_opclass"),
+                alias="comment",
+            ),
+        ]
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            )
+        ]
+        if operator_class_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("opcname", "oc"),
+                    self._catalog_value(operator_class_name),
+                )
+            )
+
+        return self._catalog_select(
+            projection,
+            source,
+            conditions,
+            [
+                self._catalog_column("nspname", "n"),
+                self._catalog_column("opcname", "oc"),
+                self._catalog_column("oid", "oc"),
+            ],
+        )
+
+    def format_operator_family_list_query_statement(
+        self, expr: "PostgresOperatorFamilyListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the operator-family listing from ``pg_opfamily``.
+
+        Args:
+            expr: Operator-family list expression with parameters.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        operator_family_name = params.get("operator_family_name")
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_opfamily", "f"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opfnamespace", "f"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_am", "am"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opfmethod", "f"),
+                self._catalog_column("oid", "am"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_roles", "r"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("opfowner", "f"),
+                self._catalog_column("oid", "r"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("opfname", "f", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("amname", "am", alias="method"),
+            self._catalog_column("rolname", "r", alias="owner"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "f"),
+                self._catalog_literal("pg_opfamily"),
+                alias="comment",
+            ),
+        ]
+
+        conditions = [
+            ComparisonPredicate(
+                self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
+            )
+        ]
+        if operator_family_name:
+            conditions.append(
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("opfname", "f"),
+                    self._catalog_value(operator_family_name),
+                )
+            )
+
+        return self._catalog_select(
+            projection,
+            source,
+            conditions,
+            [
+                self._catalog_column("nspname", "n"),
+                self._catalog_column("opfname", "f"),
+                self._catalog_column("oid", "f"),
+            ],
+        )
 
     def format_ddl_statement_query_statement(
         self, expr: "DDLStatementQueryStatement"

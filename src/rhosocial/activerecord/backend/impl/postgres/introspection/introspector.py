@@ -24,9 +24,10 @@ Design principle: Sync and Async are separate and cannot coexist.
 - AsyncPostgreSQLIntrospector: for asynchronous backends
 """
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import json
+import re
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
@@ -61,7 +62,19 @@ from .status_introspector import (
     PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
 )
-from .types import SequenceInfo
+from .types import (
+    SequenceInfo,
+    PostgresPartitionStrategy,
+    PostgresPartitionBound,
+    PostgresPartitionInfo,
+    PostgresRoutineKind,
+    PostgresRoutineInfo,
+    PostgresTypeKind,
+    PostgresTypeInfo,
+    PostgresOperatorInfo,
+    PostgresOperatorClassInfo,
+    PostgresOperatorFamilyInfo,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..expression.introspection import (
@@ -69,6 +82,12 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresMaterializedViewListQueryStatement,
         PostgresSequenceInfoQueryStatement,
         PostgresSequenceListQueryStatement,
+        PostgresPartitionListQueryStatement,
+        PostgresRoutineListQueryStatement,
+        PostgresTypeListQueryStatement,
+        PostgresOperatorListQueryStatement,
+        PostgresOperatorClassListQueryStatement,
+        PostgresOperatorFamilyListQueryStatement,
     )
     from ..expression.status import PostgresExtensionListQuery
 
@@ -220,6 +239,20 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             return int(live_rows)
         return None
 
+    @staticmethod
+    def _is_serial_default(default_value: Any) -> bool:
+        """Whether a column default is the ``nextval(...)`` a SERIAL carries.
+
+        PostgreSQL spells a SERIAL column's default as
+        ``nextval('table_column_seq'::regclass)``. That is the only signal on
+        such a column -- it has no ``attidentity`` -- so recognising it is
+        what lets a caller tell a database-generated primary key apart from
+        one the application supplies.
+        """
+        if not isinstance(default_value, str):
+            return False
+        return default_value.strip().lower().startswith("nextval(")
+
     def parse_columns(self, rows: List[Dict[str, Any]], table_name: str, schema: str) -> List[IntrospectionColumnInfo]:
         columns = []
         for row in rows:
@@ -227,6 +260,15 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             # Extract base type (remove array brackets, size specifiers)
             base_type = data_type.split("[")[0].split("(")[0].strip()
             parsed = DataType.parse_data_type_str(self._backend.dialect, data_type)
+            default_value = row.get("default_value")
+            identity_kind = row.get("identity_kind") or ""
+            generated_kind = row.get("generated_kind") or ""
+            # Identity columns have attidentity and no pg_attrdef row; SERIAL
+            # columns have the nextval default and no identity. Both mean the
+            # database generates the value, and both are what a model
+            # generator needs to set __pk_auto_generated__ correctly.
+            is_auto_increment = bool(identity_kind) or self._is_serial_default(default_value)
+            is_generated = bool(generated_kind)
             columns.append(
                 IntrospectionColumnInfo(
                     name=row["column_name"],
@@ -237,8 +279,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     data_type_full=data_type,
                     parsed_data_type=parsed,
                     nullable=ColumnNullable.NULLABLE if row.get("is_nullable") else ColumnNullable.NOT_NULL,
-                    default_value=row.get("default_value"),
+                    default_value=default_value,
                     is_primary_key=row.get("is_primary_key", False),
+                    is_auto_increment=is_auto_increment,
+                    is_generated=is_generated,
+                    generated_expression=default_value if is_generated else None,
                     comment=row.get("comment"),
                     # The four shape attributes information_schema.columns
                     # derives from atttypmod. They are absent for a relation
@@ -248,6 +293,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                     numeric_precision=row.get("numeric_precision"),
                     numeric_scale=row.get("numeric_scale"),
                     datetime_precision=row.get("datetime_precision"),
+                    extra=(
+                        {"identity_kind": identity_kind}
+                        if identity_kind
+                        else {}
+                    ),
                 )
             )
         return columns
@@ -666,6 +716,15 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         value -- neither of which the caller should have to normalise.
         """
         cycle = row.get("cycle")
+        if isinstance(cycle, bool):
+            # ``pg_sequences.cycle`` is a boolean; information_schema's
+            # ``cycle_option`` is the ``YES``/``NO`` text. Both spellings mean
+            # the same fact, so the parser accepts either.
+            cycle_value = cycle
+        elif cycle is None:
+            cycle_value = False
+        else:
+            cycle_value = str(cycle).strip().upper() == "YES"
         return SequenceInfo(
             name=row.get("sequence_name") or default_name,
             schema=row.get("schema_name") or default_schema,
@@ -674,7 +733,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             minimum_value=row.get("minimum_value"),
             maximum_value=row.get("maximum_value"),
             increment=row.get("increment"),
-            cycle=str(cycle).strip().upper() == "YES" if cycle is not None else False,
+            cycle=cycle_value,
             cache_size=row.get("cache_size"),
             last_value=row.get("last_value"),
         )
@@ -733,6 +792,407 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             sequence_name or "*",
             schema=schema,
             extra=str(include_pg_sequences),
+        )
+
+    # ------------------------------------------------------------------ #
+    # Schema-object families: partitions, routines, types, operators
+    # ------------------------------------------------------------------ #
+
+    #: ``FOR VALUES FROM (...) TO (...)`` on a RANGE partition.
+    _RANGE_BOUND = re.compile(r"FOR VALUES FROM\s*\((.+)\)\s*TO\s*\((.+)\)", re.I | re.S)
+    #: ``FOR VALUES IN (...)`` on a LIST partition.
+    _LIST_BOUND = re.compile(r"FOR VALUES IN\s*\((.+)\)", re.I | re.S)
+    #: ``FOR VALUES WITH (MODULUS n, REMAINDER r)`` on a HASH partition.
+    _HASH_BOUND = re.compile(
+        r"FOR VALUES WITH\s*\(\s*MODULUS\s+(\d+)\s*,\s*REMAINDER\s+(\d+)\s*\)",
+        re.I,
+    )
+    #: ``RANGE (created_at)`` / ``LIST (status)`` / ``HASH (user_id)``.
+    _PARTITION_KEY = re.compile(r"(RANGE|LIST|HASH)\s*\((.*)\)", re.I | re.S)
+
+    @staticmethod
+    def _split_top_level(text: str) -> List[str]:
+        """Split a comma-separated SQL fragment outside parentheses/quotes."""
+        parts: List[str] = []
+        current: List[str] = []
+        depth = 0
+        quote: Optional[str] = None
+        for char in text:
+            if quote:
+                current.append(char)
+                if char == quote:
+                    quote = None
+            elif char in ("'", '"'):
+                quote = char
+                current.append(char)
+            elif char == "(":
+                depth += 1
+                current.append(char)
+            elif char == ")":
+                depth = max(depth - 1, 0)
+                current.append(char)
+            elif char == "," and depth == 0:
+                parts.append("".join(current).strip())
+                current = []
+            else:
+                current.append(char)
+        if current:
+            parts.append("".join(current).strip())
+        return [part for part in parts if part]
+
+    @staticmethod
+    def _unquote_bound_value(value: str) -> str:
+        """Strip the SQL quotes a bound literal carries, if it is quoted."""
+        value = value.strip()
+        if len(value) >= 2 and value[0] == "'" and value[-1] == "'":
+            return value[1:-1].replace("''", "'")
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            return value[1:-1].replace('""', '"')
+        return value
+
+    @classmethod
+    def _parse_partition_key(
+        cls, key: Optional[str]
+    ) -> Tuple[PostgresPartitionStrategy, List[str], Optional[str]]:
+        """Split ``pg_get_partkeydef``'s text into strategy and key.
+
+        ``RANGE (created_at)`` is a column list; ``RANGE (date_trunc(...))``
+        is an expression. A key that is not one of those forms is still a
+        partition, so the strategy falls back to ``UNKNOWN`` rather than
+        raising.
+        """
+        if not key:
+            return PostgresPartitionStrategy.UNKNOWN, [], None
+        match = cls._PARTITION_KEY.search(str(key))
+        if match is None:
+            return PostgresPartitionStrategy.UNKNOWN, [], str(key)
+        strategy = {
+            "RANGE": PostgresPartitionStrategy.RANGE,
+            "LIST": PostgresPartitionStrategy.LIST,
+            "HASH": PostgresPartitionStrategy.HASH,
+        }.get(match.group(1).upper(), PostgresPartitionStrategy.UNKNOWN)
+        inner = match.group(2).strip()
+        parts = cls._split_top_level(inner)
+        simple = all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$]*", part) for part in parts)
+        if simple:
+            return strategy, parts, None
+        return strategy, [], inner or None
+
+    @classmethod
+    def _parse_partition_bound(cls, bound: Optional[str]) -> Optional[PostgresPartitionBound]:
+        """Decode the one bound expression ``pg_get_expr(relpartbound)`` gives.
+
+        The text is the engine's own spelling; the types are words, not rows,
+        because a RANGE endpoint is a SQL literal in the catalog and cannot be
+        safely converted without the column's type. ``text`` always carries
+        the original so nothing is lost when a shape is not recognised.
+        """
+        if not bound:
+            return None
+        text = str(bound).strip()
+        if text.upper() == "DEFAULT":
+            return PostgresPartitionBound(text=text)
+        match = cls._RANGE_BOUND.search(text)
+        if match:
+            return PostgresPartitionBound(
+                lower=cls._unquote_bound_value(match.group(1)),
+                upper=cls._unquote_bound_value(match.group(2)),
+                text=text,
+            )
+        match = cls._LIST_BOUND.search(text)
+        if match:
+            return PostgresPartitionBound(
+                values=[
+                    cls._unquote_bound_value(value)
+                    for value in cls._split_top_level(match.group(1))
+                ],
+                text=text,
+            )
+        match = cls._HASH_BOUND.search(text)
+        if match:
+            return PostgresPartitionBound(
+                modulus=int(match.group(1)),
+                remainder=int(match.group(2)),
+                text=text,
+            )
+        return PostgresPartitionBound(text=text)
+
+    def parse_partitions(
+        self,
+        rows: List[Dict[str, Any]],
+        table_name: str,
+        schema: str,
+    ) -> List[PostgresPartitionInfo]:
+        """Turn the parent/child rows into one record per child partition."""
+        partitions: List[PostgresPartitionInfo] = []
+        strategy = PostgresPartitionStrategy.UNKNOWN
+        key_columns: List[str] = []
+        key_expression: Optional[str] = None
+        for row in rows or []:
+            name = row.get("name")
+            if not name:
+                continue
+            if not partitions:
+                strategy, key_columns, key_expression = self._parse_partition_key(
+                    row.get("partition_key")
+                )
+            row_count = row.get("row_count")
+            if row_count is not None and row_count < 0:
+                row_count = None
+            elif row_count is not None:
+                row_count = int(row_count)
+            partitions.append(
+                PostgresPartitionInfo(
+                    table=row.get("parent_table") or table_name,
+                    name=str(name),
+                    schema=row.get("schema_name") or schema,
+                    strategy=strategy,
+                    key_columns=key_columns,
+                    key_expression=key_expression,
+                    parent=row.get("parent_table") or table_name,
+                    bound=self._parse_partition_bound(row.get("bound")),
+                    row_count=row_count,
+                    size_bytes=row.get("size_bytes"),
+                    comment=row.get("comment"),
+                )
+            )
+        return partitions
+
+    @staticmethod
+    def parse_routine(row: Dict[str, Any], default_schema: str) -> PostgresRoutineInfo:
+        """Build one routine record from a ``pg_proc`` row."""
+        kind = {
+            "f": PostgresRoutineKind.FUNCTION,
+            "p": PostgresRoutineKind.PROCEDURE,
+            "a": PostgresRoutineKind.AGGREGATE,
+            "w": PostgresRoutineKind.WINDOW,
+        }.get(row.get("kind"), PostgresRoutineKind.UNKNOWN)
+        volatility = {
+            "i": "immutable",
+            "s": "stable",
+            "v": "volatile",
+        }.get(row.get("volatility"), row.get("volatility"))
+        return PostgresRoutineInfo(
+            name=row.get("name") or "",
+            schema=row.get("schema_name") or default_schema,
+            kind=kind,
+            identity_arguments=row.get("identity_arguments"),
+            result_type=row.get("result_type"),
+            language=row.get("language"),
+            volatility=volatility,
+            security_definer=bool(row.get("security_definer")),
+            comment=row.get("comment"),
+        )
+
+    def parse_routines(
+        self, rows: List[Dict[str, Any]], schema: str
+    ) -> List[PostgresRoutineInfo]:
+        return [self.parse_routine(row, schema) for row in rows or []]
+
+    @staticmethod
+    def parse_types(rows: List[Dict[str, Any]], schema: str) -> List[PostgresTypeInfo]:
+        """Group the type/label/field rows into one record per type.
+
+        The statement joins ``pg_enum`` and ``pg_attribute`` to one type query;
+        each type therefore answers with as many rows as it has labels *or*
+        fields. Grouping by schema and name is what turns those rows back into
+        the record a caller reads.
+        """
+        builders: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        for row in rows or []:
+            key = (row.get("schema_name") or schema, row.get("name") or "")
+            builder = builders.get(key)
+            if builder is None:
+                builder = {"row": row, "labels": [], "fields": []}
+                builders[key] = builder
+            if row.get("label") is not None:
+                builder["labels"].append((row.get("label_order") or 0, row["label"]))
+            if row.get("field_name") is not None:
+                builder["fields"].append((row.get("field_order") or 0, row["field_name"]))
+
+        results: List[PostgresTypeInfo] = []
+        for (type_schema, type_name), builder in builders.items():
+            row = builder["row"]
+            kind = {
+                "e": PostgresTypeKind.ENUM,
+                "d": PostgresTypeKind.DOMAIN,
+                "c": PostgresTypeKind.COMPOSITE,
+                "r": PostgresTypeKind.RANGE,
+                "m": PostgresTypeKind.MULTIRANGE,
+            }.get(row.get("type_code"), PostgresTypeKind.UNKNOWN)
+            extra: Dict[str, Any] = {}
+            if row.get("relation_kind") is not None:
+                extra["relation_kind"] = row["relation_kind"]
+            if row.get("relation_name") is not None:
+                extra["relation_name"] = row["relation_name"]
+            results.append(
+                PostgresTypeInfo(
+                    name=type_name,
+                    schema=type_schema,
+                    kind=kind,
+                    labels=[label for _, label in sorted(builder["labels"])],
+                    fields=[field for _, field in sorted(builder["fields"])],
+                    base_type=row.get("base_type"),
+                    domain_not_null=(
+                        bool(row.get("domain_not_null"))
+                        if row.get("domain_not_null") is not None
+                        else None
+                    ),
+                    domain_default=row.get("domain_default"),
+                    comment=row.get("comment"),
+                    extra=extra,
+                )
+            )
+        return results
+
+    @staticmethod
+    def parse_operator(row: Dict[str, Any], default_schema: str) -> PostgresOperatorInfo:
+        """Build one operator record from a ``pg_operator`` row."""
+        return PostgresOperatorInfo(
+            name=row.get("name") or "",
+            schema=row.get("schema_name") or default_schema,
+            operator_kind={
+                "b": "binary",
+                "l": "prefix",
+                "r": "postfix",
+            }.get(row.get("operator_kind"), row.get("operator_kind")),
+            left_type=row.get("left_type"),
+            right_type=row.get("right_type"),
+            result_type=row.get("result_type"),
+            function_name=row.get("function_name"),
+            owner=row.get("owner"),
+            comment=row.get("comment"),
+        )
+
+    def parse_operators(
+        self, rows: List[Dict[str, Any]], schema: str
+    ) -> List[PostgresOperatorInfo]:
+        return [self.parse_operator(row, schema) for row in rows or []]
+
+    @staticmethod
+    def parse_operator_class(
+        row: Dict[str, Any], default_schema: str
+    ) -> PostgresOperatorClassInfo:
+        """Build one operator-class record from a ``pg_opclass`` row."""
+        return PostgresOperatorClassInfo(
+            name=row.get("name") or "",
+            schema=row.get("schema_name") or default_schema,
+            method=row.get("method"),
+            input_type=row.get("input_type"),
+            key_type=row.get("key_type"),
+            is_default=bool(row.get("is_default")),
+            family=row.get("family"),
+            owner=row.get("owner"),
+            comment=row.get("comment"),
+        )
+
+    def parse_operator_classes(
+        self, rows: List[Dict[str, Any]], schema: str
+    ) -> List[PostgresOperatorClassInfo]:
+        return [self.parse_operator_class(row, schema) for row in rows or []]
+
+    @staticmethod
+    def parse_operator_family(
+        row: Dict[str, Any], default_schema: str
+    ) -> PostgresOperatorFamilyInfo:
+        """Build one operator-family record from a ``pg_opfamily`` row."""
+        return PostgresOperatorFamilyInfo(
+            name=row.get("name") or "",
+            schema=row.get("schema_name") or default_schema,
+            method=row.get("method"),
+            owner=row.get("owner"),
+            comment=row.get("comment"),
+        )
+
+    def parse_operator_families(
+        self, rows: List[Dict[str, Any]], schema: str
+    ) -> List[PostgresOperatorFamilyInfo]:
+        return [self.parse_operator_family(row, schema) for row in rows or []]
+
+    @staticmethod
+    def _schema_family_cache_key(
+        cache,
+        family: str,
+        schema: Optional[str],
+        name: Optional[str] = None,
+        extra: Optional[str] = None,
+    ) -> str:
+        """One cache-key shape for the families that share ``SCHEMA`` scope."""
+        parts = family if not extra else f"{family}:{extra}"
+        return cache.key(
+            IntrospectionScope.SCHEMA,
+            name or "*",
+            schema=schema,
+            extra=parts,
+        )
+
+    def partition_list_statement(
+        self,
+        *,
+        table_name: str,
+        schema: Optional[str],
+        include_partitions: bool = True,
+        include_statistics: bool = True,
+    ) -> "PostgresPartitionListQueryStatement":
+        """Return the statement that lists one table's child partitions."""
+        from ..expression.introspection import PostgresPartitionListQueryStatement
+
+        return PostgresPartitionListQueryStatement(
+            self.dialect,
+            table_name,
+            schema=schema,
+            include_partitions=include_partitions,
+            include_statistics=include_statistics,
+        )
+
+    def routine_list_statement(
+        self, *, schema: Optional[str], routine_name: Optional[str] = None
+    ) -> "PostgresRoutineListQueryStatement":
+        """Return the statement that lists routines in one schema."""
+        from ..expression.introspection import PostgresRoutineListQueryStatement
+
+        return PostgresRoutineListQueryStatement(
+            self.dialect, schema=schema, routine_name=routine_name
+        )
+
+    def type_list_statement(
+        self, *, schema: Optional[str], type_name: Optional[str] = None
+    ) -> "PostgresTypeListQueryStatement":
+        """Return the statement that lists user types in one schema."""
+        from ..expression.introspection import PostgresTypeListQueryStatement
+
+        return PostgresTypeListQueryStatement(
+            self.dialect, schema=schema, type_name=type_name
+        )
+
+    def operator_list_statement(
+        self, *, schema: Optional[str], operator_name: Optional[str] = None
+    ) -> "PostgresOperatorListQueryStatement":
+        """Return the statement that lists operators in one schema."""
+        from ..expression.introspection import PostgresOperatorListQueryStatement
+
+        return PostgresOperatorListQueryStatement(
+            self.dialect, schema=schema, operator_name=operator_name
+        )
+
+    def operator_class_list_statement(
+        self, *, schema: Optional[str], operator_class_name: Optional[str] = None
+    ) -> "PostgresOperatorClassListQueryStatement":
+        """Return the statement that lists operator classes in one schema."""
+        from ..expression.introspection import PostgresOperatorClassListQueryStatement
+
+        return PostgresOperatorClassListQueryStatement(
+            self.dialect, schema=schema, operator_class_name=operator_class_name
+        )
+
+    def operator_family_list_statement(
+        self, *, schema: Optional[str], operator_family_name: Optional[str] = None
+    ) -> "PostgresOperatorFamilyListQueryStatement":
+        """Return the statement that lists operator families in one schema."""
+        from ..expression.introspection import PostgresOperatorFamilyListQueryStatement
+
+        return PostgresOperatorFamilyListQueryStatement(
+            self.dialect, schema=schema, operator_family_name=operator_family_name
         )
 
     # ------------------------------------------------------------------ #
@@ -1022,6 +1482,232 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         return self.get_sequence_info(sequence_name, schema) is not None
 
     # ------------------------------------------------------------------ #
+    # Partitions, routines, types, operators
+    # ------------------------------------------------------------------ #
+
+    def list_partitions(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+        include_partitions: bool = True,
+        include_statistics: bool = True,
+    ) -> List[PostgresPartitionInfo]:
+        """List one partitioned table's child partitions.
+
+        Args:
+            table_name: The partitioned parent table.
+            schema: Schema to inspect. Defaults to the connection default schema.
+            include_partitions: Whether to list the children (default True).
+            include_statistics: Whether to fill each child's row/size (default True).
+
+        Returns:
+            One record per child partition, ordered by name. An empty list is
+            a real answer: the table may be partitioned with no children yet.
+        """
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "partitions", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.partition_list_statement(
+            table_name=table_name,
+            schema=schema,
+            include_partitions=include_partitions,
+            include_statistics=include_statistics,
+        ).to_sql()
+        result = self.parse_partitions(self._executor.execute(sql, params), table_name, target)
+        self._cache.set(key, result)
+        return result
+
+    def list_routines(
+        self,
+        schema: Optional[str] = None,
+        routine_name: Optional[str] = None,
+    ) -> List[PostgresRoutineInfo]:
+        """List functions, procedures, aggregates and window functions.
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            routine_name: Optional name to narrow the listing (overloads are kept).
+
+        Returns:
+            List of PostgresRoutineInfo, ordered by schema, name and OID.
+        """
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "routines", schema, name=routine_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.routine_list_statement(
+            schema=schema, routine_name=routine_name
+        ).to_sql()
+        result = self.parse_routines(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_routine_info(
+        self, routine_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresRoutineInfo]:
+        """Return the first routine named ``routine_name``, or None."""
+        return next(
+            (
+                routine
+                for routine in self.list_routines(
+                    schema=schema, routine_name=routine_name
+                )
+            ),
+            None,
+        )
+
+    def list_types(
+        self,
+        schema: Optional[str] = None,
+        type_name: Optional[str] = None,
+    ) -> List[PostgresTypeInfo]:
+        """List the schema's enum, domain, composite, range and multirange types.
+
+        Args:
+            schema: Schema to inspect. Defaults to the connection default schema.
+            type_name: Optional name to narrow the listing.
+
+        Returns:
+            List of PostgresTypeInfo. A table's row type is included as a
+            composite, with ``extra['relation_kind']`` naming the relation it
+            belongs to.
+        """
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "types", schema, name=type_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.type_list_statement(
+            schema=schema, type_name=type_name
+        ).to_sql()
+        result = self.parse_types(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_type_info(
+        self, type_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresTypeInfo]:
+        """Return the type named ``type_name``, or None."""
+        return next(
+            (
+                type_info
+                for type_info in self.list_types(schema=schema, type_name=type_name)
+            ),
+            None,
+        )
+
+    def list_operators(
+        self,
+        schema: Optional[str] = None,
+        operator_name: Optional[str] = None,
+    ) -> List[PostgresOperatorInfo]:
+        """List the operators in one schema."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operators", schema, name=operator_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_list_statement(
+            schema=schema, operator_name=operator_name
+        ).to_sql()
+        result = self.parse_operators(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_operator_info(
+        self, operator_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorInfo]:
+        """Return the operator named ``operator_name``, or None."""
+        return next(
+            (
+                operator
+                for operator in self.list_operators(
+                    schema=schema, operator_name=operator_name
+                )
+            ),
+            None,
+        )
+
+    def list_operator_classes(
+        self,
+        schema: Optional[str] = None,
+        operator_class_name: Optional[str] = None,
+    ) -> List[PostgresOperatorClassInfo]:
+        """List the operator classes in one schema."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operator-classes", schema, name=operator_class_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_class_list_statement(
+            schema=schema, operator_class_name=operator_class_name
+        ).to_sql()
+        result = self.parse_operator_classes(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_operator_class_info(
+        self, operator_class_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorClassInfo]:
+        """Return the operator class named ``operator_class_name``, or None."""
+        return next(
+            (
+                operator_class
+                for operator_class in self.list_operator_classes(
+                    schema=schema, operator_class_name=operator_class_name
+                )
+            ),
+            None,
+        )
+
+    def list_operator_families(
+        self,
+        schema: Optional[str] = None,
+        operator_family_name: Optional[str] = None,
+    ) -> List[PostgresOperatorFamilyInfo]:
+        """List the operator families in one schema."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operator-families", schema, name=operator_family_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_family_list_statement(
+            schema=schema, operator_family_name=operator_family_name
+        ).to_sql()
+        result = self.parse_operator_families(self._executor.execute(sql, params), target)
+        self._cache.set(key, result)
+        return result
+
+    def get_operator_family_info(
+        self, operator_family_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorFamilyInfo]:
+        """Return the operator family named ``operator_family_name``, or None."""
+        return next(
+            (
+                operator_family
+                for operator_family in self.list_operator_families(
+                    schema=schema, operator_family_name=operator_family_name
+                )
+            ),
+            None,
+        )
+
+    # ------------------------------------------------------------------ #
     # Extension introspection
     # ------------------------------------------------------------------ #
 
@@ -1222,6 +1908,204 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
     ) -> bool:
         """Return True when the named sequence exists (async)."""
         return await self.get_sequence_info(sequence_name, schema) is not None
+
+    # ------------------------------------------------------------------ #
+    # Partitions, routines, types, operators
+    # ------------------------------------------------------------------ #
+
+    async def list_partitions(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+        include_partitions: bool = True,
+        include_statistics: bool = True,
+    ) -> List[PostgresPartitionInfo]:
+        """List one partitioned table's child partitions (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "partitions", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.partition_list_statement(
+            table_name=table_name,
+            schema=schema,
+            include_partitions=include_partitions,
+            include_statistics=include_statistics,
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_partitions(rows, table_name, target)
+        self._cache.set(key, result)
+        return result
+
+    async def list_routines(
+        self,
+        schema: Optional[str] = None,
+        routine_name: Optional[str] = None,
+    ) -> List[PostgresRoutineInfo]:
+        """List PostgreSQL routines (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "routines", schema, name=routine_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.routine_list_statement(
+            schema=schema, routine_name=routine_name
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_routines(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_routine_info(
+        self, routine_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresRoutineInfo]:
+        """Return the first routine named ``routine_name``, or None (async)."""
+        return next(
+            iter(
+                await self.list_routines(
+                    schema=schema, routine_name=routine_name
+                )
+            ),
+            None,
+        )
+
+    async def list_types(
+        self,
+        schema: Optional[str] = None,
+        type_name: Optional[str] = None,
+    ) -> List[PostgresTypeInfo]:
+        """List PostgreSQL user types (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "types", schema, name=type_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.type_list_statement(
+            schema=schema, type_name=type_name
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_types(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_type_info(
+        self, type_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresTypeInfo]:
+        """Return the type named ``type_name``, or None (async)."""
+        return next(
+            iter(
+                await self.list_types(schema=schema, type_name=type_name)
+            ),
+            None,
+        )
+
+    async def list_operators(
+        self,
+        schema: Optional[str] = None,
+        operator_name: Optional[str] = None,
+    ) -> List[PostgresOperatorInfo]:
+        """List PostgreSQL operators (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operators", schema, name=operator_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_list_statement(
+            schema=schema, operator_name=operator_name
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_operators(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_operator_info(
+        self, operator_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorInfo]:
+        """Return the operator named ``operator_name``, or None (async)."""
+        return next(
+            iter(
+                await self.list_operators(
+                    schema=schema, operator_name=operator_name
+                )
+            ),
+            None,
+        )
+
+    async def list_operator_classes(
+        self,
+        schema: Optional[str] = None,
+        operator_class_name: Optional[str] = None,
+    ) -> List[PostgresOperatorClassInfo]:
+        """List PostgreSQL operator classes (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operator-classes", schema, name=operator_class_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_class_list_statement(
+            schema=schema, operator_class_name=operator_class_name
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_operator_classes(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_operator_class_info(
+        self, operator_class_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorClassInfo]:
+        """Return the named operator class, or None (async)."""
+        return next(
+            iter(
+                await self.list_operator_classes(
+                    schema=schema, operator_class_name=operator_class_name
+                )
+            ),
+            None,
+        )
+
+    async def list_operator_families(
+        self,
+        schema: Optional[str] = None,
+        operator_family_name: Optional[str] = None,
+    ) -> List[PostgresOperatorFamilyInfo]:
+        """List PostgreSQL operator families (async counterpart)."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "operator-families", schema, name=operator_family_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.operator_family_list_statement(
+            schema=schema, operator_family_name=operator_family_name
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_operator_families(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def get_operator_family_info(
+        self, operator_family_name: str, schema: Optional[str] = None
+    ) -> Optional[PostgresOperatorFamilyInfo]:
+        """Return the named operator family, or None (async)."""
+        return next(
+            iter(
+                await self.list_operator_families(
+                    schema=schema, operator_family_name=operator_family_name
+                )
+            ),
+            None,
+        )
 
     # ------------------------------------------------------------------ #
     # Extension introspection

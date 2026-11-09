@@ -11,11 +11,25 @@ edited it would be lying about what the server reported.
 """
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.introspection.types import ColumnDataProfile
 
-__all__ = ["SequenceInfo", "PostgresColumnDataProfile"]
+__all__ = [
+    "SequenceInfo",
+    "PostgresColumnDataProfile",
+    "PostgresPartitionStrategy",
+    "PostgresPartitionBound",
+    "PostgresPartitionInfo",
+    "PostgresRoutineKind",
+    "PostgresRoutineInfo",
+    "PostgresTypeKind",
+    "PostgresTypeInfo",
+    "PostgresOperatorInfo",
+    "PostgresOperatorClassInfo",
+    "PostgresOperatorFamilyInfo",
+]
 
 
 @dataclass(frozen=True)
@@ -45,6 +59,203 @@ class SequenceInfo:
     cycle: bool = False
     cache_size: Optional[int] = None
     last_value: Optional[int] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+class PostgresPartitionStrategy(str, Enum):
+    """How PostgreSQL distributes rows across a partitioned table.
+
+    ``RELKIND`` is not the strategy: ``pg_get_partkeydef`` returns the strategy
+    as the leading word of its text (``RANGE (created_at)``), and that is the
+    only place the catalog states it. ``UNKNOWN`` is an answer, not an error --
+    a future strategy this parser does not know is still a partition.
+    """
+
+    RANGE = "range"
+    LIST = "list"
+    HASH = "hash"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class PostgresPartitionBound:
+    """A partition's bound, decoded from ``pg_get_expr(relpartbound)``.
+
+    The bound is text in the catalog. Its shape is one of three forms, and
+    which one applies follows the parent's strategy:
+
+    * ``FOR VALUES FROM (...) TO (...)`` -- ``RANGE``; ``lower`` and ``upper``
+      hold the two endpoints.
+    * ``FOR VALUES IN (...)`` -- ``LIST``; ``values`` holds the members.
+    * ``FOR VALUES WITH (MODULUS n, REMAINDER r)`` -- ``HASH``; ``modulus``
+      and ``remainder`` hold the two numbers.
+
+    ``DEFAULT`` is a partition too, and it fits none of the three. It keeps
+    ``text`` and leaves the typed slots empty, which says "this partition
+    catches what the others do not" rather than inventing a bound.
+    """
+
+    lower: Optional[str] = None
+    upper: Optional[str] = None
+    values: List[str] = field(default_factory=list)
+    modulus: Optional[int] = None
+    remainder: Optional[int] = None
+    text: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class PostgresPartitionInfo:
+    """One child partition of a partitioned PostgreSQL table.
+
+    The parent is the table a model should map to; ``name`` is the physical
+    child. ``strategy`` and ``key_columns`` come from the parent's
+    ``pg_get_partkeydef`` text, and ``bound`` from the child's own
+    ``relpartbound`` expression. ``row_count`` and ``size_bytes`` are the
+    child's own storage facts, when the query was asked for them.
+
+    ``extra`` carries catalog facts this common shape has no slot for, such as
+    the parent OID or the child's ``relkind``.
+    """
+
+    table: str
+    name: str
+    schema: Optional[str] = None
+    strategy: PostgresPartitionStrategy = PostgresPartitionStrategy.UNKNOWN
+    key_columns: List[str] = field(default_factory=list)
+    key_expression: Optional[str] = None
+    parent: Optional[str] = None
+    bound: Optional[PostgresPartitionBound] = None
+    row_count: Optional[int] = None
+    size_bytes: Optional[int] = None
+    comment: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+class PostgresRoutineKind(str, Enum):
+    """What ``pg_proc.prokind`` says a routine is."""
+
+    FUNCTION = "function"
+    PROCEDURE = "procedure"
+    AGGREGATE = "aggregate"
+    WINDOW = "window"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class PostgresRoutineInfo:
+    """One function, procedure, aggregate or window function.
+
+    ``identity_arguments`` is the argument list that identifies the routine
+    among its overloads, as PostgreSQL itself spells it. ``result_type`` is
+    the ``pg_get_function_result`` text; for a procedure it is empty because
+    procedures return no value. ``volatility`` is the catalog's word
+    (``immutable``/``stable``/``volatile``), not a boolean.
+    """
+
+    name: str
+    schema: Optional[str] = None
+    kind: PostgresRoutineKind = PostgresRoutineKind.FUNCTION
+    identity_arguments: Optional[str] = None
+    result_type: Optional[str] = None
+    language: Optional[str] = None
+    volatility: Optional[str] = None
+    security_definer: bool = False
+    comment: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+class PostgresTypeKind(str, Enum):
+    """The user-visible kinds of PostgreSQL type this family reports.
+
+    ``pg_type.typtype`` also has base (``b``) and pseudo (``p``) codes, but
+    the introspection family is about the kinds a schema defines itself:
+    enums, domains, composites, ranges and multiranges. A system base type
+    belongs to ``pg_catalog`` and is not the schema's object.
+    """
+
+    ENUM = "enum"
+    DOMAIN = "domain"
+    COMPOSITE = "composite"
+    RANGE = "range"
+    MULTIRANGE = "multirange"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class PostgresTypeInfo:
+    """One enum, domain, composite, range or multirange type.
+
+    ``labels`` is the enum's ordered value list. ``fields`` is the composite's
+    ordered attribute list -- for a table's row type these are the table's
+    columns, which is why ``extra['relation_kind']`` also travels: it tells a
+    real ``CREATE TYPE ... AS (...)`` (``typrelid`` points at a ``'c'``
+    relation) apart from a table row type (``'r'``/``'p'``/...).
+
+    ``base_type`` is the domain's underlying type or the range's subtype.
+    ``domain_not_null``/``domain_default`` are ``None`` unless the row really
+    is a domain; ``None`` here means "not a domain fact" rather than an
+    unknown one.
+    """
+
+    name: str
+    schema: Optional[str] = None
+    kind: PostgresTypeKind = PostgresTypeKind.UNKNOWN
+    labels: List[str] = field(default_factory=list)
+    fields: List[str] = field(default_factory=list)
+    base_type: Optional[str] = None
+    domain_not_null: Optional[bool] = None
+    domain_default: Optional[str] = None
+    comment: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PostgresOperatorInfo:
+    """One row of ``pg_operator``.
+
+    ``operator_kind`` is the catalog's ``oprkind`` word: ``binary``, ``prefix``
+    or ``postfix``. ``left_type``/``right_type`` are ``None`` for a position
+    the operator does not have -- a prefix operator has no left operand, and
+    ``format_type(0, NULL)`` would be a different type rather than "absent".
+    """
+
+    name: str
+    schema: Optional[str] = None
+    operator_kind: Optional[str] = None
+    left_type: Optional[str] = None
+    right_type: Optional[str] = None
+    result_type: Optional[str] = None
+    function_name: Optional[str] = None
+    owner: Optional[str] = None
+    comment: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PostgresOperatorClassInfo:
+    """One row of ``pg_opclass``: the operator class an index method uses."""
+
+    name: str
+    schema: Optional[str] = None
+    method: Optional[str] = None
+    input_type: Optional[str] = None
+    key_type: Optional[str] = None
+    is_default: bool = False
+    family: Optional[str] = None
+    owner: Optional[str] = None
+    comment: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PostgresOperatorFamilyInfo:
+    """One row of ``pg_opfamily``: a family of operator classes."""
+
+    name: str
+    schema: Optional[str] = None
+    method: Optional[str] = None
+    owner: Optional[str] = None
+    comment: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
 

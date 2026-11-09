@@ -41,9 +41,7 @@ from .output import OUTPUT_CHOICES, create_provider
 #:
 #: One entry per family this backend answers independently, whether the answer
 #: comes from the catalog, from the statistics collector or from the rows
-#: themselves. Partition metadata has a switch too, but no introspector
-#: question of its own -- it is read as part of the DDL a partitioned table
-#: carries -- so it is not a type here.
+#: themselves.
 _TYPE_CAPABILITIES = {
     "tables": "supports_table_introspection",
     "views": "supports_view_introspection",
@@ -55,6 +53,14 @@ _TYPE_CAPABILITIES = {
     "extensions": "supports_extension_introspection",
     "materialized-views": "supports_materialized_view_introspection",
     "sequences": "supports_sequence_introspection",
+    # The schema-object families that were previously reachable only through
+    # hand-written catalog SQL. Each reads its own pg_catalog relation.
+    "partitions": "supports_partition_introspection",
+    "routines": "supports_routine_introspection",
+    "types": "supports_type_introspection",
+    "operators": "supports_operator_introspection",
+    "operator-classes": "supports_operator_class_introspection",
+    "operator-families": "supports_operator_family_introspection",
     # The per-table storage family answers for one table: the three size
     # figures ride the listing's projection, and this type asks it for one
     # name rather than making the caller read the whole listing.
@@ -108,6 +114,14 @@ _NAME_RULE = {
     "extensions": "optional",
     "materialized-views": "optional",
     "sequences": "optional",
+    # A partition listing asks about one parent table, so the name is the
+    # question. The rest are catalogue families that a name narrows.
+    "partitions": "required",
+    "routines": "optional",
+    "types": "optional",
+    "operators": "optional",
+    "operator-classes": "optional",
+    "operator-families": "optional",
     "table-storage": "required",
     # The four listings over the statistics collector's scope describe what the
     # connection can see, not one object in it, so none takes a name -- the way
@@ -271,6 +285,18 @@ def create_parser(subparsers):
   %(prog)s sequences --database mydb
   %(prog)s sequences order_id_seq --database mydb
 
+  # List a partitioned table's child partitions (and their bounds)
+  %(prog)s partitions orders --database mydb
+
+  # List routines, types, operators, operator classes and operator families
+  %(prog)s routines --database mydb
+  %(prog)s routines app_total --database mydb
+  %(prog)s types --database mydb
+  %(prog)s types order_status --database mydb
+  %(prog)s operators --database mydb
+  %(prog)s operator-classes --database mydb
+  %(prog)s operator-families --database mydb
+
   # Get one table's storage split (total, data, index bytes; row estimate)
   %(prog)s table-storage orders --database mydb
 
@@ -339,12 +365,13 @@ def create_parser(subparsers):
         nargs="?",
         default=None,
         help="Object name. Required for columns, indexes, foreign-keys, "
-        "table-storage, ddl and column-profiles (the table they belong to), "
-        "and for value-samples and join-coverage (the left table); "
-        "optional for triggers (a table), dependencies (one object) "
-        "and for views, materialized-views, sequences and extensions "
-        "(one object); refused for tables, database and the four counter "
-        "listings (unused-indexes, table-stats, runtime, index-stats). "
+        "table-storage, ddl, column-profiles and partitions (the table they "
+        "belong to), and for value-samples and join-coverage (the left table); "
+        "optional for triggers (a table), dependencies (one object), "
+        "views, materialized-views, sequences, extensions, routines, types, "
+        "operators, operator-classes and operator-families (one object); "
+        "refused for tables, database and the four counter listings "
+        "(unused-indexes, table-stats, runtime, index-stats). "
         "The rule per type is _NAME_RULE",
     )
     # The three families that ask about a column or a second table carry the
@@ -549,6 +576,58 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
                 sequences = introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
+
+        elif args.type == "partitions":
+            # The parent table is the question, so NAME was already required
+            # by _validate_name; the listing carries each child's bound.
+            partitions = introspector.list_partitions(args.name, schema=None)
+            data = _serialize_for_output(partitions)
+            provider.display_results(data, title=f"Partitions of {args.name}")
+
+        elif args.type == "routines":
+            # A name narrows the listing rather than selecting one overload;
+            # functions can share a name and differ by argument list.
+            routines = introspector.list_routines(schema=None, routine_name=args.name)
+            data = _serialize_for_output(routines)
+            title = f"Routines named {args.name}" if args.name else "Routines"
+            provider.display_results(data, title=title)
+
+        elif args.type == "types":
+            types = introspector.list_types(schema=None, type_name=args.name)
+            data = _serialize_for_output(types)
+            title = f"Types named {args.name}" if args.name else "Types"
+            provider.display_results(data, title=title)
+
+        elif args.type == "operators":
+            operators = introspector.list_operators(schema=None, operator_name=args.name)
+            data = _serialize_for_output(operators)
+            title = f"Operators named {args.name}" if args.name else "Operators"
+            provider.display_results(data, title=title)
+
+        elif args.type == "operator-classes":
+            operator_classes = introspector.list_operator_classes(
+                schema=None, operator_class_name=args.name
+            )
+            data = _serialize_for_output(operator_classes)
+            title = (
+                f"Operator classes named {args.name}"
+                if args.name
+                else "Operator Classes"
+            )
+            provider.display_results(data, title=title)
+
+        elif args.type == "operator-families":
+            operator_families = introspector.list_operator_families(
+                schema=None, operator_family_name=args.name
+            )
+            data = _serialize_for_output(operator_families)
+            title = (
+                f"Operator families named {args.name}"
+                if args.name
+                else "Operator Families"
+            )
+            provider.display_results(data, title=title)
+
         elif args.type == "table-storage":
             # The storage figures ride the listing's projection, so the
             # question asks the listing and picks the row -- one read, and
@@ -780,6 +859,58 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 sequences = await introspector.list_sequences(schema=None)
                 data = _serialize_for_output(sequences)
                 provider.display_results(data, title="Sequences")
+
+        elif args.type == "partitions":
+            partitions = await introspector.list_partitions(args.name, schema=None)
+            data = _serialize_for_output(partitions)
+            provider.display_results(data, title=f"Partitions of {args.name}")
+
+        elif args.type == "routines":
+            routines = await introspector.list_routines(
+                schema=None, routine_name=args.name
+            )
+            data = _serialize_for_output(routines)
+            title = f"Routines named {args.name}" if args.name else "Routines"
+            provider.display_results(data, title=title)
+
+        elif args.type == "types":
+            types = await introspector.list_types(schema=None, type_name=args.name)
+            data = _serialize_for_output(types)
+            title = f"Types named {args.name}" if args.name else "Types"
+            provider.display_results(data, title=title)
+
+        elif args.type == "operators":
+            operators = await introspector.list_operators(
+                schema=None, operator_name=args.name
+            )
+            data = _serialize_for_output(operators)
+            title = f"Operators named {args.name}" if args.name else "Operators"
+            provider.display_results(data, title=title)
+
+        elif args.type == "operator-classes":
+            operator_classes = await introspector.list_operator_classes(
+                schema=None, operator_class_name=args.name
+            )
+            data = _serialize_for_output(operator_classes)
+            title = (
+                f"Operator classes named {args.name}"
+                if args.name
+                else "Operator Classes"
+            )
+            provider.display_results(data, title=title)
+
+        elif args.type == "operator-families":
+            operator_families = await introspector.list_operator_families(
+                schema=None, operator_family_name=args.name
+            )
+            data = _serialize_for_output(operator_families)
+            title = (
+                f"Operator families named {args.name}"
+                if args.name
+                else "Operator Families"
+            )
+            provider.display_results(data, title=title)
+
         elif args.type == "table-storage":
             # The async twin of the sync branch: the same listing read,
             # awaited, and the same pick.
