@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.impl.postgres.cli import introspect as introspect_mod
 from rhosocial.activerecord.backend.impl.postgres.cli.introspect import INTROSPECT_TYPES
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.introspection.types import DDLStatement, JoinCoverage
+from rhosocial.activerecord.backend.introspection.types import JoinCoverage
 
 
 def parse_introspect_args(argv):
@@ -167,16 +167,6 @@ class FakeIntrospector:
         self._record("list_object_dependencies", object_name, schema)
         return [{"dependent": "users_v", "referenced": "users"}]
 
-    def get_ddl_statement(self, object_name, object_type=None, schema=None):
-        self._record("get_ddl_statement", object_name, object_type, schema)
-        return DDLStatement(
-            schema="public",
-            object_type="r",
-            object_name=object_name,
-            ddl=f"CREATE TABLE {object_name} (id integer);",
-            native=False,
-        )
-
     # The data families: one table, or one column of it.
 
     def list_column_data_profiles(self, table_name, schema=None):
@@ -298,7 +288,6 @@ _FIRST_CALL = {
     "runtime": "list_runtime_metrics",
     "index-stats": "list_index_usage_stats",
     "dependencies": "list_object_dependencies",
-    "ddl": "get_ddl_statement",
     "column-profiles": "list_column_data_profiles",
     "value-samples": "sample_column_values",
     "join-coverage": "estimate_join_coverage",
@@ -313,7 +302,6 @@ _ARGV = {
     "foreign-keys": ["users"],
     "partitions": ["users"],
     "table-storage": ["users"],
-    "ddl": ["users"],
     "column-profiles": ["users"],
     "value-samples": ["users", "--column", "status"],
     "join-coverage": [
@@ -414,6 +402,14 @@ class TestTypeVocabulary:
     def test_ddl_is_not_advertised_when_no_text_is_produced(self):
         """I-05: the family that returns None for ordinary tables says so."""
         assert PostgresDialect(version=(16, 0)).supports_ddl_extraction() is False
+        assert "ddl" not in INTROSPECT_TYPES
+
+    def test_ddl_is_rejected_as_an_invalid_choice(self, run_cli):
+        """The removed type is an argparse usage error, not a handler refusal."""
+        _, err, exc = run_cli(["introspect", "ddl", "users", "--database", "mydb"])
+
+        assert exc is not None and exc.code == 2
+        assert "invalid choice: 'ddl'" in err
 
     def test_help_lists_every_type(self, run_cli):
         out, _, exc = run_cli(["introspect", "--help"])
@@ -539,17 +535,6 @@ class TestTheFamiliesTheDialectAnswers:
             ("list_object_dependencies", "orders", None)
         ]
 
-    def test_ddl_asks_for_the_named_table(self, run_cli):
-        assert self._calls(run_cli, ["ddl", "users"]) == [
-            ("get_ddl_statement", "users", None, None)
-        ]
-
-    def test_ddl_prints_the_statement_in_table_mode(self, run_cli):
-        """Table output is the SQL itself, not a one-cell table around it."""
-        out, err, exc = run_cli(["introspect", "ddl", "users", "--database", "mydb"])
-        assert exc is None, f"stderr: {err}"
-        assert "CREATE TABLE users" in out
-
     def test_column_profiles_asks_for_the_named_table(self, run_cli):
         assert self._calls(run_cli, ["column-profiles", "users"]) == [
             ("list_column_data_profiles", "users", None)
@@ -615,12 +600,6 @@ class TestTheNewArgumentsAreRequiredOrRefused:
         assert "--right-table and --right-column are required" in err
         assert FakeBackend.last_instance.introspector.calls == []
 
-    def test_ddl_without_a_table_name_exits_one(self, run_cli):
-        _, err, exc = run_cli(["introspect", "ddl", "--database", "mydb"])
-        assert exc is not None and exc.code == 1
-        assert "Table name is required for 'ddl'" in err
-        assert FakeBackend.last_instance.introspector.calls == []
-
     def test_column_on_a_type_with_no_column_exits_two(self, run_cli):
         _, err, exc = run_cli(["introspect", "tables", "--column", "status", "--database", "mydb"])
         assert exc is not None and exc.code == 2
@@ -642,23 +621,6 @@ class TestTheNewArgumentsAreRequiredOrRefused:
         assert exc is not None and exc.code == 2
         assert "does not take --right-table or --right-column" in err
         assert FakeBackend.last_instance.introspector.calls == []
-
-
-class TestTheRealDialectRefusesDDL:
-    """I-05 end to end: the advertised type meets a switch that is False."""
-
-    def test_ddl_is_refused_before_the_catalogue_is_asked(self, capsys):
-        backend = type(
-            "RealDialectBackend",
-            (),
-            {"dialect": PostgresDialect(version=(16, 0))},
-        )()
-        with pytest.raises(SystemExit) as excinfo:
-            introspect_mod._require_capability(
-                backend, argparse.Namespace(type="ddl")
-            )
-        assert excinfo.value.code == 2
-        assert "ddl introspection is not supported by this server" in capsys.readouterr().err
 
 
 class TestCapabilityGate:

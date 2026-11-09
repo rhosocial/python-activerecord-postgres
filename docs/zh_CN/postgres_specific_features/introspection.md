@@ -18,7 +18,7 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 
 ## PostgreSQL 回答什么
 
-核心声明了二十一个 `supports_*` 探针，每个探针问的是关于引擎的问题，而不是关于库的功能开关。PostgreSQL 其中十九个回答 `True`。下表是本后端对每一个探针的回答，顺序与核心声明的一致，并列出每个答案所读取的目录视图或语句。
+核心声明了二十一个 `supports_*` 探针，每个探针问的是关于引擎的问题，而不是关于库的功能开关。PostgreSQL 其中十八个回答 `True`。下表是本后端对每一个探针的回答，顺序与核心声明的一致，并列出每个答案所读取的目录视图或语句。
 
 | 探针 | 回答 | PostgreSQL 的答案来自 |
 |------|------|----------------------|
@@ -39,18 +39,20 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 | `supports_column_data_profile` | `True` | `pg_stats` |
 | `supports_column_value_sample` | `True` | `pg_stats.most_common_vals` |
 | `supports_join_coverage` | `True` | 统计两侧的不同值；没有目录来源 |
-| `supports_ddl_extraction` | `True` | `pg_class` / `pg_namespace`；投影不携带 DDL 文本 |
+| `supports_ddl_extraction` | `False` | 普通表不产生 DDL 文本（见下） |
 | `supports_extensions` | `True` | `pg_extension`，经由 `supports_extension_introspection` |
 | `supports_table_storage_introspection` | `True` | `pg_total_relation_size()`、`pg_relation_size()`、`pg_indexes_size()` |
 | `supports_ddl_extraction_native` | `False` | 没有单一的原生 DDL 获取调用（见下） |
 
-有两个回答是 `False`。一个原因写在探针自己身上；另一个继承自核心的默认值，默认值没有写出的部分在下文说明。
+有三个回答是 `False`。其中两个原因写在探针自己身上；第三个继承自核心的默认值，默认值没有写出的部分在下文说明。
 
-### 两个 False 回答
+### 三个 False 回答
 
 `supports_partition_info` 通过核心的默认值回答 `False`：本方言不覆盖该探针，也没有声明任何分区信息查询表达式或格式化方法。分区表仍然会被回答——表列表会用 `table_type` 标签 `PARTITIONED TABLE` 报告它，来自 `p` 这个 relkind 代码——但那是关系的种类，不是分区树：这里没有任何东西报告父表、子表或边界。分区 DDL 是另一个协议族（`supports_hash_partitioning`、`supports_attach_partition` 及其邻居），不是这个内省探针。
 
-`supports_ddl_extraction_native` 回答 `False`。探针自己的文档字符串就是原因：PostgreSQL 没有单一的、原生的 DDL 获取调用。`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句，所以本后端能提供的只是一次组装，而 `native=False` 正是组装结果的标记方式。`supports_ddl_extraction` 仍为 `True`，因为该族已被声明且有为它渲染的语句；语句本身在下文 `get_ddl_statement` 处描述。
+`supports_ddl_extraction` 回答 `False`，因为本后端不为普通表产生 DDL 文本。`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句，而这次组装目前并不存在。对外宣称该族会承诺一个答案无法产生的文本，所以 CLI 不提供 `ddl` 类型；格式化方法与 `DDLStatement` 仍保留在方言上，等待真正的组装实现。
+
+`supports_ddl_extraction_native` 回答 `False`。探针自己的文档字符串就是原因：PostgreSQL 没有单一的、原生的 DDL 获取调用。两个探针保持分开，调用方因此能区分“能否获取”与“能否原生获取”，即使今天两者都回答 `False`；方法本身在下文 `get_ddl_statement` 处描述。
 
 ### PostgreSQL 额外的探针
 
@@ -331,7 +333,7 @@ PostgreSQL 没有为未使用索引提供厂商视图，所以该列表由计数
 
 ### `get_ddl_statement`
 
-`supports_ddl_extraction` 回答 `True`，也确实为它渲染了语句，但本后端渲染的语句是地址，不是文本。它为指定关系选择 `pg_class.relname`、`pg_namespace.nspname` 与 `pg_class.relkind`，并且不投影 `ddl` 列。解析器会跳过没有文本的行，所以 `get_ddl_statement` 对一张存在的表返回 `None`：这是“无法重现这个”，不是“没有这张表”。`supports_ddl_extraction_native` 回答 `False`，所以需要服务器原生文本的调用方事先就知道这里任何组装都只是重建；`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句。CLI 会报告 `Error: no DDL available for '<name>'` 并以 `1` 退出；它不会打印空行，因为一行没有文本的记录会被读成一个答案。
+即使 `supports_ddl_extraction` 回答 `False`，该方法仍保留在内省器上；本后端渲染的语句是地址，不是文本。它为指定关系选择 `pg_class.relname`、`pg_namespace.nspname` 与 `pg_class.relkind`，并且不投影 `ddl` 列。解析器会跳过没有文本的行，所以 `get_ddl_statement` 对一张存在的表返回 `None`：这是“无法重现这个”，不是“没有这张表”。`supports_ddl_extraction_native` 回答 `False`，所以需要服务器原生文本的调用方事先就知道这里任何组装都只是重建；`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句。CLI 不提供 `ddl` 类型，因此无法在那里为 `<name>` 请求它。
 
 ## 列数据剖析
 
@@ -642,7 +644,7 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect tables \
 
 ### 查询运维与数据族
 
-六个运维族和三个数据族都是独立的类型：
+五个运维族和三个数据族都是独立的类型：
 
 ```bash
 # Indexes no query has used since the statistics were reset
@@ -661,10 +663,6 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect runtime \
 
 # The dependency graph, or one object's edges
 python -m rhosocial.activerecord.backend.impl.postgres introspect dependencies orders \
-  --database mydb --user postgres
-
-# The DDL that recreates a table (this backend answers "no DDL available")
-python -m rhosocial.activerecord.backend.impl.postgres introspect ddl orders \
   --database mydb --user postgres
 
 # Profiles and samples from pg_stats
@@ -703,18 +701,17 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect table-storage 
 | `runtime` | 来自 `pg_stat_activity` 的每个后端进程一行 | 不接受 |
 | `index-stats` | 逐索引计数与大小 | 不接受 |
 | `dependencies` | 依赖边，或单个对象的边 | 可选：对象名 |
-| `ddl` | 重建一张表的 DDL | 必填：表名 |
 | `column-profiles` | 来自 `pg_stats` 的逐列剖析 | 必填：表名 |
 | `value-samples` | 一列保留的值与频率 | 必填：表名；`--column` 必填 |
 | `join-coverage` | 两列值域的重叠 | 必填：左表；`--column`、`--right-table`、`--right-column` 必填 |
 
-这里的十个类型是本页此前列出的十个之外新增的；其中九个就是上文那些族。`table-storage` 向声明层询问一张表的存储拆分；`unused-indexes`、`table-stats`、`runtime`、`index-stats`、`dependencies` 与 `ddl` 是六个运维族；`column-profiles`、`value-samples` 与 `join-coverage` 是三个数据族。每个类型都在 `_TYPE_CAPABILITIES` 中指明决定连接服务器能否回答它的探针开关；对外列出的类型清单本身是静态的，开关在方言适配到服务器之后才被询问。开关为 `False` 的类型会以 `2` 退出并提示 "not supported by this server"，而不是返回空列表。
+这里的九个类型是本页此前列出的十个之外新增的。`table-storage` 向声明层询问一张表的存储拆分；`unused-indexes`、`table-stats`、`runtime`、`index-stats` 与 `dependencies` 是五个运维族；`column-profiles`、`value-samples` 与 `join-coverage` 是三个数据族。每个类型都在 `_TYPE_CAPABILITIES` 中指明决定连接服务器能否回答它的探针开关；对外列出的类型清单本身是静态的，开关在方言适配到服务器之后才被询问。开关为 `False` 的类型会以 `2` 退出并提示 "not supported by this server"，而不是返回空列表。
 
-`NAME` 指明该类型要回答的对象，每种类型对“是否接受名称”只有一个答案。`columns`、`indexes`、`foreign-keys`、`table-storage`、`ddl`、`column-profiles`、`value-samples` 与 `join-coverage` 的名称是它们所涉及的表，必须给出——对 `join-coverage` 而言是左表。`triggers` 接受表名，`dependencies` 接受对象名，`views`、`materialized-views`、`sequences`、`extensions` 接受对象名；不给名称时各自列出整族。`tables`、`database`、`unused-indexes`、`table-stats`、`runtime` 与 `index-stats` 不接受名称：在那里给名称是错误而不是过滤条件，因为这些计数列表回答的是连接的可见范围，而不是单个对象。
+`NAME` 指明该类型要回答的对象，每种类型对“是否接受名称”只有一个答案。`columns`、`indexes`、`foreign-keys`、`table-storage`、`column-profiles`、`value-samples` 与 `join-coverage` 的名称是它们所涉及的表，必须给出——对 `join-coverage` 而言是左表。`triggers` 接受表名，`dependencies` 接受对象名，`views`、`materialized-views`、`sequences`、`extensions` 接受对象名；不给名称时各自列出整族。`tables`、`database`、`unused-indexes`、`table-stats`、`runtime` 与 `index-stats` 不接受名称：在那里给名称是错误而不是过滤条件，因为这些计数列表回答的是连接的可见范围，而不是单个对象。
 
 有三个类型通过自己的标志询问一列或第二张表。`value-samples` 接受 `--column`，`join-coverage` 接受 `--column`、`--right-table` 与 `--right-column`；缺少其中一个是未完成的调用，会以 `1` 退出。把标志给一个对它没有问题可问的类型，会以 `2` 退出而不是被忽略，规则与 NAME 相同。
 
-`ddl` 是唯一一个可以在一张存在的表上合理报告失败的类型：本后端的投影不携带 DDL 文本，所以 `get_ddl_statement` 返回 `None`，命令会打印 `Error: no DDL available for '<name>'` 并以 `1` 退出。它不会打印空行，因为一行没有文本的记录会被读成一个答案。这里 `supports_ddl_extraction_native` 为 `False`，所以需要服务器原生文本的调用方事先就知道答案是组装，而不是获取。
+本后端不提供 DDL 提取：`supports_ddl_extraction` 对任何 PostgreSQL 服务器都回答 `False`，所以 `ddl` 不在对外列出的类型中。请求它属于 argparse 用法错误——`invalid choice: 'ddl'`——会以 `2` 退出，而不是进入处理器后报告 "not supported by this server"。探针与格式化方法仍保留在方言上，等待真正的组装实现；只有 CLI 表面不再提供该类型。
 
 运行以 `1` 退出表示没能完成——连接失败、查询失败，或名称所指的对象不存在；
 以 `2` 退出表示这个请求在此不成立：未知类型、该类型不接受名称，或本服务器

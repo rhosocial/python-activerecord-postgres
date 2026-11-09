@@ -298,7 +298,6 @@ class TestTheNameRuleTable:
             "runtime": "forbidden",
             "index-stats": "forbidden",
             "dependencies": "optional",
-            "ddl": "required",
             "column-profiles": "required",
             "value-samples": "required",
             "join-coverage": "required",
@@ -333,7 +332,6 @@ class TestTheNameRuleTable:
             "foreign-keys",
             "partitions",
             "table-storage",
-            "ddl",
             "column-profiles",
             "value-samples",
             "join-coverage",
@@ -383,7 +381,6 @@ class TestANameIsRequiredEndToEnd:
             "foreign-keys",
             "partitions",
             "table-storage",
-            "ddl",
             "column-profiles",
         ],
     )

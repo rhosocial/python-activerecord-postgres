@@ -5,9 +5,14 @@ PostgreSQL introspect includes the 'extensions' type in addition to
 the standard types, plus the two schema-object families this backend
 answers for on its own: materialized views and sequences. The families the
 catalog and the statistics collector answer beside the schema structure --
-unused indexes, usage counters, runtime metrics, dependencies, DDL and the
+unused indexes, usage counters, runtime metrics, dependencies and the
 data profiles -- are offered too: the dialect declares it can answer them,
 so the CLI has to be able to ask.
+
+DDL extraction is deliberately not offered here. ``supports_ddl_extraction``
+answers False for every PostgreSQL server, so a ``ddl`` type would advertise a
+question this backend can never answer. The formatter and expression stay in
+place for when a real assembly lands; only the CLI surface omits the type.
 
 A type either lists a family or, when it names a single catalogue object,
 answers for that one object; ``NAME`` is required, optional or refused
@@ -75,11 +80,9 @@ _TYPE_CAPABILITIES = {
     "runtime": "supports_runtime_stats",
     "index-stats": "supports_index_stats",
     "dependencies": "supports_object_dependencies",
-    # The one-object families: the DDL that recreates a named table, and the
-    # data profiles of one table or one column of it. They read the catalog,
-    # pg_stats or the rows themselves, and every answer carries how it was
-    # produced so the caller need not assume which.
-    "ddl": "supports_ddl_extraction",
+    # The one-object data families: the profiles of one table or one column
+    # of it. They read pg_stats or the rows themselves, and every answer
+    # carries how it was produced so the caller need not assume which.
     "column-profiles": "supports_column_data_profile",
     "value-samples": "supports_column_value_sample",
     "join-coverage": "supports_join_coverage",
@@ -132,9 +135,8 @@ _NAME_RULE = {
     "runtime": "forbidden",
     "index-stats": "forbidden",
     "dependencies": "optional",
-    # The one-object families: the DDL that recreates one table, the profiles
-    # of its columns, and the samples of one of them.
-    "ddl": "required",
+    # The one-object data families: the profiles of one table's columns,
+    # and the samples of one of them.
     "column-profiles": "required",
     "value-samples": "required",
     # ``join-coverage`` asks about two tables; the left one is NAME, so it is
@@ -228,22 +230,6 @@ def _refuse_unused_arguments(args: argparse.Namespace) -> None:
         sys.exit(2)
 
 
-def _display_ddl(provider, statement, args) -> None:
-    """Show a DDL statement in the form that stays readable.
-
-    A ``CREATE TABLE`` is text: a one-row table folds it into a cell that
-    wraps at the terminal width and interleaves with the other columns. Table
-    output therefore prints the statement itself, while the structured
-    formats keep the whole row so JSON and CSV still carry ``object_type``
-    and ``native`` beside the text.
-    """
-    if args.output == "table":
-        print(statement.ddl or "")
-        return
-    data = _serialize_for_output([statement])
-    provider.display_results(data, title=f"DDL of {statement.object_name}")
-
-
 def create_parser(subparsers):
     """Create the introspect subcommand parser."""
     parser = subparsers.add_parser(
@@ -313,9 +299,6 @@ def create_parser(subparsers):
   %(prog)s dependencies --database mydb
   %(prog)s dependencies orders --database mydb
 
-  # The DDL that recreates one table
-  %(prog)s ddl orders --database mydb
-
   # Profile every column of a table from its data, and sample one column
   %(prog)s column-profiles orders --database mydb
   %(prog)s value-samples orders --column status --database mydb
@@ -365,7 +348,7 @@ def create_parser(subparsers):
         nargs="?",
         default=None,
         help="Object name. Required for columns, indexes, foreign-keys, "
-        "table-storage, ddl, column-profiles and partitions (the table they "
+        "table-storage, column-profiles and partitions (the table they "
         "belong to), and for value-samples and join-coverage (the left table); "
         "optional for triggers (a table), dependencies (one object), "
         "views, materialized-views, sequences, extensions, routines, types, "
@@ -678,21 +661,9 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
             title = f"Dependencies of {args.name}" if args.name else "Object Dependencies"
             provider.display_results(data, title=title)
 
-        # ---- the one-object families --------------------------------------
-        # The DDL that recreates a table, and the profiles of one table or one
-        # column of it: the name is the table and the column is named on its
-        # own flag.
-
-        elif args.type == "ddl":
-            statement = introspector.get_ddl_statement(args.name, object_type=None, schema=None)
-            if statement is None:
-                # Not "no such table": the object exists, and PostgreSQL
-                # answers with no text rather than an assembled fragment that
-                # would read as authoritative. The two are worth telling
-                # apart, so this exits without printing an empty row.
-                print(f"Error: no DDL available for '{args.name}'", file=sys.stderr)
-                sys.exit(1)
-            _display_ddl(provider, statement, args)
+        # ---- the one-object data families ---------------------------------
+        # The profiles of one table or one column of it: the name is the table
+        # and the column is named on its own flag.
 
         elif args.type == "column-profiles":
             profiles = introspector.list_column_data_profiles(args.name, schema=None)
@@ -955,15 +926,6 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
             data = _serialize_for_output(dependencies)
             title = f"Dependencies of {args.name}" if args.name else "Object Dependencies"
             provider.display_results(data, title=title)
-
-        elif args.type == "ddl":
-            statement = await introspector.get_ddl_statement(
-                args.name, object_type=None, schema=None
-            )
-            if statement is None:
-                print(f"Error: no DDL available for '{args.name}'", file=sys.stderr)
-                sys.exit(1)
-            _display_ddl(provider, statement, args)
 
         elif args.type == "column-profiles":
             profiles = await introspector.list_column_data_profiles(args.name, schema=None)
