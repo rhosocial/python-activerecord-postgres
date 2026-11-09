@@ -24,8 +24,17 @@ class PostgresBackendMixin:
     - self._dialect: PostgresDialect instance
     - self.adapter_registry: Type adapter registry
     - self.config: Connection configuration
-    - self._logger: Logger instance
+
+    Logging is inherited from ``BackendLoggingMixin``: the mixin pins the
+    library logger name so the sync and async backends share
+    ``rhosocial.activerecord.backend.postgres`` and keeps the canonical
+    execution records in one place.
     """
+
+    # Both PostgresBackend and AsyncPostgresBackend report under the same
+    # library logger; without this the derived Async* name would produce
+    # ``rhosocial.activerecord.backend.asyncpostgres``.
+    _logger_name = "rhosocial.activerecord.backend.postgres"
 
     # PostgreSQL connection error SQLSTATE codes
     # Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
@@ -42,14 +51,6 @@ class PostgresBackendMixin:
         "57P03",  # CANNOT_CONNECT_NOW
         "57P04",  # DATABASE_DROPPED
     }
-
-    def log(self, level: int, message: str):
-        """Log a message with the specified level."""
-        if hasattr(self, "_logger") and self._logger:
-            self._logger.log(level, message)
-        else:
-            # Fallback logging
-            print(f"[{logging.getLevelName(level)}] {message}")
 
     def get_default_schema(self) -> str:
         """Get the default schema name for PostgreSQL.

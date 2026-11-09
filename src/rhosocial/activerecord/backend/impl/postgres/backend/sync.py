@@ -28,6 +28,11 @@ from psycopg.errors import (
 )
 
 from rhosocial.activerecord.backend.base import StorageBackend
+from rhosocial.activerecord.backend.base.execution_logging import (
+    log_batch_start,
+    log_batch_summary,
+    log_execution_error,
+)
 from rhosocial.activerecord.backend.introspection.backend_mixin import IntrospectorBackendMixin
 from rhosocial.activerecord.backend.explain import SyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
@@ -38,8 +43,9 @@ from rhosocial.activerecord.backend.errors import (
     OperationalError,
     QueryError,
 )
-from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 from rhosocial.activerecord.backend.result import QueryResult
+from rhosocial.activerecord.logging.redaction import unwrap_sensitive
 from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin, PostgresConcurrencyMixin
@@ -162,7 +168,7 @@ class PostgresBackend(
         # Initialize transaction manager (will use backend.execute())
         self._transaction_manager = PostgresTransactionManager(self, self.logger)
 
-        self.log(logging.INFO, "PostgresBackend initialized")
+        self.log(logging.DEBUG, "PostgresBackend initialized")
 
     def _create_introspector(self) -> Any:
         """Create and return a PostgreSQLIntrospector with a sync executor."""
@@ -254,7 +260,7 @@ class PostgresBackend(
                 f"Connected to PostgreSQL database: {self.config.host}:{self.config.port}/{self.config.database}",
             )
         except PsycopgError as e:
-            self.log(logging.ERROR, f"Failed to connect to PostgreSQL database: {str(e)}")
+            self.log(logging.DEBUG, f"Failed to connect to PostgreSQL database: {str(e)}")
             raise ConnectionError(f"Failed to connect to PostgreSQL: {str(e)}") from e
 
     def disconnect(self) -> None:
@@ -269,7 +275,7 @@ class PostgresBackend(
                 self._connection = None
                 self.log(logging.INFO, "Disconnected from PostgreSQL database")
             except PsycopgError as e:
-                self.log(logging.ERROR, f"Error during disconnection: {str(e)}")
+                self.log(logging.DEBUG, f"Error during disconnection: {str(e)}")
                 raise OperationalError(f"Error during PostgreSQL disconnection: {str(e)}") from e
 
     def _get_cursor(self) -> Any:
@@ -373,21 +379,31 @@ class PostgresBackend(
                 self._try_rollback_transaction()
             raise
 
-    def execute_many(self, sql: str, params_list: List[Tuple]) -> QueryResult:
-        """Execute the same SQL statement multiple times with different parameters."""
+    def execute_many(
+        self,
+        sql: str,
+        params_list: List[Tuple],
+        *,
+        options: Optional[ExecutionOptions] = None,
+    ) -> QueryResult:
+        """Execute the same SQL statement multiple times with different parameters.
+
+        The backend owns the canonical DEBUG batch record and INFO batch
+        summary; callers only pass the logging context through ``options``.
+        """
         if not self._connection:
             self.connect()
+
+        if options is None:
+            options = ExecutionOptions(stmt_type=StatementType.DML)
+        params_list = [unwrap_sensitive(params) for params in params_list]
+        log_batch_start(self, sql, params_list, options)
 
         cursor = None
         start_time = datetime.datetime.now()
 
         try:
             cursor = self._get_cursor()
-
-            # Log the batch operation if logging is enabled
-            if getattr(self.config, "log_queries", False):
-                self.log(logging.DEBUG, f"Executing batch operation: {sql}")
-                self.log(logging.DEBUG, f"With {len(params_list)} parameter sets")
 
             # Execute multiple statements
             affected_rows = 0
@@ -399,20 +415,17 @@ class PostgresBackend(
 
             result = QueryResult(affected_rows=affected_rows, data=None, duration=duration)
 
-            self.log(
-                logging.INFO,
-                f"Batch operation completed, affected {affected_rows} rows, duration={duration:.3f}s",
-            )
+            log_batch_summary(self, sql, params_list, affected_rows, duration, options)
             return result
 
         except PsycopgIntegrityError as e:
-            self.log(logging.ERROR, f"Integrity error in batch: {str(e)}")
+            log_execution_error(self, e, options)
             raise IntegrityError(str(e)) from e
         except PsycopgError as e:
-            self.log(logging.ERROR, f"PostgreSQL error in batch: {str(e)}")
+            log_execution_error(self, e, options)
             raise DatabaseError(str(e)) from e
         except Exception as e:
-            self.log(logging.ERROR, f"Unexpected error during batch execution: {str(e)}")
+            log_execution_error(self, e, options)
             raise QueryError(str(e)) from e
         finally:
             if cursor:
@@ -565,7 +578,7 @@ class PostgresBackend(
                     self.connect()
                     return True
                 except Exception as connect_error:
-                    self.log(logging.ERROR, f"Failed to reconnect after ping failure: {str(connect_error)}")
+                    self.log(logging.WARNING, f"Failed to reconnect after ping failure: {str(connect_error)}")
                     return False
             return False
 
@@ -581,7 +594,7 @@ class PostgresBackend(
             self.connect()
             return True
         except Exception as e:
-            self.log(logging.ERROR, f"Failed to reconnect: {str(e)}")
+            self.log(logging.WARNING, f"Failed to reconnect: {str(e)}")
             return False
 
     def execute(
@@ -609,8 +622,6 @@ class PostgresBackend(
         Returns:
             QueryResult containing the query results
         """
-        from rhosocial.activerecord.backend.options import StatementType
-
         # If no options provided, create default options from kwargs
         if options is None:
             # Determine statement type based on SQL
@@ -654,7 +665,7 @@ class PostgresBackend(
                     if self._reconnect():
                         continue
                     # If reconnection fails, break and raise the error
-                    self.log(logging.ERROR, "Failed to reconnect after connection error")
+                    self.log(logging.WARNING, "Failed to reconnect after connection error")
                     break
                 raise
 
@@ -668,30 +679,30 @@ class PostgresBackend(
 
         if isinstance(error, PsycopgIntegrityError):
             if "duplicate key value violates unique constraint" in error_msg.lower():
-                self.log(logging.ERROR, f"Unique constraint violation: {error_msg}")
+                self.log(logging.DEBUG, f"Unique constraint violation: {error_msg}")
                 raise IntegrityError(f"Unique constraint violation: {error_msg}") from error
             elif "violates foreign key constraint" in error_msg.lower():
-                self.log(logging.ERROR, f"Foreign key constraint violation: {error_msg}")
+                self.log(logging.DEBUG, f"Foreign key constraint violation: {error_msg}")
                 raise IntegrityError(f"Foreign key constraint violation: {error_msg}") from error
-            self.log(logging.ERROR, f"Integrity error: {error_msg}")
+            self.log(logging.DEBUG, f"Integrity error: {error_msg}")
             raise IntegrityError(error_msg) from error
         elif isinstance(error, PsycopgOperationalError):
             if "deadlock detected" in error_msg.lower():
-                self.log(logging.ERROR, f"Deadlock error: {error_msg}")
+                self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
                 raise DeadlockError(error_msg) from error
-            self.log(logging.ERROR, f"Operational error: {error_msg}")
+            self.log(logging.DEBUG, f"Operational error: {error_msg}")
             raise OperationalError(error_msg) from error
         elif isinstance(error, PsycopgProgrammingError):
-            self.log(logging.ERROR, f"Programming error: {error_msg}")
+            self.log(logging.DEBUG, f"Programming error: {error_msg}")
             raise QueryError(error_msg) from error
         elif isinstance(error, PsycopgDeadlockError):
-            self.log(logging.ERROR, f"Deadlock error: {error_msg}")
+            self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
             raise DeadlockError(error_msg) from error
         elif isinstance(error, PsycopgError):
-            self.log(logging.ERROR, f"PostgreSQL error: {error_msg}")
+            self.log(logging.DEBUG, f"PostgreSQL error: {error_msg}")
             raise DatabaseError(error_msg) from error
         else:
-            self.log(logging.ERROR, f"Unexpected error: {error_msg}")
+            self.log(logging.DEBUG, f"Unexpected error: {error_msg}")
             raise error
 
     def _try_rollback_transaction(self) -> None:
@@ -704,7 +715,7 @@ class PostgresBackend(
         try:
             # First, try the transaction manager if active
             if self.in_transaction:
-                self.log(logging.INFO, "Attempting to rollback transaction after error")
+                self.log(logging.DEBUG, "Attempting to rollback transaction after error")
                 self._transaction_manager.rollback()
 
             # Also try direct connection rollback to handle edge cases
@@ -712,7 +723,7 @@ class PostgresBackend(
             if self._connection and not self._connection.closed:
                 try:
                     self._connection.rollback()
-                    self.log(logging.INFO, "Direct connection rollback completed")
+                    self.log(logging.DEBUG, "Direct connection rollback completed")
                 except Exception as direct_error:
                     self.log(logging.DEBUG, f"Direct rollback not needed or failed: {direct_error}")
         except Exception as rollback_error:
