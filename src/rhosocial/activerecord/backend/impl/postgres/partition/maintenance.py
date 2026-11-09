@@ -1307,15 +1307,17 @@ class PostgresPartitionMaintenance(_PartitionMaintenanceBase):
         branch: PartitionBranch,
         dry_run: bool = False,
     ) -> PartitionReport:
-        """Drop a whole first-level branch and its subpartitions.
+        """Drop a whole first-level branch and its subpartitions (destructive by default).
 
-        This is the explicit destructive operation the plan reserves for
-        removing a branch; ``drop_before`` never does it implicitly.
+        Pass ``dry_run=True`` to render the drop without executing it. This is
+        the explicit operation reserved for removing a branch; ``drop_before``
+        never removes a whole branch implicitly.
 
         Args:
             plan: Tree description.
             branch: The first-level branch instance declared by the plan.
-            dry_run: When true, render the drop without executing it.
+            dry_run: When true, render the drop without executing it; defaults
+                to False, which executes the drop.
 
         Returns:
             The report after (or before, under dry run) the drop.
@@ -1585,7 +1587,22 @@ class AsyncPostgresPartitionMaintenance(_PartitionMaintenanceBase):
         branch: PartitionBranch,
         dry_run: bool = False,
     ) -> PartitionReport:
-        """Drop a whole first-level branch asynchronously."""
+        """Drop a whole first-level branch asynchronously (destructive by default).
+
+        The dropped branch takes its subpartitions with it. Pass
+        ``dry_run=True`` to render the drop without executing it. This is
+        the explicit operation reserved for removing a branch; ``drop_before``
+        never removes a whole branch implicitly.
+
+        Args:
+            plan: Tree description.
+            branch: The first-level branch instance declared by the plan.
+            dry_run: When true, render the drop without executing it; defaults
+                to False, which executes the drop.
+
+        Returns:
+            The report after (or before, under dry run) the drop.
+        """
         infos = await self._infos(plan)
         index = plan.branches.index(branch)
         name = plan.branch_name(index, branch)
