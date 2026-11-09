@@ -34,6 +34,7 @@ __all__ = [
     "PostgresDetachPartitionStatement",
     "PostgresAttachPartitionStatement",
     "PostgresPartitionMetadataQueryStatement",
+    "PostgresPartitionTreeQueryStatement",
 ]
 
 # ``PARTITION BY {RANGE|LIST|HASH} (...)`` is core's clause: PostgreSQL's
@@ -359,3 +360,46 @@ class PostgresPartitionMetadataQueryStatement(BaseExpression):
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
         return "format_partition_metadata_query_statement"
+
+
+class PostgresPartitionTreeQueryStatement(BaseExpression):
+    """PostgreSQL catalog query for the whole partition subtree.
+
+    ``PostgresPartitionMetadataQueryStatement`` answers one level: the parent's
+    partition key and its direct children. Nested PostgreSQL trees need the
+    descendants too, and a maintenance report needs the level, the parent name,
+    the server's bound text, and a size/row estimate. This expression builds
+    that recursive query; ``PostgresPartitionMixin`` owns the SQL text.
+
+    Attributes:
+        root_table: Root partitioned table name.
+        schema: Optional schema; when omitted the search path resolves the
+            root, exactly as ``to_regclass`` does.
+        include_stats: Whether to read ``pg_class`` estimates and
+            ``pg_total_relation_size`` for every node.
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        root_table: str,
+        schema: Optional[str] = None,
+        *,
+        include_stats: bool = True,
+    ):
+        super().__init__(dialect)
+        if not root_table:
+            raise ValueError("root_table must not be empty")
+        self.root_table = root_table
+        self.schema = schema
+        self.include_stats = include_stats
+
+    @property
+    def qualified_name(self) -> str:
+        """Return the ``to_regclass`` argument for the root table."""
+        return "%s.%s" % (self.schema, self.root_table) if self.schema else self.root_table
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_partition_tree_query_statement"

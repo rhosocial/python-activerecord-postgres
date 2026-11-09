@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         PostgresDetachPartitionStatement,
         PostgresAttachPartitionStatement,
         PostgresPartitionMetadataQueryStatement,
+        PostgresPartitionTreeQueryStatement,
     )
 
 
@@ -679,6 +680,65 @@ class PostgresPartitionMixin:
 
         return " ".join(parts), tuple(params)
 
+
+    def format_partition_tree_query_statement(
+        self, expr: "PostgresPartitionTreeQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the recursive pg_catalog query for a partition subtree.
+
+        The query starts at the root table named by ``expr.qualified_name``
+        (resolved with ``to_regclass`` so schema-less callers follow the search
+        path) and walks ``pg_inherits`` to every descendant. Each row carries
+        the server's own bound text, the child strategy, the tree level and,
+        optionally, relation-size estimates.
+
+        Args:
+            expr: PostgresPartitionTreeQueryStatement instance.
+
+        Returns:
+            Tuple of (SQL string with one ``%s`` placeholder, params tuple).
+        """
+        if not self.supports_table_partitioning():
+            raise UnsupportedFeatureError(
+                self.name,
+                "partition tree introspection",
+                "Partition tree introspection requires PostgreSQL 10+.",
+            )
+        if expr.include_stats:
+            stats_columns = """
+                       CASE WHEN cls.reltuples < 0 THEN NULL
+                            ELSE cls.reltuples::bigint END AS row_count,
+                       pg_total_relation_size(tree.oid) AS total_bytes,"""
+        else:
+            stats_columns = """
+                       NULL::bigint AS row_count,
+                       NULL::bigint AS total_bytes,"""
+        sql = f"""
+            WITH RECURSIVE partition_tree AS (
+                SELECT cls.oid, cls.relname AS name, 0 AS level,
+                       NULL::oid AS parent_oid
+                FROM pg_class cls
+                WHERE cls.oid = to_regclass({self.p()})
+                UNION ALL
+                SELECT child.oid, child.relname, tree.level + 1, tree.oid
+                FROM partition_tree tree
+                JOIN pg_inherits inh ON inh.inhparent = tree.oid
+                JOIN pg_class child ON child.oid = inh.inhrelid
+            )
+            SELECT tree.name AS name,
+                   tree.level AS level,
+                   parent.relname AS parent,
+                   ns.nspname AS schema_name,
+                   pg_get_partkeydef(tree.oid) AS partition_key,
+                   pg_get_expr(cls.relpartbound, cls.oid) AS bound,{stats_columns}
+                   cls.relkind = 'p' AS is_partitioned
+            FROM partition_tree tree
+            JOIN pg_class cls ON cls.oid = tree.oid
+            JOIN pg_namespace ns ON ns.oid = cls.relnamespace
+            LEFT JOIN pg_class parent ON parent.oid = tree.parent_oid
+            ORDER BY tree.level, tree.name
+        """
+        return sql, (expr.qualified_name,)
 
     def format_partition_metadata_query_statement(
         self, expr: "PostgresPartitionMetadataQueryStatement"
