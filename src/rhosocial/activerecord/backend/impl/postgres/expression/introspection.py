@@ -28,6 +28,12 @@ __all__ = [
     "PostgresMaterializedViewListQueryStatement",
     "PostgresSequenceInfoQueryStatement",
     "PostgresSequenceListQueryStatement",
+    "PostgresPartitionListQueryStatement",
+    "PostgresRoutineListQueryStatement",
+    "PostgresTypeListQueryStatement",
+    "PostgresOperatorListQueryStatement",
+    "PostgresOperatorClassListQueryStatement",
+    "PostgresOperatorFamilyListQueryStatement",
     "PostgresDatabaseSizeFunction",
     "PostgresDatabaseSizeQueryStatement",
     "PostgresRelationSizeFunction",
@@ -153,6 +159,198 @@ class PostgresSequenceInfoQueryStatement(IntrospectionExpression):
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
         return "format_sequence_info_query_statement"
+
+
+class PostgresPartitionListQueryStatement(IntrospectionExpression):
+    """List the child partitions of one partitioned table.
+
+    The parent is named by the caller; the catalog answers its partition key
+    (``pg_get_partkeydef``) and each child's bound
+    (``pg_get_expr(relpartbound)``). ``include_statistics`` adds the child's
+    own row estimate and total size, which cost a catalog lookup each but let
+    a caller report storage without a second question.
+
+    Example:
+        >>> expr = PostgresPartitionListQueryStatement(dialect, "orders", schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        schema: Optional[str] = None,
+        include_partitions: bool = True,
+        include_statistics: bool = True,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            table_name: Name of the partitioned parent table.
+            schema: Optional schema name. Defaults to the connection schema.
+            include_partitions: Whether to list the child partitions. ``False``
+                answers only the parent's key.
+            include_statistics: Whether to add each child's row estimate and
+                size in bytes.
+        """
+        super().__init__(dialect, schema=schema)
+        if not table_name:
+            raise ValueError("table_name must not be empty")
+        self.table_name = table_name
+        self.include_partitions = include_partitions
+        self.include_statistics = include_statistics
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_partition_list_query_statement"
+
+
+class PostgresRoutineListQueryStatement(IntrospectionExpression):
+    """List PostgreSQL routines from ``pg_proc``, optionally narrowed by name.
+
+    Example:
+        >>> expr = PostgresRoutineListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        routine_name: Optional[str] = None,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            routine_name: Optional routine name; it narrows the listing.
+        """
+        super().__init__(dialect, schema=schema)
+        self.routine_name = routine_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_routine_list_query_statement"
+
+
+class PostgresTypeListQueryStatement(IntrospectionExpression):
+    """List PostgreSQL enum/domain/composite/range/multirange types.
+
+    Example:
+        >>> expr = PostgresTypeListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        type_name: Optional[str] = None,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            type_name: Optional type name; it narrows the listing.
+        """
+        super().__init__(dialect, schema=schema)
+        self.type_name = type_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_type_list_query_statement"
+
+
+class PostgresOperatorListQueryStatement(IntrospectionExpression):
+    """List PostgreSQL operators from ``pg_operator``.
+
+    Example:
+        >>> expr = PostgresOperatorListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        operator_name: Optional[str] = None,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            operator_name: Optional operator name; it narrows the listing.
+        """
+        super().__init__(dialect, schema=schema)
+        self.operator_name = operator_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_operator_list_query_statement"
+
+
+class PostgresOperatorClassListQueryStatement(IntrospectionExpression):
+    """List PostgreSQL operator classes from ``pg_opclass``.
+
+    Example:
+        >>> expr = PostgresOperatorClassListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        operator_class_name: Optional[str] = None,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            operator_class_name: Optional operator class name; it narrows the
+                listing.
+        """
+        super().__init__(dialect, schema=schema)
+        self.operator_class_name = operator_class_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_operator_class_list_query_statement"
+
+
+class PostgresOperatorFamilyListQueryStatement(IntrospectionExpression):
+    """List PostgreSQL operator families from ``pg_opfamily``.
+
+    Example:
+        >>> expr = PostgresOperatorFamilyListQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+        operator_family_name: Optional[str] = None,
+    ):
+        """
+        Args:
+            dialect: The SQL dialect to use for formatting.
+            schema: Optional schema name. Defaults to the connection schema.
+            operator_family_name: Optional operator family name; it narrows the
+                listing.
+        """
+        super().__init__(dialect, schema=schema)
+        self.operator_family_name = operator_family_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_operator_family_list_query_statement"
 
 
 class PostgresDatabaseSizeFunction(BaseExpression):

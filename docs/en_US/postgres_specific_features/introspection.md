@@ -19,7 +19,7 @@ The PostgreSQL introspection system is accessible via `backend.introspector` and
 ## What PostgreSQL Answers
 
 Core declares twenty-one `supports_*` probes, and each asks a question about the
-engine rather than about the library. PostgreSQL answers nineteen of them `True`.
+engine rather than about the library. PostgreSQL answers eighteen of them `True`.
 The table below is this backend's answer to every one, in the order core declares
 them, with the catalogue view or statement each answer is read from.
 
@@ -42,15 +42,16 @@ them, with the catalogue view or statement each answer is read from.
 | `supports_column_data_profile` | `True` | `pg_stats` |
 | `supports_column_value_sample` | `True` | `pg_stats.most_common_vals` |
 | `supports_join_coverage` | `True` | Counts distinct values on both sides; no catalogue source |
-| `supports_ddl_extraction` | `True` | `pg_class` / `pg_namespace`; the projection carries no DDL text |
+| `supports_ddl_extraction` | `False` | No DDL text is produced for an ordinary table (see below) |
 | `supports_extensions` | `True` | `pg_extension`, through `supports_extension_introspection` |
 | `supports_table_storage_introspection` | `True` | `pg_total_relation_size()`, `pg_relation_size()`, `pg_indexes_size()` |
 | `supports_ddl_extraction_native` | `False` | No single native DDL retrieval call (see below) |
 
-Two answers are `False`. One reason is written in the probe itself; the other
-is inherited from core's default, and what the default leaves out is stated below.
+Three answers are `False`. Two reasons are written in the probes themselves;
+the third is inherited from core's default, and what the default leaves out is
+stated below.
 
-### The Two False Answers
+### The Three False Answers
 
 `supports_partition_info` answers `False` through core's default: this dialect
 does not override the probe and declares no partition-information query
@@ -61,14 +62,19 @@ nothing here reports the parent, the children or the bounds. Partition DDL is a
 separate protocol family (`supports_hash_partitioning`, `supports_attach_partition`
 and their neighbours), not this introspection probe.
 
+`supports_ddl_extraction` answers `False` because this backend produces no DDL
+text for an ordinary table. `pg_get_expr` and `pg_get_viewdef` recover
+expressions, but a faithful `CREATE TABLE` also needs storage parameters, the
+tablespace and per-column clauses the catalogue keeps only in parts, and the
+assembly does not exist yet. Advertising the family would promise text the
+answer cannot produce, so the CLI does not offer a `ddl` type; the formatter and
+`DDLStatement` stay on the dialect for when a real assembly lands.
+
 `supports_ddl_extraction_native` answers `False`. The probe's docstring is the
-reason: PostgreSQL has no single native DDL retrieval call. `pg_get_expr` and
-`pg_get_viewdef` recover expressions, but a faithful `CREATE TABLE` also needs
-storage parameters, the tablespace and per-column clauses the catalogue keeps
-only in parts, so what this backend can offer is an assembly, and `native=False`
-is how an assembly is marked. `supports_ddl_extraction` stays `True` because the
-family is declared and a statement renders for it; the statement itself is
-described under `get_ddl_statement` below.
+reason: PostgreSQL has no single native DDL retrieval call. The two probes stay
+separate so a caller can tell "can retrieve" from "can retrieve natively" even
+though both answer `False` today; the method itself is described under
+`get_ddl_statement` below.
 
 ### The Probes PostgreSQL Adds
 
@@ -411,18 +417,17 @@ edges to act on.
 
 ### `get_ddl_statement`
 
-`supports_ddl_extraction` answers `True` and a statement renders, but the
-statement this backend renders is an address, not text. It selects
-`pg_class.relname`, `pg_namespace.nspname` and `pg_class.relkind` for the named
-relation, and projects no `ddl` column. The parser skips a row carrying no text,
-so `get_ddl_statement` returns `None` for a table that exists: "cannot reproduce
-this", not "no such table". `supports_ddl_extraction_native` answers `False`, so
-a caller who needs the server's own text knows in advance that any assembly here
-would be a reconstruction; `pg_get_expr` and `pg_get_viewdef` can recover
-expressions, but a faithful `CREATE TABLE` would also need storage parameters,
-tablespace and per-column clauses the catalogue keeps only in parts. The CLI
-reports `Error: no DDL available for '<name>'` and exits `1`; it does not print
-an empty row, because a row with no text would read as an answer.
+The method stays on the introspector even though `supports_ddl_extraction`
+answers `False`; the statement this backend renders is an address, not text. It
+selects `pg_class.relname`, `pg_namespace.nspname` and `pg_class.relkind` for the
+named relation, and projects no `ddl` column. The parser skips a row carrying no
+text, so `get_ddl_statement` returns `None` for a table that exists: "cannot
+reproduce this", not "no such table". `supports_ddl_extraction_native` answers
+`False`, so a caller who needs the server's own text knows in advance that any
+assembly here would be a reconstruction; `pg_get_expr` and `pg_get_viewdef` can
+recover expressions, but a faithful `CREATE TABLE` would also need storage
+parameters, tablespace and per-column clauses the catalogue keeps only in parts.
+The CLI does not offer a `ddl` type, so `<name>` cannot be asked for one there.
 
 ## Column Data Profiles
 
@@ -834,7 +839,7 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect tables \
 
 ### Querying Operational and Data Families
 
-The six operational families and the three data families are their own types:
+The five operational families and the three data families are their own types:
 
 ```bash
 # Indexes no query has used since the statistics were reset
@@ -853,10 +858,6 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect runtime \
 
 # The dependency graph, or one object's edges
 python -m rhosocial.activerecord.backend.impl.postgres introspect dependencies orders \
-  --database mydb --user postgres
-
-# The DDL that recreates a table (this backend answers "no DDL available")
-python -m rhosocial.activerecord.backend.impl.postgres introspect ddl orders \
   --database mydb --user postgres
 
 # Profiles and samples from pg_stats
@@ -895,16 +896,15 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect table-storage 
 | `runtime` | One row per backend process from `pg_stat_activity` | Refused |
 | `index-stats` | Per-index counters and size | Refused |
 | `dependencies` | Dependency edges, or one object's | Optional: an object name |
-| `ddl` | The DDL that recreates one table | Required: a table name |
 | `column-profiles` | Per-column profiles from `pg_stats` | Required: a table name |
 | `value-samples` | A column's kept values and frequencies | Required: a table name; `--column` required |
 | `join-coverage` | Two columns' value-domain overlap | Required: the left table; `--column`, `--right-table`, `--right-column` required |
 
-Ten rows here are new relative to the ten types this page listed before; nine of
-them are the families above. `table-storage` asks the declaration layer for one
-table's storage split; `unused-indexes`, `table-stats`, `runtime`, `index-stats`,
-`dependencies` and `ddl` are the six operational families; `column-profiles`,
-`value-samples` and `join-coverage` are the three data families. Each type names,
+Nine rows here are new relative to the ten types this page listed before.
+`table-storage` asks the declaration layer for one table's storage split;
+`unused-indexes`, `table-stats`, `runtime`, `index-stats` and `dependencies`
+are the five operational families; `column-profiles`, `value-samples` and
+`join-coverage` are the three data families. Each type names,
 in `_TYPE_CAPABILITIES`, the probe switch that decides whether the connected
 server can answer it; the advertised list itself is static, and the switch is
 asked after the dialect has been adapted to the server. A type whose switch is
@@ -913,7 +913,7 @@ empty list.
 
 `NAME` selects the object the type answers for, and each type has exactly one
 answer to whether it takes one. `columns`, `indexes`, `foreign-keys`,
-`table-storage`, `ddl`, `column-profiles`, `value-samples` and `join-coverage`
+`table-storage`, `column-profiles`, `value-samples` and `join-coverage`
 name the table they are about and require it — for `join-coverage` that is the
 left table. `triggers` accepts a table name, `dependencies` accepts an object
 name, and `views`, `materialized-views`, `sequences` and `extensions` accept an
@@ -928,13 +928,12 @@ Three types ask about a column or a second table on their own flags.
 and exits `1`. A flag given to a type that has no question for it exits `2`
 rather than being ignored, the same rule NAME follows.
 
-`ddl` is the one type that can legitimately report a failure on an existing
-table: this backend's projection carries no DDL text, so `get_ddl_statement`
-returns `None` and the command prints `Error: no DDL available for '<name>'`
-and exits `1`. It does not print an empty row, because a row with no text would
-read as an answer. `supports_ddl_extraction_native` is `False` here, so a caller
-that needs the server's own text already knows the answer is an assembly, not
-a retrieval.
+DDL extraction is not offered by this backend: `supports_ddl_extraction`
+answers `False` for every PostgreSQL server, so `ddl` is not one of the
+advertised types. Asking for it is an argparse usage error — `invalid choice:
+'ddl'` — and exits `2`, rather than reaching the handler and reporting
+"not supported by this server". The probe and its formatter remain on the
+dialect for a future assembly; only the CLI surface omits the type.
 
 A run exits `1` when it could not finish -- the connection failed, a query
 failed, or the object a name asked for is not there -- and `2` when the request

@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.impl.postgres.cli import introspect as introspect_mod
 from rhosocial.activerecord.backend.impl.postgres.cli.introspect import INTROSPECT_TYPES
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.introspection.types import DDLStatement, JoinCoverage
+from rhosocial.activerecord.backend.introspection.types import JoinCoverage
 
 
 def parse_introspect_args(argv):
@@ -113,6 +113,37 @@ class FakeIntrospector:
         self._record("list_sequences", schema)
         return [{"name": "order_id_seq"}]
 
+    # The schema-object families added for catalogue coverage. Each answers a
+    # listing; the optional name narrows rather than selects.
+
+    def list_partitions(
+        self, table_name, schema=None, include_partitions=True, include_statistics=True
+    ):
+        self._record(
+            "list_partitions", table_name, schema, include_partitions, include_statistics
+        )
+        return [{"name": "orders_p2026_11", "table": table_name}]
+
+    def list_routines(self, schema=None, routine_name=None):
+        self._record("list_routines", schema, routine_name)
+        return [{"name": routine_name or "app_total"}]
+
+    def list_types(self, schema=None, type_name=None):
+        self._record("list_types", schema, type_name)
+        return [{"name": type_name or "order_status"}]
+
+    def list_operators(self, schema=None, operator_name=None):
+        self._record("list_operators", schema, operator_name)
+        return [{"name": operator_name or "==="}]
+
+    def list_operator_classes(self, schema=None, operator_class_name=None):
+        self._record("list_operator_classes", schema, operator_class_name)
+        return [{"name": operator_class_name or "gist_trgm_ops"}]
+
+    def list_operator_families(self, schema=None, operator_family_name=None):
+        self._record("list_operator_families", schema, operator_family_name)
+        return [{"name": operator_family_name or "gist_trgm_ops"}]
+
     # The operational families: each answers a listing of its own, from the
     # statistics collector rather than the catalog.
 
@@ -135,16 +166,6 @@ class FakeIntrospector:
     def list_object_dependencies(self, object_name=None, schema=None):
         self._record("list_object_dependencies", object_name, schema)
         return [{"dependent": "users_v", "referenced": "users"}]
-
-    def get_ddl_statement(self, object_name, object_type=None, schema=None):
-        self._record("get_ddl_statement", object_name, object_type, schema)
-        return DDLStatement(
-            schema="public",
-            object_type="r",
-            object_name=object_name,
-            ddl=f"CREATE TABLE {object_name} (id integer);",
-            native=False,
-        )
 
     # The data families: one table, or one column of it.
 
@@ -252,6 +273,12 @@ _FIRST_CALL = {
     "extensions": "list_extensions",
     "materialized-views": "list_materialized_views",
     "sequences": "list_sequences",
+    "partitions": "list_partitions",
+    "routines": "list_routines",
+    "types": "list_types",
+    "operators": "list_operators",
+    "operator-classes": "list_operator_classes",
+    "operator-families": "list_operator_families",
     # The storage figures ride the listing's projection, so the CLI asks the
     # listing and picks the row -- one read, not the four a per-table info
     # answer would spend.
@@ -261,7 +288,6 @@ _FIRST_CALL = {
     "runtime": "list_runtime_metrics",
     "index-stats": "list_index_usage_stats",
     "dependencies": "list_object_dependencies",
-    "ddl": "get_ddl_statement",
     "column-profiles": "list_column_data_profiles",
     "value-samples": "sample_column_values",
     "join-coverage": "estimate_join_coverage",
@@ -274,8 +300,8 @@ _ARGV = {
     "columns": ["users"],
     "indexes": ["users"],
     "foreign-keys": ["users"],
+    "partitions": ["users"],
     "table-storage": ["users"],
-    "ddl": ["users"],
     "column-profiles": ["users"],
     "value-samples": ["users", "--column", "status"],
     "join-coverage": [
@@ -356,6 +382,35 @@ class TestTypeVocabulary:
     def test_the_aggregate_table_type_is_gone(self):
         assert "table" not in INTROSPECT_TYPES
 
+    def test_the_new_families_have_a_supported_switch(self):
+        dialect = PostgresDialect(version=(16, 0))
+        for switch in (
+            "supports_partition_introspection",
+            "supports_routine_introspection",
+            "supports_type_introspection",
+            "supports_operator_introspection",
+            "supports_operator_class_introspection",
+            "supports_operator_family_introspection",
+        ):
+            assert getattr(dialect, switch)() is True
+
+    def test_partition_info_delegates_to_the_family_switch(self):
+        dialect = PostgresDialect(version=(16, 0))
+        assert dialect.supports_partition_info() is True
+        assert PostgresDialect(version=(9, 6)).supports_partition_info() is False
+
+    def test_ddl_is_not_advertised_when_no_text_is_produced(self):
+        """I-05: the family that returns None for ordinary tables says so."""
+        assert PostgresDialect(version=(16, 0)).supports_ddl_extraction() is False
+        assert "ddl" not in INTROSPECT_TYPES
+
+    def test_ddl_is_rejected_as_an_invalid_choice(self, run_cli):
+        """The removed type is an argparse usage error, not a handler refusal."""
+        _, err, exc = run_cli(["introspect", "ddl", "users", "--database", "mydb"])
+
+        assert exc is not None and exc.code == 2
+        assert "invalid choice: 'ddl'" in err
+
     def test_help_lists_every_type(self, run_cli):
         out, _, exc = run_cli(["introspect", "--help"])
         assert exc is not None and exc.code == 0
@@ -421,6 +476,45 @@ class TestTheFamiliesTheDialectAnswers:
         assert exc is None, f"stderr: {err}"
         return FakeBackend.last_instance.introspector.calls
 
+    def test_partitions_asks_for_the_named_parent(self, run_cli):
+        assert self._calls(run_cli, ["partitions", "orders"]) == [
+            ("list_partitions", "orders", None, True, True)
+        ]
+
+    def test_routines_list_and_narrow_by_name(self, run_cli):
+        assert self._calls(run_cli, ["routines"]) == [("list_routines", None, None)]
+        assert self._calls(run_cli, ["routines", "app_total"]) == [
+            ("list_routines", None, "app_total")
+        ]
+
+    def test_types_list_and_narrow_by_name(self, run_cli):
+        assert self._calls(run_cli, ["types"]) == [("list_types", None, None)]
+        assert self._calls(run_cli, ["types", "order_status"]) == [
+            ("list_types", None, "order_status")
+        ]
+
+    def test_operators_list_and_narrow_by_name(self, run_cli):
+        assert self._calls(run_cli, ["operators"]) == [("list_operators", None, None)]
+        assert self._calls(run_cli, ["operators", "==="]) == [
+            ("list_operators", None, "===")
+        ]
+
+    def test_operator_classes_list_and_narrow_by_name(self, run_cli):
+        assert self._calls(run_cli, ["operator-classes"]) == [
+            ("list_operator_classes", None, None)
+        ]
+        assert self._calls(run_cli, ["operator-classes", "gist_trgm_ops"]) == [
+            ("list_operator_classes", None, "gist_trgm_ops")
+        ]
+
+    def test_operator_families_list_and_narrow_by_name(self, run_cli):
+        assert self._calls(run_cli, ["operator-families"]) == [
+            ("list_operator_families", None, None)
+        ]
+        assert self._calls(run_cli, ["operator-families", "gist_trgm_ops"]) == [
+            ("list_operator_families", None, "gist_trgm_ops")
+        ]
+
     def test_unused_indexes_reads_the_statistics_collector(self, run_cli):
         assert self._calls(run_cli, ["unused-indexes"]) == [("list_unused_indexes", None)]
 
@@ -440,17 +534,6 @@ class TestTheFamiliesTheDialectAnswers:
         assert self._calls(run_cli, ["dependencies", "orders"]) == [
             ("list_object_dependencies", "orders", None)
         ]
-
-    def test_ddl_asks_for_the_named_table(self, run_cli):
-        assert self._calls(run_cli, ["ddl", "users"]) == [
-            ("get_ddl_statement", "users", None, None)
-        ]
-
-    def test_ddl_prints_the_statement_in_table_mode(self, run_cli):
-        """Table output is the SQL itself, not a one-cell table around it."""
-        out, err, exc = run_cli(["introspect", "ddl", "users", "--database", "mydb"])
-        assert exc is None, f"stderr: {err}"
-        assert "CREATE TABLE users" in out
 
     def test_column_profiles_asks_for_the_named_table(self, run_cli):
         assert self._calls(run_cli, ["column-profiles", "users"]) == [
@@ -515,12 +598,6 @@ class TestTheNewArgumentsAreRequiredOrRefused:
         )
         assert exc is not None and exc.code == 1
         assert "--right-table and --right-column are required" in err
-        assert FakeBackend.last_instance.introspector.calls == []
-
-    def test_ddl_without_a_table_name_exits_one(self, run_cli):
-        _, err, exc = run_cli(["introspect", "ddl", "--database", "mydb"])
-        assert exc is not None and exc.code == 1
-        assert "Table name is required for 'ddl'" in err
         assert FakeBackend.last_instance.introspector.calls == []
 
     def test_column_on_a_type_with_no_column_exits_two(self, run_cli):
