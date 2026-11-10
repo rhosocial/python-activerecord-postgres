@@ -441,16 +441,16 @@ jobs:
           export PYTHONPATH=src:tests
           python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
 
-      - name: Run tests with coverage (only for postgres 18)
-        if: matrix.postgres-version == '18'
+      - name: Run tests with coverage (only for postgres 18 on Python 3.14)
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --cov=src --cov-report=xml
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src --cov-report=xml
 
       - name: Upload coverage to Codecov
-        if: matrix.postgres-version == '18'
-        uses: codecov/codecov-action@v4
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
