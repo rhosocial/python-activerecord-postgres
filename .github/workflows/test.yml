@@ -446,9 +446,7 @@ jobs:
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src --cov-report=
-          python -m coverage combine || true
-          python -m coverage xml -o coverage.xml
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml
 
       - name: Debug coverage report
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
