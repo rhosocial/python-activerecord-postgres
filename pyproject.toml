@@ -110,6 +110,7 @@ markers = [
 [tool.coverage.run]
 source = ["rhosocial"]
 branch = true
+relative_files = true
 
 [tool.coverage.report]
 exclude_lines = [
