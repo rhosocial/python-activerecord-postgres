@@ -459,6 +459,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+          flags: unittests,python-${{ matrix.python-version }},postgres-${{ matrix.postgres-version }}
           name: codecov-postgres-${{ matrix.python-version }}-${{ matrix.postgres-version }}
           fail_ci_if_error: false
 
