@@ -448,6 +448,11 @@ jobs:
           pip install codecov
           python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src --cov-report=xml
 
+      - name: Debug coverage report
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
+        run: |
+          python -m coverage report -m --include="src/rhosocial/activerecord/backend/impl/postgres/*" || true
+
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
         uses: codecov/codecov-action@v5
