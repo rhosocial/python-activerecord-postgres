@@ -169,10 +169,10 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
             ).to_sql()
             self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
-            self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
+            self.log(logging.DEBUG, f"Deferred constraint: {constraint_name}")
         except Exception as e:
             error_msg = f"Failed to defer constraint {constraint_name}: {str(e)}"
-            self.log(logging.ERROR, error_msg)
+            self.log(logging.DEBUG, error_msg)
             raise TransactionError(error_msg) from e
 
     def get_current_isolation_level(self) -> IsolationLevel:
@@ -198,7 +198,7 @@ class PostgresTransactionManager(PostgresTransactionMixin, TransactionManager):
             return IsolationLevel.READ_COMMITTED
         except Exception as e:
             error_msg = f"Failed to get transaction isolation level: {str(e)}"
-            self.log(logging.ERROR, error_msg)
+            self.log(logging.DEBUG, error_msg)
             raise TransactionError(error_msg) from e
 
     def commit(self) -> None:
@@ -261,10 +261,10 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             ).to_sql()
             await self._backend.execute(sql, params)
             self._deferred_constraints.append(constraint_name)
-            self.log(logging.INFO, f"Deferred constraint: {constraint_name}")
+            self.log(logging.DEBUG, f"Deferred constraint: {constraint_name}")
         except Exception as e:
             error_msg = f"Failed to defer constraint {constraint_name}: {str(e)}"
-            self.log(logging.ERROR, error_msg)
+            self.log(logging.DEBUG, error_msg)
             raise TransactionError(error_msg) from e
 
     async def get_current_isolation_level(self) -> IsolationLevel:
@@ -290,7 +290,7 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
             return IsolationLevel.READ_COMMITTED
         except Exception as e:
             error_msg = f"Failed to get transaction isolation level: {str(e)}"
-            self.log(logging.ERROR, error_msg)
+            self.log(logging.DEBUG, error_msg)
             raise TransactionError(error_msg) from e
 
     async def commit(self) -> None:

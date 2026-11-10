@@ -63,7 +63,7 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/partition-maintenance"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/logging-execution"  # NOSONAR
           pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Install dependencies
@@ -278,7 +278,7 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/partition-maintenance"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/logging-execution"  # NOSONAR
           pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Install dependencies
@@ -385,7 +385,7 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/partition-maintenance"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/logging-execution"  # NOSONAR
           pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Install dependencies
@@ -441,16 +441,21 @@ jobs:
           export PYTHONPATH=src:tests
           python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
 
-      - name: Run tests with coverage (only for postgres 18)
-        if: matrix.postgres-version == '18'
+      - name: Run tests with coverage (only for postgres 18 on Python 3.14)
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --cov=src --cov-report=xml
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml
+
+      - name: Debug coverage report
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
+        run: |
+          python -m coverage report -m --include="src/rhosocial/activerecord/backend/impl/postgres/*" || true
 
       - name: Upload coverage to Codecov
-        if: matrix.postgres-version == '18'
-        uses: codecov/codecov-action@v4
+        if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
@@ -488,7 +493,7 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/partition-maintenance"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/logging-execution"  # NOSONAR
           pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"
 
       - name: Install dependencies
