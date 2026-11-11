@@ -18,7 +18,9 @@ from rhosocial.activerecord.field import IntegerPKMixin, TimestampMixin, Optimis
 
 class TimestampedPost(IntegerPKMixin, TimestampMixin, ActiveRecord):
     """Blog post model with timestamps"""
-    __table_name__ = "timestamped_posts"
+    @classmethod
+    def table_name(cls):
+        return "timestamped_posts"
 
     id: Optional[int] = None
     title: str
@@ -27,7 +29,9 @@ class TimestampedPost(IntegerPKMixin, TimestampMixin, ActiveRecord):
 
 class VersionedProduct(IntegerPKMixin, OptimisticLockMixin, ActiveRecord):
     """Product model with optimistic locking"""
-    __table_name__ = "versioned_products"
+    @classmethod
+    def table_name(cls):
+        return "versioned_products"
 
     id: Optional[int] = None
     name: str
@@ -36,7 +40,9 @@ class VersionedProduct(IntegerPKMixin, OptimisticLockMixin, ActiveRecord):
 
 class Task(IntegerPKMixin, SoftDeleteMixin, ActiveRecord):
     """Task model supporting soft deletion"""
-    __table_name__ = "tasks"
+    @classmethod
+    def table_name(cls):
+        return "tasks"
 
     id: Optional[int] = None
     title: str
@@ -45,7 +51,9 @@ class Task(IntegerPKMixin, SoftDeleteMixin, ActiveRecord):
 
 class CombinedArticle(IntegerPKMixin, TimestampMixin, OptimisticLockMixin, SoftDeleteMixin, ActiveRecord):
     """Article model combining all mixins"""
-    __table_name__ = "combined_articles"
+    @classmethod
+    def table_name(cls):
+        return "combined_articles"
 
     id: Optional[int] = None
     title: str

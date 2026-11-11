@@ -20,7 +20,10 @@ from .scenarios import get_scenario, get_enabled_scenarios
 
 class SyncQueryTestUser(ActiveRecord):
     """Sync test user model for query connection pool tests."""
-    __table_name__ = "test_users"
+    @classmethod
+    def table_name(cls):
+        return "test_users"
+
     id: Optional[int] = None
     name: str
     email: str
@@ -28,7 +31,10 @@ class SyncQueryTestUser(ActiveRecord):
 
 class AsyncQueryTestUser(AsyncActiveRecord):
     """Async test user model for query connection pool tests."""
-    __table_name__ = "test_users"
+    @classmethod
+    def table_name(cls):
+        return "test_users"
+
     id: Optional[int] = None
     name: str
     email: str

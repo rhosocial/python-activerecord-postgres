@@ -36,8 +36,14 @@ RISK_SCHEMA = "tenant_qualified_ref"
 
 
 class Author(ActiveRecord):
-    __table_name__ = "authors"
-    __schema_name__ = RISK_SCHEMA
+    @classmethod
+    def table_name(cls):
+        return "authors"
+
+    @classmethod
+    def schema_name(cls):
+        return RISK_SCHEMA
+
     c: ClassVar[FieldProxy] = FieldProxy()
 
     id: Optional[int] = None
@@ -46,8 +52,14 @@ class Author(ActiveRecord):
 
 
 class Book(ActiveRecord):
-    __table_name__ = "books"
-    __schema_name__ = RISK_SCHEMA
+    @classmethod
+    def table_name(cls):
+        return "books"
+
+    @classmethod
+    def schema_name(cls):
+        return RISK_SCHEMA
+
     c: ClassVar[FieldProxy] = FieldProxy()
 
     id: Optional[int] = None
@@ -112,8 +124,8 @@ def risk_env(postgres_backend_single):
         yield type("Env", (), {"backend": backend, "config": config, "captured": captured})
     finally:
         PostgresBackend.execute = original_execute
-        Author.__table_name__ = "authors"
-        Author.__schema_name__ = RISK_SCHEMA
+        Author.table_name = classmethod(lambda cls: "authors")
+        Author.schema_name = classmethod(lambda cls: RISK_SCHEMA)
         backend.execute(f'DROP SCHEMA IF EXISTS "{RISK_SCHEMA}" CASCADE', options=ddl)
         backend.execute(f'DROP SCHEMA IF EXISTS "{RISK_SCHEMA}_alt" CASCADE', options=ddl)
 
@@ -169,7 +181,7 @@ class TestQualifiedReferenceContext:
         Change the override first, then build expressions — field proxies
         pick up the new name and FROM / WHERE / SELECT all stay consistent.
         """
-        Author.__table_name__ = "authors_archive"
+        Author.table_name = classmethod(lambda cls: "authors_archive")
         try:
             rows = Author.query().where(Author.c.active == True).all()  # noqa: E712
             assert len(rows) == 1
@@ -181,11 +193,11 @@ class TestQualifiedReferenceContext:
             assert 'FROM "tenant_qualified_ref"."authors_archive"' in select_sql
             assert '"authors_archive"."active"' in select_sql
         finally:
-            Author.__table_name__ = "authors"
+            Author.table_name = classmethod(lambda cls: "authors")
 
     def test_dynamic_schema_switch_full_dql_consistency(self, risk_env):
         """R4: same contract for dynamic __schema_name__ (tenant switching)."""
-        Author.__schema_name__ = f"{RISK_SCHEMA}_alt"
+        Author.schema_name = classmethod(lambda cls: f"{RISK_SCHEMA}_alt")
         try:
             rows = Author.query().where(Author.c.name == "alt1").all()
             assert len(rows) == 1 and rows[0].name == "alt1"
@@ -195,7 +207,7 @@ class TestQualifiedReferenceContext:
             )
             assert f'FROM "{RISK_SCHEMA}_alt"."authors"' in select_sql
         finally:
-            Author.__schema_name__ = RISK_SCHEMA
+            Author.schema_name = classmethod(lambda cls: RISK_SCHEMA)
 
     def test_baseline_plain_query_with_predicate(self, risk_env):
         """Sanity: prebuilt predicates work in their construction context."""

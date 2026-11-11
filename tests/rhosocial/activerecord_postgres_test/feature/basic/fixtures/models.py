@@ -52,7 +52,9 @@ class PostgresMixedAnnotationModel(ActiveRecord):
     - tags: Uses native TEXT[] (no adapter needed)
     - metadata: Uses JSONB (adapter handles dict <-> str)
     """
-    __table_name__ = "mixed_annotation_items"
+    @classmethod
+    def table_name(cls):
+        return "mixed_annotation_items"
 
     name: str
     item_id: Annotated[Optional[int], UseColumn("id")] = None
@@ -66,7 +68,10 @@ class PostgresMixedAnnotationModel(ActiveRecord):
 
 class AsyncPostgresMixedAnnotationModel(AsyncActiveRecord):
     """Async version of PostgresMixedAnnotationModel."""
-    __table_name__ = "mixed_annotation_items"
+    @classmethod
+    def table_name(cls):
+        return "mixed_annotation_items"
+
     c: ClassVar[FieldProxy] = FieldProxy()
 
     name: str

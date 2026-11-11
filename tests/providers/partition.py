@@ -322,7 +322,10 @@ class PartitionProvider(IPartitionProvider):
         table_name = self.TABLE_NAME
 
         class PartitionEvent(ActiveRecord):
-            __table_name__ = table_name
+            @classmethod
+            def table_name(cls):
+                return table_name
+
             __backend__ = backend
             c: ClassVar[FieldProxy] = FieldProxy()
 
@@ -338,7 +341,10 @@ class PartitionProvider(IPartitionProvider):
         table_name = self.TABLE_NAME
 
         class AsyncPartitionEvent(AsyncActiveRecord):
-            __table_name__ = table_name
+            @classmethod
+            def table_name(cls):
+                return table_name
+
             __backend__ = backend
             c: ClassVar[FieldProxy] = FieldProxy()
 
