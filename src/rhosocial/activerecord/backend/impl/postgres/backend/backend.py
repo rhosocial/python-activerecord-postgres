@@ -329,7 +329,7 @@ class PostgresBackend(
             if isinstance(error, PsycopgError):
                 self._handle_error(error)
             else:
-                self._try_rollback_transaction(error)
+                self._try_rollback_transaction()
             raise
         return b"".join(chunks)
 
@@ -368,7 +368,7 @@ class PostgresBackend(
             if isinstance(error, PsycopgError):
                 self._handle_error(error)
             else:
-                self._try_rollback_transaction(error)
+                self._try_rollback_transaction()
             raise
 
     def execute_many(

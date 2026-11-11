@@ -342,7 +342,7 @@ class AsyncPostgresBackend(
             if isinstance(error, PsycopgError):
                 await self._handle_error(error)
             else:
-                await self._try_rollback_transaction(error)
+                await self._try_rollback_transaction()
             raise
         return b"".join(chunks)
 
@@ -389,7 +389,7 @@ class AsyncPostgresBackend(
             if isinstance(error, PsycopgError):
                 await self._handle_error(error)
             else:
-                await self._try_rollback_transaction(error)
+                await self._try_rollback_transaction()
             raise
 
     async def execute_many(
