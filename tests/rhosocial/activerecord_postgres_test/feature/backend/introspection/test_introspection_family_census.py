@@ -55,10 +55,11 @@ PROBE_LIMIT = 5
 def _synthesize_arguments(method) -> dict | None:
     """Build the call's arguments from the signature.
 
-    Returns None when a parameter cannot be synthesized: an unknown shape is a
-    question this walk does not know how to ask, and skipping it is honest —
-    whereas guessing a value could ask a different question than the one the
-    contract means.
+    A recognized parameter gets the probe value. One no rule covers keeps its
+    default — or None when it has none — because `list_tables(include_system=
+    False)` is still a catalogue read whose statement must parse, and dropping
+    the whole family would leave that read unchecked. Nothing is guessed at: a
+    value the rules cannot name is never invented.
     """
     kwargs = {}
     for name, parameter in inspect.signature(method).parameters.items():
@@ -66,10 +67,6 @@ def _synthesize_arguments(method) -> dict | None:
             parameter.VAR_POSITIONAL,
             parameter.VAR_KEYWORD,
         ):
-            continue
-        # A defaulted parameter is optional: leave it out, so the call is the
-        # smallest one the contract accepts.
-        if parameter.default is not parameter.empty:
             continue
         lowered = name.lower()
         if "schema" in lowered:
@@ -85,7 +82,12 @@ def _synthesize_arguments(method) -> dict | None:
         elif "name" in lowered:
             kwargs[name] = PROBE_OBJECT
         else:
-            return None
+            # A parameter no rule covers is left at its default rather than
+            # dropping the whole question: `list_tables(include_system=False)`
+            # is still a catalogue read whose statement must parse, and skipping
+            # the family would leave it unchecked. The default is the smallest
+            # question the contract accepts, which is what the census wants.
+            kwargs[name] = parameter.default if parameter.default is not parameter.empty else None
     return kwargs
 
 
@@ -186,14 +188,44 @@ def test_argument_synthesis_asks_the_smallest_question():
         "name": PROBE_OBJECT,
     }
 
-    def unaskable(left_table, right_table, on_column=""):
+    def unaskable(scope, include_system=False):
         pass
 
-    assert _synthesize_arguments(unaskable) is None
+    # A parameter no rule covers keeps its default rather than dropping the
+    # family: the read still has to parse. A required parameter with no default
+    # answers None — an absence the server can read, rather than a value the
+    # rules would have had to invent.
+    assert _synthesize_arguments(unaskable) == {
+        "scope": None,
+        "include_system": False,
+    }
+
+    def required_and_unknown(scope, table_name):
+        pass
+
+    assert _synthesize_arguments(required_and_unknown) == {
+        "scope": None,
+        "table_name": PROBE_TABLE,
+    }
 
     def optional_everything(include_system=False, table_name=""):
         pass
 
-    # Only the required parameter is asked: the smallest question the contract
-    # accepts is the one the census puts.
-    assert _synthesize_arguments(optional_everything) == {"table_name": PROBE_TABLE}
+    # Optional parameters are asked too: the contract's `schema=None` precedes
+    # `table_name=""` in most signatures, so skipping defaults would ask nothing
+    # at all — the census would pass by never asking a question.
+    assert _synthesize_arguments(optional_everything) == {
+        "include_system": False,
+        "table_name": PROBE_TABLE,
+    }
+
+    def all_recognizable(schema=None, table_name="", column_name="", limit=0, name=""):
+        pass
+
+    assert _synthesize_arguments(all_recognizable) == {
+        "schema": None,
+        "table_name": PROBE_TABLE,
+        "column_name": PROBE_COLUMN,
+        "limit": PROBE_LIMIT,
+        "name": PROBE_OBJECT,
+    }
