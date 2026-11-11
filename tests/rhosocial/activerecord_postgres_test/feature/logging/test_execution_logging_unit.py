@@ -319,8 +319,10 @@ class TestSyncExecutionLogging:
             sync_backend._handle_error(error)
 
         assert fragment in _messages(caplog)
-        # Active transaction rolls back through the manager, then the connection.
-        assert connection.rollback_calls == 1
+        # Driver errors recover through the manager and reset the connection;
+        # a non-driver error (UnexpectedError) must leave the transaction alone.
+        expected_rollback_calls = 0 if isinstance(error, UnexpectedError) else 1
+        assert connection.rollback_calls == expected_rollback_calls
 
     def test_defer_constraint_logs_deferred_name(self, sync_backend, monkeypatch, caplog):
         """defer_constraint logs the accepted constraint once it is registered."""
@@ -413,7 +415,10 @@ class TestAsyncExecutionLogging:
             await async_backend._handle_error(error)
 
         assert fragment in _messages(caplog)
-        assert connection.rollback_calls == 1
+        # Driver errors recover through the manager and reset the connection;
+        # a non-driver error (UnexpectedError) must leave the transaction alone.
+        expected_rollback_calls = 0 if isinstance(error, UnexpectedError) else 1
+        assert connection.rollback_calls == expected_rollback_calls
 
     @pytest.mark.asyncio
     async def test_defer_constraint_logs_deferred_name(self, async_backend, monkeypatch, caplog):
