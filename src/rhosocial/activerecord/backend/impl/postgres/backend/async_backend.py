@@ -31,12 +31,7 @@ from typing import (
 import psycopg
 from psycopg import AsyncConnection
 from psycopg.errors import Error as PsycopgError
-from psycopg.errors import (
-    IntegrityError as PsycopgIntegrityError,
-    OperationalError as PsycopgOperationalError,
-    ProgrammingError as PsycopgProgrammingError,
-    DeadlockDetected as PsycopgDeadlockError,
-)
+from psycopg.errors import IntegrityError as PsycopgIntegrityError
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
 from rhosocial.activerecord.backend.base.execution_logging import (
@@ -49,7 +44,6 @@ from rhosocial.activerecord.backend.explain import AsyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
-    DeadlockError,
     IntegrityError,
     OperationalError,
     QueryError,
@@ -698,33 +692,13 @@ class AsyncPostgresBackend(
         # PostgreSQL requires explicit ROLLBACK after errors in a transaction
         await self._try_rollback_transaction()
 
-        if isinstance(error, PsycopgIntegrityError):
-            if "duplicate key value violates unique constraint" in error_msg.lower():
-                self.log(logging.DEBUG, f"Unique constraint violation: {error_msg}")
-                raise IntegrityError(f"Unique constraint violation: {error_msg}") from error
-            elif "violates foreign key constraint" in error_msg.lower():
-                self.log(logging.DEBUG, f"Foreign key constraint violation: {error_msg}")
-                raise IntegrityError(f"Foreign key constraint violation: {error_msg}") from error
-            self.log(logging.DEBUG, f"Integrity error: {error_msg}")
-            raise IntegrityError(error_msg) from error
-        elif isinstance(error, PsycopgOperationalError):
-            if "deadlock detected" in error_msg.lower():
-                self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
-                raise DeadlockError(error_msg) from error
-            self.log(logging.DEBUG, f"Operational error: {error_msg}")
-            raise OperationalError(error_msg) from error
-        elif isinstance(error, PsycopgProgrammingError):
-            self.log(logging.DEBUG, f"Programming error: {error_msg}")
-            raise QueryError(error_msg) from error
-        elif isinstance(error, PsycopgDeadlockError):
-            self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
-            raise DeadlockError(error_msg) from error
-        elif isinstance(error, PsycopgError):
-            self.log(logging.DEBUG, f"PostgreSQL error: {error_msg}")
-            raise DatabaseError(error_msg) from error
-        else:
-            self.log(logging.DEBUG, f"Unexpected error: {error_msg}")
-            raise error
+        mapped = self._map_postgres_error(error)
+        if mapped is not None:
+            framework_error, log_label = mapped
+            self.log(logging.DEBUG, f"{log_label}: {error_msg}")
+            raise framework_error from error
+        self.log(logging.DEBUG, f"Unexpected error: {error_msg}")
+        raise error
 
     async def _try_rollback_transaction(self) -> None:
         """Attempt to rollback transaction to recover from aborted state asynchronously.
