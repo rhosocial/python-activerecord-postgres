@@ -2886,8 +2886,14 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         PostgreSQL ships no vendor view for this, so the family is computed
         from the counters: ``idx_scan = 0`` over valid indexes in the
         requested schema. Only ``idx_scan`` speaks -- an index is what makes
-        a scan indexed, so the other counters do not apply -- and
-        ``indisvalid`` filters the indexes the planner would never choose.
+        a scan indexed, so the other counters do not apply.
+
+        The two conditions answer different questions, so they cannot share a
+        relation: ``i.idx_scan = 0`` is "no scan in the statistics window",
+        while ``ix.indisvalid`` is "the planner would select it". The
+        statistics view carries only counters, so the validity flag has to
+        come from ``pg_index``, joined on ``indexrelid`` (the index oid on
+        both sides -- ``relid`` is the table oid and does not match).
 
         What the listing is not: proof. It reports "no index scan in the
         window the statistics remember", and that window ends at the last
@@ -2912,16 +2918,25 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ComparisonPredicate(
                 self,
                 "eq",
-                self._catalog_column("indisvalid", "i"),
+                self._catalog_column("indisvalid", "ix"),
                 Literal(self, True, inline=True),
             ),
         ]
 
-        indexes = self._catalog_relation("pg_stat_user_indexes", "i")
-        source = JoinClause(
+        indexes = JoinClause(
             self,
-            left_table=indexes,
-            right_table=self._catalog_relation("pg_namespace", "n"),
+            left_table=self._catalog_relation("pg_stat_user_indexes", "i"),
+            right_table=self._catalog_relation("pg_index", "ix"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("indexrelid", "i"),
+                self._catalog_column("indexrelid", "ix"),
+            ),
+        )
+        source = indexes.join(
+            self._catalog_relation("pg_namespace", "n"),
             join_type="JOIN",
             condition=ComparisonPredicate(
                 self,

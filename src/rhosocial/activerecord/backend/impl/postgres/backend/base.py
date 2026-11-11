@@ -5,8 +5,27 @@ This module provides the base mixin class for PostgreSQL backend implementations
 containing methods that are shared between sync and async backends.
 """
 
-from typing import Dict, Tuple, Type, TYPE_CHECKING
+from typing import Dict, Optional, Tuple, Type, TYPE_CHECKING
 import logging
+
+from psycopg.errors import (
+    Error as PsycopgError,
+    IntegrityError as PsycopgIntegrityError,
+    OperationalError as PsycopgOperationalError,
+    ProgrammingError as PsycopgProgrammingError,
+    DeadlockDetected as PsycopgDeadlockError,
+)
+from rhosocial.activerecord.backend.errors import (
+    ConnectionError,
+    ConcurrencyError,
+    DatabaseError,
+    DeadlockError,
+    IntegrityError,
+    LockError,
+    OperationalError,
+    QueryError,
+    attach_diagnostics,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.type_adapter import SQLTypeAdapter
@@ -51,6 +70,152 @@ class PostgresBackendMixin:
         "57P03",  # CANNOT_CONNECT_NOW
         "57P04",  # DATABASE_DROPPED
     }
+
+    # Fallback message markers for driver errors that carry no SQLSTATE. Text
+    # matching is the last resort after SQLSTATE and driver exception class.
+    _CONNECTION_ERROR_MESSAGE_PATTERNS = (
+        "connection",
+        "connect",
+        "closed",
+        "terminated",
+        "unexpectedly",
+        "broken pipe",
+        "reset by peer",
+        "server closed",
+        "server has gone away",
+        "consuming input failed",
+    )
+    _TIMEOUT_ERROR_MESSAGE_PATTERNS = (
+        "timeout",
+        "timed out",
+        "canceling statement",
+        "cancelling statement",
+        "query canceled",
+        "query cancelled",
+        "statement canceled",
+        "statement cancelled",
+    )
+
+    def _map_postgres_error(self, error: Exception) -> Optional[Tuple[DatabaseError, str]]:
+        """Translate a psycopg exception into the framework error taxonomy.
+
+        Recognition order is SQLSTATE, driver exception class, then message
+        text. The returned tuple is ``(framework_error, log_label)``; the
+        error already carries diagnostics (operation, SQLSTATE, driver code,
+        backend and transient hint). Non-psycopg exceptions return ``None``
+        so the caller can re-raise them unchanged.
+
+        psycopg 3.x: specific SQLSTATE classes (``UniqueViolation``,
+        ``DeadlockDetected``, ...) expose ``sqlstate`` on the exception.
+        ``pgcode`` is absent from psycopg 3, so the SQLSTATE doubles as the
+        driver code when no dedicated numeric code is available.
+        """
+        error_msg = str(error)
+        lower_msg = error_msg.lower()
+        sqlstate = getattr(error, "sqlstate", None)
+        sqlstate = str(sqlstate).upper() if sqlstate else None
+        driver_code = getattr(error, "pgcode", None) or sqlstate
+
+        def mapped(
+            framework_error: DatabaseError,
+            log_label: str,
+            transient: Optional[bool] = None,
+        ) -> Tuple[DatabaseError, str]:
+            return (
+                attach_diagnostics(
+                    framework_error,
+                    operation="execute",
+                    sqlstate=sqlstate,
+                    driver_code=driver_code,
+                    backend="postgres",
+                    transient=transient,
+                ),
+                log_label,
+            )
+
+        if sqlstate == "23505":
+            return mapped(
+                IntegrityError(f"Unique constraint violation: {error_msg}"),
+                "Unique constraint violation",
+            )
+        if sqlstate == "23503":
+            return mapped(
+                IntegrityError(f"Foreign key constraint violation: {error_msg}"),
+                "Foreign key constraint violation",
+            )
+        if sqlstate == "23502":
+            return mapped(
+                IntegrityError(f"Not-null constraint violation: {error_msg}"),
+                "Not-null constraint violation",
+            )
+        if sqlstate == "23514":
+            return mapped(
+                IntegrityError(f"Check constraint violation: {error_msg}"),
+                "Check constraint violation",
+            )
+        if sqlstate == "40P01":
+            return mapped(DeadlockError(error_msg), "Deadlock error", transient=True)
+        if sqlstate == "55P03":
+            return mapped(LockError(error_msg), "Lock not available", transient=True)
+        if sqlstate == "40001":
+            return mapped(ConcurrencyError(error_msg), "Serialization failure", transient=True)
+        if sqlstate == "25006":
+            # A read-only transaction refuses writes by policy, not by
+            # transient infrastructure failure: no retry hint.
+            return mapped(OperationalError(error_msg), "Read-only transaction", transient=False)
+        if sqlstate == "57014":
+            return mapped(OperationalError(error_msg), "Query canceled or timeout", transient=True)
+        if sqlstate in {"42601", "42P01", "42703", "42883"}:
+            return mapped(QueryError(error_msg), "Programming error")
+        if sqlstate and sqlstate.startswith("23"):
+            return mapped(IntegrityError(error_msg), "Integrity error")
+        if sqlstate in self.CONNECTION_ERROR_SQLSTATES:
+            return mapped(OperationalError(error_msg), "Operational error", transient=True)
+        if sqlstate and sqlstate.startswith("28"):
+            # Invalid authorization / password: retrying cannot succeed.
+            return mapped(ConnectionError(error_msg), "Connection error", transient=False)
+        if sqlstate and sqlstate.startswith("57"):
+            # Operator intervention (shutdown, cannot connect now) is
+            # transient; the connection may come back.
+            return mapped(OperationalError(error_msg), "Operational error", transient=True)
+
+        if isinstance(error, PsycopgDeadlockError):
+            return mapped(DeadlockError(error_msg), "Deadlock error", transient=True)
+        if isinstance(error, PsycopgIntegrityError):
+            if "duplicate key value violates unique constraint" in lower_msg:
+                return mapped(
+                    IntegrityError(f"Unique constraint violation: {error_msg}"),
+                    "Unique constraint violation",
+                )
+            if "violates foreign key constraint" in lower_msg:
+                return mapped(
+                    IntegrityError(f"Foreign key constraint violation: {error_msg}"),
+                    "Foreign key constraint violation",
+                )
+            if "null value in column" in lower_msg or "not-null constraint" in lower_msg:
+                return mapped(
+                    IntegrityError(f"Not-null constraint violation: {error_msg}"),
+                    "Not-null constraint violation",
+                )
+            if "check constraint" in lower_msg:
+                return mapped(
+                    IntegrityError(f"Check constraint violation: {error_msg}"),
+                    "Check constraint violation",
+                )
+            return mapped(IntegrityError(error_msg), "Integrity error")
+        if isinstance(error, PsycopgOperationalError):
+            if "deadlock detected" in lower_msg:
+                return mapped(DeadlockError(error_msg), "Deadlock error", transient=True)
+            if any(marker in lower_msg for marker in self._CONNECTION_ERROR_MESSAGE_PATTERNS):
+                return mapped(OperationalError(error_msg), "Operational error", transient=True)
+            if any(marker in lower_msg for marker in self._TIMEOUT_ERROR_MESSAGE_PATTERNS):
+                return mapped(OperationalError(error_msg), "Operational error", transient=True)
+            return mapped(OperationalError(error_msg), "Operational error")
+        if isinstance(error, PsycopgProgrammingError):
+            return mapped(QueryError(error_msg), "Programming error")
+        if isinstance(error, PsycopgError):
+            return mapped(DatabaseError(error_msg), "PostgreSQL error")
+        return None
 
     def get_default_schema(self) -> str:
         """Get the default schema name for PostgreSQL.

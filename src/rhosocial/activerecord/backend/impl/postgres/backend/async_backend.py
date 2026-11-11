@@ -31,12 +31,6 @@ from typing import (
 import psycopg
 from psycopg import AsyncConnection
 from psycopg.errors import Error as PsycopgError
-from psycopg.errors import (
-    IntegrityError as PsycopgIntegrityError,
-    OperationalError as PsycopgOperationalError,
-    ProgrammingError as PsycopgProgrammingError,
-    DeadlockDetected as PsycopgDeadlockError,
-)
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
 from rhosocial.activerecord.backend.base.execution_logging import (
@@ -49,10 +43,8 @@ from rhosocial.activerecord.backend.explain import AsyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
-    DeadlockError,
-    IntegrityError,
     OperationalError,
-    QueryError,
+    TransactionError,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 from rhosocial.activerecord.backend.result import QueryResult
@@ -436,21 +428,27 @@ class AsyncPostgresBackend(
 
             result = QueryResult(affected_rows=affected_rows, data=None, duration=duration)
 
+            # Auto-commit before reporting success: a commit failure must surface
+            # as TransactionError instead of a silently uncommitted batch.
+            await self._handle_auto_commit_if_needed()
             log_batch_summary(self, sql, params_list, affected_rows, duration, options)
             return result
 
-        except PsycopgIntegrityError as e:
-            log_execution_error(self, e, options)
-            raise IntegrityError(str(e)) from e
-        except PsycopgError as e:
-            log_execution_error(self, e, options)
-            raise DatabaseError(str(e)) from e
         except Exception as e:
             log_execution_error(self, e, options)
-            raise QueryError(str(e)) from e
+            if isinstance(e, DatabaseError):
+                raise
+            await self._handle_error(e)
+            # _handle_error() is required to raise. Keep a defensive fallback so
+            # a backend that returns cannot turn a failure into a None result.
+            raise DatabaseError(str(e)) from e
         finally:
             if cursor:
-                await cursor.close()
+                try:
+                    await cursor.close()
+                except Exception as close_error:
+                    # Closing must never replace the error already propagating.
+                    self.log(logging.WARNING, f"Failed to close cursor: {close_error}")
 
     async def get_server_version(self) -> Optional[Tuple[int, int, int]]:
         """Get PostgreSQL server version asynchronously.
@@ -490,7 +488,10 @@ class AsyncPostgresBackend(
             return None
         finally:
             if cursor:
-                await cursor.close()
+                try:
+                    await cursor.close()
+                except Exception as close_error:
+                    self.log(logging.WARNING, f"Failed to close cursor: {close_error}")
 
     async def introspect_and_adapt(self) -> None:
         """Introspect backend and adapt backend instance to actual server capabilities.
@@ -678,77 +679,112 @@ class AsyncPostgresBackend(
         for attempt in range(max_retries + 1):
             try:
                 return await super().execute(sql, params, options=options)
-            except OperationalError as e:
-                error_msg = str(e)
-                if self._is_connection_error_message(error_msg) and attempt < max_retries:
+            except OperationalError as exc:
+                error_msg = str(exc)
+                # Prefer the framework's transient hint. Only fall back to
+                # message matching for errors that carry no hint at all
+                # (transient is None); a non-transient error is never retried.
+                retryable = exc.transient is True or (
+                    exc.transient is None and self._is_connection_error_message(error_msg)
+                )
+                if retryable and attempt < max_retries:
                     self.log(logging.WARNING,
                              f"Connection error on attempt {attempt + 1}, retrying... Error: {error_msg}")
                     if await self._reconnect():
                         continue
-                    # If reconnection fails, break and raise the error
+                    # Reconnection failed: re-raise instead of leaving the loop
+                    # and turning the failure into a None result.
                     self.log(logging.WARNING, "Failed to reconnect after connection error")
-                    break
                 raise
 
     async def _handle_error(self, error: Exception) -> None:
         """Handle PostgreSQL-specific errors asynchronously."""
-        error_msg = str(error)
-
-        # Try to rollback transaction to recover from aborted state
-        # PostgreSQL requires explicit ROLLBACK after errors in a transaction
-        await self._try_rollback_transaction()
-
-        if isinstance(error, PsycopgIntegrityError):
-            if "duplicate key value violates unique constraint" in error_msg.lower():
-                self.log(logging.DEBUG, f"Unique constraint violation: {error_msg}")
-                raise IntegrityError(f"Unique constraint violation: {error_msg}") from error
-            elif "violates foreign key constraint" in error_msg.lower():
-                self.log(logging.DEBUG, f"Foreign key constraint violation: {error_msg}")
-                raise IntegrityError(f"Foreign key constraint violation: {error_msg}") from error
-            self.log(logging.DEBUG, f"Integrity error: {error_msg}")
-            raise IntegrityError(error_msg) from error
-        elif isinstance(error, PsycopgOperationalError):
-            if "deadlock detected" in error_msg.lower():
-                self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
-                raise DeadlockError(error_msg) from error
-            self.log(logging.DEBUG, f"Operational error: {error_msg}")
-            raise OperationalError(error_msg) from error
-        elif isinstance(error, PsycopgProgrammingError):
-            self.log(logging.DEBUG, f"Programming error: {error_msg}")
-            raise QueryError(error_msg) from error
-        elif isinstance(error, PsycopgDeadlockError):
-            self.log(logging.DEBUG, f"Deadlock error: {error_msg}")
-            raise DeadlockError(error_msg) from error
-        elif isinstance(error, PsycopgError):
-            self.log(logging.DEBUG, f"PostgreSQL error: {error_msg}")
-            raise DatabaseError(error_msg) from error
-        else:
-            self.log(logging.DEBUG, f"Unexpected error: {error_msg}")
+        # Framework errors are final: they are never remapped into a driver
+        # error. Re-raising here also keeps errors raised before any SQL
+        # (TypeConversionError, ValueError, ...) from triggering a rollback.
+        if isinstance(error, DatabaseError):
+            self.log(logging.DEBUG, f"Framework error passed through: {str(error)}")
             raise error
 
-    async def _try_rollback_transaction(self) -> None:
+        await self._try_rollback_transaction(error)
+
+        error_msg = str(error)
+        mapped = self._map_postgres_error(error)
+        if mapped is not None:
+            framework_error, log_label = mapped
+            self.log(logging.DEBUG, f"{log_label}: {error_msg}")
+            raise framework_error from error
+        self.log(logging.DEBUG, f"Unexpected error: {error_msg}")
+        raise error
+
+    @staticmethod
+    def _is_rollback_error(error: BaseException) -> bool:
+        """Return True when the error may have aborted a server transaction.
+
+        Only driver errors (the statement reached PostgreSQL) and transaction
+        errors need recovery. A framework error raised before any SQL, such as
+        a ``TypeConversionError`` or ``ValueError`` during parameter
+        preparation, leaves the transaction untouched.
+        """
+        if isinstance(error, TransactionError):
+            return True
+        if isinstance(error, DatabaseError):
+            return False
+        return isinstance(error, PsycopgError)
+
+    async def _try_rollback_transaction(self, error: Optional[BaseException] = None) -> None:
         """Attempt to rollback transaction to recover from aborted state asynchronously.
 
         PostgreSQL requires explicit ROLLBACK after query errors in a transaction.
-        This method attempts to recover by rolling back the transaction, regardless
-        of the transaction manager's state.
-        """
-        try:
-            # First, try the transaction manager if active
-            if self.in_transaction:
-                self.log(logging.DEBUG, "Attempting to rollback transaction after error")
-                await self._transaction_manager.rollback()
+        Only driver and transaction errors are recovered; framework errors raised
+        before SQL must not disturb the transaction. Outside a framework
+        transaction the connection runs in autocommit mode, so there is nothing
+        to roll back and a direct connection rollback is never attempted.
 
-            # Also try direct connection rollback to handle edge cases
-            # This ensures we recover from aborted transaction state
-            if self._connection and not self._connection.closed:
-                try:
-                    await self._connection.rollback()
-                    self.log(logging.DEBUG, "Direct connection rollback completed")
-                except Exception as direct_error:
-                    self.log(logging.DEBUG, f"Direct rollback not needed or failed: {direct_error}")
-        except Exception as rollback_error:
-            self.log(logging.WARNING, f"Failed to rollback transaction: {rollback_error}")
+        A failed rollback is logged at ERROR and the original error keeps
+        propagating.
+
+        Args:
+            error: The error that triggered recovery. ``None`` keeps the
+                historical behaviour for callers that recover without one.
+        """
+        if error is not None and not self._is_rollback_error(error):
+            self.log(logging.DEBUG, f"Skipping rollback for non-driver error: {error!r}")
+            return
+
+        if not self.in_transaction:
+            self.log(logging.DEBUG, "No active transaction to roll back after error")
+            return
+
+        try:
+            self.log(logging.DEBUG, "Attempting to rollback transaction after error")
+            await self._transaction_manager.rollback()
+        except Exception:
+            # Never let recovery hide the original failure, but do not swallow
+            # the recovery failure silently: an aborted transaction left as-is
+            # is a real problem for the next statement.
+            self.log(
+                logging.ERROR,
+                "Failed to rollback transaction after error; "
+                "the transaction state may be inconsistent",
+                exc_info=True,
+            )
+            return
+
+        # Inside a transaction the manager already issued ROLLBACK. Reset the
+        # driver-level transaction as well, because the connection's own state
+        # is independent of the manager's bookkeeping.
+        if self._connection and not getattr(self._connection, "closed", False):
+            try:
+                await self._connection.rollback()
+                self.log(logging.DEBUG, "Direct connection rollback completed")
+            except Exception:
+                self.log(
+                    logging.ERROR,
+                    "Failed to rollback connection after error; "
+                    "the connection state may be inconsistent",
+                    exc_info=True,
+                )
 
     async def _handle_auto_commit(self) -> None:
         """Handle auto commit based on PostgreSQL connection and transaction state asynchronously.
@@ -756,35 +792,40 @@ class AsyncPostgresBackend(
         This method will commit the current connection if:
         1. The connection exists and is open
         2. There is no active transaction managed by transaction_manager
+        3. autocommit is disabled in the connection configuration
 
         It's used by insert/update/delete operations to ensure changes are
         persisted immediately when auto_commit=True is specified.
-        """
-        try:
-            # Check if connection exists
-            if not self._connection:
-                return
 
-            # Check if we're not in an active transaction
-            if not self.in_transaction:
-                # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
-                if not self.config.autocommit:
-                    await self._connection.commit()
-                    self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
-        except Exception as e:
-            # Just log the error but don't raise - this is a convenience feature
-            self.log(logging.WARNING, f"Failed to auto-commit: {str(e)}")
+        Raises:
+            TransactionError: If the commit fails. A DML result must not be
+                reported as successful when its commit never reached the server.
+        """
+        if not self._connection:
+            return
+
+        if self.in_transaction:
+            return
+
+        # For PostgreSQL, if autocommit is disabled, we need to commit explicitly
+        if self.config.autocommit:
+            return
+
+        try:
+            await self._connection.commit()
+        except Exception as exc:
+            raise TransactionError("Auto-commit failed") from exc
+        self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 
     async def _handle_auto_commit_if_needed(self) -> None:
         """
         Handle auto-commit for PostgreSQL asynchronously.
 
         PostgreSQL respects the autocommit setting, but we also need to handle explicit commits.
+        Delegates to :meth:`_handle_auto_commit` so a commit failure surfaces as
+        ``TransactionError`` on every path that reaches the execute result.
         """
-        if not self.in_transaction and self._connection:
-            if not self.config.autocommit:
-                await self._connection.commit()
-                self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
+        await self._handle_auto_commit()
 
     # region Advisory Lock Methods
 
