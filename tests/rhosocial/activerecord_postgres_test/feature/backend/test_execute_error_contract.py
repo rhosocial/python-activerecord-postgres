@@ -17,6 +17,7 @@ from rhosocial.activerecord.backend.base import (  # noqa: E402
     StorageBackend,
 )
 from rhosocial.activerecord.backend.errors import (  # noqa: E402
+    DeadlockError,
     OperationalError,
     TransactionError,
     TypeConversionError,
@@ -31,11 +32,14 @@ from rhosocial.activerecord.backend.result import QueryResult  # noqa: E402
 class _FakeCursor:
     """Minimal synchronous cursor that records nothing."""
 
-    def __init__(self):
+    def __init__(self, execute_error=None):
         self.closed = False
         self.rowcount = 0
+        self.execute_error = execute_error
 
     def execute(self, *args, **kwargs):
+        if self.execute_error is not None:
+            raise self.execute_error
         return None
 
     def close(self):
@@ -48,14 +52,17 @@ class _FakeConnection:
     closed = False
     broken = False
 
-    def __init__(self, commit_error=None):
+    def __init__(self, commit_error=None, cursor=None):
         self.commit_error = commit_error
+        self.commit_calls = 0
         self.rollback_calls = 0
+        self._cursor = cursor or _FakeCursor()
 
     def cursor(self):
-        return _FakeCursor()
+        return self._cursor
 
     def commit(self):
+        self.commit_calls += 1
         if self.commit_error is not None:
             raise self.commit_error
 
@@ -78,11 +85,14 @@ class _FakeTransactionManager:
 
 
 class _AsyncFakeCursor:
-    def __init__(self):
+    def __init__(self, execute_error=None):
         self.closed = False
         self.rowcount = 0
+        self.execute_error = execute_error
 
     async def execute(self, *args, **kwargs):
+        if self.execute_error is not None:
+            raise self.execute_error
         return None
 
     async def close(self):
@@ -93,14 +103,17 @@ class _AsyncFakeConnection:
     closed = False
     broken = False
 
-    def __init__(self, commit_error=None):
+    def __init__(self, commit_error=None, cursor=None):
         self.commit_error = commit_error
+        self.commit_calls = 0
         self.rollback_calls = 0
+        self._cursor = cursor or _AsyncFakeCursor()
 
     def cursor(self):
-        return _AsyncFakeCursor()
+        return self._cursor
 
     async def commit(self):
+        self.commit_calls += 1
         if self.commit_error is not None:
             raise self.commit_error
 
@@ -152,7 +165,7 @@ class TestSyncAutoCommitContract:
             getattr(backend, method_name)()
 
         assert info.value.__cause__ is commit_error
-        assert "auto-commit" in str(info.value).lower()
+        assert str(info.value) == "Auto-commit failed"
 
     def test_autocommit_config_still_skips_commit(self, backend):
         backend._connection = _FakeConnection(commit_error=RuntimeError("must not commit"))
@@ -321,6 +334,50 @@ class TestSyncRetryContract:
         assert calls["reconnect"] == 1
 
 
+class TestSyncExecuteManyContract:
+    def test_commit_failure_raises_transaction_error(self, backend):
+        commit_error = RuntimeError("commit failed")
+        cursor = _FakeCursor()
+        backend._connection = _FakeConnection(commit_error=commit_error, cursor=cursor)
+        backend._transaction_manager = _FakeTransactionManager(active=False)
+
+        with pytest.raises(TransactionError) as info:
+            backend.execute_many("UPDATE users SET name = %s", [("alice",)])
+
+        assert info.value.__cause__ is commit_error
+        assert str(info.value) == "Auto-commit failed"
+        assert cursor.closed is True
+
+    def test_commit_is_attempted_on_success(self, backend):
+        connection = _FakeConnection()
+        backend._connection = connection
+        backend._transaction_manager = _FakeTransactionManager(active=False)
+
+        result = backend.execute_many(
+            "UPDATE users SET name = %s", [("alice",), ("bob",)]
+        )
+
+        assert result.affected_rows == 0
+        assert connection.commit_calls == 1
+
+    def test_deadlock_maps_to_deadlock_error(self, backend):
+        cursor = _FakeCursor(
+            execute_error=psycopg_errors.DeadlockDetected("deadlock detected")
+        )
+        connection = _FakeConnection(cursor=cursor)
+        manager = _FakeTransactionManager(active=False)
+        backend._connection = connection
+        backend._transaction_manager = manager
+
+        with pytest.raises(DeadlockError) as info:
+            backend.execute_many("UPDATE users SET name = %s", [("alice",)])
+
+        assert isinstance(info.value, DeadlockError)
+        assert manager.rollback_calls == 0
+        assert connection.commit_calls == 0
+        assert cursor.closed is True
+
+
 class TestAsyncAutoCommitContract:
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -336,7 +393,7 @@ class TestAsyncAutoCommitContract:
             await getattr(async_backend, method_name)()
 
         assert info.value.__cause__ is commit_error
-        assert "auto-commit" in str(info.value).lower()
+        assert str(info.value) == "Auto-commit failed"
 
     @pytest.mark.asyncio
     async def test_autocommit_config_still_skips_commit(self, async_backend):
@@ -490,3 +547,78 @@ class TestAsyncRetryContract:
         assert info.value is failure
         assert calls["execute"] == 1
         assert calls["reconnect"] == 0
+
+    @pytest.mark.asyncio
+    async def test_untagged_connection_message_still_retries(self, async_backend, monkeypatch):
+        result = QueryResult(affected_rows=1)
+        calls = {"execute": 0, "reconnect": 0}
+
+        async def fake_execute(self, sql, params=None, *, options=None):
+            calls["execute"] += 1
+            if calls["execute"] == 1:
+                raise _operational_error(
+                    "server closed the connection unexpectedly", transient=None
+                )
+            return result
+
+        async def fake_reconnect():
+            calls["reconnect"] += 1
+            return True
+
+        monkeypatch.setattr(AsyncStorageBackend, "execute", fake_execute)
+        monkeypatch.setattr(async_backend, "_reconnect", fake_reconnect)
+
+        assert await async_backend.execute("SELECT 1") is result
+        assert calls["execute"] == 2
+        assert calls["reconnect"] == 1
+
+
+class TestAsyncExecuteManyContract:
+    @pytest.mark.asyncio
+    async def test_commit_failure_raises_transaction_error(self, async_backend):
+        commit_error = RuntimeError("commit failed")
+        cursor = _AsyncFakeCursor()
+        async_backend._connection = _AsyncFakeConnection(
+            commit_error=commit_error, cursor=cursor
+        )
+        async_backend._transaction_manager = _AsyncFakeTransactionManager(active=False)
+
+        with pytest.raises(TransactionError) as info:
+            await async_backend.execute_many("UPDATE users SET name = %s", [("alice",)])
+
+        assert info.value.__cause__ is commit_error
+        assert str(info.value) == "Auto-commit failed"
+        assert cursor.closed is True
+
+    @pytest.mark.asyncio
+    async def test_commit_is_attempted_on_success(self, async_backend):
+        connection = _AsyncFakeConnection()
+        async_backend._connection = connection
+        async_backend._transaction_manager = _AsyncFakeTransactionManager(active=False)
+
+        result = await async_backend.execute_many(
+            "UPDATE users SET name = %s", [("alice",), ("bob",)]
+        )
+
+        assert result.affected_rows == 0
+        assert connection.commit_calls == 1
+
+    @pytest.mark.asyncio
+    async def test_deadlock_maps_to_deadlock_error(self, async_backend):
+        cursor = _AsyncFakeCursor(
+            execute_error=psycopg_errors.DeadlockDetected("deadlock detected")
+        )
+        connection = _AsyncFakeConnection(cursor=cursor)
+        manager = _AsyncFakeTransactionManager(active=False)
+        async_backend._connection = connection
+        async_backend._transaction_manager = manager
+
+        with pytest.raises(DeadlockError) as info:
+            await async_backend.execute_many(
+                "UPDATE users SET name = %s", [("alice",)]
+            )
+
+        assert isinstance(info.value, DeadlockError)
+        assert manager.rollback_calls == 0
+        assert connection.commit_calls == 0
+        assert cursor.closed is True

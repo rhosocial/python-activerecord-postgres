@@ -143,10 +143,14 @@ class FakeConnection:
 
     def __init__(self, cursor) -> None:
         self._cursor = cursor
+        self.commit_calls = 0
         self.rollback_calls = 0
 
     def cursor(self):
         return self._cursor
+
+    def commit(self) -> None:
+        self.commit_calls += 1
 
     def rollback(self) -> None:
         self.rollback_calls += 1
@@ -154,6 +158,9 @@ class FakeConnection:
 
 class FakeAsyncConnection(FakeConnection):
     """Minimal asynchronous connection, open and healthy enough for ``_get_cursor``."""
+
+    async def commit(self) -> None:
+        self.commit_calls += 1
 
     async def rollback(self) -> None:
         self.rollback_calls += 1

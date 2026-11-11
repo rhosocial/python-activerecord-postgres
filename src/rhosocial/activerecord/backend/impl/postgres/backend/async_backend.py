@@ -31,7 +31,6 @@ from typing import (
 import psycopg
 from psycopg import AsyncConnection
 from psycopg.errors import Error as PsycopgError
-from psycopg.errors import IntegrityError as PsycopgIntegrityError
 
 from rhosocial.activerecord.backend.base import AsyncStorageBackend
 from rhosocial.activerecord.backend.base.execution_logging import (
@@ -44,9 +43,7 @@ from rhosocial.activerecord.backend.explain import AsyncExplainBackendMixin
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     DatabaseError,
-    IntegrityError,
     OperationalError,
-    QueryError,
     TransactionError,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
@@ -431,18 +428,20 @@ class AsyncPostgresBackend(
 
             result = QueryResult(affected_rows=affected_rows, data=None, duration=duration)
 
+            # Auto-commit before reporting success: a commit failure must surface
+            # as TransactionError instead of a silently uncommitted batch.
+            await self._handle_auto_commit_if_needed()
             log_batch_summary(self, sql, params_list, affected_rows, duration, options)
             return result
 
-        except PsycopgIntegrityError as e:
-            log_execution_error(self, e, options)
-            raise IntegrityError(str(e)) from e
-        except PsycopgError as e:
-            log_execution_error(self, e, options)
-            raise DatabaseError(str(e)) from e
         except Exception as e:
             log_execution_error(self, e, options)
-            raise QueryError(str(e)) from e
+            if isinstance(e, DatabaseError):
+                raise
+            await self._handle_error(e)
+            # _handle_error() is required to raise. Keep a defensive fallback so
+            # a backend that returns cannot turn a failure into a None result.
+            raise DatabaseError(str(e)) from e
         finally:
             if cursor:
                 try:
@@ -815,9 +814,7 @@ class AsyncPostgresBackend(
         try:
             await self._connection.commit()
         except Exception as exc:
-            raise TransactionError(
-                "Failed to auto-commit PostgreSQL operation"
-            ) from exc
+            raise TransactionError("Auto-commit failed") from exc
         self.log(logging.DEBUG, "Auto-committed operation (not in active transaction)")
 
     async def _handle_auto_commit_if_needed(self) -> None:
