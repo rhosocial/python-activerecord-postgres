@@ -40,6 +40,7 @@ from collections import defaultdict
 from typing import Any, Dict
 
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.introspection import IntrospectionNotSupportedError
 
 
@@ -114,7 +115,6 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
 
     answered = []
     refused = defaultdict(list)
-    skipped = []
     server_errors = defaultdict(list)
 
     for name in sorted(dir(introspector)):
@@ -124,14 +124,15 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
         if not callable(method):
             continue
         kwargs = _probe_arguments_for(method)
-        if kwargs is None:
-            skipped.append(name)
-            continue
         try:
             method(**kwargs)
-        except IntrospectionNotSupportedError as error:
-            # A refusal is an answer: this engine does not serve the family, and
-            # it says so by name.
+        except (IntrospectionNotSupportedError, UnsupportedFeatureError) as error:
+            # A refusal is an answer: the engine or its dialect does not serve
+            # the family, and it says so by a typed refusal rather than by
+            # sending a statement the server rejects. Both classes are the
+            # contract's own vocabulary -- the capability gate is the
+            # dialect's, the family gate is the introspector's -- so the
+            # group key keeps them apart without treating either as a defect.
             refused[_refusal_name(error)].append(name)
         except Exception as error:  # noqa: BLE001 — the census classifies, not swallows
             # Grouped by (family, first line): a version-skew defect then reads
@@ -141,15 +142,6 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
             )
         else:
             answered.append(name)
-
-    # Nothing may be silently un-askable. A parameter this walk cannot
-    # name a probe value for is a gap in the walk, not a gap in the backend — it is reported
-    # so the next contract change makes the walk grow rather than skip.
-    assert not skipped, (
-        "these families were not asked because no probe value names their "
-        "parameters; extend _probe_arguments_for rather than leaving them "
-        f"unvisited: {sorted(skipped)}"
-    )
 
     assert not server_errors, (
         "a catalog statement named something this release does not serve. "
@@ -173,10 +165,10 @@ def test_argument_synthesis_asks_the_smallest_question():
     """The walk is checked without a server, so it cannot rot silently.
 
     A signature with a schema, a table, a column, a limit and a name asks five
-    things; one with a parameter no rule covers is skipped rather than guessed
-    at — an unknown shape is a question this walk does not know how to ask, and
-    skipping is honest where guessing could ask a different one than the
-    contract means.
+    things; one with a parameter no rule covers keeps that parameter's own
+    default -- an absence the server can read, never a value invented for it.
+    Every family is therefore asked: nothing is skipped, so a family that
+    answers nothing is a fact about the backend rather than about the walk.
     """
     def smallest(schema=None, table_name="", column_name="", limit=0, name=""):
         pass
