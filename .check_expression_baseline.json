@@ -1,0 +1,284 @@
+{
+  "entries": {
+    "003a7d23c21f1da3": 2,
+    "01a07beafaf8cc3a": 1,
+    "035fd1d22b0cbaae": 1,
+    "0a2acd20ea9eb701": 1,
+    "0d4a842fd919a7e3": 1,
+    "0ee3bc85a9eb66e2": 1,
+    "124a30e5d51c1fbc": 1,
+    "34c9ceaeabea0755": 1,
+    "42d4fa8eb94c17d3": 2,
+    "44e86dc8267bde88": 1,
+    "467f5776c03d8185": 1,
+    "571c32b05232f854": 1,
+    "615a793e1f2abc76": 1,
+    "630bd3782bdfd73e": 1,
+    "66f45fd04cf19f69": 1,
+    "73cf3d38f2261311": 1,
+    "74cebfe91f50b09c": 1,
+    "79cf8aaa65045a16": 1,
+    "7b5f861248dcbf83": 1,
+    "809835b8aab74f60": 1,
+    "8b832f6ab51443f6": 1,
+    "911c3c5a980c4b45": 1,
+    "92e86402b81e1b74": 1,
+    "993c58144efcfce4": 1,
+    "9a18e8fab9fbdba9": 1,
+    "9b9e4544e446c6af": 1,
+    "a8aae9eb0fb36d80": 1,
+    "ae8d96891c0683ff": 1,
+    "af012e4fb6621ad6": 1,
+    "b298b9ae52803683": 1,
+    "b77afa3b2a9c6ca7": 2,
+    "cb759f72d177a5e4": 1,
+    "cbb90e42db44b249": 1,
+    "ccb8ae79fccda3ae": 1,
+    "dc6a74c7f4206aa7": 1,
+    "e5bdab9e82e9c86c": 1,
+    "e5ccfd797f0f4ed4": 2,
+    "e6a593a7d2fe60a4": 1,
+    "e9b3055c241f2b54": 2,
+    "eb678d2f80622a98": 1,
+    "ec043c63eac5e089": 1,
+    "fd172692ec137a9e": 1
+  },
+  "findings": [
+    {
+      "found": "is_partitioned: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/copy.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "default_table: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/pg_partman.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "jobmon: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/pg_partman.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "infinite_time_partitions: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/pg_partman.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "retention_keep_table: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/pg_partman.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "retention_keep_index: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/pg_partman.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "preferred: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/type.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "collatable: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/type.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "process_toast: Optional[bool]",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/expression/ddl/vacuum.py",
+      "rule": "ED-10.2"
+    },
+    {
+      "found": "getattr(action, \"if_not_exists\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action, \"if_exists\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action, \"if_exists\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action, \"cascade\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action, \"using\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action, \"operation\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/column.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr.object_type, \"value\", expr.object_type)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/comment.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"enforced\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/constraint.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"not_enforced\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/constraint.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(action.constraint, \"enforced\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/constraint.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(\n                action.constraint, \"not_enforced\", False\n            )",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/constraint.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"if_exists\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/domain.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"cascade\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/domain.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"restrict\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/domain.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'action_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/domain.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"opclasses\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/index.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"nulls_not_distinct\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/index.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"with_options\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/index.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"concurrent\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/index.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"cascade\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"restrict\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"cascade\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"restrict\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'definition_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'definition_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'action_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'action_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/type.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"partition\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"table_options\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"temporary\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(constraint, 'is_auto_increment', False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr.on_error, \"value\", expr.on_error)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/dml/copy.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr.log_verbosity, \"value\", expr.log_verbosity)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/dml/copy.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"if_not_exists\", False)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/materialized_view.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, 'action_kind', type(expr).__name__)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/materialized_view.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"mode\", JSONPathMode.AUTO)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/types/jsonb_enhanced.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr_val, 'table', None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/upsert.py",
+      "rule": "ED-11.2"
+    },
+    {
+      "found": "getattr(expr, \"alias\", None)",
+      "path": "src/rhosocial/activerecord/backend/impl/postgres/mixins/uuid.py",
+      "rule": "ED-11.2"
+    }
+  ],
+  "format": 1
+}
