@@ -37,8 +37,10 @@ this module, so the walk's shape is checked without a database.
 """
 import inspect
 from collections import defaultdict
+from typing import Any, Dict
 
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.introspection import IntrospectionNotSupportedError
 
 
@@ -52,8 +54,8 @@ PROBE_OBJECT = "probe_object_that_does_not_exist"
 PROBE_LIMIT = 5
 
 
-def _synthesize_arguments(method) -> dict | None:
-    """Build the call's arguments from the signature.
+def _probe_arguments_for(method) -> Dict[str, Any]:
+    """Choose a probe value for every parameter of *method*.
 
     A recognized parameter gets the probe value. One no rule covers keeps its
     default — or None when it has none — because `list_tables(include_system=
@@ -113,7 +115,6 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
 
     answered = []
     refused = defaultdict(list)
-    skipped = []
     server_errors = defaultdict(list)
 
     for name in sorted(dir(introspector)):
@@ -122,15 +123,16 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
         method = getattr(introspector, name)
         if not callable(method):
             continue
-        kwargs = _synthesize_arguments(method)
-        if kwargs is None:
-            skipped.append(name)
-            continue
+        kwargs = _probe_arguments_for(method)
         try:
             method(**kwargs)
-        except IntrospectionNotSupportedError as error:
-            # A refusal is an answer: this engine does not serve the family, and
-            # it says so by name.
+        except (IntrospectionNotSupportedError, UnsupportedFeatureError) as error:
+            # A refusal is an answer: the engine or its dialect does not serve
+            # the family, and it says so by a typed refusal rather than by
+            # sending a statement the server rejects. Both classes are the
+            # contract's own vocabulary -- the capability gate is the
+            # dialect's, the family gate is the introspector's -- so the
+            # group key keeps them apart without treating either as a defect.
             refused[_refusal_name(error)].append(name)
         except Exception as error:  # noqa: BLE001 — the census classifies, not swallows
             # Grouped by (family, first line): a version-skew defect then reads
@@ -140,15 +142,6 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
             )
         else:
             answered.append(name)
-
-    # Nothing may be silently un-askable. A parameter this walk cannot
-    # synthesize is a gap in the walk, not a gap in the backend — it is reported
-    # so the next contract change makes the walk grow rather than skip.
-    assert not skipped, (
-        "these families were not asked because their parameters could not be "
-        "synthesized; extend _synthesize_arguments rather than leaving them "
-        f"unvisited: {sorted(skipped)}"
-    )
 
     assert not server_errors, (
         "a catalog statement named something this release does not serve. "
@@ -172,15 +165,15 @@ def test_argument_synthesis_asks_the_smallest_question():
     """The walk is checked without a server, so it cannot rot silently.
 
     A signature with a schema, a table, a column, a limit and a name asks five
-    things; one with a parameter no rule covers is skipped rather than guessed
-    at — an unknown shape is a question this walk does not know how to ask, and
-    skipping is honest where guessing could ask a different one than the
-    contract means.
+    things; one with a parameter no rule covers keeps that parameter's own
+    default -- an absence the server can read, never a value invented for it.
+    Every family is therefore asked: nothing is skipped, so a family that
+    answers nothing is a fact about the backend rather than about the walk.
     """
     def smallest(schema=None, table_name="", column_name="", limit=0, name=""):
         pass
 
-    assert _synthesize_arguments(smallest) == {
+    assert _probe_arguments_for(smallest) == {
         "schema": None,
         "table_name": PROBE_TABLE,
         "column_name": PROBE_COLUMN,
@@ -195,7 +188,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     # family: the read still has to parse. A required parameter with no default
     # answers None — an absence the server can read, rather than a value the
     # rules would have had to invent.
-    assert _synthesize_arguments(unaskable) == {
+    assert _probe_arguments_for(unaskable) == {
         "scope": None,
         "include_system": False,
     }
@@ -203,7 +196,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     def required_and_unknown(scope, table_name):
         pass
 
-    assert _synthesize_arguments(required_and_unknown) == {
+    assert _probe_arguments_for(required_and_unknown) == {
         "scope": None,
         "table_name": PROBE_TABLE,
     }
@@ -214,7 +207,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     # Optional parameters are asked too: the contract's `schema=None` precedes
     # `table_name=""` in most signatures, so skipping defaults would ask nothing
     # at all — the census would pass by never asking a question.
-    assert _synthesize_arguments(optional_everything) == {
+    assert _probe_arguments_for(optional_everything) == {
         "include_system": False,
         "table_name": PROBE_TABLE,
     }
@@ -222,7 +215,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     def all_recognizable(schema=None, table_name="", column_name="", limit=0, name=""):
         pass
 
-    assert _synthesize_arguments(all_recognizable) == {
+    assert _probe_arguments_for(all_recognizable) == {
         "schema": None,
         "table_name": PROBE_TABLE,
         "column_name": PROBE_COLUMN,
