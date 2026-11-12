@@ -37,6 +37,7 @@ this module, so the walk's shape is checked without a database.
 """
 import inspect
 from collections import defaultdict
+from typing import Any, Dict
 
 
 from rhosocial.activerecord.backend.introspection import IntrospectionNotSupportedError
@@ -52,8 +53,8 @@ PROBE_OBJECT = "probe_object_that_does_not_exist"
 PROBE_LIMIT = 5
 
 
-def _synthesize_arguments(method) -> dict | None:
-    """Build the call's arguments from the signature.
+def _probe_arguments_for(method) -> Dict[str, Any]:
+    """Choose a probe value for every parameter of *method*.
 
     A recognized parameter gets the probe value. One no rule covers keeps its
     default — or None when it has none — because `list_tables(include_system=
@@ -122,7 +123,7 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
         method = getattr(introspector, name)
         if not callable(method):
             continue
-        kwargs = _synthesize_arguments(method)
+        kwargs = _probe_arguments_for(method)
         if kwargs is None:
             skipped.append(name)
             continue
@@ -142,11 +143,11 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
             answered.append(name)
 
     # Nothing may be silently un-askable. A parameter this walk cannot
-    # synthesize is a gap in the walk, not a gap in the backend — it is reported
+    # name a probe value for is a gap in the walk, not a gap in the backend — it is reported
     # so the next contract change makes the walk grow rather than skip.
     assert not skipped, (
-        "these families were not asked because their parameters could not be "
-        "synthesized; extend _synthesize_arguments rather than leaving them "
+        "these families were not asked because no probe value names their "
+        "parameters; extend _probe_arguments_for rather than leaving them "
         f"unvisited: {sorted(skipped)}"
     )
 
@@ -180,7 +181,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     def smallest(schema=None, table_name="", column_name="", limit=0, name=""):
         pass
 
-    assert _synthesize_arguments(smallest) == {
+    assert _probe_arguments_for(smallest) == {
         "schema": None,
         "table_name": PROBE_TABLE,
         "column_name": PROBE_COLUMN,
@@ -195,7 +196,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     # family: the read still has to parse. A required parameter with no default
     # answers None — an absence the server can read, rather than a value the
     # rules would have had to invent.
-    assert _synthesize_arguments(unaskable) == {
+    assert _probe_arguments_for(unaskable) == {
         "scope": None,
         "include_system": False,
     }
@@ -203,7 +204,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     def required_and_unknown(scope, table_name):
         pass
 
-    assert _synthesize_arguments(required_and_unknown) == {
+    assert _probe_arguments_for(required_and_unknown) == {
         "scope": None,
         "table_name": PROBE_TABLE,
     }
@@ -214,7 +215,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     # Optional parameters are asked too: the contract's `schema=None` precedes
     # `table_name=""` in most signatures, so skipping defaults would ask nothing
     # at all — the census would pass by never asking a question.
-    assert _synthesize_arguments(optional_everything) == {
+    assert _probe_arguments_for(optional_everything) == {
         "include_system": False,
         "table_name": PROBE_TABLE,
     }
@@ -222,7 +223,7 @@ def test_argument_synthesis_asks_the_smallest_question():
     def all_recognizable(schema=None, table_name="", column_name="", limit=0, name=""):
         pass
 
-    assert _synthesize_arguments(all_recognizable) == {
+    assert _probe_arguments_for(all_recognizable) == {
         "schema": None,
         "table_name": PROBE_TABLE,
         "column_name": PROBE_COLUMN,
