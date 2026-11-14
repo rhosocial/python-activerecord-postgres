@@ -52,11 +52,24 @@ def _require_extension(backend, name):
     )
 
 
+def _supports_multirange(backend) -> bool:
+    """PostgreSQL 14 added the multirange types; older servers refuse the DDL."""
+    version = getattr(backend.dialect, "version", None)
+    if version is None:
+        return True
+    return tuple(version)[:2] >= (14,)
+
+
 @pytest.fixture(scope="class")
 def native_backend(postgres_backend_class, request):
     """The class's backend, with the class's built-in tables created."""
     backend = postgres_backend_class
     names = tuple(getattr(request.cls, "TABLES", ()))
+    if "native_ranges" in names and not _supports_multirange(backend):
+        pytest.skip(
+            "PostgreSQL before 14 has no multirange types "
+            f"(server {backend.dialect.version})"
+        )
     if names:
         _create_tables(backend, BUILTIN_SCHEMA, names)
     return backend
