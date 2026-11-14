@@ -5,7 +5,7 @@ This module provides the base mixin class for PostgreSQL backend implementations
 containing methods that are shared between sync and async backends.
 """
 
-from typing import Dict, Optional, Tuple, Type, TYPE_CHECKING
+from typing import Dict, List, Optional, Tuple, Type, TYPE_CHECKING
 import logging
 
 from psycopg.errors import (
@@ -275,6 +275,11 @@ class PostgresBackendMixin:
             PostgresEnumAdapter,
             PostgresRangeAdapter,
             PostgresMultirangeAdapter,
+            PostgresNeutralBitStringAdapter,
+            PostgresNeutralGeometryAdapter,
+            PostgresNeutralMacAddressAdapter,
+            PostgresNeutralRangeAdapter,
+            PostgresNeutralVectorAdapter,
         )
         from ..adapters.geometric import PostgresGeometryAdapter
         from ..adapters.monetary import PostgresMoneyAdapter
@@ -317,6 +322,21 @@ class PostgresBackendMixin:
                         adapter, py_type, db_type, allow_override=True
                     )
 
+        # Neutral value adapters are keyed by the core neutral Python types
+        # (Geometry, Vector, ...), so they never collide with the backend
+        # wrapper adapters above and are always available to the catalogue.
+        neutral_adapters = [
+            PostgresNeutralGeometryAdapter(),
+            PostgresNeutralVectorAdapter(),
+            PostgresNeutralBitStringAdapter(),
+            PostgresNeutralRangeAdapter(),
+            PostgresNeutralMacAddressAdapter(),
+        ]
+        for adapter in neutral_adapters:
+            for py_type, db_types in adapter.supported_types.items():
+                for db_type in db_types:
+                    self.adapter_registry.register(adapter, py_type, db_type, allow_override=True)
+
         # Register Range adapters based on configuration
         range_mode = getattr(self.config, "range_adapter_mode", RangeAdapterMode.NATIVE)
         if range_mode in (RangeAdapterMode.CUSTOM, RangeAdapterMode.BOTH):
@@ -339,6 +359,25 @@ class PostgresBackendMixin:
             self.log(logging.DEBUG, "Registered PostgresMultirangeAdapter (custom multirange type)")
 
         self.log(logging.DEBUG, "Registered PostgreSQL-specific type adapters")
+
+    def get_type_adapters(self) -> List["SQLTypeAdapter"]:
+        """Return the adapter instances this backend provides.
+
+        This is a plain inventory: it says which adapters exist for this backend.
+        It carries no suggestion/default/priority semantics; the caller decides.
+
+        The inventory is deduplicated by adapter class (module + qualname) and
+        sorted by ``(module, qualname)``, so the order is deterministic and a
+        fresh list is returned on every call.
+        """
+        adapters: List["SQLTypeAdapter"] = list(self.adapter_registry.get_all_adapters().values())
+
+        unique: Dict[Tuple[str, str], "SQLTypeAdapter"] = {}
+        for adapter in adapters:
+            adapter_class = type(adapter)
+            unique.setdefault((adapter_class.__module__, adapter_class.__qualname__), adapter)
+
+        return [unique[key] for key in sorted(unique)]
 
     def _is_connection_error(self, error: Exception) -> bool:
         """Check if an error indicates a connection loss.
@@ -439,7 +478,7 @@ class PostgresBackendMixin:
             mapping conflicts with the base string handling. Users must explicitly
             specify adapters for these types when needed.
         """
-        suggestions: Dict[Type, Tuple["SQLTypeAdapter", Type]] = {}
+        base = super().get_default_adapter_suggestions()
 
         # Define a list of desired Python type to DB driver type mappings.
         # This list reflects types seen in test fixtures and common usage,
@@ -461,6 +500,14 @@ class PostgresBackendMixin:
         # Import PostgreSQL-specific types
         from ..type_values.range import PostgresRange, PostgresMultirange
         from ..type_values.geometric import Point, Line, LineSegment, Box, Path, Polygon, Circle
+        from rhosocial.activerecord.backend.adapters.bitstring import BitString
+        from rhosocial.activerecord.backend.adapters.geometry import Geometry
+        from rhosocial.activerecord.backend.adapters.network import MacAddress
+        from rhosocial.activerecord.backend.adapters.range import Multirange, Range
+        from rhosocial.activerecord.backend.adapters.vector import Vector
+        from rhosocial.activerecord.backend.base.type_adaption import (
+            merge_adapter_suggestions,
+        )
         from ..type_values.text_search import PostgresTsVector, PostgresTsQuery
         from ..type_values.monetary import PostgresMoney
         from ..type_values.network_address import PostgresMacaddr, PostgresMacaddr8
@@ -541,18 +588,23 @@ class PostgresBackendMixin:
             (CID, int),  # Command identifier
             # === PostgreSQL Tuple Identifier ===
             (TID, str),  # Tuple identifier (block number, offset)
+            # === Neutral families (text/wire forms in this backend's adapters) ===
+            (Geometry, str),  # WKT/EWKT text (covers the seven concrete shapes)
+            (Vector, str),  # pgvector text input, e.g. ``[1.0,2.0]``
+            (BitString, str),  # ``bit``/``varbit`` binary-digit text
+            (Range, str),  # PostgreSQL range literal
+            (Multirange, str),  # PostgreSQL multirange literal
+            (MacAddress, str),  # canonical lowercase colon text
             # Note: PostgresXML and PostgresBitString are NOT included here
             # because they both map to str, which conflicts with base string handling.
             # Users must explicitly specify adapters for these types.
         ]
 
-        # Iterate through the defined mappings and retrieve adapters from the registry.
+        suggestions = merge_adapter_suggestions(base, type_mappings, self.adapter_registry)
+
+        # Report any mapping this backend's registry cannot satisfy.
         for py_type, db_type in type_mappings:
-            adapter = self.adapter_registry.get_adapter(py_type, db_type)
-            if adapter:
-                suggestions[py_type] = (adapter, db_type)
-            else:
-                # Log a debug message if a specific adapter is expected but not found.
+            if py_type not in suggestions:
                 self.log(
                     logging.DEBUG,
                     f"No adapter found for ({py_type.__name__}, {db_type.__name__}). "

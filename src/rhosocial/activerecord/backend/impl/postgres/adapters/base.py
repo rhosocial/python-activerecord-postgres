@@ -7,7 +7,7 @@ This module contains basic type adapters for PostgreSQL.
 
 import json
 from enum import Enum as PythonEnum
-from typing import Any, Dict, List, Type, Union, Optional, Set, get_args, get_origin  # noqa: F401
+from typing import Any, Callable, Dict, List, Type, Union, Optional, Set, get_args, get_origin  # noqa: F401
 
 from psycopg.types.json import Jsonb
 
@@ -114,14 +114,48 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
     Note: psycopg automatically serializes/deserializes JSON, so dict <-> JSON.
     When reading from DB, psycopg returns dict. When target type is str,
     we need to serialize back to JSON string.
+
+    The optional ``default`` and ``object_hook`` mirror their ``json.dumps`` /
+    ``json.loads`` namesakes:
+
+    - ``default`` is forwarded to psycopg's dumper through the per-value
+      ``Jsonb(value, dumps)`` hook, so it is applied when psycopg serialises
+      the value (psycopg's global ``dumps`` is replaced, not bypassed).
+    - ``object_hook`` is applied with ``json.loads``. psycopg has already
+      decoded a JSONB column to ``dict``/``list`` by the time the adapter sees
+      it, so the already-decoded value is re-encoded and decoded again to run
+      the hook over every object, exactly as ``json.loads`` would.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        default: Optional[Callable[[Any], Any]] = None,
+        object_hook: Optional[Callable[[dict], Any]] = None,
+    ):
         super().__init__()
+        self.default = default
+        self.object_hook = object_hook
         self.register_type(dict, Jsonb)
 
+    def _dumps(self, value: Any) -> str:
+        """Serialise for psycopg, applying the configured ``default``."""
+        return json.dumps(value, default=self.default)
+
+    def _wrap(self, value: Any) -> Jsonb:
+        """Build the psycopg wrapper, wiring ``default`` into the dumper."""
+        if self.default is None:
+            # Keep psycopg's default dumps function untouched.
+            return Jsonb(value)
+        return Jsonb(value, self._dumps)
+
+    def _apply_object_hook(self, value: Any) -> Any:
+        """Run ``object_hook`` over an already-decoded JSON value."""
+        if self.object_hook is None:
+            return value
+        return json.loads(json.dumps(value, default=self.default), object_hook=self.object_hook)
+
     def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
-        return Jsonb(value)
+        return self._wrap(value)
 
     def _do_from_database(
         self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
@@ -131,15 +165,16 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
         # but model fields may be defined as Optional[str] type
         if target_type is str:
             if isinstance(value, (dict, list)):
-                return json.dumps(value, ensure_ascii=False)
+                return json.dumps(value, ensure_ascii=False, default=self.default)
             return value
-        # For dict/list target types, return as-is
+        # For dict/list target types, return the decoded value (running the
+        # hook if one was configured against the already-decoded document)
         if isinstance(value, dict):
-            return value
+            return self._apply_object_hook(value)
         if isinstance(value, list):
-            return value
+            return self._apply_object_hook(value)
         # In case it's a string representation
-        return json.loads(value)
+        return json.loads(value, object_hook=self.object_hook)
 
     def to_database_batch(
         self, values: List[Any], target_type: Type, options: Optional[Dict[str, Any]] = None
@@ -150,7 +185,7 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
             if value is None:
                 result.append(None)
             else:
-                result.append(Jsonb(value))
+                result.append(self._wrap(value))
         return result
 
     def from_database_batch(
@@ -163,11 +198,11 @@ class PostgresJSONBAdapter(BaseSQLTypeAdapter):
                 result.append(None)
             elif target_type is str:
                 if isinstance(value, (dict, list)):
-                    result.append(json.dumps(value, ensure_ascii=False))
+                    result.append(json.dumps(value, ensure_ascii=False, default=self.default))
                 else:
                     result.append(value)
             else:
-                result.append(value)
+                result.append(self._apply_object_hook(value))
         return result
 
 

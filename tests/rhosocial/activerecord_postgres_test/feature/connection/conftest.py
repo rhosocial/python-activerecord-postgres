@@ -1,69 +1,68 @@
 # tests/rhosocial/activerecord_postgres_test/feature/connection/conftest.py
-"""Pytest configuration for the connection pool tests.
+"""L2 backend fixtures for the connection-pool tests.
 
-The directory owns its logical database the same way every migrated directory
-does: it declares the lifecycle here and takes the scenario and configuration
-from the testsuite ``environment``, so running against several scenarios gets
-one pool per scenario instead of a first-scenario guess. The concurrency tables
-are created and dropped by the table fixtures themselves, so ``prepare`` and
-``teardown`` have no group to manage.
+The pool fixtures own their connections: each creates the directory's database
+for the scenario it runs under and hands out PostgreSQL backends from it. The
+concurrency tables are created and dropped by the table fixtures through that
+pool, from the definitions in ``pool_definitions.py``.
+
+``database_config`` declares the directory's identity (scenario, configuration
+and database name). It exists for the xdist grouping contract: a scenario's
+tests for one directory stay on one worker, while different scenarios are
+different databases and may run in parallel.
 """
 
+from functools import partial
+from pathlib import Path
 from typing import Generator
 
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.connection.pool import (
     AsyncBackendPool,
     BackendPool,
     PoolConfig,
 )
 
+from pool_definitions import (
+    AsyncConcurrentTestPostsDefinition,
+    AsyncConcurrentTestUsersDefinition,
+    ConcurrentTestPostsDefinition,
+    ConcurrentTestUsersDefinition,
+)
 
-def ensure_database(environment):
-    """Create the directory's database, or clear it when it already exists."""
-    environment.reset_database()
-
-
-def prepare(environment):
-    """No group tables: each table fixture creates what it needs."""
-
-
-def teardown(environment):
-    """No group tables: each table fixture drops what it created."""
+DDL = ExecutionOptions(stmt_type=StatementType.DDL)
 
 
-def _backend_factory(environment):
-    """Return a factory producing sync backends for this environment."""
-    config = environment.make_config()
-
-    def factory():
-        return environment.scenario.backend_class(connection_config=config)
-
-    return factory
+def _database_name() -> str:
+    """Database name from this directory's namespace (below ``feature``)."""
+    parts = Path(__file__).parent.parts
+    start = parts.index("feature") + 1
+    return "test_" + "_".join(parts[start:])
 
 
-def _async_backend_factory(environment):
-    """Return a factory producing async backends for this environment."""
-    config = environment.make_config()
-
-    def factory():
-        return environment.scenario.async_backend_class(connection_config=config)
-
-    return factory
+@pytest.fixture(scope="session")
+def database_config(backend_scenario):
+    """The scenario, its connection configuration, and the directory database name."""
+    name = _database_name()
+    return backend_scenario, backend_scenario.make_config(name), name
 
 
 @pytest.fixture(scope="function")
-def postgres_pool(environment) -> Generator[BackendPool, None, None]:
+def postgres_pool(database_config) -> Generator[BackendPool, None, None]:
     """Create a BackendPool with PostgreSQL backends for testing."""
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=1,
         max_size=5,
         timeout=30.0,
         validate_on_borrow=True,
         validation_query="SELECT 1",
-        backend_factory=_backend_factory(environment),
+        backend_factory=partial(scenario.backend_class, connection_config=config),
     )
 
     pool = BackendPool.create(pool_config)
@@ -72,15 +71,17 @@ def postgres_pool(environment) -> Generator[BackendPool, None, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_pool(environment) -> AsyncBackendPool:
+async def async_postgres_pool(database_config) -> AsyncBackendPool:
     """Create an AsyncBackendPool with PostgreSQL backends for testing."""
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=1,
         max_size=5,
         timeout=30.0,
         validate_on_borrow=True,
         validation_query="SELECT 1",
-        backend_factory=_async_backend_factory(environment),
+        backend_factory=partial(scenario.async_backend_class, connection_config=config),
     )
 
     pool = await AsyncBackendPool.create(pool_config)
@@ -89,14 +90,16 @@ async def async_postgres_pool(environment) -> AsyncBackendPool:
 
 
 @pytest.fixture(scope="function")
-def postgres_pool_large(environment) -> Generator[BackendPool, None, None]:
+def postgres_pool_large(database_config) -> Generator[BackendPool, None, None]:
     """Create a larger BackendPool for stress testing."""
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=2,
         max_size=10,
         timeout=60.0,
         validate_on_borrow=False,  # Faster for stress tests
-        backend_factory=_backend_factory(environment),
+        backend_factory=partial(scenario.backend_class, connection_config=config),
     )
 
     pool = BackendPool.create(pool_config)
@@ -105,14 +108,16 @@ def postgres_pool_large(environment) -> Generator[BackendPool, None, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_pool_large(environment) -> AsyncBackendPool:
+async def async_postgres_pool_large(database_config) -> AsyncBackendPool:
     """Create a larger AsyncBackendPool for stress testing."""
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=2,
         max_size=10,
         timeout=60.0,
         validate_on_borrow=False,
-        backend_factory=_async_backend_factory(environment),
+        backend_factory=partial(scenario.async_backend_class, connection_config=config),
     )
 
     pool = await AsyncBackendPool.create(pool_config)
@@ -126,32 +131,21 @@ async def async_postgres_pool_large(environment) -> AsyncBackendPool:
 @pytest.fixture(scope="function")
 def postgres_pool_with_tables(postgres_pool: BackendPool) -> Generator[BackendPool, None, None]:
     """Create a pool with test tables initialized."""
+    definitions = (
+        ConcurrentTestPostsDefinition,
+        ConcurrentTestUsersDefinition,
+    )
     with postgres_pool.connection() as backend:
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        backend.execute("""
-            CREATE TABLE concurrent_test_users (
-                id SERIAL PRIMARY KEY,
-                thread_id INTEGER,
-                name VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        backend.execute("""
-            CREATE TABLE concurrent_test_posts (
-                id SERIAL PRIMARY KEY,
-                thread_id INTEGER,
-                user_id INTEGER,
-                title VARCHAR(255),
-                content TEXT
-            )
-        """)
+        fixtures = [definition(backend.dialect) for definition in definitions]
+        for fixture in fixtures:
+            backend.execute(*fixture.drop_table.to_sql(), options=DDL)
+            backend.execute(*fixture.create_table.to_sql(), options=DDL)
 
     yield postgres_pool
 
     with postgres_pool.connection() as backend:
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
+        for fixture in reversed(fixtures):
+            backend.execute(*fixture.drop_table.to_sql(), options=DDL)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -159,29 +153,18 @@ async def async_postgres_pool_with_tables(
     async_postgres_pool: AsyncBackendPool,
 ) -> AsyncBackendPool:
     """Create an async pool with test tables initialized."""
+    definitions = (
+        AsyncConcurrentTestPostsDefinition,
+        AsyncConcurrentTestUsersDefinition,
+    )
     async with async_postgres_pool.connection() as backend:
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        await backend.execute("""
-            CREATE TABLE concurrent_test_users (
-                id SERIAL PRIMARY KEY,
-                task_id INTEGER,
-                name VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        await backend.execute("""
-            CREATE TABLE concurrent_test_posts (
-                id SERIAL PRIMARY KEY,
-                task_id INTEGER,
-                user_id INTEGER,
-                title VARCHAR(255),
-                content TEXT
-            )
-        """)
+        fixtures = [definition(backend.dialect) for definition in definitions]
+        for fixture in fixtures:
+            await backend.execute(*fixture.drop_table.to_sql(), options=DDL)
+            await backend.execute(*fixture.create_table.to_sql(), options=DDL)
 
     yield async_postgres_pool
 
     async with async_postgres_pool.connection() as backend:
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
+        for fixture in reversed(fixtures):
+            await backend.execute(*fixture.drop_table.to_sql(), options=DDL)
