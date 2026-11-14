@@ -145,6 +145,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     ILIKESupport,
     IntrospectionSupport,
     TransactionControlSupport,
+    TransactionalDDLSupport,
     SQLFunctionSupport,
     DDLTypeSupport,
 )
@@ -668,6 +669,7 @@ class PostgresDialect(
     IntrospectionSupport,
     # Transaction control protocol
     TransactionControlSupport,
+    TransactionalDDLSupport,
     # PostgreSQL-specific protocols
     PostgresExtensionSupport,
     PostgresMaterializedViewSupport,
@@ -860,6 +862,10 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_transactional_ddl(self) -> bool:
+        """PostgreSQL DDL participates in transactions."""
+        return True
 
     def supports_table_function(self) -> bool:
         """PostgreSQL reads a set-returning function as a row source.

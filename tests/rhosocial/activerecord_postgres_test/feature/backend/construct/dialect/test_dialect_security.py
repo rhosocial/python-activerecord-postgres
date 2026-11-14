@@ -1,0 +1,660 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/dialect/test_dialect_security.py
+"""
+Tests for PostgreSQL dialect SQL injection security fixes.
+
+This test module verifies that string escaping and validation
+methods properly sanitize user input to prevent SQL injection.
+Tests are run against the actual PostgreSQL dialect.
+"""
+import pytest
+
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F401
+from rhosocial.activerecord.backend.expression.statements import (
+    ColumnDefinition,
+    ColumnDefaultConstraint,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    PostgresExcludeConstraint,
+)
+from rhosocial.activerecord.backend.expression.types import VarCharType
+from rhosocial.activerecord.backend.expression.operators import (
+    BinaryExpression,
+    RawSQL,
+)
+from rhosocial.activerecord.backend.expression.core import CastExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresPartitionValue
+from typing import Tuple, Any  # noqa: F401
+from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
+
+
+@pytest.fixture
+def dialect():
+    """Create a PostgreSQL test dialect."""
+    return PostgresDialect((13, 0, 0))
+
+
+def test_postgresescape_sql_string(dialect):
+    """PostgreSQL inherits the public string-escape helper core exposes.
+
+    It is public because the literal-construction protocol (``SQLLiteral``) must
+    escape every string component it embeds, and the protocol's contract names
+    this helper rather than a private one.
+    """
+    result = dialect.escape_sql_string("test's value")
+    assert result == "test''s value"
+
+
+def test_postgresa_type_position_refuses_a_payload(dialect):
+    """A type name is a name, and the grammar is what says so.
+
+    The backend has no character filter of its own any more: the type
+    position is guarded by the grammar, which is the framework's rule for
+    what a name may be, and the server decides whether the type exists.
+    """
+    from rhosocial.activerecord.backend.expression import Literal
+    from rhosocial.activerecord.backend.expression.statements import (
+        AlterColumnAction,
+    )
+    from rhosocial.activerecord.backend.expression.type_name import (
+        InvalidTypeNameError,
+    )
+    from rhosocial.activerecord.backend.expression.xml import (
+        XMLSerializeExpression,
+    )
+
+    # A name is a name: the position takes it.
+    XMLSerializeExpression(dialect, Literal(dialect, "x"), "TEXT")
+    AlterColumnAction(dialect, "c", "SET DATA TYPE", new_value="TEXT")
+
+    # A value that is not a name is refused, and refused before the
+    # statement is ever rendered.
+    with pytest.raises(InvalidTypeNameError):
+        XMLSerializeExpression(
+            dialect, Literal(dialect, "x"), "TEXT; DROP TABLE users--"
+        )
+    with pytest.raises(InvalidTypeNameError):
+        AlterColumnAction(
+            dialect, "c", "SET DATA TYPE", new_value="TEXT; DROP TABLE users--"
+        )
+
+
+def test_postgres_format_column_definition_data_type_validation(dialect):
+    """Test column definition formats data_type correctly."""
+    col_def = ColumnDefinition(
+        dialect,
+        name="test_col",
+        data_type=VarCharType(length=255, dialect=dialect),
+    )
+
+    sql, params = col_def.to_sql()
+    assert "VARCHAR(255)" in sql
+
+
+def test_postgres_column_definition_rejects_string_data_type(dialect):
+    """Test that ColumnDefinition rejects string data_type at construction."""
+    with pytest.raises(TypeError, match="data_type must be a DataType instance"):
+        ColumnDefinition(
+            dialect,
+            name="test_col",
+            data_type="VARCHAR(255); DROP TABLE users--",
+        )
+
+
+def test_postgres_format_default_constraint_string_escaping(dialect):
+    """Test DEFAULT constraint string is escaped.
+
+    The formatter named here is the *branch* formatter: under core's two-level
+    node the value rides on ``ColumnDefaultConstraint`` and the production
+    (``CONSTRAINT <name>`` plus the traits) is a separate level.
+    """
+    branch = ColumnDefaultConstraint(dialect, "test's value")
+
+    sql, params = dialect.format_column_default_constraint(branch)
+    assert "test''s value" in sql
+    assert "'; DROP" not in sql
+
+
+def test_postgres_format_storage_options_string_escaping(dialect):
+    """Test storage options string values are escaped."""
+    from rhosocial.activerecord.backend.expression.statements import StorageOptionsExpression
+    storage_opts = StorageOptionsExpression(dialect, {"key": "value's"})
+    sql, params = dialect.format_storage_options_expression(storage_opts)
+    assert "value''s" in sql
+    assert "'; DROP" not in sql
+
+
+def test_postgres_format_cast_expression_valid(dialect):
+    """The target type is a DataType, and the :: syntax renders what it says."""
+    from rhosocial.activerecord.backend.expression.types import CustomType
+
+    expr = CastExpression(dialect, RawSQL(dialect, "column"),
+                          CustomType(dialect, raw="INTEGER"))
+    sql, params = expr.to_sql()
+    assert "INTEGER" in sql
+
+
+def test_exclude_constraint_valid_using_methods(dialect):
+    """Test valid index access methods are accepted."""
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        name="test_exclude",
+        elements=[("int4range", "&&")],
+        using="gist",
+    )
+
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
+    assert "EXCLUDE USING gist" in sql
+
+
+def test_exclude_constraint_valid_operators(dialect):
+    """Test valid exclude operators are accepted."""
+    valid_ops = [
+        ("int4range", "&&"),
+        ("float8range", "&&"),
+        ("name", "="),
+        ("box", "~="),
+    ]
+
+    for elem, op in valid_ops:
+        constraint = PostgresExcludeConstraint(
+        dialect,
+        name="test_exclude",
+        elements=[(elem, op)],
+    )
+
+        sql, params = dialect.format_table_exclude_constraint(constraint.branch)
+        assert f"WITH {op}" in sql
+
+
+def test_exclude_constraint_rejects_gin(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        using="gin",
+    )
+    with pytest.raises(ValueError, match="Invalid index access method"):
+        dialect.format_table_exclude_constraint(constraint.branch)
+
+
+def test_exclude_constraint_accepts_symbol_operator(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("box", "|>>")],
+    )
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
+    assert 'WITH |>>' in sql
+    assert params == ()
+
+
+def test_exclude_constraint_rejects_invalid_using(dialect):
+    """Test that invalid index access method is rejected."""
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        name="test_exclude",
+        elements=[("range", "&&")],
+        using="invalid_method",
+    )
+
+    with pytest.raises(ValueError, match="Invalid index access method"):
+        dialect.format_table_exclude_constraint(constraint.branch)
+
+
+def test_exclude_constraint_rejects_invalid_operator(dialect):
+    """Test that invalid exclude operator is rejected."""
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        name="test_exclude",
+        elements=[("range", "'; DROP TABLE users--")],
+    )
+
+    with pytest.raises(ValueError, match="Invalid exclude operator"):
+        dialect.format_table_exclude_constraint(constraint.branch)
+
+
+def test_exclude_constraint_sql_injection_prevention(dialect):
+    """Test that SQL injection attempts are blocked."""
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        name="test_exclude",
+        elements=[("range", "&&")],
+        using="gist",
+    )
+
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
+
+    assert "; DROP" not in sql
+    assert "--" not in sql
+    assert "/*" not in sql
+
+
+def test_exclude_constraint_rejects_empty_elements(dialect):
+    constraint = PostgresExcludeConstraint(dialect, name="empty_exclude")
+    with pytest.raises(ValueError, match="at least one element"):
+        dialect.format_table_exclude_constraint(constraint.branch)
+
+
+def test_exclude_constraint_formats_expression_and_where(dialect):
+    from rhosocial.activerecord.backend.expression import Column
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+
+    where = ComparisonPredicate(
+        dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline=True)
+    )
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        where=where,
+    )
+
+    sql, params = dialect.format_table_exclude_constraint(constraint.branch)
+
+    assert sql == 'EXCLUDE USING gist ("range" WITH &&) WHERE ("active" = TRUE)'
+    assert params == ()
+
+
+def test_exclude_constraint_rejects_raw_where(dialect):
+    constraint = PostgresExcludeConstraint(
+        dialect,
+        elements=[("range", "&&")],
+        where="active = TRUE; DROP TABLE people",
+    )
+    with pytest.raises(TypeError, match="where must be a SQL expression"):
+        dialect.format_table_exclude_constraint(constraint.branch)
+
+
+class TestEnumSecurity:
+    """Tests for CREATE TYPE ENUM value escaping (fix for SQL injection risk)."""
+
+    def test_create_type_enum_values_escaped(self, dialect):
+        """Test ENUM values are properly escaped with single quote doubling."""
+        sql, params = dialect.format_create_type_enum_statement(
+            name="test_enum",
+            values=["it's", "normal", "test's value"],
+        )
+
+        assert "it''s" in sql
+        assert "test''s value" in sql
+        assert "'; DROP" not in sql
+
+    def test_create_type_enum_sql_injection_blocked(self, dialect):
+        """Test SQL injection in ENUM values is properly escaped (not executed)."""
+        sql, params = dialect.format_create_type_enum_statement(
+            name="test_enum",
+            values=["normal", "'; DROP TABLE users--"],
+        )
+
+        assert "DROP TABLE users--" in sql
+        assert "CREATE TYPE" in sql
+        assert "AS ENUM" in sql
+
+
+class TestStoredProcedureNameSecurity:
+    """Tests for stored procedure names using format_identifier."""
+
+    def test_create_procedure_name_quoted(self, dialect):
+        """Test CREATE PROCEDURE name is properly quoted."""
+        sql, params = dialect.format_create_procedure_statement(
+            name="my_procedure",
+            body="BEGIN END",
+            language="PL/pgSQL",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_drop_procedure_name_quoted(self, dialect):
+        """Test DROP PROCEDURE name is properly quoted."""
+        sql, params = dialect.format_drop_procedure_statement(
+            name="my_procedure",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_call_statement_name_quoted(self, dialect):
+        """Test CALL statement procedure name is properly quoted."""
+        sql, params = dialect.format_call_statement(
+            name="my_procedure",
+        )
+
+        assert '"my_procedure"' in sql
+
+    def test_procedure_with_schema_quoted(self, dialect):
+        """Test procedure with schema is properly quoted."""
+        sql, params = dialect.format_create_procedure_statement(
+            schema="my_schema",
+            name="my_procedure",
+            body="BEGIN END",
+            language="PL/pgSQL",
+        )
+
+        assert '"my_schema"' in sql
+        assert '"my_procedure"' in sql
+
+
+class TestPartialIndexWhereClauseSecurity:
+    """Tests for partial index WHERE clause (ToSQLProtocol support)."""
+
+    def test_create_index_with_string_where_clause(self, dialect):
+        """Test CREATE INDEX with string WHERE clause (backward compatible)."""
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_test",
+            table_name="users",
+            columns=["email"],
+            where_clause="active = true",
+        )
+
+        assert "WHERE active = true" in sql
+        assert params == ()
+
+    def test_create_index_with_to_sql_protocol(self, dialect):
+        """Test CREATE INDEX with ToSQLProtocol expression (parameterized)."""
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
+
+        class MockWhereExpr(BaseExpression):
+            def __init__(self):
+                self._sql = "age >= 18"
+                self._params = (18,)
+
+            def to_sql(self):
+                return self._sql, self._params
+
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_active",
+            table_name="users",
+            columns=["email"],
+            where_clause=MockWhereExpr(),
+        )
+
+        assert "WHERE age >= 18" in sql
+        assert params == (18,)
+
+    def test_create_index_where_clause_params_collected(self, dialect):
+        """Test WHERE clause parameters are properly collected and returned."""
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
+
+        class MockWhereExpr(BaseExpression):
+            def __init__(self):
+                self._sql = "status = %s"
+                self._params = ("active",)
+
+            def to_sql(self):
+                return self._sql, self._params
+
+        sql, params = dialect.format_create_index_pg_statement(
+            index_name="idx_test",
+            table_name="users",
+            columns=["status"],
+            where_clause=MockWhereExpr(),
+        )
+
+        assert "WHERE status = %s" in sql
+        assert params == ("active",)
+
+
+class TestTriggerFunctionNameSecurity:
+    """Tests for trigger function name using format_identifier."""
+
+    def test_trigger_function_name_quoted(self, dialect):
+        """Test trigger function name is properly quoted with double quotes."""
+        from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
+            CreateTriggerStatement,
+            TriggerTiming,
+            TriggerEvent,
+        )
+
+        expr = CreateTriggerStatement(
+            dialect=dialect,
+            trigger=Trigger(dialect, 'my_trigger'),
+            table=Table(dialect, 'users'),
+            timing=TriggerTiming.BEFORE,
+            events=[TriggerEvent.INSERT],
+            function=Function(dialect, 'my_function'),
+        )
+
+        sql, params = expr.to_sql()
+
+        assert '"my_function"' in sql
+
+    def test_trigger_function_name_special_chars_quoted(self, dialect):
+        """Test trigger function name with special characters is quoted."""
+        from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
+            CreateTriggerStatement,
+            TriggerTiming,
+            TriggerEvent,
+        )
+
+        expr = CreateTriggerStatement(
+            dialect=dialect,
+            trigger=Trigger(dialect, 'trigger'),
+            table=Table(dialect, 'users'),
+            timing=TriggerTiming.BEFORE,
+            events=[TriggerEvent.INSERT],
+            function=Function(dialect, 'Function With Spaces'),
+        )
+
+        sql, params = expr.to_sql()
+
+        assert '"Function With Spaces"' in sql
+
+
+class TestExtendedStatisticsNameSecurity:
+    """Tests for extended statistics names using format_identifier."""
+
+    def test_create_statistics_name_quoted(self, dialect):
+        """Test CREATE STATISTICS name is properly quoted."""
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
+            PostgresCreateStatisticsStatement,
+        )
+
+        expr = PostgresCreateStatisticsStatement(
+            dialect=dialect,
+            name="my_stats",
+            table_name="users",
+            columns=["email"],
+            statistics_type="ndistinct",
+        )
+
+        sql, params = expr.to_sql()
+
+        assert '"my_stats"' in sql
+
+    def test_drop_statistics_name_quoted(self, dialect):
+        """Test DROP STATISTICS name is properly quoted."""
+        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
+            PostgresDropStatisticsStatement,
+        )
+
+        expr = PostgresDropStatisticsStatement(
+            dialect=dialect,
+            name="my_stats",
+        )
+
+        sql, params = expr.to_sql()
+
+        assert '"my_stats"' in sql
+
+
+# ============================================================
+# format_partition_value — single-quote escaping
+# ============================================================
+
+def test_partition_value_none(dialect):
+    """None partition value returns NULL."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value=None).to_sql()
+    assert params == ()
+    assert sql == "NULL"
+
+
+def test_partition_value_maxvalue(dialect):
+    """MAXVALUE is returned as-is (case-insensitive)."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value="MAXVALUE").to_sql()
+    assert params == ()
+    assert sql == "MAXVALUE"
+
+
+def test_partition_value_minvalue(dialect):
+    """MINVALUE is returned as-is (case-insensitive)."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value="minvalue").to_sql()
+    assert params == ()
+    assert sql == "MINVALUE"
+
+
+def test_partition_value_normal_string(dialect):
+    """Normal string value is single-quoted."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value="2024-01-01").to_sql()
+    assert params == ()
+    assert sql == "'2024-01-01'"
+
+
+def test_partition_value_escaped_single_quote(dialect):
+    """String value with single quote is properly escaped."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value="it's").to_sql()
+    assert params == ()
+    assert sql == "'it''s'"
+    assert "'; DROP" not in sql
+
+
+def test_partition_value_injection_blocked(dialect):
+    """SQL injection in partition value is safely escaped (inside quotes)."""
+    sql, params = PostgresPartitionValue(
+        dialect=dialect, value="x'; DROP TABLE users--"
+    ).to_sql()
+    assert params == ()
+    assert sql.count("'") % 2 == 0
+    assert sql.startswith("'")
+    assert sql.endswith("'")
+
+
+def test_partition_value_integer(dialect):
+    """Integer partition value is returned as str()."""
+    sql, params = PostgresPartitionValue(dialect=dialect, value=42).to_sql()
+    assert params == ()
+    assert sql == "42"
+
+
+# ============================================================
+# format_identifier — identifier quoting equivalence and injection immunity
+# ============================================================
+
+def test_format_identifier_normal(dialect):
+    """Normal identifier is double-quoted."""
+    result = dialect.format_identifier("users")
+    assert result == '"users"'
+
+
+def test_format_identifier_with_quote(dialect):
+    """Identifier with embedded double-quote is properly escaped."""
+    result = dialect.format_identifier('table"name')
+    assert result == '"table""name"'
+
+
+def test_format_identifier_injection_payload(dialect):
+    """Identifier with injection payload is safely contained (balanced quotes)."""
+    payload = 'users"; DROP TABLE users--'
+    result = dialect.format_identifier(payload)
+    assert result.count('"') % 2 == 0, f"Unbalanced quotes: {result}"
+    assert result == '"users""; DROP TABLE users--"'
+
+
+def test_format_identifier_naive_vs_proper_safe(dialect):
+    """For safe input, naive and proper quoting produce same structure."""
+    names = ["users", "orders", "products", "table_1", "camelCase"]
+    for name in names:
+        naive = f'"{name}"'
+        proper = dialect.format_identifier(name)
+        assert naive == proper, f"Mismatch for '{name}': naive={naive}, proper={proper}"
+
+
+def test_format_identifier_naive_vs_proper_malicious(dialect):
+    """For malicious input, proper quoting prevents breakout that naive allows."""
+    payloads = [
+        'x"; DROP TABLE users--',
+        'y"; DELETE FROM t--',
+        'z"; UPDATE t SET a=1--',
+    ]
+    for payload in payloads:
+        naive = f'"{payload}"'
+        proper = dialect.format_identifier(payload)
+
+        # Naive produces odd quote count => breakout
+        assert naive.count('"') % 2 != 0, \
+            f"Naive quoting should unbalance quotes for '{payload}': {naive}"
+
+        # Proper produces even quote count => contained
+        assert proper.count('"') % 2 == 0, \
+            f"Proper quoting should balance quotes for '{payload}': {proper}"
+
+
+def test_format_identifier_empty_string(dialect):
+    """Empty identifier produces empty double quotes."""
+    assert dialect.format_identifier("") == '""'
+
+
+# ── format_binary_expression % escaping ─────────────────────────────────
+
+
+def test_format_binary_operator_percent_escaped():
+    """format_binary_expression escapes % to %% for psycopg compatibility."""
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    from rhosocial.activerecord.backend.expression.core import Literal
+    d = PostgresDialect((16, 0, 0))
+
+    def binop(op, left_sql, right_sql, right_params=()):
+        left = RawSQL(d, left_sql)
+        if right_params:
+            right = Literal(d, right_params[0])
+        else:
+            right = RawSQL(d, right_sql)
+        return BinaryExpression(d, op, left, right).to_sql()
+
+    # % operator → %% (psycopg requires %% for literal %)
+    sql, params = binop("%", "a", "b")
+    assert sql == "a %% b", f"Expected escaped %%, got: {sql}"
+    assert params == ()
+
+    # %% is pre-escaped → should NOT be double-escaped to %%%%
+    # (callers must pass raw operator, not pre-escaped)
+    sql, params = binop("%%", "a", "b")
+    assert sql == "a %%%% b", f"raw %% should be escaped to %%%%, got: {sql}"
+
+    # Operator without % → unchanged
+    sql, params = binop("=", "a", "b")
+    assert sql == "a = b"
+    assert params == ()
+
+    # ? operator (hstore/jsonb) → preserved as-is, not treated as placeholder
+    sql, params = binop("?", "data", "%s", ("key",))
+    assert sql == "data ? %s", f"? operator preserved: {sql}"
+    assert params == ("key",)
+
+    # ?| and ?& operators → preserved
+    sql, params = binop("?|", "data", "%s", ("key",))
+    assert sql == "data ?| %s", f"?| operator preserved: {sql}"
+
+    # %# (pg_trgm) → %# (unchanged, no % to escape)
+    sql, params = binop("%#", "a", "b")
+    assert sql == "a %%# b", f"%# operator: {sql}"
+
+
+def test_hstore_operator_not_double_escaped():
+    """hstore_to_array_operator uses raw %, not pre-escaped %%."""
+    hstore_path = "src/rhosocial/activerecord/backend/impl/postgres/functions/hstore.py"
+    # Try to find the file relative to the repo root
+    import os
+    for candidate in [
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", "..", hstore_path),
+        os.path.join(os.getcwd(), hstore_path),
+    ]:
+        candidate = os.path.normpath(candidate)
+        if os.path.exists(candidate):
+            hstore_path = candidate
+            break
+    with open(hstore_path) as f:
+        src = f.read()
+    assert (
+        "BinaryExpression(" in src and '"%",' in src
+    ), "hstore operator must pass raw % (not pre-escaped %%)"
+    import re
+    for m in re.finditer(r'BinaryExpression\([^)]*?["\']%%["\']', src):
+        pytest.fail(f"Found pre-escaped %% operator: {m.group()[:80]}")

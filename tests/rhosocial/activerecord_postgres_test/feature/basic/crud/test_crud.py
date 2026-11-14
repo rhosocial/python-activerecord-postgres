@@ -28,5 +28,3 @@ from rhosocial.activerecord.testsuite.feature.basic.conftest import (
 
 # Import shared tests from testsuite package
 from rhosocial.activerecord.testsuite.feature.basic.crud.test_crud import *  # noqa: F403
-from rhosocial.activerecord.testsuite.feature.basic.crud.test_crud_async import *  # noqa: F403
-

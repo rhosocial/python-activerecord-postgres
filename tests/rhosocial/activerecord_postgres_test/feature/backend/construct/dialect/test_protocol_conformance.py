@@ -1,0 +1,905 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/dialect/test_protocol_conformance.py
+"""
+Tests to verify PostgresDialect protocol conformance and protocol non-overlap.
+
+This test ensures:
+1. PostgresDialect implements all methods defined in the protocols it claims to support
+2. All protocols have at least one member
+3. No two protocols share the same method name (no overlap)
+4. Method signatures on PostgresDialect match Protocol declarations
+5. Protocol-declared methods exist in corresponding Mixins (forward coverage)
+6. Mixin-implemented methods are declared in corresponding Protocols (reverse coverage)
+"""
+import inspect
+import sys
+from itertools import combinations
+from typing import Protocol
+
+if sys.version_info >= (3, 13):
+    from typing import get_protocol_members
+elif sys.version_info >= (3, 12):
+    from typing import _get_protocol_attrs as get_protocol_members
+
+import pytest
+from rhosocial.activerecord.backend.dialect import protocols as dialect_protocols
+from rhosocial.activerecord.backend.impl.postgres import dialect as postgres_dialect
+from rhosocial.activerecord.backend.impl.postgres import mixins as postgres_mixins
+from rhosocial.activerecord.backend.impl.postgres import protocols as postgres_protocols
+
+
+def get_all_protocol_methods(proto: type) -> set:
+    """Extract all public method names from a protocol, including inherited."""
+    members = set()
+    if sys.version_info >= (3, 13):
+        members = get_protocol_members(proto)
+    elif sys.version_info >= (3, 12):
+        members = get_protocol_members(proto)
+    else:
+        # Walk MRO to include methods from parent protocols
+        for cls in proto.__mro__:
+            if cls is object:
+                continue
+            for name in cls.__dict__:
+                if name.startswith("_"):
+                    continue
+                val = cls.__dict__[name]
+                if callable(val) or isinstance(val, (property, classmethod, staticmethod)):
+                    members.add(name)
+            members.update(
+                k for k in getattr(cls, "__annotations__", {})
+                if not k.startswith("_")
+            )
+    return members
+
+
+def get_own_protocol_methods(proto: type) -> set:
+    """Extract public method names declared directly on a protocol (not inherited).
+
+    Used for forward coverage: only checks methods the protocol itself declares,
+    since parent protocol methods are typically implemented by generic mixins.
+    """
+    members = set()
+    for name in proto.__dict__:
+        if name.startswith("_"):
+            continue
+        val = proto.__dict__[name]
+        if callable(val) or isinstance(val, (property, classmethod, staticmethod)):
+            members.add(name)
+    members.update(
+        k for k in getattr(proto, "__annotations__", {})
+        if not k.startswith("_")
+    )
+    return members
+
+
+def get_postgres_protocols():
+    """Get all protocols that PostgresDialect implements."""
+    from typing import runtime_checkable  # noqa: F401
+
+    protocols = [
+        dialect_protocols.SQLXMLSupport,
+        dialect_protocols.SQLXMLParsingSupport,
+        dialect_protocols.SQLXMLSerializationSupport,
+        dialect_protocols.SQLXMLConstructionSupport,
+        dialect_protocols.SQLXMLAggregationSupport,
+        dialect_protocols.SQLXMLQueryingSupport,
+        dialect_protocols.CollationSupport,
+        dialect_protocols.CTESupport,
+        dialect_protocols.ColumnAttributeSupport,
+        dialect_protocols.CommentSupport,
+        dialect_protocols.FilterClauseSupport,
+        dialect_protocols.WindowFunctionSupport,
+        dialect_protocols.JSONSupport,
+        dialect_protocols.UUIDSupport,
+        dialect_protocols.ReturningSupport,
+        dialect_protocols.AdvancedGroupingSupport,
+        dialect_protocols.ArraySupport,
+        dialect_protocols.ExplainSupport,
+        dialect_protocols.GraphSupport,
+        dialect_protocols.LockingSupport,
+        dialect_protocols.MergeSupport,
+        dialect_protocols.OrderedSetAggregationSupport,
+        dialect_protocols.QualifyClauseSupport,
+        dialect_protocols.TemporalTableSupport,
+        dialect_protocols.UpsertSupport,
+        dialect_protocols.LateralJoinSupport,
+        dialect_protocols.WildcardSupport,
+        dialect_protocols.JoinSupport,
+        dialect_protocols.SetOperationSupport,
+        # Named objects. Core split naming out of the DDL umbrella protocols,
+        # so each kind a PostgreSQL statement can name is listed on its own.
+        dialect_protocols.NamespaceSupport,
+        dialect_protocols.TableObjectSupport,
+        dialect_protocols.ViewObjectSupport,
+        dialect_protocols.MaterializedViewObjectSupport,
+        dialect_protocols.ForeignTableObjectSupport,
+        dialect_protocols.IndexObjectSupport,
+        dialect_protocols.SequenceObjectSupport,
+        dialect_protocols.TriggerObjectSupport,
+        dialect_protocols.TypeObjectSupport,
+        dialect_protocols.RoutineObjectSupport,
+        # Per-statement DDL protocols. One per statement expression: PostgreSQL
+        # implements each of these, so it declares each.
+        dialect_protocols.CreateTableSupport,
+        dialect_protocols.DropTableSupport,
+        dialect_protocols.AlterTableSupport,
+        dialect_protocols.CreateIndexSupport,
+        dialect_protocols.DropIndexSupport,
+        dialect_protocols.CreateViewSupport,
+        dialect_protocols.DropViewSupport,
+        dialect_protocols.MaterializedViewSupport,
+        dialect_protocols.CreateSequenceSupport,
+        dialect_protocols.DropSequenceSupport,
+        dialect_protocols.AlterSequenceSupport,
+        dialect_protocols.CreateTriggerSupport,
+        dialect_protocols.DropTriggerSupport,
+        dialect_protocols.CreateTypeSupport,
+        dialect_protocols.AlterTypeSupport,
+        dialect_protocols.DropTypeSupport,
+        dialect_protocols.CreateDomainSupport,
+        dialect_protocols.AlterDomainSupport,
+        dialect_protocols.DropDomainSupport,
+        dialect_protocols.CreateSchemaSupport,
+        dialect_protocols.DropSchemaSupport,
+        dialect_protocols.CreateDatabaseSupport,
+        dialect_protocols.DropDatabaseSupport,
+        dialect_protocols.AlterDatabaseSupport,
+        dialect_protocols.CreateRoutineSupport,
+        dialect_protocols.DropRoutineSupport,
+        dialect_protocols.PartitionSupport,
+        dialect_protocols.ConstraintSupport,
+        dialect_protocols.TruncateSupport,
+        dialect_protocols.TransactionalDDLSupport,
+        dialect_protocols.IntrospectionSupport,
+        dialect_protocols.TransactionControlSupport,
+        dialect_protocols.SQLFunctionSupport,
+        # Generic protocols Postgres also satisfies.
+        dialect_protocols.AlterTableModifierSupport,
+        dialect_protocols.DDLTypeSupport,
+        dialect_protocols.GraphTableSupport,
+        dialect_protocols.ILIKESupport,
+        dialect_protocols.AutoIncrementColumnSupport,
+        dialect_protocols.IdentityColumnSupport,
+        dialect_protocols.GeneratedColumnSupport,
+        # The column-type table: `PostgresColumnTypeMixin` answers
+        # `suggested_column_types()` for all eighteen common Python types and
+        # `suggested_extra_column_types()` with nothing of its own, and the
+        # dialect composes the mixin. The table is the model layer's source for
+        # which column class a field's annotation resolves to, so PostgreSQL
+        # declares it rather than leaving it for another dialect to answer.
+        dialect_protocols.ColumnTypeSupport,
+        # Statement forms PostgreSQL implements through its mixins, so the
+        # partition test below can classify them rather than leaving them
+        # unclassified.
+        dialect_protocols.CreateTableAsSupport,
+        dialect_protocols.CreateTableCloneSupport,
+        dialect_protocols.CreateTableLikeSupport,
+        dialect_protocols.CreateTableUsingTemplateSupport,
+        dialect_protocols.TimestampSupport,
+        dialect_protocols.DqlOrderSupport,
+        dialect_protocols.FulltextIndexSupport,
+        dialect_protocols.SynonymObjectSupport,
+    ]
+
+    postgres_mro = postgres_dialect.PostgresDialect.__mro__
+    for name in dir(postgres_protocols):
+        obj = getattr(postgres_protocols, name)
+        if isinstance(obj, type) and Protocol in getattr(obj, "__mro__", []):
+            if obj in postgres_mro and getattr(obj, "_is_protocol", False):
+                protocols.append(obj)
+
+    return protocols
+
+
+POSTGRES_PROTOCOLS = get_postgres_protocols()
+
+
+class TestDialectProtocolConformance:
+    """Assert PostgresDialect implements all protocols it declares to support."""
+
+    @pytest.fixture
+    def dialect(self):
+        """Create a PostgresDialect instance for testing."""
+        return postgres_dialect.PostgresDialect()
+
+    @pytest.mark.parametrize("protocol", POSTGRES_PROTOCOLS)
+    def test_implements_protocol(self, dialect, protocol):
+        """PostgresDialect should implement each protocol in POSTGRES_PROTOCOLS."""
+        if not getattr(protocol, "_is_runtime_protocol", False):
+            pytest.skip(f"Protocol {protocol.__name__} is not @runtime_checkable")
+        assert isinstance(dialect, protocol), (
+            f"PostgresDialect does not implement protocol {protocol.__name__}, "
+            f"missing methods: {get_all_protocol_methods(protocol) - set(dir(dialect))}"
+        )
+
+
+# Generic protocols PostgresDialect intentionally does NOT implement.
+#
+# Listing them makes the omission a deliberate, tested contract: if Postgres
+# ever satisfies one by accident, the negative test fails and forces a
+# conscious decision (move to POSTGRES_PROTOCOLS or revert).
+POSTGRES_NOT_IMPLEMENTED = [
+    # --- Intentional non-support ---
+    # PIVOT is not a PostgreSQL statement form. A dialect that reports support
+    # has to render one, and nothing here does.
+    dialect_protocols.PivotSupport,
+]
+
+
+def get_all_generic_protocols() -> dict:
+    """Discover every generic dialect protocol defined in protocols.py."""
+    from typing import Protocol
+
+    discovered = {}
+    for name, obj in inspect.getmembers(dialect_protocols, inspect.isclass):
+        if Protocol in getattr(obj, "__mro__", []) and name.endswith("Support"):
+            discovered[name] = obj
+    return discovered
+
+
+class TestDialectNegativeProtocolConformance:
+    """Assert PostgresDialect does not implement intentionally-unsupported protocols."""
+
+    @pytest.fixture
+    def dialect(self):
+        return postgres_dialect.PostgresDialect()
+
+    @pytest.mark.parametrize("protocol", POSTGRES_NOT_IMPLEMENTED)
+    def test_does_not_implement_protocol(self, dialect, protocol):
+        """PostgresDialect must NOT implement any protocol in POSTGRES_NOT_IMPLEMENTED."""
+        assert not isinstance(dialect, protocol), (
+            f"PostgresDialect unexpectedly implements {protocol.__name__}. "
+            f"If intentional, move it from POSTGRES_NOT_IMPLEMENTED to "
+            f"POSTGRES_PROTOCOLS (and implement the behaviour fully)."
+        )
+
+    def test_positive_and_negative_lists_partition_all_protocols(self):
+        """Every generic protocol must be classified for Postgres."""
+        all_protos = set(get_all_generic_protocols())
+        if dialect_protocols.DDLTypeSupport is dialect_protocols.DataTypeSupport:
+            all_protos.discard("DDLTypeSupport")
+        positive = {
+        p.__name__
+        for p in POSTGRES_PROTOCOLS
+        if p.__module__ == dialect_protocols.__name__
+        or p.__module__.startswith(dialect_protocols.__name__ + ".")
+    }
+        negative = {p.__name__ for p in POSTGRES_NOT_IMPLEMENTED}
+
+        overlap = positive & negative
+        assert not overlap, f"Protocols in BOTH lists: {sorted(overlap)}"
+
+        unclassified = all_protos - positive - negative
+        assert not unclassified, (
+            f"Generic protocols not classified for Postgres: {sorted(unclassified)}. "
+            f"Add each to POSTGRES_PROTOCOLS or POSTGRES_NOT_IMPLEMENTED."
+        )
+
+
+class TestProtocolNonOverlap:
+    """Assert protocols do not have overlapping method names."""
+
+    def test_no_interface_overlap_between_protocols(self):
+        """No two protocols should share the same method name."""
+        member_map = {
+            proto.__name__: get_all_protocol_methods(proto)
+            for proto in POSTGRES_PROTOCOLS
+        }
+        class_map = {proto.__name__: proto for proto in POSTGRES_PROTOCOLS}
+
+        for name, members in member_map.items():
+            assert len(members) > 0, f"Protocol {name} has no members defined"
+
+        excluded_overlaps = {
+
+            # The CTAS bind-parameter probe: the backend's table protocol
+
+            # derives from the generic CTAS protocol, so both declare it.
+
+            ('CreateTableAsSupport', 'PostgresTableSupport'),
+
+            ('PostgresTableSupport', 'CreateTableAsSupport'),
+            # Generic -> Postgres derivation pairs (expected overlap)
+            ('NamespaceSupport', 'PostgresNamespaceSupport'),
+            ('PostgresNamespaceSupport', 'NamespaceSupport'),
+            ('IndexObjectSupport', 'PostgresIndexSupport'),
+            ('PostgresIndexSupport', 'IndexObjectSupport'),
+            ('TableObjectSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'TableObjectSupport'),
+            ('PartitionSupport', 'PostgresPartitionSupport'),
+            ('PostgresPartitionSupport', 'PartitionSupport'),
+            ('ConstraintSupport', 'PostgresConstraintSupport'),
+            ('PostgresConstraintSupport', 'ConstraintSupport'),
+            ('LockingSupport', 'PostgresLockingSupport'),
+            ('PostgresLockingSupport', 'LockingSupport'),
+            ('TriggerObjectSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'TriggerObjectSupport'),
+            ('CreateTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'CreateTypeSupport'),
+            ('AlterTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'AlterTypeSupport'),
+            ('DropTypeSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'DropTypeSupport'),
+            ('TypeObjectSupport', 'PostgresTypeSupport'),
+            ('PostgresTypeSupport', 'TypeObjectSupport'),
+            ('CreateDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'CreateDomainSupport'),
+            ('AlterDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'AlterDomainSupport'),
+            ('DropDomainSupport', 'PostgresDomainSupport'),
+            ('PostgresDomainSupport', 'DropDomainSupport'),
+            # SQLXMLSupport aggregates standard SQL/XML capability-family protocols
+            ('SQLXMLSupport', 'SQLXMLParsingSupport'),
+            ('SQLXMLParsingSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLSerializationSupport'),
+            ('SQLXMLSerializationSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLConstructionSupport'),
+            ('SQLXMLConstructionSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLAggregationSupport'),
+            ('SQLXMLAggregationSupport', 'SQLXMLSupport'),
+            ('SQLXMLSupport', 'SQLXMLQueryingSupport'),
+            ('SQLXMLQueryingSupport', 'SQLXMLSupport'),
+            # PG enhanced protocols extend generic protocols with same method names
+            ('JSONSupport', 'PostgresJSONBEnhancedSupport'),
+            ('PostgresJSONBEnhancedSupport', 'JSONSupport'),
+            ('ArraySupport', 'PostgresArrayEnhancedSupport'),
+            ('PostgresArrayEnhancedSupport', 'ArraySupport'),
+            # Cross-type protocol overlaps (shared capability methods)
+            ('PostgresArrayEnhancedSupport', 'PostgresDataTypeSupport'),
+            ('PostgresDataTypeSupport', 'PostgresArrayEnhancedSupport'),
+            ('PostgresDataTypeSupport', 'PostgresJSONBEnhancedSupport'),
+            ('PostgresJSONBEnhancedSupport', 'PostgresDataTypeSupport'),
+            # PG protocols sharing methods from same domain
+            ('PostgresExtendedStatisticsSupport', 'PostgresIndexSupport'),
+            ('PostgresIndexSupport', 'PostgresExtendedStatisticsSupport'),
+            ('PostgresParallelQuerySupport', 'PostgresQueryOptimizationSupport'),
+            ('PostgresQueryOptimizationSupport', 'PostgresParallelQuerySupport'),
+            # Per-feature protocol overlaps (override base protocols)
+            ('CollationSupport', 'PostgresCollationSupport'),
+            ('PostgresCollationSupport', 'CollationSupport'),
+            ('CTESupport', 'PostgresCTESupport'),
+            ('PostgresCTESupport', 'CTESupport'),
+            ('FilterClauseSupport', 'PostgresFilterSupport'),
+            ('PostgresFilterSupport', 'FilterClauseSupport'),
+            ('WindowFunctionSupport', 'PostgresWindowSupport'),
+            ('PostgresWindowSupport', 'WindowFunctionSupport'),
+            ('ReturningSupport', 'PostgresReturningSupport'),
+            ('PostgresReturningSupport', 'ReturningSupport'),
+            ('AdvancedGroupingSupport', 'PostgresGroupingSupport'),
+            ('PostgresGroupingSupport', 'AdvancedGroupingSupport'),
+            ('ExplainSupport', 'PostgresExplainSupport'),
+            ('PostgresExplainSupport', 'ExplainSupport'),
+            ('MergeSupport', 'PostgresMergeSupport'),
+            ('PostgresMergeSupport', 'MergeSupport'),
+            ('OrderedSetAggregationSupport', 'PostgresOrderedSetAggSupport'),
+            ('PostgresOrderedSetAggSupport', 'OrderedSetAggregationSupport'),
+            ('UpsertSupport', 'PostgresUpsertSupport'),
+            ('PostgresUpsertSupport', 'UpsertSupport'),
+            ('LateralJoinSupport', 'PostgresLateralJoinSupport'),
+            ('PostgresLateralJoinSupport', 'LateralJoinSupport'),
+            ('JoinSupport', 'PostgresJoinSupport'),
+            ('PostgresJoinSupport', 'JoinSupport'),
+            ('SetOperationSupport', 'PostgresSetOperationSupport'),
+            ('PostgresSetOperationSupport', 'SetOperationSupport'),
+            ('ViewObjectSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'ViewObjectSupport'),
+            # PG materialized-view protocol restates the generic view formatter
+            ('MaterializedViewObjectSupport', 'PostgresMaterializedViewSupport'),
+            ('PostgresMaterializedViewSupport', 'MaterializedViewObjectSupport'),
+            ('MaterializedViewSupport', 'PostgresMaterializedViewSupport'),
+            ('PostgresMaterializedViewSupport', 'MaterializedViewSupport'),
+            # PG protocols restate the generic statement DDL they override.
+            # Core split the former umbrella protocols per statement, so the
+            # restatement is now against each half rather than one protocol.
+            ('CreateTableSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'CreateTableSupport'),
+            ('CreateTableLikeSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'CreateTableLikeSupport'),
+            ('CreateViewSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'CreateViewSupport'),
+            ('DropViewSupport', 'PostgresViewSupport'),
+            ('PostgresViewSupport', 'DropViewSupport'),
+            ('CreateSequenceSupport', 'PostgresSequenceSupport'),
+            ('PostgresSequenceSupport', 'CreateSequenceSupport'),
+            ('DropSequenceSupport', 'PostgresSequenceSupport'),
+            ('PostgresSequenceSupport', 'DropSequenceSupport'),
+            ('CreateTriggerSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'CreateTriggerSupport'),
+            ('DropTriggerSupport', 'PostgresTriggerSupport'),
+            ('PostgresTriggerSupport', 'DropTriggerSupport'),
+            ('CreateSchemaSupport', 'PostgresSchemaSupport'),
+            ('PostgresSchemaSupport', 'CreateSchemaSupport'),
+            ('DropSchemaSupport', 'PostgresSchemaSupport'),
+            ('PostgresSchemaSupport', 'DropSchemaSupport'),
+            ('TruncateSupport', 'PostgresTruncateSupport'),
+            ('PostgresTruncateSupport', 'TruncateSupport'),
+            ('TransactionControlSupport', 'PostgresTransactionSupport'),
+            ('PostgresTransactionSupport', 'TransactionControlSupport'),
+            ('SQLXMLSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLSupport'),
+            ('SQLXMLParsingSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLParsingSupport'),
+            ('SQLXMLSerializationSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLSerializationSupport'),
+            ('SQLXMLConstructionSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLConstructionSupport'),
+            ('SQLXMLAggregationSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLAggregationSupport'),
+            ('SQLXMLQueryingSupport', 'PostgresXMLSupport'),
+            ('PostgresXMLSupport', 'SQLXMLQueryingSupport'),
+            # PostgresFeaturesSupport shares some stored procedure methods
+            ('PostgresFeaturesSupport', 'PostgresStoredProcedureSupport'),
+            ('PostgresStoredProcedureSupport', 'PostgresFeaturesSupport'),
+            # Generic capabilities restated by PG-specific protocols
+            ('AlterTableModifierSupport', 'PostgresConstraintSupport'),
+            ('PostgresConstraintSupport', 'AlterTableModifierSupport'),
+            ('ILIKESupport', 'PostgresILIKESupport'),
+            ('PostgresILIKESupport', 'ILIKESupport'),
+            # Generic generated-column capability also declared by PG features protocol
+            ('GeneratedColumnSupport', 'PostgresFeaturesSupport'),
+            ('PostgresFeaturesSupport', 'GeneratedColumnSupport'),
+            # Generic COMMENT ON capability restated by the PG comment protocol
+            ('CommentSupport', 'PostgresCommentSupport'),
+            ('PostgresCommentSupport', 'CommentSupport'),
+        }
+
+        # NamespaceSupport is the base of every object protocol, so all of them
+        # inherit its five namespace switches. That is the shape of the tree --
+        # naming questions are asked once and answered once -- so an overlap
+        # that is entirely NamespaceSupport's members is not two protocols
+        # competing for the same method. Anything else still is.
+        namespace_members = get_all_protocol_methods(dialect_protocols.NamespaceSupport)
+
+        # A protocol that derives another inherits its members, so the two share
+        # those names by construction rather than by accident. NamespaceSupport
+        # is the base of every object protocol and Create/Drop/AlterTableSupport
+        # and friends are the bases of the PostgreSQL protocols that extend them,
+        # which is why each is listed explicitly below; PostgresTypeSupport and
+        # PostgresDomainSupport carry the same relationship for Type/Domain.
+        # Anything that is not an inheritance relationship still competes for the
+        # same method name, and that is what this test is for.
+        inheritance_pairs = set()
+        for name, proto in class_map.items():
+            for base in getattr(proto, "__mro__", ())[1:]:
+                base_name = base.__name__
+                if base_name in class_map and base_name != name:
+                    inheritance_pairs.add((name, base_name))
+                    inheritance_pairs.add((base_name, name))
+
+        violations = []
+        for (name_a, members_a), (name_b, members_b) in combinations(member_map.items(), 2):
+            if (name_a, name_b) in excluded_overlaps:
+                continue
+            if (name_a, name_b) in inheritance_pairs:
+                continue
+            overlap = members_a & members_b
+            if overlap and not overlap <= namespace_members:
+                violations.append(f"{name_a} ∩ {name_b} = {overlap}")
+
+        assert not violations, (
+            "The following protocols have overlapping interfaces, need to merge or rename:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+
+
+class TestProtocolDerivation:
+    """Verify PostgreSQL-specific protocols derive from their generic counterparts.
+
+    This ensures that backend-specific protocols inherit the standard interface,
+    allowing isinstance() checks against generic protocols to work correctly.
+    """
+
+    PROTOCOL_DERIVATIONS = [
+        ("PostgresTableSupport", "TableObjectSupport"),
+        ("PostgresPartitionSupport", "PartitionSupport"),
+        ("PostgresIndexSupport", "IndexObjectSupport"),
+        ("PostgresLockingSupport", "LockingSupport"),
+        ("PostgresTriggerSupport", "TriggerObjectSupport"),
+        ("PostgresConstraintSupport", "ConstraintSupport"),
+        ("PostgresNamespaceSupport", "NamespaceSupport"),
+        ("PostgresTypeSupport", "CreateTypeSupport"),
+        ("PostgresTypeSupport", "AlterTypeSupport"),
+        ("PostgresTypeSupport", "DropTypeSupport"),
+        ("PostgresTypeSupport", "TypeObjectSupport"),
+        ("PostgresDomainSupport", "CreateDomainSupport"),
+        ("PostgresDomainSupport", "AlterDomainSupport"),
+        ("PostgresDomainSupport", "DropDomainSupport"),
+        ("PostgresIdentitySupport", "IdentityColumnSupport"),
+        ("PostgresAutoIncrementSupport", "AutoIncrementColumnSupport"),
+    ]
+
+    @pytest.mark.parametrize("pg_name,generic_name", PROTOCOL_DERIVATIONS)
+    def test_protocol_derives_from_generic(self, pg_name, generic_name):
+        """Backend-specific protocol should derive from its generic counterpart."""
+        pg_proto = getattr(postgres_protocols, pg_name)
+        generic_proto = getattr(dialect_protocols, generic_name)
+        assert issubclass(pg_proto, generic_proto), (
+            f"{pg_name} does not derive from {generic_name}"
+        )
+
+    def test_dialect_satisfies_generic_protocols_via_derivation(self):
+        """PostgresDialect should satisfy generic protocols through derived protocols."""
+        dialect = postgres_dialect.PostgresDialect()
+        for pg_name, generic_name in self.PROTOCOL_DERIVATIONS:
+            generic_proto = getattr(dialect_protocols, generic_name)
+            if getattr(generic_proto, "_is_runtime_protocol", False):
+                assert isinstance(dialect, generic_proto), (
+                    f"PostgresDialect does not satisfy {generic_name} "
+                    f"(should be inherited via {pg_name})"
+                )
+
+
+class TestExpressionDialectSeparation:
+    """Verify PostgreSQL-specific expression classes delegate to dialect for SQL generation.
+
+    Expression-Dialect separation means expression classes collect parameters
+    and delegate to_sql() to dialect.format_*() methods, never directly
+    constructing SQL strings.
+    """
+
+    EXPRESSION_DIALECT_PAIRS = [
+        ("PostgresRefreshMaterializedViewPgStatement",
+         "format_refresh_materialized_view_pg_statement"),
+        ("PostgresCreateEnumTypeExpression", "format_create_type_statement"),
+        ("PostgresDropEnumTypeExpression", "format_drop_type_statement"),
+        ("PostgresAlterEnumAddValueExpression", "format_alter_type_statement"),
+        ("PostgresAlterEnumTypeAddValueExpression", "format_alter_type_statement"),
+        ("PostgresAlterEnumTypeRenameValueExpression", "format_alter_type_statement"),
+        ("PostgresCreateRangeTypeExpression", "format_create_type_statement"),
+        ("PostgresVacuumStatement", "format_vacuum_statement"),
+        ("PostgresAnalyzeStatement", "format_analyze_statement"),
+        ("PostgresReindexStatement", "format_reindex_statement"),
+        ("PostgresCommentOnStatement", "format_comment_on_statement"),
+        ("PostgresCreateExtensionStatement", "format_create_extension_statement"),
+        ("PostgresDropExtensionStatement", "format_drop_extension_statement"),
+        ("PostgresAdvisoryLockExpression", "format_advisory_lock_expression"),
+        ("PostgresAdvisoryUnlockExpression", "format_advisory_unlock_expression"),
+        ("PostgresAdvisoryUnlockAllExpression", "format_advisory_unlock_all_expression"),
+        ("PostgresTryAdvisoryLockExpression", "format_try_advisory_lock_expression"),
+        ("PostgresCreatePartitionStatement", "format_create_partition_statement"),
+        ("PostgresDetachPartitionStatement", "format_detach_partition_statement"),
+        ("PostgresAttachPartitionStatement", "format_attach_partition_statement"),
+        ("PostgresPartitionMetadataQueryStatement", "format_partition_metadata_query_statement"),
+        ("PostgresCreateStatisticsStatement", "format_create_statistics_statement"),
+        ("PostgresDropStatisticsStatement", "format_drop_statistics_statement"),
+         ("PostgresAlterIndexStatement", "format_alter_index_statement"),
+         ("PostgresCopyToStatement", "format_copy_to_statement"),
+         ("PostgresCopyFromStatement", "format_copy_from_statement"),
+         ("PostgresRepackStatement", "format_repack_statement"),
+
+    ]
+
+    @pytest.mark.parametrize("expr_name,format_method", EXPRESSION_DIALECT_PAIRS)
+    def test_expression_delegates_to_dialect(self, expr_name, format_method):
+        """Expression.to_sql() should delegate to dialect.format_*() method."""
+        from rhosocial.activerecord.backend.impl.postgres import expression as pg_expr
+
+        # Find the expression class
+        expr_class = None
+        for module_name in dir(pg_expr):
+            module = getattr(pg_expr, module_name)
+            if hasattr(module, expr_name):
+                expr_class = getattr(module, expr_name)
+                break
+
+        # Also check top-level imports
+        if expr_class is None:
+            expr_class = getattr(pg_expr, expr_name, None)
+
+        assert expr_class is not None, f"Expression class {expr_name} not found"
+
+        # Verify the dialect has the corresponding format method
+        dialect = postgres_dialect.PostgresDialect()
+        assert hasattr(dialect, format_method), (
+            f"PostgresDialect missing format method {format_method} "
+            f"for expression {expr_name}"
+        )
+
+
+# ============================================================================
+# Protocol Implementation Completeness Tests
+# ============================================================================
+
+# Map from PostgreSQL-specific Protocol to corresponding Mixin class
+POSTGRES_PROTOCOL_MIXIN_PAIRS = [
+    # Core protocols
+    (postgres_protocols.PostgresExtensionSupport, postgres_mixins.PostgresExtensionMixin),
+    (postgres_protocols.PostgresMaterializedViewSupport, postgres_mixins.PostgresMaterializedViewMixin),
+    (postgres_protocols.PostgresTableSupport, postgres_mixins.PostgresTableMixin),
+    # DDL protocols
+    (postgres_protocols.PostgresPartitionSupport, postgres_mixins.PostgresPartitionMixin),
+    (postgres_protocols.PostgresIndexSupport, postgres_mixins.PostgresIndexMixin),
+    (postgres_protocols.PostgresTriggerSupport, postgres_mixins.PostgresTriggerMixin),
+    (postgres_protocols.PostgresCommentSupport, postgres_mixins.PostgresCommentMixin),
+    (postgres_protocols.PostgresTypeSupport, postgres_mixins.PostgresTypeMixin),
+    (postgres_protocols.PostgresDomainSupport, postgres_mixins.PostgresDomainMixin),
+     (postgres_protocols.PostgresConstraintSupport, postgres_mixins.PostgresConstraintMixin),
+     (postgres_protocols.PostgresRepackSupport, postgres_mixins.PostgresRepackMixin),
+
+    # DML protocols
+     (postgres_protocols.PostgresVacuumSupport, postgres_mixins.PostgresVacuumMixin),
+     (postgres_protocols.PostgresCopySupport, postgres_mixins.PostgresCopyMixin),
+
+    (postgres_protocols.PostgresStoredProcedureSupport, postgres_mixins.PostgresStoredProcedureMixin),
+    (postgres_protocols.PostgresExtendedStatisticsSupport, postgres_mixins.PostgresExtendedStatisticsMixin),
+    (postgres_protocols.PostgresAdvisoryLockSupport, postgres_mixins.PostgresAdvisoryLockMixin),
+    (postgres_protocols.PostgresLockingSupport, postgres_mixins.PostgresLockingMixin),
+    # Type protocols
+    (postgres_protocols.PostgresDataTypeSupport, postgres_mixins.TypesDataTypeMixin),
+    (postgres_protocols.PostgresMultirangeSupport, postgres_mixins.MultirangeMixin),
+    (postgres_protocols.PostgresEnumTypeSupport, postgres_mixins.EnumTypeMixin),
+    (postgres_protocols.PostgresFullTextSearchSupport, postgres_mixins.PostgresFullTextSearchMixin),
+    (postgres_protocols.PostgresRangeTypeSupport, postgres_mixins.PostgresRangeTypeMixin),
+    (postgres_protocols.PostgresJSONBEnhancedSupport, postgres_mixins.PostgresJSONBEnhancedMixin),
+    (postgres_protocols.PostgresArrayEnhancedSupport, postgres_mixins.PostgresArrayEnhancedMixin),
+    # Additional protocols
+    (postgres_protocols.PostgresQueryOptimizationSupport, postgres_mixins.PostgresQueryOptimizationMixin),
+    (postgres_protocols.PostgresLogicalReplicationSupport, postgres_mixins.PostgresLogicalReplicationMixin),
+    (postgres_protocols.PostgresParallelQuerySupport, postgres_mixins.PostgresParallelQueryMixin),
+    # Per-feature protocols
+    (postgres_protocols.PostgresCTESupport, postgres_mixins.PostgresCTEMixin),
+    (postgres_protocols.PostgresWindowSupport, postgres_mixins.PostgresWindowMixin),
+    (postgres_protocols.PostgresFilterSupport, postgres_mixins.PostgresFilterMixin),
+    (postgres_protocols.PostgresReturningSupport, postgres_mixins.PostgresReturningMixin),
+    (postgres_protocols.PostgresGroupingSupport, postgres_mixins.PostgresGroupingMixin),
+    (postgres_protocols.PostgresExplainSupport, postgres_mixins.PostgresExplainMixin),
+    (postgres_protocols.PostgresMergeSupport, postgres_mixins.PostgresMergeMixin),
+    (postgres_protocols.PostgresUpsertSupport, postgres_mixins.PostgresUpsertMixin),
+    (postgres_protocols.PostgresLateralJoinSupport, postgres_mixins.PostgresLateralJoinMixin),
+    (postgres_protocols.PostgresSetOperationSupport, postgres_mixins.PostgresSetOperationMixin),
+    (postgres_protocols.PostgresILIKESupport, postgres_mixins.PostgresILIKEMixin),
+    (postgres_protocols.PostgresJoinSupport, postgres_mixins.PostgresJoinMixin),
+    (postgres_protocols.PostgresTruncateSupport, postgres_mixins.PostgresTruncateMixin),
+    (postgres_protocols.PostgresSchemaSupport, postgres_mixins.PostgresSchemaMixin),
+    # The naming side. Paired with the one mixin that answers it, so a switch
+    # added to the protocol without an implementation -- or an override added to
+    # the mixin without a protocol declaration -- fails here rather than at
+    # render time.
+    (postgres_protocols.PostgresNamespaceSupport, postgres_mixins.PostgresNamespaceMixin),
+    (postgres_protocols.PostgresSequenceSupport, postgres_mixins.PostgresSequenceMixin),
+    (postgres_protocols.PostgresIdentitySupport, postgres_mixins.PostgresIdentityColumnMixin),
+    (postgres_protocols.PostgresAutoIncrementSupport, postgres_mixins.PostgresAutoIncrementMixin),
+    (postgres_protocols.PostgresTransactionSupport, postgres_mixins.PostgresTransactionMixin),
+    (postgres_protocols.PostgresViewSupport, postgres_mixins.PostgresViewMixin),
+    (postgres_protocols.PostgresXMLSupport, postgres_mixins.PostgresXMLMixin),
+    (postgres_protocols.PostgresCollationSupport, postgres_mixins.PostgresCollationMixin),
+    (postgres_protocols.PostgresOrderedSetAggSupport, postgres_mixins.PostgresOrderedSetAggMixin),
+    (postgres_protocols.PostgresFeaturesSupport, postgres_mixins.PostgresFeaturesMixin),
+    # Extension protocols
+    (postgres_protocols.PostgresPgvectorSupport, postgres_mixins.PostgresPgvectorMixin),
+    (postgres_protocols.PostgresPostGISSupport, postgres_mixins.PostgresPostGISMixin),
+    (postgres_protocols.PostgresPostgisRasterSupport, postgres_mixins.PostgresPostgisRasterMixin),
+    (postgres_protocols.PostgresPgroutingSupport, postgres_mixins.PostgresPgroutingMixin),
+    (postgres_protocols.PostgresHstoreSupport, postgres_mixins.PostgresHstoreMixin),
+    (postgres_protocols.PostgresLtreeSupport, postgres_mixins.PostgresLtreeMixin),
+    (postgres_protocols.PostgresIntarraySupport, postgres_mixins.PostgresIntarrayMixin),
+    (postgres_protocols.PostgresPgTrgmSupport, postgres_mixins.PostgresPgTrgmMixin),
+    (postgres_protocols.PostgresEarthdistanceSupport, postgres_mixins.PostgresEarthdistanceMixin),
+    (postgres_protocols.PostgresTablefuncSupport, postgres_mixins.PostgresTablefuncMixin),
+    (postgres_protocols.PostgresPgStatStatementsSupport, postgres_mixins.PostgresPgStatStatementsMixin),
+    (postgres_protocols.PostgresCitextSupport, postgres_mixins.PostgresCitextMixin),
+    (postgres_protocols.PostgresPgcryptoSupport, postgres_mixins.PostgresPgcryptoMixin),
+    (postgres_protocols.PostgresFuzzystrmatchSupport, postgres_mixins.PostgresFuzzystrmatchMixin),
+    (postgres_protocols.PostgresCubeSupport, postgres_mixins.PostgresCubeMixin),
+    (postgres_protocols.PostgresUuidOssSupport, postgres_mixins.PostgresUuidOssMixin),
+    (postgres_protocols.PostgresBloomSupport, postgres_mixins.PostgresBloomMixin),
+    (postgres_protocols.PostgresBtreeGinSupport, postgres_mixins.PostgresBtreeGinMixin),
+    (postgres_protocols.PostgresBtreeGistSupport, postgres_mixins.PostgresBtreeGistMixin),
+    # Unpaired extension protocols
+    (postgres_protocols.PostgresAddressStandardizerSupport, postgres_mixins.PostgresAddressStandardizerMixin),
+    (postgres_protocols.PostgresHypoPgSupport, postgres_mixins.PostgresHypoPgMixin),
+    (postgres_protocols.PostgresOrafceSupport, postgres_mixins.PostgresOrafceMixin),
+    (postgres_protocols.PostgresPgCronSupport, postgres_mixins.PostgresPgCronMixin),
+    (postgres_protocols.PostgresPgLogicalSupport, postgres_mixins.PostgresPgLogicalMixin),
+    (postgres_protocols.PostgresPgPartmanSupport, postgres_mixins.PostgresPgPartmanMixin),
+    (postgres_protocols.PostgresPgRepackSupport, postgres_mixins.PostgresPgRepackMixin),
+    (postgres_protocols.PostgresPgSurgerySupport, postgres_mixins.PostgresPgSurgeryMixin),
+    (postgres_protocols.PostgresPgWalinspectSupport, postgres_mixins.PostgresPgWalinspectMixin),
+    (postgres_protocols.PostgresPgauditSupport, postgres_mixins.PostgresPgauditMixin),
+]
+
+
+class TestProtocolMethodSignatureConformance:
+    """Verify PostgresDialect method signatures match Protocol declarations.
+
+    Python's @runtime_checkable Protocol only checks method existence,
+    not signature compatibility. This test catches parameter mismatches.
+    """
+
+    # Known signature mismatches between dialect implementations and generic protocols.
+    # Generic Mixins use expr-based signatures instead of named params defined in protocols.
+    # These are pre-existing issues that require a broader refactoring to fix.
+    _SIGNATURE_MISMATCH_EXCLUSIONS = {
+        # JSONSupport: Mixin uses expr-based signatures instead of named params
+        ('JSONSupport', 'format_json_expression'),
+        ('JSONSupport', 'format_json_table_expression'),
+        # ArraySupport: Mixin uses expr-based signatures
+        ('ArraySupport', 'format_array_expression'),
+        # AdvancedGroupingSupport: Mixin uses expr instead of named params
+        ('AdvancedGroupingSupport', 'format_grouping_clause'),
+        # GraphSupport: Mixin uses expr instead of clause
+        ('GraphSupport', 'format_match_clause'),
+        # OrderedSetAggregationSupport: Mixin uses expr instead of aggregation
+        ('OrderedSetAggregationSupport', 'format_ordered_set_aggregation'),
+        # QualifyClauseSupport: Mixin uses expr instead of clause
+        ('QualifyClauseSupport', 'format_qualify_clause'),
+        # MaterializedViewSupport: the PG mixin methods take expr, and the PG
+        # override carries the CONCURRENTLY gate the generic one lacks.
+        ('MaterializedViewSupport', 'format_create_materialized_view_statement'),
+        ('MaterializedViewSupport', 'format_drop_materialized_view_statement'),
+        ('MaterializedViewSupport', 'format_refresh_materialized_view_pg_statement'),
+        # ExplainSupport: Mixin uses different signature
+        ('ExplainSupport', 'format_explain_statement'),
+        # ILIKESupport: Mixin uses expr-based signature instead of named params
+        ('ILIKESupport', 'format_ilike_predicate'),
+    }
+
+    @pytest.fixture
+    def dialect(self):
+        """Create a PostgresDialect instance for testing."""
+        return postgres_dialect.PostgresDialect()
+
+    @pytest.mark.parametrize("protocol", POSTGRES_PROTOCOLS)
+    def test_method_signatures_match_protocol(self, dialect, protocol):
+        """Each method on PostgresDialect must have a compatible signature
+        with the corresponding Protocol method."""
+        proto_methods = get_all_protocol_methods(protocol)
+        missing = []
+        signature_mismatch = []
+
+        for method_name in proto_methods:
+            # Check existence
+            if not hasattr(dialect, method_name):
+                missing.append(method_name)
+                continue
+
+            # Check signature compatibility
+            # Skip known mismatches between dialect implementations and generic protocols
+            if (protocol.__name__, method_name) in self._SIGNATURE_MISMATCH_EXCLUSIONS:
+                continue
+
+            proto_method = getattr(protocol, method_name, None)
+            dialect_method = getattr(dialect, method_name)
+
+            if proto_method is not None and callable(proto_method):
+                try:
+                    proto_sig = inspect.signature(proto_method)
+                    dialect_sig = inspect.signature(dialect_method)
+
+                    # Compare parameter names (excluding 'self')
+                    proto_params = [
+                        p for p in proto_sig.parameters.values()
+                        if p.name != 'self'
+                    ]
+                    dialect_params = [
+                        p for p in dialect_sig.parameters.values()
+                        if p.name != 'self'
+                    ]
+
+                    # Dialect must accept at least all required proto params
+                    proto_required = [
+                        p for p in proto_params
+                        if p.default is inspect.Parameter.empty
+                        and p.kind not in (
+                            inspect.Parameter.VAR_POSITIONAL,
+                            inspect.Parameter.VAR_KEYWORD,
+                        )
+                    ]
+                    dialect_param_names = {p.name for p in dialect_params}
+
+                    for req_param in proto_required:
+                        if req_param.name not in dialect_param_names:
+                            signature_mismatch.append(
+                                f"{method_name}: missing required param "
+                                f"'{req_param.name}' from protocol"
+                            )
+                except (ValueError, TypeError):
+                    pass  # Some protocol methods can't be inspected
+
+        assert not missing, (
+            f"PostgresDialect missing methods for {protocol.__name__}: {missing}"
+        )
+        assert not signature_mismatch, (
+            f"Signature mismatches for {protocol.__name__}: {signature_mismatch}"
+        )
+
+
+class TestProtocolMixinForwardCoverage:
+    """Verify every method declared in Protocol is implemented in Mixin.
+
+    This catches the failure mode where a Protocol declares format_* or
+    supports_* methods but the corresponding Mixin doesn't implement them.
+    """
+
+    @pytest.mark.parametrize("protocol,mixin", POSTGRES_PROTOCOL_MIXIN_PAIRS)
+    def test_protocol_declared_methods_are_implemented(self, protocol, mixin):
+        """Every format_* / supports_* / get_* in Protocol must exist in Mixin.
+
+        Only checks methods declared directly on the protocol (not inherited
+        from parent protocols), since parent protocol methods are typically
+        implemented by generic mixins rather than the backend-specific one.
+        """
+        proto_methods = get_own_protocol_methods(protocol)
+        mixin_methods = {name for name in dir(mixin) if not name.startswith('_')}
+        missing = proto_methods - mixin_methods
+        assert not missing, (
+            f"{mixin.__name__} does not implement these methods "
+            f"declared in {protocol.__name__}: {missing}"
+        )
+
+
+class TestProtocolMixinReverseCoverage:
+    """Verify every format_*/supports_*/get_* in Mixin is declared in Protocol.
+
+    This catches the failure mode where a Mixin implements format_* or
+    supports_* methods but the corresponding Protocol doesn't declare them.
+    """
+
+    @pytest.mark.parametrize("protocol,mixin", POSTGRES_PROTOCOL_MIXIN_PAIRS)
+    def test_mixin_public_methods_are_declared_in_protocol(self, protocol, mixin):
+        """Every format_*/supports_*/get_* in Mixin must be declared in Protocol.
+
+        Only checks methods defined on the Mixin itself (not inherited
+        from object or other bases), and only public methods
+        with the format_*/supports_*/get_*/detect_*/is_*/check_* prefix pattern.
+        """
+        proto_methods = get_all_protocol_methods(protocol)
+
+        # Collect Mixin's own public method names matching the prefix pattern
+        mixin_own_methods = set()
+        for name in dir(mixin):
+            if name.startswith('_'):
+                continue
+            if not (name.startswith('format_') or name.startswith('supports_')
+                    or name.startswith('get_') or name.startswith('detect_')
+                    or name.startswith('is_') or name.startswith('check_')):
+                continue
+            # Only include methods defined on the mixin itself, not inherited
+            if name in mixin.__dict__:
+                mixin_own_methods.add(name)
+
+        undeclared = mixin_own_methods - proto_methods
+        assert not undeclared, (
+            f"{mixin.__name__} implements these methods not declared in "
+            f"{protocol.__name__}: {undeclared}"
+        )
+
+
+class TestTheBackendOwnAnswersAreTheEffectiveOnes:
+    """A backend mixin's method must resolve to a backend class.
+
+    The other checks in this file are about the *declaration*: the mixin
+    declares the method, and the protocol declares it too. This one is
+    about the *resolution*. A core class that wins the MRO makes the
+    backend's implementation dead code, and the answer a caller gets is
+    core's rather than the backend's -- so the backend never says what it
+    means about itself, and nothing else in the suite notices: the
+    declaration is there either way.
+
+    A protocol class is a declaration rather than an implementation (its
+    body is ``...``), so a core class may legitimately precede it; only
+    the mixins are held to this.
+    """
+
+    def test_no_backend_method_is_shadowed_by_a_core_class(self):
+        mro = type(postgres_dialect.PostgresDialect()).__mro__
+        own = "rhosocial.activerecord.backend.impl.postgres"
+        shadowed = []
+        for klass in mro:
+            if not klass.__module__.startswith(own):
+                continue
+            if not klass.__name__.endswith("Mixin"):
+                continue
+            for name in vars(klass):
+                if not name.startswith(("format_", "supports_", "get_")):
+                    continue
+                if not callable(vars(klass)[name]):
+                    continue
+                winner = next((k for k in mro if name in k.__dict__), None)
+                if winner is None or winner.__module__.startswith(own):
+                    continue
+                shadowed.append(f"{klass.__name__}.{name} -> {winner.__name__}")
+        assert not shadowed, (
+            "a core class wins these backend methods, so the backend's "
+            f"implementation is dead code: {shadowed}"
+        )

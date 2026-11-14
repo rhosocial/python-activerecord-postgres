@@ -1,110 +1,131 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/conftest.py
+"""Fixtures for the backend-owned tests.
+
+The backend runs these against a real server. The scenario supplies the
+connection parameters; the database name is derived from the directory that
+owns the test, so two directories never share tables.
+"""
+import os
+from typing import Any, Dict, Tuple, Type
+
 import pytest
 import pytest_asyncio
-import yaml
-import os
-from typing import Dict, Any, Tuple, Type  # noqa: F401
 
-from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
+import support.postgres
+
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
+from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
+    AsyncPostgresBackend,
+)
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
-
 
 # --- Scenario Loading Logic ---
 
-SCENARIO_MAP: Dict[str, Dict[str, Any]] = {}
+SCENARIO_MAP: Dict[str, Dict[str, Any]] = dict(support.postgres.SCENARIO_MAP)
 
-def register_scenario(name: str, config: Dict[str, Any]):
-    SCENARIO_MAP[name] = config
 
-def _load_scenarios_from_config():
+def _apply_scenario_filter():
+    """Filter SCENARIO_MAP based on the active scenarios env var.
+
+    Keeps the backend-feature scenarios consistent with the scenarios active
+    for the rest of the test run.
     """
-    Load scenarios from a configuration file.
-    Uses POSTGRES_SCENARIOS_CONFIG_PATH or a default path.
-    """
-    config_path = None
-    env_config_path = os.getenv("POSTGRES_SCENARIOS_CONFIG_PATH")
+    filter_str = os.getenv("POSTGRES_ACTIVE_SCENARIOS") or os.getenv(
+        "TESTSUITE_ACTIVE_SCENARIOS"
+    )
+    if not filter_str:
+        return
+    allowed = set(s.strip() for s in filter_str.split(",") if s.strip())
+    if not allowed:
+        return
+    for name in [n for n in SCENARIO_MAP if n not in allowed]:
+        del SCENARIO_MAP[name]
 
-    if env_config_path and os.path.exists(env_config_path):
-        config_path = env_config_path
-    else:
-        # Path is relative to this file's location
-        default_path = os.path.join(os.path.dirname(__file__), "../../../../config", "postgres_scenarios.yaml")
-        if os.path.exists(default_path):
-            config_path = default_path
-        elif env_config_path:
-            print(f"Warning: Scenario file specified in POSTGRES_SCENARIOS_CONFIG_PATH not found: {env_config_path}")
-            return
 
-    if not config_path:
-        raise FileNotFoundError(
-            "No PostgreSQL scenarios configuration file found. "
-            "Set POSTGRES_SCENARIOS_CONFIG_PATH or place postgres_scenarios.yaml in tests/config."
-        )
+_apply_scenario_filter()
 
+
+def get_enabled_scenarios() -> Dict[str, Any]:
+    return SCENARIO_MAP
+
+
+def get_scenario_names():
+    return list(get_enabled_scenarios().keys())
+
+
+_PREPARED_DATABASES = set()
+
+
+def _database_for(request) -> str:
+    """Derive the logical database the directory owning the test runs in."""
+    parts = list(request.node.path.parts)
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config_data = yaml.safe_load(f)
+        index = max(i for i, part in enumerate(parts) if part == "backend")
+    except ValueError:
+        return "test_backend"
+    names = [part for part in parts[index + 1 : -1] if part]
+    return "test_backend" + "".join("_" + name for name in names)
 
-        if 'scenarios' not in config_data:
-            raise ValueError(f"Configuration file {config_path} does not contain 'scenarios' key")
 
-        for scenario_name, config in config_data['scenarios'].items():
-            if config: # Ensure config is not null or empty
-                register_scenario(scenario_name, config)
+def _prepare_database(scenario_name: str, database: str) -> None:
+    """Create the directory's database once per scenario."""
+    key = (scenario_name, database)
+    if key in _PREPARED_DATABASES:
+        return
+    support.postgres.scenario(scenario_name).reset_database(database)
+    _PREPARED_DATABASES.add(key)
 
-    except ImportError:
-        raise ImportError("PyYAML is required to load scenario configuration files")  # noqa: B904
 
-_load_scenarios_from_config()
-
-def get_scenario_config(name: str) -> Dict[str, Any]:
+def get_scenario(
+    name: str, database: str = "test_backend"
+) -> Tuple[Type[PostgresBackend], PostgresConnectionConfig]:
     if name not in SCENARIO_MAP:
         if SCENARIO_MAP:
             name = next(iter(SCENARIO_MAP))
         else:
-            raise ValueError("No scenarios registered or enabled")
-    config_dict = SCENARIO_MAP[name].copy()
-    # Apply the pooled database name so parallel workers never share a schema.
-    from providers.pooling import resolve_database_name
+            raise ValueError("No scenarios registered")
+    _prepare_database(name, database)
+    return PostgresBackend, support.postgres.scenario(name).make_config(database)
 
-    pooled_db = resolve_database_name(name)
-    if pooled_db:
-        config_dict["database"] = pooled_db
-    return config_dict
+
+def pytest_collection_modifyitems(config, items):
+    """Pin a backend directory's tests to one worker.
+
+    These directories create and drop tables in the directory's own database,
+    so two workers must never run tests from the same directory at once.
+    """
+    for item in items:
+        parts = item.path.parts
+        if "backend" not in parts:
+            continue
+        item.add_marker(pytest.mark.xdist_group("postgres-backend::" + str(item.path.parent)))
+
 
 # --- Provider Logic for Fixtures ---
+
 
 class BackendFeatureProvider:
     def __init__(self):
         self._backend = None
         self._async_backend = None
 
-    def setup_backend(self, scenario_name: str):
-        print(f"DEBUG: setup_backend called with scenario_name: {scenario_name}")
+    def setup_backend(self, scenario_name: str, database: str):
         if self._backend:
             return self._backend
-        config_dict = get_scenario_config(scenario_name)
-        # Remove 'enabled' keyword as it's not a connection parameter
-        config_dict.pop('enabled', None)
-        config = PostgresConnectionConfig(**config_dict)
-        self._backend = PostgresBackend(connection_config=config)
+        backend_class, config = get_scenario(scenario_name, database)
+        self._backend = backend_class(connection_config=config)
         self._backend.connect()
-        # Introspect and adapt to detect server version and extensions
+        # Introspect and adapt to detect server version and extensions.
         self._backend.introspect_and_adapt()
         return self._backend
 
-    async def setup_async_backend(self, scenario_name: str):
-        print(f"DEBUG: setup_async_backend called with scenario_name: {scenario_name}")
+    async def setup_async_backend(self, scenario_name: str, database: str):
         if self._async_backend:
             return self._async_backend
-        config_dict = get_scenario_config(scenario_name)
-        # Remove 'enabled' keyword as it's not a connection parameter
-        config_dict.pop('enabled', None)
-        config = PostgresConnectionConfig(**config_dict)
+        _, config = get_scenario(scenario_name, database)
         self._async_backend = AsyncPostgresBackend(connection_config=config)
         await self._async_backend.connect()
-        # Introspect and adapt to detect server version and extensions
+        # Introspect and adapt to detect server version and extensions.
         await self._async_backend.introspect_and_adapt()
         return self._async_backend
 
@@ -118,26 +139,26 @@ class BackendFeatureProvider:
             await self._async_backend.disconnect()
             self._async_backend = None
 
+
 # --- Fixtures ---
 
-def get_scenario_names():
-    return list(SCENARIO_MAP.keys())
 
 @pytest.fixture(scope="function", params=get_scenario_names())
 def postgres_backend(request):
     scenario_name = request.param
     provider = BackendFeatureProvider()
-    backend = provider.setup_backend(scenario_name)
-    backend.scenario_name = scenario_name # Attach for test reference
+    backend = provider.setup_backend(scenario_name, _database_for(request))
+    backend.scenario_name = scenario_name  # Attach for test reference
     yield backend
     provider.cleanup()
+
 
 @pytest_asyncio.fixture(scope="function", params=get_scenario_names())
 async def async_postgres_backend(request):
     scenario_name = request.param
     provider = BackendFeatureProvider()
-    backend = await provider.setup_async_backend(scenario_name)
-    backend.scenario_name = scenario_name # Attach for test reference
+    backend = await provider.setup_async_backend(scenario_name, _database_for(request))
+    backend.scenario_name = scenario_name  # Attach for test reference
     yield backend
     await provider.async_cleanup()
 
@@ -146,38 +167,38 @@ async def async_postgres_backend(request):
 
 
 @pytest.fixture(scope="function")
-def postgres_backend_single():
+def postgres_backend_single(request):
     """Non-parameterized fixture using the first available scenario."""
     scenario_names = get_scenario_names()
     if not scenario_names:
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = provider.setup_backend(scenario_name)
+    backend = provider.setup_backend(scenario_name, _database_for(request))
     backend.scenario_name = scenario_name
     yield backend
     provider.cleanup()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_backend_single():
+async def async_postgres_backend_single(request):
     """Non-parameterized async fixture using the first available scenario."""
     scenario_names = get_scenario_names()
     if not scenario_names:
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = await provider.setup_async_backend(scenario_name)
+    backend = await provider.setup_async_backend(scenario_name, _database_for(request))
     backend.scenario_name = scenario_name
     yield backend
     await provider.async_cleanup()
 
 
-# --- Control Backend for Session Modification Tests ---
+# --- Class-scoped Backend Fixtures ---
 
 
 @pytest.fixture(scope="class")
-def postgres_backend_class():
+def postgres_backend_class(request):
     """Class-scoped backend fixture for extension integration tests.
 
     Uses the first available scenario. Suitable for test classes where
@@ -188,21 +209,21 @@ def postgres_backend_class():
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = provider.setup_backend(scenario_name)
+    backend = provider.setup_backend(scenario_name, _database_for(request))
     backend.scenario_name = scenario_name
     yield backend
     provider.cleanup()
 
 
 @pytest_asyncio.fixture(scope="class")
-async def async_postgres_backend_class():
+async def async_postgres_backend_class(request):
     """Class-scoped async backend fixture for extension integration tests."""
     scenario_names = get_scenario_names()
     if not scenario_names:
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = await provider.setup_async_backend(scenario_name)
+    backend = await provider.setup_async_backend(scenario_name, _database_for(request))
     backend.scenario_name = scenario_name
     yield backend
     await provider.async_cleanup()
@@ -212,7 +233,7 @@ async def async_postgres_backend_class():
 
 
 @pytest.fixture(scope="function")
-def postgres_control_backend():
+def postgres_control_backend(request):
     """
     Dedicated control backend for tests that modify PostgreSQL session settings.
 
@@ -230,13 +251,13 @@ def postgres_control_backend():
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = provider.setup_backend(scenario_name)
+    backend = provider.setup_backend(scenario_name, _database_for(request))
     yield backend
     provider.cleanup()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_control_backend():
+async def async_postgres_control_backend(request):
     """
     Dedicated async control backend for tests that modify PostgreSQL session settings.
 
@@ -248,7 +269,7 @@ async def async_postgres_control_backend():
         pytest.skip("No PostgreSQL scenarios configured")
     scenario_name = scenario_names[0]
     provider = BackendFeatureProvider()
-    backend = await provider.setup_async_backend(scenario_name)
+    backend = await provider.setup_async_backend(scenario_name, _database_for(request))
     yield backend
     await provider.async_cleanup()
 
@@ -257,6 +278,7 @@ async def async_postgres_control_backend():
 def postgres_dialect():
     """Fixture providing PostgresDialect instance for testing transaction expressions."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+
     return PostgresDialect(version=(15, 0, 0))
 
 

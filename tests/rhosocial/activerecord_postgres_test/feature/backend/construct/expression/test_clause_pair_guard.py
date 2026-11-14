@@ -1,0 +1,918 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/expression/test_clause_pair_guard.py
+"""Guard: every clause pair the PostgreSQL dialect consumes is fully spellable.
+
+The rule this file enforces (the round's rule 1/2/3/4):
+
+* each spellable alternative has its own parameter;
+* "unspecified" is the state where none of the group's parameters is set;
+* setting more than one of them is API misuse and raises ``ValueError`` at
+  construction time;
+* no ``Optional[bool]`` tri-state and no sentinel value.
+
+For every pair the PostgreSQL dialect consumes the four states must be
+pairwise distinguishable:
+
+====================  =============================================
+neither parameter     neither spelling rendered
+parameter A           A's spelling rendered (and not B's)
+parameter B           B's spelling rendered (and not A's)
+both parameters       ``ValueError``
+====================  =============================================
+
+Two deliberate shapes are pinned separately:
+
+* A spelling PostgreSQL cannot express must refuse *by name*
+  (``UnsupportedFeatureError``) -- never render a token the server rejects and
+  never drop the clause. ``TestRefusedSpellingsFailClosed`` covers these, and
+  names the measured server evidence for each.
+* ``AlterConstraintAction.enforced`` is mandatory in the action's grammar: "neither"
+  is refused as well as "both".
+
+The render evidence in this file is produced offline by the dialect. The
+server-side evidence for the capability answers (which tokens PostgreSQL
+accepts) was measured against live PostgreSQL 16 and 19 servers; the probes
+are version-independent for every clause covered here.
+"""
+
+import re
+
+import pytest
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.objects import (
+    Function,
+    MaterializedView,
+    Schema,
+    Sequence,
+    Table,
+    Type,
+    View,
+)
+from rhosocial.activerecord.backend.expression.pivot import Unpivot
+from rhosocial.activerecord.backend.expression.query_sources import (
+    CTEClause,
+    SetOperation,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+    AlterConstraintAction,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_function import (
+    DropFunctionStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_schema import (
+    DropSchemaStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
+    AlterSequenceStatement,
+    CreateSequenceStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    ColumnConstraint,
+    CreateTableAsStatement,
+    DropTableStatement,
+    IdentityClause,
+    TableConstraint,
+    ColumnCheckConstraint,
+    ColumnForeignKeyConstraint,
+    TableCheckConstraint,
+    TableForeignKeyConstraint,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_truncate import (
+    TruncateStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_view import (
+    CreateMaterializedViewStatement,
+    DropMaterializedViewStatement,
+    DropViewStatement,
+    RefreshMaterializedViewStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
+from rhosocial.activerecord.backend.expression.transaction import (
+    BeginTransactionStatement,
+    SetTransactionStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
+    PostgresCopyToStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.mixins import (
+    PostgresCTEMixin,
+    PostgresMaterializedViewMixin,
+    PostgresTransactionMixin,
+    PostgresTruncateMixin,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
+    PostgresExcludeConstraint,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
+    PostgresRefreshMaterializedViewPgStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+    PostgresDropTypeExpression,
+)
+
+PG16 = (16, 0, 0)
+PG18 = (18, 0, 0)
+PG19 = (19, 0, 0)
+
+
+def _dialect(version=PG16):
+    return PostgresDialect(version=version)
+
+
+def _table(d, name="t"):
+    return Table(d, name)
+
+
+def _query(d):
+    return QueryStatement(d, select=[Column(d, "id")], from_=_table(d))
+
+
+def _fk(d, **kw):
+    return TableConstraint(d, branch=TableForeignKeyConstraint(d, ["a"], (_table(d, "t2"), ["b"])), name="fk", **kw)
+
+
+def _check(d, **kw):
+    from rhosocial.activerecord.backend.expression.predicates import (
+        ComparisonPredicate,
+    )
+
+    return TableConstraint(
+               d,
+               branch=TableCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
+
+
+def _column_fk(d, **kw):
+    return ColumnConstraint(d, branch=ColumnForeignKeyConstraint(d, (_table(d, "t2"), ["b"])), name="fk", **kw)
+
+
+def _column_check(d, **kw):
+    from rhosocial.activerecord.backend.expression.predicates import (
+        ComparisonPredicate,
+    )
+
+    return ColumnConstraint(
+               d,
+               branch=ColumnCheckConstraint(d, ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b"))),
+               name="ck",
+               **kw,
+           )
+
+
+def _exclude(d, **kw):
+    return PostgresExcludeConstraint(
+        d, name="ex", elements=[("range", "&&")], **kw
+    )
+
+
+class PairCase:
+    """One two-spelling clause and the four states of its parameter pair."""
+
+    def __init__(
+        self,
+        case_id,
+        builder,
+        a,
+        b,
+        a_pattern,
+        b_pattern,
+        a_value=True,
+        b_value=True,
+        version=PG16,
+        neither_error=None,
+        both_match=None,
+        a_refusal=None,
+        b_refusal=None,
+    ):
+        self.case_id = case_id
+        self.builder = builder
+        self.a = a
+        self.b = b
+        self.a_pattern = re.compile(a_pattern)
+        self.b_pattern = re.compile(b_pattern)
+        self.a_value = a_value
+        self.b_value = b_value
+        self.version = version
+        self.neither_error = neither_error
+        self.both_match = both_match or (
+            f"{a} and {b} are mutually exclusive options"
+        )
+        self.a_refusal = a_refusal
+        self.b_refusal = b_refusal
+
+    def render(self, **kwargs):
+        dialect = _dialect(self.version)
+        sql, _params = self.builder(dialect, **kwargs).to_sql()
+        return sql
+
+    def outcome(self, side):
+        """The spelling state of one side: render or refusal feature name."""
+        if side == "a":
+            return self.a_refusal, self.a_value
+        return self.b_refusal, self.b_value
+
+    def matches_a(self, sql):
+        return bool(self.a_pattern.search(sql))
+
+    def matches_b(self, sql):
+        return bool(self.b_pattern.search(sql))
+
+
+PAIR_CASES = (
+    PairCase(
+        "CreateSequenceStatement.cycle",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
+        "cycle",
+        "no_cycle",
+        r"(?<!NO )CYCLE\b",
+        r"NO CYCLE\b",
+    ),
+    PairCase(
+        "CreateSequenceStatement.cache",
+        lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
+        "cache",
+        "no_cache",
+        r"CACHE 10\b",
+        r"NO CACHE\b",
+        a_value=10,
+        b_refusal="SEQUENCE NO CACHE",
+    ),
+    PairCase(
+        "AlterSequenceStatement.cycle",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
+        "cycle",
+        "no_cycle",
+        r"(?<!NO )CYCLE\b",
+        r"NO CYCLE\b",
+    ),
+    PairCase(
+        "AlterSequenceStatement.cache",
+        lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
+        "cache",
+        "no_cache",
+        r"CACHE 10\b",
+        r"NO CACHE\b",
+        a_value=10,
+        b_refusal="ALTER SEQUENCE NO CACHE",
+    ),
+    PairCase(
+        "IdentityClause.cycle",
+        lambda d, **kw: IdentityClause(d, **kw),
+        "cycle",
+        "no_cycle",
+        r"(?<!NO )CYCLE\b",
+        r"NO CYCLE\b",
+    ),
+    PairCase(
+        "IdentityClause.cache",
+        lambda d, **kw: IdentityClause(d, **kw),
+        "cache",
+        "no_cache",
+        r"CACHE 10\b",
+        r"NO CACHE\b",
+        a_value=10,
+        b_refusal="IDENTITY NO CACHE",
+    ),
+    PairCase(
+        "DropSchemaStatement.cascade",
+        lambda d, **kw: DropSchemaStatement(d, Schema(d, "s"), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "DropViewStatement.cascade",
+        lambda d, **kw: DropViewStatement(d, View(d, "v"), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "DropMaterializedViewStatement.cascade",
+        lambda d, **kw: DropMaterializedViewStatement(d, MaterializedView(d, "mv"), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "DropFunctionStatement.cascade",
+        lambda d, **kw: DropFunctionStatement(d, Function(d, "f"), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "DropTableStatement.cascade",
+        lambda d, **kw: DropTableStatement(d, _table(d), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "TruncateStatement.cascade",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+    ),
+    PairCase(
+        "TruncateStatement.restart_identity",
+        lambda d, **kw: TruncateStatement(d, _table(d), **kw),
+        "restart_identity",
+        "continue_identity",
+        r"RESTART IDENTITY\b",
+        r"CONTINUE IDENTITY\b",
+    ),
+    PairCase(
+        "CreateMaterializedViewStatement.with_data",
+        lambda d, **kw: CreateMaterializedViewStatement(
+            d, MaterializedView(d, "mv"), _query(d), **kw
+        ),
+        "with_data",
+        "no_data",
+        r"WITH DATA\b",
+        r"WITH NO DATA\b",
+    ),
+    PairCase(
+        "RefreshMaterializedViewStatement.with_data",
+        lambda d, **kw: RefreshMaterializedViewStatement(
+            d, MaterializedView(d, "mv"), **kw
+        ),
+        "with_data",
+        "no_data",
+        r"WITH DATA\b",
+        r"WITH NO DATA\b",
+    ),
+    PairCase(
+        "PostgresRefreshMaterializedViewPgStatement.with_data",
+        lambda d, **kw: PostgresRefreshMaterializedViewPgStatement(
+            d, MaterializedView(d, "mv"), **kw
+        ),
+        "with_data",
+        "no_data",
+        r"WITH DATA\b",
+        r"WITH NO DATA\b",
+    ),
+    PairCase(
+        "CreateTableAsStatement.with_data",
+        lambda d, **kw: CreateTableAsStatement(d, _table(d), _query(d), **kw),
+        "with_data",
+        "no_data",
+        r"WITH DATA\b",
+        r"WITH NO DATA\b",
+    ),
+    PairCase(
+        "CTEClause.materialized",
+        lambda d, **kw: CTEClause(d, "c", _query(d), **kw),
+        "materialized",
+        "not_materialized",
+        r"(?<!NOT )MATERIALIZED\b",
+        r"NOT MATERIALIZED\b",
+    ),
+    PairCase(
+        "TableConstraint.deferrable",
+        _fk,
+        "deferrable",
+        "not_deferrable",
+        r"(?<!NOT )DEFERRABLE\b",
+        r"NOT DEFERRABLE\b",
+    ),
+    PairCase(
+        "TableConstraint.initially_deferred",
+        _fk,
+        "initially_deferred",
+        "initially_immediate",
+        r"INITIALLY DEFERRED\b",
+        r"INITIALLY IMMEDIATE\b",
+    ),
+    PairCase(
+        "TableConstraint.enforced",
+        _check,
+        "enforced",
+        "not_enforced",
+        r"(?<!NOT )ENFORCED\b",
+        r"NOT ENFORCED\b",
+        version=PG19,
+    ),
+    PairCase(
+        "ColumnConstraint.deferrable",
+        _column_fk,
+        "deferrable",
+        "not_deferrable",
+        r"(?<!NOT )DEFERRABLE\b",
+        r"NOT DEFERRABLE\b",
+    ),
+    PairCase(
+        "ColumnConstraint.initially_deferred",
+        _column_fk,
+        "initially_deferred",
+        "initially_immediate",
+        r"INITIALLY DEFERRED\b",
+        r"INITIALLY IMMEDIATE\b",
+    ),
+    PairCase(
+        "BeginTransactionStatement.deferrable",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
+        "deferrable",
+        "not_deferrable",
+        r"(?<!NOT )DEFERRABLE\b",
+        r"NOT DEFERRABLE\b",
+    ),
+    PairCase(
+        "SetTransactionStatement.deferrable",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
+        "deferrable",
+        "not_deferrable",
+        r"(?<!NOT )DEFERRABLE\b",
+        r"NOT DEFERRABLE\b",
+    ),
+    # PostgreSQL has no WAIT / NO WAIT on BEGIN or SET TRANSACTION. The pair
+    # must refuse by name through supports_transaction_wait() rather than be
+    # silently dropped; both spellings are refused here.
+    PairCase(
+        "BeginTransactionStatement.wait",
+        lambda d, **kw: BeginTransactionStatement(d, **kw),
+        "wait",
+        "no_wait",
+        r"(?<!NO )WAIT\b",
+        r"NO WAIT\b",
+        a_refusal="WAIT",
+        b_refusal="NO WAIT",
+    ),
+    PairCase(
+        "SetTransactionStatement.wait",
+        lambda d, **kw: SetTransactionStatement(d, **kw),
+        "wait",
+        "no_wait",
+        r"(?<!NO )WAIT\b",
+        r"NO WAIT\b",
+        a_refusal="WAIT",
+        b_refusal="NO WAIT",
+    ),
+    PairCase(
+        "AlterConstraintAction.enforced",
+        lambda d, **kw: AlterConstraintAction(
+            d, "c", constraint_kind=TableCheckConstraint, **kw
+        ),
+        "enforced",
+        "not_enforced",
+        r"(?<!NOT )ENFORCED\b",
+        r"NOT ENFORCED\b",
+        version=PG19,
+        neither_error="AlterConstraintAction requires exactly one of",
+    ),
+    PairCase(
+        "PostgresCopyToStatement.force_array",
+        lambda d, **kw: PostgresCopyToStatement(
+            d, table_name="t", format="json", **kw
+        ),
+        "force_array",
+        "force_array_false",
+        r"FORCE_ARRAY(?! FALSE)\b",
+        r"FORCE_ARRAY FALSE\b",
+        version=PG19,
+    ),
+    # Control: already the target shape before the round; pinned so a later
+    # change cannot silently break it.
+    PairCase(
+        "PostgresDropTypeExpression.cascade/restrict",
+        lambda d, **kw: PostgresDropTypeExpression(d, Type(d, "t"), **kw),
+        "cascade",
+        "restrict",
+        r"CASCADE\b",
+        r"RESTRICT\b",
+        both_match="CASCADE and RESTRICT are mutually exclusive",
+    ),
+)
+
+PAIR_IDS = [case.case_id for case in PAIR_CASES]
+
+
+class TestFourStatesArePairwiseDistinguishable:
+    """The four states of every consumed pair are pairwise distinguishable."""
+
+    @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
+    def test_neither_set_renders_neither_spelling(self, case):
+        if case.neither_error is not None:
+            with pytest.raises(ValueError, match=case.neither_error):
+                case.render()
+            return
+        sql = case.render()
+        assert not case.matches_a(sql), (
+            f"{case.case_id}: with neither parameter set the SQL still spells "
+            f"{case.a!r}: {sql!r}"
+        )
+        assert not case.matches_b(sql), (
+            f"{case.case_id}: with neither parameter set the SQL still spells "
+            f"{case.b!r}: {sql!r}"
+        )
+
+    @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
+    def test_a_set_renders_a_only(self, case):
+        refusal, value = case.outcome("a")
+        if refusal is not None:
+            with pytest.raises(UnsupportedFeatureError, match=refusal):
+                case.render(**{case.a: value})
+            return
+        sql = case.render(**{case.a: value})
+        assert case.matches_a(sql), f"{case.case_id}: {case.a!r} was not rendered: {sql!r}"
+        assert not case.matches_b(sql), (
+            f"{case.case_id}: setting {case.a!r} also rendered {case.b!r}: {sql!r}"
+        )
+
+    @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
+    def test_b_set_renders_b_only(self, case):
+        refusal, value = case.outcome("b")
+        if refusal is not None:
+            with pytest.raises(UnsupportedFeatureError, match=refusal):
+                case.render(**{case.b: value})
+            return
+        sql = case.render(**{case.b: value})
+        assert case.matches_b(sql), f"{case.case_id}: {case.b!r} was not rendered: {sql!r}"
+        assert not case.matches_a(sql), (
+            f"{case.case_id}: setting {case.b!r} also rendered {case.a!r}: {sql!r}"
+        )
+
+    @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
+    def test_both_set_is_refused(self, case):
+        with pytest.raises(ValueError, match=case.both_match):
+            case.render(**{case.a: case.a_value, case.b: case.b_value})
+
+
+class TestColumnEnforcementTraitIsRefusedAtEveryVersion:
+    """``[NOT] ENFORCED`` has no column-level form on PostgreSQL at all.
+
+    Measured on all three instances: at column level the clause is a parse
+    error for every kind -- ``42601: misplaced NOT ENFORCED clause`` on 18 and
+    19, and ``42601: syntax error at or near "ENFORCED"`` on 17, where it is
+    not in the grammar at all.  So neither spelling of the pair can be
+    rendered, at any version, for any branch: there is no pair to distinguish
+    and the answer is a refusal that names the clause.
+    """
+
+    @pytest.mark.parametrize(
+        "version", [PG16, PG18, PG19], ids=["pg16", "pg18", "pg19"]
+    )
+    @pytest.mark.parametrize(
+        "kwargs", [{"enforced": True}, {"not_enforced": True}], ids=["enforced", "not_enforced"]
+    )
+    def test_both_spellings_are_refused(self, version, kwargs):
+        with pytest.raises(
+            UnsupportedFeatureError, match="CHECK NOT ENFORCED on a column constraint"
+        ):
+            _column_check(_dialect(version), **kwargs).to_sql()
+
+
+class TestExcludeConstraintTraitsAreRefusedAtConstruction:
+    """EXCLUDE carries neither the deferral nor the enforcement trait.
+
+    PostgreSQL 19beta4 accepts ``EXCLUDE ... DEFERRABLE``
+    (:meth:`supports_deferrable_exclude_constraint` records the measurement)
+    and refuses ``NOT ENFORCED`` with ``0A000: EXCLUDE constraints cannot be
+    marked NOT ENFORCED``.  The core branch whitelist -- an expression-layer
+    contract a backend does not get to widen -- says the same thing from the
+    other end: ``DEFERRABLE``/``INITIALLY`` ride PRIMARY KEY, UNIQUE and
+    FOREIGN KEY, and ``ENFORCED`` rides those plus CHECK.  EXCLUDE is in
+    neither list, so the request cannot be written at all and is a
+    ``ValueError`` at construction rather than SQL the server would answer at
+    execution time.  These two cases are therefore not pair guards -- there is
+    no pair to distinguish, because neither spelling is reachable.
+    """
+
+    @pytest.mark.parametrize(
+        "kwargs,message",
+        [
+            ({"deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"not_deferrable": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_deferred": True}, "DEFERRABLE / INITIALLY cannot ride"),
+            ({"initially_immediate": True}, "DEFERRABLE / INITIALLY cannot ride"),
+        ],
+        ids=["deferrable", "not_deferrable", "initially_deferred", "initially_immediate"],
+    )
+    def test_deferral_trait_is_refused(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            _exclude(_dialect(), **kwargs)
+
+    def test_enforcement_trait_is_not_even_a_parameter(self):
+        """``enforced=`` is a TypeError, not a silently dropped keyword."""
+        with pytest.raises(TypeError):
+            PostgresExcludeConstraint(
+                _dialect(), elements=[("range", "&&")], enforced=True
+            )
+
+
+class TestRefusedSpellingsFailClosed:
+    """Spellings PostgreSQL cannot express refuse by name, never drop."""
+
+    @pytest.mark.parametrize(
+        "case_id,builder,feature",
+        [
+            (
+                "CreateSequenceStatement.order",
+                lambda d, **kw: CreateSequenceStatement(d, Sequence(d, "s"), **kw),
+                "SEQUENCE ORDER",
+            ),
+            (
+                "AlterSequenceStatement.order",
+                lambda d, **kw: AlterSequenceStatement(d, Sequence(d, "s"), **kw),
+                "ALTER SEQUENCE ORDER",
+            ),
+            (
+                "IdentityClause.order",
+                lambda d, **kw: IdentityClause(d, **kw),
+                "IDENTITY ORDER",
+            ),
+        ],
+        ids=["CreateSequence.order", "AlterSequence.order", "Identity.order"],
+    )
+    @pytest.mark.parametrize("side", ["order", "no_order"])
+    def test_unspellable_option_refuses_by_name(self, case_id, builder, feature, side):
+        dialect = _dialect()
+        with pytest.raises(UnsupportedFeatureError, match=feature):
+            builder(dialect, **{side: True}).to_sql()
+
+    def test_unpivot_is_refused_before_its_pair_is_read(self):
+        """PostgreSQL declares no UNPIVOT formatter; the refusal is the answer."""
+        dialect = _dialect()
+        with pytest.raises(UnsupportedFeatureError, match="format_unpivot"):
+            Unpivot(
+                dialect, value_column="v", pivot_column="k", columns=["a", "b"]
+            ).to_sql()
+
+
+class TestSetOperationWordsAreClosed:
+    """``UNION`` / ``UNION ALL`` are two words of one closed set, not two flags.
+
+    The node no longer carries an ``all_``/``distinct`` parameter pair, so the
+    pair this file used to guard is gone: the alternative is spelled in ``op``
+    itself. That trades the four-state rule for a closed word set, which must
+    hold the same ground — each word renders its own spelling, and anything
+    outside the set is refused **where it is written**, at construction, not at
+    render time where a typo would silently fall back.
+    """
+
+    @staticmethod
+    def _sides(dialect, op):
+        return SetOperation(
+            dialect,
+            op=op,
+            left=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t1")),
+            right=QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table(dialect, "t2")),
+        )
+
+    #: The complement check as operator-aware patterns, not substrings:
+    #: ``UNION`` is contained in ``UNION ALL``, so the bare-UNION test has to
+    #: say "a UNION not followed by ALL", or every ``union_all`` render would
+    #: fail its own assertion.
+    _FORBIDDEN = {
+        "UNION": r"UNION(?! ALL)",
+        "UNION ALL": r"UNION ALL",
+        "INTERSECT": r"INTERSECT",
+        "EXCEPT": r"EXCEPT",
+    }
+
+    @pytest.mark.parametrize(
+        ("op", "expected"),
+        [
+            ("union", "UNION"),
+            ("UNION", "UNION"),
+            ("union_all", "UNION ALL"),
+            ("Union_All", "UNION ALL"),
+            ("intersect", "INTERSECT"),
+            ("except", "EXCEPT"),
+        ],
+        ids=["union", "union-upper", "union_all", "union_all-mixed", "intersect", "except"],
+    )
+    def test_each_word_renders_its_own_spelling(self, op, expected):
+        sql, _params = self._sides(_dialect(), op).to_sql()
+        assert expected in sql, sql
+        for spelling, pattern in self._FORBIDDEN.items():
+            if spelling == expected:
+                continue
+            assert re.search(pattern, sql) is None, (op, spelling, sql)
+
+    @pytest.mark.parametrize(
+        "op",
+        ["UNION DISTINCT", "union distinct", "minus", "union all", "", "nonsense"],
+        ids=["sql-tokens", "sql-tokens-lower", "oracle-minus", "spaced", "empty", "nonsense"],
+    )
+    def test_a_word_outside_the_set_is_refused_at_construction(self, op):
+        with pytest.raises(ValueError, match="op must be one of"):
+            self._sides(_dialect(), op)
+
+
+class TestGuardIsNotVacuous:
+    """Guards so the checks above cannot pass by accident."""
+
+    def test_every_case_has_two_distinct_parameters(self):
+        for case in PAIR_CASES:
+            assert case.a != case.b, case.case_id
+
+    def test_every_case_has_a_spelling_or_a_named_refusal(self):
+        for case in PAIR_CASES:
+            assert case.a_refusal or case.a_pattern, case.case_id
+            assert case.b_refusal or case.b_pattern, case.case_id
+
+    def test_expected_pairs_are_covered(self):
+        expected = {
+            "CreateSequenceStatement.cycle",
+            "CreateSequenceStatement.cache",
+            "AlterSequenceStatement.cycle",
+            "AlterSequenceStatement.cache",
+            "IdentityClause.cycle",
+            "IdentityClause.cache",
+            "DropSchemaStatement.cascade",
+            "DropViewStatement.cascade",
+            "DropMaterializedViewStatement.cascade",
+            "DropFunctionStatement.cascade",
+            "DropTableStatement.cascade",
+            "TruncateStatement.cascade",
+            "TruncateStatement.restart_identity",
+            "CreateMaterializedViewStatement.with_data",
+            "RefreshMaterializedViewStatement.with_data",
+            "PostgresRefreshMaterializedViewPgStatement.with_data",
+            "CreateTableAsStatement.with_data",
+            "CTEClause.materialized",
+            "TableConstraint.deferrable",
+            "TableConstraint.initially_deferred",
+            "TableConstraint.enforced",
+            "ColumnConstraint.deferrable",
+            "ColumnConstraint.initially_deferred",
+            "BeginTransactionStatement.deferrable",
+            "BeginTransactionStatement.wait",
+            "SetTransactionStatement.deferrable",
+            "SetTransactionStatement.wait",
+            "AlterConstraintAction.enforced",
+            "PostgresCopyToStatement.force_array",
+            "PostgresDropTypeExpression.cascade/restrict",
+        }
+        covered = {case.case_id for case in PAIR_CASES}
+        missing = expected - covered
+        assert not missing, f"pairs in scope but not guarded: {sorted(missing)}"
+
+    def test_refusal_features_are_named(self):
+        """A refusal that only says "unsupported" does not name the option."""
+        for case in PAIR_CASES:
+            for refusal in (case.a_refusal, case.b_refusal):
+                if refusal is not None:
+                    assert refusal.strip(), case.case_id
+
+
+class TestMasterProbesAreDeclared:
+    """The master probes core now consults are answered by this package.
+
+    Core's c4d6adc gave call sites to three probes that had been decorative
+    (materialized CTE, truncate, with-data) and added a fourth (transaction
+    wait). A dialect whose answer falls back to core's fail-closed default
+    starts refusing statements it used to render. Each probe is declared on
+    the PostgreSQL mixin that owns it -- inherited core defaults are exactly
+    the gap this round closes -- and the version boundary is the measured one.
+
+    Measurement (live PostgreSQL 9.6 through 19beta4, this repository's
+    scenario matrix): ``AS [NOT] MATERIALIZED`` is a syntax error through 11
+    and accepted from 12; CTAS/MV/refresh ``WITH [NO] DATA`` and ``TRUNCATE``
+    are accepted everywhere; ``WAIT`` / ``NO WAIT`` on BEGIN/SET TRANSACTION
+    is a syntax error everywhere.
+    """
+
+    def test_materialized_cte_carries_the_measured_boundary(self):
+        assert _dialect((11, 0, 0)).supports_materialized_cte() is False
+        assert _dialect((12, 0, 0)).supports_materialized_cte() is True
+        assert _dialect(PG19).supports_materialized_cte() is True
+
+    def test_materialized_cte_refuses_before_pg12(self):
+        dialect = _dialect((11, 0, 0))
+        with pytest.raises(UnsupportedFeatureError, match="MATERIALIZED CTE"):
+            CTEClause(dialect, "c", _query(dialect), materialized=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NOT MATERIALIZED CTE"):
+            CTEClause(dialect, "c", _query(dialect), not_materialized=True).to_sql()
+
+    def test_materialized_cte_renders_from_pg12(self):
+        dialect = _dialect((12, 0, 0))
+        sql, _params = CTEClause(
+            dialect, "c", _query(dialect), materialized=True
+        ).to_sql()
+        assert "AS MATERIALIZED " in sql, sql
+        sql, _params = CTEClause(
+            dialect, "c", _query(dialect), not_materialized=True
+        ).to_sql()
+        assert "AS NOT MATERIALIZED " in sql, sql
+
+    def test_the_declarations_live_on_the_postgres_mixins(self):
+        """A probe inherited from a core default is not a declaration."""
+        for mixin, name in (
+            (PostgresCTEMixin, "supports_materialized_cte"),
+            (PostgresTruncateMixin, "supports_truncate"),
+            (PostgresMaterializedViewMixin, "supports_with_data_clause"),
+            (PostgresTransactionMixin, "supports_transaction_wait"),
+        ):
+            assert name in mixin.__dict__, (
+                f"{mixin.__name__}.{name} is inherited, not declared"
+            )
+
+    def test_probe_answers(self):
+        dialect = _dialect(PG16)
+        assert dialect.supports_truncate() is True
+        assert dialect.supports_with_data_clause() is True
+        assert dialect.supports_transaction_wait() is False
+
+
+class TestMasterProbesGateTheirConsumers:
+    """A probe flipped to False refuses each consumer of its clause by name."""
+
+    class _NoWithData(PostgresDialect):
+        def supports_with_data_clause(self) -> bool:
+            return False
+
+    class _NoTruncate(PostgresDialect):
+        def supports_truncate(self) -> bool:
+            return False
+
+    def test_with_data_is_gated_on_every_consumer(self):
+        """CTAS, CREATE MV and both REFRESH forms consult the one probe."""
+        d = self._NoWithData(version=PG16)
+        assert d.supports_with_data_clause() is False
+        cases = (
+            (
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: CreateTableAsStatement(dd, _table(dd), _query(dd), **kw),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: CreateMaterializedViewStatement(
+                    dd, MaterializedView(dd, "mv"), _query(dd), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: CreateMaterializedViewStatement(
+                    dd, MaterializedView(dd, "mv"), _query(dd), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: RefreshMaterializedViewStatement(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: RefreshMaterializedViewStatement(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+            (
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"with_data": True},
+                "WITH DATA",
+            ),
+            (
+                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
+                    dd, MaterializedView(dd, "mv"), **kw
+                ),
+                {"no_data": True},
+                "WITH NO DATA",
+            ),
+        )
+        for builder, kwargs, feature in cases:
+            with pytest.raises(UnsupportedFeatureError, match=feature):
+                builder(d, **kwargs).to_sql()
+
+    def test_truncate_is_gated_on_its_probe(self):
+        d = self._NoTruncate(version=PG16)
+        assert d.supports_truncate() is False
+        with pytest.raises(UnsupportedFeatureError, match="TRUNCATE"):
+            TruncateStatement(d, _table(d)).to_sql()
+
+    def test_wait_pair_refuses_by_name_on_postgres(self):
+        d = _dialect(PG16)
+        with pytest.raises(UnsupportedFeatureError, match="WAIT"):
+            BeginTransactionStatement(d, wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
+            BeginTransactionStatement(d, no_wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="WAIT"):
+            SetTransactionStatement(d, wait=True).to_sql()
+        with pytest.raises(UnsupportedFeatureError, match="NO WAIT"):
+            SetTransactionStatement(d, no_wait=True).to_sql()

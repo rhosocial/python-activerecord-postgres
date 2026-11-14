@@ -306,3 +306,7 @@ class AsyncPostgresTransactionManager(PostgresTransactionMixin, AsyncTransaction
         # Clear deferred constraints when outermost transaction rolls back
         if self._transaction_level == 0:
             self._deferred_constraints.clear()
+
+    async def supports_savepoint(self) -> bool:
+        """Async counterpart of the sync capability probe."""
+        return self._backend.dialect.supports_savepoint()

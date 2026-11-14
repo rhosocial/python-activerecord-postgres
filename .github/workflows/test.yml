@@ -63,8 +63,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"  # NOSONAR
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/activerecord-ddl"  # NOSONAR
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-ddl"  # NOSONAR
 
       - name: Install dependencies
         run: |
@@ -122,14 +122,14 @@ jobs:
           python -m pytest \
             --rootdir=. \
             --confcutdir=. \
-            "$TESTSUITE_DIR/benchmark/crud/test_delete_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_delete.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_insert_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_insert.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_query_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_query.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_update_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_update.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_delete_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_delete.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_insert_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_insert.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_query_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_query.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_update_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_update.py" \
             "$TESTSUITE_DIR/benchmark/query" \
             "$TESTSUITE_DIR/benchmark/transaction" \
             "$TESTSUITE_DIR/benchmark/mixin" \
@@ -278,8 +278,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"  # NOSONAR
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/activerecord-ddl"  # NOSONAR
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-ddl"  # NOSONAR
 
       - name: Install dependencies
         run: |
@@ -385,8 +385,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"  # NOSONAR
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/activerecord-ddl"  # NOSONAR
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-ddl"  # NOSONAR
 
       - name: Install dependencies
         run: |
@@ -488,8 +488,8 @@ jobs:
 
       - name: Install activerecord and testsuite
         run: |
-          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@release/v1.0.0.dev30"  # NOSONAR
-          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@release/v1.0.0.dev17"  # NOSONAR
+          pip install "rhosocial-activerecord @ git+https://github.com/rhosocial/python-activerecord.git@feature/activerecord-ddl"  # NOSONAR
+          pip install "rhosocial-activerecord-testsuite @ git+https://github.com/rhosocial/python-activerecord-testsuite.git@feature/activerecord-ddl"  # NOSONAR
 
       - name: Install dependencies
         run: |

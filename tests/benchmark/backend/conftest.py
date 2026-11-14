@@ -13,7 +13,7 @@ from rhosocial.activerecord.testsuite.benchmark.crud.fixtures.data import (
     payload_count_for_size,
 )
 
-from providers.scenarios import get_enabled_scenarios, get_scenario
+from support.postgres import get_enabled_scenarios, get_scenario
 
 
 @dataclass
