@@ -221,7 +221,7 @@ jobs:
 
   test-python-315:
     name: Python ${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }} / postgres ${{ matrix.postgres-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
@@ -236,7 +236,7 @@ jobs:
           # psycopg does not support free-threaded builds -- tracked as
           # psycopg/psycopg#1095 -- so the GIL leg is the only one this backend
           # has, on 3.15 as on every other interpreter.
-          - { python-version: '3.15', postgres-version: '18', freethreaded: false }
+          - { python-version: '3.15', postgres-version: '18', freethreaded: false, os: ubuntu-26.04 }
 
     services:
       postgres:
@@ -338,13 +338,13 @@ jobs:
           - { python-version: '3.8', postgres-version: '9', os: ubuntu-22.04 }
           - { python-version: '3.8', postgres-version: '10', os: ubuntu-22.04 }
           - { python-version: '3.9', postgres-version: '11', os: ubuntu-22.04 }
-          - { python-version: '3.10', postgres-version: '12', os: ubuntu-latest }
-          - { python-version: '3.11', postgres-version: '13', os: ubuntu-latest }
-          - { python-version: '3.12', postgres-version: '14', os: ubuntu-latest }
-          - { python-version: '3.13', postgres-version: '15', os: ubuntu-latest }
-          - { python-version: '3.13', postgres-version: '16', os: ubuntu-latest }
-          - { python-version: '3.14', postgres-version: '17', os: ubuntu-latest }
-          - { python-version: '3.14', postgres-version: '18', os: ubuntu-latest }
+          - { python-version: '3.10', postgres-version: '12', os: ubuntu-24.04 }
+          - { python-version: '3.11', postgres-version: '13', os: ubuntu-24.04 }
+          - { python-version: '3.12', postgres-version: '14', os: ubuntu-24.04 }
+          - { python-version: '3.13', postgres-version: '15', os: ubuntu-24.04 }
+          - { python-version: '3.13', postgres-version: '16', os: ubuntu-24.04 }
+          - { python-version: '3.14', postgres-version: '17', os: ubuntu-26.04 }
+          - { python-version: '3.14', postgres-version: '18', os: ubuntu-26.04 }
 
     services:
       postgres:
