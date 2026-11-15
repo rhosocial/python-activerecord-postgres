@@ -88,6 +88,15 @@ class PostgresDataTypeMixin:
         """
         return self.version_at_least((13, 0, 0))
 
+    def supports_pg_lsn_addition(self) -> bool:
+        """Whether a pg_lsn value can be added to a numeric byte count.
+
+        Native feature, PostgreSQL 14+. The pg_lsn subtraction operator
+        predates it; only 14 introduced ``pg_lsn + numeric``.
+        https://www.postgresql.org/docs/current/datatype-pg-lsn.html#DATATYPE-PG-LSN
+        """
+        return self.version_at_least((14, 0, 0))
+
     def format_create_range_type(
         self,
         expr: CreateTypeStatement,

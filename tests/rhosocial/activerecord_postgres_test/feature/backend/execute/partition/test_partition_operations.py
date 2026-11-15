@@ -421,8 +421,11 @@ def _create_production_partitioned_table(backend, partitions):
     dialect = backend.dialect
     if not dialect.supports_partitioned_table_creation():
         pytest.skip("PostgreSQL scenario does not support declarative partitioning")
-    if backend.get_server_version() < (11, 0, 0):
-        pytest.skip("production partition primary key scenario requires PostgreSQL 11+")
+    if not dialect.supports_partitioned_table_primary_key():
+        pytest.skip(
+            "production partition primary key scenario requires PostgreSQL 11+ "
+            "(supports_partitioned_table_primary_key)"
+        )
     for table_name in PRODUCTION_PARTITION_TABLES:
         backend.execute(*_drop_table_sql(dialect, table_name))
     backend.execute(*_create_production_parent_sql(dialect))
@@ -443,8 +446,11 @@ async def _async_create_production_partitioned_table(backend, partitions):
     dialect = backend.dialect
     if not dialect.supports_partitioned_table_creation():
         pytest.skip("PostgreSQL scenario does not support declarative partitioning")
-    if await backend.get_server_version() < (11, 0, 0):
-        pytest.skip("production partition primary key scenario requires PostgreSQL 11+")
+    if not dialect.supports_partitioned_table_primary_key():
+        pytest.skip(
+            "production partition primary key scenario requires PostgreSQL 11+ "
+            "(supports_partitioned_table_primary_key)"
+        )
     for table_name in PRODUCTION_PARTITION_TABLES:
         await backend.execute(*_drop_table_sql(dialect, table_name))
     await backend.execute(*_create_production_parent_sql(dialect))

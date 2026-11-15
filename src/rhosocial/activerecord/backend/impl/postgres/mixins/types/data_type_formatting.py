@@ -812,7 +812,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_pg_lsn(self) -> bool:
-        return True
+        """pg_lsn arrived in PostgreSQL 9.4.
+
+        An unconditional True told every server it could have a pg_lsn
+        column, and a 9.3 server found out by executing the DDL ('type
+        "pg_lsn" does not exist'). The type is documented from 9.4 on:
+        https://www.postgresql.org/docs/9.4/datatype-pg-lsn.html
+        """
+        return self.version_at_least((9, 4, 0))
 
     def supports_data_type_postgres_hstore(self) -> bool:
         return True

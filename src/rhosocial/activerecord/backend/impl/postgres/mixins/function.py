@@ -101,3 +101,13 @@ class PostgresFunctionMixin:
                         return FunctionSupportInfo(supported=False, reason="extension_version_insufficient")
 
         return FunctionSupportInfo(supported=True)
+
+    def supports_bit_count(self) -> bool:
+        """Whether bit_count(bit) is supported.
+
+        Native function, PostgreSQL 14+. The bit-string function tables of
+        the 9.5 through 13 documentation carry no bit_count entry; it first
+        appears in 14.
+        https://www.postgresql.org/docs/current/functions-bitstring.html
+        """
+        return self.version_at_least((14, 0, 0))

@@ -21,6 +21,7 @@ class PostgresDataTypeSupport(Protocol):
     - Numeric Infinity (PG 14+)
     - Nondeterministic ICU collation (PG 12+)
     - xid8 type (PG 13+)
+    - pg_lsn addition (PG 14+)
 
     Official Documentation:
     - Multirange: https://www.postgresql.org/docs/current/rangetypes.html
@@ -37,6 +38,7 @@ class PostgresDataTypeSupport(Protocol):
     - Multirange: PostgreSQL 14+
     - JSONB subscript: PostgreSQL 14+
     - Numeric Infinity: PostgreSQL 14+
+    - pg_lsn addition: PostgreSQL 14+
     """
 
     def supports_multirange_type(self) -> bool:
@@ -92,6 +94,14 @@ class PostgresDataTypeSupport(Protocol):
 
         Native feature, PostgreSQL 13+.
         Provides 64-bit transaction identifiers.
+        """
+        ...
+
+    def supports_pg_lsn_addition(self) -> bool:
+        """Whether a pg_lsn value can be added to a numeric byte count.
+
+        Native feature, PostgreSQL 14+.
+        Enables ``pg_lsn + numeric`` arithmetic.
         """
         ...
 

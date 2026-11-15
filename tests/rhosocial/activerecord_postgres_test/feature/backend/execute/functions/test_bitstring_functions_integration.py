@@ -159,8 +159,8 @@ class TestSyncBitStringFunctionsIntegration:
 
     def test_bit_count_executes_on_postgres_14_plus(self, postgres_backend):
         """Test bit_count(bit) function on PostgreSQL 14+."""
-        if postgres_backend.get_server_version() < (14, 0, 0):
-            pytest.skip("bit_count requires PostgreSQL 14+")
+        if not postgres_backend.dialect.supports_bit_count():
+            pytest.skip("bit_count requires PostgreSQL 14+ per supports_bit_count")
 
         expr = bit_count(postgres_backend.dialect, _bit(postgres_backend.dialect, "101011"))
         result = _execute_expression(postgres_backend, expr)
@@ -169,12 +169,8 @@ class TestSyncBitStringFunctionsIntegration:
 
     def test_bit_count_skips_before_postgres_14(self, postgres_backend):
         """Test bit_count version gate for PostgreSQL versions before 14."""
-        version = postgres_backend.get_server_version()
-        if version >= (14, 0, 0):
-            assert version >= (14, 0, 0)
-            return
-
-        pytest.skip("bit_count requires PostgreSQL 14+")
+        if not postgres_backend.dialect.supports_bit_count():
+            pytest.skip("bit_count requires PostgreSQL 14+ per supports_bit_count")
 
 
 class TestAsyncBitStringFunctionsIntegration:
@@ -209,8 +205,8 @@ class TestAsyncBitStringFunctionsIntegration:
     @pytest.mark.asyncio
     async def test_async_bit_count_executes_on_postgres_14_plus(self, async_postgres_backend):
         """Test async bit_count(bit) function on PostgreSQL 14+."""
-        if await async_postgres_backend.get_server_version() < (14, 0, 0):
-            pytest.skip("bit_count requires PostgreSQL 14+")
+        if not async_postgres_backend.dialect.supports_bit_count():
+            pytest.skip("bit_count requires PostgreSQL 14+ per supports_bit_count")
 
         expr = bit_count(
             async_postgres_backend.dialect,

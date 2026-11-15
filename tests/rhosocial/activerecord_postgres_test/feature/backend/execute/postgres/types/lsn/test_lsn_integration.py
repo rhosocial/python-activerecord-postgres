@@ -20,13 +20,13 @@ ASYNC_LSN_TABLE = "test_lsn_types_async"
 
 
 def _requires_pg_lsn(backend):
-    if backend.get_server_version() < (9, 4, 0):
-        pytest.skip("pg_lsn requires PostgreSQL 9.4+")
+    if not backend.dialect.supports_data_type_postgres_pg_lsn():
+        pytest.skip("pg_lsn requires PostgreSQL 9.4+ per supports_data_type_postgres_pg_lsn")
 
 
-async def _requires_pg_lsn_async(backend):
-    if await backend.get_server_version() < (9, 4, 0):
-        pytest.skip("pg_lsn requires PostgreSQL 9.4+")
+def _requires_pg_lsn_async(backend):
+    if not backend.dialect.supports_data_type_postgres_pg_lsn():
+        pytest.skip("pg_lsn requires PostgreSQL 9.4+ per supports_data_type_postgres_pg_lsn")
 
 
 def _lsn_literal(value):
@@ -124,8 +124,8 @@ class TestSyncLsnIntegration:
 
     def test_lsn_addition_executes(self, postgres_backend):
         """Add bytes to a pg_lsn value and verify PostgreSQL returns the new LSN."""
-        if postgres_backend.get_server_version() < (14, 0, 0):
-            pytest.skip("pg_lsn addition requires PostgreSQL 14+")
+        if not postgres_backend.dialect.supports_pg_lsn_addition():
+            pytest.skip("pg_lsn addition requires PostgreSQL 14+ per supports_pg_lsn_addition")
         result = postgres_backend.fetch_one("""
             SELECT ('16/B374D848'::pg_lsn + 1)::text AS lsn_value
         """)
@@ -144,7 +144,7 @@ class TestAsyncLsnIntegration:
     @pytest_asyncio.fixture
     async def async_lsn_test_table(self, async_postgres_backend):
         """Create a table containing a pg_lsn column for async tests."""
-        await _requires_pg_lsn_async(async_postgres_backend)
+        _requires_pg_lsn_async(async_postgres_backend)
         await async_postgres_backend.execute(f"DROP TABLE IF EXISTS {ASYNC_LSN_TABLE}")
         await async_postgres_backend.execute(f"""
             CREATE TABLE {ASYNC_LSN_TABLE} (
@@ -188,7 +188,7 @@ class TestAsyncLsnIntegration:
     @pytest.mark.asyncio
     async def test_async_lsn_subtraction_executes(self, async_postgres_backend):
         """Subtract pg_lsn values asynchronously and verify PostgreSQL byte distance."""
-        await _requires_pg_lsn_async(async_postgres_backend)
+        _requires_pg_lsn_async(async_postgres_backend)
         result = await async_postgres_backend.fetch_one("""
             SELECT '16/B374D849'::pg_lsn - '16/B374D848'::pg_lsn AS distance
         """)

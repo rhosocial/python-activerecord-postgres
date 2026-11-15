@@ -132,8 +132,8 @@ class TestSyncNetworkAddressIntegration:
 
     def test_insert_and_select_macaddr8_value(self, postgres_backend, network_test_table):
         """Insert a MACADDR8 value and verify PostgreSQL returns canonical text."""
-        if postgres_backend.get_server_version() < (10, 0, 0):
-            pytest.skip("macaddr8 requires PostgreSQL 10+")
+        if not postgres_backend.dialect.supports_data_type_postgres_macaddr8():
+            pytest.skip("macaddr8 requires PostgreSQL 10+ per supports_data_type_postgres_macaddr8")
 
         literal = _macaddr8_literal(PostgresMacaddr8("08:00:2b:01:02:03:04:05"))
 

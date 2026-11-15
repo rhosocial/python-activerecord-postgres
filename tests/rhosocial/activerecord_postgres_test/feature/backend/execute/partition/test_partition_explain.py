@@ -237,9 +237,11 @@ def _extract_relation_names(result: PostgresExplainResult) -> list[str]:
 def _assert_range_partition_support(dialect):
     if not dialect.supports_partitioned_table_creation():
         pytest.skip("PostgreSQL scenario does not support declarative partitioning")
-    version = dialect.get_server_version()
-    if version and version[0] < 11:
-        pytest.skip("PostgreSQL 10 does not support primary keys on partitioned tables")
+    if not dialect.supports_partitioned_table_primary_key():
+        pytest.skip(
+            "PostgreSQL 10 does not support primary keys on partitioned tables "
+            "(supports_partitioned_table_primary_key)"
+        )
 
 
 @pytest.fixture

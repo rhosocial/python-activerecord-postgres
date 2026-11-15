@@ -33,13 +33,8 @@ RANGE = PostgresNeutralRangeAdapter()
 
 
 def _require_multirange(backend):
-    version = backend.get_server_version()
-    if version < (14, 0, 0):
-        pytest.skip(
-            "multirange requires PostgreSQL 14+, server is {}".format(
-                ".".join(str(part) for part in version)
-            )
-        )
+    if not backend.dialect.supports_multirange():
+        pytest.skip("multirange requires PostgreSQL 14+ per supports_multirange")
 
 
 def _read_range_columns(backend, table, row_id, columns):

@@ -345,14 +345,13 @@ class TestRangeVersionCompatibility:
         """Test multirange version detection via protocol."""
         dialect = postgres_backend.dialect
         
-        # Check version-based support
-        version = postgres_backend.get_server_version()
-        if version >= (14, 0, 0):
-            assert dialect.supports_multirange() is True
-            assert dialect.supports_multirange_constructor() is True
-        else:
-            assert dialect.supports_multirange() is False
-            assert dialect.supports_multirange_constructor() is False
+        # Multirange is one capability: the types, their constructor and the aggregate
+        # all arrived together in PostgreSQL 14, so every probe the dialect
+        # exposes for the concept has to give one answer.
+        supports = dialect.supports_multirange()
+        assert dialect.supports_multirange_constructor() is supports
+        assert dialect.supports_multirange_agg() is supports
+        assert dialect.supports_data_type_postgres_int4multirange() is supports
 
     def test_range_types_available(self, postgres_backend):
         """Test that numeric range types are available."""
