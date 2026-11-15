@@ -52,13 +52,14 @@ def _require_extension(backend, name):
     )
 
 
-#: Tables whose DDL uses types a server may not have. The value is the
-#: minimum server version; below it the class is skipped with the reason.
-_TABLE_MIN_VERSION = {
-    "native_ranges": (14,),      # int4multirange is PostgreSQL 14+
-    "native_multiranges": (14,),
-    "native_wrapped_scalars": (13,),  # xid8 is PostgreSQL 13+
-}
+#: The dialect's own support switches for the column types these native tables
+#: need. The conftest never inspects a server version itself: it asks the
+#: dialect, and the dialect answers per version and per capability.
+_TABLE_TYPE_SWITCHES = (
+    ("native_ranges", "supports_multirange_type", "multirange"),
+    ("native_multiranges", "supports_multirange_type", "multirange"),
+    ("native_wrapped_scalars", "supports_xid8_type", "xid8"),
+)
 
 
 @pytest.fixture(scope="class")
@@ -66,15 +67,11 @@ def native_backend(postgres_backend_class, request):
     """The class's backend, with the class's built-in tables created."""
     backend = postgres_backend_class
     names = tuple(getattr(request.cls, "TABLES", ()))
-    server = tuple(getattr(backend.dialect, "version", None) or ())
-    for name in names:
-        minimum = _TABLE_MIN_VERSION.get(name)
-        if minimum and server[: len(minimum)] < minimum:
+    for table, probe, concept in _TABLE_TYPE_SWITCHES:
+        if table in names and not getattr(backend.dialect, probe)():
             pytest.skip(
-                "PostgreSQL {} lacks the column types of {} "
-                "(needs >= {})".format(
-                    ".".join(str(p) for p in server) or "?", name, minimum[0]
-                )
+                f"this dialect does not support {concept} "
+                f"({probe} is False)"
             )
     if names:
         _create_tables(backend, BUILTIN_SCHEMA, names)
