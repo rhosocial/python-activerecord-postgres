@@ -159,6 +159,7 @@ def get_postgres_protocols():
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.AutoIncrementColumnSupport,
+        dialect_protocols.DatabaseAssignedColumnSupport,
         dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,
         # The column-type table: `PostgresColumnTypeMixin` answers

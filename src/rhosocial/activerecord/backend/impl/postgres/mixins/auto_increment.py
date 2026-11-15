@@ -21,26 +21,9 @@ class PostgresAutoIncrementMixin(AutoIncrementMixin):
 
         Always ``False``: ``AUTO_INCREMENT`` is MySQL / MariaDB syntax and is
         absent from the PostgreSQL grammar. The server-generated-value
-        mechanisms PostgreSQL does have are the ``SERIAL`` type family
-        (:meth:`supports_database_assigned_integer_column` answers yes through
-        it) and the SQL-standard identity clause
-        (:class:`~...mixins.identity_column.PostgresIdentityColumnMixin`).
+        mechanism PostgreSQL does have is the ``SERIAL`` type family; the
+        capability-level answer lives on the dialect
+        (``PostgresDialect.supports_database_assigned_integer_column``), which
+        is what a declaration asks for.
         """
         return False
-
-    def supports_database_assigned_integer_column(self) -> bool:
-        """Whether an integer column's value comes from the database.
-
-        ``True``: SERIAL is a pseudo-type that carries the value, and its
-        observable behaviour is the one a declaration asks about -- omit the
-        value on INSERT and the database supplies it, and the row can return
-        it. The spelling is not ``AUTO_INCREMENT`` (that probe stays ``False``),
-        which is why the capability and the mechanism are separate questions.
-
-        Not guaranteed: the MySQL counter behaviour. Inserting an explicit
-        value larger than the sequence's current one raises MySQL's counter to
-        ``max + 1``; a SERIAL column leaves its sequence untouched, so a later
-        generated value may collide. Any test mixing explicit keys with
-        generated ones must be scoped to the mechanism that behaves that way.
-        """
-        return True

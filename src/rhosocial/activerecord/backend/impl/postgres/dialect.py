@@ -867,6 +867,23 @@ class PostgresDialect(
         """PostgreSQL DDL participates in transactions."""
         return True
 
+    def supports_database_assigned_integer_column(self) -> bool:
+        """Whether an integer column's value comes from the database.
+
+        ``True``: SERIAL is a pseudo-type whose backing sequence supplies the
+        value, and its observable behaviour is the one a declaration asks
+        about -- omit the value on INSERT, the database supplies it, and the
+        row can return it. The spelling is not ``AUTO_INCREMENT``
+        (``supports_auto_increment_column`` stays ``False``), which is why the
+        capability and the mechanism are separate questions.
+
+        Not guaranteed: the MySQL counter behaviour. Inserting an explicit
+        value larger than the sequence's current one raises MySQL's counter to
+        ``max + 1``; a SERIAL column leaves its sequence untouched, so a later
+        generated value may collide.
+        """
+        return True
+
     def supports_table_function(self) -> bool:
         """PostgreSQL reads a set-returning function as a row source.
 
