@@ -234,17 +234,17 @@ class TestIdentityExecutionConfirmation:
             assert outcome is ExecutionOutcome.NOT_RENDERED
 
     def test_auto_increment_constraint_matches_the_declaration(self, postgres_backend):
-        """The legacy is_auto_increment flag routes through the identity gate."""
+        """The auto-increment flag renders a SERIAL type, accepted on every version."""
         dialect = postgres_backend.dialect
         outcome = _confirm(
             postgres_backend,
             _auto_increment_table(dialect, "test_identity_exec_legacy"),
             "test_identity_exec_legacy",
         )
-        if dialect.supports_identity_column():
-            assert outcome is ExecutionOutcome.ACCEPTED
-        else:
-            assert outcome is ExecutionOutcome.NOT_RENDERED
+        # Unlike an identity clause, SERIAL predates the standard and exists on
+        # every version, so the server accepts the declaration whether or not it
+        # has ``supports_identity_column``.
+        assert outcome is ExecutionOutcome.ACCEPTED
 
 
 class TestSerialTypeExecution:
