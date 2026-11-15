@@ -59,6 +59,7 @@ _TABLE_TYPE_SWITCHES = (
     ("native_ranges", "supports_multirange_type", "multirange"),
     ("native_multiranges", "supports_multirange_type", "multirange"),
     ("native_wrapped_scalars", "supports_xid8_type", "xid8"),
+    ("native_json_xml", "supports_data_type_postgres_jsonpath", "jsonpath"),
 )
 
 
