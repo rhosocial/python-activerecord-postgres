@@ -271,3 +271,37 @@ def test_vector_ops_fail_when_the_extension_is_not_available(dialect, method):
     column = PostgresVectorColumn(dialect, "v")
     with pytest.raises(UnsupportedFeatureError, match="supports_pgvector_similarity_search"):
         getattr(column, method)([1.0, 2.0])
+
+
+# ---------------------------------------------------------------------------
+# hstore: key existence, gated on the extension's operators
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def hstore(dialect, monkeypatch):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresHstoreColumn,
+    )
+
+    monkeypatch.setattr(dialect, "supports_hstore_operators", lambda: True)
+    return PostgresHstoreColumn(dialect, "h")
+
+
+@pytest.mark.parametrize("method, name", [("exist", "EXIST"), ("defined", "DEFINED")])
+def test_hstore_key_predicates(hstore, method, name):
+    sql, params = getattr(hstore, method)("k").to_sql()
+    assert sql == f'{name}("h", %s)'
+    assert params == ("k",)
+
+
+@pytest.mark.parametrize("method", ["exist", "defined"])
+def test_hstore_ops_fail_when_the_extension_is_not_available(dialect, method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresHstoreColumn,
+    )
+
+    column = PostgresHstoreColumn(dialect, "h")
+    with pytest.raises(UnsupportedFeatureError, match="supports_hstore_operators"):
+        getattr(column, method)("k")

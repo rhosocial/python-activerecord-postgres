@@ -317,6 +317,22 @@ class PostgresHstoreColumn(ColumnBase):
     class starts from the column surface.
     """
 
+    def exist(self, key) -> "FunctionCall":
+        """``EXIST(col, key)``: whether the key is present, even with NULL."""
+        _require(self._dialect, "supports_hstore_operators")
+        from rhosocial.activerecord.backend.expression import Literal
+        from .functions.hstore import hstore_exist
+
+        return hstore_exist(self._dialect, self, Literal(self._dialect, key))
+
+    def defined(self, key) -> "FunctionCall":
+        """``DEFINED(col, key)``: whether the key is present and non-NULL."""
+        _require(self._dialect, "supports_hstore_operators")
+        from rhosocial.activerecord.backend.expression import Literal
+        from .functions.hstore import hstore_defined
+
+        return hstore_defined(self._dialect, self, Literal(self._dialect, key))
+
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this column."""
