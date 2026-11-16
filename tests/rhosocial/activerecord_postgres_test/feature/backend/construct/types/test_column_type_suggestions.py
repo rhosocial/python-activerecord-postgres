@@ -106,15 +106,37 @@ def test_the_table_has_no_entry_beyond_the_protocol(dialect):
     assert extra == set()
 
 
-def test_the_backend_declares_no_extra_python_types(dialect):
-    """The framework's twenty-four are the whole of what PostgreSQL answers for.
+def test_the_backend_declares_its_own_python_types_separately(dialect):
+    """The framework's twenty-four stay in their own table.
 
-    Its *server* types beyond them (``interval``, ``xml``, the multirange
-    family) are reached through their ``DataType`` spelling, not through a
-    Python-annotation entry of their own: annotating a field with an
-    unregistered custom class is what ``UseColumnType`` is for.
+    PostgreSQL models value classes beyond them (``Point``, ``PostgresXML``,
+    ``PostgresMoney``, the object identifiers), and the protocol reports those
+    through ``suggested_extra_column_types()`` so "the framework has an answer"
+    stays distinguishable from "this backend has one of its own".
     """
-    assert dialect.suggested_extra_column_types() == {}
+    extra = dialect.suggested_extra_column_types()
+    assert set(extra) - set(COMMON_TYPES) == set(extra)
+    assert extra
+
+
+def test_every_extra_entry_answers_with_a_column_class(dialect):
+    """The same two-state rule as the common table: a class, never a hole."""
+    from rhosocial.activerecord.backend.expression.column_types import ColumnBase
+
+    extra = dialect.suggested_extra_column_types()
+    for entry, column_class in extra.items():
+        assert isinstance(column_class, type), entry
+        assert issubclass(column_class, ColumnBase), entry
+
+
+def test_every_extra_class_builds_and_renders(dialect):
+    """An extras cell is only real if the column it names can be built."""
+    from rhosocial.activerecord.backend.expression.column_types import ColumnBase
+
+    for column_class in dialect.suggested_extra_column_types().values():
+        column = column_class(dialect, "c")
+        assert isinstance(column, ColumnBase)
+        assert column.to_sql() == ('"c"', ())
 
 
 def test_the_table_agrees_with_the_module_level_constant(dialect):
@@ -285,6 +307,40 @@ def test_the_complex_families_name_the_core_column_classes(dialect):
     for entry, klass in expected.items():
         assert dialect.suggested_column_types()[entry] is klass
         assert resolve(dialect, entry) is klass
+
+
+def test_the_complex_families_are_named_by_this_backend(dialect):
+    """PostGIS, range and vector spellings belong to PostgreSQL-named classes.
+
+    The core classes stay the shared floor; the names that carry this server's
+    own operations live in ``impl.postgres.column_types`` and are reachable
+    with ``UseColumnType``.
+    """
+    from rhosocial.activerecord.backend.impl.postgres import column_types as pg
+
+    for column_class in dialect.suggested_extra_column_types().values():
+        assert column_class.__module__ == pg.__name__
+        assert column_class.__name__.startswith("Postgres")
+
+
+def test_a_postgres_named_class_is_usable_through_use_column_type(dialect):
+    """A field can declare the stronger surface explicitly.
+
+    ``Point`` on its own resolves to the column class the extras table records;
+    a ``UseColumnType`` declaration overrides that with any class whose values
+    the same annotation can hold.
+    """
+    from rhosocial.activerecord.base.fields import UseColumnType
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresGeometryColumn,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.type_values import Point
+
+    assert resolve(dialect, Point) is PostgresGeometryColumn
+    assert (
+        resolve_column_class(dialect, Point, UseColumnType(PostgresGeometryColumn))
+        is PostgresGeometryColumn
+    )
 
 
 # ---------------------------------------------------------------------------

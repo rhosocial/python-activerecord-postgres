@@ -85,6 +85,56 @@ from rhosocial.activerecord.backend.expression.column_types import (
     UUIDColumn,
     VectorColumn,
 )
+from ..column_types import (
+    PostgresBitStringColumn,
+    PostgresGeometryColumn,
+    PostgresHstoreColumn,
+    PostgresIdentifierColumn,
+    PostgresJsonPathColumn,
+    PostgresLsnColumn,
+    PostgresMacAddressColumn,
+    PostgresMoneyColumn,
+    PostgresTextSearchColumn,
+    PostgresVectorColumn,
+    PostgresXmlColumn,
+)
+from ..type_values import (
+    Box,
+    Circle,
+    CID,
+    Line,
+    LineSegment,
+    OID,
+    Path,
+    Point,
+    Polygon,
+    PostgresBitString,
+    PostgresGeometry,
+    PostgresHstore,
+    PostgresJsonPath,
+    PostgresLsn,
+    PostgresMacaddr,
+    PostgresMacaddr8,
+    PostgresMoney,
+    PostgresTsQuery,
+    PostgresTsVector,
+    PostgresVector,
+    PostgresXML,
+    RegClass,
+    RegCollation,
+    RegConfig,
+    RegDictionary,
+    RegNamespace,
+    RegOper,
+    RegOperator,
+    RegProc,
+    RegProcedure,
+    RegRole,
+    RegType,
+    TID,
+    XID,
+    XID8,
+)
 
 #: All twenty-four protocol entries, in the protocol's reading order. Commented
 #: per group because the reasons are the content: the answer is a claim about
@@ -192,6 +242,58 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
 }
 
 
+#: PostgreSQL's own value classes -> the column class a bare field gets.
+#:
+#: The protocol's second table, and the backend-owned half: a Python type this
+#: server models and the framework does not. The keys mirror
+#: ``POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS``, with one deliberate omission --
+#: ``PostgresRange`` / ``PostgresMultirange`` -- for the reason recorded there:
+#: their adapters register only in the CUSTOM/BOTH range modes, so a default
+#: backend has no adapter for the value and a suggestion would build a column
+#: nothing can write. The column classes exist (``PostgresRangeColumn`` and
+#: ``PostgresMultirangeColumn``) and a field can name them explicitly with
+#: ``UseColumnType`` once its adapter is in place.
+POSTGRES_EXTRA_COLUMN_TYPES: Dict[Any, Type[ColumnBase]] = {
+    PostgresBitString: PostgresBitStringColumn,
+    PostgresGeometry: PostgresGeometryColumn,
+    Point: PostgresGeometryColumn,
+    Line: PostgresGeometryColumn,
+    LineSegment: PostgresGeometryColumn,
+    Box: PostgresGeometryColumn,
+    Path: PostgresGeometryColumn,
+    Polygon: PostgresGeometryColumn,
+    Circle: PostgresGeometryColumn,
+    PostgresTsVector: PostgresTextSearchColumn,
+    PostgresTsQuery: PostgresTextSearchColumn,
+    PostgresJsonPath: PostgresJsonPathColumn,
+    PostgresHstore: PostgresHstoreColumn,
+    PostgresMacaddr: PostgresMacAddressColumn,
+    PostgresMacaddr8: PostgresMacAddressColumn,
+    PostgresMoney: PostgresMoneyColumn,
+    PostgresXML: PostgresXmlColumn,
+    PostgresLsn: PostgresLsnColumn,
+    PostgresVector: PostgresVectorColumn,
+    # Object identifiers: the registry names are OID aliases, so they share the
+    # whole-number surface and the DDL spelling differs per name.
+    OID: PostgresIdentifierColumn,
+    RegClass: PostgresIdentifierColumn,
+    RegType: PostgresIdentifierColumn,
+    RegProc: PostgresIdentifierColumn,
+    RegProcedure: PostgresIdentifierColumn,
+    RegOper: PostgresIdentifierColumn,
+    RegOperator: PostgresIdentifierColumn,
+    RegConfig: PostgresIdentifierColumn,
+    RegDictionary: PostgresIdentifierColumn,
+    RegNamespace: PostgresIdentifierColumn,
+    RegRole: PostgresIdentifierColumn,
+    RegCollation: PostgresIdentifierColumn,
+    XID: PostgresIdentifierColumn,
+    XID8: PostgresIdentifierColumn,
+    CID: PostgresIdentifierColumn,
+    TID: PostgresIdentifierColumn,
+}
+
+
 class PostgresColumnTypeMixin(ColumnTypeMixin):
     """The full framework-modelled-Python-type → column-class table for PostgreSQL.
 
@@ -232,5 +334,18 @@ class PostgresColumnTypeMixin(ColumnTypeMixin):
     def suggested_column_types(self) -> Dict[Any, Optional[Type[ColumnBase]]]:
         return dict(POSTGRES_COLUMN_TYPES)
 
+    def suggested_extra_column_types(self) -> Dict[Any, Type[ColumnBase]]:
+        """This server's own value classes -> their column classes.
 
-__all__ = ["POSTGRES_COLUMN_TYPES", "PostgresColumnTypeMixin"]
+        A field annotated with a PostgreSQL value class (``Point``, ``PostgresXML``,
+        ``PostgresMoney``) resolves without a declaration. The range wrappers are
+        absent on purpose -- see :data:`POSTGRES_EXTRA_COLUMN_TYPES`.
+        """
+        return dict(POSTGRES_EXTRA_COLUMN_TYPES)
+
+
+__all__ = [
+    "POSTGRES_COLUMN_TYPES",
+    "POSTGRES_EXTRA_COLUMN_TYPES",
+    "PostgresColumnTypeMixin",
+]
