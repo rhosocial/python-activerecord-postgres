@@ -1,18 +1,19 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/types/test_column_type_suggestions.py
-"""PostgreSQL's column-type table, and the one entry it refuses.
+"""PostgreSQL's column-type table, and where its own operations live.
 
 The protocol's obligation on a backend is three things
 (``backend/dialect/mixins/column_type.py``, the contract list in
 ``testsuite/feature/query/typed_column/column_helpers.COMMON_TYPES``):
 
-1. **Answer every entry.** All eighteen of the closed list, none of them
+1. **Answer every entry.** All twenty-four of the closed list, none of them
    silently absent. A hole is a lie told to the model layer.
 2. **Say so where this backend differs.** Here: native arrays for the four
    sequence entries, where seven backends carry a JSON document.
 3. **Refuse only what it truly cannot express** -- with ``None``, which reaches
-   the caller as a resolution error rather than as a silent pick. Here: the one
-   entry, ``datetime.timedelta``, whose native ``interval`` this server carries
-   but whose operations no core column class names.
+   the caller as a resolution error rather than as a silent pick. Here:
+   nothing. ``timedelta`` names ``IntervalColumn`` and the six complex families
+   name their core classes, all of which promise only the surface every column
+   has.
 
 No database is needed for any of it: the question is which class an annotation
 resolves to, and the dialect already knows the server version.
@@ -106,7 +107,7 @@ def test_the_table_has_no_entry_beyond_the_protocol(dialect):
 
 
 def test_the_backend_declares_no_extra_python_types(dialect):
-    """The framework's eighteen are the whole of what PostgreSQL answers for.
+    """The framework's twenty-four are the whole of what PostgreSQL answers for.
 
     Its *server* types beyond them (``interval``, ``xml``, the multirange
     family) are reached through their ``DataType`` spelling, not through a
@@ -225,41 +226,65 @@ def test_the_enum_entry_answers_string_column(dialect):
     assert resolve(dialect, Mood) is StringColumn
 
 
-def test_the_interval_entry_is_refused_until_core_grows_an_interval_column(dialect):
-    """**The one deliberate refusal**, and the reasons it is not ``None``'s
-    opposite either.
+def test_the_interval_entry_names_the_core_interval_class(dialect):
+    """A duration is a duration, not a number of its own family.
 
     PostgreSQL has a real ``interval`` type where eight backends have no answer
-    at all (the protocol's own survey, §1), so there is no "this backend cannot
-    carry a duration" story here: psycopg binds a ``timedelta`` and reads one
-    back, and the ``DataType`` layer spells the storage
-    (``format_data_type_interval``). What no core column class offers is the
-    *operation* surface -- ``justify_hours``, ``EXTRACT(... FROM interval)``,
-    the field qualifiers -- and naming a number class would offer
-    transcendentals the server refuses: ``sqrt(interval '1 day')`` is an error.
+    at all (the protocol's own survey, §1): psycopg binds a ``timedelta`` and
+    reads one back, and the ``DataType`` layer spells the storage
+    (``format_data_type_interval``).
 
-    ``NumericColumn`` was the answer the last version of this table gave, and
-    it was a *declared* over-claim kept visible only because ``FloatColumn``
-    and ``DecimalColumn`` existed to differ from. With the numeric family merged
-    into one class that visibility is gone, so the honest answer under the
-    rebuilt protocol is ``None``: the gap reaches the model layer as a
-    resolution error naming the way out, instead of as a number class that
-    cannot keep its promise.
-
-    When core grows an ``IntervalColumn``, this entry is where it goes -- so
-    this test fails then, on purpose.
+    The class matters because ``interval`` refuses the numeric operations --
+    ``sqrt(interval '1 day')`` is an error -- and offers operations of its own
+    (``justify_hours``, ``EXTRACT(... FROM interval)``, field qualifiers).
+    ``IntervalColumn`` names the value without claiming either side: the
+    numeric surface is not offered, and PostgreSQL's own operations belong to
+    a PostgreSQL-named subclass.
     """
-    assert dialect.suggested_column_types()[datetime.timedelta] is None
-
-    with pytest.raises(ColumnTypeResolutionError) as excinfo:
-        resolve(dialect, datetime.timedelta)
-    assert "UseColumnType" in str(excinfo.value)
-
-    # The refusal is this table's, not the framework's: the generic numeric
-    # answer is what the portable baseline would have said.
+    from rhosocial.activerecord.backend.expression.column_types import IntervalColumn
     from rhosocial.activerecord.backend.impl.dummy.column_type import DUMMY_COLUMN_TYPES
 
-    assert DUMMY_COLUMN_TYPES[datetime.timedelta] is NumericColumn
+    assert dialect.suggested_column_types()[datetime.timedelta] is IntervalColumn
+    assert resolve(dialect, datetime.timedelta) is IntervalColumn
+    # Both dialects now answer it, so there is no gap left to refuse.
+    assert DUMMY_COLUMN_TYPES[datetime.timedelta] is IntervalColumn
+
+
+def test_the_complex_families_name_the_core_column_classes(dialect):
+    """Six families, one answer each -- and no operation beyond the column surface.
+
+    The classes carry alias, null tests, casting and collation only. PostGIS,
+    the range operators and bit arithmetic are this server's own spellings and
+    belong to backend-named subclasses, which the extra table will carry.
+    """
+    from rhosocial.activerecord.backend.adapters import (
+        BitString,
+        Geometry,
+        MacAddress,
+        Multirange,
+        Range,
+        Vector,
+    )
+    from rhosocial.activerecord.backend.expression.column_types import (
+        BitStringColumn,
+        GeometryColumn,
+        MacAddressColumn,
+        MultirangeColumn,
+        RangeColumn,
+        VectorColumn,
+    )
+
+    expected = {
+        Geometry: GeometryColumn,
+        Vector: VectorColumn,
+        BitString: BitStringColumn,
+        Range: RangeColumn,
+        Multirange: MultirangeColumn,
+        MacAddress: MacAddressColumn,
+    }
+    for entry, klass in expected.items():
+        assert dialect.suggested_column_types()[entry] is klass
+        assert resolve(dialect, entry) is klass
 
 
 # ---------------------------------------------------------------------------

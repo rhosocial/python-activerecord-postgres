@@ -11,16 +11,14 @@ the two are answers to different questions, and neither infers the other.
 Every answer below is written out rather than inherited from a core-side
 table, because a backend that owns its answer should be readable without a
 second file. The twenty-four entries are the protocol's closed list, all of
-them answered, and seven of them are refused: ``datetime.timedelta``, which
-this server can spell as ``interval`` but which no core column class can
-answer for, and the six complex families -- geometry, vector, bit string,
-range, multirange and MAC address -- whose column classes core does not have
-yet. The DDL half of the six families *is* answered, in ``data_type_suggestions.py``:
-this backend spells ``GEOMETRY`` / ``VARBIT`` / ``MACADDR`` for three of them
-and refuses the three whose parameters a bare annotation does not carry. A
-refused column class costs operations (``Model.c.<field>`` reports the gap);
-a refused storage entry costs the table itself, which is why the two halves
-answer separately.
+them answered: ``datetime.timedelta`` names ``IntervalColumn``, and the six
+complex families -- geometry, vector, bit string, range, multirange and MAC
+address -- name the core classes, which promise only the surface every column
+has. The DDL half of the six families is answered separately, in
+``data_type_suggestions.py``: this backend spells ``GEOMETRY`` / ``VARBIT`` /
+``MACADDR`` for three of them and refuses the three whose parameters a bare
+annotation does not carry. A column class and a storage entry answer
+separately, and neither one's answer implies the other's.
 
 **What the answers are measured against.** The live probes in
 ``.claude/plan/2026-10-08/suggested-mappings.md`` §8 (≈90 server instances
@@ -71,14 +69,21 @@ from rhosocial.activerecord.backend.dialect.mixins import ColumnTypeMixin
 from rhosocial.activerecord.backend.expression.column_types import (
     ArrayColumn,
     BinaryColumn,
+    BitStringColumn,
     BooleanColumn,
     ColumnBase,
-    TimestampColumn,
+    GeometryColumn,
     IntegerColumn,
+    IntervalColumn,
     JSONColumn,
+    MacAddressColumn,
+    MultirangeColumn,
     NumericColumn,
+    RangeColumn,
     StringColumn,
+    TimestampColumn,
     UUIDColumn,
+    VectorColumn,
 )
 
 #: All twenty-four protocol entries, in the protocol's reading order. Commented
@@ -116,23 +121,18 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     datetime.date: TimestampColumn,
     datetime.time: TimestampColumn,
     datetime.datetime: TimestampColumn,
-    # THE ONE DELIBERATE `None`. PostgreSQL has a real `interval` type -- §1
-    # spells it `INTERVAL` where eight backends have no answer at all -- and no
-    # core column class answers for it (`IntervalColumn` is a core gap,
-    # secondary-gaps 附录 D ①). `interval` is not a number: the server answers
-    # `justify_hours`, `EXTRACT(... FROM interval)` and field qualifiers for
-    # it, and refuses `sqrt(interval '1 day')` outright, so naming a number
-    # class here would hand the caller operations the engine cannot execute.
-    # `None` is the protocol's last resort and this is its last resort: the
-    # value is carried (psycopg binds and reads back a `timedelta`), and the
-    # storage is spelled by the `DataType` layer
-    # (`format_data_type_interval`), but the *operations* have no class to
-    # name. A field declared `timedelta` fails to resolve with a message
-    # naming the fix -- declare one explicitly with
-    # `UseColumnType(SomeColumn)`. When core grows an `IntervalColumn`, this
-    # entry is where it goes (pinned by
-    # `test_the_interval_entry_is_refused_until_core_grows_an_interval_column`).
-    datetime.timedelta: None,
+    # PostgreSQL has a real `interval` type -- §1 spells it `INTERVAL` where
+    # eight backends have no answer at all -- and it is not a number:
+    # `justify_hours`, `EXTRACT(... FROM interval)` and the field qualifiers
+    # operate on it, while `sqrt(interval '1 day')` is refused outright. So
+    # `IntervalColumn` names the value and offers no arithmetic; the numeric
+    # operations stay with numbers. The storage is spelled by the `DataType`
+    # layer (`format_data_type_interval`).
+    #
+    # The backend's own interval operations (`justify_hours`, field extraction)
+    # belong to a PostgreSQL-named subclass; the core class states only the
+    # surface every column has.
+    datetime.timedelta: IntervalColumn,
     # -- Value families --------------------------------------------------
     uuid.UUID: UUIDColumn,
     # `dict` → the JSON column class, on both `json` and `jsonb`. §12's
@@ -176,16 +176,19 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     # this protocol exists to keep.
     enum.Enum: StringColumn,
     # -- Complex families ------------------------------------------------
-    # core has no column class for these yet, so they are refused rather than
-    # answered with a class that does not exist. Their storage is answered in
-    # ``data_type_suggestions.py``, which is the half this backend does own. When core
-    # grows the family classes, these six entries are where they go.
-    Geometry: None,
-    Vector: None,
-    BitString: None,
-    Range: None,
-    Multirange: None,
-    MacAddress: None,
+    # The six families now have core column classes. Those classes promise
+    # only the surface every column has -- alias, null tests, casting and
+    # collation -- because no distance, containment, overlap, bitwise or
+    # similarity operation is spelled the same way on every backend. The
+    # PostgreSQL operations live on backend-named subclasses (PostGIS is an
+    # extension, not the core server), which is where the richer spelling
+    # belongs. The storage stays answered in `data_type_suggestions.py`.
+    Geometry: GeometryColumn,
+    Vector: VectorColumn,
+    BitString: BitStringColumn,
+    Range: RangeColumn,
+    Multirange: MultirangeColumn,
+    MacAddress: MacAddressColumn,
 }
 
 
@@ -205,17 +208,21 @@ class PostgresColumnTypeMixin(ColumnTypeMixin):
     operations, and it is pinned by the backend's own test file rather than
     left to drift.
 
-    **Seven entries are refused.** ``datetime.timedelta`` answers ``None``
-    because PostgreSQL's native ``interval`` has no core column class -- the
-    gap this backend used to hide by naming ``NumericColumn`` and accepting
-    that ``sqrt(interval '1 day')`` would be offered and would fail on the
-    server. A refusal that reaches the model layer as a resolution error is
-    the honest version of that gap, and the entry's comment says what closes
-    it. The other six are the complex families, refused for the mirror-image
-    reason: the operations would have to be written against a core column
-    class that does not exist yet. Their storage is answered -- ``GEOMETRY``,
-    ``VARBIT`` and ``MACADDR`` here -- so a bare model builds the table and
-    only the field accessor reports the gap.
+    **No entry is refused.** ``datetime.timedelta`` used to answer ``None``
+    because PostgreSQL's native ``interval`` had no core column class; core
+    now has ``IntervalColumn``, so the value is named and the arithmetic it
+    does not promise stays where it belongs. The six complex families used to
+    answer ``None`` for the mirror-image reason -- no core class existed --
+    and now name their core classes, which promise only the surface every
+    column has. Their storage is answered here too -- ``GEOMETRY``,
+    ``VARBIT`` and ``MACADDR`` -- so a bare model builds the table and a
+    field resolves.
+
+    **A backend-named class is where richer operations go.** PostGIS
+    functions, range ``@>`` operators and `justify_hours` are each this
+    server's own; they belong to a subclass such as
+    ``PostgresGeometryColumn(GeometryColumn)`` in the extra table, not to
+    the core class that every backend derives from.
 
     The table has no version branch because nothing in it moves with the
     version: the one thing that does (``jsonb`` becoming available in 9.4)
