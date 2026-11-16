@@ -25,6 +25,8 @@ value class they answer for, so a field annotated with one of PostgreSQL's own
 value types resolves without a declaration.
 """
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.expression.column_types import (
     BitStringColumn,
     ColumnBase,
@@ -38,6 +40,9 @@ from rhosocial.activerecord.backend.expression.column_types import (
     XMLColumn,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+
 
 class PostgresGeometryColumn(GeometryColumn):
     """A column holding a PostgreSQL geometric value (point, line, box, ...).
@@ -46,6 +51,44 @@ class PostgresGeometryColumn(GeometryColumn):
     operation surface here. ``ST_Distance`` and the overlap operators are the
     server's own spellings and are added to this class as they are measured.
     """
+
+    def distance_to(self, other) -> "BinaryExpression":
+        """``col <-> other``: the distance between two geometric values.
+
+        ``<->`` is the one geometric operator every native geometric type
+        answers (point, line, lseg, box, path, polygon, circle), so it is safe
+        on this shared class.
+        """
+        from .functions.geometric import geometry_distance
+
+        return geometry_distance(self._dialect, self, other)
+
+
+class PostgresAreaGeometryColumn(PostgresGeometryColumn):
+    """A geometry column whose value can contain and overlap another value.
+
+    ``@>`` / ``<@`` / ``&&`` exist for boxes, polygons and circles, not for
+    points, lines or segments. Keeping them on this narrower class means a
+    ``Point`` field cannot offer an operator the server would refuse.
+    """
+
+    def contains(self, other) -> "BinaryExpression":
+        """``col @> other``: whether this geometry contains the other."""
+        from .functions.geometric import geometry_contains
+
+        return geometry_contains(self._dialect, self, other)
+
+    def contained_by(self, other) -> "BinaryExpression":
+        """``col <@ other``: whether this geometry is contained by the other."""
+        from .functions.geometric import geometry_contained_by
+
+        return geometry_contained_by(self._dialect, self, other)
+
+    def overlaps(self, other) -> "BinaryExpression":
+        """``col && other``: whether the two geometries overlap."""
+        from .functions.geometric import geometry_overlaps
+
+        return geometry_overlaps(self._dialect, self, other)
 
 
 class PostgresVectorColumn(VectorColumn):
@@ -159,6 +202,7 @@ class PostgresLsnColumn(ColumnBase):
 
 __all__ = [
     "PostgresGeometryColumn",
+    "PostgresAreaGeometryColumn",
     "PostgresVectorColumn",
     "PostgresRangeColumn",
     "PostgresMultirangeColumn",

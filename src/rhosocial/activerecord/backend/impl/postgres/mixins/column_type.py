@@ -86,6 +86,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
     VectorColumn,
 )
 from ..column_types import (
+    PostgresAreaGeometryColumn,
     PostgresBitStringColumn,
     PostgresGeometryColumn,
     PostgresHstoreColumn,
@@ -259,10 +260,11 @@ POSTGRES_EXTRA_COLUMN_TYPES: Dict[Any, Type[ColumnBase]] = {
     Point: PostgresGeometryColumn,
     Line: PostgresGeometryColumn,
     LineSegment: PostgresGeometryColumn,
-    Box: PostgresGeometryColumn,
     Path: PostgresGeometryColumn,
-    Polygon: PostgresGeometryColumn,
-    Circle: PostgresGeometryColumn,
+    # @> / <@ / && exist for these three, not for the line-like types.
+    Box: PostgresAreaGeometryColumn,
+    Polygon: PostgresAreaGeometryColumn,
+    Circle: PostgresAreaGeometryColumn,
     PostgresTsVector: PostgresTextSearchColumn,
     PostgresTsQuery: PostgresTextSearchColumn,
     PostgresJsonPath: PostgresJsonPathColumn,
