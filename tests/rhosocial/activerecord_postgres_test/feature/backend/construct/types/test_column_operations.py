@@ -208,3 +208,25 @@ def test_multirange_operators_fail_without_the_capability(method):
     column = PostgresMultirangeColumn(old, "m")
     with pytest.raises(UnsupportedFeatureError, match="supports_multirange"):
         getattr(column, method)(5)
+
+
+# ---------------------------------------------------------------------------
+# Text search: the match operator and ranking function
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def tsvector(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresTextSearchColumn,
+    )
+
+    return PostgresTextSearchColumn(dialect, "tv")
+
+
+def test_text_search_matches(tsvector):
+    assert tsvector.matches("foo & bar").to_sql() == ('"tv" @@ %s', ("foo & bar",))
+
+
+def test_text_search_rank(tsvector):
+    assert tsvector.rank("foo").to_sql() == ('TS_RANK("tv", %s)', ("foo",))

@@ -258,6 +258,18 @@ class PostgresTextSearchColumn(ColumnBase):
     models a text-search value, so this class starts from the column surface.
     """
 
+    def matches(self, query) -> "BinaryExpression":
+        """``col @@ query``: does the vector match the query?"""
+        from .functions.text_search import ts_matches
+
+        return ts_matches(self._dialect, self, query)
+
+    def rank(self, query, weights=None) -> "FunctionCall":
+        """``ts_rank(col, query[, weights])``: the relevance of the match."""
+        from .functions.text_search import ts_rank
+
+        return ts_rank(self._dialect, self, query, weights)
+
     @property
     def format_method(self) -> str:
         """The dialect formatting method that renders this column."""
