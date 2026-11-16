@@ -234,10 +234,12 @@ POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
     XID8: PostgresXID8Type(),
     CID: PostgresCIDType(),
     TID: PostgresTIDType(),
-    # Parameter-carrying wrappers: the text their adapters write.
+    # Parameter-carrying wrapper: the text its adapter writes.
     PostgresVector: TextType(),
-    PostgresRange: TextType(),
-    PostgresMultirange: TextType(),
+    # `PostgresRange` / `PostgresMultirange` are deliberately absent: their
+    # adapters are registered only in the CUSTOM/BOTH range modes, so a default
+    # backend has no adapter for those value classes. A suggestion without an
+    # adapter builds a column nothing can write.
 }
 
 
