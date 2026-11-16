@@ -79,3 +79,41 @@ def test_the_area_operators_are_not_offered_on_a_point(dialect):
     assert dialect.suggested_extra_column_types()[Box] is PostgresAreaGeometryColumn
     assert not hasattr(PostgresGeometryColumn(dialect, "p"), "contains")
     assert hasattr(PostgresAreaGeometryColumn(dialect, "b"), "contains")
+
+
+# ---------------------------------------------------------------------------
+# Bit strings: built-in bitwise operators and length/count functions
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def bits(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresBitStringColumn,
+    )
+
+    return PostgresBitStringColumn(dialect, "b")
+
+
+@pytest.mark.parametrize(
+    "method, operator",
+    [("bit_and", "&"), ("bit_or", "|"), ("bit_xor", "#")],
+)
+def test_bitwise_binary_operators(bits, dialect, method, operator):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresBitStringColumn,
+    )
+
+    expr = getattr(bits, method)(PostgresBitStringColumn(dialect, "h"))
+    assert expr.to_sql() == (f'"b" {operator} "h"', ())
+
+
+def test_bitwise_not_and_length(bits):
+    assert bits.bit_not().to_sql() == ('~ "b"', ())
+    assert bits.bit_length().to_sql() == ('BIT_LENGTH("b")', ())
+    assert bits.bit_count().to_sql() == ('BIT_COUNT("b")', ())
+
+
+@pytest.mark.parametrize("method, operator", [("shift_left", "<<"), ("shift_right", ">>")])
+def test_bitwise_shifts(bits, method, operator):
+    assert getattr(bits, method)(2).to_sql() == (f'"b" {operator} %s', (2,))

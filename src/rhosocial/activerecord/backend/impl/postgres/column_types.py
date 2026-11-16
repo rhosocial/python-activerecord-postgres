@@ -41,7 +41,11 @@ from rhosocial.activerecord.backend.expression.column_types import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+    from rhosocial.activerecord.backend.expression.operators import (
+        BinaryExpression,
+        UnaryExpression,
+    )
+    from rhosocial.activerecord.backend.expression.functions import FunctionCall
 
 
 class PostgresGeometryColumn(GeometryColumn):
@@ -117,6 +121,54 @@ class PostgresBitStringColumn(BitStringColumn):
     PostgreSQL spells exclusive-or ``#`` where MySQL spells it ``^``, so the
     bitwise family lives on this class rather than on the shared one.
     """
+
+    def bit_and(self, other) -> "BinaryExpression":
+        """``col & other``."""
+        from .functions.bit_string import bit_and
+
+        return bit_and(self._dialect, self, other)
+
+    def bit_or(self, other) -> "BinaryExpression":
+        """``col | other``."""
+        from .functions.bit_string import bit_or
+
+        return bit_or(self._dialect, self, other)
+
+    def bit_xor(self, other) -> "BinaryExpression":
+        """``col # other`` -- PostgreSQL's spelling of bitwise XOR."""
+        from .functions.bit_string import bit_xor
+
+        return bit_xor(self._dialect, self, other)
+
+    def bit_not(self) -> "UnaryExpression":
+        """``~ col``."""
+        from .functions.bit_string import bit_not
+
+        return bit_not(self._dialect, self)
+
+    def bit_length(self) -> "FunctionCall":
+        """``BIT_LENGTH(col)``, not the generic ``LENGTH``."""
+        from .functions.bit_string import bit_length_func
+
+        return bit_length_func(self._dialect, self)
+
+    def bit_count(self) -> "FunctionCall":
+        """``BIT_COUNT(col)``: the number of set bits."""
+        from .functions.bit_string import bit_count
+
+        return bit_count(self._dialect, self)
+
+    def shift_left(self, n: int) -> "BinaryExpression":
+        """``col << n``."""
+        from .functions.bit_string import bit_shift_left
+
+        return bit_shift_left(self._dialect, self, n)
+
+    def shift_right(self, n: int) -> "BinaryExpression":
+        """``col >> n``."""
+        from .functions.bit_string import bit_shift_right
+
+        return bit_shift_right(self._dialect, self, n)
 
 
 class PostgresTextSearchColumn(ColumnBase):
