@@ -43,6 +43,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.operators import (
+        ArithmeticOperation,
         BinaryExpression,
         UnaryExpression,
     )
@@ -192,6 +193,13 @@ class PostgresVectorColumn(VectorColumn):
         from .functions.pgvector import vector_inner_product
 
         return vector_inner_product(self._dialect, self, other)
+
+    def cosine_similarity(self, other) -> "ArithmeticOperation":
+        """``1 - (col <=> other)``: cosine similarity."""
+        _require(self._dialect, "supports_pgvector_similarity_search")
+        from .functions.pgvector import vector_cosine_similarity
+
+        return vector_cosine_similarity(self._dialect, self, other)
 
 
 class PostgresRangeColumn(RangeColumn):

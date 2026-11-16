@@ -261,7 +261,15 @@ def test_vector_distance_operators(vectors, method, operator):
     assert params == ("[1.0, 2.0]",)
 
 
-@pytest.mark.parametrize("method", ["l2_distance", "cosine_distance", "inner_product"])
+def test_vector_cosine_similarity(vectors):
+    sql, params = vectors.cosine_similarity([1.0, 2.0]).to_sql()
+    assert sql == '%s - ("v" <=> %s::VECTOR(2))'
+    assert params == (1, "[1.0, 2.0]")
+
+
+@pytest.mark.parametrize(
+    "method", ["l2_distance", "cosine_distance", "inner_product", "cosine_similarity"]
+)
 def test_vector_ops_fail_when_the_extension_is_not_available(dialect, method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
     from rhosocial.activerecord.backend.impl.postgres.column_types import (

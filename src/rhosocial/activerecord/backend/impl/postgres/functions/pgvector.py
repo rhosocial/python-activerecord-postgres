@@ -27,6 +27,7 @@ from rhosocial.activerecord.backend.expression import bases, core
 from rhosocial.activerecord.backend.expression.operators import (
     ArithmeticOperation,
     BinaryExpression,
+    RawSQL,
 )
 from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import PostgresVector
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
@@ -290,8 +291,15 @@ def vector_cosine_similarity(
         >>> expr = vector_cosine_similarity(d, "embedding", [1.0, 2.0, 3.0])
     """
     cosine_dist = vector_cosine_distance(dialect, column, query_vector)
+    # ``ArithmeticOperation`` only parenthesizes an ``ArithmeticOperation``
+    # operand; a ``BinaryExpression`` carrying ``<=>`` is not one, so without
+    # this wrapper it renders ``1 - col <=> x`` and the server reads that as
+    # ``(1 - col) <=> x``. The text is ours (a rendered expression, never user
+    # input) and the bind parameters are carried through unchanged.
+    dist_sql, dist_params = cosine_dist.to_sql()
+    grouped_dist = RawSQL(dialect, f"({dist_sql})", dist_params)
     one = core.Literal(dialect, 1)
-    return ArithmeticOperation(dialect, "sub", one, cosine_dist)
+    return ArithmeticOperation(dialect, "sub", one, grouped_dist)
 
 
 # === Type Construction ===

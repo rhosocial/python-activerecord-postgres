@@ -82,6 +82,10 @@ class TestPgvectorDistanceFunctions:
         sql, params = result.to_sql()
         assert "-" in sql
         assert "<=>" in sql
+        # The distance must be grouped: without the parentheses the server
+        # reads ``1 - col <=> x`` as ``(1 - col) <=> x`` and refuses it.
+        assert " - (" in sql
+        assert "<=>" in sql
 
 
 class TestPgvectorLiteralFunction:
