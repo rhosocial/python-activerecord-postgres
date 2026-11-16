@@ -177,7 +177,12 @@ class PostgresMultirangeAdapter:
             return PostgresMultirange.from_postgres_string(value)
 
         try:
-            from psycopg.types.range import Multirange
+            # psycopg 3.2+ keeps the multirange type beside the range one, in
+            # ``psycopg.types.multirange``. Importing it from
+            # ``psycopg.types.range`` silently failed (the ``ImportError`` below
+            # swallowed it), so a native multirange value never reached this
+            # branch.
+            from psycopg.types.multirange import Multirange
 
             if isinstance(value, Multirange):
                 ranges = [

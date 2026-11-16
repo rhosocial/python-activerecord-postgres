@@ -226,3 +226,84 @@ class TestVector:
         s = vec.to_database(v, str)
         assert isinstance(s, str)
         assert vec.from_database(s, list) == v
+class TestRangeAdapterRefusals:
+    """The custom range adapters' refusals, and the psycopg values they read.
+
+    These are the ``PostgresRange`` / ``PostgresMultirange`` wrapper adapters
+    (the ones a CUSTOM/BOTH range mode registers), not the neutral ones: their
+    wire form is PostgreSQL's literal, and their read path accepts psycopg's
+    native objects so a native-mode result can still be consumed.
+    """
+
+    def test_a_tuple_with_invalid_bounds_is_refused(self, range_a):
+        with pytest.raises(ValueError, match="Invalid bounds specification"):
+            range_a.to_database((1, 2, "(("), str)
+
+    def test_a_tuple_must_carry_two_or_three_elements(self, range_a):
+        with pytest.raises(ValueError, match="2 or 3 elements"):
+            range_a.to_database((1,), str)
+
+    def test_a_string_without_brackets_is_refused(self, range_a):
+        with pytest.raises(ValueError, match="Invalid range string format"):
+            range_a.to_database("1,2", str)
+
+    def test_a_value_that_is_no_range_is_refused_on_write(self, range_a):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            range_a.to_database({"lower": 1}, str)
+
+    def test_a_psycopg_range_is_read(self, range_a):
+        from psycopg.types.range import Range as PsycopgRange
+
+        converted = range_a.from_database(PsycopgRange(1, 3, "[)"), str)
+
+        assert converted.to_postgres_string() == "[1,3)"
+
+    def test_a_value_that_is_no_range_is_refused_on_read(self, range_a):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            range_a.from_database({"lower": 1}, str)
+
+    def test_a_multirange_literal_is_carried_through(self, multi_range):
+        assert multi_range.to_database("{[(1,3)]}", str) == "{[(1,3)]}"
+
+    def test_a_multirange_refuses_an_unknown_value_on_write(self, multi_range):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            multi_range.to_database({"a": 1}, str)
+
+    def test_a_psycopg_multirange_is_read(self, multi_range):
+        from psycopg.types.multirange import Multirange as PsycopgMultirange
+        from psycopg.types.range import Range as PsycopgRange
+
+        converted = multi_range.from_database(PsycopgMultirange([PsycopgRange(1, 3, "[)")]), str)
+
+        assert len(converted.ranges) == 1
+        assert converted.ranges[0].to_postgres_string() == "[1,3)"
+
+    def test_a_multirange_refuses_a_value_it_cannot_read(self, multi_range):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            multi_range.from_database({"a": 1}, str)
+
+
+class TestJSONBBatchPaths:
+    """The JSONB batch override: a text target re-serialises, everything else
+    is handed back decoded (with the object hook applied if one is configured)."""
+
+    def test_a_text_target_re_serialises_documents(self, jsonb):
+        assert jsonb.from_database_batch([{"a": 1}, [1], "raw"], str) == [
+            '{"a": 1}',
+            "[1]",
+            "raw",
+        ]
+
+    def test_absent_values_stay_absent_and_documents_decode(self, jsonb):
+        assert jsonb.from_database_batch([None, {"a": 1}], dict) == [None, {"a": 1}]
+
+
+class TestEnumAdapterOptionGuards:
+    """``enum_type`` / ``enum_class`` are declarations supplied by the field;
+    anything that is not the declared shape is ignored rather than trusted."""
+
+    def test_a_non_postgres_enum_type_does_not_validate(self, enum_a):
+        assert enum_a.to_database("ACTIVE", str, {"enum_type": object()}) == "ACTIVE"
+
+    def test_a_non_enum_class_does_not_rebuild(self, enum_a):
+        assert enum_a.from_database("ACTIVE", str, {"enum_class": object}) == "ACTIVE"
