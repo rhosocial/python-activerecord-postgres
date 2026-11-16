@@ -60,14 +60,98 @@ from rhosocial.activerecord.backend.expression.types import (
     JsonBType,
     TextType,
     TimeType,
+    XmlType,
     TimestampType,
     UUIDType,
     VarCharType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresBoxType,
+    PostgresCIDType,
+    PostgresCircleType,
     PostgresGeometryType,
+    PostgresHstoreType,
+    PostgresJsonPathType,
+    PostgresLineSegmentType,
+    PostgresLineType,
+    PostgresMacAddr8Type,
     PostgresMacAddrType,
+    PostgresMoneyType,
+    PostgresOIDType,
+    PostgresPathType,
+    PostgresPointType,
+    PostgresPolygonType,
+    PostgresRegClassType,
+    PostgresRegTypeType,
+    PostgresTIDType,
+    PostgresTSQueryType,
+    PostgresTSVectorType,
     PostgresVarBitType,
+    PostgresXID8Type,
+    PostgresXIDType,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.bit_string import (
+    PostgresBitString,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.geometric import (
+    Box,
+    Circle,
+    Line,
+    LineSegment,
+    Path,
+    Point,
+    Polygon,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import (
+    PostgresHstore,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.json import (
+    PostgresJsonPath,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.monetary import (
+    PostgresMoney,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.network_address import (
+    PostgresMacaddr,
+    PostgresMacaddr8,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.object_identifier import (
+    CID,
+    OID,
+    TID,
+    XID,
+    XID8,
+    RegClass,
+    RegCollation,
+    RegConfig,
+    RegDictionary,
+    RegNamespace,
+    RegOper,
+    RegOperator,
+    RegProc,
+    RegProcedure,
+    RegRole,
+    RegType,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.pg_lsn import (
+    PostgresLsn,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.pgvector import (
+    PostgresVector,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import (
+    PostgresGeometry,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.range import (
+    PostgresMultirange,
+    PostgresRange,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.text_search import (
+    PostgresTsQuery,
+    PostgresTsVector,
+)
+from rhosocial.activerecord.backend.impl.postgres.type_values.xml import (
+    PostgresXML,
 )
 
 #: PostgreSQL's suggested declaration per framework-modelled Python type.
@@ -104,11 +188,71 @@ POSTGRES_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
 }
 
 
+#: Declarations for PostgreSQL's **own** value classes -- the types the
+#: framework does not model. A field annotated with one of these is a Python
+#: type no portable reader knows, so the backend has to say what it stores.
+#: Entries whose native spelling needs a parameter (a vector's dimension, a
+#: range's subtype) name the text carrier their adapters write; the rest name
+#: the server's own type.
+POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
+    # Bit string, text search, jsonpath and the PostGIS wrapper.
+    PostgresBitString: PostgresVarBitType(),
+    PostgresGeometry: PostgresGeometryType(),
+    PostgresTsVector: PostgresTSVectorType(),
+    PostgresTsQuery: PostgresTSQueryType(),
+    PostgresJsonPath: PostgresJsonPathType(),
+    # The server's own geometric family.
+    Point: PostgresPointType(),
+    Line: PostgresLineType(),
+    LineSegment: PostgresLineSegmentType(),
+    Box: PostgresBoxType(),
+    Path: PostgresPathType(),
+    Polygon: PostgresPolygonType(),
+    Circle: PostgresCircleType(),
+    # Network, money, hstore, xml and LSN.
+    PostgresMacaddr: PostgresMacAddrType(),
+    PostgresMacaddr8: PostgresMacAddr8Type(),
+    PostgresMoney: PostgresMoneyType(),
+    PostgresHstore: PostgresHstoreType(),
+    PostgresXML: XmlType(),
+    PostgresLsn: TextType(),
+    # Object identifiers: the wrapped ones have their own declaration; the
+    # registry names are OID aliases and are carried as text.
+    OID: PostgresOIDType(),
+    RegClass: PostgresRegClassType(),
+    RegType: PostgresRegTypeType(),
+    RegProc: TextType(),
+    RegProcedure: TextType(),
+    RegOper: TextType(),
+    RegOperator: TextType(),
+    RegConfig: TextType(),
+    RegDictionary: TextType(),
+    RegNamespace: TextType(),
+    RegRole: TextType(),
+    RegCollation: TextType(),
+    XID: PostgresXIDType(),
+    XID8: PostgresXID8Type(),
+    CID: PostgresCIDType(),
+    TID: PostgresTIDType(),
+    # Parameter-carrying wrappers: the text their adapters write.
+    PostgresVector: TextType(),
+    PostgresRange: TextType(),
+    PostgresMultirange: TextType(),
+}
+
+
 class PostgresDataTypeSuggestionsMixin:
     """PostgreSQL's answer to "what declaration does a bare field get here"."""
 
     def suggested_data_types(self) -> Dict[Any, Optional[Any]]:
         return dict(POSTGRES_DATA_TYPE_SUGGESTIONS)
 
+    def suggested_extra_data_types(self) -> Dict[Any, Optional[Any]]:
+        return dict(POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS)
 
-__all__ = ["POSTGRES_DATA_TYPE_SUGGESTIONS", "PostgresDataTypeSuggestionsMixin"]
+
+__all__ = [
+    "POSTGRES_DATA_TYPE_SUGGESTIONS",
+    "POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS",
+    "PostgresDataTypeSuggestionsMixin",
+]
