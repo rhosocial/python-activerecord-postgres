@@ -173,3 +173,38 @@ def test_range_functions_fail_on_a_server_without_them(method):
     column = PostgresRangeColumn(old, "r")
     with pytest.raises(UnsupportedFeatureError, match="supports_range_functions"):
         getattr(column, method)()
+
+
+# ---------------------------------------------------------------------------
+# Multiranges: the same operators on a native multirange column
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def multiranges(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresMultirangeColumn,
+    )
+
+    return PostgresMultirangeColumn(dialect, "m")
+
+
+@pytest.mark.parametrize(
+    "method, operator",
+    [("contains", "@>"), ("contained_by", "<@"), ("overlaps", "&&")],
+)
+def test_multirange_operators(multiranges, method, operator):
+    assert getattr(multiranges, method)(5).to_sql() == (f'"m" {operator} %s', (5,))
+
+
+@pytest.mark.parametrize("method", ["contains", "contained_by", "overlaps"])
+def test_multirange_operators_fail_without_the_capability(method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresMultirangeColumn,
+    )
+
+    old = PostgresDialect(version=(9, 1, 0))
+    column = PostgresMultirangeColumn(old, "m")
+    with pytest.raises(UnsupportedFeatureError, match="supports_multirange"):
+        getattr(column, method)(5)

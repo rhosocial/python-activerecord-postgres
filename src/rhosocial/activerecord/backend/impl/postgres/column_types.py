@@ -173,6 +173,27 @@ class PostgresRangeColumn(RangeColumn):
 class PostgresMultirangeColumn(MultirangeColumn):
     """A column holding a native PostgreSQL multirange."""
 
+    def contains(self, other) -> "BinaryExpression":
+        """``col @> other``."""
+        _require(self._dialect, "supports_multirange")
+        from .functions.range import multirange_contains
+
+        return multirange_contains(self._dialect, self, other)
+
+    def contained_by(self, other) -> "BinaryExpression":
+        """``col <@ other``."""
+        _require(self._dialect, "supports_multirange")
+        from .functions.range import multirange_is_contained_by
+
+        return multirange_is_contained_by(self._dialect, self, other)
+
+    def overlaps(self, other) -> "BinaryExpression":
+        """``col && other``."""
+        _require(self._dialect, "supports_multirange")
+        from .functions.range import multirange_overlaps
+
+        return multirange_overlaps(self._dialect, self, other)
+
 
 class PostgresBitStringColumn(BitStringColumn):
     """A column holding ``bit`` / ``varbit``.
