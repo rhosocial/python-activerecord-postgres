@@ -112,6 +112,59 @@ class PostgresAreaGeometryColumn(PostgresGeometryColumn):
         return geometry_overlaps(self._dialect, self, other)
 
 
+class PostgisGeometryColumn(PostgresGeometryColumn):
+    """A ``geometry`` column backed by the PostGIS extension.
+
+    The ``ST_*`` functions are an extension's surface, not the core server's,
+    so they live on this subclass and are gated on
+    ``supports_postgis_spatial_functions()``. A field annotated with the
+    PostGIS wrapper value class resolves here; a plain geometric type keeps
+    the built-in operators only.
+    """
+
+    def st_distance(self, other, use_spheroid: bool = False) -> "FunctionCall":
+        """``ST_Distance(col, other[, use_spheroid])``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_distance
+
+        return st_distance(self._dialect, self, other, use_spheroid)
+
+    def st_contains(self, other) -> "FunctionCall":
+        """``ST_Contains(col, other)``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_contains
+
+        return st_contains(self._dialect, self, other)
+
+    def st_within(self, other) -> "FunctionCall":
+        """``ST_Within(col, other)``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_within
+
+        return st_within(self._dialect, self, other)
+
+    def st_intersects(self, other) -> "FunctionCall":
+        """``ST_Intersects(col, other)``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_intersects
+
+        return st_intersects(self._dialect, self, other)
+
+    def st_area(self) -> "FunctionCall":
+        """``ST_Area(col)``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_area
+
+        return st_area(self._dialect, self)
+
+    def st_length(self) -> "FunctionCall":
+        """``ST_Length(col)``."""
+        _require(self._dialect, "supports_postgis_spatial_functions")
+        from .functions.postgis import st_length
+
+        return st_length(self._dialect, self)
+
+
 class PostgresVectorColumn(VectorColumn):
     """A column holding a pgvector value.
 
@@ -384,6 +437,7 @@ class PostgresLsnColumn(ColumnBase):
 __all__ = [
     "PostgresGeometryColumn",
     "PostgresAreaGeometryColumn",
+    "PostgisGeometryColumn",
     "PostgresVectorColumn",
     "PostgresRangeColumn",
     "PostgresMultirangeColumn",

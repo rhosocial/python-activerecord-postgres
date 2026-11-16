@@ -320,7 +320,7 @@ def test_the_complex_families_are_named_by_this_backend(dialect):
 
     for column_class in dialect.suggested_extra_column_types().values():
         assert column_class.__module__ == pg.__name__
-        assert column_class.__name__.startswith("Postgres")
+        assert column_class.__name__.startswith(("Postgres", "Postgis"))
 
 
 def test_a_postgres_named_class_is_usable_through_use_column_type(dialect):

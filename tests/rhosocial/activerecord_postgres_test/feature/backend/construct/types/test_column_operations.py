@@ -305,3 +305,72 @@ def test_hstore_ops_fail_when_the_extension_is_not_available(dialect, method):
     column = PostgresHstoreColumn(dialect, "h")
     with pytest.raises(UnsupportedFeatureError, match="supports_hstore_operators"):
         getattr(column, method)("k")
+
+
+# ---------------------------------------------------------------------------
+# PostGIS: ST_* on the wrapper's column class, gated on the extension
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def postgis(dialect, monkeypatch):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgisGeometryColumn,
+    )
+
+    monkeypatch.setattr(dialect, "supports_postgis_spatial_functions", lambda: True)
+    return PostgisGeometryColumn(dialect, "g")
+
+
+@pytest.mark.parametrize(
+    "method, name",
+    [
+        ("st_contains", "ST_CONTAINS"),
+        ("st_within", "ST_WITHIN"),
+        ("st_intersects", "ST_INTERSECTS"),
+        ("st_distance", "ST_DISTANCE"),
+    ],
+)
+def test_postgis_predicates_and_distance(postgis, dialect, method, name):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgisGeometryColumn,
+    )
+
+    other = PostgisGeometryColumn(dialect, "h")
+    sql, params = getattr(postgis, method)(other).to_sql()
+    assert sql == f'{name}("g", "h")'
+    assert params == ()
+
+
+@pytest.mark.parametrize("method, name", [("st_area", "ST_AREA"), ("st_length", "ST_LENGTH")])
+def test_postgis_measurements(postgis, method, name):
+    assert getattr(postgis, method)().to_sql() == (f'{name}("g")', ())
+
+
+@pytest.mark.parametrize(
+    "method",
+    ["st_distance", "st_contains", "st_within", "st_intersects", "st_area", "st_length"],
+)
+def test_postgis_ops_fail_without_the_extension(dialect, method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgisGeometryColumn,
+    )
+
+    column = PostgisGeometryColumn(dialect, "g")
+    args = () if method in ("st_area", "st_length") else (column,)
+    with pytest.raises(UnsupportedFeatureError, match="supports_postgis_spatial_functions"):
+        getattr(column, method)(*args)
+
+
+def test_the_postgis_wrapper_resolves_to_the_extension_class(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgisGeometryColumn,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.type_values import (
+        Point,
+        PostgresGeometry,
+    )
+
+    assert dialect.suggested_extra_column_types()[PostgresGeometry] is PostgisGeometryColumn
+    assert dialect.suggested_extra_column_types()[Point] is not PostgisGeometryColumn

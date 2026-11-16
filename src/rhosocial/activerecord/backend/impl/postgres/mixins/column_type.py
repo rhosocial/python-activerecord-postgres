@@ -88,6 +88,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
 from ..column_types import (
     PostgresAreaGeometryColumn,
     PostgresBitStringColumn,
+    PostgisGeometryColumn,
     PostgresGeometryColumn,
     PostgresHstoreColumn,
     PostgresIdentifierColumn,
@@ -256,7 +257,7 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
 #: ``UseColumnType`` once its adapter is in place.
 POSTGRES_EXTRA_COLUMN_TYPES: Dict[Any, Type[ColumnBase]] = {
     PostgresBitString: PostgresBitStringColumn,
-    PostgresGeometry: PostgresGeometryColumn,
+    PostgresGeometry: PostgisGeometryColumn,
     Point: PostgresGeometryColumn,
     Line: PostgresGeometryColumn,
     LineSegment: PostgresGeometryColumn,
