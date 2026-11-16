@@ -361,3 +361,175 @@ class TestMacAddressAdapter:
             adapter.from_database("08:00:2b:01:02", MacAddress)
         with pytest.raises(TypeConversionError):
             adapter.to_database(MacAddress.parse("08:00:2b:01:02:03"), int)
+
+
+# ---------------------------------------------------------------------------
+# Remaining branches: pass-throughs, per-family refusals, option guards, and
+# the literal parser's own error contract.
+# ---------------------------------------------------------------------------
+
+
+class TestGeometryRemainingBranches:
+    def test_a_concrete_geometry_is_carried_through(self):
+        adapter = PostgresNeutralGeometryAdapter()
+        value = Point(1, 2)
+        assert adapter.from_database(value, Geometry) is value
+
+    def test_a_non_geometry_value_is_named(self):
+        adapter = PostgresNeutralGeometryAdapter()
+        with pytest.raises(TypeConversionError, match="must decode from WKT/EWKT text"):
+            adapter.from_database(42, Geometry)
+
+    def test_hex_ewkb_output_is_refused_with_the_right_advice(self):
+        """PostGIS's default output is hex EWKB; the adapter asks for WKT
+        instead of pretending to decode it."""
+        adapter = PostgresNeutralGeometryAdapter()
+        with pytest.raises(TypeConversionError, match="hex EWKB"):
+            adapter.from_database("0101000020E6100000", Geometry)
+
+
+class TestVectorRemainingBranches:
+    def test_a_neutral_vector_is_carried_through(self):
+        adapter = PostgresNeutralVectorAdapter()
+        value = Vector((1.0, 2.0))
+        assert adapter.from_database(value, Vector) is value
+
+    def test_a_non_vector_value_is_named(self):
+        adapter = PostgresNeutralVectorAdapter()
+        with pytest.raises(TypeConversionError, match="pgvector must decode from text"):
+            adapter.from_database(object(), Vector)
+
+    def test_a_non_finite_component_in_text_is_permitted(self):
+        adapter = PostgresNeutralVectorAdapter()
+        parsed = adapter.from_database("[nan,1.0]", Vector)
+        assert parsed.allow_non_finite is True
+
+
+class TestBitStringRemainingBranches:
+    def test_a_neutral_bit_string_is_carried_through(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        value = BitString.from_bits("101")
+        assert adapter.from_database(value, BitString) is value
+
+    def test_a_wrapper_without_a_declared_length_keeps_its_own(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        bits = adapter.from_database(PostgresBitString("101", length=3), BitString)
+        assert bits.to_bits() == "101"
+
+    def test_empty_bytes_are_refused(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        with pytest.raises(TypeConversionError, match="bytes must not be empty"):
+            adapter.from_database(b"", BitString)
+
+    def test_an_integer_is_read_as_bits(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        assert adapter.from_database(5, BitString).to_bits() == "101"
+
+    def test_a_non_bit_value_is_named(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        with pytest.raises(TypeConversionError, match="must decode from text, bytes, int"):
+            adapter.from_database(1.5, BitString)
+
+    def test_a_declared_length_must_be_a_positive_integer(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        with pytest.raises(TypeConversionError, match=r"must be int, got bool"):
+            adapter.from_database("101", BitString, {"bit_length": True})
+        with pytest.raises(TypeConversionError, match="must be at least 1"):
+            adapter.from_database("101", BitString, {"bit_length": 0})
+
+    def test_a_literal_spelling_is_read_and_written(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        assert adapter.from_database("B'101'", BitString).to_bits() == "101"
+        assert adapter.to_database(BitString.from_bits("101"), str, {"literal": True}) == "B'101'"
+
+    def test_the_wire_form_is_text_only(self):
+        adapter = PostgresNeutralBitStringAdapter()
+        with pytest.raises(TypeConversionError, match="target_type must be str"):
+            adapter.to_database(BitString.from_bits("101"), bytes)
+
+
+class TestRangeRemainingBranches:
+    def test_a_neutral_range_is_carried_through(self):
+        adapter = PostgresNeutralRangeAdapter()
+        value = Range(1, 2, "[)")
+        assert adapter.from_database(value, Range) is value
+
+    def test_an_empty_sequence_is_an_empty_multirange(self):
+        adapter = PostgresNeutralRangeAdapter()
+        assert adapter.from_database([], Multirange) == Multirange(())
+
+    def test_a_sequence_of_non_ranges_is_refused(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="must contain range objects"):
+            adapter.from_database([{"a": 1}], Multirange)
+
+    def test_a_non_range_value_is_named(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="must decode from text, a backend/driver"):
+            adapter.from_database(42, Range)
+
+    def test_the_wire_form_is_text_only(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="target_type must be str"):
+            adapter.to_database(Range(1, 2, "[)"), bytes)
+
+    def test_an_element_hint_must_be_text(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="must be str"):
+            adapter.from_database("[1,2]", Range, {"element_type": 1})
+
+    def test_an_unknown_element_hint_is_named(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="unsupported range element type hint"):
+            adapter.from_database("[1,2]", Range, {"element_type": "bogus"})
+
+    def test_a_malformed_bound_of_each_label_is_named(self):
+        adapter = PostgresNeutralRangeAdapter()
+        for label in ("date", "time", "datetime", "int", "decimal", "float"):
+            with pytest.raises(TypeConversionError, match="invalid .* range bound"):
+                adapter.from_database('["x","y"]', Range, {"element_type": label})
+
+    def test_a_non_finite_bound_is_read_as_its_float(self):
+        adapter = PostgresNeutralRangeAdapter()
+        parsed = adapter.from_database("[nan,1]", Range)
+        assert math.isnan(parsed.lower)
+
+    def test_bracket_and_quote_errors_are_named(self):
+        adapter = PostgresNeutralRangeAdapter()
+        for text, reason in (
+            ("[1)]", "unbalanced closing bracket"),
+            ("[(1,2]", "unbalanced brackets"),
+            ('["abc]', "unterminated quoted range bound"),
+        ):
+            with pytest.raises(TypeConversionError, match=reason):
+                adapter.from_database(text, Range)
+
+    def test_an_empty_and_a_truncated_literal_are_named(self):
+        adapter = PostgresNeutralRangeAdapter()
+        with pytest.raises(TypeConversionError, match="range literal is empty"):
+            adapter.from_database("", Range)
+        with pytest.raises(TypeConversionError, match="range literal is too short"):
+            adapter.from_database("[", Range)
+
+    def test_an_infinite_bound_is_normalised_to_the_exclusive_bracket(self):
+        adapter = PostgresNeutralRangeAdapter()
+        parsed = adapter.from_database("[,]", Range)
+        assert parsed.lower is None and parsed.upper is None
+        assert parsed.bounds == "()"
+
+
+class TestMacAddressRemainingBranches:
+    def test_a_neutral_mac_is_carried_through(self):
+        adapter = PostgresNeutralMacAddressAdapter()
+        value = MacAddress.parse("08:00:2b:01:02:03")
+        assert adapter.from_database(value, MacAddress) is value
+
+    def test_the_backend_wrapper_is_read(self):
+        adapter = PostgresNeutralMacAddressAdapter()
+        parsed = adapter.from_database(PostgresMacaddr("08:00:2b:01:02:03"), MacAddress)
+        assert str(parsed) == "08:00:2b:01:02:03"
+
+    def test_a_non_mac_value_is_named(self):
+        adapter = PostgresNeutralMacAddressAdapter()
+        with pytest.raises(TypeConversionError, match="must decode from text, bytes, or a backend MAC"):
+            adapter.from_database(42, MacAddress)
