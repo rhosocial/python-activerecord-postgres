@@ -4,7 +4,7 @@
 Verifies:
 - format family == supports family (1:1 correspondence)
 - supports_data_types() includes postgres_* + core entries
-- suggested_data_types(): values are DataType classes; keys disjoint from supported
+- substitute_data_types(): values are DataType classes; keys disjoint from supported
 - dialect_options forwarding and equality
 """
 
@@ -201,32 +201,32 @@ def test_supports_data_types_values_are_data_type_classes(dialect):
 
 
 # ---------------------------------------------------------------------------
-# W4: suggested_data_types()
+# W4: substitute_data_types()
 # ---------------------------------------------------------------------------
 
 
-def test_suggested_data_types_returns_dict(dialect):
-    result = dialect.suggested_data_types()
+def test_substitute_data_types_returns_dict(dialect):
+    result = dialect.substitute_data_types()
     assert isinstance(result, dict)
 
 
-def test_suggested_data_types_values_are_classes(dialect):
-    result = dialect.suggested_data_types()
+def test_substitute_data_types_values_are_classes(dialect):
+    result = dialect.substitute_data_types()
     for name, cls in result.items():
         assert isinstance(cls, type), (
-            f"suggested_data_types()[{name!r}] is not a class: {cls!r}"
+            f"substitute_data_types()[{name!r}] is not a class: {cls!r}"
         )
         assert issubclass(cls, DataType), (
-            f"suggested_data_types()[{name!r}] = {cls.__name__} is not a DataType subclass"
+            f"substitute_data_types()[{name!r}] = {cls.__name__} is not a DataType subclass"
         )
 
 
-def test_suggested_data_types_keys_disjoint_from_supported(dialect):
+def test_substitute_data_types_keys_disjoint_from_supported(dialect):
     supported = set(dialect.supports_data_types().keys())
-    suggested = set(dialect.suggested_data_types().keys())
+    suggested = set(dialect.substitute_data_types().keys())
     overlap = supported & suggested
     assert not overlap, (
-        f"suggested_data_types() keys overlap with supports_data_types(): {overlap}"
+        f"substitute_data_types() keys overlap with supports_data_types(): {overlap}"
     )
 
 

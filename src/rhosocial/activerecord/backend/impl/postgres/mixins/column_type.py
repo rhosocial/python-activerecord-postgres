@@ -10,10 +10,17 @@ the two are answers to different questions, and neither infers the other.
 
 Every answer below is written out rather than inherited from a core-side
 table, because a backend that owns its answer should be readable without a
-second file. The eighteen entries are the protocol's closed list, all of them
-answered, and exactly one of them is refused: ``datetime.timedelta``, which
+second file. The twenty-four entries are the protocol's closed list, all of
+them answered, and seven of them are refused: ``datetime.timedelta``, which
 this server can spell as ``interval`` but which no core column class can
-answer for -- see the entry's own comment.
+answer for, and the six complex families -- geometry, vector, bit string,
+range, multirange and MAC address -- whose column classes core does not have
+yet. The DDL half of the six families *is* answered, in ``data_type_suggestions.py``:
+this backend spells ``GEOMETRY`` / ``VARBIT`` / ``MACADDR`` for three of them
+and refuses the three whose parameters a bare annotation does not carry. A
+refused column class costs operations (``Model.c.<field>`` reports the gap);
+a refused storage entry costs the table itself, which is why the two halves
+answer separately.
 
 **What the answers are measured against.** The live probes in
 ``.claude/plan/2026-10-08/suggested-mappings.md`` §8 (≈90 server instances
@@ -51,6 +58,15 @@ import enum
 import uuid
 from typing import Any, Dict, Optional, Type
 
+from rhosocial.activerecord.backend.adapters import (
+    BitString,
+    Geometry,
+    MacAddress,
+    Multirange,
+    Range,
+    Vector,
+)
+
 from rhosocial.activerecord.backend.dialect.mixins import ColumnTypeMixin
 from rhosocial.activerecord.backend.expression.column_types import (
     ArrayColumn,
@@ -65,7 +81,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
     UUIDColumn,
 )
 
-#: All eighteen protocol entries, in the protocol's reading order. Commented
+#: All twenty-four protocol entries, in the protocol's reading order. Commented
 #: per group because the reasons are the content: the answer is a claim about
 #: this server, and a claim without its evidence is decoration.
 POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
@@ -159,11 +175,22 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     # class would put storage into the operation layer, which is the split
     # this protocol exists to keep.
     enum.Enum: StringColumn,
+    # -- Complex families ------------------------------------------------
+    # core has no column class for these yet, so they are refused rather than
+    # answered with a class that does not exist. Their storage is answered in
+    # ``data_type_suggestions.py``, which is the half this backend does own. When core
+    # grows the family classes, these six entries are where they go.
+    Geometry: None,
+    Vector: None,
+    BitString: None,
+    Range: None,
+    Multirange: None,
+    MacAddress: None,
 }
 
 
 class PostgresColumnTypeMixin(ColumnTypeMixin):
-    """The full common-Python-type → column-class table for PostgreSQL.
+    """The full framework-modelled-Python-type → column-class table for PostgreSQL.
 
     Composed into :class:`~rhosocial.activerecord.backend.impl.postgres.dialect.PostgresDialect`
     ahead of this backend's own mixins. Nothing else in the list can answer for
@@ -178,12 +205,17 @@ class PostgresColumnTypeMixin(ColumnTypeMixin):
     operations, and it is pinned by the backend's own test file rather than
     left to drift.
 
-    **One entry is refused.** ``datetime.timedelta`` answers ``None`` because
-    PostgreSQL's native ``interval`` has no core column class -- the gap this
-    backend used to hide by naming ``NumericColumn`` and accepting that
-    ``sqrt(interval '1 day')`` would be offered and would fail on the server.
-    A refusal that reaches the model layer as a resolution error is the honest
-    version of that gap, and the entry's comment says what closes it.
+    **Seven entries are refused.** ``datetime.timedelta`` answers ``None``
+    because PostgreSQL's native ``interval`` has no core column class -- the
+    gap this backend used to hide by naming ``NumericColumn`` and accepting
+    that ``sqrt(interval '1 day')`` would be offered and would fail on the
+    server. A refusal that reaches the model layer as a resolution error is
+    the honest version of that gap, and the entry's comment says what closes
+    it. The other six are the complex families, refused for the mirror-image
+    reason: the operations would have to be written against a core column
+    class that does not exist yet. Their storage is answered -- ``GEOMETRY``,
+    ``VARBIT`` and ``MACADDR`` here -- so a bare model builds the table and
+    only the field accessor reports the gap.
 
     The table has no version branch because nothing in it moves with the
     version: the one thing that does (``jsonb`` becoming available in 9.4)

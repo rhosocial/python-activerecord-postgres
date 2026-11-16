@@ -996,7 +996,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def supports_data_type_postgres_enum(self) -> bool:
         return True
 
-    def suggested_data_types(self) -> dict:
+    def substitute_data_types(self) -> dict:
         """Cross-backend type-consistency suggestion map.
 
         PostgreSQL renders every core type it supports through its own

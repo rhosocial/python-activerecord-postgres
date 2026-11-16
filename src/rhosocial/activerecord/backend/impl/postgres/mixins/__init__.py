@@ -98,6 +98,7 @@ from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
 from .column_type import PostgresColumnTypeMixin
+from .data_type_suggestions import PostgresDataTypeSuggestionsMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 from .parallel_query import PostgresParallelQueryMixin
 from .property_graph_query import PostgresPropertyGraphQueryMixin
@@ -219,6 +220,7 @@ __all__ = [
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",
     "PostgresColumnTypeMixin",
+    "PostgresDataTypeSuggestionsMixin",
     "PostgresLogicalReplicationMixin",
     "PostgresParallelQueryMixin",
     "PostgresPropertyGraphQueryMixin",

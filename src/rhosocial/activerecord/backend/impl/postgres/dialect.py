@@ -171,6 +171,7 @@ from .mixins import (
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
     PostgresColumnTypeMixin,
+    PostgresDataTypeSuggestionsMixin,
     # Per-feature mixins
     PostgresCTEMixin,
     PostgresWindowMixin,
@@ -523,6 +524,9 @@ class PostgresDialect(
     PostgresVacuumMixin,
     PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
+    # Suggested data types: the DDL half of the same answer. Ahead of the
+    # mixin that withholds the table, so this dialect's answers win.
+    PostgresDataTypeSuggestionsMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
