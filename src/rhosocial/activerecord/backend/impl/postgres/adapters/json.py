@@ -175,7 +175,7 @@ class PostgresJsonPathAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to jsonpath")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresJsonPath]:
         """Convert PostgreSQL jsonpath value to Python.
 

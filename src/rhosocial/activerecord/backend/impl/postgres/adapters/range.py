@@ -83,7 +83,7 @@ class PostgresRangeAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to range")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresRange]:
         """Convert PostgreSQL range value to PostgresRange object."""
         if value is None:
@@ -164,7 +164,7 @@ class PostgresMultirangeAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to multirange")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresMultirange]:
         """Convert from PostgreSQL multirange value."""
         if value is None:

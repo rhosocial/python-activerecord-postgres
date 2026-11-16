@@ -89,7 +89,7 @@ class PostgresTsVectorAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to tsvector")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresTsVector]:
         """Convert PostgreSQL tsvector value to PostgresTsVector object.
 
@@ -170,7 +170,7 @@ class PostgresTsQueryAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to tsquery")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresTsQuery]:
         """Convert PostgreSQL tsquery value to PostgresTsQuery object.
 

@@ -133,7 +133,9 @@ class PostgresOidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to OID type")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         """Convert PostgreSQL OID value to Python object.
 
         Args:
@@ -229,7 +231,9 @@ class PostgresXidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to transaction ID type")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         """Convert PostgreSQL transaction ID to Python object.
 
         Args:
@@ -314,7 +318,9 @@ class PostgresTidAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to TID")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         """Convert PostgreSQL tid to Python object.
 
         Args:

@@ -68,7 +68,7 @@ class PostgresVectorAdapter:
 
     def from_database(
         self, value: Any, target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresVector]:
         """Convert PostgreSQL vector to Python object.
 

@@ -51,7 +51,9 @@ class PostgresNetworkAddressAdapter:
             return None
         return str(value)
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         if value is None:
             return None
         try:
@@ -123,7 +125,7 @@ class PostgresMacaddrAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to MACADDR")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresMacaddr]:
         """Convert PostgreSQL MACADDR to Python object.
 
@@ -206,7 +208,9 @@ class PostgresMacaddr8Adapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to MACADDR8")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         """Convert PostgreSQL MACADDR8 to Python object.
 
         Args:
