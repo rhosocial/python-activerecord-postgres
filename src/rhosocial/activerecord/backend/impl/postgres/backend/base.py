@@ -260,13 +260,18 @@ class PostgresBackendMixin:
           - BOTH: Register both adapters, with custom taking precedence
         - multirange_adapter_mode: Same for Multirange types (PG 14+ only)
 
-        Note: The following adapters are NOT registered by default due to str->str
-        type mapping conflicts with existing string handling:
-        - PostgresXMLAdapter: XML type
-        - PostgresBitStringAdapter: bit/varbit types
-        - PostgresJsonPathAdapter: jsonpath type
+        Note: every backend-named value type this package defines has its
+        adapter registered here. Those adapters key on their own wrapper
+        types (``PostgresXML``, ``PostgresJsonPath``, ``PostgresBitString``,
+        ``PostgresGeometry``, ``PostgresVector``, ``PostgresHstore``) rather
+        than on ``str``, so registering them cannot shadow the core string
+        handling -- an earlier note here described an older shape of these
+        adapters and no longer applies.
 
-        Users should specify these explicitly when working with such columns.
+        ``PostgresHstoreAdapter`` is registered for its own type only. It also
+        accepts a plain ``dict``, but ``(dict, str)`` in this registry would
+        take every dict in the backend away from the JSON adapter, and a
+        backend covers its own types without displacing the core ones.
         """
         from ..adapters import (
             PostgresListAdapter,
@@ -288,6 +293,13 @@ class PostgresBackendMixin:
         from ..adapters.uuid import PostgresUUIDAdapter
         from ..adapters.pg_lsn import PostgresLsnAdapter
         from ..adapters.text_search import PostgresTsVectorAdapter, PostgresTsQueryAdapter
+        from ..adapters.xml import PostgresXMLAdapter
+        from ..adapters.json import PostgresJsonPathAdapter
+        from ..adapters.bit_string import PostgresBitStringAdapter
+        from ..adapters.hstore import PostgresHstoreAdapter
+        from ..adapters.postgis import PostgresPostGISAdapter
+        from ..adapters.pgvector import PostgresVectorAdapter
+        from ..type_values.hstore import PostgresHstore
         from ..config import RangeAdapterMode
 
         pg_adapters = [
@@ -310,9 +322,13 @@ class PostgresBackendMixin:
             # PostgresJsonPathAdapter it claims no str->str mapping, so it
             # cannot shadow the default string handling.
             PostgresUUIDAdapter(),
-            # PostgresJsonPathAdapter(), # Not registered: str->str conflict
-            # PostgresXMLAdapter is NOT registered by default
-            # due to str->str type pair conflict
+            # The backend's own value types: each keys on its wrapper type,
+            # so none of them can shadow a core Python type.
+            PostgresXMLAdapter(),
+            PostgresJsonPathAdapter(),
+            PostgresBitStringAdapter(),
+            PostgresPostGISAdapter(),
+            PostgresVectorAdapter(),
         ]
 
         for adapter in pg_adapters:
@@ -321,6 +337,13 @@ class PostgresBackendMixin:
                     self.adapter_registry.register(
                         adapter, py_type, db_type, allow_override=True
                     )
+
+        # hstore is registered for its own type only: the adapter also accepts
+        # a plain ``dict`` as a convenience, and that pair would displace the
+        # JSON adapter for every dict in this backend.
+        self.adapter_registry.register(
+            PostgresHstoreAdapter(), PostgresHstore, str, allow_override=True
+        )
 
         # Neutral value adapters are keyed by the core neutral Python types
         # (Geometry, Vector, ...), so they never collide with the backend
