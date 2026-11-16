@@ -307,3 +307,43 @@ class TestEnumAdapterOptionGuards:
 
     def test_a_non_enum_class_does_not_rebuild(self, enum_a):
         assert enum_a.from_database("ACTIVE", str, {"enum_class": object}) == "ACTIVE"
+
+class TestNetworkAddressBatches:
+    """Both directions in bulk, including the absent values."""
+
+    def test_batch_write_and_read(self, net_addr):
+        assert net_addr.to_database_batch(["192.168.1.1", None], str) == ["192.168.1.1", None]
+
+        parsed = net_addr.from_database_batch(["192.168.1.1", None], str)
+        assert str(parsed[0]) == "192.168.1.1"
+        assert parsed[1] is None
+
+    def test_scalar_absence(self, net_addr):
+        assert net_addr.from_database(None, str) is None
+
+
+class TestMacaddrRefusals:
+    """``MACADDR`` accepts text, bytes and the wrapper; everything else is
+    named in the refusal."""
+
+    def test_absence_passes_through(self, mac):
+        assert mac.to_database(None, str) is None
+        assert mac.from_database(None, str) is None
+
+    def test_bytes_are_accepted_on_write(self, mac):
+        assert mac.to_database(b"\x08\x00\x2b\x01\x02\x03", str) == "08:00:2b:01:02:03"
+
+    def test_an_unsupported_write_type_is_named(self, mac):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            mac.to_database(42, str)
+
+    def test_an_unsupported_read_type_is_named(self, mac):
+        with pytest.raises(TypeError, match="Cannot convert"):
+            mac.from_database(42, str)
+
+    def test_both_batch_directions(self, mac):
+        text = "08:00:2b:01:02:03"
+        assert mac.to_database_batch([text, None], str) == [text, None]
+
+        parsed = mac.from_database_batch([text], str)
+        assert str(parsed[0]) == text
