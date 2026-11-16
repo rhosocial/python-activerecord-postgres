@@ -117,3 +117,59 @@ def test_bitwise_not_and_length(bits):
 @pytest.mark.parametrize("method, operator", [("shift_left", "<<"), ("shift_right", ">>")])
 def test_bitwise_shifts(bits, method, operator):
     assert getattr(bits, method)(2).to_sql() == (f'"b" {operator} %s', (2,))
+
+
+# ---------------------------------------------------------------------------
+# Ranges: native operators and functions, gated on the range capability
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ranges(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresRangeColumn,
+    )
+
+    return PostgresRangeColumn(dialect, "r")
+
+
+@pytest.mark.parametrize(
+    "method, operator",
+    [("contains", "@>"), ("contained_by", "<@"), ("overlaps", "&&")],
+)
+def test_range_operators(ranges, method, operator):
+    assert getattr(ranges, method)(5).to_sql() == (f'"r" {operator} %s', (5,))
+
+
+@pytest.mark.parametrize(
+    "method, sql",
+    [("is_empty", 'ISEMPTY("r")'), ("lower", 'LOWER("r")'), ("upper", 'UPPER("r")')],
+)
+def test_range_functions(ranges, method, sql):
+    assert getattr(ranges, method)().to_sql() == (sql, ())
+
+
+@pytest.mark.parametrize("method", ["contains", "contained_by", "overlaps"])
+def test_range_operators_fail_on_a_server_without_them(method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresRangeColumn,
+    )
+
+    old = PostgresDialect(version=(9, 1, 0))
+    column = PostgresRangeColumn(old, "r")
+    with pytest.raises(UnsupportedFeatureError, match="supports_range_operators"):
+        getattr(column, method)(5)
+
+
+@pytest.mark.parametrize("method", ["is_empty", "lower", "upper"])
+def test_range_functions_fail_on_a_server_without_them(method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresRangeColumn,
+    )
+
+    old = PostgresDialect(version=(9, 1, 0))
+    column = PostgresRangeColumn(old, "r")
+    with pytest.raises(UnsupportedFeatureError, match="supports_range_functions"):
+        getattr(column, method)()

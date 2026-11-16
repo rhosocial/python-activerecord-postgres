@@ -27,6 +27,7 @@ value types resolves without a declaration.
 
 from typing import TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.column_types import (
     BitStringColumn,
     ColumnBase,
@@ -46,6 +47,22 @@ if TYPE_CHECKING:  # pragma: no cover
         UnaryExpression,
     )
     from rhosocial.activerecord.backend.expression.functions import FunctionCall
+
+
+def _require(dialect, switch: str) -> None:
+    """Fail loudly, and by name, when the server does not answer a capability.
+
+    A column method must never render an operator the server has no switch
+    for: that would produce SQL which fails on the first query, with the error
+    pointing at the column instead of at the missing capability.
+    """
+    answer = getattr(dialect, switch, None)
+    if answer is None or not answer():
+        raise UnsupportedFeatureError(
+            type(dialect).__name__,
+            switch,
+            f"this operation needs the {switch}() capability",
+        )
 
 
 class PostgresGeometryColumn(GeometryColumn):
@@ -109,6 +126,48 @@ class PostgresRangeColumn(RangeColumn):
     ``@>`` / ``<@`` / ``&&`` and ``lower()`` / ``upper()`` are PostgreSQL's own;
     they are added here as the range family is completed.
     """
+
+    def contains(self, other) -> "BinaryExpression":
+        """``col @> other``: does the range contain the element or range?"""
+        _require(self._dialect, "supports_range_operators")
+        from .functions.range import range_contains
+
+        return range_contains(self._dialect, self, other)
+
+    def contained_by(self, other) -> "BinaryExpression":
+        """``col <@ other``."""
+        _require(self._dialect, "supports_range_operators")
+        from .functions.range import range_contained_by
+
+        return range_contained_by(self._dialect, self, other)
+
+    def overlaps(self, other) -> "BinaryExpression":
+        """``col && other``."""
+        _require(self._dialect, "supports_range_operators")
+        from .functions.range import range_overlaps
+
+        return range_overlaps(self._dialect, self, other)
+
+    def is_empty(self) -> "FunctionCall":
+        """``ISEMPTY(col)``."""
+        _require(self._dialect, "supports_range_functions")
+        from .functions.range import range_is_empty
+
+        return range_is_empty(self._dialect, self)
+
+    def lower(self) -> "FunctionCall":
+        """``LOWER(col)``."""
+        _require(self._dialect, "supports_range_functions")
+        from .functions.range import range_lower
+
+        return range_lower(self._dialect, self)
+
+    def upper(self) -> "FunctionCall":
+        """``UPPER(col)``."""
+        _require(self._dialect, "supports_range_functions")
+        from .functions.range import range_upper
+
+        return range_upper(self._dialect, self)
 
 
 class PostgresMultirangeColumn(MultirangeColumn):
