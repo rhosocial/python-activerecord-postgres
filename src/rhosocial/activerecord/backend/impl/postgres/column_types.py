@@ -119,6 +119,27 @@ class PostgresVectorColumn(VectorColumn):
     class states only the shared column surface until they are measured.
     """
 
+    def l2_distance(self, other) -> "BinaryExpression":
+        """``col <-> other``: Euclidean distance."""
+        _require(self._dialect, "supports_pgvector_similarity_search")
+        from .functions.pgvector import vector_l2_distance
+
+        return vector_l2_distance(self._dialect, self, other)
+
+    def cosine_distance(self, other) -> "BinaryExpression":
+        """``col <=> other``: cosine distance."""
+        _require(self._dialect, "supports_pgvector_similarity_search")
+        from .functions.pgvector import vector_cosine_distance
+
+        return vector_cosine_distance(self._dialect, self, other)
+
+    def inner_product(self, other) -> "BinaryExpression":
+        """``col <#> other``: negative inner product."""
+        _require(self._dialect, "supports_pgvector_similarity_search")
+        from .functions.pgvector import vector_inner_product
+
+        return vector_inner_product(self._dialect, self, other)
+
 
 class PostgresRangeColumn(RangeColumn):
     """A column holding a native PostgreSQL range (``int4range``, ...).

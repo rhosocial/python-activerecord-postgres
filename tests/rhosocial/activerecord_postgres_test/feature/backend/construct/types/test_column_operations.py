@@ -230,3 +230,44 @@ def test_text_search_matches(tsvector):
 
 def test_text_search_rank(tsvector):
     assert tsvector.rank("foo").to_sql() == ('TS_RANK("tv", %s)', ("foo",))
+
+
+# ---------------------------------------------------------------------------
+# pgvector: distance operators, gated on the extension's capability
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def vectors(dialect, monkeypatch):
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresVectorColumn,
+    )
+
+    monkeypatch.setattr(dialect, "supports_pgvector_similarity_search", lambda: True)
+    return PostgresVectorColumn(dialect, "v")
+
+
+@pytest.mark.parametrize(
+    "method, operator",
+    [
+        ("l2_distance", "<->"),
+        ("cosine_distance", "<=>"),
+        ("inner_product", "<#>"),
+    ],
+)
+def test_vector_distance_operators(vectors, method, operator):
+    sql, params = getattr(vectors, method)([1.0, 2.0]).to_sql()
+    assert sql == f'"v" {operator} %s::VECTOR(2)'
+    assert params == ("[1.0, 2.0]",)
+
+
+@pytest.mark.parametrize("method", ["l2_distance", "cosine_distance", "inner_product"])
+def test_vector_ops_fail_when_the_extension_is_not_available(dialect, method):
+    from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+        PostgresVectorColumn,
+    )
+
+    column = PostgresVectorColumn(dialect, "v")
+    with pytest.raises(UnsupportedFeatureError, match="supports_pgvector_similarity_search"):
+        getattr(column, method)([1.0, 2.0])
