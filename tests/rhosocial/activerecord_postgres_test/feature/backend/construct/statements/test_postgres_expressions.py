@@ -1,4 +1,4 @@
-# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/statements/test_expressions.py
+# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/statements/test_postgres_expressions.py
 """Tests for PostgreSQL-specific expression classes and format methods.
 
 This module tests the expression-based format methods for DDL/DML operations,

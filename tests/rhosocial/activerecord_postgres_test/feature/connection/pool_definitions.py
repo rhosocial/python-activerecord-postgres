@@ -36,7 +36,7 @@ from rhosocial.activerecord.backend.expression.types import (
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
-from rhosocial.activerecord.testsuite.fixture_types import supports_drop_if_exists
+from rhosocial.activerecord.testsuite.feature.query.fixtures.definitions import supports_drop_if_exists
 
 
 class Definition:
