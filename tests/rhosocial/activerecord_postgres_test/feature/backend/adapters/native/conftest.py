@@ -17,6 +17,15 @@ from pathlib import Path
 
 import pytest
 
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
+
+DECLARATION = Declaration(
+    parallel=True,
+    purpose="PostgreSQL native type tests (native) against the directory-owned database.",
+    passes_means="the live-database contract of this directory holds on PostgreSQL",
+    fails_means="the directory-owned database is corrupted or a backend behavior is wrong",
+)
+
 SCHEMA_DIR = Path(__file__).parent / "schema"
 BUILTIN_SCHEMA = SCHEMA_DIR / "native_types.sql"
 EXTENSION_SCHEMA = SCHEMA_DIR / "extension_types.sql"

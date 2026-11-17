@@ -9,6 +9,15 @@ functionality with PostgreSQL backends.
 import pytest
 import pytest_asyncio
 
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
+
+DECLARATION = Declaration(
+    parallel=True,
+    purpose="PostgreSQL introspection tests (introspection) against the directory-owned database.",
+    passes_means="the live-database contract of this directory holds on PostgreSQL",
+    fails_means="the directory-owned database is corrupted or a backend behavior is wrong",
+)
+
 
 # SQL statements for test tables
 _TABLES_SQL = [
