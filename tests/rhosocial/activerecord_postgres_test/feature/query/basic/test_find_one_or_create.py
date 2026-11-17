@@ -1,3 +1,0 @@
-# tests/rhosocial/activerecord_postgres_test/feature/query/basic/test_find_one_or_create.py
-"""Bridge file for the testsuite natural-key find_one_or_create contract."""
-from rhosocial.activerecord.testsuite.feature.query.basic.test_find_one_or_create import *  # noqa: F403
