@@ -11,8 +11,9 @@ server. This backend bridge adds the missing capability gate locally:
   the GEOMETRY table at setup. We override it as opt-in so declaration-only
   tests keep running on servers without PostGIS;
 * the tests that actually build or use the table are skipped with a named
-  reason when the scenario's server has no PostGIS, using the dialect's own
-  ``is_extension_available`` probe.
+  reason when the scenario's server has no ``geometry`` type. The catalog is
+  queried directly: a server can advertise PostGIS as installable while no
+  database actually has the type, which the extension-name probe cannot tell.
 """
 
 import re
@@ -22,6 +23,8 @@ from pathlib import Path
 import pytest
 
 import support.postgres
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.testsuite.feature.basic.fixtures.operations import (
     create_schema,
     drop_schema,
@@ -34,23 +37,34 @@ from rhosocial.activerecord.testsuite.feature.basic.types_complex.conftest impor
     _unsupported_reason,
 )
 
-_SKIP_REASON = "PostGIS not available on this server"
+_SKIP_REASON = "geometry type not available on this server (PostGIS required)"
+
+_GEOMETRY_TYPE_SQL = "SELECT 1 FROM pg_type WHERE typname = 'geometry' LIMIT 1"
 
 
 @lru_cache(maxsize=None)
-def _postgis_available(scenario_name: str) -> bool:
-    """Ask the scenario's dialect whether PostGIS can be used on its server."""
+def _geometry_type_available(scenario_name: str) -> bool:
+    """Whether the scenario's server actually has a ``geometry`` type.
+
+    Ask the catalog, not the extension name: PostGIS can be advertised as
+    installable while the type is missing from the database the tests run in.
+    Probe ``template1`` because the per-directory test database is created
+    from it with no explicit TEMPLATE, so the type's presence there decides
+    whether the test tables can use it.
+    """
     scenario = support.postgres.scenario(scenario_name)
-    backend = scenario.backend_class(connection_config=scenario.make_config("postgres"))
+    backend = scenario.backend_class(connection_config=scenario.make_config("template1"))
     try:
         backend.connect()
         try:
-            backend.introspect_and_adapt()
-            return bool(backend.dialect.is_extension_available("postgis"))
+            result = backend.execute(
+                _GEOMETRY_TYPE_SQL, (), options=ExecutionOptions(stmt_type=StatementType.DQL)
+            )
+            return bool(result.data)
         finally:
             backend.disconnect()
     except Exception:
-        # A probe we could not perform is not evidence that PostGIS is absent.
+        # A probe we could not perform is not evidence that the type is absent.
         # Leave the test to run so a real connection problem surfaces normally.
         return True
 
@@ -89,5 +103,5 @@ def pytest_collection_modifyitems(config, items):
             # No scenario in the node id: let the test run rather than
             # guessing about a server we have not identified.
             continue
-        if not _postgis_available(match.group(1)):
+        if not _geometry_type_available(match.group(1)):
             item.add_marker(pytest.mark.skip(reason=_SKIP_REASON))
