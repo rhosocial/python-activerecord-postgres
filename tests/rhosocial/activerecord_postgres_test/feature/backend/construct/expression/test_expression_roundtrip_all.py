@@ -129,7 +129,7 @@ from typing import Dict
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedDataTypeError, UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
     CaseExpression,
@@ -1266,7 +1266,7 @@ LEGITIMATE_NON_RENDERS = {
     # PostgreSQL has no such type -- ``CREATE TYPE ... AS ENUM`` goes through
     # ``PostgresEnumType`` -- so there is no ``format_data_type_enum`` to reach.
     "rhosocial.activerecord.backend.expression.types.enum_.EnumType": (
-        TypeError,
+        UnsupportedDataTypeError,
         "does not support the generic type 'enum'",
     ),
 
@@ -1346,7 +1346,7 @@ LEGITIMATE_NON_RENDERS = {
     # UnsupportedFeatureError, because the class is incomplete rather than the
     # dialect being unable.
     "rhosocial.activerecord.backend.expression.types._base.DataType": (
-        TypeError,
+        UnsupportedDataTypeError,
         "does not support the generic type None",
     ),
 
@@ -1372,11 +1372,11 @@ LEGITIMATE_NON_RENDERS = {
     # there is no ``format_data_type_binary`` to dispatch to. A dialect gap, not a
     # defect: the dialect is saying it cannot render them.
     "rhosocial.activerecord.backend.expression.types.binary.BinaryType": (
-        TypeError,
+        UnsupportedDataTypeError,
         "does not support the generic type 'binary'",
     ),
     "rhosocial.activerecord.backend.expression.types.binary.VarBinaryType": (
-        TypeError,
+        UnsupportedDataTypeError,
         "does not support the generic type 'varbinary'",
     ),
 
