@@ -11,6 +11,7 @@ and database name). It exists for the xdist grouping contract: a scenario's
 tests for one directory stay on one worker, while different scenarios are
 different databases and may run in parallel.
 """
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 from functools import partial
 from pathlib import Path
@@ -43,6 +44,15 @@ def _database_name() -> str:
     start = parts.index("feature") + 1
     return "test_" + "_".join(parts[start:])
 
+
+
+
+# This directory owns a database shared by all its tests within a scenario;
+# pin them to one worker so setup/teardown never races on the same database.
+DECLARATION = Declaration(
+    parallel=True,
+    purpose="Directory-owned PostgreSQL database shared by this test group.",
+)
 
 @pytest.fixture(scope="session")
 def database_config(backend_scenario):

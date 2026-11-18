@@ -9,8 +9,8 @@ makes the testsuite plugin pin each such directory to one worker per scenario;
 the group key is derived from the test file's own directory, so different
 execute directories still run in parallel.
 """
-
 from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
+
 
 DECLARATION = Declaration(
     parallel=True,

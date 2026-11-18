@@ -1,5 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/execute/ddl_view/conftest.py
 """Fixtures for PostgreSQL materialized view integration tests."""
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 import pytest
 import pytest_asyncio
@@ -16,7 +17,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
-from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 DECLARATION = Declaration(
     parallel=True,

@@ -5,11 +5,11 @@ Pytest fixtures for PostgreSQL introspection tests.
 This module provides fixtures for testing database introspection
 functionality with PostgreSQL backends.
 """
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 import pytest
 import pytest_asyncio
 
-from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 DECLARATION = Declaration(
     parallel=True,

@@ -11,13 +11,13 @@ between modules in one visible place.
 Extension tables live in ``schema/extension_types.sql`` and are only created
 by a class fixture that has already established the extension exists.
 """
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 import re
 from pathlib import Path
 
 import pytest
 
-from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 DECLARATION = Declaration(
     parallel=True,

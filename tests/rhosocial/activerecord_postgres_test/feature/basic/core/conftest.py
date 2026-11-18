@@ -10,6 +10,7 @@ exactly those three definitions.
 - ``schema``: those three tables, dropped and recreated for every test
   (function scope), so each test starts from empty tables.
 """
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 from pathlib import Path
 
@@ -34,6 +35,15 @@ def _database_name() -> str:
     start = parts.index("feature") + 1
     return "test_" + "_".join(parts[start:])
 
+
+
+
+# This directory owns a database shared by all its tests within a scenario;
+# pin them to one worker so setup/teardown never races on the same database.
+DECLARATION = Declaration(
+    parallel=True,
+    purpose="Directory-owned PostgreSQL database shared by this test group.",
+)
 
 @pytest.fixture(scope="session")
 def database_config(backend_scenario):
