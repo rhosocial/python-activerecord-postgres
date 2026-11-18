@@ -12,6 +12,7 @@ import pytest_asyncio
 
 
 DECLARATION = Declaration(
+    uses_database=True,
     parallel=True,
     purpose="PostgreSQL introspection tests (introspection) against the directory-owned database.",
     passes_means="the live-database contract of this directory holds on PostgreSQL",

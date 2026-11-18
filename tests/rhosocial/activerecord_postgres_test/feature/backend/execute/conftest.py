@@ -13,6 +13,7 @@ from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
 
 
 DECLARATION = Declaration(
+    uses_database=True,
     parallel=True,
     purpose="PostgreSQL execute tests against each directory-owned database.",
     passes_means="the live-database contract of the execute directory holds on PostgreSQL",

@@ -19,6 +19,7 @@ from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
 DECLARATION = Declaration(
+    uses_database=True,
     parallel=True,
     purpose="PostgreSQL materialized view tests (ddl_view) against the directory-owned database.",
     passes_means="the live-database contract of this directory holds on PostgreSQL",

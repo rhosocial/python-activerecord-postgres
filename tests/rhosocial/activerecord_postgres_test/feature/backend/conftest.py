@@ -21,6 +21,7 @@ from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import (
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
 DECLARATION = Declaration(
+    uses_database=True,
     parallel=False,
     purpose="Backend-owned PostgreSQL tests; pure-render scopes stay ungrouped.",
     passes_means="backend-specific behavior matches PostgreSQL semantics",

@@ -20,6 +20,7 @@ import pytest
 
 
 DECLARATION = Declaration(
+    uses_database=True,
     parallel=True,
     purpose="PostgreSQL native type tests (native) against the directory-owned database.",
     passes_means="the live-database contract of this directory holds on PostgreSQL",

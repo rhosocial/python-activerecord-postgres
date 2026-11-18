@@ -243,15 +243,7 @@ class PostgresTableMixin:
         )
 
         all_params: List[Any] = []
-        is_serial = any(
-            isinstance(constraint.branch, ColumnPrimaryKeyConstraint)
-            and constraint.branch.is_auto_increment
-            for constraint in col_def.constraints
-        )
-        if is_serial:
-            type_sql = self._serial_type_sql(col_def.data_type)
-        else:
-            type_sql, _ = col_def.data_type.to_sql()
+        type_sql, _ = col_def.data_type.to_sql()
         if not re.fullmatch(r"[A-Za-z0-9_\s(),\[\]]+", type_sql):
             raise ValueError(
                 f"Invalid data type '{type_sql}': "
@@ -264,13 +256,6 @@ class PostgresTableMixin:
         col_sql += attr_sql
         all_params.extend(attr_params)
         for constraint in col_def.constraints:
-            # The auto-increment request was answered by the type above; it
-            # contributes no clause of its own.
-            if (
-                isinstance(constraint.branch, ColumnPrimaryKeyConstraint)
-                and constraint.branch.is_auto_increment
-            ):
-                continue
             suffix, params = self.format_column_constraint(constraint)
             col_sql += suffix
             all_params.extend(params)

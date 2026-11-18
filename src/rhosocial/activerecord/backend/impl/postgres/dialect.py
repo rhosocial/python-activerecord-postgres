@@ -265,6 +265,7 @@ from .mixins import (
     PostgresExpressionMixin,
     PostgresFunctionMixin,
     PostgresLiteralValueMixin,
+    PostgresIntegerAutoIncrementColumnSuggestionMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -369,6 +370,8 @@ from .protocols import (
 
 
 class PostgresDialect(
+    # Backend suggestion first: no core mixin may shadow its answer.
+    PostgresIntegerAutoIncrementColumnSuggestionMixin,
     # The bases below come in bundles: a backend mixin, then the core bundle
     # it stands in for. The backend's answer has to come first -- a mixin
     # placed after the class it overrides never wins -- so a new mixin goes

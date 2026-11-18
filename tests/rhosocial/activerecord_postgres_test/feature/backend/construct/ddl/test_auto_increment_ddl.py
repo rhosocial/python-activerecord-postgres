@@ -16,6 +16,7 @@ The SQL-standard identity clause remains available to a caller that asks for
 it explicitly (``IdentityClause``); it is simply not what an auto-increment
 request means.
 """
+from rhosocial.activerecord.backend.expression.statements import auto_increment_parts  # noqa: E402
 
 import pytest
 
@@ -42,20 +43,20 @@ def dialect():
     return PostgresDialect(version=(16, 0, 0))
 
 
-def _pk(dialect):
-    return [
-        ColumnConstraint(
-            dialect,
-            branch=ColumnPrimaryKeyConstraint(dialect, is_auto_increment=True),
-        )
-    ]
+def _id_column(dialect, data_type):
+    suggested_type, attributes = auto_increment_parts(dialect, data_type)
+    return ColumnDefinition(
+        dialect, "id", suggested_type,
+        constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+        attributes=attributes,
+    )
 
 
 def _build_table(dialect):
     return CreateTableStatement(
         dialect=dialect, table=Table(dialect, 'test_tbl'),
         columns=[
-            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
+            _id_column(dialect, IntegerType(dialect=dialect)),
             ColumnDefinition(dialect, "name", TextType(dialect=dialect),
                 constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "flag", BooleanType(dialect=dialect),
@@ -83,7 +84,7 @@ class TestAutoIncrementDDL:
         expr = CreateTableStatement(
             dialect=dialect, table=Table(dialect, 'bool_test'),
             columns=[
-                ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
+                _id_column(dialect, IntegerType(dialect=dialect)),
                 ColumnDefinition(dialect, "flag", BooleanType(dialect=dialect),
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
                                  ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True))]),
@@ -96,7 +97,7 @@ class TestAutoIncrementDDL:
         expr = CreateTableStatement(
             dialect=dialect, table=Table(dialect, 'ts_test'),
             columns=[
-                ColumnDefinition(dialect, "id", IntegerType(dialect=dialect), constraints=_pk(dialect)),
+                _id_column(dialect, IntegerType(dialect=dialect)),
                 ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect)),
             ],
         )
@@ -130,9 +131,7 @@ class TestAutoIncrementIsSerial:
                 dialect=dialect,
                 table=Table(dialect, "serial_tbl"),
                 columns=[
-                    ColumnDefinition(
-                        dialect, "id", core_type(dialect=dialect), constraints=_pk(dialect)
-                    )
+                    _id_column(dialect, core_type(dialect=dialect))
                 ],
             )
             sql, _ = expr.to_sql()
@@ -141,17 +140,10 @@ class TestAutoIncrementIsSerial:
     def test_non_integer_auto_increment_is_refused(self):
         """SERIAL has three widths; anything else is refused, not approximated."""
         dialect = PostgresDialect(version=(16, 0, 0))
-        expr = CreateTableStatement(
-            dialect=dialect,
-            table=Table(dialect, "bad_tbl"),
-            columns=[
-                ColumnDefinition(
-                    dialect, "id", TextType(dialect=dialect), constraints=_pk(dialect)
-                )
-            ],
-        )
+        # The backend suggestion is consulted when the column definition is
+        # built, so the refusal happens there rather than at render time.
         with pytest.raises(UnsupportedFeatureError, match="AUTO_INCREMENT column"):
-            expr.to_sql()
+            _id_column(dialect, TextType(dialect=dialect))
 
     def test_serial_type_still_spellable_explicitly(self):
         """A caller that asks for SERIAL by type keeps that path."""

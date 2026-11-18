@@ -11,6 +11,7 @@ This package organizes PostgreSQL-specific mixins by category:
 - extensions: Extension mixins (pgvector, postgis, hstore, etc.)
 """
 
+from .integer_auto_increment_column_suggestion import PostgresIntegerAutoIncrementColumnSuggestionMixin
 from .object_name import PostgresObjectNameMixin
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
@@ -137,6 +138,7 @@ from .show import PostgresShowMixin
 from .introspection import PostgresIntrospectionCapabilityMixin
 
 __all__ = [
+    'PostgresIntegerAutoIncrementColumnSuggestionMixin',
     # Core mixins
     "PostgresObjectNameMixin",
     "PostgresExtensionMixin",
