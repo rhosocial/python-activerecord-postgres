@@ -446,7 +446,7 @@ jobs:
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml --ignore=tests/benchmark
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=rhosocial.activerecord.backend.impl.postgres --cov-report=xml --ignore=tests/benchmark
 
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
