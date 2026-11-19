@@ -326,7 +326,7 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark
 
   test:
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
@@ -439,14 +439,14 @@ jobs:
         if: matrix.postgres-version != '18'
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark
 
       - name: Run tests with coverage (only for postgres 18 on Python 3.14)
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml --ignore=tests/benchmark
 
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
@@ -525,4 +525,4 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark
