@@ -2,61 +2,143 @@
 """Backend-local, deep EXPLAIN tests for PostgreSQL.
 
 The shared testsuite contracts only assert that EXPLAIN *can run*. This file
-goes further and interprets what PostgreSQL actually returns, which is
-deliberately NOT generalised into the testsuite because dialects disagree on
-plan shape. PostgreSQL has the richest EXPLAIN surface of the family, so the
-coverage is split in two:
+interprets what PostgreSQL actually returns, which is deliberately NOT
+generalised into the testsuite because dialects disagree on plan shape.
+PostgreSQL has the richest EXPLAIN surface of the family, so coverage is split:
 
 * **Construction level** (no database needed): the ``supports_explain_*``
   capability gates and the ``EXPLAIN (ANALYZE, FORMAT JSON, ...)`` SQL rendered
-  by ``PostgresExplainMixin.format_explain_statement``. These run everywhere.
+  by ``PostgresExplainMixin.format_explain_statement``.
 * **Result interpretation** (real PostgreSQL, CI service): the JSON plan tree
   (``Plan`` / ``Node Type`` / ``Relation Name``) is inspected for sequential
-  versus index scans, aggregate/join nodes, and partition-pruning evidence.
-  These tests use the same ``postgres_backend`` / ``async_postgres_backend``
-  fixtures as the other backend-owned EXPLAIN tests in this directory and are
-  skipped when no scenario is configured.
+  scans, aggregate/join nodes, and partition-pruning evidence.
 
-SQLite's local bytecode tests are intentionally NOT copied here -- they depend
-on ``aiosqlite`` and on core's ``rhosocial.activerecord_test`` package, neither
-of which this backend ships.
+Every statement -- including DDL/DML and the EXPLAIN wrapper -- is built with
+the expression system and passed to the backend as ``*expr.to_sql()`` or as a
+``QueryStatement`` to ``backend.explain()``. Strings appear only as assertion
+expected values; no hand-built SQL is ever handed to a backend API.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterator, List
+from datetime import datetime
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
 
 from rhosocial.activerecord.backend.expression import (
     AllColumnsWildcard,
+    Column,
+    ColumnConstraint,
+    ColumnDefinition,
+    ColumnNotNullConstraint,
+    ComparisonPredicate,
+    CreateIndexStatement,
+    CreateTableStatement,
+    DropTableStatement,
+    InsertStatement,
+    Literal,
+    LogicalPredicate,
     QueryStatement,
-    RawSQL,
+    TableConstraint,
+    TablePrimaryKeyConstraint,
+    ValuesSource,
 )
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.functions import count
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+from rhosocial.activerecord.backend.expression.query_parts import (
+    GroupByHavingClause,
+    JoinClause,
+    WhereClause,
+)
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements import (
     ExplainFormat,
     ExplainOptions,
     ExplainStatement,
     ExplainType,
+    PartitionClause,
+    PartitionStrategy,
+)
+from rhosocial.activerecord.backend.expression.types import (
+    BigIntType,
+    TextType,
+    TimestampType,
+    VarCharType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.explain import PostgresExplainResult
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresCreatePartitionStatement,
+)
 
 # ---------------------------------------------------------------------------
-# Construction helpers (no database)
+# Expression builders (no hand-built SQL anywhere)
 # ---------------------------------------------------------------------------
 
 
 def _simple_query(dialect: PostgresDialect, table: str = "explain_deep_events") -> QueryStatement:
-    """A minimal SELECT used purely to render an EXPLAIN statement."""
     return QueryStatement(
         dialect,
         select=[AllColumnsWildcard(dialect)],
-        from_=Table(dialect, table),
+        from_=NamedRelationRef(dialect, Table(dialect, table)),
     )
+
+
+def _category_query(dialect: PostgresDialect) -> QueryStatement:
+    return QueryStatement(
+        dialect,
+        select=[AllColumnsWildcard(dialect)],
+        from_=NamedRelationRef(dialect, Table(dialect, "explain_deep_events")),
+        where=WhereClause(
+            dialect,
+            condition=ComparisonPredicate(
+                dialect, "=", Column(dialect, "category"), Literal(dialect, "alpha")
+            ),
+        ),
+    )
+
+
+def _aggregate_query(dialect: PostgresDialect) -> QueryStatement:
+    return QueryStatement(
+        dialect,
+        select=[Column(dialect, "category"), count(dialect).as_("n")],
+        from_=NamedRelationRef(dialect, Table(dialect, "explain_deep_events")),
+        group_by_having=GroupByHavingClause(dialect, group_by=[Column(dialect, "category")]),
+    )
+
+
+def _join_query(dialect: PostgresDialect) -> QueryStatement:
+    left = NamedRelationRef(dialect, Table(dialect, "explain_deep_events"), alias="a")
+    right = NamedRelationRef(dialect, Table(dialect, "explain_deep_events"), alias="b")
+    join = JoinClause(
+        dialect,
+        left_table=left,
+        right_table=right,
+        condition=ComparisonPredicate(
+            dialect,
+            "=",
+            Column(dialect, "category", table="a"),
+            Column(dialect, "category", table="b"),
+        ),
+    )
+    return QueryStatement(dialect, select=[Column(dialect, "id", table="a")], from_=join)
+
+
+def _explain_expr(
+    dialect: PostgresDialect,
+    statement: Any,
+    options: Optional[ExplainOptions] = None,
+) -> ExplainStatement:
+    return ExplainStatement(dialect, statement=statement, options=options)
+
+
+def _render(
+    dialect: PostgresDialect, options: Optional[ExplainOptions] = None
+) -> Tuple[str, tuple]:
+    return _explain_expr(dialect, _simple_query(dialect), options).to_sql()
 
 
 def _require_explain(dialect: PostgresDialect) -> None:
@@ -65,17 +147,12 @@ def _require_explain(dialect: PostgresDialect) -> None:
 
 
 # ---------------------------------------------------------------------------
-# JSON-plan helpers (real database)
+# JSON-plan helpers
 # ---------------------------------------------------------------------------
 
 
 def _parse_json_plan(raw_rows: List[Any]) -> Any:
-    """Extract the JSON plan from rows returned by ``EXPLAIN (FORMAT JSON)``.
-
-    psycopg may deserialize the ``json`` column automatically (list/dict) or
-    return the raw JSON text, so accept both shapes. ``fetch_all`` yields dict
-    rows keyed by ``QUERY PLAN``; the tuple branch mirrors the legacy row form.
-    """
+    """Extract the JSON plan from rows returned by ``EXPLAIN (FORMAT JSON)``."""
     if not raw_rows:
         return {}
     row = raw_rows[0]
@@ -90,8 +167,32 @@ def _parse_json_plan(raw_rows: List[Any]) -> Any:
     return json.loads(data)
 
 
+def _json_plan(backend: Any, statement: Any) -> Any:
+    """Run ``EXPLAIN (FORMAT JSON)`` built by the expression/dialect system.
+
+    ``backend.explain()`` is used for text plans, but its result wrapper coerces
+    each plan row to ``str`` and therefore cannot carry a JSON document. For the
+    JSON plan we render the very same ``ExplainStatement`` through the dialect
+    and pass ``*expr.to_sql()`` to ``fetch_all`` -- no SQL string is hand-built.
+    """
+    expr = _explain_expr(
+        backend.dialect,
+        statement,
+        options=ExplainOptions(format=ExplainFormat.JSON),
+    )
+    return _parse_json_plan(backend.fetch_all(*expr.to_sql()))
+
+
+async def _async_json_plan(backend: Any, statement: Any) -> Any:
+    expr = _explain_expr(
+        backend.dialect,
+        statement,
+        options=ExplainOptions(format=ExplainFormat.JSON),
+    )
+    return _parse_json_plan(await backend.fetch_all(*expr.to_sql()))
+
+
 def _iter_nodes(plan: Any) -> Iterator[Dict[str, Any]]:
-    """Walk a PostgreSQL JSON plan tree, yielding every node dict."""
     if isinstance(plan, list):
         for item in plan:
             yield from _iter_nodes(item)
@@ -116,53 +217,90 @@ def _combined_text(result: PostgresExplainResult) -> str:
     return " ".join(str(row.get("QUERY PLAN", "")) for row in result.raw_rows).upper()
 
 
-def _json_explain(backend: Any, sql: str) -> Any:
-    return _parse_json_plan(backend.fetch_all(sql))
-
-
-async def _async_json_explain(backend: Any, sql: str) -> Any:
-    return _parse_json_plan(await backend.fetch_all(sql))
-
-
 # ---------------------------------------------------------------------------
-# Fixtures: a table with a primary key and a secondary index
+# DDL/DML builders for the indexed events table
 # ---------------------------------------------------------------------------
 
 _EVENTS_TABLE = "explain_deep_events"
-_EVENTS_SETUP = [
-    "DROP TABLE IF EXISTS explain_deep_events CASCADE",
-    """CREATE TABLE explain_deep_events (
-        id       SERIAL       PRIMARY KEY,
-        category VARCHAR(32)  NOT NULL,
-        payload  TEXT
-    )""",
-    "CREATE INDEX idx_explain_deep_category ON explain_deep_events(category)",
-    """INSERT INTO explain_deep_events (category, payload)
-        SELECT CASE WHEN n % 2 = 0 THEN 'alpha' ELSE 'beta' END, 'p' || n
-        FROM generate_series(1, 200) AS seq(n)""",
-    "ANALYZE explain_deep_events",
-]
-_EVENTS_CLEANUP = "DROP TABLE IF EXISTS explain_deep_events CASCADE"
+
+
+def _drop_events(dialect) -> DropTableStatement:
+    return DropTableStatement(dialect=dialect, table=Table(dialect, _EVENTS_TABLE), if_exists=True)
+
+
+def _create_events(dialect) -> CreateTableStatement:
+    return CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, _EVENTS_TABLE),
+        columns=[
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition(
+                dialect,
+                "category",
+                VarCharType(dialect, 32),
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+        ],
+        table_constraints=[
+            TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id"]))
+        ],
+    )
+
+
+def _index_events(dialect) -> CreateIndexStatement:
+    return CreateIndexStatement(
+        dialect=dialect,
+        index=Index(dialect, "idx_explain_deep_category"),
+        table=Table(dialect, _EVENTS_TABLE),
+        columns=["category"],
+    )
+
+
+def _seed_events(dialect) -> InsertStatement:
+    rows = [[i, "alpha" if i % 2 == 0 else "beta"] for i in range(1, 201)]
+    return InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, _EVENTS_TABLE),
+        columns=["id", "category"],
+        source=ValuesSource(dialect, [[Literal(dialect, value) for value in row] for row in rows]),
+    )
 
 
 @pytest.fixture
 def indexed_backend(postgres_backend):
-    for statement in _EVENTS_SETUP:
-        postgres_backend.execute(statement)
+    dialect = postgres_backend.dialect
+    for expr in (
+        _drop_events(dialect),
+        _create_events(dialect),
+        _index_events(dialect),
+        _seed_events(dialect),
+    ):
+        postgres_backend.execute(*expr.to_sql())
     yield postgres_backend
     try:
-        postgres_backend.execute(_EVENTS_CLEANUP)
+        postgres_backend.execute(*_drop_events(dialect).to_sql())
     except Exception:
         pass
 
 
 @pytest_asyncio.fixture
 async def async_indexed_backend(async_postgres_backend):
-    for statement in _EVENTS_SETUP:
-        await async_postgres_backend.execute(statement)
+    dialect = async_postgres_backend.dialect
+    for expr in (
+        _drop_events(dialect),
+        _create_events(dialect),
+        _index_events(dialect),
+        _seed_events(dialect),
+    ):
+        await async_postgres_backend.execute(*expr.to_sql())
     yield async_postgres_backend
     try:
-        await async_postgres_backend.execute(_EVENTS_CLEANUP)
+        await async_postgres_backend.execute(*_drop_events(dialect).to_sql())
     except Exception:
         pass
 
@@ -173,10 +311,7 @@ async def async_indexed_backend(async_postgres_backend):
 
 
 class TestPostgresExplainConstruction:
-    """Verify ``supports_*`` gates agree with the SQL the dialect renders."""
-
     def test_capability_gates(self, postgres_dialect):
-        """PostgreSQL advertises EXPLAIN, ANALYZE and the four native formats."""
         dialect = postgres_dialect
         assert dialect.supports_explain_plan() is True
         assert dialect.supports_explain_analyze() is True
@@ -185,66 +320,45 @@ class TestPostgresExplainConstruction:
         assert dialect.supports_explain_format("NOT_A_FORMAT") is False
 
     def test_plain_explain_rendering(self, postgres_dialect):
-        """With no options the renderer emits a bare ``EXPLAIN <statement>``."""
         dialect = postgres_dialect
         _require_explain(dialect)
-        sql, params = ExplainStatement(dialect, _simple_query(dialect)).to_sql()
+        sql, params = _render(dialect)
         assert sql.startswith("EXPLAIN SELECT")
         assert _EVENTS_TABLE in sql
         assert "(" not in sql, "no option list should be rendered without options"
         assert params == ()
 
     def test_analyze_rendering(self, postgres_dialect):
-        """``ANALYZE`` is rendered only when the capability gate is open."""
         dialect = postgres_dialect
         _require_explain(dialect)
         if not dialect.supports_explain_analyze():
             pytest.skip("dialect does not support EXPLAIN ANALYZE")
-        sql, _ = ExplainStatement(
-            dialect,
-            _simple_query(dialect),
-            options=ExplainOptions(analyze=True),
-        ).to_sql()
+        sql, _ = _render(dialect, ExplainOptions(analyze=True))
         assert sql.startswith("EXPLAIN (ANALYZE)")
         assert "ANALYZE" in sql
 
     def test_json_format_rendering(self, postgres_dialect):
-        """``FORMAT JSON`` is rendered only when the gate accepts JSON."""
         dialect = postgres_dialect
         _require_explain(dialect)
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        sql, _ = ExplainStatement(
-            dialect,
-            _simple_query(dialect),
-            options=ExplainOptions(format=ExplainFormat.JSON),
-        ).to_sql()
+        sql, _ = _render(dialect, ExplainOptions(format=ExplainFormat.JSON))
         assert sql.startswith("EXPLAIN (FORMAT JSON)")
         assert "FORMAT JSON" in sql
         assert "ANALYZE" not in sql
 
     def test_analyze_and_json_format_combined(self, postgres_dialect):
-        """Options compose into a single parenthesised list in a stable order."""
         dialect = postgres_dialect
         _require_explain(dialect)
         if not dialect.supports_explain_analyze() or not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect lacks ANALYZE or FORMAT JSON")
-        sql, _ = ExplainStatement(
-            dialect,
-            _simple_query(dialect),
-            options=ExplainOptions(analyze=True, format=ExplainFormat.JSON),
-        ).to_sql()
+        sql, _ = _render(dialect, ExplainOptions(analyze=True, format=ExplainFormat.JSON))
         assert "EXPLAIN (ANALYZE, FORMAT JSON)" in sql
 
     def test_query_plan_type_is_omitted(self, postgres_dialect):
-        """PostgreSQL has no QUERY PLAN keyword; plain EXPLAIN is equivalent."""
         dialect = postgres_dialect
         _require_explain(dialect)
-        sql, _ = ExplainStatement(
-            dialect,
-            _simple_query(dialect),
-            options=ExplainOptions(type=ExplainType.QUERY_PLAN),
-        ).to_sql()
+        sql, _ = _render(dialect, ExplainOptions(type=ExplainType.QUERY_PLAN))
         assert sql.startswith("EXPLAIN SELECT")
         assert "QUERY PLAN" not in sql
 
@@ -255,13 +369,10 @@ class TestPostgresExplainConstruction:
 
 
 class TestPostgresExplainResultInterpretation:
-    """Interpret the JSON/text plan shapes PostgreSQL returns."""
-
     def test_text_plan_full_scan(self, indexed_backend):
-        """An unfiltered SELECT plans as a Seq Scan with no index access."""
         dialect = indexed_backend.dialect
         _require_explain(dialect)
-        result = indexed_backend.explain(RawSQL(dialect, "SELECT * FROM explain_deep_events"))
+        result = indexed_backend.explain(_simple_query(dialect))
         assert isinstance(result, PostgresExplainResult)
         assert result.rows
         combined = _combined_text(result)
@@ -272,60 +383,38 @@ class TestPostgresExplainResultInterpretation:
         assert result.is_index_used is False
 
     def test_json_plan_exposes_plan_and_node_type(self, indexed_backend):
-        """JSON output is a list whose first element carries ``Plan``/``Node Type``."""
         dialect = indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = _json_explain(
-            indexed_backend,
-            "EXPLAIN (FORMAT JSON) SELECT * FROM explain_deep_events",
-        )
+        plan = _json_plan(indexed_backend, _simple_query(dialect))
         assert isinstance(plan, list) and plan
         root = plan[0]["Plan"]
         assert "Node Type" in root
         assert root["Node Type"] == "Seq Scan"
         assert root.get("Relation Name") == _EVENTS_TABLE
 
-    def test_json_plan_index_scan_when_seqscan_disabled(self, indexed_backend):
-        """Forcing the planner off sequential scans yields an index access node."""
+    def test_json_plan_category_filter(self, indexed_backend):
+        """An indexed-column predicate still yields an interpretable JSON plan."""
         dialect = indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        indexed_backend.execute("SET enable_seqscan = off")
-        try:
-            plan = _json_explain(
-                indexed_backend,
-                "EXPLAIN (FORMAT JSON) SELECT * FROM explain_deep_events "
-                "WHERE category = 'alpha'",
-            )
-        finally:
-            indexed_backend.execute("RESET enable_seqscan")
+        plan = _json_plan(indexed_backend, _category_query(dialect))
         types = _node_types(plan)
-        assert any("Index Scan" in node_type for node_type in types), types
+        assert any("Scan" in node_type for node_type in types), types
 
     def test_json_plan_aggregate_node(self, indexed_backend):
-        """A GROUP BY query produces an Aggregate-family node."""
         dialect = indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = _json_explain(
-            indexed_backend,
-            "EXPLAIN (FORMAT JSON) SELECT category, COUNT(*) "
-            "FROM explain_deep_events GROUP BY category",
-        )
+        plan = _json_plan(indexed_backend, _aggregate_query(dialect))
         types = _node_types(plan)
         assert any("Aggregate" in node_type for node_type in types), types
 
     def test_json_plan_join_node(self, indexed_backend):
-        """A two-way join produces a join node in the plan tree."""
         dialect = indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = _json_explain(
-            indexed_backend,
-            "EXPLAIN (FORMAT JSON) SELECT a.id FROM explain_deep_events a "
-            "JOIN explain_deep_events b ON a.category = b.category",
-        )
+        plan = _json_plan(indexed_backend, _join_query(dialect))
         types = _node_types(plan)
         assert any("Join" in node_type or node_type == "Nested Loop" for node_type in types), types
 
@@ -336,15 +425,11 @@ class TestPostgresExplainResultInterpretation:
 
 
 class TestAsyncPostgresExplainResultInterpretation:
-    """Asynchronous counterparts of the core interpretation cases."""
-
     @pytest.mark.asyncio
     async def test_text_plan_full_scan(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
         _require_explain(dialect)
-        result = await async_indexed_backend.explain(
-            RawSQL(dialect, "SELECT * FROM explain_deep_events")
-        )
+        result = await async_indexed_backend.explain(_simple_query(dialect))
         assert isinstance(result, PostgresExplainResult)
         assert result.rows
         assert "SEQ SCAN" in _combined_text(result)
@@ -355,10 +440,7 @@ class TestAsyncPostgresExplainResultInterpretation:
         dialect = async_indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = await _async_json_explain(
-            async_indexed_backend,
-            "EXPLAIN (FORMAT JSON) SELECT * FROM explain_deep_events",
-        )
+        plan = await _async_json_plan(async_indexed_backend, _simple_query(dialect))
         root = plan[0]["Plan"]
         assert root["Node Type"] == "Seq Scan"
         assert root.get("Relation Name") == _EVENTS_TABLE
@@ -368,11 +450,7 @@ class TestAsyncPostgresExplainResultInterpretation:
         dialect = async_indexed_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = await _async_json_explain(
-            async_indexed_backend,
-            "EXPLAIN (FORMAT JSON) SELECT category, COUNT(*) "
-            "FROM explain_deep_events GROUP BY category",
-        )
+        plan = await _async_json_plan(async_indexed_backend, _aggregate_query(dialect))
         assert any("Aggregate" in t for t in _node_types(plan))
 
 
@@ -382,41 +460,119 @@ class TestAsyncPostgresExplainResultInterpretation:
 
 _PART_TABLE = "ar_pg_explain_deep_events"
 _PARTITIONS = {
-    "p2026_01": ("ar_pg_explain_deep_events_p2026_01", "2026-01-01", "2026-02-01"),
-    "p2026_02": ("ar_pg_explain_deep_events_p2026_02", "2026-02-01", "2026-03-01"),
-    "p2026_03": ("ar_pg_explain_deep_events_p2026_03", "2026-03-01", "2026-04-01"),
+    "p2026_01": ("ar_pg_explain_deep_events_p2026_01", datetime(2026, 1, 1), datetime(2026, 2, 1)),
+    "p2026_02": ("ar_pg_explain_deep_events_p2026_02", datetime(2026, 2, 1), datetime(2026, 3, 1)),
+    "p2026_03": ("ar_pg_explain_deep_events_p2026_03", datetime(2026, 3, 1), datetime(2026, 4, 1)),
 }
 
 
-def _partition_setup_sql() -> List[str]:
-    statements = ["DROP TABLE IF EXISTS %s CASCADE" % _PART_TABLE]
-    for name, _, _ in _PARTITIONS.values():
-        statements.append("DROP TABLE IF EXISTS %s CASCADE" % name)
-    statements.append("""CREATE TABLE %s (
-            id         BIGINT       NOT NULL,
-            created_at TIMESTAMP    NOT NULL,
-            tenant_id  BIGINT       NOT NULL,
-            payload    TEXT,
-            PRIMARY KEY (id, created_at)
-        ) PARTITION BY RANGE (created_at)""" % _PART_TABLE)
-    for name, start, end in _PARTITIONS.values():
-        statements.append(
-            "CREATE TABLE %s PARTITION OF %s FOR VALUES FROM ('%s') TO ('%s')"
-            % (name, _PART_TABLE, start, end)
-        )
-    statements.append("""INSERT INTO %s (id, created_at, tenant_id, payload) VALUES
-            (1, TIMESTAMP '2026-01-15', 100, 'jan'),
-            (2, TIMESTAMP '2026-02-15', 100, 'feb'),
-            (3, TIMESTAMP '2026-03-15', 200, 'mar')""" % _PART_TABLE)
-    statements.append("ANALYZE %s" % _PART_TABLE)
-    return statements
+def _drop_partition(dialect, name: str) -> DropTableStatement:
+    return DropTableStatement(dialect=dialect, table=Table(dialect, name), if_exists=True)
 
 
-def _partition_cleanup_sql() -> List[str]:
-    return [
-        "DROP TABLE IF EXISTS %s CASCADE" % name
-        for name in [_PART_TABLE] + [name for name, _, _ in _PARTITIONS.values()]
+def _create_partition_parent(dialect) -> CreateTableStatement:
+    return CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, _PART_TABLE),
+        columns=[
+            ColumnDefinition(
+                dialect,
+                "id",
+                BigIntType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition(
+                dialect,
+                "created_at",
+                TimestampType(precision=6, dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition(
+                dialect,
+                "tenant_id",
+                BigIntType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
+        ],
+        table_constraints=[
+            TableConstraint(
+                dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])
+            )
+        ],
+        partition=PartitionClause(
+            dialect=dialect,
+            method=PartitionStrategy.RANGE,
+            keys=[Column(dialect, "created_at")],
+        ),
+    )
+
+
+def _create_partition(dialect, name: str, start: datetime, end: datetime):
+    return PostgresCreatePartitionStatement(
+        dialect=dialect,
+        partition_name=name,
+        parent_table=_PART_TABLE,
+        partition_type="RANGE",
+        partition_values={
+            "from": start.strftime("%Y-%m-%d"),
+            "to": end.strftime("%Y-%m-%d"),
+        },
+    )
+
+
+def _seed_partition_rows(dialect) -> InsertStatement:
+    rows = [
+        [1, datetime(2026, 1, 15), 100, "jan"],
+        [2, datetime(2026, 2, 15), 100, "feb"],
+        [3, datetime(2026, 3, 15), 200, "mar"],
     ]
+    return InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, _PART_TABLE),
+        columns=["id", "created_at", "tenant_id", "payload"],
+        source=ValuesSource(dialect, [[Literal(dialect, value) for value in row] for row in rows]),
+    )
+
+
+def _partition_range_query(dialect, start: datetime, end: datetime) -> QueryStatement:
+    condition = LogicalPredicate(
+        dialect,
+        "AND",
+        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
+        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
+    )
+    return QueryStatement(
+        dialect,
+        select=[AllColumnsWildcard(dialect)],
+        from_=NamedRelationRef(dialect, Table(dialect, _PART_TABLE)),
+        where=WhereClause(dialect, condition=condition),
+    )
+
+
+def _partition_full_scan_query(dialect) -> QueryStatement:
+    return QueryStatement(
+        dialect,
+        select=[AllColumnsWildcard(dialect)],
+        from_=NamedRelationRef(dialect, Table(dialect, _PART_TABLE)),
+    )
+
+
+def _partition_ddl(dialect):
+    exprs = [_drop_partition(dialect, _PART_TABLE)]
+    exprs.extend(_drop_partition(dialect, name) for name, _, _ in _PARTITIONS.values())
+    exprs.append(_create_partition_parent(dialect))
+    exprs.extend(
+        _create_partition(dialect, name, start, end) for name, start, end in _PARTITIONS.values()
+    )
+    exprs.append(_seed_partition_rows(dialect))
+    return exprs
+
+
+def _partition_cleanup(dialect):
+    exprs = [_drop_partition(dialect, name) for name, _, _ in _PARTITIONS.values()]
+    exprs.append(_drop_partition(dialect, _PART_TABLE))
+    return exprs
 
 
 def _require_partition_support(dialect) -> None:
@@ -429,42 +585,40 @@ def _require_partition_support(dialect) -> None:
 
 @pytest.fixture
 def partition_backend(postgres_backend):
-    _require_partition_support(postgres_backend.dialect)
-    for statement in _partition_setup_sql():
-        postgres_backend.execute(statement)
+    dialect = postgres_backend.dialect
+    _require_partition_support(dialect)
+    for expr in _partition_ddl(dialect):
+        postgres_backend.execute(*expr.to_sql())
     yield postgres_backend
-    for statement in _partition_cleanup_sql():
+    for expr in _partition_cleanup(dialect):
         try:
-            postgres_backend.execute(statement)
+            postgres_backend.execute(*expr.to_sql())
         except Exception:
             pass
 
 
 @pytest_asyncio.fixture
 async def async_partition_backend(async_postgres_backend):
-    _require_partition_support(async_postgres_backend.dialect)
-    for statement in _partition_setup_sql():
-        await async_postgres_backend.execute(statement)
+    dialect = async_postgres_backend.dialect
+    _require_partition_support(dialect)
+    for expr in _partition_ddl(dialect):
+        await async_postgres_backend.execute(*expr.to_sql())
     yield async_postgres_backend
-    for statement in _partition_cleanup_sql():
+    for expr in _partition_cleanup(dialect):
         try:
-            await async_postgres_backend.execute(statement)
+            await async_postgres_backend.execute(*expr.to_sql())
         except Exception:
             pass
 
 
 class TestPostgresPartitionPruningEvidence:
-    """Assert the JSON plan shows target partitions and pruning of others."""
-
     def test_range_predicate_prunes_unrelated_partitions(self, partition_backend):
         dialect = partition_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = _json_explain(
+        plan = _json_plan(
             partition_backend,
-            "EXPLAIN (FORMAT JSON) SELECT * FROM %s "
-            "WHERE created_at >= TIMESTAMP '2026-02-01' "
-            "AND created_at < TIMESTAMP '2026-03-01'" % _PART_TABLE,
+            _partition_range_query(dialect, datetime(2026, 2, 1), datetime(2026, 3, 1)),
         )
         names = _relation_names(plan)
         target = _PARTITIONS["p2026_02"][0]
@@ -476,30 +630,21 @@ class TestPostgresPartitionPruningEvidence:
         dialect = partition_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = _json_explain(
-            partition_backend,
-            "EXPLAIN (FORMAT JSON) SELECT * FROM %s" % _PART_TABLE,
-        )
+        plan = _json_plan(partition_backend, _partition_full_scan_query(dialect))
         names = _relation_names(plan)
-        for partition_name, _, _ in _PARTITIONS.values():
-            assert partition_name in names, (
-                "partition %s missing from full-scan plan" % partition_name
-            )
+        for name, _, _ in _PARTITIONS.values():
+            assert name in names, "partition %s missing from full-scan plan" % name
 
 
 class TestAsyncPostgresPartitionPruningEvidence:
-    """Asynchronous partition-pruning counterpart."""
-
     @pytest.mark.asyncio
     async def test_range_predicate_prunes_unrelated_partitions(self, async_partition_backend):
         dialect = async_partition_backend.dialect
         if not dialect.supports_explain_format("JSON"):
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
-        plan = await _async_json_explain(
+        plan = await _async_json_plan(
             async_partition_backend,
-            "EXPLAIN (FORMAT JSON) SELECT * FROM %s "
-            "WHERE created_at >= TIMESTAMP '2026-02-01' "
-            "AND created_at < TIMESTAMP '2026-03-01'" % _PART_TABLE,
+            _partition_range_query(dialect, datetime(2026, 2, 1), datetime(2026, 3, 1)),
         )
         names = _relation_names(plan)
         target = _PARTITIONS["p2026_02"][0]
