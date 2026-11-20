@@ -45,6 +45,11 @@
 * [Materialized views](ddl/materialized_view.md)
 * [DDL example](../examples/chapter_04_ddl/ddl.py)
 
+## Migrations
+
+* [Migrations overview](migration/README.md)
+* [Migration examples](../examples/migration/README.md)
+
 ## Transaction Support
 
 * [Transaction Support overview](transaction_support/README.md)

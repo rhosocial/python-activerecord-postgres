@@ -56,4 +56,8 @@
 10. **[Worker 隔离实验](../examples/chapter_05_worker_isolation/README.md)**
     *   **[Worker 连接隔离实验](../examples/chapter_05_worker_isolation/README.md)**: Worker 进程隔离实验
 
+11. **[迁移 (Migrations)](migration/README.md)**
+    *   **[PostgreSQL 迁移指南](migration/README.md)**: 配置、事务性 DDL、受版本门禁的特性、函数式与类式用法
+    *   **[迁移示例](../examples/migration/README.md)**: 可运行的 PostgreSQL 迁移脚本
+
 > 📖 **核心库文档**：要了解 ActiveRecord 框架的完整功能，请参考 [rhosocial-activerecord 文档](https://github.com/Rhosocial/python-activerecord/tree/main/docs/zh_CN)。

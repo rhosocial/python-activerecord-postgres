@@ -57,4 +57,8 @@
 10. **[Worker Isolation Experiment](../examples/chapter_05_worker_isolation/README.md)**
     *   **[Worker Connection Isolation](../examples/chapter_05_worker_isolation/README.md)**: worker process isolation experiment
 
+11. **[Migrations](migration/README.md)**
+    *   **[PostgreSQL Migration Guide](migration/README.md)**: configuration, transactional DDL, version-gated features, function-style and class-style usage
+    *   **[Migration Examples](../examples/migration/README.md)**: runnable PostgreSQL migration scripts
+
 > 📖 **Core Library Documentation**: To learn about the complete functionality of the ActiveRecord framework, please refer to [rhosocial-activerecord documentation](https://github.com/rhosocial/python-activerecord/tree/main/docs/en_US).
