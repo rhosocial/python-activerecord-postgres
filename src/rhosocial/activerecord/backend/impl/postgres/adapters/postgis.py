@@ -62,7 +62,7 @@ class PostgresPostGISAdapter:
 
     def from_database(
         self, value: Any, target_type: Type,
-        options: Optional[Dict[str, Any]] = None
+        options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresGeometry]:
         """Convert PostgreSQL geometry/geography to Python object.
 

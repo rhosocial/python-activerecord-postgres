@@ -1,138 +1,79 @@
 # tests/rhosocial/activerecord_postgres_test/feature/connection/conftest.py
-"""
-Pytest configuration for connection pool tests.
+"""L2 backend fixtures for the connection-pool tests.
 
-This module provides fixtures for testing connection pools with PostgreSQL backends.
-"""
+The pool fixtures own their connections: each creates the directory's database
+for the scenario it runs under and hands out PostgreSQL backends from it. The
+concurrency tables are created and dropped by the table fixtures through that
+pool, from the definitions in ``pool_definitions.py``.
 
-import os
-from typing import Dict, Any, Generator
+``database_config`` declares the directory's identity (scenario, configuration
+and database name). It exists for the xdist grouping contract: a scenario's
+tests for one directory stay on one worker, while different scenarios are
+different databases and may run in parallel.
+"""
+from rhosocial.activerecord.testsuite.pytest_plugin import Declaration
+
+from functools import partial
+from pathlib import Path
+from typing import Generator
 
 import pytest
 import pytest_asyncio
-import yaml
 
-from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
-from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
-from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
+from rhosocial.activerecord.backend.options import ExecutionOptions
+from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.connection.pool import (
-    PoolConfig,
-    BackendPool,
     AsyncBackendPool,
+    BackendPool,
+    PoolConfig,
 )
 
+from pool_definitions import (
+    AsyncConcurrentTestPostsDefinition,
+    AsyncConcurrentTestUsersDefinition,
+    ConcurrentTestPostsDefinition,
+    ConcurrentTestUsersDefinition,
+)
 
-# --- Scenario Loading Logic ---
-
-SCENARIO_MAP: Dict[str, Dict[str, Any]] = {}
-
-
-def register_scenario(name: str, config: Dict[str, Any]):
-    SCENARIO_MAP[name] = config
-
-
-def _load_scenarios_from_config():
-    """Load scenarios from a configuration file."""
-    config_path = None
-    env_config_path = os.getenv("POSTGRES_SCENARIOS_CONFIG_PATH")
-
-    if env_config_path and os.path.exists(env_config_path):
-        config_path = env_config_path
-    else:
-        default_path = os.path.join(
-            os.path.dirname(__file__),
-            "../../../../config",
-            "postgres_scenarios.yaml"
-        )
-        if os.path.exists(default_path):
-            config_path = default_path
-        elif env_config_path:
-            print(f"Warning: Scenario file specified in POSTGRES_SCENARIOS_CONFIG_PATH not found: {env_config_path}")
-            return
-
-    if not config_path:
-        raise FileNotFoundError(
-            "No PostgreSQL scenarios configuration file found. "
-            "Set POSTGRES_SCENARIOS_CONFIG_PATH or place postgres_scenarios.yaml in tests/config."
-        )
-
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config_data = yaml.safe_load(f)
-
-        if 'scenarios' not in config_data:
-            raise ValueError(f"Configuration file {config_path} does not contain 'scenarios' key")
-
-        for scenario_name, config in config_data['scenarios'].items():
-            if config:
-                register_scenario(scenario_name, config)
-
-    except ImportError:
-        raise ImportError("PyYAML is required to load scenario configuration files")  # noqa: B904
+DDL = ExecutionOptions(stmt_type=StatementType.DDL)
 
 
-_load_scenarios_from_config()
+def _database_name() -> str:
+    """Database name from this directory's namespace (below ``feature``)."""
+    parts = Path(__file__).parent.parts
+    start = parts.index("feature") + 1
+    return "test_" + "_".join(parts[start:])
 
 
-def get_scenario_config(name: str) -> Dict[str, Any]:
-    if name not in SCENARIO_MAP:
-        if SCENARIO_MAP:
-            name = next(iter(SCENARIO_MAP))
-        else:
-            raise ValueError("No scenarios registered or enabled")
-    config_dict = SCENARIO_MAP[name].copy()
-    # Apply the pooled database name so parallel workers never share a schema.
-    from providers.pooling import resolve_database_name
-
-    pooled_db = resolve_database_name(name)
-    if pooled_db:
-        config_dict["database"] = pooled_db
-    return config_dict
 
 
-def get_scenario_names():
-    return list(SCENARIO_MAP.keys())
+# This directory owns a database shared by all its tests within a scenario;
+# pin them to one worker so setup/teardown never races on the same database.
+DECLARATION = Declaration(
+    uses_database=True,
+    parallel=True,
+    purpose="Directory-owned PostgreSQL database shared by this test group.",
+)
 
-
-# --- Pool Fixtures ---
-
-def create_postgres_backend_factory(config_dict: Dict[str, Any]):
-    """Create a factory function that produces PostgresBackend instances."""
-    def factory():
-        config = PostgresConnectionConfig(**config_dict)
-        backend = PostgresBackend(connection_config=config)
-        backend.connect()
-        return backend
-    return factory
-
-
-def create_async_postgres_backend_factory(config_dict: Dict[str, Any]):
-    """Create a factory function that produces AsyncPostgresBackend instances."""
-    def factory():
-        config = PostgresConnectionConfig(**config_dict)
-        backend = AsyncPostgresBackend(connection_config=config)
-        # Note: connect() will be called by the pool when needed
-        return backend
-    return factory
+@pytest.fixture(scope="session")
+def database_config(backend_scenario):
+    """The scenario, its connection configuration, and the directory database name."""
+    name = _database_name()
+    return backend_scenario, backend_scenario.make_config(name), name
 
 
 @pytest.fixture(scope="function")
-def postgres_pool() -> Generator[BackendPool, None, None]:
+def postgres_pool(database_config) -> Generator[BackendPool, None, None]:
     """Create a BackendPool with PostgreSQL backends for testing."""
-    scenario_names = get_scenario_names()
-    if not scenario_names:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    config_dict = get_scenario_config(scenario_names[0])
-    config_dict.pop('enabled', None)
-
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=1,
         max_size=5,
         timeout=30.0,
         validate_on_borrow=True,
         validation_query="SELECT 1",
-        backend_factory=create_postgres_backend_factory(config_dict),
+        backend_factory=partial(scenario.backend_class, connection_config=config),
     )
 
     pool = BackendPool.create(pool_config)
@@ -141,22 +82,17 @@ def postgres_pool() -> Generator[BackendPool, None, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_pool() -> AsyncBackendPool:
+async def async_postgres_pool(database_config) -> AsyncBackendPool:
     """Create an AsyncBackendPool with PostgreSQL backends for testing."""
-    scenario_names = get_scenario_names()
-    if not scenario_names:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    config_dict = get_scenario_config(scenario_names[0])
-    config_dict.pop('enabled', None)
-
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=1,
         max_size=5,
         timeout=30.0,
         validate_on_borrow=True,
         validation_query="SELECT 1",
-        backend_factory=create_async_postgres_backend_factory(config_dict),
+        backend_factory=partial(scenario.async_backend_class, connection_config=config),
     )
 
     pool = await AsyncBackendPool.create(pool_config)
@@ -165,21 +101,16 @@ async def async_postgres_pool() -> AsyncBackendPool:
 
 
 @pytest.fixture(scope="function")
-def postgres_pool_large() -> Generator[BackendPool, None, None]:
+def postgres_pool_large(database_config) -> Generator[BackendPool, None, None]:
     """Create a larger BackendPool for stress testing."""
-    scenario_names = get_scenario_names()
-    if not scenario_names:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    config_dict = get_scenario_config(scenario_names[0])
-    config_dict.pop('enabled', None)
-
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=2,
         max_size=10,
         timeout=60.0,
         validate_on_borrow=False,  # Faster for stress tests
-        backend_factory=create_postgres_backend_factory(config_dict),
+        backend_factory=partial(scenario.backend_class, connection_config=config),
     )
 
     pool = BackendPool.create(pool_config)
@@ -188,21 +119,16 @@ def postgres_pool_large() -> Generator[BackendPool, None, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_pool_large() -> AsyncBackendPool:
+async def async_postgres_pool_large(database_config) -> AsyncBackendPool:
     """Create a larger AsyncBackendPool for stress testing."""
-    scenario_names = get_scenario_names()
-    if not scenario_names:
-        pytest.skip("No PostgreSQL scenarios configured")
-
-    config_dict = get_scenario_config(scenario_names[0])
-    config_dict.pop('enabled', None)
-
+    scenario, config, name = database_config
+    scenario.reset_database(name)
     pool_config = PoolConfig(
         min_size=2,
         max_size=10,
         timeout=60.0,
         validate_on_borrow=False,
-        backend_factory=create_async_postgres_backend_factory(config_dict),
+        backend_factory=partial(scenario.async_backend_class, connection_config=config),
     )
 
     pool = await AsyncBackendPool.create(pool_config)
@@ -212,63 +138,44 @@ async def async_postgres_pool_large() -> AsyncBackendPool:
 
 # --- Table Setup Fixtures ---
 
+
 @pytest.fixture(scope="function")
 def postgres_pool_with_tables(postgres_pool: BackendPool) -> Generator[BackendPool, None, None]:
     """Create a pool with test tables initialized."""
+    definitions = (
+        ConcurrentTestPostsDefinition,
+        ConcurrentTestUsersDefinition,
+    )
     with postgres_pool.connection() as backend:
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        backend.execute("""
-            CREATE TABLE concurrent_test_users (
-                id SERIAL PRIMARY KEY,
-                thread_id INTEGER,
-                name VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        backend.execute("""
-            CREATE TABLE concurrent_test_posts (
-                id SERIAL PRIMARY KEY,
-                thread_id INTEGER,
-                user_id INTEGER,
-                title VARCHAR(255),
-                content TEXT
-            )
-        """)
+        fixtures = [definition(backend.dialect) for definition in definitions]
+        for fixture in fixtures:
+            backend.execute(*fixture.drop_table.to_sql(), options=DDL)
+            backend.execute(*fixture.create_table.to_sql(), options=DDL)
 
     yield postgres_pool
 
     with postgres_pool.connection() as backend:
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
+        for fixture in reversed(fixtures):
+            backend.execute(*fixture.drop_table.to_sql(), options=DDL)
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_postgres_pool_with_tables(async_postgres_pool: AsyncBackendPool) -> AsyncBackendPool:
+async def async_postgres_pool_with_tables(
+    async_postgres_pool: AsyncBackendPool,
+) -> AsyncBackendPool:
     """Create an async pool with test tables initialized."""
+    definitions = (
+        AsyncConcurrentTestPostsDefinition,
+        AsyncConcurrentTestUsersDefinition,
+    )
     async with async_postgres_pool.connection() as backend:
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        await backend.execute("""
-            CREATE TABLE concurrent_test_users (
-                id SERIAL PRIMARY KEY,
-                task_id INTEGER,
-                name VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        await backend.execute("""
-            CREATE TABLE concurrent_test_posts (
-                id SERIAL PRIMARY KEY,
-                task_id INTEGER,
-                user_id INTEGER,
-                title VARCHAR(255),
-                content TEXT
-            )
-        """)
+        fixtures = [definition(backend.dialect) for definition in definitions]
+        for fixture in fixtures:
+            await backend.execute(*fixture.drop_table.to_sql(), options=DDL)
+            await backend.execute(*fixture.create_table.to_sql(), options=DDL)
 
     yield async_postgres_pool
 
     async with async_postgres_pool.connection() as backend:
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_posts")
-        await backend.execute("DROP TABLE IF EXISTS concurrent_test_users")
+        for fixture in reversed(fixtures):
+            await backend.execute(*fixture.drop_table.to_sql(), options=DDL)

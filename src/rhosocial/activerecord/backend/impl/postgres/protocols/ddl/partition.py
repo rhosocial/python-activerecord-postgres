@@ -33,6 +33,7 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Concurrent DETACH (PG 14+)
     - Partition bounds expression (PG 12+)
     - Partitionwise join/aggregate (PG 11+)
+    - Primary key on a partitioned table (PG 11+)
 
     Official Documentation:
     - Partitioning: https://www.postgresql.org/docs/current/ddl-partitioning.html
@@ -43,6 +44,7 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - HASH partitioning: PostgreSQL 11+
     - DEFAULT partition: PostgreSQL 11+
     - Row movement: PostgreSQL 11+
+    - Primary key on a partitioned table: PostgreSQL 11+
     - Concurrent DETACH: PostgreSQL 14+
     - Partition bounds expression: PostgreSQL 12+
     - Partitionwise join: PostgreSQL 11+
@@ -70,6 +72,15 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
 
         Native feature, PostgreSQL 11+.
         When updating partition key, rows automatically move to correct partition.
+        """
+        ...
+
+    def supports_partitioned_table_primary_key(self) -> bool:
+        """Whether a partitioned parent table can declare a primary key.
+
+        Native feature, PostgreSQL 11+.
+        PostgreSQL 10 refuses a PRIMARY KEY on a partitioned table unless it
+        includes the partition key, so the constraint arrives with 11.
         """
         ...
 

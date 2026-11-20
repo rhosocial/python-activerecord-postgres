@@ -87,6 +87,15 @@ from .postgis import PostgresPostGISAdapter
 # hstore types
 from .hstore import PostgresHstoreAdapter
 
+# Neutral value adapters (core driver-independent types)
+from .neutral import (
+    PostgresNeutralBitStringAdapter,
+    PostgresNeutralGeometryAdapter,
+    PostgresNeutralMacAddressAdapter,
+    PostgresNeutralRangeAdapter,
+    PostgresNeutralVectorAdapter,
+)
+
 __all__ = [
     # Basic types
     "PostgresListAdapter",
@@ -126,4 +135,10 @@ __all__ = [
     "PostgresPostGISAdapter",
     # hstore types
     "PostgresHstoreAdapter",
+    # Neutral value adapters
+    "PostgresNeutralBitStringAdapter",
+    "PostgresNeutralGeometryAdapter",
+    "PostgresNeutralMacAddressAdapter",
+    "PostgresNeutralRangeAdapter",
+    "PostgresNeutralVectorAdapter",
 ]

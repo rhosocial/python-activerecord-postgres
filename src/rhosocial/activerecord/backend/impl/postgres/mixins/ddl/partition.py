@@ -63,6 +63,19 @@ class PostgresPartitionMixin:
         """
         return self.supports_table_partitioning()
 
+    def supports_partitioned_table_primary_key(self) -> bool:
+        """Check if a partitioned parent table can declare a primary key.
+
+        PostgreSQL 10 refused a PRIMARY KEY on a partitioned table unless
+        it included the partition key, so a parent declared with one fails
+        on 10 and works from 11 on -- a parent partitioned by created_at
+        with PRIMARY KEY (id, created_at) is the shape callers rely on.
+
+        Returns:
+            True if PostgreSQL version >= 11.
+        """
+        return self.version_at_least((11, 0, 0))
+
     def supports_range_table_partitioning(self) -> bool:
         """Check if RANGE table partitioning is supported.
 

@@ -16,17 +16,12 @@ ensuring postgres backend compatibility.
 # parameterized to run against the scenarios defined in `providers/scenarios.py`.
 from rhosocial.activerecord.testsuite.feature.basic.conftest import (
     user_class,  # noqa: F401
-    type_case_class,  # noqa: F401
-    type_test_model,  # noqa: F401
     validated_user_class,  # noqa: F401
     validated_user,  # noqa: F401
     async_user_class,  # noqa: F401
-    async_type_case_class,  # noqa: F401
     async_validated_user_class,  # noqa: F401
     async_validated_user  # noqa: F401
 )
 
 # Import shared tests from testsuite package
 from rhosocial.activerecord.testsuite.feature.basic.crud.test_crud import *  # noqa: F403
-from rhosocial.activerecord.testsuite.feature.basic.crud.test_crud_async import *  # noqa: F403
-

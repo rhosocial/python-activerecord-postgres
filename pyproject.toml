@@ -85,7 +85,7 @@ minversion = "7.0"
 # an explicit xdist_group is the only thing that serialises a case, and the
 # worker count is the caller's (-n). The expression directory pins the same
 # mode for its own runs; see its conftest.
-addopts = "-ra -q -p rhosocial.activerecord.testsuite.conftest --dist=loadgroup"
+addopts = "-ra -q --dist=loadgroup"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = [

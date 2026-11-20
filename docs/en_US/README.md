@@ -4,7 +4,7 @@
 
 > **Example:** "How does the PostgreSQL backend handle JSONB data types? What are the advantages over regular JSON?"
 
-> 📖 **For detailed usage, please refer to**: [AI-Assisted Development Guide](introduction/ai_assistance.md)
+> 📖 **For detailed usage, please refer to**: [AI-Assisted Development Guide](https://github.com/rhosocial/python-activerecord/blob/main/docs/en_US/introduction/ai_assistance.md)
 
 ## Table of Contents
 
@@ -44,18 +44,21 @@
 
 7. **[Testing](testing/README.md)**
     *   **[Test Configuration](testing/configuration.md)**: test environment setup
-    *   **[Using testsuite for Testing](testing/testsuite.md)**: test suite usage
+    *   **[Using testsuite for Testing](https://github.com/rhosocial/python-activerecord-testsuite/blob/main/docs/en_US/README.md)**: test suite usage
     *   **[Local PostgreSQL Testing](testing/local.md)**: local database testing
 
 8. **[Troubleshooting](troubleshooting/README.md)**
     *   **[Common Connection Errors](troubleshooting/connection.md)**: connection issue diagnosis
     *   **[Performance Issues](troubleshooting/performance.md)**: performance bottleneck analysis
-    *   **[SQL Standard Compliance](troubleshooting/sql_standard.md)**: strict SQL compliance handling
 
 9. **[Scenarios](scenarios/README.md)**
     *   **[Parallel Worker Processing](scenarios/parallel_workers.md)**: correct usage in multi-process/async concurrent scenarios
 
-10. **[Worker Isolation Experiment](examples/chapter_05_worker_isolation/README.md)**
-    *   **[Worker Connection Isolation](examples/chapter_05_worker_isolation/README.md)**: worker process isolation experiment
+10. **[Worker Isolation Experiment](../examples/chapter_05_worker_isolation/README.md)**
+    *   **[Worker Connection Isolation](../examples/chapter_05_worker_isolation/README.md)**: worker process isolation experiment
+
+11. **[Migrations](migration/README.md)**
+    *   **[PostgreSQL Migration Guide](migration/README.md)**: configuration, transactional DDL, version-gated features, function-style and class-style usage
+    *   **[Migration Examples](../examples/migration/README.md)**: runnable PostgreSQL migration scripts
 
 > 📖 **Core Library Documentation**: To learn about the complete functionality of the ActiveRecord framework, please refer to [rhosocial-activerecord documentation](https://github.com/rhosocial/python-activerecord/tree/main/docs/en_US).

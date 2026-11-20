@@ -15,49 +15,12 @@ Both json and jsonb accept identical input values; the key difference is in
 storage format. jsonb is generally preferred for query purposes.
 """
 
-import json
-from typing import Any, Dict, List, Optional, Set, Type, Union, get_args, get_origin  # noqa: F401
-
-from psycopg.types.json import Jsonb
-
-from rhosocial.activerecord.backend.type_adapter import BaseSQLTypeAdapter
+from typing import Any, Callable, Dict, List, Optional, Set, Type, Union, get_args, get_origin  # noqa: F401
 
 from ..type_values.json import PostgresJsonPath
 
-
-class PostgresJSONBAdapter(BaseSQLTypeAdapter):
-    """
-    Adapts Python dict to PostgreSQL JSONB and vice-versa.
-
-    Note: psycopg automatically serializes/deserializes JSON, so dict <-> JSON.
-    When reading from DB, psycopg returns dict. When target type is str,
-    we need to serialize back to JSON string.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.register_type(dict, Jsonb)
-
-    def _do_to_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
-        return Jsonb(value)
-
-    def _do_from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
-    ) -> Union[dict, list, str]:
-        # For string target type, serialize dict/list back to JSON string
-        # This is needed because psycopg auto-deserializes JSON to dict,
-        # but model fields may be defined as Optional[str] type
-        if target_type is str:
-            if isinstance(value, (dict, list)):
-                return json.dumps(value, ensure_ascii=False)
-            return value
-        # For dict/list target types, return as-is
-        if isinstance(value, dict):
-            return value
-        if isinstance(value, list):
-            return value
-        # In case it's a string representation
-        return json.loads(value)
+# One implementation: the class lives in ``base`` beside the list adapter.
+from .base import PostgresJSONBAdapter  # noqa: F401  (re-exported public name)
 
 
 class PostgresJsonPathAdapter:
@@ -140,7 +103,7 @@ class PostgresJsonPathAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to jsonpath")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresJsonPath]:
         """Convert PostgreSQL jsonpath value to Python.
 

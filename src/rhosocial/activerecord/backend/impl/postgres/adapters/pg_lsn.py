@@ -63,7 +63,7 @@ class PostgresLsnAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to pg_lsn")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresLsn]:
         """Convert PostgreSQL pg_lsn to Python object.
 

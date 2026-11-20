@@ -21,8 +21,9 @@ class PostgresAutoIncrementMixin(AutoIncrementMixin):
 
         Always ``False``: ``AUTO_INCREMENT`` is MySQL / MariaDB syntax and is
         absent from the PostgreSQL grammar. The server-generated-value
-        mechanisms PostgreSQL does have are the SQL-standard identity clause
-        (:class:`~...mixins.identity_column.PostgresIdentityColumnMixin`) and
-        the ``SERIAL`` type family.
+        mechanism PostgreSQL does have is the ``SERIAL`` type family; the
+        capability-level answer lives on the dialect
+        (``PostgresDialect.supports_database_assigned_integer_column``), which
+        is what a declaration asks for.
         """
         return False

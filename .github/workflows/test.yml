@@ -119,17 +119,17 @@ jobs:
           print(pathlib.Path(testsuite.__file__).parent)
           PY
           )
-          python -m pytest \
+          python -m pytest -p tests.benchmark.providers \
             --rootdir=. \
             --confcutdir=. \
-            "$TESTSUITE_DIR/benchmark/crud/test_delete_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_delete.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_insert_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_insert.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_query_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_query.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_update_async.py" \
-            "$TESTSUITE_DIR/benchmark/crud/test_update.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_delete_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_delete.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_insert_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_insert.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_query_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_query.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_update_async.py" \
+            "$TESTSUITE_DIR/benchmark/crud/core/test_update.py" \
             "$TESTSUITE_DIR/benchmark/query" \
             "$TESTSUITE_DIR/benchmark/transaction" \
             "$TESTSUITE_DIR/benchmark/mixin" \
@@ -221,7 +221,7 @@ jobs:
 
   test-python-315:
     name: Python ${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }} / postgres ${{ matrix.postgres-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
     strategy:
@@ -236,7 +236,7 @@ jobs:
           # psycopg does not support free-threaded builds -- tracked as
           # psycopg/psycopg#1095 -- so the GIL leg is the only one this backend
           # has, on 3.15 as on every other interpreter.
-          - { python-version: '3.15', postgres-version: '18', freethreaded: false }
+          - { python-version: '3.15', postgres-version: '18', freethreaded: false, os: ubuntu-26.04 }
 
     services:
       postgres:
@@ -326,25 +326,25 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark
 
   test:
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { python-version: '3.8', postgres-version: '9' }
-          - { python-version: '3.8', postgres-version: '10' }
-          - { python-version: '3.9', postgres-version: '11' }
-          - { python-version: '3.10', postgres-version: '12' }
-          - { python-version: '3.11', postgres-version: '13' }
-          - { python-version: '3.12', postgres-version: '14' }
-          - { python-version: '3.13', postgres-version: '15' }
-          - { python-version: '3.13', postgres-version: '16' }
-          - { python-version: '3.14', postgres-version: '17' }
-          - { python-version: '3.14', postgres-version: '18' }
+          - { python-version: '3.8', postgres-version: '9', os: ubuntu-22.04 }
+          - { python-version: '3.8', postgres-version: '10', os: ubuntu-22.04 }
+          - { python-version: '3.9', postgres-version: '11', os: ubuntu-22.04 }
+          - { python-version: '3.10', postgres-version: '12', os: ubuntu-24.04 }
+          - { python-version: '3.11', postgres-version: '13', os: ubuntu-24.04 }
+          - { python-version: '3.12', postgres-version: '14', os: ubuntu-24.04 }
+          - { python-version: '3.13', postgres-version: '15', os: ubuntu-24.04 }
+          - { python-version: '3.13', postgres-version: '16', os: ubuntu-24.04 }
+          - { python-version: '3.14', postgres-version: '17', os: ubuntu-26.04 }
+          - { python-version: '3.14', postgres-version: '18', os: ubuntu-26.04 }
 
     services:
       postgres:
@@ -439,14 +439,14 @@ jobs:
         if: matrix.postgres-version != '18'
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark
 
       - name: Run tests with coverage (only for postgres 18 on Python 3.14)
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
         run: |
           export PYTHONPATH=src:tests
           pip install codecov
-          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=src/rhosocial --cov-report=xml
+          python -m pytest tests/ --tb=short -n auto --dist=loadgroup --cov=rhosocial.activerecord.backend.impl.postgres --cov-report=xml --ignore=tests/benchmark
 
       - name: Upload coverage to Codecov
         if: matrix.postgres-version == '18' && matrix.python-version == '3.14'
@@ -459,12 +459,12 @@ jobs:
           fail_ci_if_error: false
 
   test-postgres-19:
-    name: Python 3.14 / postgres 19rc1
+    name: Python 3.14 / postgres 19
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:19rc1
+        image: postgres:19
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
@@ -525,4 +525,4 @@ jobs:
       - name: Run tests
         run: |
           export PYTHONPATH=src:tests
-          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup
+          python -m pytest tests/ --tb=short -n 8 --dist=loadgroup --ignore=tests/benchmark

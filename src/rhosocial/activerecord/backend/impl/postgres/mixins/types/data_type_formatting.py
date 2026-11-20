@@ -679,6 +679,28 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_serial(self) -> bool:
+        """Whether ``SERIAL`` exists, which is every PostgreSQL version.
+
+        SERIAL is the PostgreSQL spelling of "the database assigns this
+        integer", and it is a *pseudo-type*, not a column attribute: writing
+        ``id SERIAL`` creates an integer column with a default drawn from a
+        sequence the engine creates and owns. ``AUTO_INCREMENT`` is the MySQL
+        spelling of the same observable behaviour and differs in three ways:
+
+        * it is a column attribute, so the type stays ``INT`` and the marker
+          rides beside it; ``SERIAL`` replaces the type;
+        * it is a per-table counter, while ``SERIAL`` is backed by a sequence
+          object (visible in the catalogue, droppable, shareable);
+        * inserting an explicit value larger than the current one raises the
+          MySQL counter to ``max + 1``, while a ``SERIAL`` column leaves its
+          sequence untouched -- the one place where the two are not
+          operationally equivalent.
+
+        PostgreSQL also accepts the SQL-standard identity clause from 10 on
+        (``supports_identity_column``), which is a third spelling of the same
+        capability; ``supports_database_assigned_integer_column`` is the
+        capability-level answer.
+        """
         return True
 
     def supports_data_type_postgres_bigserial(self) -> bool:
@@ -812,7 +834,14 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return True
 
     def supports_data_type_postgres_pg_lsn(self) -> bool:
-        return True
+        """pg_lsn arrived in PostgreSQL 9.4.
+
+        An unconditional True told every server it could have a pg_lsn
+        column, and a 9.3 server found out by executing the DDL ('type
+        "pg_lsn" does not exist'). The type is documented from 9.4 on:
+        https://www.postgresql.org/docs/9.4/datatype-pg-lsn.html
+        """
+        return self.version_at_least((9, 4, 0))
 
     def supports_data_type_postgres_hstore(self) -> bool:
         return True
@@ -967,7 +996,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
     def supports_data_type_postgres_enum(self) -> bool:
         return True
 
-    def suggested_data_types(self) -> dict:
+    def substitute_data_types(self) -> dict:
         """Cross-backend type-consistency suggestion map.
 
         PostgreSQL renders every core type it supports through its own

@@ -83,7 +83,7 @@ class PostgresXMLAdapter:
         raise TypeError(f"Cannot convert {type(value).__name__} to XML")
 
     def from_database(
-        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[PostgresXML]:
         """Convert PostgreSQL XML value to Python.
 

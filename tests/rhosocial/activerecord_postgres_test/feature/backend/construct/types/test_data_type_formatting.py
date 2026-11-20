@@ -1,0 +1,643 @@
+# tests/rhosocial/activerecord_postgres_test/feature/backend/construct/types/test_data_type_formatting.py
+"""Pure-function tests for PostgreSQL DataType formatting and parsing.
+
+These tests exercise ``PostgresTypeFormatSupportMixin`` (the
+``PostgresDialect.format_data_type`` and ``PostgresDialect.parse_type``
+paths) without requiring a live PostgreSQL server.
+"""
+
+import pytest
+
+from rhosocial.activerecord.backend.expression.types import (
+    ArrayType,
+    BigIntType,
+    BlobType,
+    BooleanType,
+    CharType,
+    CustomType,
+    DateType,
+    DateTimeType,
+    DecimalType,
+    DoubleType,
+    FloatType,
+    IntegerType,
+    IntervalType,
+    JsonBType,
+    JsonType,
+    RealType,
+    SmallIntType,
+    TextType,
+    TimeType,
+    TimeTzType,
+    TimestampType,
+    TimestampTzType,
+    TinyIntType,
+    VarCharType,
+    UUIDType,
+    XmlType,
+)
+from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+    PostgresArrayType,
+    PostgresBigSerialType,
+    PostgresBitType,
+    PostgresBoxType,
+    PostgresCIDType,
+    PostgresCidrType,
+    PostgresCircleType,
+    PostgresCitextType,
+    PostgresCubeType,
+    PostgresDateMultirangeType,
+    PostgresDateRangeType,
+    PostgresGeographyType,
+    PostgresGeometryType,
+    PostgresHstoreType,
+    PostgresInetType,
+    PostgresInt4MultirangeType,
+    PostgresInt4RangeType,
+    PostgresInt8MultirangeType,
+    PostgresInt8RangeType,
+    PostgresJsonPathType,
+    PostgresLineSegmentType,
+    PostgresLineType,
+    PostgresLtreeType,
+    PostgresMacAddr8Type,
+    PostgresMacAddrType,
+    PostgresMoneyType,
+    PostgresNumMultirangeType,
+    PostgresNumRangeType,
+    PostgresOIDType,
+    PostgresPathType,
+    PostgresPgLSNType,
+    PostgresPointType,
+    PostgresPolygonType,
+    PostgresRasterType,
+    PostgresRegClassType,
+    PostgresRegTypeType,
+    PostgresSerialType,
+    PostgresSmallSerialType,
+    PostgresTIDType,
+    PostgresTSQueryType,
+    PostgresTSVectorType,
+    PostgresTsMultirangeType,
+    PostgresTsRangeType,
+    PostgresTsTzMultirangeType,
+    PostgresTsTzRangeType,
+    PostgresVarBitType,
+    PostgresHalfvecType,
+    PostgresSparsevecType,
+    PostgresVectorType,
+    PostgresXID8Type,
+    PostgresXIDType,
+)
+
+
+@pytest.fixture
+def dialect():
+    return PostgresDialect(version=(15, 0, 0))
+
+
+# ---------------------------------------------------------------------------
+# format_data_type — PostgreSQL-specific types
+# ---------------------------------------------------------------------------
+
+FORMAT_CASES = [
+    (BlobType(), "BYTEA"),
+    (PostgresSmallSerialType(), "SMALLSERIAL"),
+    (PostgresSerialType(), "SERIAL"),
+    (PostgresBigSerialType(), "BIGSERIAL"),
+    (UUIDType(), "UUID"),
+    (XmlType(), "XML"),
+    (PostgresTSVectorType(), "TSVECTOR"),
+    (PostgresTSQueryType(), "TSQUERY"),
+    (PostgresJsonPathType(), "JSONPATH"),
+    (PostgresBitType(), "BIT"),
+    (PostgresBitType(n=8), "BIT(8)"),
+    (PostgresVarBitType(), "VARBIT"),
+    (PostgresVarBitType(n=16), "VARBIT(16)"),
+    (PostgresInetType(), "INET"),
+    (PostgresCidrType(), "CIDR"),
+    (PostgresMacAddrType(), "MACADDR"),
+    (PostgresMacAddr8Type(), "MACADDR8"),
+    (PostgresPointType(), "POINT"),
+    (PostgresLineType(), "LINE"),
+    (PostgresLineSegmentType(), "LSEG"),
+    (PostgresBoxType(), "BOX"),
+    (PostgresPathType(), "PATH"),
+    (PostgresPolygonType(), "POLYGON"),
+    (PostgresCircleType(), "CIRCLE"),
+    (PostgresMoneyType(), "MONEY"),
+    (PostgresInt4RangeType(), "INT4RANGE"),
+    (PostgresInt8RangeType(), "INT8RANGE"),
+    (PostgresNumRangeType(), "NUMRANGE"),
+    (PostgresTsRangeType(), "TSRANGE"),
+    (PostgresTsTzRangeType(), "TSTZRANGE"),
+    (PostgresDateRangeType(), "DATERANGE"),
+    (PostgresInt4MultirangeType(), "INT4MULTIRANGE"),
+    (PostgresInt8MultirangeType(), "INT8MULTIRANGE"),
+    (PostgresNumMultirangeType(), "NUMMULTIRANGE"),
+    (PostgresTsMultirangeType(), "TSMULTIRANGE"),
+    (PostgresTsTzMultirangeType(), "TSTZMULTIRANGE"),
+    (PostgresDateMultirangeType(), "DATEMULTIRANGE"),
+    (PostgresOIDType(), "OID"),
+    (PostgresRegClassType(), "REGCLASS"),
+    (PostgresRegTypeType(), "REGTYPE"),
+    (PostgresXIDType(), "XID"),
+    (PostgresXID8Type(), "XID8"),
+    (PostgresCIDType(), "CID"),
+    (PostgresTIDType(), "TID"),
+    (PostgresPgLSNType(), "PG_LSN"),
+    (PostgresHstoreType(), "HSTORE"),
+    (PostgresGeometryType(), "GEOMETRY"),
+    (PostgresGeographyType(), "GEOGRAPHY"),
+    (PostgresVectorType(dim=384), "VECTOR(384)"),
+    (PostgresHalfvecType(dim=128), "HALFVEC(128)"),
+    (PostgresSparsevecType(dim=16), "SPARSEVEC(16)"),
+    (PostgresCitextType(), "CITEXT"),
+    (PostgresCubeType(), "CUBE"),
+    (PostgresLtreeType(), "LTREE"),
+    (PostgresRasterType(), "RASTER"),
+    (VarCharType(spelling="character varying"), "CHARACTER VARYING"),
+    (VarCharType(length=100, spelling="character varying"),
+     "CHARACTER VARYING(100)"),
+]
+
+
+@pytest.mark.parametrize("data_type,expected", FORMAT_CASES)
+def test_format_postgres_specific_types(dialect, data_type, expected):
+    sql, params = dialect.format_data_type(data_type)
+    assert sql == expected
+    assert params == ()
+
+
+# ---------------------------------------------------------------------------
+# format_data_type — core types with PostgreSQL specialisation
+# ---------------------------------------------------------------------------
+
+CORE_FORMAT_CASES = [
+    (TinyIntType(), "SMALLINT"),
+    (SmallIntType(), "SMALLINT"),
+    (IntegerType(), "INTEGER"),
+    (IntegerType(spelling="int"), "INT"),
+    (IntegerType(), "INTEGER"),
+    (BigIntType(), "BIGINT"),
+    (FloatType(), "REAL"),
+    (FloatType(precision=8), "FLOAT(8)"),
+    (RealType(), "REAL"),
+    (DoubleType(), "DOUBLE PRECISION"),
+    (DecimalType(), "DECIMAL"),
+    (DecimalType(precision=10), "DECIMAL(10)"),
+    (DecimalType(precision=10, scale=2), "DECIMAL(10,2)"),
+    (CharType(), "CHAR"),
+    (CharType(length=5), "CHAR(5)"),
+    (VarCharType(), "VARCHAR"),
+    (VarCharType(length=50), "VARCHAR(50)"),
+    (TextType(), "TEXT"),
+    (BooleanType(), "BOOLEAN"),
+    (BlobType(), "BYTEA"),
+    (DateType(), "DATE"),
+    (TimeType(), "TIME"),
+    (TimeType(precision=6), "TIME(6)"),
+    (TimeTzType(), "TIME WITH TIME ZONE"),
+    (TimeTzType(precision=6), "TIME(6) WITH TIME ZONE"),
+    (DateTimeType(), "TIMESTAMP"),
+    (TimestampType(), "TIMESTAMP"),
+    (TimestampType(precision=3), "TIMESTAMP(3)"),
+    (TimestampTzType(), "TIMESTAMP WITH TIME ZONE"),
+    (TimestampTzType(precision=3), "TIMESTAMP(3) WITH TIME ZONE"),
+    (IntervalType(), "INTERVAL"),
+    (IntervalType(fields="DAY TO SECOND"), "INTERVAL DAY TO SECOND"),
+    (JsonType(), "JSON"),
+    (JsonBType(), "JSONB"),
+]
+
+
+@pytest.mark.parametrize("data_type,expected", CORE_FORMAT_CASES)
+def test_format_core_types(dialect, data_type, expected):
+    sql, params = dialect.format_data_type(data_type)
+    assert sql == expected
+    assert params == ()
+
+
+def test_format_array_type(dialect):
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=1))
+    assert sql == "INTEGER[]"
+
+    sql, _ = dialect.format_data_type(ArrayType(element_type=VarCharType(length=10), dimensions=3))
+    assert sql == "VARCHAR(10)[][][]"
+
+
+def test_format_array_type_multidimensional(dialect):
+    sql, _ = dialect.format_data_type(ArrayType(element_type=IntegerType(), dimensions=2))
+    assert sql == "INTEGER[][]"
+
+
+def test_format_array_type_with_postgres_element(dialect):
+    sql, _ = dialect.format_data_type(ArrayType(element_type=UUIDType(), dimensions=1))
+    assert sql == "UUID[]"
+
+
+def test_format_array_type_with_custom_element(dialect):
+    sql, _ = dialect.format_data_type(ArrayType(element_type=CustomType(raw="X"), dimensions=1))
+    assert sql == "X[]"
+
+
+def test_format_custom_type_passthrough(dialect):
+    sql, _ = dialect.format_data_type(CustomType(raw="X"))
+    assert sql == "X"
+
+
+# ---------------------------------------------------------------------------
+# parse_type — round-trip families
+# ---------------------------------------------------------------------------
+
+PARSE_CASES = [
+    ("SMALLINT", SmallIntType, {}),
+    ("INT2", SmallIntType, {}),
+    ("INT", IntegerType, {}),
+    ("INTEGER", IntegerType, {}),
+    ("INT4", IntegerType, {}),
+    ("BIGINT", BigIntType, {}),
+    ("INT8", BigIntType, {}),
+    ("SMALLSERIAL", PostgresSmallSerialType, {}),
+    ("SERIAL2", PostgresSmallSerialType, {}),
+    ("SERIAL", PostgresSerialType, {}),
+    ("SERIAL4", PostgresSerialType, {}),
+    ("BIGSERIAL", PostgresBigSerialType, {}),
+    ("SERIAL8", PostgresBigSerialType, {}),
+    ("REAL", RealType, {}),
+    ("FLOAT4", RealType, {}),
+    ("DOUBLE", DoubleType, {}),
+    ("DOUBLE PRECISION", DoubleType, {}),
+    ("FLOAT", FloatType, {}),
+    ("FLOAT(8)", FloatType, {"precision": 8}),
+    ("DECIMAL", DecimalType, {}),
+    ("NUMERIC", DecimalType, {}),
+    ("DECIMAL(10)", DecimalType, {"precision": 10}),
+    ("DECIMAL(10,2)", DecimalType, {"precision": 10, "scale": 2}),
+    ("NUMERIC(12,4)", DecimalType, {"precision": 12, "scale": 4}),
+    ("CHAR", CharType, {}),
+    ("CHAR(5)", CharType, {"length": 5}),
+    ("CHARACTER", CharType, {}),
+    ("CHARACTER(5)", CharType, {"length": 5}),
+    ("VARCHAR", VarCharType, {}),
+    ("VARCHAR(50)", VarCharType, {"length": 50}),
+    ("CHARACTER VARYING", VarCharType, {}),
+    ("CHARACTER VARYING(100)", VarCharType, {"length": 100}),
+    ("TEXT", TextType, {}),
+    ("BYTEA", BlobType, {}),
+    ("BLOB", BlobType, {}),
+    ("DATE", DateType, {}),
+    ("DATETIME", DateTimeType, {}),
+    ("TIMESTAMP", TimestampType, {}),
+    ("TIMESTAMP(3)", TimestampType, {"precision": 3}),
+    ("TIMESTAMPTZ", TimestampTzType, {}),
+    ("TIMESTAMP(3) WITH TIME ZONE", TimestampTzType, {"precision": 3}),
+    ("TIME", TimeType, {}),
+    ("TIME(6)", TimeType, {"precision": 6}),
+    ("TIMETZ", TimeTzType, {}),
+    ("TIME(6) WITH TIME ZONE", TimeTzType, {"precision": 6}),
+    ("INTERVAL", IntervalType, {}),
+    ("INTERVAL DAY TO SECOND", IntervalType, {"fields": "DAY TO SECOND"}),
+    ("JSON", JsonType, {}),
+    ("JSONB", JsonBType, {}),
+    ("JSONPATH", PostgresJsonPathType, {}),
+    ("UUID", UUIDType, {}),
+    ("BOOLEAN", BooleanType, {}),
+    ("BOOL", BooleanType, {}),
+    ("BIT", PostgresBitType, {}),
+    ("BIT(8)", PostgresBitType, {"n": 8}),
+    ("VARBIT", PostgresVarBitType, {}),
+    ("VARBIT(16)", PostgresVarBitType, {"n": 16}),
+    # ``bit varying`` is the spelling live ``pg_catalog.format_type`` returns
+    # for a varbit column (report appendix F1); it must answer the same class
+    # as the renderer's ``VARBIT`` word, not the fixed-length ``BIT`` one.
+    ("BIT VARYING", PostgresVarBitType, {}),
+    ("BIT VARYING(16)", PostgresVarBitType, {"n": 16}),
+    ("INET", PostgresInetType, {}),
+    ("CIDR", PostgresCidrType, {}),
+    ("MACADDR", PostgresMacAddrType, {}),
+    ("MACADDR8", PostgresMacAddr8Type, {}),
+    ("POINT", PostgresPointType, {}),
+    ("LINE", PostgresLineType, {}),
+    ("LSEG", PostgresLineSegmentType, {}),
+    ("BOX", PostgresBoxType, {}),
+    ("PATH", PostgresPathType, {}),
+    ("POLYGON", PostgresPolygonType, {}),
+    ("CIRCLE", PostgresCircleType, {}),
+    ("INT4RANGE", PostgresInt4RangeType, {}),
+    ("INT8RANGE", PostgresInt8RangeType, {}),
+    ("NUMRANGE", PostgresNumRangeType, {}),
+    ("TSRANGE", PostgresTsRangeType, {}),
+    ("TSTZRANGE", PostgresTsTzRangeType, {}),
+    ("DATERANGE", PostgresDateRangeType, {}),
+    ("INT4MULTIRANGE", PostgresInt4MultirangeType, {}),
+    ("INT8MULTIRANGE", PostgresInt8MultirangeType, {}),
+    ("NUMMULTIRANGE", PostgresNumMultirangeType, {}),
+    ("TSMULTIRANGE", PostgresTsMultirangeType, {}),
+    ("TSTZMULTIRANGE", PostgresTsTzMultirangeType, {}),
+    ("DATEMULTIRANGE", PostgresDateMultirangeType, {}),
+    ("OID", PostgresOIDType, {}),
+    ("REGCLASS", PostgresRegClassType, {}),
+    ("REGTYPE", PostgresRegTypeType, {}),
+    ("XID", PostgresXIDType, {}),
+    ("XID8", PostgresXID8Type, {}),
+    ("CID", PostgresCIDType, {}),
+    ("TID", PostgresTIDType, {}),
+    ("TSVECTOR", PostgresTSVectorType, {}),
+    ("TSQUERY", PostgresTSQueryType, {}),
+    ("MONEY", PostgresMoneyType, {}),
+    ("XML", XmlType, {}),
+    ("PG_LSN", PostgresPgLSNType, {}),
+    ("HSTORE", PostgresHstoreType, {}),
+    ("GEOGRAPHY", PostgresGeographyType, {}),
+    ("GEOMETRY", PostgresGeometryType, {}),
+    ("VECTOR", PostgresVectorType, {"dim": 0}),
+    ("VECTOR(768)", PostgresVectorType, {"dim": 768}),
+    ("HALFVEC", PostgresHalfvecType, {"dim": 0}),
+    ("HALFVEC(128)", PostgresHalfvecType, {"dim": 128}),
+    ("SPARSEVEC", PostgresSparsevecType, {"dim": 0}),
+    ("SPARSEVEC(16)", PostgresSparsevecType, {"dim": 16}),
+]
+
+
+@pytest.mark.parametrize("raw,expected_cls,expected_attrs", PARSE_CASES)
+def test_parse_type(dialect, raw, expected_cls, expected_attrs):
+    result = dialect.parse_type(raw)
+    assert type(result) is expected_cls
+    for attr, value in expected_attrs.items():
+        assert getattr(result, attr) == value
+
+
+def test_parse_type_array_bracket_suffix(dialect):
+    result = dialect.parse_type("INTEGER[]")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is IntegerType
+    assert result.dimensions == 1
+
+
+def test_parse_type_array_multidimensional_brackets(dialect):
+    result = dialect.parse_type("INTEGER[][]")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is IntegerType
+
+
+def test_parse_type_array_with_dimension_bracket(dialect):
+    result = dialect.parse_type("VARCHAR(10)[3]")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is VarCharType
+    assert result.element_type.length == 10
+
+
+def test_parse_type_malformed_bracket_suffix_is_rejected(dialect):
+    """A malformed array marker is refused, not quietly dropped.
+
+    Falling back to CustomType would put "FOO[abc]" into the statement as-is,
+    and the type position cannot take a bound parameter -- so a name that does
+    not parse is a name that has to be reported rather than passed through."""
+    from rhosocial.activerecord.backend.expression.type_name import (
+        InvalidTypeNameError,
+    )
+
+    with pytest.raises(InvalidTypeNameError):
+        dialect.parse_type("FOO[abc]")
+
+
+def test_parse_type_array_keyword(dialect):
+    result = dialect.parse_type("INTEGER ARRAY")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is IntegerType
+
+
+def test_parse_type_array_keyword_with_dimension(dialect):
+    result = dialect.parse_type("INTEGER ARRAY[3]")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is IntegerType
+
+
+def test_parse_type_array_nested_element(dialect):
+    result = dialect.parse_type("UUID[]")
+    assert type(result) is PostgresArrayType
+    assert type(result.element_type) is UUIDType
+
+
+def test_parse_type_unknown_falls_back_to_custom(dialect):
+    result = dialect.parse_type("FOOBARBAZ")
+    assert type(result) is CustomType
+    assert result.raw == "FOOBARBAZ"
+
+
+def test_parse_type_case_insensitive(dialect):
+    result = dialect.parse_type("  varchar(25)  ")
+    assert type(result) is VarCharType
+    assert result.length == 25
+
+
+def test_parse_vector_requires_extension(dialect):
+    """parse_type must reject pgvector types when the extension is not installed."""
+    from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
+        PostgresExtensionInfo,
+    )
+    dialect._extensions = {
+        "vector": PostgresExtensionInfo(name="vector", installed=False, available=True)
+    }
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("VECTOR(3)")
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("HALFVEC(3)")
+    with pytest.raises(RuntimeError, match="vector.*extension"):
+        dialect.parse_type("SPARSEVEC(3)")
+
+
+def test_parse_vector_allowed_when_extension_installed(dialect):
+    from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
+        PostgresExtensionInfo,
+    )
+    dialect._extensions = {
+        "vector": PostgresExtensionInfo(name="vector", installed=True)
+    }
+    assert type(dialect.parse_type("VECTOR(3)")) is PostgresVectorType
+    assert type(dialect.parse_type("HALFVEC(3)")) is PostgresHalfvecType
+    assert type(dialect.parse_type("SPARSEVEC(3)")) is PostgresSparsevecType
+
+
+def test_vector_types_equality_and_hash():
+    assert PostgresVectorType(dim=3) == PostgresVectorType(dim=3)
+    assert PostgresVectorType(dim=3) != PostgresVectorType(dim=4)
+    assert PostgresVectorType(dim=3) != PostgresHalfvecType(dim=3)
+    assert PostgresVectorType(dim=3) != object()
+    assert hash(PostgresVectorType(dim=3)) == hash(PostgresVectorType(dim=3))
+
+    assert PostgresHalfvecType(dim=3) == PostgresHalfvecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != PostgresHalfvecType(dim=4)
+    assert PostgresHalfvecType(dim=3) != PostgresSparsevecType(dim=3)
+    assert PostgresHalfvecType(dim=3) != object()
+    assert hash(PostgresHalfvecType(dim=3)) == hash(PostgresHalfvecType(dim=3))
+
+    assert PostgresSparsevecType(dim=5) == PostgresSparsevecType(dim=5)
+    assert PostgresSparsevecType(dim=5) != PostgresSparsevecType(dim=6)
+    assert PostgresSparsevecType(dim=5) != PostgresVectorType(dim=5)
+    assert PostgresSparsevecType(dim=5) != object()
+    assert hash(PostgresSparsevecType(dim=5)) == hash(PostgresSparsevecType(dim=5))
+
+
+# ---------------------------------------------------------------------------
+# supports_data_types
+# ---------------------------------------------------------------------------
+
+
+def test_supports_data_types_registers_all_postgres_types(dialect):
+    supported = dialect.supports_data_types()
+    assert isinstance(supported, dict)
+    assert len(supported) > 0
+    classes = set(supported.values())
+    for expected in (
+        PostgresSerialType,
+        PostgresVectorType,
+        PostgresTsRangeType,
+        ArrayType,
+        JsonBType,
+        IntegerType,
+    ):
+        assert expected in classes
+
+
+class TestVersionGatesAreNotEmpty:
+    """A gate with no lower bound is not a gate.
+
+    ``supports_data_type_x`` returning True unconditionally tells the dialect it
+    can render a type on any server, and the server disagrees at execution. That
+    is the expensive way to find out: the DDL is built, sent, and rejected.
+
+    These boundaries were measured against the scenario servers rather than
+    read off the release notes, because the release notes and the servers
+    disagreed about jsonpath -- the notes say 13, and 12 has it.
+    """
+
+    @pytest.mark.parametrize("version", [(9, 0, 0), (10, 0, 0), (11, 0, 0)])
+    def test_jsonpath_is_refused_below_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is False
+
+    @pytest.mark.parametrize("version", [(12, 0, 0), (13, 0, 0), (14, 0, 0)])
+    def test_jsonpath_is_available_from_12(self, version):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=version)
+        assert dialect.supports_data_type_postgres_jsonpath() is True
+
+    @pytest.mark.parametrize(
+        "name", ["postgres_int4multirange", "postgres_int8multirange",
+                 "postgres_nummultirange", "postgres_datemultirange",
+                 "postgres_tsmultirange", "postgres_tstzmultirange"],
+    )
+    def test_multiranges_need_14(self, name):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(11, 0, 0), (12, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is False, (
+                name, version)
+        dialect = PostgresDialect(version=(14, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is True
+
+    @pytest.mark.parametrize(
+        "name", ["text", "varchar", "boolean", "integer", "bigint",
+                 "postgres_int4range", "postgres_int8range"],
+    )
+    def test_base_types_are_unconditionally_available(self, name):
+        """The distinction that matters: most of these gates are True on
+        purpose, because the type has existed since before the oldest server
+        this backend supports. They are not a to-do list."""
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        for version in [(9, 0, 0), (13, 0, 0)]:
+            dialect = PostgresDialect(version=version)
+            assert getattr(dialect, f"supports_data_type_{name}")() is True, (
+                name, version)
+
+
+#: Every version boundary this backend gates on, and the server it was read
+#: off. Recorded so the next empty gate is a deliberate omission rather than an
+#: oversight -- four of these were found by CI, one at a time: jsonpath (12),
+#: xid8 (13), the multiranges (14) and macaddr8 (10).
+KNOWN_VERSIONED_TYPES = {
+    "postgres_macaddr8": (10, 0, 0),
+    "postgres_jsonpath": (12, 0, 0),
+    "postgres_xid8": (13, 0, 0),
+    "postgres_int4multirange": (14, 0, 0),
+    "postgres_int8multirange": (14, 0, 0),
+    "postgres_nummultirange": (14, 0, 0),
+    "postgres_datemultirange": (14, 0, 0),
+    "postgres_tsmultirange": (14, 0, 0),
+    "postgres_tstzmultirange": (14, 0, 0),
+}
+
+
+class TestEveryVersionedTypeIsGated:
+    """A gate that says yes to a server that says no costs a round trip.
+
+    Each of these was an unconditional True. The dialect rendered the type, the
+    DDL went out, and the server answered "type X does not exist" -- so the
+    failure arrived at execution, naming a table rather than the version gap
+    that caused it.
+    """
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_refused_below_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        below = floor[0] - 1
+        dialect = PostgresDialect(version=(below, 0, 0))
+        assert getattr(dialect, f"supports_data_type_{name}")() is False, name
+
+    @pytest.mark.parametrize("name,floor", sorted(KNOWN_VERSIONED_TYPES.items()))
+    def test_available_from_the_floor(self, name, floor):
+        from rhosocial.activerecord.backend.impl.postgres.dialect import (
+            PostgresDialect,
+        )
+
+        dialect = PostgresDialect(version=floor)
+        assert getattr(dialect, f"supports_data_type_{name}")() is True, name
+
+    def test_no_unconditional_gate_left_on_a_versioned_type(self):
+        """A versioned type must not answer yes unconditionally.
+
+        The reverse is fine and common: text, integer and varchar have been in
+        PostgreSQL since before the oldest server this backend supports, so
+        their gates say yes on purpose. What must not happen is the opposite --
+        a type that arrived later carrying a gate that cannot say no. That is
+        the whole of what went wrong here four times.
+        """
+        import inspect
+
+        from rhosocial.activerecord.backend.impl.postgres.mixins.types import (
+            PostgresTypeFormatSupportMixin,
+        )
+
+        unconditional = set()
+        for attr in dir(PostgresTypeFormatSupportMixin):
+            if not attr.startswith("supports_data_type_"):
+                continue
+            fn = getattr(PostgresTypeFormatSupportMixin, attr)
+            try:
+                body = inspect.getsource(fn)
+            except (OSError, TypeError):  # pragma: no cover
+                continue
+            if "return True" in body and "version" not in body:
+                unconditional.add(attr[len("supports_data_type_"):])
+        # The versioned ones must not be in that set.
+        assert not (unconditional & set(KNOWN_VERSIONED_TYPES)), (
+            unconditional & set(KNOWN_VERSIONED_TYPES))

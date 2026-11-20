@@ -145,6 +145,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     ILIKESupport,
     IntrospectionSupport,
     TransactionControlSupport,
+    TransactionalDDLSupport,
     SQLFunctionSupport,
     DDLTypeSupport,
 )
@@ -170,6 +171,7 @@ from .mixins import (
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
     PostgresColumnTypeMixin,
+    PostgresDataTypeSuggestionsMixin,
     # Per-feature mixins
     PostgresCTEMixin,
     PostgresWindowMixin,
@@ -263,6 +265,7 @@ from .mixins import (
     PostgresExpressionMixin,
     PostgresFunctionMixin,
     PostgresLiteralValueMixin,
+    PostgresIntegerAutoIncrementColumnSuggestionMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -367,6 +370,8 @@ from .protocols import (
 
 
 class PostgresDialect(
+    # Backend suggestion first: no core mixin may shadow its answer.
+    PostgresIntegerAutoIncrementColumnSuggestionMixin,
     # The bases below come in bundles: a backend mixin, then the core bundle
     # it stands in for. The backend's answer has to come first -- a mixin
     # placed after the class it overrides never wins -- so a new mixin goes
@@ -522,6 +527,9 @@ class PostgresDialect(
     PostgresVacuumMixin,
     PostgresCopyMixin,
     PostgresQueryOptimizationMixin,
+    # Suggested data types: the DDL half of the same answer. Ahead of the
+    # mixin that withholds the table, so this dialect's answers win.
+    PostgresDataTypeSuggestionsMixin,
     PostgresDataTypeMixin,
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
@@ -668,6 +676,7 @@ class PostgresDialect(
     IntrospectionSupport,
     # Transaction control protocol
     TransactionControlSupport,
+    TransactionalDDLSupport,
     # PostgreSQL-specific protocols
     PostgresExtensionSupport,
     PostgresMaterializedViewSupport,
@@ -860,6 +869,27 @@ class PostgresDialect(
     def get_server_version(self) -> Tuple[int, int, int]:
         """Return the PostgreSQL version this dialect is configured for."""
         return self.version
+
+    def supports_transactional_ddl(self) -> bool:
+        """PostgreSQL DDL participates in transactions."""
+        return True
+
+    def supports_database_assigned_integer_column(self) -> bool:
+        """Whether an integer column's value comes from the database.
+
+        ``True``: SERIAL is a pseudo-type whose backing sequence supplies the
+        value, and its observable behaviour is the one a declaration asks
+        about -- omit the value on INSERT, the database supplies it, and the
+        row can return it. The spelling is not ``AUTO_INCREMENT``
+        (``supports_auto_increment_column`` stays ``False``), which is why the
+        capability and the mechanism are separate questions.
+
+        Not guaranteed: the MySQL counter behaviour. Inserting an explicit
+        value larger than the sequence's current one raises MySQL's counter to
+        ``max + 1``; a SERIAL column leaves its sequence untouched, so a later
+        generated value may collide.
+        """
+        return True
 
     def supports_table_function(self) -> bool:
         """PostgreSQL reads a set-returning function as a row source.

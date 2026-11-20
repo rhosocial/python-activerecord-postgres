@@ -1,13 +1,53 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py
 import re
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements.ddl_table import ColumnPrimaryKeyConstraint, IdentityClause
+from rhosocial.activerecord.backend.expression.statements.ddl_table import ColumnPrimaryKeyConstraint
+from rhosocial.activerecord.backend.expression.types import (
+    BigIntType,
+    IntegerType,
+    SmallIntType,
+)
+
+#: An auto-increment column is a SERIAL pseudo-type, not a clause.
+#:
+#: PostgreSQL spells "the database assigns this integer" as a *type* whose
+#: backing sequence does the work. SERIAL has existed far longer than the
+#: SQL-standard identity clause, and its observable behaviour -- an omitted
+#: value is supplied and returned -- is what the declaration asks for, so it
+#: is the one spelling this dialect uses. The mapping covers exactly the three
+#: integer widths SERIAL has; anything else is refused rather than approximated.
+SERIAL_TYPES: Dict[type, str] = {
+    SmallIntType: "SMALLSERIAL",
+    IntegerType: "SERIAL",
+    BigIntType: "BIGSERIAL",
+}
 
 
 class PostgresTableMixin:
     """PostgreSQL table extended features implementation."""
+
+    def _serial_type_sql(self, data_type: Any) -> str:
+        """The SERIAL pseudo-type for an auto-increment integer column.
+
+        Refuses a column outside the three widths SERIAL has rather than
+        approximating one: an auto-increment text column has no PostgreSQL
+        spelling, and silently choosing a type would decide for the caller.
+        """
+        for core_type, spelling in SERIAL_TYPES.items():
+            if isinstance(data_type, core_type):
+                return spelling
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
+        raise UnsupportedFeatureError(
+            self.name,
+            "AUTO_INCREMENT column",
+            "SERIAL covers smallint, integer and bigint; "
+            f"{type(data_type).__name__} is none of them",
+        )
 
     def supports_if_not_exists_table(self) -> bool:
         """CREATE TABLE IF NOT EXISTS is supported since PostgreSQL 9.5+."""
@@ -215,27 +255,7 @@ class PostgresTableMixin:
         attr_sql, attr_params = self.format_column_attributes(col_def)
         col_sql += attr_sql
         all_params.extend(attr_params)
-        auto_identity_added = False
         for constraint in col_def.constraints:
-            if (
-                not auto_identity_added
-                and isinstance(constraint.branch, ColumnPrimaryKeyConstraint)
-                and constraint.branch.is_auto_increment
-            ):
-                # An auto-increment constraint on PostgreSQL is the standard
-                # identity clause in its default generation mode. Routing it
-                # through the gated formatter keeps the version boundary in
-                # one place: PostgreSQL 9 refuses here instead of rendering
-                # a GENERATED clause its server rejects, and no silent
-                # fallback to SERIAL is attempted. The flag lives on the
-                # PRIMARY KEY branch since the two-level split, so it is read
-                # there rather than probed off the clause.
-                identity_sql, identity_params = self.format_identity_clause(
-                    IdentityClause(self, "BY DEFAULT")
-                )
-                col_sql += identity_sql
-                all_params.extend(identity_params)
-                auto_identity_added = True
             suffix, params = self.format_column_constraint(constraint)
             col_sql += suffix
             all_params.extend(params)

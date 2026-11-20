@@ -95,7 +95,9 @@ class PostgresGeometryAdapter:
 
         raise TypeError(f"Cannot convert {type(value).__name__} to geometric type")
 
-    def from_database(self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None) -> Any:
+    def from_database(
+        self, value: Any, target_type: Type, options: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> Any:
         """Convert PostgreSQL geometric value to Python object.
 
         Args:
