@@ -459,12 +459,12 @@ jobs:
           fail_ci_if_error: false
 
   test-postgres-19:
-    name: Python 3.14 / postgres 19rc1
+    name: Python 3.14 / postgres 19
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:19rc1
+        image: postgres:19
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
