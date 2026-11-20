@@ -4,7 +4,7 @@
 
 > **示例：** "PostgreSQL 后端如何处理 JSONB 数据类型？与普通 JSON 有什么优势？"
 
-> 📖 **详细用法请参考**：[AI 辅助开发指南](introduction/ai_assistance.md)
+> 📖 **详细用法请参考**：[AI 辅助开发指南](https://github.com/rhosocial/python-activerecord/blob/main/docs/en_US/introduction/ai_assistance.md)
 
 ## 目录 (Table of Contents)
 
@@ -53,7 +53,7 @@
 9. **[场景实战 (Scenarios)](scenarios/README.md)**
     *   **[并行 Worker 处理](scenarios/parallel_workers.md)**: 多进程/异步并发场景的正确用法
 
-10. **[Worker 隔离实验](examples/chapter_05_worker_isolation/README.md)**
-    *   **[Worker 连接隔离实验](examples/chapter_05_worker_isolation/README.md)**: Worker 进程隔离实验
+10. **[Worker 隔离实验](../examples/chapter_05_worker_isolation/README.md)**
+    *   **[Worker 连接隔离实验](../examples/chapter_05_worker_isolation/README.md)**: Worker 进程隔离实验
 
 > 📖 **核心库文档**：要了解 ActiveRecord 框架的完整功能，请参考 [rhosocial-activerecord 文档](https://github.com/Rhosocial/python-activerecord/tree/main/docs/zh_CN)。
