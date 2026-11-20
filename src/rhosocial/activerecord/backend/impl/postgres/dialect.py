@@ -266,6 +266,7 @@ from .mixins import (
     PostgresFunctionMixin,
     PostgresLiteralValueMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
+    PostgresPartitionSuggestionMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -370,7 +371,8 @@ from .protocols import (
 
 
 class PostgresDialect(
-    # Backend suggestion first: no core mixin may shadow its answer.
+    # Backend suggestions first: no core mixin may shadow their answers.
+    PostgresPartitionSuggestionMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
     # The bases below come in bundles: a backend mixin, then the core bundle
     # it stands in for. The backend's answer has to come first -- a mixin

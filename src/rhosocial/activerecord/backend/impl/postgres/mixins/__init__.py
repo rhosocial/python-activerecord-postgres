@@ -12,6 +12,7 @@ This package organizes PostgreSQL-specific mixins by category:
 """
 
 from .integer_auto_increment_column_suggestion import PostgresIntegerAutoIncrementColumnSuggestionMixin
+from .partition_suggestion import PostgresPartitionSuggestionMixin
 from .object_name import PostgresObjectNameMixin
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
@@ -139,6 +140,7 @@ from .introspection import PostgresIntrospectionCapabilityMixin
 
 __all__ = [
     'PostgresIntegerAutoIncrementColumnSuggestionMixin',
+    'PostgresPartitionSuggestionMixin',
     # Core mixins
     "PostgresObjectNameMixin",
     "PostgresExtensionMixin",
