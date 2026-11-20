@@ -63,17 +63,22 @@ parent on `tenant_bucket` and RANGE children on `created_at`, the parent key is
 `(id, tenant_bucket, created_at)`; PostgreSQL rejects a child that is itself
 partitioned when the inherited key omits `created_at`.
 
-## Partition Maintenance
+## Partition Plans, Suggestions and Introspection
 
-`PostgresPartitionPlan` describes the tree without naming individual
-partitions; `PostgresPartitionMaintenance` (and its async twin) reconciles it
-with the catalog. The module is owner-agnostic: table names and retention
+`PostgresPartitionPlan` describes a tree as data -- parent, partition keys,
+policies and naming -- without hard-coding individual partition names. The
+plan grammar (`partition/plan.py` and `partition/bounds.py`) derives bounds and
+labels. There is no backend maintenance executor: the "how" of every operation
+comes from the backend suggestion protocols on `PostgresDialect`, and the SQL
+spelling comes from the DDL expression classes. Live tree state comes from the
+introspection layer. The plan is owner-agnostic: table names and retention
 decisions stay with the application.
 
 ```python
 from datetime import datetime, timezone
+from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
 from rhosocial.activerecord.backend.impl.postgres.partition import (
-    HashBranch, PostgresPartitionMaintenance, PostgresPartitionPlan, RangePolicy,
+    HashBranch, PostgresPartitionPlan, RangePolicy,
 )
 
 start = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -91,22 +96,20 @@ plan = PostgresPartitionPlan(
     ),
 )
 
-maintenance = PostgresPartitionMaintenance(backend)
-report = maintenance.ensure(plan)                  # idempotent gap filling
-report.missing                                     # (parent, child) pairs
-maintenance.list(plan).orphans                     # catalog-only partitions
-maintenance.validate(plan).issues                  # gaps / overlaps / mismatches
-maintenance.drop_before(plan, cutoff, dry_run=True)# per-branch retention
+specs = tuple(plan.iter_specs())                   # derived branch/leaf specs
+build = dialect.suggest_partition_build(PartitionStrategy.RANGE, plan)
+adds = dialect.suggest_partition_add(PartitionStrategy.HASH, plan)
+retention = dialect.suggest_partition_retention(PartitionStrategy.RANGE, plan)
 ```
 
-* `ensure` creates only missing partitions. PostgreSQL DDL is transactional, so
-  each unit (one branch with its leaves, or all leaves of a flat plan) commits
-  independently.
-* `list` reads `pg_inherits`/`pg_class` recursively and keeps the server's
-  bound text verbatim.
-* `drop_before` only drops true leaves; a branch that is itself partitioned is
-  never cascaded. It defaults to `dry_run=True`.
-* `drop_branch(plan, plan.branches[0])` is the explicit whole-branch removal.
+* `iter_specs()` materializes the tree into concrete specs; each spec carries
+  the parent, method, bounds and level needed to render DDL.
+* `suggest_partition_build` / `suggest_partition_add` / `suggest_partition_drop`
+  and the other suggestion protocols return DDL expression nodes; execute the
+  nodes the same way as any other backend expression.
+* `backend.list_partitions("logs")` (introspection) reads `pg_inherits` /
+  `pg_class` recursively and returns `PostgresPartitionInfo` rows with the
+  server's bound text kept verbatim.
 * A flat plan (`policy=RangePolicy(...)` with no `branches`) produces the
   single-level shape used by monthly log tables.
 

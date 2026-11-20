@@ -65,16 +65,19 @@ leaf = PostgresCreatePartitionStatement(
 `created_at` RANGE，父表主键应为 `(id, tenant_bucket, created_at)`；当继承的
 唯一键缺少 `created_at` 时，PostgreSQL 会拒绝“本身又分区”的一级子表。
 
-## 分区维护
+## 分区计划、建议与内省
 
-`PostgresPartitionPlan` 只描述树（父表、分区键、分支策略、命名），不写死具体
-分区名；`PostgresPartitionMaintenance`（及其异步版本）把它与目录状态对齐。
-模块不绑定任何业务表名或保留策略，这些仍由应用决定。
+`PostgresPartitionPlan` 只把树描述为数据（父表、分区键、策略、命名），不写死具体
+分区名。边界与标签由计划语法（`partition/plan.py` 与 `partition/bounds.py`）推导。
+后端不再有分区维护执行器：所有操作的“怎么做”由 `PostgresDialect` 上的后端建议
+协议提供，SQL 拼写由 DDL 表达式类负责；线上树状态由内省层提供。计划不绑定任何
+业务表名或保留策略，这些仍由应用决定。
 
 ```python
 from datetime import datetime, timezone
+from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
 from rhosocial.activerecord.backend.impl.postgres.partition import (
-    HashBranch, PostgresPartitionMaintenance, PostgresPartitionPlan, RangePolicy,
+    HashBranch, PostgresPartitionPlan, RangePolicy,
 )
 
 start = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -92,20 +95,18 @@ plan = PostgresPartitionPlan(
     ),
 )
 
-maintenance = PostgresPartitionMaintenance(backend)
-report = maintenance.ensure(plan)                   # 幂等补建缺失分区
-report.missing                                      # (父表, 缺失分区) 列表
-maintenance.list(plan).orphans                      # 计划外的分区
-maintenance.validate(plan).issues                   # 缺口 / 重叠 / 策略不符
-maintenance.drop_before(plan, cutoff, dry_run=True) # 按分支策略回收
+specs = tuple(plan.iter_specs())                   # 推导出的分支/叶子 spec
+build = dialect.suggest_partition_build(PartitionStrategy.RANGE, plan)
+adds = dialect.suggest_partition_add(PartitionStrategy.HASH, plan)
+retention = dialect.suggest_partition_retention(PartitionStrategy.RANGE, plan)
 ```
 
-* `ensure` 只补建缺失项；PostgreSQL 的 DDL 是事务性的，每个单元（一个一级
-  分支及其叶子，或单层计划的全部叶子）独立提交。
-* `list` 递归读取 `pg_inherits` / `pg_class`，并原样保留服务器给出的 bound 文本。
-* `drop_before` 只删除真正的叶子；自身已分区的一级分支不会被级联删除，默认
-  `dry_run=True`。
-* `drop_branch(plan, plan.branches[0])` 是删除整个一级分支的显式操作。
+* `iter_specs()` 把树展开为具体 spec；每个 spec 携带渲染 DDL 所需的父表、
+  方法、边界与层级。
+* `suggest_partition_build` / `suggest_partition_add` / `suggest_partition_drop`
+  及其它建议协议返回 DDL 表达式节点，按普通后端表达式的方式执行即可。
+* `backend.list_partitions("logs")`（内省）递归读取 `pg_inherits` / `pg_class`，
+  返回 `PostgresPartitionInfo` 行，并原样保留服务器给出的 bound 文本。
 * 单层计划（只给 `policy=RangePolicy(...)`、不给 `branches`）生成按月日志表
   所需的扁平形态。
 

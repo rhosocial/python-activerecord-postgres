@@ -2,9 +2,8 @@
 """PostgreSQL's partition lifecycle suggestions.
 
 This mixin is the single "how" source for the eight partition backend-suggestion
-protocols. Every answer is assembled from the backend's own expression classes
-(the same ones the maintenance executor renders), so a caller can retire the
-maintenance protocol without losing the PostgreSQL spelling of any operation.
+protocols. Every answer is assembled from the backend's own DDL expression
+classes, so the PostgreSQL spelling of each operation lives in one place.
 No SQL text is composed here: the returned nodes' formatters own the spelling.
 
 It is installed first in :class:`PostgresDialect` bases so no core mixin can

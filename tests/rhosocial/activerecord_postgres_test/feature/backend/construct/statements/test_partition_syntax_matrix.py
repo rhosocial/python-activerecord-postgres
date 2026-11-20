@@ -3,34 +3,26 @@
 
 Each test consumes ``partition_syntax_case`` from
 ``partition_syntax_fixtures.py``. The matrix proves plan generation, spec
-shape, DDL rendering, retention selection and protocol conformance without a
-PostgreSQL server: a dialect plus a scripted catalog is enough.
+shape, DDL rendering and protocol conformance without a PostgreSQL server:
+a dialect plus the plan's own specs is enough.
 
 The only statement-only row is ``attach_detach``; every other row is
 plan-driven and is checked against its declared expected specs rather than
 against names written inside the test.
 """
 
-from datetime import datetime
-
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.statements import PartitionClause
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
     PostgresAttachPartitionStatement,
-)
-from rhosocial.activerecord.backend.impl.postgres.partition import (
-    PostgresPartitionMaintenance,
+    PostgresCreatePartitionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.protocols.ddl.partition import (
     PostgresPartitionSupport,
-)
-from rhosocial.activerecord.backend.partition import (
-    PartitionEnsurer,
-    PartitionInventory,
-    PartitionRetention,
-    PartitionValidator,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.statements.partition_syntax_fixtures import (  # noqa: F401  (fixture re-export)
     PartitionSyntaxCase,
@@ -51,104 +43,37 @@ _METHOD_FRAGMENTS = {
 }
 
 
-class _FakeTransaction:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        return False
-
-
-class _FakeBackend:
-    """Scripted backend: a fixed catalog plus DDL capture."""
-
-    def __init__(self, rows):
-        self.dialect = PostgresDialect(version=(17, 0, 0))
-        self.rows = list(rows)
-        self.executed = []
-
-    def fetch_all(self, sql, params=None):
-        return list(self.rows)
-
-    def execute(self, sql, params=None):
-        self.executed.append((sql, tuple(params or ())))
-
-    def transaction(self):
-        return _FakeTransaction()
-
-
-def _format_bound_value(value):
-    if isinstance(value, datetime):
-        return value.isoformat(sep=" ")
-    return str(value)
-
-
-def _bound_text(bounds):
-    if "modulus" in bounds:
-        return "FOR VALUES WITH (MODULUS %d, REMAINDER %d)" % (
-            bounds["modulus"], bounds["remainder"],
-        )
-    if "values" in bounds:
-        values = ", ".join("'%s'" % value for value in bounds["values"])
-        return "FOR VALUES IN (%s)" % values
-    return "FOR VALUES FROM ('%s') TO ('%s')" % (
-        _format_bound_value(bounds["from"]),
-        _format_bound_value(bounds["to"]),
-    )
-
-
-def _catalog_rows(case: PartitionSyntaxCase):
-    """Build the catalog a live server would return for the fixture facts."""
-    plan = case.plan
-    if plan is None:
-        return []
-    root_key = "%s (%s)" % (plan.method, ", ".join(plan.columns))
-    rows = [{
-        "name": plan.parent,
-        "parent": None,
-        "level": 0,
-        "schema_name": "public",
-        "partition_key": root_key,
-        "bound": None,
-        "row_count": 0,
-        "total_bytes": 0,
-        "is_partitioned": True,
-    }]
-    for fact in case.expected_specs:
-        partition_key = None
-        if fact.child_method is not None:
-            partition_key = "%s (%s)" % (
-                fact.child_method, ", ".join(fact.child_columns),
-            )
-        rows.append({
-            "name": fact.name,
-            "parent": fact.parent,
-            "level": fact.level,
-            "schema_name": "public",
-            "partition_key": partition_key,
-            "bound": _bound_text(fact.bounds),
-            "row_count": 0,
-            "total_bytes": 0,
-            "is_partitioned": fact.child_method is not None,
-        })
-    return rows
-
-
 def _plan_ddl(case: PartitionSyntaxCase, if_not_exists=True):
     """Render the plan's actual specs, keyed by partition name."""
-    maintenance = PostgresPartitionMaintenance(_FakeBackend([]))
-    return {
-        spec.name: maintenance._create_statement(case.plan, spec, if_not_exists)[0]
-        for spec in case.plan.iter_specs()
-    }
+    dialect = PostgresDialect(version=(17, 0, 0))
+
+    def render(spec):
+        clause = None
+        if spec.child_method is not None:
+            clause = PartitionClause(
+                dialect,
+                spec.child_method,
+                [Column(dialect, name) for name in spec.child_columns],
+            )
+        statement = PostgresCreatePartitionStatement(
+            dialect=dialect,
+            partition_name=spec.name,
+            parent_table=spec.parent,
+            partition_type=spec.method,
+            partition_values=dict(spec.bounds),
+            schema=case.plan.schema,
+            parent_schema=case.plan.schema,
+            if_not_exists=if_not_exists,
+            partition_clause=clause,
+        )
+        return statement.to_sql()[0]
+
+    return {spec.name: render(spec) for spec in case.plan.iter_specs()}
 
 
 def _clause_sql(case: PartitionSyntaxCase):
     dialect = PostgresDialect(version=(17, 0, 0))
-    return [
-        statement.build(dialect).to_sql()
-        for statement in case.clause.statements
-    ]
+    return [statement.build(dialect).to_sql() for statement in case.clause.statements]
 
 
 def _rendered_sql(case: PartitionSyntaxCase):
@@ -164,9 +89,7 @@ def test_plan_specs_match_fixture_facts(partition_syntax_case):
 
     actual = tuple(case.plan.iter_specs())
     assert len(actual) == len(case.expected_specs)
-    assert [spec.name for spec in actual] == [
-        fact.name for fact in case.expected_specs
-    ]
+    assert [spec.name for spec in actual] == [fact.name for fact in case.expected_specs]
 
     for spec, fact in zip(actual, case.expected_specs):
         assert spec.name == fact.name
@@ -187,10 +110,7 @@ def test_branch_leaf_counts_and_shape(partition_syntax_case):
     actual = tuple(case.plan.iter_specs())
     for branch_name, expected_count in case.branch_leaf_counts:
         branch = next(spec for spec in actual if spec.name == branch_name)
-        leaves = [
-            spec for spec in actual
-            if spec.parent == branch_name and spec.level == 2
-        ]
+        leaves = [spec for spec in actual if spec.parent == branch_name and spec.level == 2]
         assert branch.level == 1
         assert len(leaves) == expected_count
         if expected_count:
@@ -227,33 +147,14 @@ def test_ddl_required_and_forbidden_fragments(partition_syntax_case):
         assert fragment not in rendered
 
 
-def test_drop_before_candidate_selection(partition_syntax_case):
-    case = partition_syntax_case
-    if case.drop_before is None:
-        pytest.skip("case has no range leaves or no retention expectation")
-
-    backend = _FakeBackend(_catalog_rows(case))
-    maintenance = PostgresPartitionMaintenance(backend)
-    report = maintenance.drop_before(
-        case.plan, case.drop_before.cutoff, dry_run=True,
-    )
-
-    assert report.dry_run is True
-    assert [op.name for op in report.operations] == list(case.drop_before.candidates)
-    assert backend.executed == []
-
-    facts = {fact.name: fact for fact in case.expected_specs}
-    for operation in report.operations:
-        assert facts[operation.name].is_leaf is True
-
-
 def test_clause_statements_render(partition_syntax_case):
     case = partition_syntax_case
     if case.clause is None:
         pytest.skip("plan-driven case has no standalone clause statements")
 
     for statement, (sql, params) in zip(
-        case.clause.statements, _clause_sql(case),
+        case.clause.statements,
+        _clause_sql(case),
     ):
         assert sql == statement.expected_sql
         assert params == ()
@@ -274,7 +175,6 @@ def test_clause_statements_render(partition_syntax_case):
 
 
 def test_protocol_conformance(partition_syntax_case):
-    case = partition_syntax_case
     dialect = PostgresDialect(version=(17, 0, 0))
     assert isinstance(dialect, PostgresPartitionSupport)
     assert dialect.supports_table_partitioning()
@@ -289,9 +189,3 @@ def test_protocol_conformance(partition_syntax_case):
     assert expected_detach is True
     assert dialect.supports_concurrent_attach() is False
     assert dialect.supports_reorganize_partition() is False
-
-    executor = PostgresPartitionMaintenance(_FakeBackend(_catalog_rows(case)))
-    assert isinstance(executor, PartitionInventory)
-    assert isinstance(executor, PartitionEnsurer)
-    assert isinstance(executor, PartitionRetention)
-    assert isinstance(executor, PartitionValidator)
