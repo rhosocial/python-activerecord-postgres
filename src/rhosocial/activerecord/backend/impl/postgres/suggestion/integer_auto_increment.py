@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/mixins/integer_auto_increment_column_suggestion.py
+# src/rhosocial/activerecord/backend/impl/postgres/suggestion/integer_auto_increment.py
 """PostgresIntegerAutoIncrementColumnSuggestionMixin -- postgres's integer auto-increment column suggestion.
 
 The answer is the backend's own spelling, assembled from its capability
@@ -9,7 +9,7 @@ formatter owns the SQL spelling.
 
 from typing import TYPE_CHECKING
 
-from ....expression.statements import IntegerAutoIncrementColumnSuggestion
+from rhosocial.activerecord.backend.suggestion import IntegerAutoIncrementColumnSuggestion
 
 if TYPE_CHECKING:  # pragma: no cover
     from ....expression.types._base import DataType

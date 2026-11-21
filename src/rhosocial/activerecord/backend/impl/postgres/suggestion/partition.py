@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/mixins/partition_suggestion.py
+# src/rhosocial/activerecord/backend/impl/postgres/suggestion/partition.py
 """PostgreSQL's partition lifecycle suggestions.
 
 This mixin is the single "how" source for the eight partition backend-suggestion
@@ -16,17 +16,18 @@ strategy or plan cannot yield a concrete mechanism.
 from datetime import date, datetime
 from typing import Any, Optional, Tuple
 
-from ....expression.statements import (
+from rhosocial.activerecord.backend.suggestion import (
     PartitionAddSuggestion,
     PartitionBuildSuggestion,
     PartitionDropSuggestion,
     PartitionMergeSuggestion,
     PartitionRetentionSuggestion,
     PartitionSplitSuggestion,
-    PartitionStrategy,
     PartitionTableAlterSuggestion,
     PartitionTableDropSuggestion,
 )
+
+from ....expression.statements import PartitionStrategy
 
 __all__ = ["PostgresPartitionSuggestionMixin"]
 

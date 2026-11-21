@@ -15,7 +15,7 @@ them answered: ``datetime.timedelta`` names ``IntervalColumn``, and the six
 complex families -- geometry, vector, bit string, range, multirange and MAC
 address -- name the core classes, which promise only the surface every column
 has. The DDL half of the six families is answered separately, in
-``data_type_suggestions.py``: this backend spells ``GEOMETRY`` / ``VARBIT`` /
+``suggestion/data_types.py``: this backend spells ``GEOMETRY`` / ``VARBIT`` /
 ``MACADDR`` for three of them and refuses the three whose parameters a bare
 annotation does not carry. A column class and a storage entry answer
 separately, and neither one's answer implies the other's.
@@ -234,7 +234,7 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     # similarity operation is spelled the same way on every backend. The
     # PostgreSQL operations live on backend-named subclasses (PostGIS is an
     # extension, not the core server), which is where the richer spelling
-    # belongs. The storage stays answered in `data_type_suggestions.py`.
+    # belongs. The storage stays answered in `suggestion/data_types.py`.
     Geometry: GeometryColumn,
     Vector: VectorColumn,
     BitString: BitStringColumn,

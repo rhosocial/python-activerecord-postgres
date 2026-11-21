@@ -11,8 +11,6 @@ This package organizes PostgreSQL-specific mixins by category:
 - extensions: Extension mixins (pgvector, postgis, hstore, etc.)
 """
 
-from .integer_auto_increment_column_suggestion import PostgresIntegerAutoIncrementColumnSuggestionMixin
-from .partition_suggestion import PostgresPartitionSuggestionMixin
 from .object_name import PostgresObjectNameMixin
 from .extension import PostgresExtensionMixin
 from .materialized_view import PostgresMaterializedViewMixin
@@ -100,7 +98,6 @@ from .extensions.address_standardizer import PostgresAddressStandardizerMixin
 from .query_optimization import PostgresQueryOptimizationMixin
 from .data_type import PostgresDataTypeMixin
 from .column_type import PostgresColumnTypeMixin
-from .data_type_suggestions import PostgresDataTypeSuggestionsMixin
 from .logical_replication import PostgresLogicalReplicationMixin
 from .parallel_query import PostgresParallelQueryMixin
 from .property_graph_query import PostgresPropertyGraphQueryMixin
@@ -139,8 +136,6 @@ from .show import PostgresShowMixin
 from .introspection import PostgresIntrospectionCapabilityMixin
 
 __all__ = [
-    'PostgresIntegerAutoIncrementColumnSuggestionMixin',
-    'PostgresPartitionSuggestionMixin',
     # Core mixins
     "PostgresObjectNameMixin",
     "PostgresExtensionMixin",
@@ -224,7 +219,6 @@ __all__ = [
     "PostgresQueryOptimizationMixin",
     "PostgresDataTypeMixin",
     "PostgresColumnTypeMixin",
-    "PostgresDataTypeSuggestionsMixin",
     "PostgresLogicalReplicationMixin",
     "PostgresParallelQueryMixin",
     "PostgresPropertyGraphQueryMixin",

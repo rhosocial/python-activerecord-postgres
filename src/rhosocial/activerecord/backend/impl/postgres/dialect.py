@@ -171,7 +171,6 @@ from .mixins import (
     PostgresLogicalReplicationMixin,
     PostgresParallelQueryMixin,
     PostgresColumnTypeMixin,
-    PostgresDataTypeSuggestionsMixin,
     # Per-feature mixins
     PostgresCTEMixin,
     PostgresWindowMixin,
@@ -265,6 +264,9 @@ from .mixins import (
     PostgresExpressionMixin,
     PostgresFunctionMixin,
     PostgresLiteralValueMixin,
+)
+from .suggestion import (
+    PostgresDataTypeSuggestionsMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
     PostgresPartitionSuggestionMixin,
 )

@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/mixins/data_type_suggestions.py
+# src/rhosocial/activerecord/backend/impl/postgres/suggestion/data_types.py
 """PostgreSQL's **suggested data types**: what a bare field is declared as here.
 
 The DDL half of the type answer, separate from :mod:`.column_type` for the

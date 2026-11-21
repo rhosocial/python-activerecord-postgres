@@ -18,16 +18,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     PartitionTableAlterSuggestionSupport,
     PartitionTableDropSuggestionSupport,
 )
-from rhosocial.activerecord.backend.expression import (
-    PartitionAddSuggestion,
-    PartitionBuildSuggestion,
-    PartitionDropSuggestion,
-    PartitionMergeSuggestion,
-    PartitionRetentionSuggestion,
-    PartitionSplitSuggestion,
-    PartitionTableAlterSuggestion,
-    PartitionTableDropSuggestion,
-)
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -47,6 +37,16 @@ from rhosocial.activerecord.backend.impl.postgres.partition import (
     ListPolicy,
     PostgresPartitionPlan,
     RangePolicy,
+)
+from rhosocial.activerecord.backend.suggestion import (
+    PartitionAddSuggestion,
+    PartitionBuildSuggestion,
+    PartitionDropSuggestion,
+    PartitionMergeSuggestion,
+    PartitionRetentionSuggestion,
+    PartitionSplitSuggestion,
+    PartitionTableAlterSuggestion,
+    PartitionTableDropSuggestion,
 )
 
 CASES = [
