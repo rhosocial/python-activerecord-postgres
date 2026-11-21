@@ -1,53 +1,126 @@
 # Advanced Indexing
 
-## B-Tree Index (Default)
+All indexes below are built with expression objects — no hand-written `CREATE INDEX`
+strings. The access method is selected with `PostgresIndexType`, a `(str, Enum)` whose
+members are the literal words PostgreSQL writes after `USING`. The node still stores a
+string, so the SQL and the cross-language artifact are unchanged; an unknown word is
+refused at construction or rendering instead of reaching the server.
 
-Standard B-Tree indexes work for equality and range queries:
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
 
-```sql
-CREATE INDEX idx_users_name ON users(name);
-CREATE INDEX idx_users_email ON users(email);
+dialect.get_supported_index_types()            # native: BTREE HASH GIST GIN SPGIST BRIN
+dialect.get_supported_extension_index_types()  # HNSW IVFFLAT BLOOM
 ```
 
-## GIN Index (Generalized Inverted Index)
+## B-Tree Index (default)
 
-Ideal for arrays and JSONB:
+Equality, ordering and range scans:
 
-```sql
--- For array columns
-CREATE INDEX idx_articles_tags ON articles USING GIN(tags);
+```python
+from rhosocial.activerecord.backend.expression import CreateIndexStatement
+from rhosocial.activerecord.backend.expression.objects import Index, Table
 
--- For JSONB columns
-CREATE INDEX idx_products_attributes ON products USING GIN(attributes);
+CreateIndexStatement(
+    dialect,
+    index=Index(dialect, "idx_orders_customer_created"),
+    table=Table(dialect, "orders"),
+    columns=["customer_id", "created_at"],
+    index_type=PostgresIndexType.BTREE,
+)
 ```
 
-## GiST Index (Generalized Search Tree)
+## Operator classes
 
-Useful for range types and full-text search:
+An operator class can be attached to a named column, **or to a functional index
+column** via `expression_opclasses` (nodes are unhashable, so this is a list of
+`(node, opclass)` pairs rather than a dict):
 
-```sql
--- For range types
-CREATE INDEX idx_bookings_date_range ON bookings USING GIST(date_range);
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresCreateIndexExpression
 
--- For full-text search
-CREATE INDEX idx_articles_content ON articles USING GIST(to_tsvector('english', content));
+PostgresCreateIndexExpression(
+    dialect,
+    index=Index(dialect, "idx_orders_tags"),
+    table=Table(dialect, "orders"),
+    columns=["tags"],
+    index_type=PostgresIndexType.GIN,
+    opclasses={"tags": "array_ops"},
+)
 ```
 
-## BRIN Index (Block Range Index)
+## GIN Index
 
-Efficient for large tables with sorted data:
+For arrays and whole JSONB documents:
 
-```sql
--- For timestamp columns with sequential data
-CREATE INDEX idx_logs_created_at ON logs USING BRIN(created_at);
+```python
+CreateIndexStatement(
+    dialect,
+    index=Index(dialect, "idx_events_payload"),
+    table=Table(dialect, "events"),
+    columns=["payload"],
+    index_type=PostgresIndexType.GIN,
+)
 ```
 
-## Partial Indexes
+## JSONB key indexes
 
-Index only rows meeting conditions:
+Three shapes are worth distinguishing. PostgreSQL accepts all three; the backend
+provides a helper for the two most common ones:
 
-```sql
-CREATE INDEX idx_active_users ON users(email) WHERE active = true;
+```python
+from rhosocial.activerecord.backend.impl.postgres.functions import create_jsonb_index
+
+# Containment on a sub-document: GIN + jsonb_path_ops
+create_jsonb_index(dialect, "events", "$.sku")
+
+# Exact lookup / ordering on a scalar key: text B-tree (->>)
+create_jsonb_index(dialect, "events", "$.user.id", as_text=True)
 ```
 
-💡 *AI Prompt:* "When should I choose GIN over GiST for JSONB indexing?"
+The path is inlined as an escaped literal because PostgreSQL rejects a bind parameter
+inside an index expression. Use `json_extract(..., inline_path=True)` when building the
+expression manually. `ARROW` mode renders a proper key chain
+(`data->'profile'->>'name'`) and takes no parameters, so it is also safe for DDL.
+
+## GiST / SP-GiST / BRIN
+
+```python
+CreateIndexStatement(..., index_type=PostgresIndexType.GIST)    # ranges, full-text
+CreateIndexStatement(..., index_type=PostgresIndexType.SPGIST)  # partitioned data
+CreateIndexStatement(..., index_type=PostgresIndexType.BRIN)    # huge ordered tables
+```
+
+## Partial and unique indexes
+
+```python
+from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+
+CreateIndexStatement(
+    dialect,
+    index=Index(dialect, "idx_orders_unpaid"),
+    table=Table(dialect, "orders"),
+    columns=["customer_id"],
+    where=ComparisonPredicate(
+        dialect, "=", Column(dialect, "status"), Literal(dialect, "unpaid", inline=True)
+    ),
+)
+```
+
+The partial-index value is inlined for the same reason as JSON paths: DDL cannot bind
+parameters.
+
+## Extension access methods
+
+Methods supplied by extensions share the same enum and are validated before rendering:
+
+| Extension | Method | Operator class | Example |
+|---|---|---|---|
+| pgvector | `HNSW`, `IVFFLAT` | `vector_cosine_ops`, `vector_l2_ops`, `vector_ip_ops` | `examples/indexes/pgvector_indexes.py` |
+| PostGIS | `GIST`, `SPGIST`, `BRIN` | — | `examples/indexes/postgis_indexes.py` |
+| pg_trgm | `GIN`, `GIST` | `gin_trgm_ops` / `gist_trgm_ops` | `examples/indexes/pg_trgm_indexes.py` |
+
+See the [plugin guides](../plugins/README.md) for extension-specific setup.
+
+💡 *AI Prompt:* "When should I choose a key-level GIN index over a text B-tree index for a JSONB key?"

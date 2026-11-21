@@ -75,13 +75,25 @@ ORDER BY similarity(name, 'John') DESC;
 
 ## Index Support
 
-```sql
--- GiST index
-CREATE INDEX idx_users_name_trgm ON users USING GIST(name gist_trgm_ops);
+The operator class is chosen from the access method — `gin_trgm_ops` for GIN,
+`gist_trgm_ops` for GiST. The helper makes the pairing impossible to get wrong:
 
--- GIN index
-CREATE INDEX idx_users_name_trgm ON users USING GIN(name gin_trgm_ops);
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+
+gin_sql, gin_params = dialect.format_trgm_index_statement(
+    "idx_users_name_gin", "users", "name",
+    index_type=PostgresIndexType.GIN.value,
+)
+gist_sql, gist_params = dialect.format_trgm_index_statement(
+    "idx_users_name_gist", "users", "name",
+    index_type=PostgresIndexType.GIST.value,
+)
+
+backend.execute(gin_sql, gin_params)
 ```
+
+A full runnable scenario is in `examples/indexes/pg_trgm_indexes.py`.
 
 ## Notes
 

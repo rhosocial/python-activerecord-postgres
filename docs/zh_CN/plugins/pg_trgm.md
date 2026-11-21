@@ -75,13 +75,25 @@ ORDER BY similarity(name, 'John') DESC;
 
 ## 索引支持
 
-```sql
--- GiST 索引
-CREATE INDEX idx_users_name_trgm ON users USING GIST(name gist_trgm_ops);
+操作符类由访问方法决定——GIN 用 `gin_trgm_ops`，GiST 用 `gist_trgm_ops`。
+helper 把这对关系固定下来，不会再配错：
 
--- GIN 索引
-CREATE INDEX idx_users_name_trgm ON users USING GIN(name gin_trgm_ops);
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+
+gin_sql, gin_params = dialect.format_trgm_index_statement(
+    "idx_users_name_gin", "users", "name",
+    index_type=PostgresIndexType.GIN.value,
+)
+gist_sql, gist_params = dialect.format_trgm_index_statement(
+    "idx_users_name_gist", "users", "name",
+    index_type=PostgresIndexType.GIST.value,
+)
+
+backend.execute(gin_sql, gin_params)
 ```
+
+完整可运行场景见 `examples/indexes/pg_trgm_indexes.py`。
 
 ## 注意事项
 

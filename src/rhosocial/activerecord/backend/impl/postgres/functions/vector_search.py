@@ -161,8 +161,10 @@ def vector_search(
                 stacklevel=2,
             )
         else:
+            # Wrap the distance: otherwise "1 - embedding <=> query" parses as
+            # "(1 - embedding) <=> query" because <=> binds looser than -.
             similarity = ArithmeticOperation(
-                dialect, "sub", Literal(dialect, 1), distance_expr
+                dialect, "sub", Literal(dialect, 1), Subquery(dialect, distance_expr)
             )
             select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
 

@@ -39,6 +39,8 @@ class TestVectorSearch:
         assert "SELECT \"content\", \"tenant\"" in sql
         assert 'AS "cosine_distance"' in sql
         assert 'AS "cosine_similarity"' in sql
+        # 1 - distance must parenthesize the distance operator.
+        assert '- ("embedding" <=>' in sql
         assert "LIMIT %s" in sql and params[-1] == 3
 
     def test_where_filter(self, postgres_dialect):
