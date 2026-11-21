@@ -15,7 +15,7 @@ from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl import PostgresCreateIndexExpression
+from ...expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
 
 
 class PostgresPgvectorMixin:
@@ -70,7 +70,13 @@ class PostgresPgvectorMixin:
         full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
         )
 
-        if index_type.lower() == "hnsw":
+        method = PostgresIndexType.normalize(index_type).value
+        if method not in ("hnsw", "ivfflat"):
+            raise ValueError(
+                f"pgvector index_type must be 'hnsw' or 'ivfflat', got {index_type!r}"
+            )
+
+        if method == "hnsw":
             with_clauses = []
             if m is not None:
                 with_clauses.append(f"m = {m}")

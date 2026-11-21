@@ -95,6 +95,10 @@ class PostgresIndexSupport(
         """
         ...  # pragma: no cover
 
+    def get_supported_extension_index_types(self) -> List[str]:
+        """Return ``USING`` methods supplied by extensions, not core PG."""
+        ...  # pragma: no cover
+
     def get_supported_index_types(self) -> List[str]:
         """Return every index access method this dialect accepts in ``USING``.
 

@@ -14,6 +14,8 @@ from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
 
+from ...expression.ddl import PostgresIndexType
+
 
 class PostgresPgTrgmMixin:
     """pg_trgm trigram functionality implementation."""
@@ -43,7 +45,7 @@ class PostgresPgTrgmMixin:
         """
         full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
         )
-        access_method = index_type.lower()
+        access_method = PostgresIndexType.normalize(index_type).value
         if access_method not in ("gin", "gist"):
             raise ValueError(
                 f"pg_trgm index_type must be 'gin' or 'gist', got {index_type!r}"

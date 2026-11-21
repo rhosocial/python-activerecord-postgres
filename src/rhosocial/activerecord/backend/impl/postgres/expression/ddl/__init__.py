@@ -91,6 +91,7 @@ from .index_definition import (
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
 )
+from .index_type import PostgresIndexType
 from .exclude_constraint import PostgresExcludeConstraint
 from .constraint import PostgresAlterConstraintAction
 from .statistics import (
@@ -228,6 +229,7 @@ __all__ = [
     "PostgresPartitionMetadataQueryStatement",
     "PostgresPartitionTreeQueryStatement",
     # index
+    "PostgresIndexType",
     "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
     "PostgresReindexStatement",

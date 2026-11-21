@@ -46,6 +46,9 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index_definition import (
     PostgresCreateIndexExpression,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index_type import (
+    PostgresIndexType,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -209,7 +212,7 @@ def create_vector_index(
         inserting rows when using ``index_type='ivfflat'``.
     """
     _validate_metric(metric)
-    index_type_l = index_type.lower()
+    index_type_l = PostgresIndexType.normalize(index_type).value
     if index_type_l not in ("hnsw", "ivfflat"):
         raise ValueError(f"Unsupported vector index type '{index_type}'; "
                          "expected 'hnsw' or 'ivfflat'")

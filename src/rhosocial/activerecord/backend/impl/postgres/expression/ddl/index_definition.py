@@ -25,6 +25,8 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import IndexDefinition
 
+from .index_type import PostgresIndexType
+
 
 class PostgresCreateIndexExpression(CreateIndexStatement):
     """A PostgreSQL ``CREATE INDEX`` statement extending the generic one.
@@ -71,6 +73,12 @@ class PostgresCreateIndexExpression(CreateIndexStatement):
             tablespace=tablespace,
             concurrent=concurrent,
         )
+        # Keep the caller's string spelling (the artifact and the SQL are
+        # byte-identical with it) but refuse a word that is not an access
+        # method this backend can render.
+        self.index_type = (
+            PostgresIndexType.coerce(index_type) if index_type else None
+        )
         self.opclasses = opclasses or {}
         self.nulls_not_distinct = nulls_not_distinct
         self.with_options = with_options or {}
@@ -111,6 +119,7 @@ class PostgresIndexDefinition(IndexDefinition):
             partial_condition=partial_condition,
             include_columns=include_columns,
         )
+        self.type = PostgresIndexType.coerce(type) if type else None
         self.opclasses = opclasses or {}
         self.nulls_not_distinct = nulls_not_distinct
         self.with_options = with_options or {}

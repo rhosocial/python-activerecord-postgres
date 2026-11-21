@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl import PostgresCreateIndexExpression
+from ...expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
 
 if TYPE_CHECKING:  # pragma: no cover
     from ...expression.ddl import (
@@ -200,8 +200,12 @@ class PostgresIndexMixin:
         return self.version_at_least((11, 0, 0))
 
     def get_supported_index_types(self) -> List[str]:
-        """Return all index access methods supported by PostgreSQL."""
+        """Return the native index access methods supported by PostgreSQL."""
         return ["BTREE", "HASH", "GIST", "GIN", "SPGIST", "BRIN"]
+
+    def get_supported_extension_index_types(self) -> List[str]:
+        """Return ``USING`` methods supplied by extensions rather than core PG."""
+        return ["HNSW", "IVFFLAT", "BLOOM"]
 
     # =========================================================================
     # Fulltext search — PostgreSQL uses tsvector/tsquery
@@ -411,7 +415,10 @@ class PostgresIndexMixin:
         parts.append(expr.table.to_sql()[0])
 
         if expr.index_type:
-            parts.append(f"USING {expr.index_type}")
+            # The typed postgres nodes already coerce at construction; a
+            # generic CreateIndexStatement handed here still has to obey the
+            # same closed vocabulary instead of interpolating raw text.
+            parts.append(f"USING {PostgresIndexType.coerce(expr.index_type)}")
 
         # Columns with optional operator classes. The PostgreSQL-only fields
         # exist only on the PostgreSQL subclass; the core node has no such
@@ -743,11 +750,12 @@ class PostgresIndexMixin:
             self.format_table_object(Table(self, table_name, schema_name=schema))[0]
         )
 
-        # Index type
-        index_type = index_type.lower()
-        valid_types = ("btree", "hash", "gist", "gin", "spgist", "brin")
-        if index_type not in valid_types:
-            raise ValueError(f"Invalid index_type: {index_type}. Must be one of {valid_types}")
+        # Index type. This helper has always rendered lowercase, so keep that
+        # spelling while taking the closed vocabulary from the shared enum.
+        try:
+            index_type = PostgresIndexType.normalize(index_type).value
+        except ValueError as exc:
+            raise ValueError(f"Invalid index_type: {index_type}. {exc}") from None
         parts.append(f"USING {index_type}")
 
         # Columns

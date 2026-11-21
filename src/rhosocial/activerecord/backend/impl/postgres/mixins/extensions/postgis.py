@@ -14,7 +14,7 @@ from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl import PostgresCreateIndexExpression
+from ...expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
 
 
 class PostgresPostGISMixin:
@@ -59,7 +59,7 @@ class PostgresPostGISMixin:
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        method = index_type.lower()
+        method = PostgresIndexType.normalize(index_type).value
         if method not in ("gist", "spgist", "brin"):
             raise ValueError(
                 f"PostGIS index_type must be 'gist', 'spgist' or 'brin', "
