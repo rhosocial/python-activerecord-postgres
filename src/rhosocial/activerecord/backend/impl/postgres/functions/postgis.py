@@ -416,7 +416,43 @@ def st_centroid(
     return core.FunctionCall(dialect, "ST_Centroid", geom)
 
 
+def spatial_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str,
+    *,
+    index_type: str = "gist",
+    schema: str = None,
+):
+    """Build a PostGIS spatial index expression.
+
+    PostGIS accepts GiST, SP-GiST and BRIN; the access method is validated
+    against :class:`PostgresIndexType`. The returned node renders through the
+    dialect's single ``format_create_index_statement`` formatter.
+    """
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateIndexExpression,
+        PostgresIndexType,
+    )
+
+    method = PostgresIndexType.normalize(index_type).value
+    if method not in ("gist", "spgist", "brin"):
+        raise ValueError(
+            f"PostGIS index_type must be 'gist', 'spgist' or 'brin', got {index_type!r}"
+        )
+    return PostgresCreateIndexExpression(
+        dialect,
+        index=Index(dialect, index_name, schema_name=schema),
+        table=Table(dialect, table_name, schema_name=schema),
+        columns=list(columns),
+        index_type=method,
+    )
+
+
 __all__ = [
+    "spatial_index",
     # Construction
     "st_make_point",
     "st_geom_from_text",

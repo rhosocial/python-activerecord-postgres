@@ -1,14 +1,15 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/extensions/test_trgm_index.py
-"""Construction tests for pg_trgm index operator classes."""
+"""Trigram index factories return expression nodes, not raw SQL."""
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.functions import trgm_index
 
 
-class TestTrgmIndexOpclass:
+class TestTrgmIndexExpression:
     def test_gin_uses_gin_trgm_ops(self):
         d = PostgresDialect((15, 0, 0))
-        sql, params = d.format_trgm_index_statement("ix", "t", "name")
+        sql, params = trgm_index(d, "t", ["name"], "ix").to_sql()
         assert "USING gin" in sql
         assert "gin_trgm_ops" in sql
         assert "gist_trgm_ops" not in sql
@@ -16,9 +17,9 @@ class TestTrgmIndexOpclass:
 
     def test_gist_uses_gist_trgm_ops(self):
         d = PostgresDialect((15, 0, 0))
-        sql, params = d.format_trgm_index_statement(
-            "ix", "t", "name", index_type="gist"
-        )
+        sql, params = trgm_index(
+            d, "t", ["name"], "ix", index_type="gist"
+        ).to_sql()
         assert "USING gist" in sql
         assert "gist_trgm_ops" in sql
         assert "gin_trgm_ops" not in sql
@@ -27,4 +28,4 @@ class TestTrgmIndexOpclass:
     def test_unknown_access_method_refused(self):
         d = PostgresDialect((15, 0, 0))
         with pytest.raises(ValueError, match="gin.*gist"):
-            d.format_trgm_index_statement("ix", "t", "name", index_type="brin")
+            trgm_index(d, "t", ["name"], "ix", index_type="brin")

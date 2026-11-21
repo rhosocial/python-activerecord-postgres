@@ -1,54 +1,67 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/extensions/test_extension_indexes.py
-"""Extension index helpers render through the expression system."""
+"""Extension index factories return expression nodes with one-to-one formatters."""
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Literal
 from rhosocial.activerecord.backend.expression.functions.aggregate import count
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.functions.vector_search import vector_search
+from rhosocial.activerecord.backend.impl.postgres.functions import (
+    btree_gin_index,
+    btree_gist_index,
+    intarray_index,
+    spatial_index,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.vector_search import (
+    create_vector_index,
+    vector_search,
+)
 
 
-class TestSpatialIndex:
+class TestSpatialIndexExpression:
     def test_default_gist(self):
         d = PostgresDialect((15, 0, 0))
-        sql, params = d.format_spatial_index_statement("ix", "t", "geom")
-        assert sql == 'CREATE INDEX "ix" ON "t" USING GIST ("geom")'
+        sql, params = spatial_index(d, "t", ["geom"], "ix").to_sql()
+        assert sql == 'CREATE INDEX "ix" ON "t" USING gist ("geom")'
         assert params == ()
 
     @pytest.mark.parametrize("method", ["spgist", "brin"])
     def test_other_access_methods(self, method):
         d = PostgresDialect((15, 0, 0))
-        sql, _ = d.format_spatial_index_statement(
-            "ix", "t", "geom", index_type=method
-        )
-        assert f"USING {method.upper()}" in sql
+        sql, _ = spatial_index(
+            d, "t", ["geom"], "ix", index_type=method
+        ).to_sql()
+        assert f"USING {method}" in sql
 
     def test_invalid_method(self):
         d = PostgresDialect((15, 0, 0))
         with pytest.raises(ValueError, match="spgist"):
-            d.format_spatial_index_statement("ix", "t", "geom", index_type="gin")
+            spatial_index(d, "t", ["geom"], "ix", index_type="gin")
 
 
 class TestOtherExtensionIndexes:
     def test_intarray(self):
         d = PostgresDialect((15, 0, 0))
-        sql = d.format_intarray_index_statement("t", "tags")
-        assert sql == 'CREATE INDEX "idx_t_tags" ON "t" USING GIN ("tags" gin__int_ops)'
+        sql = intarray_index(d, "t", ["tags"]).to_sql()[0]
+        assert sql == 'CREATE INDEX "idx_t_tags" ON "t" USING gin ("tags" gin__int_ops)'
 
     def test_btree_gin(self):
         d = PostgresDialect((15, 0, 0))
-        sql = d.format_gin_index("ix", "t", ["a", "b"])
-        assert sql == 'CREATE INDEX "ix" ON "t" USING GIN ("a", "b")'
+        sql = btree_gin_index(d, "t", ["a", "b"], "ix").to_sql()[0]
+        assert sql == 'CREATE INDEX "ix" ON "t" USING gin ("a", "b")'
 
     def test_btree_gist_with_include(self):
         d = PostgresDialect((15, 0, 0))
-        sql = d.format_gist_index("ix", "t", ["a"], include=["b"])
-        assert sql == 'CREATE INDEX "ix" ON "t" USING GIST ("a") INCLUDE ("b")'
+        sql = btree_gist_index(
+            d, "t", ["a"], "ix", include=["b"]
+        ).to_sql()[0]
+        assert sql == 'CREATE INDEX "ix" ON "t" USING gist ("a") INCLUDE ("b")'
 
     def test_hnsw(self):
         d = PostgresDialect((15, 0, 0))
-        sql = d.format_create_hnsw_index_statement("t", "v", m=16)
+        sql = create_vector_index(
+            d, "t", "v", index_type="hnsw", m=16
+        ).to_sql()[0]
         assert 'USING HNSW ("v" vector_cosine_ops)' in sql
         assert "WITH (m = 16)" in sql
 

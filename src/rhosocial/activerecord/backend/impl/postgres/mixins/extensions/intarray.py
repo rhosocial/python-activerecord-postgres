@@ -1,18 +1,9 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/intarray.py
-"""PostgreSQL intarray integer array functionality mixin.
+"""PostgreSQL intarray capability probes.
 
-This module provides functionality to check intarray extension features,
-including operators, functions, and index support.
-
-For SQL expression generation, use the function factories in
-``functions/intarray.py`` instead of the removed format_* methods.
+For SQL expression generation use ``functions/intarray.py``; for index DDL use
+``functions.intarray.intarray_index``, which returns an expression node.
 """
-
-from typing import Optional
-
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-
-from ...expression.ddl import PostgresCreateIndexExpression
 
 
 class PostgresIntarrayMixin:
@@ -29,34 +20,3 @@ class PostgresIntarrayMixin:
     def supports_intarray_index(self) -> bool:
         """Check if intarray supports index."""
         return self.check_extension_feature("intarray", "index")
-
-    def format_intarray_index_statement(
-        self, table_name: str, column_name: str, index_name: Optional[str] = None
-    ) -> str:
-        """Format CREATE INDEX statement with GIN intarray ops.
-
-        Args:
-            table_name: Table name
-            column_name: Integer array column name
-            index_name: Optional index name (auto-generated if None)
-
-        Returns:
-            SQL CREATE INDEX statement
-
-        Example:
-            >>> format_intarray_index_statement('documents', 'tags', 'idx_tags')
-            "CREATE INDEX idx_tags ON documents USING gin (tags gin__int_ops)"
-            >>> format_intarray_index_statement('documents', 'tags')
-            "CREATE INDEX idx_documents_tags ON documents USING gin (tags gin__int_ops)"
-        """
-        if index_name is None:
-            index_name = f"idx_{table_name}_{column_name}"
-        expr = PostgresCreateIndexExpression(
-            self,
-            index=Index(self, index_name),
-            table=Table(self, table_name),
-            columns=[column_name],
-            index_type="GIN",
-            opclasses={column_name: "gin__int_ops"},
-        )
-        return expr.to_sql()[0]

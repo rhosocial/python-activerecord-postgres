@@ -2,8 +2,8 @@
 """Spatial indexes for delivery zones — choose the access method on purpose.
 
 GiST is the default for geometry; SP-GiST suits partitioned point sets and BRIN
-suits very large, spatially clustered tables. All three are selected through
-the shared ``PostgresIndexType`` vocabulary.
+suits very large, spatially clustered tables. The factory returns an expression
+node; the dialect renders it through its one ``format_create_index_statement``.
 """
 
 # ============================================================
@@ -15,7 +15,6 @@ from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCreateExtensionStatement,
-    PostgresIndexType,
 )
 from rhosocial.activerecord.backend.expression import (
     ColumnConstraint,
@@ -43,33 +42,35 @@ dialect = backend.dialect
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
+from rhosocial.activerecord.backend.impl.postgres.functions import (  # noqa: E402
+    spatial_index,
+)
+
 if dialect.is_extension_available("postgis") and not dialect.is_extension_installed("postgis"):
     backend.execute(*PostgresCreateExtensionStatement(
         dialect=dialect, name="postgis"
     ).to_sql())
     backend.introspect_and_adapt()
 
+expressions = []
 if dialect.supports_postgis_spatial_index():
-    # The helper takes an index_type; the enum documents the allowed values.
-    statements = []
     for method, name in (
-        (PostgresIndexType.GIST, "idx_zones_geom_gist"),
-        (PostgresIndexType.SPGIST, "idx_zones_geom_spgist"),
-        (PostgresIndexType.BRIN, "idx_zones_geom_brin"),
+        ("gist", "idx_zones_geom_gist"),
+        ("spgist", "idx_zones_geom_spgist"),
+        ("brin", "idx_zones_geom_brin"),
     ):
-        sql, params = dialect.format_spatial_index_statement(
-            name, "delivery_zones", "geom", index_type=method.value
+        statement = spatial_index(
+            dialect, "delivery_zones", ["geom"], name, index_type=method
         )
-        print(f"SQL: {sql}")
-        statements.append((sql, params))
+        print(f"SQL: {statement.to_sql()[0]}")
+        expressions.append(statement)
 else:
-    statements = []
     print("PostGIS spatial index is not available on this server")
 
 # ============================================================
 # SECTION: Execution (run the expressions)
 # ============================================================
-if statements:
+if expressions:
     backend.execute(*DropTableStatement(
         dialect=dialect, table=Table(dialect, "delivery_zones"), if_exists=True
     ).to_sql())
@@ -83,8 +84,8 @@ if statements:
             ColumnDefinition(dialect, "geom", dialect.parse_type("GEOMETRY")),
         ],
     ).to_sql())
-    for sql, params in statements:
-        backend.execute(sql, params)
+    for statement in expressions:
+        backend.execute(*statement.to_sql())
 
 # ============================================================
 # SECTION: Teardown (necessary for execution, reference only)

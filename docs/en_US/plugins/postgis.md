@@ -117,13 +117,13 @@ GiST is the default; PostGIS also accepts SP-GiST and BRIN. Select the access
 method with `PostgresIndexType` — the helper rejects an unknown method:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+from rhosocial.activerecord.backend.impl.postgres.functions import spatial_index
 
-sql, params = dialect.format_spatial_index_statement(
-    "idx_locations_geom", "locations", "geom",
-    index_type=PostgresIndexType.GIST.value,   # or SPGIST / BRIN
+ix = spatial_index(
+    dialect, "locations", ["geom"], "idx_locations_geom",
+    index_type="gist",   # or "spgist" / "brin"
 )
-backend.execute(sql, params)
+backend.execute(*ix.to_sql())
 ```
 
 A full runnable scenario is in `examples/indexes/postgis_indexes.py`.

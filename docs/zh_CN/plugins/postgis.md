@@ -117,13 +117,13 @@ CREATE TABLE global_locations (
 helper 会拒绝未知方法：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+from rhosocial.activerecord.backend.impl.postgres.functions import spatial_index
 
-sql, params = dialect.format_spatial_index_statement(
-    "idx_locations_geom", "locations", "geom",
-    index_type=PostgresIndexType.GIST.value,   # 或 SPGIST / BRIN
+ix = spatial_index(
+    dialect, "locations", ["geom"], "idx_locations_geom",
+    index_type="gist",   # 或 "spgist" / "brin"
 )
-backend.execute(sql, params)
+backend.execute(*ix.to_sql())
 ```
 
 完整可运行场景见 `examples/indexes/postgis_indexes.py`。

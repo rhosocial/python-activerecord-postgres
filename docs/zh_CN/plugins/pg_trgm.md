@@ -79,18 +79,12 @@ ORDER BY similarity(name, 'John') DESC;
 helper 把这对关系固定下来，不会再配错：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+from rhosocial.activerecord.backend.impl.postgres.functions import trgm_index
 
-gin_sql, gin_params = dialect.format_trgm_index_statement(
-    "idx_users_name_gin", "users", "name",
-    index_type=PostgresIndexType.GIN.value,
-)
-gist_sql, gist_params = dialect.format_trgm_index_statement(
-    "idx_users_name_gist", "users", "name",
-    index_type=PostgresIndexType.GIST.value,
-)
+gin = trgm_index(dialect, "users", ["name"], "idx_users_name_gin", index_type="gin")
+gist = trgm_index(dialect, "users", ["name"], "idx_users_name_gist", index_type="gist")
 
-backend.execute(gin_sql, gin_params)
+backend.execute(*gin.to_sql())
 ```
 
 完整可运行场景见 `examples/indexes/pg_trgm_indexes.py`。

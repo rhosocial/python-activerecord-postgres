@@ -301,6 +301,7 @@ from .vector_search import (
 
 # PostGIS functions
 from .postgis import (
+    spatial_index,
     st_make_point,
     st_geom_from_text,
     st_geog_from_text,
@@ -357,7 +358,11 @@ from .pg_trgm import (
     word_similarity,
     show_trgm,
     similarity_operator,
+    trgm_index,
 )
+
+# btree_* index factories
+from .btree_indexes import btree_gin_index, btree_gist_index
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -389,6 +394,7 @@ from .intarray import (
     intarray_uniq,
     intarray_sort,
     intarray_operator,
+    intarray_index,
 )
 
 # cube functions
@@ -729,6 +735,11 @@ __all__ = [
     # pgvector similarity-search helpers
     "vector_search",
     "create_vector_index",
+    "trgm_index",
+    "spatial_index",
+    "intarray_index",
+    "btree_gin_index",
+    "btree_gist_index",
     # PostGIS functions - Construction
     "st_make_point",
     "st_geom_from_text",

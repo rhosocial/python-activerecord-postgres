@@ -2,9 +2,7 @@
 """
 Unit tests for PostgreSQL btree_gin extension mixin.
 
-Tests for PostgresBtreeGinMixin format methods:
-- format_gin_index
-- format_btree_gin_operator_class
+Tests for btree_gin index expression rendering (no scalar formatter methods).
 """
 
 from rhosocial.activerecord.backend.expression import CreateIndexStatement
@@ -19,7 +17,7 @@ class TestPostgresBtreeGinMixin:
         """Set up test fixtures."""
         self.dialect = PostgresDialect(version=(14, 0, 0))
 
-    def test_format_gin_index(self):
+    def test_gin_index_expression(self):
         """CreateIndexStatement with index_type gin should render a gin index."""
         expr = CreateIndexStatement(
             self.dialect,
@@ -34,7 +32,14 @@ class TestPostgresBtreeGinMixin:
         assert "table_name" in sql
         assert params == ()
 
-    def test_format_btree_gin_operator_class(self):
-        """format_btree_gin_operator_class should return operator class name."""
-        result = self.dialect.format_btree_gin_operator_class("int4")
-        assert result == "int4_ops"
+    def test_btree_gin_index_factory(self):
+        """The factory returns an expression node, not a raw SQL string."""
+        from rhosocial.activerecord.backend.impl.postgres.functions import (
+            btree_gin_index,
+        )
+
+        expr = btree_gin_index(self.dialect, "table_name", ["column"], "idx_name")
+        sql, params = expr.to_sql()
+        assert "USING gin" in sql
+        assert "idx_name" in sql
+        assert params == ()

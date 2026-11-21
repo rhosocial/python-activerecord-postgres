@@ -1,28 +1,17 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pgvector.py
+"""pgvector capability probes.
+
+Distance operators are built by ``functions/pgvector.py`` and index DDL by
+``functions.vector_search.create_vector_index``. Both return expression nodes
+whose rendering goes through the one-to-one formatter on the dialect.
 """
-PostgreSQL pgvector vector similarity search mixin.
-
-This module provides functionality to check pgvector extension features,
-including vector type, similarity search, and index types.
-
-For SQL expression generation, use the function factories in
-``functions/pgvector.py`` instead of the removed format_* methods.
-For DDL index creation, use ``format_create_vector_index_statement``
-or ``format_create_hnsw_index_statement``.
-"""
-
-from typing import Optional, Tuple
-
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-
-from ...expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
 
 
 class PostgresPgvectorMixin:
     """pgvector vector similarity search implementation."""
 
     def supports_pgvector_type(self) -> bool:
-        """Check if pgvector supports vector type."""
+        """Check if pgvector type is available."""
         return self.check_extension_feature("vector", "type")
 
     def supports_pgvector_similarity_search(self) -> bool:
@@ -36,102 +25,3 @@ class PostgresPgvectorMixin:
     def supports_pgvector_hnsw_index(self) -> bool:
         """Check if pgvector supports HNSW index (requires 0.5.0+)."""
         return self.check_extension_feature("vector", "hnsw_index")
-
-    def format_create_vector_index_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        column_name: str,
-        index_type: str = "hnsw",
-        m: Optional[int] = None,
-        ef_construction: Optional[int] = None,
-        lists: Optional[int] = None,
-        schema: Optional[str] = None,
-        opclass: str = "vector_cosine_ops",
-    ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for vector column.
-
-        Args:
-            index_name: Name of the index
-            table_name: Table name
-            column_name: Vector column name
-            index_type: Index type - 'hnsw' or 'ivfflat'
-            m: HNSW M parameter (max connections per layer)
-            ef_construction: HNSW ef_construction parameter
-            lists: IVFFlat number of lists
-            schema: Optional schema name
-            opclass: pgvector operator class for the index; defaults to
-                ``vector_cosine_ops``. Use ``vector_l2_ops`` or ``vector_ip_ops``
-                for L2/inner-product distance indexes.
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-        """
-        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
-        )
-
-        method = PostgresIndexType.normalize(index_type).value
-        if method not in ("hnsw", "ivfflat"):
-            raise ValueError(
-                f"pgvector index_type must be 'hnsw' or 'ivfflat', got {index_type!r}"
-            )
-
-        if method == "hnsw":
-            with_clauses = []
-            if m is not None:
-                with_clauses.append(f"m = {m}")
-            if ef_construction is not None:
-                with_clauses.append(f"ef_construction = {ef_construction}")
-            with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
-            sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING hnsw ({column_name} {opclass}){with_clause}"
-            )
-        else:  # ivfflat
-            lists_clause = f" WITH (lists = {lists})" if lists else ""
-            sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING ivfflat ({column_name} {opclass}){lists_clause}"
-            )
-
-        return (sql, ())
-
-    def format_create_hnsw_index_statement(
-        self,
-        table_name: str,
-        column_name: str,
-        index_name: Optional[str] = None,
-        m: Optional[int] = None,
-        ef_construction: Optional[int] = None,
-        opclass: str = "vector_cosine_ops",
-    ) -> str:
-        """Format CREATE INDEX statement with HNSW index for vector column.
-
-        Args:
-            table_name: Table name
-            column_name: Vector column name
-            index_name: Optional index name (auto-generated if not provided)
-            m: HNSW M parameter (max connections per layer)
-            ef_construction: HNSW ef_construction parameter
-            opclass: pgvector operator class for the index; defaults to
-                ``vector_cosine_ops``.
-
-        Returns:
-            SQL CREATE INDEX statement
-        """
-        idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
-        with_options = {}
-        if m is not None:
-            with_options["m"] = m
-        if ef_construction is not None:
-            with_options["ef_construction"] = ef_construction
-        expr = PostgresCreateIndexExpression(
-            self,
-            index=Index(self, idx_name),
-            table=Table(self, table_name),
-            columns=[column_name],
-            index_type="HNSW",
-            opclasses={column_name: opclass},
-            with_options=with_options,
-        )
-        return expr.to_sql()[0]
