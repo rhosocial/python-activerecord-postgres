@@ -922,6 +922,36 @@ class TestCreateIndexExpressionAllOptions:
         assert '"a" text_pattern_ops' in sql
         assert '"b"' in sql
 
+    def test_expression_opclass(self):
+        """An operator class can be bound to a functional index column."""
+        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
+
+        d = PostgresDialect()
+        expr_col = ArithmeticOperation(
+            d, "add", Column(d, "a"), Literal(d, 1, inline=True)
+        )
+        expr = PostgresCreateIndexExpression(
+            d, Index(d, 'idx_e'), Table(d, 't'), [expr_col],
+            index_type="GIN",
+            expression_opclasses=[(expr_col, "jsonb_path_ops")],
+        )
+        sql, params = expr.to_sql()
+        assert "USING GIN" in sql
+        assert "jsonb_path_ops" in sql
+        assert params == ()
+
+    def test_expression_column_with_params_is_refused(self):
+        """A bind parameter in an index expression cannot execute on the server."""
+        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
+
+        d = PostgresDialect()
+        expr_col = ArithmeticOperation(d, "add", Column(d, "a"), Literal(d, 1))
+        expr = CreateIndexStatement(d, Index(d, 'idx_p'), Table(d, 't'), [expr_col])
+        with pytest.raises(ValueError, match="bind parameters"):
+            expr.to_sql()
+
 
 class TestFormatCreateIndexPgStatementWhereExpression:
     """Test format_create_index_pg_statement where_clause as ToSQLProtocol."""

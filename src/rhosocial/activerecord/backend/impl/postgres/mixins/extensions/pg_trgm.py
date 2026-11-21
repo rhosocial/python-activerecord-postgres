@@ -43,5 +43,17 @@ class PostgresPgTrgmMixin:
         """
         full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
         )
-        sql = f"CREATE INDEX {index_name} ON {full_table} USING {index_type} ({column_name} gin_trgm_ops)"
+        access_method = index_type.lower()
+        if access_method not in ("gin", "gist"):
+            raise ValueError(
+                f"pg_trgm index_type must be 'gin' or 'gist', got {index_type!r}"
+            )
+        # gin_trgm_ops is the GIN operator class; GiST has its own. Rendering
+        # the GIN class on a GiST index produces "operator class ... does not
+        # accept access method gist" on every server that has both.
+        opclass = "gin_trgm_ops" if access_method == "gin" else "gist_trgm_ops"
+        sql = (
+            f"CREATE INDEX {self.format_identifier(index_name)} ON {full_table} "
+            f"USING {access_method} ({self.format_identifier(column_name)} {opclass})"
+        )
         return (sql, ())

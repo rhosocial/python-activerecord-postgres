@@ -131,6 +131,7 @@ from .bit_string import (
 
 # JSON functions
 from .json import (
+    create_jsonb_index,
     json_path_root,
     json_path_key,
     json_path_index,
@@ -582,6 +583,7 @@ __all__ = [
     "bit_set_bit",
     "bit_count",
     # JSON functions
+    "create_jsonb_index",
     "json_path_root",
     "json_path_key",
     "json_path_index",

@@ -267,6 +267,52 @@ def _canonical_jsonpath(path: str) -> str:
     return f'$."{literal}"'
 
 
+def _jsonpath_arrow_chain(path: str) -> Tuple[Tuple[str, Union[str, int]], ...]:
+    """Translate a jsonpath into the key/subscript chain the ``->`` operators walk.
+
+    The arrow operators read a *key name*, not a jsonpath: ``data->>'$.name'``
+    looks up a key literally named ``$.name`` and returns NULL on every server.
+    The standard ``build_json_path`` helper produces rooted jsonpaths, so ARROW
+    mode has to split them into segments before rendering. Each segment is
+    ``("key", name)`` or ``("index", n)``; the last one carries the node's
+    ``->`` / ``->>`` operation and the earlier ones are always ``->``.
+
+    Raises:
+        ValueError: For an empty path, a jsonpath variable, a longer rootless
+            chain, or a construct the arrow operators cannot express. The
+            message is a clause ready for an ``UnsupportedFeatureError``.
+    """
+    text = path.strip()
+    if not text:
+        raise ValueError("is empty")
+
+    rootless = not text.startswith("$")
+    if rootless:
+        if text[0] not in ".[":
+            text = "." + text
+    else:
+        text = text[1:].lstrip()
+        if text and text[0] not in ".[":
+            raise ValueError("uses a jsonpath variable")
+
+    accessors = _jsonpath_accessors(text)
+    chain: list = []
+    for kind, raw in accessors:
+        if kind == "index":
+            chain.append(("index", int(raw)))
+        elif kind == "quoted":
+            chain.append(("key", raw.replace('\\"', '"').replace("\\\\", "\\")))
+        else:
+            chain.append(("key", raw))
+
+    if rootless and len(chain) != 1:
+        raise ValueError(
+            "omits the root $, which the arrow operators read the same way "
+            "only for a single accessor"
+        )
+    return tuple(chain)
+
+
 class PostgresJSONBEnhancedMixin:
     """Mixin for PostgreSQL enhanced JSONB support.
 
@@ -378,6 +424,59 @@ class PostgresJSONBEnhancedMixin:
         # jsonpath, which the arrow operators cannot consume.
         return self._format_json_path_expression(expr)
 
+    def format_json_arrow_expression(self, expr: "JSONPathNode") -> Tuple[str, tuple]:
+        """Render ``->`` / ``->>`` from a path *chain*, never from a jsonpath.
+
+        The core formatter emits a single operator with ``expr.path`` as a
+        literal key. That is correct for a raw key but wrong for the rooted
+        jsonpath the standard helpers build: ``$.name`` would be read as a key
+        literally named ``$.name`` and yield NULL. PostgreSQL spells a walk as
+        one operator per segment (``data->'profile'->>'name'``), with a numeric
+        subscript for an array step (``data->'tags'->0``).
+
+        A path a chain cannot express -- a filter, a wildcard, ``last``, a
+        variable -- is refused with a named error rather than rendered into
+        SQL that quietly reads the wrong key.
+        """
+        from rhosocial.activerecord.backend.expression import bases
+
+        if not self.supports_json_arrow_operators():
+            raise UnsupportedFeatureError(
+                self.name,
+                "JSON arrow operators (-> / ->>)",
+                f"This PostgreSQL is older than 9.3, which added the arrow "
+                f"operators. Use the default path mode instead.",
+            )
+
+        if isinstance(expr.column, bases.BaseExpression):
+            col_sql, params = expr.column.to_sql()
+        else:
+            col_sql, params = self.format_identifier(str(expr.column)), ()
+
+        try:
+            chain = _jsonpath_arrow_chain(expr.path)
+        except ValueError as exc:
+            raise UnsupportedFeatureError(
+                self.name,
+                "this JSON path in ARROW mode",
+                f"The arrow operators walk keys and array subscripts; this path "
+                f"{exc}. Use the default path mode, which renders the SQL/JSON "
+                f"path form and can express filters and wildcards.",
+            ) from None
+
+        pieces = []
+        for position, (kind, value) in enumerate(chain):
+            operator = expr.operation if position == len(chain) - 1 else "->"
+            if kind == "index":
+                pieces.append(f"{operator}{value}")
+            else:
+                pieces.append(f"{operator}'{self.escape_sql_string(value)}'")
+
+        sql = col_sql + "".join(pieces)
+        if expr.alias:
+            sql = f"{sql} AS {self.format_identifier(expr.alias)}"
+        return sql, params
+
     def _format_json_path_expression(self, expr: "JSONPathNode") -> Tuple[str, tuple]:
         """Render the path form, in whichever spelling this server has.
 
@@ -470,12 +569,22 @@ class PostgresJSONBEnhancedMixin:
                 f"e.g. '$.a'.",
             ) from None
 
+        if expr.inline_path:
+            # A functional index cannot carry a bind parameter. Callers that
+            # build a DDL expression opt in; the path is escaped here rather
+            # than parameterized, and the choice is explicit on the node.
+            path_sql = f"'{self.escape_sql_string(path)}'::jsonpath"
+            params: tuple = ()
+        else:
+            path_sql = f"{placeholder}::jsonpath"
+            params = (path,)
+
         value_sql = (
-            f"jsonb_path_query_first(({col_sql})::jsonb, {placeholder}::jsonpath)"
+            f"jsonb_path_query_first(({col_sql})::jsonb, {path_sql})"
         )
         if expr.operation == "->>":
-            return f"({value_sql} #>> '{{}}')", (path,)
-        return value_sql, (path,)
+            return f"({value_sql} #>> '{{}}')", params
+        return value_sql, params
 
     def _format_key_path_expression(
         self, col_sql: str, expr: "JSONPathNode"
@@ -530,11 +639,21 @@ class PostgresJSONBEnhancedMixin:
             ) from None
 
         if keys:
-            placeholder = self.get_parameter_placeholder()
-            array_sql = "ARRAY[{}]::text[]".format(
-                ", ".join(f"{placeholder}::text" for _ in keys)
-            )
-            params = keys
+            if expr.inline_path:
+                # See ``_format_sql_json_path_expression``: DDL positions need
+                # a literal, and the caller chose that explicitly.
+                array_sql = "ARRAY[{}]::text[]".format(
+                    ", ".join(
+                        f"'{self.escape_sql_string(key)}'::text" for key in keys
+                    )
+                )
+                params = ()
+            else:
+                placeholder = self.get_parameter_placeholder()
+                array_sql = "ARRAY[{}]::text[]".format(
+                    ", ".join(f"{placeholder}::text" for _ in keys)
+                )
+                params = tuple(keys)
         else:
             # The root. No key to bind, and '{}' is an empty text[] literal, so
             # there is nothing here a caller could have influenced.

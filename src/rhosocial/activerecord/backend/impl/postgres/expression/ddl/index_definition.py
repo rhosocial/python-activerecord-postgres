@@ -4,6 +4,8 @@
 PostgreSQL adds index options with no generic equivalent:
 
 * ``opclasses`` — operator classes per column (e.g. ``{"a": "text_pattern_ops"}``).
+  A key may also be an expression node, so an operator class can be attached to
+  a functional index column (e.g. ``{data_expr: "jsonb_path_ops"}``).
 * ``nulls_not_distinct`` — ``NULLS NOT DISTINCT`` on a UNIQUE index (PG 15+).
 * ``with_options`` — index storage parameters, e.g. ``{"fillfactor": 70}``.
 
@@ -31,6 +33,8 @@ class PostgresCreateIndexExpression(CreateIndexStatement):
     ``PostgresIndexMixin.format_create_index_statement``:
 
     * ``opclasses`` — operator classes per column (e.g. ``{"a": "text_pattern_ops"}``).
+  A key may also be an expression node, so an operator class can be attached to
+  a functional index column (e.g. ``{data_expr: "jsonb_path_ops"}``).
     * ``nulls_not_distinct`` — ``NULLS NOT DISTINCT`` on a UNIQUE index (PG 15+).
     * ``with_options`` — index storage parameters, e.g. ``{"fillfactor": 70}``.
     """
@@ -49,9 +53,10 @@ class PostgresCreateIndexExpression(CreateIndexStatement):
         tablespace: Optional[str] = None,
         concurrent: bool = False,
         *,
-        opclasses: Optional[Dict[str, str]] = None,
+        opclasses: Optional[Dict[Any, str]] = None,
         nulls_not_distinct: bool = False,
         with_options: Optional[Dict[str, Any]] = None,
+        expression_opclasses: Optional[List[tuple]] = None,
     ):
         super().__init__(
             dialect,
@@ -69,6 +74,10 @@ class PostgresCreateIndexExpression(CreateIndexStatement):
         self.opclasses = opclasses or {}
         self.nulls_not_distinct = nulls_not_distinct
         self.with_options = with_options or {}
+        # Expression nodes are unhashable, so a dict cannot key them. Operator
+        # classes for functional columns are bound by node identity in a list
+        # of ``(node, opclass)`` pairs instead.
+        self.expression_opclasses = expression_opclasses or []
 
 
 class PostgresIndexDefinition(IndexDefinition):
@@ -88,9 +97,10 @@ class PostgresIndexDefinition(IndexDefinition):
         type: Optional[str] = None,
         partial_condition: Optional[SQLPredicate] = None,
         include_columns: Optional[List[str]] = None,
-        opclasses: Optional[Dict[str, str]] = None,
+        opclasses: Optional[Dict[Any, str]] = None,
         nulls_not_distinct: bool = False,
         with_options: Optional[Dict[str, Any]] = None,
+        expression_opclasses: Optional[List[tuple]] = None,
     ):
         super().__init__(
             dialect,
@@ -104,6 +114,7 @@ class PostgresIndexDefinition(IndexDefinition):
         self.opclasses = opclasses or {}
         self.nulls_not_distinct = nulls_not_distinct
         self.with_options = with_options or {}
+        self.expression_opclasses = expression_opclasses or []
 
 
 class PostgresDropIndexExpression(DropIndexStatement):

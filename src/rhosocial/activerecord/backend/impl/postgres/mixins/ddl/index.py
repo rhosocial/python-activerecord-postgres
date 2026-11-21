@@ -420,14 +420,32 @@ class PostgresIndexMixin:
             opclasses = expr.opclasses
             nulls_not_distinct = expr.nulls_not_distinct
             with_options = expr.with_options
+            expression_opclasses = expr.expression_opclasses
         else:
             opclasses = {}
             nulls_not_distinct = False
             with_options = {}
+            expression_opclasses = []
         col_parts = []
         for col in expr.columns:
             if isinstance(col, ToSQLProtocol):
                 col_sql, col_params = col.to_sql()
+                if col_params:
+                    raise ValueError(
+                        "An index expression cannot carry bind parameters: the "
+                        "server rejects a parameter in an index expression. "
+                        "Build a literal path (e.g. json_extract_text(..., "
+                        "inline_path=True)) or use ARROW mode instead."
+                    )
+                # An operator class belongs to the expression as much as to a
+                # named column. Expression nodes are unhashable, so callers
+                # bind by node identity through ``expression_opclasses``.
+                opclass = next(
+                    (value for key, value in expression_opclasses if key is col),
+                    None,
+                )
+                if opclass:
+                    col_sql = f"{col_sql} {opclass}"
                 col_parts.append(col_sql)
                 all_params.extend(col_params)
             else:
