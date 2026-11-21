@@ -223,8 +223,8 @@ def vector_distance(
     column: Union[str, "bases.BaseExpression"],
     query_vector: Union[PostgresVector, List[float], str, "bases.BaseExpression"],
     metric: str = "cosine",
-) -> BinaryExpression:
-    """Distance operator for a vector column, dispatching by metric.
+):
+    """Collect arguments for a vector distance operator; the formatter dispatches.
 
     Unlike the raw operator factories, a plain string ``column`` is wrapped in
     ``Column`` (a column reference), so passing a column name is safe.
@@ -239,31 +239,10 @@ def vector_distance(
     Returns:
         BinaryExpression for the requested distance
     """
-    if metric not in _METRIC_OPERATORS:
-        raise ValueError(
-            f"Unsupported vector metric '{metric}'; expected one of "
-            f"{tuple(_METRIC_OPERATORS)}"
-        )
-    column_expr = (
-        core.Column(dialect, column) if isinstance(column, str) else column
-    )
-    if isinstance(query_vector, bases.BaseExpression):
-        query_expr = query_vector
-    elif isinstance(query_vector, PostgresVector):
-        query_expr = _typed_vector(
-            dialect, query_vector.to_postgres_string(), query_vector.dimensions
-        )
-    elif isinstance(query_vector, list):
-        vec = PostgresVector(values=query_vector)
-        query_expr = _typed_vector(
-            dialect, vec.to_postgres_string(), vec.dimensions
-        )
-    else:
-        query_expr = core.Literal(dialect, query_vector)
+    from ..expression.ddl import PostgresVectorDistanceExpression
 
-    return BinaryExpression(
-        dialect, _METRIC_OPERATORS[metric],
-        column_expr, query_expr,
+    return PostgresVectorDistanceExpression(
+        dialect, column, query_vector, metric
     )
 
 

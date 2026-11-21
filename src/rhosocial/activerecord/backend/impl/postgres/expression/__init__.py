@@ -47,6 +47,11 @@ from .advisory import (
     AdvisoryLockType,
 )
 from .wildcard import PostgresRowCountWildcard
+from .pg_stat import PostgresPgStatStatement
+from .tablefunc import (
+    PostgresCrosstabWithDefinitionStatement,
+    PostgresConnectbyFullStatement,
+)
 from .copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
@@ -71,6 +76,7 @@ from .ddl import (
     PostgresAlterIndexActionType,
     PostgresReindexStatement,
     PostgresCreateIndexExpression,
+    PostgresIndexType,
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
     PostgresExcludeConstraint,
@@ -181,6 +187,9 @@ from .types import (
 __all__ = [
     "PostgresEnumType",
     "PostgresSettingsQuery",
+    "PostgresPgStatStatement",
+    "PostgresCrosstabWithDefinitionStatement",
+    "PostgresConnectbyFullStatement",
     "PostgresActivityCountQuery",
     "PostgresShowStatement",
     "PostgresDatabaseListQuery",
@@ -237,6 +246,7 @@ __all__ = [
     "PostgresAlterIndexActionType",
     "PostgresReindexStatement",
     "PostgresCreateIndexExpression",
+    "PostgresIndexType",
     "PostgresIndexDefinition",
     "PostgresDropIndexExpression",
     "PostgresExcludeConstraint",

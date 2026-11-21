@@ -357,7 +357,27 @@ def ltree_lca(
     return core.FunctionCall(dialect, "lca", *args)
 
 
+def ltree_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str,
+    *,
+    index_type: str = "gist",
+    schema: str = None,
+):
+    """Collect arguments for an ltree index; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresLtreeIndexExpression,
+    )
+
+    return PostgresLtreeIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
+    )
+
+
 __all__ = [
+    "ltree_index",
     # Literal constructors
     "ltree_literal",
     "lquery_literal",

@@ -289,7 +289,33 @@ def intarray_operator(
     )
 
 
+def intarray_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str = None,
+    *,
+    schema: str = None,
+):
+    """Build a GIN index expression with the ``gin__int_ops`` operator class."""
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateIndexExpression,
+    )
+
+    name = index_name or f"idx_{table_name}_{'_'.join(columns)}"
+    return PostgresCreateIndexExpression(
+        dialect,
+        index=Index(dialect, name, schema_name=schema),
+        table=Table(dialect, table_name, schema_name=schema),
+        columns=list(columns),
+        index_type="gin",
+        opclasses={column: "gin__int_ops" for column in columns},
+    )
+
+
 __all__ = [
+    "intarray_index",
     # intarray operators
     "intarray_contains",
     "intarray_contained_by",

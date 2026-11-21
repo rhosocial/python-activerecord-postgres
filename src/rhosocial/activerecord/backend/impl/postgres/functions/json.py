@@ -347,7 +347,67 @@ def jsonb_path_match(
     return core.FunctionCall(dialect, "jsonb_path_match", *args)
 
 
+def create_jsonb_index(
+    dialect: "SQLDialectBase",
+    table_name: str,
+    key: str,
+    *,
+    column_name: str = "data",
+    index_name: Optional[str] = None,
+    opclass: Optional[str] = "jsonb_path_ops",
+    as_text: bool = False,
+    if_not_exists: bool = False,
+):
+    """Build a ``CREATE INDEX`` on a key inside a ``jsonb`` column.
+
+    Two shapes are common and both need the path inlined: a server rejects a
+    bind parameter inside an index expression before it can infer its type.
+
+    * ``as_text=False`` (default): a GIN index on the jsonb value at *key*,
+      with ``jsonb_path_ops`` unless another opclass is given. Supports
+      ``@?`` / ``@@`` containment on that sub-document.
+    * ``as_text=True``: a btree index on the text at *key* (``->>``), for
+      equality, ordering and range scans. No opclass is applied.
+
+    Args:
+        dialect: The SQL dialect instance.
+        table_name: Table holding the jsonb column.
+        key: A JSONPath key such as ``"$.name"`` or ``"$.profile.address"``.
+        column_name: Name of the jsonb column (default ``"data"``).
+        index_name: Index name; generated from table and column when omitted.
+        opclass: Operator class for the GIN form. Pass ``None`` for default.
+        as_text: Build a text (btree) expression index instead of GIN.
+        if_not_exists: Add ``IF NOT EXISTS``.
+
+    Returns:
+        A ready-to-execute ``PostgresCreateIndexExpression``.
+    """
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.functions.json import (
+        json_extract,
+        json_extract_text,
+    )
+
+    from ..expression.ddl import PostgresCreateIndexExpression
+
+    path = key if key.startswith("$") else f"$.{key}"
+    builder = json_extract_text if as_text else json_extract
+    expression = builder(dialect, column_name, path, inline_path=True)
+
+    name = index_name or f"idx_{table_name}_{column_name}_{'text' if as_text else 'gin'}"
+    return PostgresCreateIndexExpression(
+        dialect,
+        index=Index(dialect, name),
+        table=Table(dialect, table_name),
+        columns=[expression],
+        index_type=None if as_text else "GIN",
+        if_not_exists=if_not_exists,
+        expression_opclasses=[] if as_text or opclass is None else [(expression, opclass)],
+    )
+
+
 __all__ = [
+    "create_jsonb_index",
     "json_path_root",
     "json_path_key",
     "json_path_index",

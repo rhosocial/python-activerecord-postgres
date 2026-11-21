@@ -694,7 +694,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         """
         return True
 
-    def format_column_constraint(self, constraint: "ColumnConstraint") -> Tuple[str, Tuple]:
+    def format_column_constraint(self, expr: "ColumnConstraint") -> Tuple[str, Tuple]:
         """Refuse the enforcement trait outright, then render as core does.
 
         PostgreSQL has no column-level ``[NOT] ENFORCED`` at all: the clause is
@@ -718,13 +718,13 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         hand.  Overriding the column-level seam makes the family the override's
         own business and leaves the shared hook alone.
         """
-        if constraint.enforced or constraint.not_enforced:
+        if expr.enforced or expr.not_enforced:
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,
             )
 
             kind = self._KIND_SQL.get(
-                type(constraint.branch), type(constraint.branch).__name__
+                type(expr.branch), type(expr.branch).__name__
             )
             feature = f"{kind} NOT ENFORCED on a column constraint"
             raise UnsupportedFeatureError(
@@ -732,7 +732,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
                 feature,
                 f"{self.name} does not support {feature}.",
             )
-        return cast(Tuple[str, tuple], super().format_column_constraint(constraint))
+        return cast(Tuple[str, tuple], super().format_column_constraint(expr))
 
     def format_table_constraint(self, expr: "TableConstraint") -> Tuple[str, tuple]:
         """Narrow the enforcement trait to CHECK and FOREIGN KEY, then render.
@@ -748,7 +748,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             self._require_constraint_enforced(type(expr.branch))
         return cast(Tuple[str, tuple], super().format_table_constraint(expr))
 
-    def format_alter_constraint_action(self, action: "AlterConstraintAction") -> Tuple[str, tuple]:
+    def format_alter_constraint_action(self, expr: "AlterConstraintAction") -> Tuple[str, tuple]:
         """Gate the ``ALTER CONSTRAINT`` verb on the measured per-kind boundary.
 
         Core already refuses a branch that is neither CHECK nor FOREIGN KEY and
@@ -757,11 +757,11 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         FOREIGN KEY from 18, CHECK from 19 -- which is what this override adds
         before delegating.
         """
-        self._require_enforceable_constraint(action.constraint_branch)
-        return cast(Tuple[str, tuple], super().format_alter_constraint_action(action))
+        self._require_enforceable_constraint(expr.constraint_branch)
+        return cast(Tuple[str, tuple], super().format_alter_constraint_action(expr))
 
-    def format_validate_constraint_action(self, action: "ValidateConstraintAction") -> Tuple[str, tuple]:
-        return cast(Tuple[str, tuple], super().format_validate_constraint_action(action))
+    def format_validate_constraint_action(self, expr: "ValidateConstraintAction") -> Tuple[str, tuple]:
+        return cast(Tuple[str, tuple], super().format_validate_constraint_action(expr))
 
     @staticmethod
     def _validate_exclude_expression_sql(expression_sql: str, context: str) -> None:
@@ -801,7 +801,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             raise ValueError(f"{context} has unbalanced quotes or parentheses")
 
     def format_table_exclude_constraint(
-        self, constraint: TableExcludeConstraint,
+        self, expr: TableExcludeConstraint,
     ) -> Tuple[str, tuple]:
         """Render PostgreSQL's EXCLUDE body.
 
@@ -820,14 +820,14 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         than trusted from the caller, and every free-form fragment (an element
         expression, the predicate) goes through
         :meth:`_validate_exclude_expression_sql`, because ``EXCLUDE`` is the
-        one constraint production where PostgreSQL takes expression text.
+        one expr production where PostgreSQL takes expression text.
         """
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
             PostgresExcludeBranch,
         )
 
         valid_using = frozenset({"gist", "btree", "spgist", "hash", "brin"})
-        using = constraint.index_method or "gist"
+        using = expr.index_method or "gist"
         if not isinstance(using, str):
             raise ValueError("EXCLUDE index access method must be a string")
         using = using.strip().lower()
@@ -836,11 +836,11 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
                 f"Invalid index access method '{using}': must be one of {sorted(valid_using)}"
             )
 
-        if isinstance(constraint, PostgresExcludeBranch):
-            elements = list(constraint.elements)
-            where = constraint.where
+        if isinstance(expr, PostgresExcludeBranch):
+            elements = list(expr.elements)
+            where = expr.where
         else:
-            elements = [(column, constraint.operator) for column in constraint.columns]
+            elements = [(column, expr.operator) for column in expr.columns]
             where = None
         if not elements:
             raise ValueError("EXCLUDE constraint requires at least one element")

@@ -39,6 +39,8 @@ class TestVectorSearch:
         assert "SELECT \"content\", \"tenant\"" in sql
         assert 'AS "cosine_distance"' in sql
         assert 'AS "cosine_similarity"' in sql
+        # 1 - distance must parenthesize the distance operator.
+        assert '- ("embedding" <=>' in sql
         assert "LIMIT %s" in sql and params[-1] == 3
 
     def test_where_filter(self, postgres_dialect):
@@ -100,11 +102,11 @@ class TestVectorSearch:
 
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
-            vector_search(postgres_dialect, "documents", [1.0], metric="hamming")
+            vector_search(postgres_dialect, "documents", [1.0], metric="hamming").to_sql()
 
     def test_non_positive_top_k(self, postgres_dialect):
         with pytest.raises(ValueError, match="top_k must be positive"):
-            vector_search(postgres_dialect, "documents", [1.0], top_k=0)
+            vector_search(postgres_dialect, "documents", [1.0], top_k=0).to_sql()
 
 
 class TestVectorDistance:
@@ -125,7 +127,7 @@ class TestVectorDistance:
 
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
-            vector_distance(postgres_dialect, "embedding", [1.0], metric="bad")
+            vector_distance(postgres_dialect, "embedding", [1.0], metric="bad").to_sql()
 
 
 class TestCreateVectorIndex:
@@ -190,9 +192,9 @@ class TestCreateVectorIndex:
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
             create_vector_index(postgres_dialect, "documents", "embedding",
-                                metric="hamming")
+                                metric="hamming").to_sql()
 
     def test_invalid_index_type(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector index type"):
             create_vector_index(postgres_dialect, "documents", "embedding",
-                                index_type="btree")
+                                index_type="btree").to_sql()

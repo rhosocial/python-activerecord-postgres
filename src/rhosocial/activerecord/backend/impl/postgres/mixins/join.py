@@ -8,6 +8,10 @@ class PostgresJoinMixin:
     All features are native, using version number for detection.
     """
 
+    def supports_explicit_inner_join(self) -> bool:
+        """An explicit ``INNER JOIN`` is the ordinary PostgreSQL spelling."""
+        return self.supports_inner_join()
+
     def supports_right_join(self) -> bool:
         return True
 

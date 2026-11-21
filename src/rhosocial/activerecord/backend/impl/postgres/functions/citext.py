@@ -65,7 +65,17 @@ def citext_literal(
     return core.CastExpression(dialect, converted, PostgresCitextType(dialect))
 
 
+def citext_column(dialect, column_name: str, length: int = None):
+    """Collect arguments for a CITEXT column; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCitextColumnExpression,
+    )
+
+    return PostgresCitextColumnExpression(dialect, column_name, length=length)
+
+
 __all__ = [
+    "citext_column",
     # citext functions
     "citext_literal",
 ]

@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.impl.postgres.functions import create_type_enum, drop_type
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     AlterTypeStatement,
@@ -254,12 +255,12 @@ class TestFormattingHelpers:
 
 class TestCreateType:
     def test_enum_helper(self):
-        sql, params = _dialect().format_create_type_enum_statement("mood", ["happy", "sad"])
+        sql, params = create_type_enum(_dialect(), "mood", ["happy", "sad"]).to_sql()
         assert sql == "CREATE TYPE \"mood\" AS ENUM ('happy', 'sad')"
         assert params == ()
 
     def test_enum_helper_with_schema(self):
-        sql, _ = _dialect().format_create_type_enum_statement("mood", ["ok"], schema="public")
+        sql, _ = create_type_enum(_dialect(), "mood", ["ok"], schema="public").to_sql()
         assert sql == 'CREATE TYPE "public"."mood" AS ENUM (\'ok\')'
 
     def test_composite_statement(self):
@@ -303,7 +304,7 @@ class TestCreateType:
 
     def test_create_type_requires_96(self):
         with pytest.raises(UnsupportedFeatureError, match="CREATE TYPE"):
-            _dialect((9, 5, 0)).format_create_type_enum_statement("mood", ["a"])
+            create_type_enum(_dialect((9, 5, 0)), "mood", ["a"]).to_sql()
 
     def test_definition_must_be_supported(self):
         with pytest.raises(UnsupportedFeatureError, match="TYPE definition"):
@@ -571,21 +572,21 @@ class TestAlterStatement:
 
 class TestDropType:
     def test_by_name(self):
-        assert _dialect().format_drop_type_statement(name="mood") == ('DROP TYPE "mood"', ())
+        assert drop_type(_dialect(), name="mood").to_sql() == ('DROP TYPE "mood"', ())
 
     def test_with_schema_and_if_exists(self):
-        assert _dialect().format_drop_type_statement(
+        assert drop_type(_dialect(), 
             name="mood", schema="public", if_exists=True
-        ) == ('DROP TYPE IF EXISTS "public"."mood"', ())
+        ).to_sql() == ('DROP TYPE IF EXISTS "public"."mood"', ())
 
     def test_legacy_schema_name(self):
-        assert _dialect().format_drop_type_statement(name="mood", schema_name="public") == (
+        assert drop_type(_dialect(), name="mood", schema_name="public").to_sql() == (
             'DROP TYPE "public"."mood"',
             (),
         )
 
     def test_cascade(self):
-        assert _dialect().format_drop_type_statement(name="mood", cascade=True) == (
+        assert drop_type(_dialect(), name="mood", cascade=True).to_sql() == (
             'DROP TYPE "mood" CASCADE',
             (),
         )
@@ -594,30 +595,25 @@ class TestDropType:
         expression = PostgresDropTypeExpression(
             _dialect(), Type(_dialect(), "mood"), if_exists=True, restrict=True
         )
-        assert _dialect().format_drop_type_statement(expr=expression) == (
+        assert expression.to_sql() == (
             'DROP TYPE IF EXISTS "mood" RESTRICT',
             (),
         )
 
-    def test_expr_and_name_are_mutually_exclusive(self):
-        expression = PostgresDropTypeExpression(_dialect(), _type("mood"))
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            _dialect().format_drop_type_statement(expr=expression, name="mood")
-
     def test_expr_or_name_required(self):
         with pytest.raises(TypeError, match="required"):
-            _dialect().format_drop_type_statement()
+            drop_type(_dialect()).to_sql()
 
     def test_conflicting_schema_arguments(self):
         with pytest.raises(ValueError, match="must match"):
-            _dialect().format_drop_type_statement(name="mood", schema="a", schema_name="b")
+            drop_type(_dialect(), name="mood", schema="a", schema_name="b").to_sql()
 
     def test_drop_type_requires_96(self):
         with pytest.raises(UnsupportedFeatureError, match="DROP TYPE"):
-            _dialect((9, 5, 0)).format_drop_type_statement(name="mood")
+            drop_type(_dialect((9, 5, 0)), "mood").to_sql()
 
     def test_if_exists_guard(self):
         dialect = _dialect()
         with patch.object(dialect, "supports_drop_type_if_exists", return_value=False):
             with pytest.raises(UnsupportedFeatureError, match="IF EXISTS"):
-                dialect.format_drop_type_statement(name="mood", if_exists=True)
+                drop_type(dialect, name="mood", if_exists=True).to_sql()

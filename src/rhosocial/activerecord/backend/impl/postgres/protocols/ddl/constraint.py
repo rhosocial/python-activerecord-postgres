@@ -212,20 +212,20 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         """
         ...
 
-    def format_column_constraint(self, constraint: "ColumnConstraint") -> Tuple[str, tuple]:
-        """Format a column constraint, refusing the enforcement trait outright.
+    def format_column_constraint(self, expr: "ColumnConstraint") -> Tuple[str, tuple]:
+        """Format a column expr, refusing the enforcement trait outright.
 
         PostgreSQL has no column-level ``[NOT] ENFORCED`` for any kind or any
         version, so this seam refuses before delegating.
         """
         ...
 
-    def format_alter_constraint_action(self, action: "AlterConstraintAction") -> Tuple[str, tuple]:
+    def format_alter_constraint_action(self, expr: "AlterConstraintAction") -> Tuple[str, tuple]:
         """Format ALTER CONSTRAINT enforcement on the measured per-kind boundary."""
         ...
 
     def format_table_exclude_constraint(
-        self, constraint: "PostgresExcludeBranch"
+        self, expr: "PostgresExcludeBranch"
     ) -> Tuple[str, tuple]:
         """Format a PostgreSQL EXCLUDE body.
 
@@ -235,6 +235,6 @@ class PostgresConstraintSupport(ConstraintSupport, Protocol):
         """
         ...
 
-    def format_validate_constraint_action(self, action: "ValidateConstraintAction") -> Tuple[str, tuple]:
+    def format_validate_constraint_action(self, expr: "ValidateConstraintAction") -> Tuple[str, tuple]:
         """Format VALIDATE CONSTRAINT."""
         ...

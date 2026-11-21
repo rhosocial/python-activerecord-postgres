@@ -113,10 +113,20 @@ CREATE TABLE global_locations (
 
 ## 空间索引
 
-```sql
--- 创建 GiST 空间索引
-CREATE INDEX idx_locations_geom ON locations USING GIST(geom);
+默认 GiST；PostGIS 也接受 SP-GiST 和 BRIN。通过 `PostgresIndexType` 选择访问方法，
+helper 会拒绝未知方法：
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.functions import spatial_index
+
+ix = spatial_index(
+    dialect, "locations", ["geom"], "idx_locations_geom",
+    index_type="gist",   # 或 "spgist" / "brin"
+)
+backend.execute(*ix.to_sql())
 ```
+
+完整可运行场景见 `examples/indexes/postgis_indexes.py`。
 
 ## 常用函数
 

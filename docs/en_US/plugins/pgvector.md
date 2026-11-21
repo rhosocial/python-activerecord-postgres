@@ -95,22 +95,33 @@ CREATE TABLE embeddings (
 
 ## Vector Indexes
 
-### HNSW Index (Recommended)
+The access method is a `PostgresIndexType` member (HNSW / IVFFLAT) and the operator
+class is derived from the distance metric. Both are part of the expression object:
 
-```sql
--- Create HNSW index (requires pgvector 0.5.0+)
-CREATE INDEX idx_embeddings_hnsw ON embeddings 
-USING hnsw (embedding vector_cosine_ops);
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+from rhosocial.activerecord.backend.impl.postgres.functions import create_vector_index
+
+# Cosine + HNSW (needs pgvector 0.5.0+)
+hnsw = create_vector_index(
+    dialect, "embeddings", "embedding",
+    metric="cosine",
+    index_type=PostgresIndexType.HNSW.value,
+    m=16, ef_construction=64,
+)
+
+# L2 + IVFFlat — build after data is loaded
+ivfflat = create_vector_index(
+    dialect, "embeddings", "embedding",
+    metric="l2",
+    index_type=PostgresIndexType.IVFFLAT.value,
+    lists=100,
+)
+
+backend.execute(*hnsw.to_sql())
 ```
 
-### IVFFlat Index
-
-```sql
--- Create IVFFlat index
-CREATE INDEX idx_embeddings_ivfflat ON embeddings 
-USING ivfflat (embedding vector_cosine_ops) 
-WITH (lists = 100);
-```
+A full runnable scenario is in `examples/indexes/pgvector_indexes.py`.
 
 ## Similarity Search
 

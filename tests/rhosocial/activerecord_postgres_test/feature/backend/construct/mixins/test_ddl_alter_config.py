@@ -7,6 +7,7 @@ including materialized view refresh, comment, and partition expressions.
 
 import pytest
 
+from rhosocial.activerecord.backend.impl.postgres.functions import create_type_enum, drop_type
 from rhosocial.activerecord.backend.expression import (
     ArithmeticOperation,
     Column,
@@ -450,31 +451,31 @@ class TestTypeDDL:
         assert dialect.supports_type_cascade() is True
 
     def test_create_enum(self, dialect):
-        sql, params = dialect.format_create_type_enum_statement(
+        sql, params = create_type_enum(dialect, 
             "color", ["red", "blue"]
-        )
+        ).to_sql()
         assert sql == 'CREATE TYPE "color" AS ENUM (\'red\', \'blue\')'
         assert params == ()
 
     def test_create_enum_with_schema(self, dialect):
-        sql, _ = dialect.format_create_type_enum_statement(
+        sql, _ = create_type_enum(dialect, 
             "color", ["red"], schema="app"
-        )
+        ).to_sql()
         assert sql == 'CREATE TYPE "app"."color" AS ENUM (\'red\')'
 
     def test_create_enum_empty_values(self, dialect):
-        sql, params = dialect.format_create_type_enum_statement("color", [])
+        sql, params = create_type_enum(dialect, "color", []).to_sql()
         assert sql == 'CREATE TYPE "color" AS ENUM ()'
         assert params == ()
 
     def test_drop_type(self, dialect):
-        sql, _ = dialect.format_drop_type_statement("color")
+        sql, _ = drop_type(dialect, "color").to_sql()
         assert sql == 'DROP TYPE "color"'
 
     def test_drop_type_full(self, dialect):
-        sql, _ = dialect.format_drop_type_statement(
+        sql, _ = drop_type(dialect, 
             "color", schema="app", if_exists=True, cascade=True
-        )
+        ).to_sql()
         assert sql == 'DROP TYPE IF EXISTS "app"."color" CASCADE'
 
 

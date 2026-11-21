@@ -57,92 +57,92 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
     # --- PostgreSQL-specific formatters ---
 
-    def format_data_type_postgres_enum(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_enum(self, expr) -> Tuple[str, tuple]:
         """Render a PostgresEnumType reference for DDL column definitions.
 
         PostgreSQL ENUM types are referenced by name in column definitions;
         the CREATE TYPE ... AS ENUM is a separate DDL operation.
         """
-        return data_type.name, ()
-    def format_data_type_postgres_smallserial(self, data_type) -> Tuple[str, tuple]:
+        return expr.name, ()
+    def format_data_type_postgres_smallserial(self, expr) -> Tuple[str, tuple]:
         return "SMALLSERIAL", ()
 
-    def format_data_type_postgres_serial(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_serial(self, expr) -> Tuple[str, tuple]:
         return "SERIAL", ()
 
-    def format_data_type_postgres_bigserial(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_bigserial(self, expr) -> Tuple[str, tuple]:
         return "BIGSERIAL", ()
-    def format_data_type_postgres_tsvector(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tsvector(self, expr) -> Tuple[str, tuple]:
         return "TSVECTOR", ()
 
-    def format_data_type_postgres_tsquery(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tsquery(self, expr) -> Tuple[str, tuple]:
         return "TSQUERY", ()
 
-    def format_data_type_postgres_jsonpath(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_jsonpath(self, expr) -> Tuple[str, tuple]:
         return "JSONPATH", ()
 
-    def format_data_type_postgres_bit(self, data_type) -> Tuple[str, tuple]:
-        if data_type.n is not None:
-            return f"BIT({data_type.n})", ()
+    def format_data_type_postgres_bit(self, expr) -> Tuple[str, tuple]:
+        if expr.n is not None:
+            return f"BIT({expr.n})", ()
         return "BIT", ()
 
-    def format_data_type_postgres_varbit(self, data_type) -> Tuple[str, tuple]:
-        if data_type.n is not None:
-            return f"VARBIT({data_type.n})", ()
+    def format_data_type_postgres_varbit(self, expr) -> Tuple[str, tuple]:
+        if expr.n is not None:
+            return f"VARBIT({expr.n})", ()
         return "VARBIT", ()
 
-    def format_data_type_postgres_inet(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_inet(self, expr) -> Tuple[str, tuple]:
         return "INET", ()
 
-    def format_data_type_postgres_cidr(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_cidr(self, expr) -> Tuple[str, tuple]:
         return "CIDR", ()
 
-    def format_data_type_postgres_macaddr(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_macaddr(self, expr) -> Tuple[str, tuple]:
         return "MACADDR", ()
 
-    def format_data_type_postgres_macaddr8(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_macaddr8(self, expr) -> Tuple[str, tuple]:
         return "MACADDR8", ()
 
-    def format_data_type_postgres_point(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_point(self, expr) -> Tuple[str, tuple]:
         return "POINT", ()
 
-    def format_data_type_postgres_line(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_line(self, expr) -> Tuple[str, tuple]:
         return "LINE", ()
 
-    def format_data_type_postgres_line_segment(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_line_segment(self, expr) -> Tuple[str, tuple]:
         return "LSEG", ()
 
-    def format_data_type_postgres_box(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_box(self, expr) -> Tuple[str, tuple]:
         return "BOX", ()
 
-    def format_data_type_postgres_path(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_path(self, expr) -> Tuple[str, tuple]:
         return "PATH", ()
 
-    def format_data_type_postgres_polygon(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_polygon(self, expr) -> Tuple[str, tuple]:
         return "POLYGON", ()
 
-    def format_data_type_postgres_circle(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_circle(self, expr) -> Tuple[str, tuple]:
         return "CIRCLE", ()
 
-    def format_data_type_postgres_money(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_money(self, expr) -> Tuple[str, tuple]:
         return "MONEY", ()
 
-    def format_data_type_postgres_int4range(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_int4range(self, expr) -> Tuple[str, tuple]:
         return "INT4RANGE", ()
 
-    def format_data_type_postgres_int8range(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_int8range(self, expr) -> Tuple[str, tuple]:
         return "INT8RANGE", ()
 
-    def format_data_type_postgres_numrange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_numrange(self, expr) -> Tuple[str, tuple]:
         return "NUMRANGE", ()
 
-    def format_data_type_postgres_tsrange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tsrange(self, expr) -> Tuple[str, tuple]:
         return "TSRANGE", ()
 
-    def format_data_type_postgres_tstzrange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tstzrange(self, expr) -> Tuple[str, tuple]:
         return "TSTZRANGE", ()
 
-    def format_data_type_postgres_daterange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_daterange(self, expr) -> Tuple[str, tuple]:
         return "DATERANGE", ()
 
     def _format_postgres_multirange_data_type(self, sql: str) -> Tuple[str, tuple]:
@@ -154,87 +154,87 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             )
         return sql, ()
 
-    def format_data_type_postgres_int4multirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_int4multirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("INT4MULTIRANGE")
 
-    def format_data_type_postgres_int8multirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_int8multirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("INT8MULTIRANGE")
 
-    def format_data_type_postgres_nummultirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_nummultirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("NUMMULTIRANGE")
 
-    def format_data_type_postgres_tsmultirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tsmultirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("TSMULTIRANGE")
 
-    def format_data_type_postgres_tstzmultirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tstzmultirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("TSTZMULTIRANGE")
 
-    def format_data_type_postgres_datemultirange(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_datemultirange(self, expr) -> Tuple[str, tuple]:
         return self._format_postgres_multirange_data_type("DATEMULTIRANGE")
 
-    def format_data_type_postgres_oid(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_oid(self, expr) -> Tuple[str, tuple]:
         return "OID", ()
 
-    def format_data_type_postgres_regclass(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_regclass(self, expr) -> Tuple[str, tuple]:
         return "REGCLASS", ()
 
-    def format_data_type_postgres_regtype(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_regtype(self, expr) -> Tuple[str, tuple]:
         return "REGTYPE", ()
 
-    def format_data_type_postgres_xid(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_xid(self, expr) -> Tuple[str, tuple]:
         return "XID", ()
 
-    def format_data_type_postgres_xid8(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_xid8(self, expr) -> Tuple[str, tuple]:
         return "XID8", ()
 
-    def format_data_type_postgres_cid(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_cid(self, expr) -> Tuple[str, tuple]:
         return "CID", ()
 
-    def format_data_type_postgres_tid(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_tid(self, expr) -> Tuple[str, tuple]:
         return "TID", ()
 
-    def format_data_type_postgres_pg_lsn(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_pg_lsn(self, expr) -> Tuple[str, tuple]:
         return "PG_LSN", ()
 
-    def format_data_type_postgres_hstore(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_hstore(self, expr) -> Tuple[str, tuple]:
         return "HSTORE", ()
 
-    def format_data_type_postgres_geometry(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_geometry(self, expr) -> Tuple[str, tuple]:
         return "GEOMETRY", ()
 
-    def format_data_type_postgres_geography(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_geography(self, expr) -> Tuple[str, tuple]:
         return "GEOGRAPHY", ()
 
-    def format_data_type_postgres_vector(self, data_type) -> Tuple[str, tuple]:
-        return f"VECTOR({data_type.dim})", ()
+    def format_data_type_postgres_vector(self, expr) -> Tuple[str, tuple]:
+        return f"VECTOR({expr.dim})", ()
 
-    def format_data_type_postgres_halfvec(self, data_type) -> Tuple[str, tuple]:
-        return f"HALFVEC({data_type.dim})", ()
+    def format_data_type_postgres_halfvec(self, expr) -> Tuple[str, tuple]:
+        return f"HALFVEC({expr.dim})", ()
 
-    def format_data_type_postgres_sparsevec(self, data_type) -> Tuple[str, tuple]:
-        return f"SPARSEVEC({data_type.dim})", ()
+    def format_data_type_postgres_sparsevec(self, expr) -> Tuple[str, tuple]:
+        return f"SPARSEVEC({expr.dim})", ()
 
-    def format_data_type_postgres_citext(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_citext(self, expr) -> Tuple[str, tuple]:
         return "CITEXT", ()
 
-    def format_data_type_postgres_cube(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_cube(self, expr) -> Tuple[str, tuple]:
         return "CUBE", ()
 
-    def format_data_type_postgres_ltree(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_ltree(self, expr) -> Tuple[str, tuple]:
         return "LTREE", ()
 
-    def format_data_type_postgres_lquery(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_lquery(self, expr) -> Tuple[str, tuple]:
         return "LQUERY", ()
 
-    def format_data_type_postgres_ltxtquery(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_ltxtquery(self, expr) -> Tuple[str, tuple]:
         return "LTXTQUERY", ()
 
-    def format_data_type_postgres_raster(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_raster(self, expr) -> Tuple[str, tuple]:
         return "RASTER", ()
 
-    def format_data_type_postgres_array(self, data_type: ArrayType) -> Tuple[str, tuple]:
-        element_sql, _ = self.format_data_type(data_type.element_type)
-        return element_sql + "[]" * data_type.dimensions, ()
+    def format_data_type_postgres_array(self, expr: ArrayType) -> Tuple[str, tuple]:
+        element_sql, _ = self.format_data_type(expr.element_type)
+        return element_sql + "[]" * expr.dimensions, ()
 
     # --- Core formatters (PostgreSQL specialized) ---
 
@@ -379,7 +379,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             ),
         )
 
-    def format_data_type_tinyint(self, data_type: TinyIntType) -> Tuple[str, tuple]:
+    def format_data_type_tinyint(self, expr: TinyIntType) -> Tuple[str, tuple]:
         """PostgreSQL has neither ``TINYINT`` nor ``INT1`` — no 1-byte integer
         exists — so the concept is *widened* to the next size that does, and
         the rendered column is a ``SMALLINT``. Both spellings are accepted
@@ -390,21 +390,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`, which is where the reason is written
         down."""
-        self.check_spelling(data_type, TinyIntType)
-        self._refuse_unsigned_integer(data_type, "SMALLINT")
+        self.check_spelling(expr, TinyIntType)
+        self._refuse_unsigned_integer(expr, "SMALLINT")
         return "SMALLINT", ()
 
-    def format_data_type_smallint(self, data_type: SmallIntType) -> Tuple[str, tuple]:
+    def format_data_type_smallint(self, expr: SmallIntType) -> Tuple[str, tuple]:
         """Both ``SMALLINT`` and ``INT2`` are PostgreSQL spellings of this
         concept, so both render as written.
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(data_type, SmallIntType)
-        self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
-        return data_type.spelling.upper(), ()
+        self.check_spelling(expr, SmallIntType)
+        self._refuse_unsigned_integer(expr, expr.spelling.upper())
+        return expr.spelling.upper(), ()
 
-    def format_data_type_integer(self, data_type: IntegerType) -> Tuple[str, tuple]:
+    def format_data_type_integer(self, expr: IntegerType) -> Tuple[str, tuple]:
         """PostgreSQL writes this concept both ways, ``INT`` and ``INTEGER``, and
         the two are distinct renderings of one 4-byte signed integer — so the
         spelling is honoured rather than normalised.
@@ -421,21 +421,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(data_type, ("integer", "int"))
-        self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
-        return data_type.spelling.upper(), ()
+        self.check_spelling(expr, ("integer", "int"))
+        self._refuse_unsigned_integer(expr, expr.spelling.upper())
+        return expr.spelling.upper(), ()
 
-    def format_data_type_bigint(self, data_type: BigIntType) -> Tuple[str, tuple]:
+    def format_data_type_bigint(self, expr: BigIntType) -> Tuple[str, tuple]:
         """``BIGINT`` and ``INT8`` are both PostgreSQL spellings of this
         concept, so both render as written.
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(data_type, BigIntType)
-        self._refuse_unsigned_integer(data_type, data_type.spelling.upper())
-        return data_type.spelling.upper(), ()
+        self.check_spelling(expr, BigIntType)
+        self._refuse_unsigned_integer(expr, expr.spelling.upper())
+        return expr.spelling.upper(), ()
 
-    def format_data_type_float(self, data_type: FloatType) -> Tuple[str, tuple]:
+    def format_data_type_float(self, expr: FloatType) -> Tuple[str, tuple]:
         """``FLOAT(p)`` for a declared precision, ``REAL`` for none.
 
         ``unsigned`` is refused rather than ignored; see
@@ -444,17 +444,17 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         check below, and so an unsigned request is answered the same way whether
         or not it also named a precision.
         """
-        self._refuse_unsigned_numeric(data_type, "FLOAT")
-        if data_type.precision is not None:
-            if not (1 <= data_type.precision <= 53):
+        self._refuse_unsigned_numeric(expr, "FLOAT")
+        if expr.precision is not None:
+            if not (1 <= expr.precision <= 53):
                 raise ValueError(
                     f"FLOAT precision must be between 1 and 53 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"FLOAT({data_type.precision})", ()
+            return f"FLOAT({expr.precision})", ()
         return "REAL", ()
 
-    def format_data_type_real(self, data_type: RealType) -> Tuple[str, tuple]:
+    def format_data_type_real(self, expr: RealType) -> Tuple[str, tuple]:
         """``REAL``, and ``unsigned`` refused rather than ignored; see
         :meth:`_refuse_unsigned_numeric`, which is where the reason is written
         down.
@@ -472,10 +472,10 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         as its only parameter, and ``REAL`` is one of the two words PostgreSQL
         writes verbatim, so nothing about a *signed* declaration moves.
         """
-        self._refuse_unsigned_numeric(data_type, "REAL")
+        self._refuse_unsigned_numeric(expr, "REAL")
         return "REAL", ()
 
-    def format_data_type_double(self, data_type: DoubleType) -> Tuple[str, tuple]:
+    def format_data_type_double(self, expr: DoubleType) -> Tuple[str, tuple]:
         """``double`` and ``double precision`` are both PostgreSQL spellings,
         and PostgreSQL writes the long one itself — so both render as
         ``DOUBLE PRECISION`` rather than the bare ``DOUBLE``, which is valid
@@ -483,11 +483,11 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_numeric`."""
-        self.check_spelling(data_type, DoubleType)
-        self._refuse_unsigned_numeric(data_type, "DOUBLE PRECISION")
+        self.check_spelling(expr, DoubleType)
+        self._refuse_unsigned_numeric(expr, "DOUBLE PRECISION")
         return "DOUBLE PRECISION", ()
 
-    def format_data_type_decimal(self, data_type: DecimalType) -> Tuple[str, tuple]:
+    def format_data_type_decimal(self, expr: DecimalType) -> Tuple[str, tuple]:
         """``DECIMAL``, ``NUMERIC`` and ``DEC`` are interchangeable in
         PostgreSQL — the manual states they are synonyms, not variants — so all
         three are accepted and the declared one is rendered verbatim.
@@ -500,21 +500,21 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         whether or not it also named numbers this grammar could not have taken.
         The scale-without-precision refusal and the two ``ValueError`` range
         checks below are untouched and still fire for a signed declaration."""
-        self.check_spelling(data_type, DecimalType)
-        self._refuse_unsigned_numeric(data_type, "DECIMAL")
-        if data_type.precision is not None:
-            if not (1 <= data_type.precision <= 1000):
+        self.check_spelling(expr, DecimalType)
+        self._refuse_unsigned_numeric(expr, "DECIMAL")
+        if expr.precision is not None:
+            if not (1 <= expr.precision <= 1000):
                 raise ValueError(
                     f"DECIMAL precision must be between 1 and 1000 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-        if data_type.scale is not None:
-            if not (0 <= data_type.scale <= data_type.precision if data_type.precision else True):
+        if expr.scale is not None:
+            if not (0 <= expr.scale <= expr.precision if expr.precision else True):
                 raise ValueError(
                     f"DECIMAL scale must be between 0 and precision "
-                    f"({data_type.precision}), got {data_type.scale}"
+                    f"({expr.precision}), got {expr.scale}"
                 )
-        if data_type.scale is not None and data_type.precision is None:
+        if expr.scale is not None and expr.precision is None:
             # PostgreSQL's grammar is `numeric(precision, scale)`: the scale is
             # the second argument, so there is nowhere to put it without a
             # precision. `numeric(3)` means scale 0, so the alternative reading
@@ -534,7 +534,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             # used to be the one that did not.
             raise UnsupportedFeatureError(
                 self.name,
-                f"a DECIMAL with scale={data_type.scale} but no precision "
+                f"a DECIMAL with scale={expr.scale} but no precision "
                 f"(PostgreSQL's grammar is numeric(precision, scale) -- there is "
                 f"nowhere to put a bare scale, and numeric(precision) alone means "
                 f"scale 0, not the scale requested)",
@@ -542,30 +542,30 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                     "Declare the precision as well: numeric(precision, scale)."
                 ),
             )
-        if data_type.precision is not None and data_type.scale is not None:
-            return f"DECIMAL({data_type.precision},{data_type.scale})", ()
-        if data_type.precision is not None:
-            return f"DECIMAL({data_type.precision})", ()
+        if expr.precision is not None and expr.scale is not None:
+            return f"DECIMAL({expr.precision},{expr.scale})", ()
+        if expr.precision is not None:
+            return f"DECIMAL({expr.precision})", ()
         return "DECIMAL", ()
 
-    def format_data_type_char(self, data_type: CharType) -> Tuple[str, tuple]:
+    def format_data_type_char(self, expr: CharType) -> Tuple[str, tuple]:
         """``CHARACTER`` is PostgreSQL's own long form and is rendered as
         written, since PostgreSQL emits it back from the catalog."""
-        self.check_spelling(data_type, CharType)
-        width = f"({data_type.length})" if data_type.length is not None else ""
-        return f"{data_type.spelling.upper()}{width}", ()
+        self.check_spelling(expr, CharType)
+        width = f"({expr.length})" if expr.length is not None else ""
+        return f"{expr.spelling.upper()}{width}", ()
 
-    def format_data_type_varchar(self, data_type: VarCharType) -> Tuple[str, tuple]:
+    def format_data_type_varchar(self, expr: VarCharType) -> Tuple[str, tuple]:
         """PostgreSQL writes this concept both ways — and emits
         ``character varying`` from the catalog, which is why the long form is a
         spelling of the core type rather than a class of its own."""
-        self.check_spelling(data_type, VarCharType)
-        width = f"({data_type.length})" if data_type.length is not None else ""
-        if data_type.spelling == "character varying":
+        self.check_spelling(expr, VarCharType)
+        width = f"({expr.length})" if expr.length is not None else ""
+        if expr.spelling == "character varying":
             return f"CHARACTER VARYING{width}", ()
         return f"VARCHAR{width}", ()
 
-    def format_data_type_text(self, data_type: TextType) -> Tuple[str, tuple]:
+    def format_data_type_text(self, expr: TextType) -> Tuple[str, tuple]:
         """``TEXT`` only.
 
         ``CLOB`` is in the concept's spelling list but is not PostgreSQL's word
@@ -574,15 +574,15 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         something else. The default spelling must always render, or the concept
         would be unusable on this backend.
         """
-        self.check_spelling(data_type, ("text",))
+        self.check_spelling(expr, ("text",))
         return "TEXT", ()
 
-    def format_data_type_boolean(self, data_type: BooleanType) -> Tuple[str, tuple]:
+    def format_data_type_boolean(self, expr: BooleanType) -> Tuple[str, tuple]:
         """``BOOL`` is a PostgreSQL alias, so it is accepted and rendered."""
-        self.check_spelling(data_type, BooleanType)
-        return data_type.spelling.upper(), ()
+        self.check_spelling(expr, BooleanType)
+        return expr.spelling.upper(), ()
 
-    def format_data_type_blob(self, data_type: BlobType) -> Tuple[str, tuple]:
+    def format_data_type_blob(self, expr: BlobType) -> Tuple[str, tuple]:
         """Both spellings are accepted and both render ``BYTEA``.
 
         ``BYTEA`` is PostgreSQL's name for this concept and ``BLOB`` is not a
@@ -591,33 +591,33 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         carries. A backend that writes the concept under another name normalises
         the spelling; it does not refuse the request.
         """
-        self.check_spelling(data_type, BlobType)
+        self.check_spelling(expr, BlobType)
         return "BYTEA", ()
 
-    def format_data_type_date(self, data_type: DateType) -> Tuple[str, tuple]:
+    def format_data_type_date(self, expr: DateType) -> Tuple[str, tuple]:
         return "DATE", ()
 
-    def format_data_type_time(self, data_type: TimeType) -> Tuple[str, tuple]:
-        if data_type.precision is not None:
-            if not (0 <= data_type.precision <= 6):
+    def format_data_type_time(self, expr: TimeType) -> Tuple[str, tuple]:
+        if expr.precision is not None:
+            if not (0 <= expr.precision <= 6):
                 raise ValueError(
                     f"TIME precision must be between 0 and 6 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"TIME({data_type.precision})", ()
+            return f"TIME({expr.precision})", ()
         return "TIME", ()
 
-    def format_data_type_timetz(self, data_type: TimeTzType) -> Tuple[str, tuple]:
-        if data_type.precision is not None:
-            if not (0 <= data_type.precision <= 6):
+    def format_data_type_timetz(self, expr: TimeTzType) -> Tuple[str, tuple]:
+        if expr.precision is not None:
+            if not (0 <= expr.precision <= 6):
                 raise ValueError(
                     f"TIME precision must be between 0 and 6 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"TIME({data_type.precision}) WITH TIME ZONE", ()
+            return f"TIME({expr.precision}) WITH TIME ZONE", ()
         return "TIME WITH TIME ZONE", ()
 
-    def format_data_type_datetime(self, data_type: DateTimeType) -> Tuple[str, tuple]:
+    def format_data_type_datetime(self, expr: DateTimeType) -> Tuple[str, tuple]:
         """``TIMESTAMP`` without a fraction-seconds precision, which is what
         PostgreSQL reports for every such column -- so the bare form is what a
         default declaration renders.
@@ -629,44 +629,44 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         success.
         https://www.postgresql.org/docs/current/datatype-datetime.html
         """
-        if data_type.precision is not None:
-            if not (0 <= data_type.precision <= 6):
+        if expr.precision is not None:
+            if not (0 <= expr.precision <= 6):
                 raise ValueError(
                     f"TIMESTAMP precision must be between 0 and 6 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"TIMESTAMP({data_type.precision})", ()
+            return f"TIMESTAMP({expr.precision})", ()
         return "TIMESTAMP", ()
 
-    def format_data_type_timestamp(self, data_type: TimestampType) -> Tuple[str, tuple]:
-        if data_type.precision is not None:
-            if not (0 <= data_type.precision <= 6):
+    def format_data_type_timestamp(self, expr: TimestampType) -> Tuple[str, tuple]:
+        if expr.precision is not None:
+            if not (0 <= expr.precision <= 6):
                 raise ValueError(
                     f"TIMESTAMP precision must be between 0 and 6 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"TIMESTAMP({data_type.precision})", ()
+            return f"TIMESTAMP({expr.precision})", ()
         return "TIMESTAMP", ()
 
-    def format_data_type_timestamptz(self, data_type: TimestampTzType) -> Tuple[str, tuple]:
-        if data_type.precision is not None:
-            if not (0 <= data_type.precision <= 6):
+    def format_data_type_timestamptz(self, expr: TimestampTzType) -> Tuple[str, tuple]:
+        if expr.precision is not None:
+            if not (0 <= expr.precision <= 6):
                 raise ValueError(
                     f"TIMESTAMP precision must be between 0 and 6 "
-                    f"(PostgreSQL limit), got {data_type.precision}"
+                    f"(PostgreSQL limit), got {expr.precision}"
                 )
-            return f"TIMESTAMP({data_type.precision}) WITH TIME ZONE", ()
+            return f"TIMESTAMP({expr.precision}) WITH TIME ZONE", ()
         return "TIMESTAMP WITH TIME ZONE", ()
 
-    def format_data_type_interval(self, data_type: IntervalType) -> Tuple[str, tuple]:
-        if data_type.fields is not None:
-            return f"INTERVAL {data_type.fields}", ()
+    def format_data_type_interval(self, expr: IntervalType) -> Tuple[str, tuple]:
+        if expr.fields is not None:
+            return f"INTERVAL {expr.fields}", ()
         return "INTERVAL", ()
 
-    def format_data_type_json(self, data_type: JsonType) -> Tuple[str, tuple]:
+    def format_data_type_json(self, expr: JsonType) -> Tuple[str, tuple]:
         return "JSON", ()
 
-    def format_data_type_jsonb(self, data_type: JsonBType) -> Tuple[str, tuple]:
+    def format_data_type_jsonb(self, expr: JsonBType) -> Tuple[str, tuple]:
         return "JSONB", ()
 
     # ------------------------------------------------------------------
@@ -985,13 +985,17 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
                     result[name] = cls
         return result
 
-    def format_data_type_postgres_enum(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_postgres_enum(self, expr) -> Tuple[str, tuple]:
         """Render the reference to a created enum type.
 
         A column of an enum type states the type's name, not its labels — the
         labels belong to the CREATE TYPE that made it.
         """
-        return self.format_enum_type_name(data_type.type_name, data_type.schema)
+        from ...functions.enum import enum_type_name
+
+        return enum_type_name(
+            self, expr.type_name, expr.schema
+        ).to_sql()
 
     def supports_data_type_postgres_enum(self) -> bool:
         return True
@@ -1028,7 +1032,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
             "enum": PostgresEnumColumnType,
         }
 
-    def format_data_type_uuid(self, data_type) -> Tuple[str, tuple]:
+    def format_data_type_uuid(self, expr) -> Tuple[str, tuple]:
         return "UUID", ()
 
     def supports_data_type_xml(self) -> bool:
@@ -1036,7 +1040,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         rather than substituting text for it."""
         return True
 
-    def format_data_type_xml(self, data_type: XmlType) -> Tuple[str, tuple]:
+    def format_data_type_xml(self, expr: XmlType) -> Tuple[str, tuple]:
         """``xml`` in PostgreSQL.
 
         The type may be validated against an XML Schema registered for it, but
@@ -1045,12 +1049,12 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         """
         return "XML", ()
 
-    def format_data_type_custom(self, data_type) -> Tuple[str, tuple]:
-        return data_type.raw, ()
+    def format_data_type_custom(self, expr) -> Tuple[str, tuple]:
+        return expr.raw, ()
 
-    def format_data_type_array(self, data_type: ArrayType) -> Tuple[str, tuple]:
-        element_sql, _ = self.format_data_type(data_type.element_type)
-        return element_sql + "[]" * data_type.dimensions, ()
+    def format_data_type_array(self, expr: ArrayType) -> Tuple[str, tuple]:
+        element_sql, _ = self.format_data_type(expr.element_type)
+        return element_sql + "[]" * expr.dimensions, ()
 
     # ------------------------------------------------------------------
     # DDLTypeSupport — parsing

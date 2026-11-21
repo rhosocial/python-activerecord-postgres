@@ -1,97 +1,21 @@
 # src/rhosocial/activerecord/backend/impl/postgres/functions/vector_search.py
-"""
-PostgreSQL pgvector similarity-search helpers.
+"""pgvector factories — argument collection only.
 
-High-level helpers built on top of the pgvector operator factories in
-``functions/pgvector.py``:
-
-- ``vector_search``: assemble a complete similarity-search
-  ``QueryStatement`` (SELECT distance/similarity, WHERE filters,
-  ORDER BY distance, LIMIT top_k).
-- ``create_vector_index``: assemble a ``CreateIndexStatement`` for
-  HNSW/IVFFlat with metric-to-operator-class mapping.
-
-They target the RAG knowledge-base pattern:
-    index(chunk/tenant/meta/vector) + search(query_vector, top_k, filters)
-
-Requires the pgvector extension: CREATE EXTENSION IF NOT EXISTS vector;
+Validation and SQL assembly live in ``PostgresPgvectorMixin`` formatters.
 """
 
-from typing import List, Optional, Union, Dict, TYPE_CHECKING
+from typing import List, Optional, Union
 
-from rhosocial.activerecord.backend.expression import (
-    Column,
-    Literal,
-    QueryStatement,
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
+
+from ..expression.ddl import (
+    PostgresVectorIndexExpression,
+    PostgresVectorSearchExpression,
 )
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import (
-    AllColumnsWildcard,
-    BaseExpression,
-    Subquery,
-)
-from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
-from rhosocial.activerecord.backend.expression.query_parts import (
-    LimitOffsetClause,
-    OrderByClause,
-)
-from rhosocial.activerecord.backend.expression.query_parts import (
-    SQLPredicate,
-    WhereClause,
-)
-from rhosocial.activerecord.backend.expression.statements.ddl_index import (
-    CreateIndexStatement,
-)
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index_definition import (
-    PostgresCreateIndexExpression,
-)
-
-if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.dialect import SQLDialectBase
-
-from .pgvector import (
-    vector_cosine_distance,
-    vector_inner_product,
-    vector_l2_distance,
-)
-
-__all__ = ["vector_search", "create_vector_index"]
-
-VECTOR_METRICS = ("cosine", "l2", "ip")
-
-_METRIC_DISTANCE_FN: Dict[str, object] = {
-    "cosine": vector_cosine_distance,
-    "l2": vector_l2_distance,
-    "ip": vector_inner_product,
-}
-
-_METRIC_DISTANCE_ALIAS = {
-    "cosine": "cosine_distance",
-    "l2": "l2_distance",
-    "ip": "inner_product",
-}
-
-_METRIC_SIMILARITY_ALIAS = {
-    "cosine": "cosine_similarity",
-    "l2": "l2_similarity",
-}
-
-_METRIC_OPCLASS = {
-    "cosine": "vector_cosine_ops",
-    "l2": "vector_l2_ops",
-    "ip": "vector_ip_ops",
-}
-
-
-def _validate_metric(metric: str) -> None:
-    if metric not in VECTOR_METRICS:
-        raise ValueError(
-            f"Unsupported vector metric '{metric}'; expected one of {VECTOR_METRICS}"
-        )
 
 
 def vector_search(
-    dialect: "SQLDialectBase",
+    dialect,
     table: str,
     query_vector,
     metric: str = "cosine",
@@ -99,69 +23,20 @@ def vector_search(
     *,
     vector_column: str = "embedding",
     columns: Optional[List[Union[str, BaseExpression]]] = None,
-    where: Optional[Union[SQLPredicate, WhereClause]] = None,
+    where=None,
     include_distance: bool = True,
     include_similarity: bool = False,
-) -> QueryStatement:
-    """Build a pgvector similarity-search query.
-
-    Args:
-        dialect: The SQL dialect instance
-        table: Table name to search
-        query_vector: Query vector (``PostgresVector``, ``List[float]``, str,
-            or expression)
-        metric: Distance metric - 'cosine' | 'l2' | 'ip'
-        top_k: Number of nearest neighbors to return (LIMIT)
-        vector_column: Vector column name (default 'embedding')
-        columns: Select list; strings become columns, expressions pass through.
-            Defaults to ``SELECT *``.
-        where: Optional filter predicate (e.g. tenant/permission scoping)
-        include_distance: Include an aliased distance column in SELECT
-        include_similarity: Include ``1 - distance`` for cosine/l2 in SELECT
-
-    Returns:
-        A ready-to-execute ``QueryStatement``.
-    """
-    _validate_metric(metric)
-    if top_k <= 0:
-        raise ValueError("top_k must be positive")
-
-    vector_col = Column(dialect, vector_column)
-    distance_expr = _METRIC_DISTANCE_FN[metric](dialect, vector_col, query_vector)
-
-    if columns is None:
-        select: List[BaseExpression] = [AllColumnsWildcard(dialect)]
-    else:
-        select = [
-            Column(dialect, c) if isinstance(c, str) else c for c in columns
-        ]
-
-    if include_distance:
-        # A binary operation declares no alias field of its own (§4.3: the
-        # operation nodes carry the operands and nothing else), so the alias
-        # rides on the wrapping subquery -- the same shape the cube example
-        # uses for its distance column.
-        select.append(
-            Subquery(dialect, distance_expr).as_(_METRIC_DISTANCE_ALIAS[metric])
-        )
-    if include_similarity and metric in _METRIC_SIMILARITY_ALIAS:
-        similarity = ArithmeticOperation(
-            dialect, "sub", Literal(dialect, 1), distance_expr
-        )
-        select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
-
-    return QueryStatement(
-        dialect=dialect,
-        select=select,
-        from_=Table(dialect, table),
-        where=where,
-        order_by=OrderByClause(dialect, [distance_expr]),
-        limit_offset=LimitOffsetClause(dialect, limit=top_k),
+) -> PostgresVectorSearchExpression:
+    """Collect arguments for a pgvector similarity search."""
+    return PostgresVectorSearchExpression(
+        dialect, table, query_vector, metric, top_k,
+        vector_column=vector_column, columns=columns, where=where,
+        include_distance=include_distance, include_similarity=include_similarity,
     )
 
 
 def create_vector_index(
-    dialect: "SQLDialectBase",
+    dialect,
     table_name: str,
     column_name: str = "embedding",
     metric: str = "cosine",
@@ -172,53 +47,13 @@ def create_vector_index(
     ef_construction: Optional[int] = None,
     lists: Optional[int] = None,
     if_not_exists: bool = True,
-) -> CreateIndexStatement:
-    """Build a pgvector index creation expression.
-
-    Args:
-        dialect: The SQL dialect instance
-        table_name: Table name
-        column_name: Vector column name (default 'embedding')
-        metric: Distance metric - 'cosine' | 'l2' | 'ip' (maps to opclass)
-        index_type: Index type - 'hnsw' | 'ivfflat'
-        index_name: Optional index name (auto-generated if not provided)
-        m: HNSW max connections per layer
-        ef_construction: HNSW ef_construction
-        lists: IVFFlat number of lists
-        if_not_exists: Add IF NOT EXISTS
-
-    Returns:
-        A ready-to-execute ``CreateIndexStatement``.
-
-    Note:
-        IVFFlat requires the table to contain data before the index can be
-        created (HNSW has no such requirement). Create the index after
-        inserting rows when using ``index_type='ivfflat'``.
-    """
-    _validate_metric(metric)
-    index_type_l = index_type.lower()
-    if index_type_l not in ("hnsw", "ivfflat"):
-        raise ValueError(f"Unsupported vector index type '{index_type}'; "
-                         "expected 'hnsw' or 'ivfflat'")
-
-    idx_name = index_name or f"idx_{table_name}_{column_name}_{index_type_l}"
-    with_options: Dict[str, int] = {}
-    if index_type_l == "hnsw":
-        if m is not None:
-            with_options["m"] = m
-        if ef_construction is not None:
-            with_options["ef_construction"] = ef_construction
-    else:
-        if lists is not None:
-            with_options["lists"] = lists
-
-    return PostgresCreateIndexExpression(
-        dialect=dialect,
-        index=Index(dialect, idx_name),
-        table=Table(dialect, table_name),
-        columns=[column_name],
-        index_type=index_type_l.upper(),
-        if_not_exists=if_not_exists,
-        opclasses={column_name: _METRIC_OPCLASS[metric]},
-        with_options=with_options,
+) -> PostgresVectorIndexExpression:
+    """Collect arguments for a pgvector index."""
+    return PostgresVectorIndexExpression(
+        dialect, table_name, column_name, metric, index_type,
+        index_name=index_name, m=m, ef_construction=ef_construction,
+        lists=lists, if_not_exists=if_not_exists,
     )
+
+
+__all__ = ["vector_search", "create_vector_index"]

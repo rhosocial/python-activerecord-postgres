@@ -179,7 +179,27 @@ def similarity_operator(
     )
 
 
+def trgm_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str,
+    *,
+    index_type: str = "gin",
+    schema: str = None,
+):
+    """Collect arguments for a trigram index; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresTrgmIndexExpression,
+    )
+
+    return PostgresTrgmIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
+    )
+
+
 __all__ = [
+    "trgm_index",
     # Similarity functions
     "similarity",
     "word_similarity",

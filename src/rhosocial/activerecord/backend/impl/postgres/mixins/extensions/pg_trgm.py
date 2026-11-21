@@ -1,47 +1,44 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pg_trgm.py
-"""
-PostgreSQL pg_trgm trigram functionality mixin.
+"""pg_trgm capability probes and index renderer.
 
-This module provides functionality to check pg_trgm extension features,
-including similarity functions and trigram indexes.
-
-For SQL expression generation, use the function factories in
-``functions/pg_trgm.py`` instead of the removed format_* methods.
-For DDL index creation, use ``format_trgm_index_statement``.
+The node carries raw arguments; the formatter decides which access methods and
+operator classes are legal.
 """
 
-from typing import Optional, Tuple
+from typing import Tuple
 
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import (
+    PostgresCreateIndexExpression,
+    PostgresIndexType,
+    PostgresTrgmIndexExpression,
+)
 
 
 class PostgresPgTrgmMixin:
-    """pg_trgm trigram functionality implementation."""
+    """pg_trgm capability implementation."""
 
     def supports_pg_trgm_similarity(self) -> bool:
-        """Check if pg_trgm supports similarity functions."""
         return self.check_extension_feature("pg_trgm", "similarity")
 
     def supports_pg_trgm_index(self) -> bool:
-        """Check if pg_trgm supports trigram index."""
         return self.check_extension_feature("pg_trgm", "index")
 
-    def format_trgm_index_statement(
-        self, index_name: str, table_name: str, column_name: str, index_type: str = "gin", schema: Optional[str] = None
+    def format_postgres_trgm_index_expression(
+        self, expr: PostgresTrgmIndexExpression
     ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for trigram index.
-
-        Args:
-            index_name: Name of the index
-            table_name: Table name
-            column_name: Text column name
-            index_type: Index type - 'gin' (default) or 'gist'
-            schema: Optional schema name
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-        """
-        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
-        )
-        sql = f"CREATE INDEX {index_name} ON {full_table} USING {index_type} ({column_name} gin_trgm_ops)"
-        return (sql, ())
+        method = PostgresIndexType.normalize(expr.index_type or "gin").value
+        if method not in ("gin", "gist"):
+            raise ValueError(
+                f"pg_trgm index_type must be 'gin' or 'gist', got {expr.index_type!r}"
+            )
+        opclass = "gin_trgm_ops" if method == "gin" else "gist_trgm_ops"
+        return PostgresCreateIndexExpression(
+            self,
+            index=Index(self, expr.name, schema_name=expr.schema),
+            table=Table(self, expr.table, schema_name=expr.schema),
+            columns=expr.columns,
+            index_type=method,
+            opclasses={column: opclass for column in expr.columns},
+        ).to_sql()

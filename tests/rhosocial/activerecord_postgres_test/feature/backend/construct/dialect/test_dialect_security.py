@@ -9,6 +9,9 @@ Tests are run against the actual PostgreSQL dialect.
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.functions import (
+    create_index_pg, create_type_enum, create_procedure, drop_procedure, call_procedure,
+)
 from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F401
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -269,10 +272,10 @@ class TestEnumSecurity:
 
     def test_create_type_enum_values_escaped(self, dialect):
         """Test ENUM values are properly escaped with single quote doubling."""
-        sql, params = dialect.format_create_type_enum_statement(
+        sql, params = create_type_enum(dialect, 
             name="test_enum",
             values=["it's", "normal", "test's value"],
-        )
+        ).to_sql()
 
         assert "it''s" in sql
         assert "test''s value" in sql
@@ -280,10 +283,10 @@ class TestEnumSecurity:
 
     def test_create_type_enum_sql_injection_blocked(self, dialect):
         """Test SQL injection in ENUM values is properly escaped (not executed)."""
-        sql, params = dialect.format_create_type_enum_statement(
+        sql, params = create_type_enum(dialect, 
             name="test_enum",
             values=["normal", "'; DROP TABLE users--"],
-        )
+        ).to_sql()
 
         assert "DROP TABLE users--" in sql
         assert "CREATE TYPE" in sql
@@ -295,38 +298,38 @@ class TestStoredProcedureNameSecurity:
 
     def test_create_procedure_name_quoted(self, dialect):
         """Test CREATE PROCEDURE name is properly quoted."""
-        sql, params = dialect.format_create_procedure_statement(
+        sql, params = create_procedure(dialect, 
             name="my_procedure",
             body="BEGIN END",
             language="PL/pgSQL",
-        )
+        ).to_sql()
 
         assert '"my_procedure"' in sql
 
     def test_drop_procedure_name_quoted(self, dialect):
         """Test DROP PROCEDURE name is properly quoted."""
-        sql, params = dialect.format_drop_procedure_statement(
+        sql, params = drop_procedure(dialect, 
             name="my_procedure",
-        )
+        ).to_sql()
 
         assert '"my_procedure"' in sql
 
     def test_call_statement_name_quoted(self, dialect):
         """Test CALL statement procedure name is properly quoted."""
-        sql, params = dialect.format_call_statement(
+        sql, params = call_procedure(dialect, 
             name="my_procedure",
-        )
+        ).to_sql()
 
         assert '"my_procedure"' in sql
 
     def test_procedure_with_schema_quoted(self, dialect):
         """Test procedure with schema is properly quoted."""
-        sql, params = dialect.format_create_procedure_statement(
+        sql, params = create_procedure(dialect, 
             schema="my_schema",
             name="my_procedure",
             body="BEGIN END",
             language="PL/pgSQL",
-        )
+        ).to_sql()
 
         assert '"my_schema"' in sql
         assert '"my_procedure"' in sql
@@ -337,12 +340,12 @@ class TestPartialIndexWhereClauseSecurity:
 
     def test_create_index_with_string_where_clause(self, dialect):
         """Test CREATE INDEX with string WHERE clause (backward compatible)."""
-        sql, params = dialect.format_create_index_pg_statement(
+        sql, params = create_index_pg(dialect, 
             index_name="idx_test",
             table_name="users",
             columns=["email"],
             where_clause="active = true",
-        )
+        ).to_sql()
 
         assert "WHERE active = true" in sql
         assert params == ()
@@ -359,12 +362,12 @@ class TestPartialIndexWhereClauseSecurity:
             def to_sql(self):
                 return self._sql, self._params
 
-        sql, params = dialect.format_create_index_pg_statement(
+        sql, params = create_index_pg(dialect, 
             index_name="idx_active",
             table_name="users",
             columns=["email"],
             where_clause=MockWhereExpr(),
-        )
+        ).to_sql()
 
         assert "WHERE age >= 18" in sql
         assert params == (18,)
@@ -381,12 +384,12 @@ class TestPartialIndexWhereClauseSecurity:
             def to_sql(self):
                 return self._sql, self._params
 
-        sql, params = dialect.format_create_index_pg_statement(
+        sql, params = create_index_pg(dialect, 
             index_name="idx_test",
             table_name="users",
             columns=["status"],
             where_clause=MockWhereExpr(),
-        )
+        ).to_sql()
 
         assert "WHERE status = %s" in sql
         assert params == ("active",)

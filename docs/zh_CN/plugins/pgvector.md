@@ -93,22 +93,33 @@ CREATE TABLE embeddings (
 
 ## 向量索引
 
-### HNSW 索引（推荐）
+访问方法用 `PostgresIndexType` 成员（HNSW / IVFFLAT）选择，操作符类由距离度量推导，
+两者都是表达式节点的一部分：
 
-```sql
--- 创建 HNSW 索引（需要 pgvector 0.5.0+）
-CREATE INDEX idx_embeddings_hnsw ON embeddings 
-USING hnsw (embedding vector_cosine_ops);
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import PostgresIndexType
+from rhosocial.activerecord.backend.impl.postgres.functions import create_vector_index
+
+# cosine + HNSW（需 pgvector 0.5.0+）
+hnsw = create_vector_index(
+    dialect, "embeddings", "embedding",
+    metric="cosine",
+    index_type=PostgresIndexType.HNSW.value,
+    m=16, ef_construction=64,
+)
+
+# L2 + IVFFlat —— 数据加载后再建
+ivfflat = create_vector_index(
+    dialect, "embeddings", "embedding",
+    metric="l2",
+    index_type=PostgresIndexType.IVFFLAT.value,
+    lists=100,
+)
+
+backend.execute(*hnsw.to_sql())
 ```
 
-### IVFFlat 索引
-
-```sql
--- 创建 IVFFlat 索引
-CREATE INDEX idx_embeddings_ivfflat ON embeddings 
-USING ivfflat (embedding vector_cosine_ops) 
-WITH (lists = 100);
-```
+完整可运行场景见 `examples/indexes/pgvector_indexes.py`。
 
 ## 相似性搜索
 

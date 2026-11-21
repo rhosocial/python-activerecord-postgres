@@ -1,124 +1,191 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/pgvector.py
-"""
-PostgreSQL pgvector vector similarity search mixin.
+"""pgvector capability probes and query/index renderers.
 
-This module provides functionality to check pgvector extension features,
-including vector type, similarity search, and index types.
-
-For SQL expression generation, use the function factories in
-``functions/pgvector.py`` instead of the removed format_* methods.
-For DDL index creation, use ``format_create_vector_index_statement``
-or ``format_create_hnsw_index_statement``.
+The nodes only carry arguments; validation and SQL assembly happen here.
 """
 
-from typing import Optional, Tuple
+import warnings
+from typing import Tuple
 
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
+from rhosocial.activerecord.backend.expression.core import AllColumnsWildcard, Subquery
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+from rhosocial.activerecord.backend.expression.operators import (
+    ArithmeticOperation,
+    BinaryExpression,
+)
+from rhosocial.activerecord.backend.expression.query_parts import (
+    LimitOffsetClause,
+    OrderByClause,
+)
+
+from ...expression.ddl import (
+    PostgresCreateIndexExpression,
+    PostgresIndexType,
+    PostgresVectorIndexExpression,
+    PostgresVectorSearchExpression,
+    PostgresVectorDistanceExpression,
+)
+from ...functions.pgvector import (
+    vector_cosine_distance,
+    vector_inner_product,
+    vector_l2_distance,
+)
+
+_DISTANCE = {
+    "cosine": vector_cosine_distance,
+    "l2": vector_l2_distance,
+    "ip": vector_inner_product,
+}
+_DISTANCE_ALIAS = {
+    "cosine": "cosine_distance", "l2": "l2_distance", "ip": "inner_product",
+}
+_SIMILARITY_ALIAS = {"cosine": "cosine_similarity", "l2": "l2_similarity"}
+_OPCLASS = {
+    "cosine": "vector_cosine_ops", "l2": "vector_l2_ops", "ip": "vector_ip_ops",
+}
+_DISTANCE_OPERATOR = {"cosine": "<=>", "l2": "<->", "ip": "<#>"}
 
 
 class PostgresPgvectorMixin:
     """pgvector vector similarity search implementation."""
 
     def supports_pgvector_type(self) -> bool:
-        """Check if pgvector supports vector type."""
         return self.check_extension_feature("vector", "type")
 
     def supports_pgvector_similarity_search(self) -> bool:
-        """Check if pgvector supports similarity search."""
         return self.check_extension_feature("vector", "similarity_search")
 
     def supports_pgvector_ivfflat_index(self) -> bool:
-        """Check if pgvector supports IVFFlat index."""
         return self.check_extension_feature("vector", "ivfflat_index")
 
     def supports_pgvector_hnsw_index(self) -> bool:
-        """Check if pgvector supports HNSW index (requires 0.5.0+)."""
         return self.check_extension_feature("vector", "hnsw_index")
 
-    def format_create_vector_index_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        column_name: str,
-        index_type: str = "hnsw",
-        m: Optional[int] = None,
-        ef_construction: Optional[int] = None,
-        lists: Optional[int] = None,
-        schema: Optional[str] = None,
-        opclass: str = "vector_cosine_ops",
+    def format_postgres_vector_distance_expression(
+        self, expr: PostgresVectorDistanceExpression
     ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for vector column.
+        from rhosocial.activerecord.backend.expression import bases, core
 
-        Args:
-            index_name: Name of the index
-            table_name: Table name
-            column_name: Vector column name
-            index_type: Index type - 'hnsw' or 'ivfflat'
-            m: HNSW M parameter (max connections per layer)
-            ef_construction: HNSW ef_construction parameter
-            lists: IVFFlat number of lists
-            schema: Optional schema name
-            opclass: pgvector operator class for the index; defaults to
-                ``vector_cosine_ops``. Use ``vector_l2_ops`` or ``vector_ip_ops``
-                for L2/inner-product distance indexes.
+        from ...functions.pgvector import PostgresVector, _typed_vector
 
-        Returns:
-            Tuple of (SQL statement, parameters)
-        """
-        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        metric = (
+            expr.metric.strip().lower()
+            if isinstance(expr.metric, str)
+            else expr.metric
         )
-
-        if index_type.lower() == "hnsw":
-            with_clauses = []
-            if m is not None:
-                with_clauses.append(f"m = {m}")
-            if ef_construction is not None:
-                with_clauses.append(f"ef_construction = {ef_construction}")
-            with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
-            sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING hnsw ({column_name} {opclass}){with_clause}"
+        if metric not in _DISTANCE_OPERATOR:
+            raise ValueError(
+                f"Unsupported vector metric {expr.metric!r}; expected cosine/l2/ip"
             )
-        else:  # ivfflat
-            lists_clause = f" WITH (lists = {lists})" if lists else ""
-            sql = (
-                f"CREATE INDEX {index_name} ON {full_table} "
-                f"USING ivfflat ({column_name} {opclass}){lists_clause}"
-            )
-
-        return (sql, ())
-
-    def format_create_hnsw_index_statement(
-        self,
-        table_name: str,
-        column_name: str,
-        index_name: Optional[str] = None,
-        m: Optional[int] = None,
-        ef_construction: Optional[int] = None,
-        opclass: str = "vector_cosine_ops",
-    ) -> str:
-        """Format CREATE INDEX statement with HNSW index for vector column.
-
-        Args:
-            table_name: Table name
-            column_name: Vector column name
-            index_name: Optional index name (auto-generated if not provided)
-            m: HNSW M parameter (max connections per layer)
-            ef_construction: HNSW ef_construction parameter
-            opclass: pgvector operator class for the index; defaults to
-                ``vector_cosine_ops``.
-
-        Returns:
-            SQL CREATE INDEX statement
-        """
-        idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
-        with_clauses = []
-        if m is not None:
-            with_clauses.append(f"m = {m}")
-        if ef_construction is not None:
-            with_clauses.append(f"ef_construction = {ef_construction}")
-        with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
-        return (
-            f"CREATE INDEX {idx_name} ON {table_name} "
-            f"USING hnsw ({column_name} {opclass}){with_clause}"
+        column_expr = (
+            Column(self, expr.column)
+            if isinstance(expr.column, str)
+            else expr.column
         )
+        if isinstance(expr.query_vector, bases.BaseExpression):
+            query_expr = expr.query_vector
+        elif isinstance(expr.query_vector, PostgresVector):
+            query_expr = _typed_vector(
+                self,
+                expr.query_vector.to_postgres_string(),
+                expr.query_vector.dimensions,
+            )
+        elif isinstance(expr.query_vector, list):
+            vec = PostgresVector(values=expr.query_vector)
+            query_expr = _typed_vector(
+                self, vec.to_postgres_string(), vec.dimensions
+            )
+        else:
+            query_expr = core.Literal(self, expr.query_vector)
+        return BinaryExpression(
+            self, _DISTANCE_OPERATOR[metric], column_expr, query_expr
+        ).to_sql()
+
+    def format_postgres_vector_index_expression(
+        self, expr: PostgresVectorIndexExpression
+    ) -> Tuple[str, tuple]:
+        metric = (
+            expr.metric.strip().lower()
+            if isinstance(expr.metric, str)
+            else expr.metric
+        )
+        if metric not in _DISTANCE:
+            raise ValueError(
+                f"Unsupported vector metric {expr.metric!r}; expected cosine/l2/ip"
+            )
+        method = PostgresIndexType.normalize(expr.index_type).value
+        if method not in ("hnsw", "ivfflat"):
+            raise ValueError(
+                f"Unsupported vector index type {expr.index_type!r}; "
+                "expected 'hnsw' or 'ivfflat'"
+            )
+        name = expr.index_name or f"idx_{expr.table_name}_{expr.column_name}_{method}"
+        with_options = {}
+        if method == "hnsw":
+            if expr.m is not None:
+                with_options["m"] = expr.m
+            if expr.ef_construction is not None:
+                with_options["ef_construction"] = expr.ef_construction
+        elif expr.lists is not None:
+            with_options["lists"] = expr.lists
+        return PostgresCreateIndexExpression(
+            self,
+            index=Index(self, name),
+            table=Table(self, expr.table_name),
+            columns=[expr.column_name],
+            index_type=method.upper(),
+            if_not_exists=expr.if_not_exists,
+            opclasses={expr.column_name: _OPCLASS[metric]},
+            with_options=with_options,
+        ).to_sql()
+
+    def format_postgres_vector_search_expression(
+        self, expr: PostgresVectorSearchExpression
+    ) -> Tuple[str, tuple]:
+        metric = (
+            expr.metric.strip().lower()
+            if isinstance(expr.metric, str)
+            else expr.metric
+        )
+        if metric not in _DISTANCE:
+            raise ValueError(
+                f"Unsupported vector metric {expr.metric!r}; expected cosine/l2/ip"
+            )
+        if expr.top_k <= 0:
+            raise ValueError("top_k must be positive")
+
+        vector_col = Column(self, expr.vector_column)
+        distance = _DISTANCE[metric](self, vector_col, expr.query_vector)
+        select = (
+            [AllColumnsWildcard(self)]
+            if expr.columns is None
+            else [
+                Column(self, c) if isinstance(c, str) else c for c in expr.columns
+            ]
+        )
+        if expr.include_distance:
+            select.append(
+                Subquery(self, distance).as_(_DISTANCE_ALIAS[metric])
+            )
+        if expr.include_similarity:
+            if metric not in _SIMILARITY_ALIAS:
+                warnings.warn(
+                    f"include_similarity is defined for cosine and l2, not "
+                    f"{expr.metric!r}; no similarity column was added",
+                    stacklevel=2,
+                )
+            else:
+                similarity = ArithmeticOperation(
+                    self, "sub", Literal(self, 1), Subquery(self, distance)
+                )
+                select.append(similarity.as_(_SIMILARITY_ALIAS[metric]))
+
+        return QueryStatement(
+            dialect=self,
+            select=select,
+            from_=Table(self, expr.table),
+            where=expr.where,
+            order_by=OrderByClause(self, [distance]),
+            limit_offset=LimitOffsetClause(self, limit=expr.top_k),
+        ).to_sql()

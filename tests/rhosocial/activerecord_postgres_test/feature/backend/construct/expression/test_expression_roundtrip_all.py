@@ -1215,6 +1215,10 @@ UNCONSTRUCTIBLE = (
     # the filler supplies none of them and the type declares neither its name nor
     # its members.
     "rhosocial.activerecord.backend.impl.postgres.expression.types.PostgresEnumColumnType",
+    # PG STAT STATEMENT. `query_kind` is required, but the filler's "x" is
+    # refused by the closed QUERY_KINDS vocabulary; construct via the factories
+    # in functions.pg_stat_statements instead.
+    "rhosocial.activerecord.backend.impl.postgres.expression.pg_stat.PostgresPgStatStatement",
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own

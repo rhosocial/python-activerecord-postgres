@@ -182,7 +182,38 @@ def normal_rand(
     return core.FunctionCall(dialect, "normal_rand", *args)
 
 
+def crosstab_with_definition(
+    dialect, source_sql: str, output_columns: str, categories_sql: str = None
+):
+    """Build a crosstab query with typed output columns."""
+    from ..expression.tablefunc import PostgresCrosstabWithDefinitionStatement
+
+    return PostgresCrosstabWithDefinitionStatement(
+        dialect, source_sql, output_columns, categories_sql
+    )
+
+
+def connectby_full(
+    dialect,
+    table_name: str,
+    key_column: str,
+    parent_column: str,
+    start_value: str,
+    max_depth: int,
+    branch_delim: str = "~",
+):
+    """Build a connectby query with typed output columns."""
+    from ..expression.tablefunc import PostgresConnectbyFullStatement
+
+    return PostgresConnectbyFullStatement(
+        dialect, table_name, key_column, parent_column,
+        start_value, max_depth, branch_delim,
+    )
+
+
 __all__ = [
+    "crosstab_with_definition",
+    "connectby_full",
     # Crosstab functions
     "crosstab",
     # Hierarchical tree functions

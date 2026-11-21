@@ -416,7 +416,27 @@ def st_centroid(
     return core.FunctionCall(dialect, "ST_Centroid", geom)
 
 
+def spatial_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str,
+    *,
+    index_type: str = "gist",
+    schema: str = None,
+):
+    """Collect arguments for a spatial index; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresSpatialIndexExpression,
+    )
+
+    return PostgresSpatialIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
+    )
+
+
 __all__ = [
+    "spatial_index",
     # Construction
     "st_make_point",
     "st_geom_from_text",

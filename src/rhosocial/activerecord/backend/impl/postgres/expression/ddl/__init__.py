@@ -91,6 +91,24 @@ from .index_definition import (
     PostgresIndexDefinition,
     PostgresDropIndexExpression,
 )
+from .index_type import PostgresIndexType
+from .procedure import (
+    PostgresCreateProcedureStatement,
+    PostgresDropProcedureStatement,
+    PostgresCallProcedureStatement,
+)
+from .extension_index import (
+    PostgresLtreeIndexExpression,
+    PostgresTrgmIndexExpression,
+    PostgresSpatialIndexExpression,
+    PostgresCitextColumnExpression,
+    PostgresDropTypeNameExpression,
+)
+from .vector import (
+    PostgresVectorIndexExpression,
+    PostgresVectorSearchExpression,
+    PostgresVectorDistanceExpression,
+)
 from .exclude_constraint import PostgresExcludeConstraint
 from .constraint import PostgresAlterConstraintAction
 from .statistics import (
@@ -228,6 +246,18 @@ __all__ = [
     "PostgresPartitionMetadataQueryStatement",
     "PostgresPartitionTreeQueryStatement",
     # index
+    "PostgresIndexType",
+    "PostgresCreateProcedureStatement",
+    "PostgresDropProcedureStatement",
+    "PostgresCallProcedureStatement",
+    "PostgresLtreeIndexExpression",
+    "PostgresTrgmIndexExpression",
+    "PostgresSpatialIndexExpression",
+    "PostgresCitextColumnExpression",
+    "PostgresDropTypeNameExpression",
+    "PostgresVectorIndexExpression",
+    "PostgresVectorSearchExpression",
+    "PostgresVectorDistanceExpression",
     "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
     "PostgresReindexStatement",

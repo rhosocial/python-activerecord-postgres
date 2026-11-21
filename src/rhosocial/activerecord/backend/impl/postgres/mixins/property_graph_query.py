@@ -122,31 +122,31 @@ class PostgresPropertyGraphQueryMixin:
         )
         return formatter(expression)
 
-    def format_graph_edge(self, edge: "GraphEdge") -> Tuple[str, tuple]:
-        """Validate and format a graph edge."""
+    def format_graph_edge(self, expr: "GraphEdge") -> Tuple[str, tuple]:
+        """Validate and format a graph expr."""
         self._require_graph_match()
 
         from rhosocial.activerecord.backend.expression.graph import GraphEdge, GraphEdgeDirection
 
-        if not isinstance(edge, GraphEdge):
+        if not isinstance(expr, GraphEdge):
             raise TypeError("GraphEdge must be a GraphEdge expression")
-        if edge.table is not None and edge.variable is None:
+        if expr.table is not None and expr.variable is None:
             raise ValueError("GraphEdge table requires a variable")
-        if not isinstance(edge.direction, GraphEdgeDirection):
-            raise ValueError(f"Invalid graph edge direction: {edge.direction!r}")
+        if not isinstance(expr.direction, GraphEdgeDirection):
+            raise ValueError(f"Invalid graph edge direction: {expr.direction!r}")
 
-        return self._delegate_graph_formatter("format_graph_edge", edge)
+        return self._delegate_graph_formatter("format_graph_edge", expr)
 
-    def format_match_clause(self, clause: "MatchClause") -> Tuple[str, tuple]:
-        """Validate and format a MATCH clause."""
+    def format_match_clause(self, expr: "MatchClause") -> Tuple[str, tuple]:
+        """Validate and format a MATCH expr."""
         self._require_graph_match()
 
-        return self._delegate_graph_formatter("format_match_clause", clause)
+        return self._delegate_graph_formatter("format_match_clause", expr)
 
-    def format_graph_columns_clause(self, columns: "ColumnsClause") -> Tuple[str, tuple]:
+    def format_graph_columns_clause(self, expr: "ColumnsClause") -> Tuple[str, tuple]:
         """Format a GRAPH_TABLE COLUMNS clause after checking capability."""
         self._require_graph_table("GRAPH_TABLE COLUMNS clause")
-        return self._delegate_graph_formatter("format_graph_columns_clause", columns)
+        return self._delegate_graph_formatter("format_graph_columns_clause", expr)
 
     @staticmethod
     def _normalize_alter_keyword(value: object, allowed: Mapping[str, str], label: str) -> str:
