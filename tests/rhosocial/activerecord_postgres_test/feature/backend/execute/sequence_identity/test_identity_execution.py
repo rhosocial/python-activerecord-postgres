@@ -19,7 +19,7 @@ The three outcomes stay distinct, as core's helper requires:
 Each verdict is preceded by a sentinel: a deliberately invalid statement must
 be classified ``REJECTED``, or a null result could be read as acceptance.
 """
-from rhosocial.activerecord.backend.expression.statements import auto_increment_parts  # noqa: E402
+from rhosocial.activerecord.backend.suggestion import IntegerAutoIncrementSuggestionRenderer  # noqa: E402
 
 import pytest
 
@@ -142,14 +142,14 @@ def _auto_increment_table(dialect, table_name):
             ColumnDefinition(
                 dialect,
                 "id"[0],
-                auto_increment_parts(dialect, IntegerType(dialect=dialect))[0],
+                IntegerAutoIncrementSuggestionRenderer().parts(dialect, IntegerType(dialect=dialect))[0],
                 constraints=[
                     ColumnConstraint(
                         dialect,
                         branch=ColumnPrimaryKeyConstraint(dialect),
                     )
                 ],
-             attributes=auto_increment_parts(dialect, IntegerType(dialect=dialect))[1])
+             attributes=IntegerAutoIncrementSuggestionRenderer().parts(dialect, IntegerType(dialect=dialect))[1])
         ],
     )
 

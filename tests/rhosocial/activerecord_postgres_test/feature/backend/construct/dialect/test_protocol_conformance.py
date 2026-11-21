@@ -77,6 +77,14 @@ def get_postgres_protocols():
     from typing import runtime_checkable  # noqa: F401
 
     protocols = [
+        dialect_protocols.PartitionBuildSuggestionSupport,
+        dialect_protocols.PartitionTableDropSuggestionSupport,
+        dialect_protocols.PartitionTableAlterSuggestionSupport,
+        dialect_protocols.PartitionAddSuggestionSupport,
+        dialect_protocols.PartitionDropSuggestionSupport,
+        dialect_protocols.PartitionSplitSuggestionSupport,
+        dialect_protocols.PartitionMergeSuggestionSupport,
+        dialect_protocols.PartitionRetentionSuggestionSupport,
         dialect_protocols.SQLXMLSupport,
         dialect_protocols.SQLXMLParsingSupport,
         dialect_protocols.SQLXMLSerializationSupport,
