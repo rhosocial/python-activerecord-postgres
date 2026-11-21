@@ -6,10 +6,11 @@ This module provides the PostgresBtreeGinMixin class that adds support for
 btree_gin extension features.
 """
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
-if TYPE_CHECKING:
-    pass
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import PostgresCreateIndexExpression
 
 
 class PostgresBtreeGinMixin:
@@ -35,8 +36,14 @@ class PostgresBtreeGinMixin:
         Returns:
             SQL CREATE INDEX statement
         """
-        col_str = ", ".join(columns)
-        return f"CREATE INDEX {index_name} ON {table_name} USING gin ({col_str})"
+        expr = PostgresCreateIndexExpression(
+            self,
+            index=Index(self, index_name),
+            table=Table(self, table_name),
+            columns=list(columns),
+            index_type="GIN",
+        )
+        return expr.to_sql()[0]
 
     def format_btree_gin_operator_class(self, data_type: str) -> str:
         """Format btree_gin operator class name.

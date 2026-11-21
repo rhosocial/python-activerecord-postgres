@@ -13,7 +13,9 @@ or ``format_create_hnsw_index_statement``.
 
 from typing import Optional, Tuple
 
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import PostgresCreateIndexExpression
 
 
 class PostgresPgvectorMixin:
@@ -112,13 +114,18 @@ class PostgresPgvectorMixin:
             SQL CREATE INDEX statement
         """
         idx_name = index_name or f"idx_{table_name}_{column_name}_hnsw"
-        with_clauses = []
+        with_options = {}
         if m is not None:
-            with_clauses.append(f"m = {m}")
+            with_options["m"] = m
         if ef_construction is not None:
-            with_clauses.append(f"ef_construction = {ef_construction}")
-        with_clause = f" WITH ({', '.join(with_clauses)})" if with_clauses else ""
-        return (
-            f"CREATE INDEX {idx_name} ON {table_name} "
-            f"USING hnsw ({column_name} {opclass}){with_clause}"
+            with_options["ef_construction"] = ef_construction
+        expr = PostgresCreateIndexExpression(
+            self,
+            index=Index(self, idx_name),
+            table=Table(self, table_name),
+            columns=[column_name],
+            index_type="HNSW",
+            opclasses={column_name: opclass},
+            with_options=with_options,
         )
+        return expr.to_sql()[0]

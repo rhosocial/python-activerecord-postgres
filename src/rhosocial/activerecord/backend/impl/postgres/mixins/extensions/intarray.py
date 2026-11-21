@@ -10,6 +10,10 @@ For SQL expression generation, use the function factories in
 
 from typing import Optional
 
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import PostgresCreateIndexExpression
+
 
 class PostgresIntarrayMixin:
     """intarray integer array implementation."""
@@ -47,4 +51,12 @@ class PostgresIntarrayMixin:
         """
         if index_name is None:
             index_name = f"idx_{table_name}_{column_name}"
-        return f"CREATE INDEX {index_name} ON {table_name} USING gin ({column_name} gin__int_ops)"
+        expr = PostgresCreateIndexExpression(
+            self,
+            index=Index(self, index_name),
+            table=Table(self, table_name),
+            columns=[column_name],
+            index_type="GIN",
+            opclasses={column_name: "gin__int_ops"},
+        )
+        return expr.to_sql()[0]

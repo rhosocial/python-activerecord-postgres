@@ -12,7 +12,9 @@ For DDL index creation, use ``format_spatial_index_statement``.
 
 from typing import Optional, Tuple
 
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import PostgresCreateIndexExpression
 
 
 class PostgresPostGISMixin:
@@ -35,20 +37,39 @@ class PostgresPostGISMixin:
         return self.check_extension_feature("postgis", "spatial_functions")
 
     def format_spatial_index_statement(
-        self, index_name: str, table_name: str, column_name: str, schema: Optional[str] = None
+        self,
+        index_name: str,
+        table_name: str,
+        column_name: str,
+        schema: Optional[str] = None,
+        index_type: str = "gist",
     ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for spatial column.
+        """Format CREATE INDEX statement for a spatial column.
+
+        PostGIS also supports SP-GiST and BRIN spatial indexes; the default
+        stays GiST for compatibility with existing callers.
 
         Args:
             index_name: Name of the index
             table_name: Table name
             column_name: Geometry/Geography column name
             schema: Optional schema name
+            index_type: Access method: ``gist``, ``spgist`` or ``brin``
 
         Returns:
             Tuple of (SQL statement, parameters)
         """
-        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        method = index_type.lower()
+        if method not in ("gist", "spgist", "brin"):
+            raise ValueError(
+                f"PostGIS index_type must be 'gist', 'spgist' or 'brin', "
+                f"got {index_type!r}"
+            )
+        expr = PostgresCreateIndexExpression(
+            self,
+            index=Index(self, index_name, schema_name=schema),
+            table=Table(self, table_name, schema_name=schema),
+            columns=[column_name],
+            index_type=method.upper(),
         )
-        sql = f"CREATE INDEX {index_name} ON {full_table} USING gist ({column_name})"
-        return (sql, ())
+        return expr.to_sql()

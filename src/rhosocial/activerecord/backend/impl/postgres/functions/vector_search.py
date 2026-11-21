@@ -17,6 +17,7 @@ They target the RAG knowledge-base pattern:
 Requires the pgvector extension: CREATE EXTENSION IF NOT EXISTS vector;
 """
 
+import warnings
 from typing import List, Optional, Union, Dict, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression import (
@@ -117,7 +118,9 @@ def vector_search(
             Defaults to ``SELECT *``.
         where: Optional filter predicate (e.g. tenant/permission scoping)
         include_distance: Include an aliased distance column in SELECT
-        include_similarity: Include ``1 - distance`` for cosine/l2 in SELECT
+        include_similarity: Include ``1 - distance`` for cosine/l2 in SELECT.
+            Inner product has no such similarity, so this warns and adds no
+            column when ``metric='ip'``.
 
     Returns:
         A ready-to-execute ``QueryStatement``.
@@ -144,11 +147,21 @@ def vector_search(
         select.append(
             Subquery(dialect, distance_expr).as_(_METRIC_DISTANCE_ALIAS[metric])
         )
-    if include_similarity and metric in _METRIC_SIMILARITY_ALIAS:
-        similarity = ArithmeticOperation(
-            dialect, "sub", Literal(dialect, 1), distance_expr
-        )
-        select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
+    if include_similarity:
+        if metric not in _METRIC_SIMILARITY_ALIAS:
+            # Inner product has no ``1 - distance`` similarity, so there is no
+            # column to add. Say so rather than dropping the caller's request
+            # without a trace.
+            warnings.warn(
+                f"include_similarity is defined for cosine and l2, not {metric!r}; "
+                f"no similarity column was added",
+                stacklevel=2,
+            )
+        else:
+            similarity = ArithmeticOperation(
+                dialect, "sub", Literal(dialect, 1), distance_expr
+            )
+            select.append(similarity.as_(_METRIC_SIMILARITY_ALIAS[metric]))
 
     return QueryStatement(
         dialect=dialect,

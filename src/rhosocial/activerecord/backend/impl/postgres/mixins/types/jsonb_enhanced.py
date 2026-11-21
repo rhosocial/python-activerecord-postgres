@@ -444,8 +444,8 @@ class PostgresJSONBEnhancedMixin:
             raise UnsupportedFeatureError(
                 self.name,
                 "JSON arrow operators (-> / ->>)",
-                f"This PostgreSQL is older than 9.3, which added the arrow "
-                f"operators. Use the default path mode instead.",
+                "This PostgreSQL is older than 9.3, which added the arrow "
+                "operators. Use the default path mode instead.",
             )
 
         if isinstance(expr.column, bases.BaseExpression):

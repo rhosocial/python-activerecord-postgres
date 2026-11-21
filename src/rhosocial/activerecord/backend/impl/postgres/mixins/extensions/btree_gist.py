@@ -6,10 +6,11 @@ This module provides the PostgresBtreeGistMixin class that adds support for
 btree_gist extension features.
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-if TYPE_CHECKING:
-    pass
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import PostgresCreateIndexExpression
 
 
 class PostgresBtreeGistMixin:
@@ -37,9 +38,15 @@ class PostgresBtreeGistMixin:
         Returns:
             SQL CREATE INDEX statement
         """
-        col_str = ", ".join(columns)
-        inc_str = f" INCLUDE ({', '.join(include)})" if include else ""
-        return f"CREATE INDEX {index_name} ON {table_name} USING gist ({col_str}){inc_str}"
+        expr = PostgresCreateIndexExpression(
+            self,
+            index=Index(self, index_name),
+            table=Table(self, table_name),
+            columns=list(columns),
+            index_type="GIST",
+            include=list(include) if include else None,
+        )
+        return expr.to_sql()[0]
 
     def format_btree_gist_operator_class(self, data_type: str) -> str:
         """Format btree_gist operator class name.
