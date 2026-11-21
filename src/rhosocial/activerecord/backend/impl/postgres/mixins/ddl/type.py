@@ -359,6 +359,20 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts.append(", ".join(action_parts))
         return " ".join(parts), tuple(action_params)
 
+    def format_postgres_drop_type_name_expression(self, expr) -> Tuple[str, tuple]:
+        """Validate schema arguments and render a name-addressed DROP TYPE."""
+        if expr.schema is not None and expr.schema_name is not None and expr.schema != expr.schema_name:
+            raise ValueError("schema and schema_name must match when both are provided")
+        resolved = expr.schema if expr.schema is not None else expr.schema_name
+        node = PostgresDropTypeExpression(
+            self._as_dialect(),
+            Type(self._as_dialect(), expr.name, schema_name=resolved),
+            if_exists=expr.if_exists,
+            cascade=expr.cascade,
+            restrict=expr.restrict,
+        )
+        return self.format_drop_type_statement(node)
+
     def format_drop_type_statement(self, expr: DropTypeStatement) -> Tuple[str, tuple]:
         """Render a DROP TYPE expression node.
 

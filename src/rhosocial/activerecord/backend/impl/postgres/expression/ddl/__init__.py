@@ -97,6 +97,17 @@ from .procedure import (
     PostgresDropProcedureStatement,
     PostgresCallProcedureStatement,
 )
+from .extension_index import (
+    PostgresLtreeIndexExpression,
+    PostgresTrgmIndexExpression,
+    PostgresSpatialIndexExpression,
+    PostgresCitextColumnExpression,
+    PostgresDropTypeNameExpression,
+)
+from .vector import (
+    PostgresVectorIndexExpression,
+    PostgresVectorSearchExpression,
+)
 from .exclude_constraint import PostgresExcludeConstraint
 from .constraint import PostgresAlterConstraintAction
 from .statistics import (
@@ -238,6 +249,13 @@ __all__ = [
     "PostgresCreateProcedureStatement",
     "PostgresDropProcedureStatement",
     "PostgresCallProcedureStatement",
+    "PostgresLtreeIndexExpression",
+    "PostgresTrgmIndexExpression",
+    "PostgresSpatialIndexExpression",
+    "PostgresCitextColumnExpression",
+    "PostgresDropTypeNameExpression",
+    "PostgresVectorIndexExpression",
+    "PostgresVectorSearchExpression",
     "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
     "PostgresReindexStatement",

@@ -66,16 +66,12 @@ def citext_literal(
 
 
 def citext_column(dialect, column_name: str, length: int = None):
-    """Build a column definition whose data type is CITEXT.
+    """Collect arguments for a CITEXT column; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCitextColumnExpression,
+    )
 
-    PostgreSQL's citext has no length modifier; *length* is kept only for
-    backwards compatibility with the old scalar helper and is rejected.
-    """
-    from rhosocial.activerecord.backend.expression import ColumnDefinition
-
-    if length is not None:
-        raise ValueError("CITEXT has no length modifier in PostgreSQL")
-    return ColumnDefinition(dialect, column_name, dialect.parse_type("CITEXT"))
+    return PostgresCitextColumnExpression(dialect, column_name, length=length)
 
 
 __all__ = [

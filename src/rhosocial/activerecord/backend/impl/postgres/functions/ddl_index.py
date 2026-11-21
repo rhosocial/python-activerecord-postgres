@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate
 
-from ..expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
+from ..expression.ddl import PostgresCreateIndexExpression
 
 
 def create_index_pg(
@@ -39,11 +39,8 @@ def create_index_pg(
     A string ``where_clause`` is wrapped in a raw predicate; pass a
     :class:`SQLPredicate` for a parameterized condition.
     """
-    try:
-        method = PostgresIndexType.normalize(index_type).value
-    except ValueError as exc:
-        raise ValueError(f"Invalid index_type: {index_type}. {exc}") from None
-
+    # No validation here: the node is an argument bag, the formatter decides
+    # which access methods and predicates are legal.
     where = None
     if where_clause is not None:
         where = (
@@ -59,7 +56,7 @@ def create_index_pg(
         columns=list(columns),
         unique=unique,
         if_not_exists=if_not_exists,
-        index_type=method,
+        index_type=index_type,
         where=where,
         include=list(include_columns) if include_columns else None,
         tablespace=tablespace,

@@ -28,4 +28,4 @@ class TestTrgmIndexExpression:
     def test_unknown_access_method_refused(self):
         d = PostgresDialect((15, 0, 0))
         with pytest.raises(ValueError, match="gin.*gist"):
-            trgm_index(d, "t", ["name"], "ix", index_type="brin")
+            trgm_index(d, "t", ["name"], "ix", index_type="brin").to_sql()

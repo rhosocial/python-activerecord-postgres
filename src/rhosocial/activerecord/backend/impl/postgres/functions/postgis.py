@@ -425,29 +425,13 @@ def spatial_index(
     index_type: str = "gist",
     schema: str = None,
 ):
-    """Build a PostGIS spatial index expression.
-
-    PostGIS accepts GiST, SP-GiST and BRIN; the access method is validated
-    against :class:`PostgresIndexType`. The returned node renders through the
-    dialect's single ``format_create_index_statement`` formatter.
-    """
-    from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateIndexExpression,
-        PostgresIndexType,
+    """Collect arguments for a spatial index; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresSpatialIndexExpression,
     )
 
-    method = PostgresIndexType.normalize(index_type).value
-    if method not in ("gist", "spgist", "brin"):
-        raise ValueError(
-            f"PostGIS index_type must be 'gist', 'spgist' or 'brin', got {index_type!r}"
-        )
-    return PostgresCreateIndexExpression(
-        dialect,
-        index=Index(dialect, index_name, schema_name=schema),
-        table=Table(dialect, table_name, schema_name=schema),
-        columns=list(columns),
-        index_type=method,
+    return PostgresSpatialIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
     )
 
 

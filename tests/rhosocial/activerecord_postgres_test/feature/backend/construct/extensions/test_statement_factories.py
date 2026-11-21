@@ -38,7 +38,7 @@ class TestStatementFactories:
         sql, _ = ltree_index(self.dialect, "t", ["path"], "ix").to_sql()
         assert "USING gist" in sql
         with pytest.raises(ValueError, match="gist.*btree"):
-            ltree_index(self.dialect, "t", ["path"], "ix", index_type="gin")
+            ltree_index(self.dialect, "t", ["path"], "ix", index_type="gin").to_sql()
 
     def test_pg_stat_queries(self):
         for factory in (

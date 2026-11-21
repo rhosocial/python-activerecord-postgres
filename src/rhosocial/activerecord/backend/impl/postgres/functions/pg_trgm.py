@@ -188,32 +188,13 @@ def trgm_index(
     index_type: str = "gin",
     schema: str = None,
 ):
-    """Build a trigram index expression.
-
-    The operator class is derived from the access method: GIN takes
-    ``gin_trgm_ops`` and GiST takes ``gist_trgm_ops``. The returned node is a
-    :class:`PostgresCreateIndexExpression`, rendered by the dialect's single
-    ``format_create_index_statement`` formatter.
-    """
-    from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.impl.postgres.expression import (
-        PostgresCreateIndexExpression,
-        PostgresIndexType,
+    """Collect arguments for a trigram index; the formatter validates them."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresTrgmIndexExpression,
     )
 
-    method = PostgresIndexType.normalize(index_type).value
-    if method not in ("gin", "gist"):
-        raise ValueError(
-            f"pg_trgm index_type must be 'gin' or 'gist', got {index_type!r}"
-        )
-    opclass = "gin_trgm_ops" if method == "gin" else "gist_trgm_ops"
-    return PostgresCreateIndexExpression(
-        dialect,
-        index=Index(dialect, index_name, schema_name=schema),
-        table=Table(dialect, table_name, schema_name=schema),
-        columns=list(columns),
-        index_type=method,
-        opclasses={name: opclass for name in columns},
+    return PostgresTrgmIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
     )
 
 

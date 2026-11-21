@@ -102,11 +102,11 @@ class TestVectorSearch:
 
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
-            vector_search(postgres_dialect, "documents", [1.0], metric="hamming")
+            vector_search(postgres_dialect, "documents", [1.0], metric="hamming").to_sql()
 
     def test_non_positive_top_k(self, postgres_dialect):
         with pytest.raises(ValueError, match="top_k must be positive"):
-            vector_search(postgres_dialect, "documents", [1.0], top_k=0)
+            vector_search(postgres_dialect, "documents", [1.0], top_k=0).to_sql()
 
 
 class TestVectorDistance:
@@ -192,9 +192,9 @@ class TestCreateVectorIndex:
     def test_invalid_metric(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector metric"):
             create_vector_index(postgres_dialect, "documents", "embedding",
-                                metric="hamming")
+                                metric="hamming").to_sql()
 
     def test_invalid_index_type(self, postgres_dialect):
         with pytest.raises(ValueError, match="Unsupported vector index type"):
             create_vector_index(postgres_dialect, "documents", "embedding",
-                                index_type="btree")
+                                index_type="btree").to_sql()

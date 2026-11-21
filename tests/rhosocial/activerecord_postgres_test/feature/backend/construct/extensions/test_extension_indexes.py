@@ -36,7 +36,7 @@ class TestSpatialIndexExpression:
     def test_invalid_method(self):
         d = PostgresDialect((15, 0, 0))
         with pytest.raises(ValueError, match="spgist"):
-            spatial_index(d, "t", ["geom"], "ix", index_type="gin")
+            spatial_index(d, "t", ["geom"], "ix", index_type="gin").to_sql()
 
 
 class TestOtherExtensionIndexes:
@@ -87,8 +87,7 @@ class TestPreviouslyClaimedGaps:
     def test_ip_similarity_does_not_silently_drop_column(self):
         d = PostgresDialect((15, 0, 0))
         with pytest.warns(UserWarning, match="include_similarity"):
-            expr = vector_search(
+            sql, _ = vector_search(
                 d, "t", [1.0, 2.0, 3.0], metric="ip", include_similarity=True
-            )
-        sql, _ = expr.to_sql()
+            ).to_sql()
         assert "similarity" not in sql

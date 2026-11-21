@@ -3,11 +3,9 @@
 
 from typing import Optional, Sequence
 
-from rhosocial.activerecord.backend.expression.objects import Type
-
-from ..expression.ddl.type import (
+from ..expression.ddl import (
     PostgresCreateEnumTypeExpression,
-    PostgresDropTypeExpression,
+    PostgresDropTypeNameExpression,
 )
 
 
@@ -34,17 +32,11 @@ def drop_type(
     cascade: bool = False,
     restrict: bool = False,
     schema_name: Optional[str] = None,
-) -> PostgresDropTypeExpression:
-    """Build DROP TYPE from scalar arguments."""
-    if schema is not None and schema_name is not None and schema != schema_name:
-        raise ValueError("schema and schema_name must match when both are provided")
-    resolved = schema if schema is not None else schema_name
-    return PostgresDropTypeExpression(
-        dialect,
-        Type(dialect, name, schema_name=resolved),
-        if_exists=if_exists,
-        cascade=cascade,
-        restrict=restrict,
+) -> PostgresDropTypeNameExpression:
+    """Collect arguments for DROP TYPE; the formatter validates them."""
+    return PostgresDropTypeNameExpression(
+        dialect, name, schema=schema, schema_name=schema_name,
+        if_exists=if_exists, cascade=cascade, restrict=restrict,
     )
 
 

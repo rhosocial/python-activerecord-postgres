@@ -1,27 +1,48 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/postgis.py
-"""PostGIS capability probes.
+"""PostGIS capability probes and spatial-index renderer.
 
-Index creation is an expression concern: use ``functions.postgis.spatial_index``,
-which returns a ``PostgresCreateIndexExpression``. Dialect formatters only ever
-take ``(self, expr)``.
+Validation belongs to the formatter; the node is a plain argument bag.
 """
+
+from typing import Tuple
+
+from rhosocial.activerecord.backend.expression.objects import Index, Table
+
+from ...expression.ddl import (
+    PostgresCreateIndexExpression,
+    PostgresIndexType,
+    PostgresSpatialIndexExpression,
+)
 
 
 class PostgresPostGISMixin:
     """PostGIS spatial functionality implementation."""
 
     def supports_postgis_geometry_type(self) -> bool:
-        """Check if PostGIS supports geometry type."""
         return self.check_extension_feature("postgis", "geometry_type")
 
     def supports_postgis_geography_type(self) -> bool:
-        """Check if PostGIS supports geography type."""
         return self.check_extension_feature("postgis", "geography_type")
 
     def supports_postgis_spatial_index(self) -> bool:
-        """Check if PostGIS supports spatial index."""
         return self.check_extension_feature("postgis", "spatial_index")
 
     def supports_postgis_spatial_functions(self) -> bool:
-        """Check if PostGIS supports spatial functions."""
         return self.check_extension_feature("postgis", "spatial_functions")
+
+    def format_postgres_spatial_index_expression(
+        self, expr: PostgresSpatialIndexExpression
+    ) -> Tuple[str, tuple]:
+        method = PostgresIndexType.normalize(expr.index_type or "gist").value
+        if method not in ("gist", "spgist", "brin"):
+            raise ValueError(
+                f"PostGIS index_type must be 'gist', 'spgist' or 'brin', "
+                f"got {expr.index_type!r}"
+            )
+        return PostgresCreateIndexExpression(
+            self,
+            index=Index(self, expr.name, schema_name=expr.schema),
+            table=Table(self, expr.table, schema_name=expr.schema),
+            columns=expr.columns,
+            index_type=method,
+        ).to_sql()

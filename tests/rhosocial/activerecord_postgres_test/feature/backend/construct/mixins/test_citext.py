@@ -32,7 +32,7 @@ class TestPostgresCitextMixin:
 
         # PostgreSQL's citext has no length modifier.
         with pytest.raises(ValueError, match="length"):
-            citext_column(self.dialect, "name", length=255)
+            citext_column(self.dialect, "name", length=255).to_sql()
 
 
 class TestCitextFunctions:

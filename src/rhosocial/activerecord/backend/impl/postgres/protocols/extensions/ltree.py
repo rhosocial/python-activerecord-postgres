@@ -47,4 +47,6 @@ class PostgresLtreeSupport(Protocol):
         """Whether ltree indexes are supported."""
         ...
 
+    def format_postgres_ltree_index_expression(self, expr) -> tuple: ...
+
 

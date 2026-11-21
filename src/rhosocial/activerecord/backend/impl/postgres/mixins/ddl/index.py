@@ -415,10 +415,13 @@ class PostgresIndexMixin:
         parts.append(expr.table.to_sql()[0])
 
         if expr.index_type:
-            # The typed postgres nodes already coerce at construction; a
-            # generic CreateIndexStatement handed here still has to obey the
-            # same closed vocabulary instead of interpolating raw text.
-            parts.append(f"USING {PostgresIndexType.coerce(expr.index_type)}")
+            # Nodes only carry the requested method; the formatter owns the
+            # closed vocabulary and rejects anything it cannot render.
+            try:
+                method = PostgresIndexType.coerce(expr.index_type)
+            except ValueError as exc:
+                raise ValueError(f"Invalid index_type: {expr.index_type}. {exc}") from None
+            parts.append(f"USING {method}")
 
         # Columns with optional operator classes. The PostgreSQL-only fields
         # exist only on the PostgreSQL subclass; the core node has no such

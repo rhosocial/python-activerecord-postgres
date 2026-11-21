@@ -366,24 +366,13 @@ def ltree_index(
     index_type: str = "gist",
     schema: str = None,
 ):
-    """Build an ltree index expression."""
-    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    """Collect arguments for an ltree index; the formatter validates them."""
     from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-        PostgresCreateIndexExpression,
-        PostgresIndexType,
+        PostgresLtreeIndexExpression,
     )
 
-    method = PostgresIndexType.normalize(index_type).value
-    if method not in ("gist", "btree"):
-        raise ValueError(
-            f"ltree index_type must be 'gist' or 'btree', got {index_type!r}"
-        )
-    return PostgresCreateIndexExpression(
-        dialect,
-        index=Index(dialect, index_name, schema_name=schema),
-        table=Table(dialect, table_name, schema_name=schema),
-        columns=list(columns),
-        index_type=method,
+    return PostgresLtreeIndexExpression(
+        dialect, index_name, table_name, columns, index_type=index_type, schema=schema
     )
 
 
