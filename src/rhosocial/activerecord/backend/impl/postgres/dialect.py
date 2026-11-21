@@ -268,7 +268,15 @@ from .mixins import (
 from .suggestion import (
     PostgresDataTypeSuggestionsMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
-    PostgresPartitionSuggestionMixin,
+    PostgresPartitionAddSuggestionMixin,
+    PostgresPartitionBuildSuggestionMixin,
+    PostgresPartitionDropSuggestionMixin,
+    PostgresPartitionMergeSuggestionMixin,
+    PostgresPartitionRetentionSuggestionMixin,
+    PostgresPartitionSplitSuggestionMixin,
+    PostgresPartitionSuggestionBase,
+    PostgresPartitionTableAlterSuggestionMixin,
+    PostgresPartitionTableDropSuggestionMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -373,9 +381,19 @@ from .protocols import (
 
 
 class PostgresDialect(
-    # Backend suggestions first: no core mixin may shadow their answers.
-    PostgresPartitionSuggestionMixin,
+    # Backend suggestions first: no core mixin may shadow their answers. The
+    # eight partition answer mixins are one per protocol; their shared helper
+    # base is listed once, last among the suggestions, so C3 stays unambiguous.
+    PostgresPartitionBuildSuggestionMixin,
+    PostgresPartitionTableDropSuggestionMixin,
+    PostgresPartitionTableAlterSuggestionMixin,
+    PostgresPartitionAddSuggestionMixin,
+    PostgresPartitionDropSuggestionMixin,
+    PostgresPartitionSplitSuggestionMixin,
+    PostgresPartitionMergeSuggestionMixin,
+    PostgresPartitionRetentionSuggestionMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
+    PostgresPartitionSuggestionBase,
     # The bases below come in bundles: a backend mixin, then the core bundle
     # it stands in for. The backend's answer has to come first -- a mixin
     # placed after the class it overrides never wins -- so a new mixin goes

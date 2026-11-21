@@ -4,21 +4,41 @@
 Suggestions are not expressions: the immutable suggestion values live in
 ``rhosocial.activerecord.backend.suggestion``. This package holds PostgreSQL's
 concrete answer mixins -- which the dialect installs ahead of the core mixins
-so no portable default can shadow them.
+so no portable default can shadow them. The eight partition answer mixins each
+live in their own module and share the helpers on
+:class:`PostgresPartitionSuggestionBase`.
 """
 
-from .data_types import (
+from ._common import PostgresPartitionSuggestionBase
+from .data_type_suggestions import (
     POSTGRES_DATA_TYPE_SUGGESTIONS,
     POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS,
     PostgresDataTypeSuggestionsMixin,
 )
-from .integer_auto_increment import PostgresIntegerAutoIncrementColumnSuggestionMixin
-from .partition import PostgresPartitionSuggestionMixin
+from .integer_auto_increment_column_suggestion import (
+    PostgresIntegerAutoIncrementColumnSuggestionMixin,
+)
+from .partition_add_suggestion import PostgresPartitionAddSuggestionMixin
+from .partition_build_suggestion import PostgresPartitionBuildSuggestionMixin
+from .partition_drop_suggestion import PostgresPartitionDropSuggestionMixin
+from .partition_merge_suggestion import PostgresPartitionMergeSuggestionMixin
+from .partition_retention_suggestion import PostgresPartitionRetentionSuggestionMixin
+from .partition_split_suggestion import PostgresPartitionSplitSuggestionMixin
+from .partition_table_alter_suggestion import PostgresPartitionTableAlterSuggestionMixin
+from .partition_table_drop_suggestion import PostgresPartitionTableDropSuggestionMixin
 
 __all__ = [
     "POSTGRES_DATA_TYPE_SUGGESTIONS",
     "POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS",
     "PostgresDataTypeSuggestionsMixin",
     "PostgresIntegerAutoIncrementColumnSuggestionMixin",
-    "PostgresPartitionSuggestionMixin",
+    "PostgresPartitionSuggestionBase",
+    "PostgresPartitionAddSuggestionMixin",
+    "PostgresPartitionBuildSuggestionMixin",
+    "PostgresPartitionDropSuggestionMixin",
+    "PostgresPartitionMergeSuggestionMixin",
+    "PostgresPartitionRetentionSuggestionMixin",
+    "PostgresPartitionSplitSuggestionMixin",
+    "PostgresPartitionTableAlterSuggestionMixin",
+    "PostgresPartitionTableDropSuggestionMixin",
 ]
