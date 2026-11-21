@@ -24,7 +24,6 @@ from rhosocial.activerecord.backend.expression.statements import (
     PartitionByHashClause,
     PartitionByListClause,
     PartitionByRangeClause,
-    PartitionClause,
 )
 from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -373,16 +372,15 @@ class TestPartitionedTableCreation:
             expr.to_sql()
 
     def test_key_partitioning_is_rejected(self, dialect):
-        """Generic PartitionClause rejects non-core KEY partitioning."""
-        with pytest.raises(TypeError, match="PartitionStrategy"):
-            PartitionClause(
-                dialect=dialect,
-                method="KEY",
-                keys=[Column(dialect, "id")],
-            )
+        """A strategy is fixed by the clause class; KEY has no clause node."""
+        assert PartitionByRangeClause(dialect, [Column(dialect, "id")]).method == "RANGE"
+        assert PartitionByListClause(dialect, [Column(dialect, "id")]).method == "LIST"
+        assert PartitionByHashClause(dialect, [Column(dialect, "id")]).method == "HASH"
+        with pytest.raises(TypeError):
+            PartitionByRangeClause(dialect, [Column(dialect, "id")], method="KEY")
 
     def test_partition_clause_is_the_generic_clause(self, dialect):
-        """PostgreSQL uses core's PartitionClause; it adds no field of its own."""
+        """PostgreSQL uses core's strategy clause; it adds no field of its own."""
         clause = PartitionByRangeClause(
             dialect=dialect,
             keys=[Column(dialect, "created_at")],
