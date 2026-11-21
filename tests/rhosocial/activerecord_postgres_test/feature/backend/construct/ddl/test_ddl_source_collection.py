@@ -16,8 +16,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     CreateTableStatement,
     GeneratedColumnType,
     IndexDefinition,
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
     StorageOptionsExpression,
     TableConstraint,
     TableForeignKeyConstraint,
@@ -122,9 +121,8 @@ TABLE_OPTIONS = [
 STORAGE_OPTIONS = [
     StorageOptionsExpression(DIALECT, {"fillfactor": 70}),
 ]
-TABLE_PARTITION = PartitionClause(
+TABLE_PARTITION = PartitionByRangeClause(
     DIALECT,
-    PartitionStrategy.RANGE,
     [Column(DIALECT, "display_label")],
 )
 TABLE_INHERITS = ["order_audit_base"]

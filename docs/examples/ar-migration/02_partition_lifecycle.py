@@ -17,7 +17,12 @@ PostgreSQL lifecycle answers:
 
 from datetime import date
 
-from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.statements import (
+    PartitionByHashClause,
+    PartitionByListClause,
+    PartitionByRangeClause,
+)
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.partition import (
     HashBranch,
@@ -26,6 +31,17 @@ from rhosocial.activerecord.backend.impl.postgres.partition import (
     PostgresPartitionPlan,
     RangePolicy,
 )
+
+_CLAUSE_TYPES = {
+    "RANGE": PartitionByRangeClause,
+    "LIST": PartitionByListClause,
+    "HASH": PartitionByHashClause,
+}
+
+
+def _strategy(dialect, word, *columns):
+    """A strategy clause carrying ``word`` over the given key columns."""
+    return _CLAUSE_TYPES[word](dialect, [Column(dialect, name) for name in columns])
 
 
 def render(label, suggestion):
@@ -54,7 +70,7 @@ def main():
     # 1) Add one partition: CREATE TABLE ... PARTITION OF ... FOR VALUES.
     render(
         "add RANGE leaf (orders_2024_01_01)",
-        dialect.suggest_partition_add(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_add(_strategy(dialect, "RANGE", "created_at"), orders),
     )
 
     # HASH and LIST add use the same statement with different FOR VALUES forms.
@@ -66,7 +82,7 @@ def main():
     )
     render(
         "add HASH leaf (MODULUS/REMAINDER)",
-        dialect.suggest_partition_add(PartitionStrategy.HASH, events),
+        dialect.suggest_partition_add(_strategy(dialect, "HASH", "tenant"), events),
     )
 
     tickets = PostgresPartitionPlan(
@@ -77,13 +93,13 @@ def main():
     )
     render(
         "add LIST leaf (FOR VALUES IN)",
-        dialect.suggest_partition_add(PartitionStrategy.LIST, tickets),
+        dialect.suggest_partition_add(_strategy(dialect, "LIST", "status"), tickets),
     )
 
     # 2) Drop a leaf: detach concurrently first, then drop the now-standalone table.
     render(
         "drop RANGE leaf (detach -> drop)",
-        dialect.suggest_partition_drop(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_drop(_strategy(dialect, "RANGE", "created_at"), orders),
     )
 
     # A branch carrying subpartitions goes through one cascading DROP instead.
@@ -98,32 +114,32 @@ def main():
     )
     render(
         "drop subtree (cascading DROP)",
-        dialect.suggest_partition_drop(PartitionStrategy.HASH, tree),
+        dialect.suggest_partition_drop(_strategy(dialect, "HASH", "tenant"), tree),
     )
 
     # 3) Retention: retire a dated RANGE partition by detaching then dropping it.
     render(
         "retire dated RANGE partition",
-        dialect.suggest_partition_retention(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_retention(_strategy(dialect, "RANGE", "created_at"), orders),
     )
     # Retention is a date-bound notion: LIST has no such mechanism.
     render(
         "retention on LIST (unsupported)",
-        dialect.suggest_partition_retention(PartitionStrategy.LIST, tickets),
+        dialect.suggest_partition_retention(_strategy(dialect, "LIST", "status"), tickets),
     )
 
     # 4) Mechanisms PostgreSQL does not provide.
     render(
         "ALTER partitioning scheme (unsupported)",
-        dialect.suggest_partition_table_alter(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_table_alter(_strategy(dialect, "RANGE", "created_at"), orders),
     )
     render(
         "split partition (unsupported)",
-        dialect.suggest_partition_split(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_split(_strategy(dialect, "RANGE", "created_at"), orders),
     )
     render(
         "merge partitions (unsupported)",
-        dialect.suggest_partition_merge(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_merge(_strategy(dialect, "RANGE", "created_at"), orders),
     )
 
 

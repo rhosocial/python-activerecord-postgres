@@ -26,7 +26,11 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements import PartitionClause, PartitionStrategy
+from rhosocial.activerecord.backend.expression.statements import (
+    PartitionByHashClause,
+    PartitionByListClause,
+    PartitionByRangeClause,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresAttachPartitionStatement,
     PostgresCreatePartitionStatement,
@@ -70,9 +74,8 @@ def _create_list_parent_expression(dialect):
             ColumnDefinition(dialect, "status", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
-        partition=PartitionClause(
+        partition=PartitionByListClause(
             dialect=dialect,
-            method=PartitionStrategy.LIST,
             keys=[Column(dialect, "status")],
         ),
     )
@@ -98,9 +101,8 @@ def _create_hash_parent_expression(dialect):
             ColumnDefinition(dialect, "bucket", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
-        partition=PartitionClause(
+        partition=PartitionByHashClause(
             dialect=dialect,
-            method=PartitionStrategy.HASH,
             keys=[Column(dialect, "bucket")],
         ),
     )
@@ -126,9 +128,8 @@ def _create_range_parent_expression(dialect):
             ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
         ],
-        partition=PartitionClause(
+        partition=PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         ),
     )
@@ -387,9 +388,8 @@ class TestAdvancedPartitionOperations:
                         ColumnDefinition(dialect, "id", BigIntType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
                         ColumnDefinition(dialect, "created_at", TimestampType(dialect=dialect), constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))]),
                     ],
-                    partition=PartitionClause(
+                    partition=PartitionByRangeClause(
                         dialect=dialect,
-                        method=PartitionStrategy.RANGE,
                         keys=[Column(dialect, "created_at")],
                     ),
                 )

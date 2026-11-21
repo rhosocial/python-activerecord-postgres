@@ -59,8 +59,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ExplainOptions,
     ExplainStatement,
     ExplainType,
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
 )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
@@ -500,9 +499,8 @@ def _create_partition_parent(dialect) -> CreateTableStatement:
                 dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])
             )
         ],
-        partition=PartitionClause(
+        partition=PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         ),
     )

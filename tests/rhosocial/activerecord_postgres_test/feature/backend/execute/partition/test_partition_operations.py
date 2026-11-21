@@ -35,8 +35,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableStatement,
     DropTableStatement,
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
     TableConstraint,
     TruncateStatement,
 )
@@ -104,9 +103,8 @@ def _create_partitioned_parent_sql(dialect, table_name: str):
             ),
             ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
         ],
-        partition=PartitionClause(
+        partition=PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         ),
     )
@@ -268,9 +266,8 @@ def _create_production_parent_sql(dialect):
         table_constraints=[
             TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
-        partition=PartitionClause(
+        partition=PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         ),
     )

@@ -326,6 +326,9 @@ def special_constructors():
         "advanced_functions.JSONTextValue": _json_text_expr,
         "query_parts.JoinClause": _join_expr,
         "statements.ddl_partition.PartitionClause": _partition_clause,
+        "statements.ddl_partition.PartitionByRangeClause": _partition_by_range_clause,
+        "statements.ddl_partition.PartitionByListClause": _partition_by_list_clause,
+        "statements.ddl_partition.PartitionByHashClause": _partition_by_hash_clause,
         "statements.dml.OnConflictClause": _on_conflict,
         "statements.dml.UpdateStatement": _update_expr,
         "statements.dml.InsertStatement": _insert_expr,
@@ -814,12 +817,36 @@ def _join_expr(dialect):
 
 def _partition_clause(dialect):
     from rhosocial.activerecord.backend.expression.core import Column
+    from rhosocial.activerecord.backend.expression.statements.ddl_partition import PartitionClause
+
+    return PartitionClause(dialect, "RANGE", [Column(dialect, "created_at")])
+
+
+def _partition_by_range_clause(dialect):
+    from rhosocial.activerecord.backend.expression.core import Column
     from rhosocial.activerecord.backend.expression.statements.ddl_partition import (
-        PartitionClause,
-        PartitionStrategy,
+        PartitionByRangeClause,
     )
 
-    return PartitionClause(dialect, method=PartitionStrategy.RANGE, keys=[Column(dialect, "created_at")])
+    return PartitionByRangeClause(dialect, [Column(dialect, "created_at")])
+
+
+def _partition_by_list_clause(dialect):
+    from rhosocial.activerecord.backend.expression.core import Column
+    from rhosocial.activerecord.backend.expression.statements.ddl_partition import (
+        PartitionByListClause,
+    )
+
+    return PartitionByListClause(dialect, [Column(dialect, "created_at")])
+
+
+def _partition_by_hash_clause(dialect):
+    from rhosocial.activerecord.backend.expression.core import Column
+    from rhosocial.activerecord.backend.expression.statements.ddl_partition import (
+        PartitionByHashClause,
+    )
+
+    return PartitionByHashClause(dialect, [Column(dialect, "created_at")])
 
 
 def _on_conflict(dialect):

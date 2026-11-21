@@ -208,8 +208,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     RenameDomainAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_partition import (
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnCheckConstraint,
@@ -691,8 +690,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "ddl_partition.PartitionClause",
-        lambda d: PartitionClause(d, PartitionStrategy.RANGE, [Column(d, "a")]),
+        "ddl_partition.PartitionByRangeClause",
+        lambda d: PartitionByRangeClause(d, [Column(d, "a")]),
     )
     register_special_constructor(
         "ddl.index.PostgresAlterIndexStatement",
@@ -1472,6 +1471,15 @@ UNMODELLED_FORMATTERS = {
     ),
     "the TableSource root (every concrete row source overrides its formatter; "
     "the root carries nothing but an alias and is never rendered)": ("format_table_source",),
+    # The expression-only definition nodes are for backends that declare inline
+    # partitions in CREATE TABLE. PostgreSQL declares each partition with a
+    # separate CREATE TABLE ... PARTITION OF, so there are no inline storage
+    # options or subpartition declarations for this dialect to render.
+    "inline partition definitions (PostgreSQL uses separate CREATE TABLE ... "
+    "PARTITION OF statements, not inline definitions)": (
+        "format_partition_definition_options",
+        "format_subpartition_definition",
+    ),
 }
 
 

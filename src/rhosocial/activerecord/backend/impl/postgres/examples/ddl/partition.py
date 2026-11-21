@@ -25,8 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
     ValuesSource,
     QueryStatement,
 )
@@ -86,9 +85,8 @@ parent_expr = CreateTableStatement(
             dialect, 'amount', DecimalType(precision=10, scale=2, dialect=dialect),
         ),
     ],
-    partition=PartitionClause(
+    partition=PartitionByRangeClause(
         dialect=dialect,
-        method=PartitionStrategy.RANGE,
         keys=[Column(dialect, 'order_date')],
     ),
 )

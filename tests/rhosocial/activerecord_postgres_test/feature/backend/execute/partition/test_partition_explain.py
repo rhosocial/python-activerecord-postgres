@@ -30,8 +30,7 @@ from rhosocial.activerecord.backend.expression.statements import (
     ExplainStatement,
     ExplainFormat,
     ExplainOptions,
-    PartitionClause,
-    PartitionStrategy,
+    PartitionByRangeClause,
     TableConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import BigIntType, TextType, TimestampType
@@ -81,9 +80,8 @@ def _create_parent_table_expression(dialect):
         table_constraints=[
             TableConstraint(dialect, branch=TablePrimaryKeyConstraint(dialect, ["id", "created_at"])),
         ],
-        partition=PartitionClause(
+        partition=PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         ),
     )

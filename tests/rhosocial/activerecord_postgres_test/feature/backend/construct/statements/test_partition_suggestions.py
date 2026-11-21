@@ -23,8 +23,10 @@ from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     DropTableStatement,
+    PartitionByHashClause,
+    PartitionByListClause,
+    PartitionByRangeClause,
     PartitionClause,
-    PartitionStrategy,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
@@ -61,8 +63,20 @@ CASES = [
 ]
 
 
+_CLAUSE_TYPES = {
+    "RANGE": PartitionByRangeClause,
+    "LIST": PartitionByListClause,
+    "HASH": PartitionByHashClause,
+}
+
+
 def _dialect():
     return PostgresDialect(version=(14, 0, 0))
+
+
+def _strategy(dialect, word, *columns):
+    """A strategy clause carrying ``word`` over the given key columns."""
+    return _CLAUSE_TYPES[word](dialect, [Column(dialect, name) for name in columns])
 
 
 def _range_plan():
@@ -80,13 +94,17 @@ def test_dialect_satisfies_all_eight_protocols_and_returns_right_dataclass():
     plan = _range_plan()
     for name, protocol, dataclass in CASES:
         assert isinstance(dialect, protocol), name
-        suggestion = getattr(dialect, "suggest_partition_" + name)(PartitionStrategy.RANGE, plan)
+        suggestion = getattr(dialect, "suggest_partition_" + name)(
+            _strategy(dialect, "RANGE", "created_at"), plan
+        )
         assert isinstance(suggestion, dataclass), name
 
 
 def test_build_renders_partition_by_clause_for_supported_method():
     dialect = _dialect()
-    suggestion = dialect.suggest_partition_build(PartitionStrategy.RANGE, _range_plan())
+    suggestion = dialect.suggest_partition_build(
+        _strategy(dialect, "RANGE", "created_at"), _range_plan()
+    )
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 1
     clause = suggestion.operations[0]
     assert isinstance(clause, PartitionClause)
@@ -100,7 +118,10 @@ def test_build_refuses_non_partition_strategy():
 
 
 def test_table_drop_renders_drop_table():
-    suggestion = _dialect().suggest_partition_table_drop(PartitionStrategy.RANGE, _range_plan())
+    dialect = _dialect()
+    suggestion = dialect.suggest_partition_table_drop(
+        _strategy(dialect, "RANGE", "created_at"), _range_plan()
+    )
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 1
     statement = suggestion.operations[0]
     assert isinstance(statement, DropTableStatement)
@@ -112,14 +133,27 @@ def test_table_drop_renders_drop_table():
 def test_no_mechanism_points_are_false():
     dialect = _dialect()
     plan = _range_plan()
-    assert dialect.suggest_partition_table_alter(PartitionStrategy.RANGE, plan).operations is False
-    assert dialect.suggest_partition_split(PartitionStrategy.RANGE, plan).operations is False
-    assert dialect.suggest_partition_merge(PartitionStrategy.RANGE, plan).operations is False
+    assert (
+        dialect.suggest_partition_table_alter(
+            _strategy(dialect, "RANGE", "created_at"), plan
+        ).operations
+        is False
+    )
+    assert (
+        dialect.suggest_partition_split(_strategy(dialect, "RANGE", "created_at"), plan).operations
+        is False
+    )
+    assert (
+        dialect.suggest_partition_merge(_strategy(dialect, "RANGE", "created_at"), plan).operations
+        is False
+    )
 
 
 def test_add_renders_create_table_partition_of():
     dialect = _dialect()
-    suggestion = dialect.suggest_partition_add(PartitionStrategy.RANGE, _range_plan())
+    suggestion = dialect.suggest_partition_add(
+        _strategy(dialect, "RANGE", "created_at"), _range_plan()
+    )
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 1
     statement = suggestion.operations[0]
     assert isinstance(statement, PostgresCreatePartitionStatement)
@@ -137,7 +171,9 @@ def test_add_hash_and_list_plans_render_for_values():
         columns="tenant",
         policy=HashPolicy(modulus=4, remainders=(0,)),
     )
-    statement = dialect.suggest_partition_add(PartitionStrategy.HASH, hash_plan).operations[0]
+    statement = dialect.suggest_partition_add(
+        _strategy(dialect, "HASH", "tenant"), hash_plan
+    ).operations[0]
     assert isinstance(statement, PostgresCreatePartitionStatement)
     assert "MODULUS 4, REMAINDER 0" in statement.to_sql()[0]
 
@@ -147,14 +183,18 @@ def test_add_hash_and_list_plans_render_for_values():
         columns="status",
         policy=ListPolicy(groups=(("open",),)),
     )
-    statement = dialect.suggest_partition_add(PartitionStrategy.LIST, list_plan).operations[0]
+    statement = dialect.suggest_partition_add(
+        _strategy(dialect, "LIST", "status"), list_plan
+    ).operations[0]
     assert isinstance(statement, PostgresCreatePartitionStatement)
     assert "FOR VALUES IN" in statement.to_sql()[0]
 
 
 def test_drop_leaf_is_detach_then_drop_chain():
     dialect = _dialect()
-    suggestion = dialect.suggest_partition_drop(PartitionStrategy.RANGE, _range_plan())
+    suggestion = dialect.suggest_partition_drop(
+        _strategy(dialect, "RANGE", "created_at"), _range_plan()
+    )
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 2
     detach, drop = suggestion.operations
     assert isinstance(detach, PostgresDetachPartitionStatement)
@@ -175,7 +215,8 @@ def test_drop_subtree_is_cascading_drop():
             HashBranch(0, child=RangePolicy(bounds=((date(2024, 1, 1), date(2024, 2, 1)),))),
         ),
     )
-    suggestion = _dialect().suggest_partition_drop(PartitionStrategy.HASH, plan)
+    dialect = _dialect()
+    suggestion = dialect.suggest_partition_drop(_strategy(dialect, "HASH", "tenant"), plan)
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 1
     statement = suggestion.operations[0]
     assert isinstance(statement, DropTableStatement) and statement.cascade is True
@@ -184,7 +225,9 @@ def test_drop_subtree_is_cascading_drop():
 
 def test_retention_needs_dated_range_plan():
     dialect = _dialect()
-    suggestion = dialect.suggest_partition_retention(PartitionStrategy.RANGE, _range_plan())
+    suggestion = dialect.suggest_partition_retention(
+        _strategy(dialect, "RANGE", "created_at"), _range_plan()
+    )
     assert isinstance(suggestion.operations, tuple) and len(suggestion.operations) == 2
     assert isinstance(suggestion.operations[0], PostgresDetachPartitionStatement)
     assert isinstance(suggestion.operations[1], DropTableStatement)
@@ -196,7 +239,10 @@ def test_retention_needs_dated_range_plan():
         policy=ListPolicy(groups=(("open",),)),
     )
     assert (
-        dialect.suggest_partition_retention(PartitionStrategy.LIST, list_plan).operations is False
+        dialect.suggest_partition_retention(
+            _strategy(dialect, "LIST", "status"), list_plan
+        ).operations
+        is False
     )
 
 
@@ -205,7 +251,7 @@ def test_all_returned_operations_are_real_expressions():
     dialect = _dialect()
     for name, _protocol, _dataclass in CASES:
         operations = getattr(dialect, "suggest_partition_" + name)(
-            PartitionStrategy.RANGE, plan
+            _strategy(dialect, "RANGE", "created_at"), plan
         ).operations
         if isinstance(operations, tuple):
             assert operations

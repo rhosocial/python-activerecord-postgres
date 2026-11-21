@@ -7,10 +7,14 @@ its CREATE TABLE, so it is the single operation returned here. Strategies outsid
 RANGE/LIST/HASH and plans with no key columns have no PostgreSQL mechanism.
 """
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.suggestion import PartitionBuildSuggestion
 
-from ....expression.statements import PartitionStrategy
 from ._common import PostgresPartitionSuggestionBase
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ....expression.statements import PartitionByClause
 
 __all__ = ["PostgresPartitionBuildSuggestionMixin"]
 
@@ -19,7 +23,7 @@ class PostgresPartitionBuildSuggestionMixin(PostgresPartitionSuggestionBase):
     """Declare the parent as ``PARTITION BY <method> (<keys>)``."""
 
     def suggest_partition_build(
-        self, strategy: PartitionStrategy, plan: object
+        self, strategy: "PartitionByClause", plan: object
     ) -> PartitionBuildSuggestion:
         """Declare the parent as ``PARTITION BY <method> (<keys>)``.
 

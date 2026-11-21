@@ -15,8 +15,9 @@ never called (that would require a live backend connection).
 - **Plan is an object, not a mapping.** PostgreSQL accepts only a real
   `PostgresPartitionPlan` carrying policy objects from `partition/plan.py` —
   e.g. `RangePolicy(bounds=((date(...), date(...)),))`, `HashPolicy`,
-  `ListPolicy` — plus a core `PartitionStrategy` constant. A plain `dict` is not
-  the contract here (other backends do accept mappings).
+  `ListPolicy` — plus a core strategy clause expression (`PartitionByRangeClause`,
+  `PartitionByListClause`, `PartitionByHashClause`). A plain `dict` is not the
+  contract here (other backends do accept mappings).
 - **Build = one `PARTITION BY` clause.** There are no inline named partitions;
   the parent's contribution at `CREATE TABLE` time is just
   `PARTITION BY <RANGE|LIST|HASH> (<keys>)`.

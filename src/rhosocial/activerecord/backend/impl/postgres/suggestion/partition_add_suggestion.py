@@ -6,10 +6,14 @@ concrete spec (name, parent, bounds) and a supported strategy are required;
 without them the answer is the explicit "unsupported" state.
 """
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.suggestion import PartitionAddSuggestion
 
-from ....expression.statements import PartitionStrategy
 from ._common import PostgresPartitionSuggestionBase
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ....expression.statements import PartitionByClause
 
 __all__ = ["PostgresPartitionAddSuggestionMixin"]
 
@@ -18,7 +22,7 @@ class PostgresPartitionAddSuggestionMixin(PostgresPartitionSuggestionBase):
     """Add a partition with ``CREATE TABLE ... PARTITION OF ... FOR VALUES``."""
 
     def suggest_partition_add(
-        self, strategy: PartitionStrategy, plan: object
+        self, strategy: "PartitionByClause", plan: object
     ) -> PartitionAddSuggestion:
         """Add a partition with ``CREATE TABLE ... PARTITION OF ... FOR VALUES``."""
         from ..expression.ddl.partition import PostgresCreatePartitionStatement

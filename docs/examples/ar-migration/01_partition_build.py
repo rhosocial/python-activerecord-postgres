@@ -20,7 +20,12 @@ Scenarios in this script (see README for the full map):
 
 from datetime import date
 
-from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.statements import (
+    PartitionByHashClause,
+    PartitionByListClause,
+    PartitionByRangeClause,
+)
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.partition import (
     HashPolicy,
@@ -28,6 +33,17 @@ from rhosocial.activerecord.backend.impl.postgres.partition import (
     PostgresPartitionPlan,
     RangePolicy,
 )
+
+_CLAUSE_TYPES = {
+    "RANGE": PartitionByRangeClause,
+    "LIST": PartitionByListClause,
+    "HASH": PartitionByHashClause,
+}
+
+
+def _strategy(dialect, word, *columns):
+    """A strategy clause carrying ``word`` over the given key columns."""
+    return _CLAUSE_TYPES[word](dialect, [Column(dialect, name) for name in columns])
 
 
 def render(label, suggestion):
@@ -59,7 +75,7 @@ def main():
     # 1) The parent's PARTITION BY clause — the entire "build" operation.
     render(
         "build RANGE parent (orders)",
-        dialect.suggest_partition_build(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_build(_strategy(dialect, "RANGE", "created_at"), orders),
     )
 
     # Same intent, different method/key: HASH over a tenant column.
@@ -71,7 +87,7 @@ def main():
     )
     render(
         "build HASH parent (events)",
-        dialect.suggest_partition_build(PartitionStrategy.HASH, events),
+        dialect.suggest_partition_build(_strategy(dialect, "HASH", "tenant"), events),
     )
 
     # LIST over a status column.
@@ -83,7 +99,7 @@ def main():
     )
     render(
         "build LIST parent (tickets)",
-        dialect.suggest_partition_build(PartitionStrategy.LIST, tickets),
+        dialect.suggest_partition_build(_strategy(dialect, "LIST", "status"), tickets),
     )
 
     # 2) A strategy PostgreSQL cannot spell (KEY) -> definite "no mechanism".
@@ -95,7 +111,7 @@ def main():
     # 3) Removing the whole partitioned parent is one DROP TABLE.
     render(
         "drop whole parent table",
-        dialect.suggest_partition_table_drop(PartitionStrategy.RANGE, orders),
+        dialect.suggest_partition_table_drop(_strategy(dialect, "RANGE", "created_at"), orders),
     )
 
 

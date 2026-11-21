@@ -31,14 +31,12 @@ partition = PostgresCreatePartitionStatement(
 ## 多级（子）分区
 
 PostgreSQL 允许一个分区继续分区，且 HASH 父表的每个一级分支可以各自选择
-二级策略。把 `PartitionClause` 传给 `PostgresCreatePartitionStatement`，
-渲染顺序为 `FOR VALUES` → `PARTITION BY`。
+二级策略。把策略子句（如 `PartitionByRangeClause`）传给
+`PostgresCreatePartitionStatement`，渲染顺序为 `FOR VALUES` → `PARTITION BY`。
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.expression.statements import (
-    PartitionClause, PartitionStrategy,
-)
+from rhosocial.activerecord.backend.expression.statements import PartitionByRangeClause
 
 # CREATE TABLE logs_p0 PARTITION OF logs
 #   FOR VALUES WITH (MODULUS 4, REMAINDER 0)
@@ -46,8 +44,8 @@ from rhosocial.activerecord.backend.expression.statements import (
 branch = PostgresCreatePartitionStatement(
     dialect, parent_table="logs", partition_name="logs_p0",
     partition_type="HASH", partition_values={"modulus": 4, "remainder": 0},
-    partition_clause=PartitionClause(
-        dialect, PartitionStrategy.RANGE, [Column(dialect, "created_at")],
+    partition_clause=PartitionByRangeClause(
+        dialect, [Column(dialect, "created_at")],
     ),
 )
 
@@ -75,7 +73,10 @@ leaf = PostgresCreatePartitionStatement(
 
 ```python
 from datetime import datetime, timezone
-from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.statements import (
+    PartitionByHashClause, PartitionByRangeClause,
+)
 from rhosocial.activerecord.backend.impl.postgres.partition import (
     HashBranch, PostgresPartitionPlan, RangePolicy,
 )
@@ -96,9 +97,16 @@ plan = PostgresPartitionPlan(
 )
 
 specs = tuple(plan.iter_specs())                   # 推导出的分支/叶子 spec
-build = dialect.suggest_partition_build(PartitionStrategy.RANGE, plan)
-adds = dialect.suggest_partition_add(PartitionStrategy.HASH, plan)
-retention = dialect.suggest_partition_retention(PartitionStrategy.RANGE, plan)
+
+# 策略现在由子句表达：类名给出策略词，keys 给出分区键。
+def _strategy(clause_type, column):
+    return clause_type(dialect, [Column(dialect, column)])
+
+build = dialect.suggest_partition_build(_strategy(PartitionByRangeClause, "created_at"), plan)
+adds = dialect.suggest_partition_add(_strategy(PartitionByHashClause, "tenant_bucket"), plan)
+retention = dialect.suggest_partition_retention(
+    _strategy(PartitionByRangeClause, "created_at"), plan
+)
 ```
 
 * `iter_specs()` 把树展开为具体 spec；每个 spec 携带渲染 DDL 所需的父表、

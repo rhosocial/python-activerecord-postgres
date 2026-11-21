@@ -21,8 +21,10 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableStatement,
+    PartitionByHashClause,
+    PartitionByListClause,
+    PartitionByRangeClause,
     PartitionClause,
-    PartitionStrategy,
 )
 from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -264,9 +266,8 @@ class TestPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 ),
             ],
-            partition=PartitionClause(
+            partition=PartitionByRangeClause(
                 dialect=dialect,
-                method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "created_at")],
             ),
         )
@@ -294,9 +295,8 @@ class TestPartitionedTableCreation:
                     ],
                 ),
             ],
-            partition=PartitionClause(
+            partition=PartitionByListClause(
                 dialect=dialect,
-                method=PartitionStrategy.LIST,
                 keys=[Column(dialect, "status")],
             ),
         )
@@ -318,9 +318,8 @@ class TestPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PartitionClause(
+            partition=PartitionByHashClause(
                 dialect=dialect,
-                method=PartitionStrategy.HASH,
                 keys=[Column(dialect, "tenant_id")],
             ),
         )
@@ -341,9 +340,8 @@ class TestPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PartitionClause(
+            partition=PartitionByHashClause(
                 dialect=dialect,
-                method=PartitionStrategy.HASH,
                 keys=[Column(dialect, "tenant_id")],
             ),
         )
@@ -365,9 +363,8 @@ class TestPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PartitionClause(
+            partition=PartitionByRangeClause(
                 dialect=dialect,
-                method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "created_at")],
             ),
         )
@@ -386,9 +383,8 @@ class TestPartitionedTableCreation:
 
     def test_partition_clause_is_the_generic_clause(self, dialect):
         """PostgreSQL uses core's PartitionClause; it adds no field of its own."""
-        clause = PartitionClause(
+        clause = PartitionByRangeClause(
             dialect=dialect,
-            method=PartitionStrategy.RANGE,
             keys=[Column(dialect, "created_at")],
         )
         sql, params = clause.to_sql()
@@ -407,9 +403,8 @@ class TestPartitionedTableCreation:
                     constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
                 )
             ],
-            partition=PartitionClause(
+            partition=PartitionByRangeClause(
                 dialect=dialect,
-                method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "created_at")],
             ),
         )
@@ -417,18 +412,16 @@ class TestPartitionedTableCreation:
         assert "PARTITION BY RANGE" in sql
 
     def test_partition_clause_rejects_cross_dialect_key(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByRangeClause(
             dialect,
-            PartitionStrategy.RANGE,
             [Column(DummyDialect(), "created_at")],
         )
         with pytest.raises(ValueError, match="same dialect|PostgreSQL dialect"):
             clause.to_sql()
 
     def test_create_partition_rejects_cross_dialect_clause(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByHashClause(
             DummyDialect(),
-            PartitionStrategy.HASH,
             [Column(DummyDialect(), "bucket")],
         )
         with pytest.raises(ValueError, match="same dialect"):
@@ -459,9 +452,8 @@ class TestPartitionedTableCreation:
                 ),
                 ColumnDefinition(dialect, "payload", TextType(dialect=dialect)),
             ],
-            partition=PartitionClause(
+            partition=PartitionByRangeClause(
                 dialect=dialect,
-                method=PartitionStrategy.RANGE,
                 keys=[Column(dialect, "tenant_id"), Column(dialect, "created_at")],
             ),
         )
@@ -472,9 +464,8 @@ class TestPartitionedTableCreation:
         assert params == ()
 
     def test_multi_column_list_partitioned_parent_table_rejected(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByListClause(
             dialect=dialect,
-            method=PartitionStrategy.LIST,
             keys=[Column(dialect, "region"), Column(dialect, "status")],
         )
 
@@ -482,9 +473,8 @@ class TestPartitionedTableCreation:
             clause.to_sql()
 
     def test_child_multi_column_list_partition_clause_rejected(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByListClause(
             dialect=dialect,
-            method=PartitionStrategy.LIST,
             keys=[Column(dialect, "region"), Column(dialect, "status")],
         )
         expr = PostgresCreatePartitionStatement(
@@ -792,9 +782,8 @@ class TestCreatePartitionExpression:
         assert "IN ('MINVALUE', 'MAXVALUE', 'DEFAULT')" in sql
 
     def test_child_partition_clause_order_and_schemas(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByHashClause(
             dialect,
-            PartitionStrategy.HASH,
             [Column(dialect, "bucket")],
         )
         expr = PostgresCreatePartitionStatement(
@@ -819,9 +808,8 @@ class TestCreatePartitionExpression:
         assert params == ()
 
     def test_create_partition_rejects_nested_parameters(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByHashClause(
             dialect,
-            PartitionStrategy.HASH,
             [RawSQL(dialect, "bucket %s", (1,))],
         )
         expr = PostgresCreatePartitionStatement(
@@ -839,9 +827,8 @@ class TestCreatePartitionExpression:
             expr.to_sql()
 
     def test_create_partition_literals_are_inlined(self, dialect):
-        clause = PartitionClause(
+        clause = PartitionByHashClause(
             dialect,
-            PartitionStrategy.HASH,
             [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket", inline=True))],
         )
         expr = PostgresCreatePartitionStatement(

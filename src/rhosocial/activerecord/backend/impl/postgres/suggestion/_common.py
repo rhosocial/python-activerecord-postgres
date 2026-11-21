@@ -7,12 +7,11 @@ assemble their answers from the same DDL expression nodes. Those helpers live
 here, on :class:`PostgresPartitionSuggestionBase`, so each per-protocol module
 holds only its own ``suggest_partition_<x>()`` method and the imports that method
 needs. Behaviour is unchanged from the former single ``partition.py``: the
-helpers below are moved verbatim, never rewritten.
+helpers still read the same strategy word, now carried by a strategy clause
+expression rather than a strategy enum.
 """
 
 from typing import Any, Optional, Tuple
-
-from ....expression.statements import PartitionStrategy
 
 __all__ = ["PostgresPartitionSuggestionBase"]
 
@@ -29,15 +28,16 @@ class PostgresPartitionSuggestionBase:
         for candidate in (strategy, getattr(plan, "method", None)):
             if candidate is None:
                 continue
-            try:
-                word = PartitionStrategy.parse(candidate)
-            except TypeError:
-                # An explicitly supplied strategy that PostgreSQL cannot spell
-                # (KEY, INTERVAL, ...) is a definite "no mechanism", not a cue
-                # to fall back to the plan's own method.
-                if candidate is strategy:
-                    return None
-                continue
+            # A strategy clause carries the word in ``word``/``method``. A
+            # legacy str Enum carries it in ``value``; a plain string is itself.
+            word = candidate
+            for attr in ("word", "method", "value"):
+                candidate_word = getattr(candidate, attr, None)
+                if isinstance(candidate_word, str):
+                    word = candidate_word
+                    break
+            # An unsupported word (KEY, INTERVAL, ...) is a definite "no
+            # mechanism", not a cue to fall back to the plan's own method.
             return word if word in _RANGE_LIST_HASH else None
         return None
 

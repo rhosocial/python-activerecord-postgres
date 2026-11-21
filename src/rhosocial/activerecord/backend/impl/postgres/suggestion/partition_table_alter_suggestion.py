@@ -7,10 +7,14 @@ DDL expression statements. The honest answer is the explicit "no such mechanism"
 state.
 """
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.suggestion import PartitionTableAlterSuggestion
 
-from ....expression.statements import PartitionStrategy
 from ._common import PostgresPartitionSuggestionBase
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ....expression.statements import PartitionByClause
 
 __all__ = ["PostgresPartitionTableAlterSuggestionMixin"]
 
@@ -19,7 +23,7 @@ class PostgresPartitionTableAlterSuggestionMixin(PostgresPartitionSuggestionBase
     """Answer PostgreSQL's lack of in-place partition scheme alter explicitly."""
 
     def suggest_partition_table_alter(
-        self, strategy: PartitionStrategy, plan: object
+        self, strategy: "PartitionByClause", plan: object
     ) -> PartitionTableAlterSuggestion:
         """PostgreSQL cannot ALTER a table's partitioning scheme in place.
 

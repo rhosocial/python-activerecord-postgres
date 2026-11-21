@@ -7,11 +7,14 @@ have a mechanism here; LIST and HASH partitions are explicitly unsupported.
 """
 
 from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from rhosocial.activerecord.backend.suggestion import PartitionRetentionSuggestion
 
-from ....expression.statements import PartitionStrategy
 from ._common import PostgresPartitionSuggestionBase
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ....expression.statements import PartitionByClause
 
 __all__ = ["PostgresPartitionRetentionSuggestionMixin"]
 
@@ -20,7 +23,7 @@ class PostgresPartitionRetentionSuggestionMixin(PostgresPartitionSuggestionBase)
     """Retire a dated RANGE partition by detaching then dropping it."""
 
     def suggest_partition_retention(
-        self, strategy: PartitionStrategy, plan: object
+        self, strategy: "PartitionByClause", plan: object
     ) -> PartitionRetentionSuggestion:
         """Retire a dated RANGE partition by detaching then dropping it.
 

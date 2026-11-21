@@ -27,15 +27,13 @@ partition = PostgresCreatePartitionStatement(
 ## Nested Partitions
 
 PostgreSQL lets a partition be partitioned again, and it lets each branch of a
-HASH parent pick its own child strategy. Pass a `PartitionClause` to
-`PostgresCreatePartitionStatement`; the rendered order is `FOR VALUES` then
-`PARTITION BY`.
+HASH parent pick its own child strategy. Pass a strategy clause such as
+`PartitionByRangeClause` to `PostgresCreatePartitionStatement`; the rendered
+order is `FOR VALUES` then `PARTITION BY`.
 
 ```python
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.expression.statements import (
-    PartitionClause, PartitionStrategy,
-)
+from rhosocial.activerecord.backend.expression.statements import PartitionByRangeClause
 
 # CREATE TABLE logs_p0 PARTITION OF logs
 #   FOR VALUES WITH (MODULUS 4, REMAINDER 0)
@@ -43,8 +41,8 @@ from rhosocial.activerecord.backend.expression.statements import (
 branch = PostgresCreatePartitionStatement(
     dialect, parent_table="logs", partition_name="logs_p0",
     partition_type="HASH", partition_values={"modulus": 4, "remainder": 0},
-    partition_clause=PartitionClause(
-        dialect, PartitionStrategy.RANGE, [Column(dialect, "created_at")],
+    partition_clause=PartitionByRangeClause(
+        dialect, [Column(dialect, "created_at")],
     ),
 )
 
@@ -76,7 +74,10 @@ decisions stay with the application.
 
 ```python
 from datetime import datetime, timezone
-from rhosocial.activerecord.backend.expression.statements import PartitionStrategy
+from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.statements import (
+    PartitionByHashClause, PartitionByRangeClause,
+)
 from rhosocial.activerecord.backend.impl.postgres.partition import (
     HashBranch, PostgresPartitionPlan, RangePolicy,
 )
@@ -97,9 +98,17 @@ plan = PostgresPartitionPlan(
 )
 
 specs = tuple(plan.iter_specs())                   # derived branch/leaf specs
-build = dialect.suggest_partition_build(PartitionStrategy.RANGE, plan)
-adds = dialect.suggest_partition_add(PartitionStrategy.HASH, plan)
-retention = dialect.suggest_partition_retention(PartitionStrategy.RANGE, plan)
+
+# A strategy is a clause expression: the class names the word, the keys name
+# the partition columns.
+def _strategy(clause_type, column):
+    return clause_type(dialect, [Column(dialect, column)])
+
+build = dialect.suggest_partition_build(_strategy(PartitionByRangeClause, "created_at"), plan)
+adds = dialect.suggest_partition_add(_strategy(PartitionByHashClause, "tenant_bucket"), plan)
+retention = dialect.suggest_partition_retention(
+    _strategy(PartitionByRangeClause, "created_at"), plan
+)
 ```
 
 * `iter_specs()` materializes the tree into concrete specs; each spec carries

@@ -6,10 +6,14 @@ through a single cascading ``DROP TABLE``. A plan that yields no concrete spec
 has no PostgreSQL mechanism, so the answer is the explicit "unsupported" state.
 """
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.suggestion import PartitionDropSuggestion
 
-from ....expression.statements import PartitionStrategy
 from ._common import PostgresPartitionSuggestionBase
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ....expression.statements import PartitionByClause
 
 __all__ = ["PostgresPartitionDropSuggestionMixin"]
 
@@ -18,7 +22,7 @@ class PostgresPartitionDropSuggestionMixin(PostgresPartitionSuggestionBase):
     """Drop one partition; a whole branch goes through a cascading DROP."""
 
     def suggest_partition_drop(
-        self, strategy: PartitionStrategy, plan: object
+        self, strategy: "PartitionByClause", plan: object
     ) -> PartitionDropSuggestion:
         """Drop one partition; a whole branch goes through a cascading DROP."""
         from ....expression.objects import Table
