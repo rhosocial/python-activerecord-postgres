@@ -5,12 +5,11 @@ This module defines the protocol for PostgreSQL extension detection
 and management functionality.
 """
 
-from typing import Protocol, runtime_checkable, Dict, Optional, TYPE_CHECKING
+from typing import Protocol, runtime_checkable, Dict, Optional, Tuple, TYPE_CHECKING
 
 from .base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.bases import SQLQueryAndParams
     from ..expression.ddl.extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
 
 
@@ -143,7 +142,7 @@ class PostgresExtensionSupport(Protocol):
         """
         ...
 
-    def format_create_extension_statement(self, expr: "PostgresCreateExtensionStatement") -> "SQLQueryAndParams":
+    def format_create_extension_statement(self, expr: "PostgresCreateExtensionStatement") -> Tuple[str, tuple]:
         """Format CREATE EXTENSION expression.
 
         Args:
@@ -154,7 +153,7 @@ class PostgresExtensionSupport(Protocol):
         """
         ...
 
-    def format_drop_extension_statement(self, expr: "PostgresDropExtensionStatement") -> "SQLQueryAndParams":
+    def format_drop_extension_statement(self, expr: "PostgresDropExtensionStatement") -> Tuple[str, tuple]:
         """Format DROP EXTENSION expression.
 
         Args:

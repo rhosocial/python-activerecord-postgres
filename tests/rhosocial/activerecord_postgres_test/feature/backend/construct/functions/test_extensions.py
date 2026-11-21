@@ -110,21 +110,31 @@ class TestLtreeFunctions:
         assert "~" in sql
 
     def test_ltree_index_statement(self):
-        """Test ltree index statement (DDL, still on mixin)."""
+        """ltree index DDL is an expression node from the factory."""
         dialect = PostgresDialect((14, 0, 0))
-        sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path')
-        assert 'CREATE INDEX idx_path ON "categories" USING gist (path)' in sql
+        from rhosocial.activerecord.backend.impl.postgres.functions import ltree_index
+
+        sql, _ = ltree_index(
+            dialect, 'categories', ['path'], 'idx_path'
+        ).to_sql()
+        assert 'CREATE INDEX "idx_path" ON "categories" USING gist ("path")' in sql
 
     def test_ltree_index_statement_with_schema(self):
-        """Test ltree index statement with schema."""
         dialect = PostgresDialect((14, 0, 0))
-        sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path', schema='public')
+        from rhosocial.activerecord.backend.impl.postgres.functions import ltree_index
+
+        sql, _ = ltree_index(
+            dialect, 'categories', ['path'], 'idx_path', schema='public'
+        ).to_sql()
         assert 'ON "public"."categories"' in sql
 
     def test_ltree_index_statement_btree(self):
-        """Test ltree index statement with btree."""
         dialect = PostgresDialect((14, 0, 0))
-        sql, params = dialect.format_ltree_index_statement('idx_path', 'categories', 'path', index_type='btree')
+        from rhosocial.activerecord.backend.impl.postgres.functions import ltree_index
+
+        sql, _ = ltree_index(
+            dialect, 'categories', ['path'], 'idx_path', index_type='btree'
+        ).to_sql()
         assert "USING btree" in sql
 
     def test_ltree_subpath_with_length(self):

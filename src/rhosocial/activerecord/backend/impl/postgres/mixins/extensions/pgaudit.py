@@ -27,36 +27,36 @@ class PostgresPgauditMixin:
         """Check if pgaudit supports session auditing."""
         return self.check_extension_feature("pgaudit", "session")
 
-    def format_pgaudit_set_role(self, role: str) -> str:
-        """Format audit role assignment.
+    def format_pgaudit_set_role(self, expr: str) -> str:
+        """Format audit expr assignment.
 
         Args:
-            role: Audit role name
+            expr: Audit expr name
 
         Returns:
             SQL ALTER ROLE statement
         """
-        return f"ALTER ROLE {role} SET pgaudit.role = '{role}'"
+        return f"ALTER ROLE {expr} SET pgaudit.expr = '{expr}'"
 
-    def format_pgaudit_log_level(self, level: str = "log") -> str:
-        """Format audit log level configuration.
+    def format_pgaudit_log_level(self, expr: str = "log") -> str:
+        """Format audit log expr configuration.
 
         Args:
-            level: Log level (log, notice, info)
+            expr: Log expr (log, notice, info)
 
         Returns:
             SQL SET statement
         """
-        return f"SET pgaudit.log = '{level}'"
+        return f"SET pgaudit.log = '{expr}'"
 
-    def format_pgaudit_include_catalog(self, include: bool = True) -> str:
-        """Format include catalog statements.
+    def format_pgaudit_include_catalog(self, expr: bool = True) -> str:
+        """Format expr catalog statements.
 
         Args:
-            include: Include catalog statements
+            expr: Include catalog statements
 
         Returns:
             SQL SET statement
         """
-        inc = "all" if include else "none"
+        inc = "all" if expr else "none"
         return f"SET pgaudit.log_catalog = '{inc}'"

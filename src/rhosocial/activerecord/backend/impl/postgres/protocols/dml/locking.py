@@ -48,11 +48,11 @@ class PostgresLockingSupport(LockingSupport, Protocol):
         """Whether FOR UPDATE SKIP LOCKED is supported (PostgreSQL 9.5+)."""
         ...
 
-    def format_for_update_clause(self, clause: Any) -> Tuple[str, tuple]:
-        """Format PostgreSQL-specific FOR UPDATE clause.
+    def format_for_update_clause(self, expr: Any) -> Tuple[str, tuple]:
+        """Format PostgreSQL-specific FOR UPDATE expr.
 
         Args:
-            clause: ForUpdateClause instance
+            expr: ForUpdateClause instance
 
         Returns:
             Tuple of (SQL string, parameters tuple)

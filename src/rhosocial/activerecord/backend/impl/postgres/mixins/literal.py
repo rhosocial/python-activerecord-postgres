@@ -59,11 +59,11 @@ class PostgresLiteralValueMixin:
     wins the lookup.
     """
 
-    def format_literal(self, value: Any) -> str:
-        """Render *value* as inline SQL text, PostgreSQL's spelling where it has one.
+    def format_literal(self, expr: Any) -> str:
+        """Render *expr* as inline SQL text, PostgreSQL's spelling where it has one.
 
         Args:
-            value: The host value to write into the statement.
+            expr: The host expr to write into the statement.
 
         Returns:
             The escaped literal text, without a bind parameter.
@@ -72,21 +72,21 @@ class PostgresLiteralValueMixin:
             TypeError: The base implementation refuses a type PostgreSQL has
                 no literal form for, and this is the same refusal.
         """
-        if isinstance(value, (bytes, bytearray)):
+        if isinstance(expr, (bytes, bytearray)):
             # Lowercase hex is PostgreSQL's own bytea output form; the input
             # grammar accepts either case.
-            return f"'\\x{bytes(value).hex()}'::bytea"
-        if isinstance(value, uuid.UUID):
+            return f"'\\x{bytes(expr).hex()}'::bytea"
+        if isinstance(expr, uuid.UUID):
             # The base owns the quoting through the escape helper; the cast is
             # PostgreSQL's, the same shape as the UUID constants in
             # mixins/uuid.py.
-            return f"{super().format_literal(str(value))}::uuid"
-        if isinstance(value, datetime.timedelta):
+            return f"{super().format_literal(str(expr))}::uuid"
+        if isinstance(expr, datetime.timedelta):
             # The body text is generated from digits and separators alone -- no
             # host-controlled string reaches it, so quote-doubling has nothing
             # to double.
-            return f"INTERVAL '{self._postgres_interval_text(value)}'"
-        return super().format_literal(value)
+            return f"INTERVAL '{self._postgres_interval_text(expr)}'"
+        return super().format_literal(expr)
 
     @staticmethod
     def _postgres_interval_text(value: datetime.timedelta) -> str:

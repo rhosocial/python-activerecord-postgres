@@ -1004,6 +1004,28 @@ def _build_range_constructor_args(
     return args
 
 
+def create_multirange_type(dialect, name: str, range_type: str, schema: str = None):
+    """Build an explicit multirange DDL node (it fails fast when rendered)."""
+    from ..expression.ddl.multirange import PostgresCreateMultirangeTypeExpression
+
+    return PostgresCreateMultirangeTypeExpression(dialect, name, range_type, schema=schema)
+
+
+def multirange_agg(
+    dialect,
+    range_column: str,
+    table_name: str,
+    where_clause: str = None,
+    schema: str = None,
+):
+    """Build a ``SELECT multirange_agg(...)`` expression node."""
+    from ..expression.ddl.multirange import PostgresMultirangeAggFunctionExpression
+
+    return PostgresMultirangeAggFunctionExpression(
+        dialect, range_column, table_name, where_clause=where_clause, schema=schema
+    )
+
+
 __all__ = [
     # Range operators
     "range_contains",
@@ -1033,6 +1055,8 @@ __all__ = [
     "multirange_union",
     "multirange_intersection",
     "multirange_difference",
+    "create_multirange_type",
+    "multirange_agg",
     # Multirange functions
     "range_merge",
     "multirange_literal",

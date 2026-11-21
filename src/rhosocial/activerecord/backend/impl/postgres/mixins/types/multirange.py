@@ -1,13 +1,13 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/types/multirange.py
-"""PostgreSQL multirange support."""
+"""PostgreSQL multirange support — capability probes and node formatters."""
 
-from typing import Optional, Tuple, TYPE_CHECKING
+from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
+    from ...expression.ddl.multirange import (
         PostgresCreateMultirangeTypeExpression,
         PostgresMultirangeAggFunctionExpression,
     )
@@ -32,11 +32,8 @@ class MultirangeMixin:
     def supports_multirange_agg(self) -> bool:
         return self.version_at_least((14, 0, 0))
 
-    def format_create_multirange_type_statement(
-        self,
-        name: str,
-        range_type: str,
-        schema: Optional[str] = None,
+    def format_postgres_create_multirange_type_expression(
+        self, expr: "PostgresCreateMultirangeTypeExpression"
     ) -> Tuple[str, tuple]:
         raise UnsupportedFeatureError(
             self.name,
@@ -44,12 +41,8 @@ class MultirangeMixin:
             suggestion="set MULTIRANGE_TYPE_NAME on a RANGE definition",
         )
 
-    def format_multirange_agg_function(
-        self,
-        range_column: str,
-        table_name: str,
-        where_clause: Optional[str] = None,
-        schema: Optional[str] = None,
+    def format_postgres_multirange_agg_function_expression(
+        self, expr: "PostgresMultirangeAggFunctionExpression"
     ) -> Tuple[str, tuple]:
         if not self.supports_multirange_agg():
             raise UnsupportedFeatureError(
@@ -57,31 +50,11 @@ class MultirangeMixin:
                 "multirange_agg",
                 suggestion="requires PostgreSQL 14+",
             )
-        table_sql, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
+        table_sql, _ = self.format_table_object(
+            Table(self, expr.table_name, schema_name=expr.schema)
         )
-        column_sql = self.format_identifier(range_column)
+        column_sql = self.format_identifier(expr.range_column)
         sql = f"SELECT multirange_agg({column_sql}) FROM {table_sql}"
-        if where_clause:
-            sql += f" WHERE {where_clause}"
+        if expr.where_clause:
+            sql += f" WHERE {expr.where_clause}"
         return sql, ()
-
-    def format_postgres_create_multirange_type_expression(
-        self,
-        expr: "PostgresCreateMultirangeTypeExpression",
-    ) -> Tuple[str, tuple]:
-        return self.format_create_multirange_type_statement(
-            expr.name,
-            expr.range_type,
-            expr.schema,
-        )
-
-    def format_postgres_multirange_agg_function_expression(
-        self,
-        expr: "PostgresMultirangeAggFunctionExpression",
-    ) -> Tuple[str, tuple]:
-        return self.format_multirange_agg_function(
-            expr.range_column,
-            expr.table_name,
-            expr.where_clause,
-            expr.schema,
-        )

@@ -5,7 +5,7 @@ This module provides the PostgresIndexMixin class which implements
 PostgreSQL-specific index features and operations.
 """
 
-from typing import Any, Dict, Optional, Tuple, List, Union, TYPE_CHECKING
+from typing import Tuple, List, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 from rhosocial.activerecord.backend.expression.objects import Index, Table
@@ -694,102 +694,7 @@ class PostgresIndexMixin:
 
         return (" ".join(parts), ())
 
-    def format_create_index_pg_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        columns: List[str],
-        schema: Optional[str] = None,
-        unique: bool = False,
-        index_type: str = "btree",
-        concurrently: bool = False,
-        if_not_exists: bool = False,
-        include_columns: Optional[List[str]] = None,
-        with_options: Optional[Dict[str, Any]] = None,
-        tablespace: Optional[str] = None,
-        where_clause: Optional[Union[str, ToSQLProtocol]] = None,
-    ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement with PostgreSQL-specific options.
-
-        This method provides a convenient way to create indexes with
-        PostgreSQL-specific options without using expression objects.
-
-        Args:
-            where_clause: Accepts either a string (for hardcoded conditions)
-                or a ToSQLProtocol expression for parameterized queries.
-                WARNING: When using string, never pass user input directly;
-                always use ToSQLProtocol expressions for untrusted input.
-
-        """
-        all_params = []
-        parts = ["CREATE"]
-
-        if unique:
-            parts.append("UNIQUE")
-
-        parts.append("INDEX")
-
-        # CONCURRENTLY requires PG 11+
-        if concurrently:
-            if not self.supports_parallel_create_index():
-                raise ValueError("CREATE INDEX CONCURRENTLY requires PostgreSQL 11+")
-            parts.append("CONCURRENTLY")
-
-        if if_not_exists:
-            parts.append("IF NOT EXISTS")
-
-        # Index name and its target table, each through the shared renderer so
-        # the two agree on qualification and quoting.
-        parts.append(
-            self.format_index_object(Index(self, index_name, schema_name=schema))[0]
-        )
-
-        # ON table
-        parts.append("ON")
-        parts.append(
-            self.format_table_object(Table(self, table_name, schema_name=schema))[0]
-        )
-
-        # Index type. This helper has always rendered lowercase, so keep that
-        # spelling while taking the closed vocabulary from the shared enum.
-        try:
-            index_type = PostgresIndexType.normalize(index_type).value
-        except ValueError as exc:
-            raise ValueError(f"Invalid index_type: {index_type}. {exc}") from None
-        parts.append(f"USING {index_type}")
-
-        # Columns
-        parts.append("(" + ", ".join(self.format_identifier(c) for c in columns) + ")")
-
-        # INCLUDE clause (PG 12+ for GiST, PG 14+ for SP-GiST)
-        if include_columns:
-            if index_type == "gist" and not self.supports_gist_include():
-                raise ValueError("INCLUDE for GiST indexes requires PostgreSQL 12+")
-            if index_type == "spgist" and not self.supports_spgist_include():
-                raise ValueError("INCLUDE for SP-GiST indexes requires PostgreSQL 14+")
-            parts.append("INCLUDE (" + ", ".join(self.format_identifier(c) for c in include_columns) + ")")
-
-        # WITH options
-        if with_options:
-            opts = ", ".join(f"{k} = {v}" for k, v in with_options.items())
-            parts.append(f"WITH ({opts})")
-
-        # TABLESPACE
-        if tablespace:
-            parts.append(f"TABLESPACE {self.format_identifier(tablespace)}")
-
-        # WHERE clause for partial index
-        if where_clause:
-            if isinstance(where_clause, ToSQLProtocol):
-                where_sql, where_params = where_clause.to_sql()
-                parts.append(f"WHERE {where_sql}")
-                all_params = list(all_params) + list(where_params)
-            else:
-                parts.append(f"WHERE {where_clause}")
-
-        return (" ".join(parts), tuple(all_params))
-
-    def format_add_index_action(self, action) -> Tuple[str, tuple]:
+    def format_add_index_action(self, expr) -> Tuple[str, tuple]:
         """PostgreSQL does not support ALTER TABLE ADD INDEX.
 
         Raises UnsupportedFeatureError — use CREATE INDEX instead.
@@ -804,7 +709,7 @@ class PostgresIndexMixin:
             suggestion="Use CREATE INDEX to create an index on the table.",
         )
 
-    def format_drop_index_action(self, action) -> Tuple[str, tuple]:
+    def format_drop_index_action(self, expr) -> Tuple[str, tuple]:
         """PostgreSQL does not support ALTER TABLE DROP INDEX.
 
         Raises UnsupportedFeatureError — use DROP INDEX statement instead.

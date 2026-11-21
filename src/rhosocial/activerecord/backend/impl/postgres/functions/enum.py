@@ -258,7 +258,79 @@ def enum_ge(
     return BinaryExpression(dialect, ">=", left, right)
 
 
+def enum_type_name(dialect, name: str, schema: str = None):
+    """Build a quoted (optionally schema-qualified) enum type-name expression."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+        PostgresEnumTypeNameExpression,
+    )
+
+    return PostgresEnumTypeNameExpression(dialect, name, schema=schema)
+
+
+def create_enum_type(
+    dialect,
+    name: str,
+    values,
+    schema: str = None,
+    *,
+    if_not_exists: bool = False,
+):
+    """Build a CREATE TYPE ... AS ENUM expression."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+        PostgresCreateEnumTypeExpression,
+    )
+
+    return PostgresCreateEnumTypeExpression(
+        dialect, name, values, schema=schema, if_not_exists=if_not_exists
+    )
+
+
+def drop_enum_type(
+    dialect,
+    name: str,
+    schema: str = None,
+    *,
+    if_exists: bool = False,
+    cascade: bool = False,
+    restrict: bool = False,
+):
+    """Build a DROP TYPE expression for an enum type."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+        PostgresDropEnumTypeExpression,
+    )
+
+    return PostgresDropEnumTypeExpression(
+        dialect, name, schema=schema, if_exists=if_exists,
+        cascade=cascade, restrict=restrict,
+    )
+
+
+def add_enum_value(
+    dialect,
+    type_name: str,
+    new_value: str,
+    schema: str = None,
+    *,
+    before: str = None,
+    after: str = None,
+    if_not_exists: bool = False,
+):
+    """Build an ALTER TYPE ... ADD VALUE expression."""
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+        PostgresAlterEnumAddValueExpression,
+    )
+
+    return PostgresAlterEnumAddValueExpression(
+        dialect, type_name, new_value, schema=schema,
+        before=before, after=after, if_not_exists=if_not_exists,
+    )
+
+
 __all__ = [
+    "enum_type_name",
+    "create_enum_type",
+    "drop_enum_type",
+    "add_enum_value",
     "enum_range",
     "enum_first",
     "enum_last",

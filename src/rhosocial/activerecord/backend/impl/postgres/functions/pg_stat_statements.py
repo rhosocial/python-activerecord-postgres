@@ -71,7 +71,55 @@ def pg_stat_statements_reset(
     return core.FunctionCall(dialect, "pg_stat_statements_reset")
 
 
+def query_stats_statement(
+    dialect, limit=None, sort_by: str = "total_exec_time", descending: bool = True
+):
+    """Build a general pg_stat_statements query node."""
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(
+        dialect, "stats", limit=limit, sort_by=sort_by, descending=descending
+    )
+
+
+def query_by_id_statement(dialect, queryid: int):
+    """Build a query-by-queryid node."""
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(dialect, "by_id", queryid=queryid)
+
+
+def top_queries_by_time(dialect, limit: int = 10):
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(dialect, "by_time", limit=limit)
+
+
+def top_queries_by_calls(dialect, limit: int = 10):
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(dialect, "by_calls", limit=limit)
+
+
+def top_queries_by_rows(dialect, limit: int = 10):
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(dialect, "by_rows", limit=limit)
+
+
+def io_stats_statement(dialect, limit: int = 10):
+    from ..expression.pg_stat import PostgresPgStatStatement
+
+    return PostgresPgStatStatement(dialect, "io", limit=limit)
+
+
 __all__ = [
+    "query_stats_statement",
+    "query_by_id_statement",
+    "top_queries_by_time",
+    "top_queries_by_calls",
+    "top_queries_by_rows",
+    "io_stats_statement",
     # pg_stat_statements functions
     "pg_stat_statements_reset",
 ]

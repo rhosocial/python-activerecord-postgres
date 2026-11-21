@@ -6,7 +6,7 @@ that extend beyond standard SQL.
 """
 
 from enum import Enum  # noqa: F401
-from typing import Protocol, runtime_checkable, Optional, Tuple, List, Dict, Any, TYPE_CHECKING
+from typing import Protocol, runtime_checkable, Tuple, List, Any, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import (
     CreateIndexSupport,
@@ -217,71 +217,34 @@ class PostgresIndexSupport(
         """
         ...  # pragma: no cover
 
-    def format_add_index_action(self, action: Any) -> Tuple[str, tuple]:
-        """Format ALTER TABLE ADD INDEX action.
+    def format_add_index_action(self, expr: Any) -> Tuple[str, tuple]:
+        """Format ALTER TABLE ADD INDEX expr.
 
         PostgreSQL does not support ADD INDEX inside ALTER TABLE; this
         raises ``UnsupportedFeatureError`` and directs callers to
         ``CREATE INDEX``.
 
         Args:
-            action: Index action to format.
+            expr: Index expr to format.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...  # pragma: no cover
 
-    def format_drop_index_action(self, action: Any) -> Tuple[str, tuple]:
-        """Format ALTER TABLE DROP INDEX action.
+    def format_drop_index_action(self, expr: Any) -> Tuple[str, tuple]:
+        """Format ALTER TABLE DROP INDEX expr.
 
         PostgreSQL does not support DROP INDEX inside ALTER TABLE; this
         raises ``UnsupportedFeatureError`` and directs callers to
         ``DROP INDEX``.
 
         Args:
-            action: Index action to format.
+            expr: Index expr to format.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
         """
         ...  # pragma: no cover
 
-    def format_create_index_pg_statement(
-        self,
-        index_name: str,
-        table_name: str,
-        columns: List[str],
-        schema: Optional[str] = None,
-        unique: bool = False,
-        index_type: str = "btree",
-        concurrently: bool = False,
-        if_not_exists: bool = False,
-        include_columns: Optional[List[str]] = None,
-        with_options: Optional[Dict[str, Any]] = None,
-        tablespace: Optional[str] = None,
-        where_clause: Optional[str] = None,
-    ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement with PostgreSQL-specific options.
 
-        This method provides a convenient way to create indexes with
-        PostgreSQL-specific options without using expression objects.
-
-        Args:
-            index_name: Index name
-            table_name: Table name
-            columns: Column names for index key
-            schema: Schema name
-            unique: Create UNIQUE index
-            index_type: Index type ('btree', 'hash', 'gist', 'gin', 'spgist', 'brin')
-            concurrently: Use CONCURRENTLY (PG 11+)
-            if_not_exists: Add IF NOT EXISTS
-            include_columns: Non-key columns for INCLUDE (PG 12+ for GiST, PG 14+ for SP-GiST)
-            with_options: Storage parameters as dict
-            tablespace: Tablespace name
-            where_clause: WHERE clause for partial index
-
-        Returns:
-            Tuple of (SQL string, parameters tuple)
-        """
-        ...  # pragma: no cover

@@ -1,30 +1,21 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/dml/stored_procedure.py
-"""PostgreSQL stored procedure implementation mixin.
+"""Stored-procedure capability probes and node renderers (PostgreSQL 11+)."""
 
-This module provides the PostgresStoredProcedureMixin class which implements
-stored procedure support for PostgreSQL databases (introduced in PostgreSQL 11).
-"""
-
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Procedure
 
+from ...expression.ddl import (
+    PostgresCallProcedureStatement,
+    PostgresCreateProcedureStatement,
+    PostgresDropProcedureStatement,
+)
+
 
 class PostgresStoredProcedureMixin:
-    """PostgreSQL stored procedure implementation.
-
-    Stored procedures (introduced in PostgreSQL 11) support:
-    - CALL statement for procedure invocation
-    - Transaction control within procedures (COMMIT/ROLLBACK)
-    """
+    """PostgreSQL stored procedure implementation."""
 
     def _format_procedure_ref(self, schema: Optional[str], name: str) -> str:
-        """Render the procedure a CALL / CREATE / DROP statement names.
-
-        A :class:`Procedure` schema object carries the two namespace slots, so
-        the three statements that name a procedure share one qualification and
-        one quoting rule instead of three copies of it.
-        """
         sql, _ = self.format_procedure_object(Procedure(self, name, schema_name=schema))
         return sql
 
@@ -40,142 +31,67 @@ class PostgresStoredProcedureMixin:
         """SQL-standard function body syntax is supported since PostgreSQL 14."""
         return self.version_at_least((14, 0, 0))
 
-    def format_create_procedure_statement(
-        self,
-        name: str,
-        parameters: Optional[List[Dict[str, str]]] = None,
-        returns: Optional[str] = None,
-        language: str = "plpgsql",
-        body: str = "",
-        schema: Optional[str] = None,
-        or_replace: bool = False,
-        security: Optional[str] = None,
-        cost: Optional[float] = None,
-        rows: Optional[int] = None,
-        set_params: Optional[Dict[str, str]] = None,
+    def format_postgres_create_procedure_statement(
+        self, expr: PostgresCreateProcedureStatement
     ) -> Tuple[str, tuple]:
-        """Format CREATE PROCEDURE statement.
-
-        Args:
-            name: Procedure name
-            parameters: List of parameter dicts with 'name', 'type', 'mode' (IN/OUT/INOUT)
-            returns: Return type (for functions, not procedures)
-            language: Procedural language (default: plpgsql)
-            body: Procedure body
-            schema: Schema name
-            or_replace: Add OR REPLACE clause
-            security: 'DEFINER' or 'INVOKER'
-            cost: Estimated execution cost
-            rows: Estimated rows returned
-            set_params: SET configuration parameters
-
-        Returns:
-            Tuple of (SQL statement, parameters tuple)
-        """
+        """Render a CREATE PROCEDURE node."""
         if not self.supports_call_statement():
             raise ValueError("CREATE PROCEDURE requires PostgreSQL 11+")
 
-        full_name = self._format_procedure_ref(schema, name)
-
-        # OR REPLACE clause
-        replace_clause = "OR REPLACE " if or_replace else ""
-
+        full_name = self._format_procedure_ref(expr.schema, expr.name)
+        replace_clause = "OR REPLACE " if expr.or_replace else ""
         sql = f"CREATE {replace_clause}PROCEDURE {full_name}"
 
-        # Parameters
-        if parameters:
+        if expr.parameters:
             param_strs = []
-            for param in parameters:
-                param_str = ""
+            for param in expr.parameters:
+                part = ""
                 mode = param.get("mode", "IN")
                 if mode and mode != "IN":
-                    param_str += f"{mode} "
-                param_str += f"{param['name']} {param['type']}"
+                    part += f"{mode} "
+                part += f"{param['name']} {param['type']}"
                 if "default" in param:
-                    param_str += f" = {param['default']}"
-                param_strs.append(param_str)
+                    part += f" = {param['default']}"
+                param_strs.append(part)
             sql += f"({', '.join(param_strs)})"
         else:
             sql += "()"
 
-        # Language and options
-        sql += f"\nLANGUAGE {language}"
-
-        # Security
-        if security:
-            security = security.upper()
+        sql += f"\nLANGUAGE {expr.language}"
+        if expr.security:
+            security = expr.security.upper()
             if security not in ("DEFINER", "INVOKER"):
                 raise ValueError("Security must be 'DEFINER' or 'INVOKER'")
             sql += f"\nSECURITY {security}"
-
-        # SET parameters
-        if set_params:
-            set_strs = [f"{k} = {v}" for k, v in set_params.items()]
-            sql += f"\nSET {', '.join(set_strs)}"
-
-        # Body
-        sql += f"\nAS $$\n{body}\n$$"
-
+        if expr.set_params:
+            sql += "\nSET " + ", ".join(
+                f"{k} = {v}" for k, v in expr.set_params.items()
+            )
+        sql += f"\nAS $$\n{expr.body}\n$$"
         return sql, ()
 
-    def format_drop_procedure_statement(
-        self,
-        name: str,
-        parameters: Optional[List[Dict[str, str]]] = None,
-        schema: Optional[str] = None,
-        if_exists: bool = False,
-        cascade: bool = False,
+    def format_postgres_drop_procedure_statement(
+        self, expr: PostgresDropProcedureStatement
     ) -> Tuple[str, tuple]:
-        """Format DROP PROCEDURE statement.
-
-        Args:
-            name: Procedure name
-            parameters: Parameter types for overload resolution
-            schema: Schema name
-            if_exists: Add IF EXISTS clause
-            cascade: Add CASCADE clause
-
-        Returns:
-            Tuple of (SQL statement, parameters tuple)
-        """
-        full_name = self._format_procedure_ref(schema, name)
-
-        exists_clause = "IF EXISTS " if if_exists else ""
-
+        full_name = self._format_procedure_ref(expr.schema, expr.name)
+        exists_clause = "IF EXISTS " if expr.if_exists else ""
         sql = f"DROP PROCEDURE {exists_clause}{full_name}"
-
-        # Parameter types for overload resolution
-        if parameters:
-            param_types = [p["type"] if isinstance(p, dict) else p for p in parameters]
-            sql += f"({', '.join(param_types)})"
-
-        if cascade:
+        if expr.parameters:
+            types = [
+                p["type"] if isinstance(p, dict) else p for p in expr.parameters
+            ]
+            sql += f"({', '.join(types)})"
+        if expr.cascade:
             sql += " CASCADE"
-
         return sql, ()
 
-    def format_call_statement(
-        self, name: str, arguments: Optional[List[Any]] = None, schema: Optional[str] = None
+    def format_postgres_call_procedure_statement(
+        self, expr: PostgresCallProcedureStatement
     ) -> Tuple[str, tuple]:
-        """Format CALL statement for stored procedure.
-
-        Args:
-            name: Procedure name
-            arguments: List of argument values
-            schema: Schema name
-
-        Returns:
-            Tuple of (SQL statement, parameters tuple)
-        """
         if not self.supports_call_statement():
             raise ValueError("CALL statement requires PostgreSQL 11+")
-
-        full_name = self._format_procedure_ref(schema, name)
-
-        if arguments:
-            placeholders = ", ".join([self.p()] * len(arguments))
-            sql = f"CALL {full_name}({placeholders})"
-            return sql, tuple(arguments)
-        else:
-            sql = f"CALL {full_name}()"
-            return sql, ()
+        full_name = self._format_procedure_ref(expr.schema, expr.name)
+        if expr.arguments:
+            placeholders = ", ".join([self.get_parameter_placeholder()] * len(expr.arguments))
+            return f"CALL {full_name}({placeholders})", tuple(expr.arguments)
+        return f"CALL {full_name}()", ()

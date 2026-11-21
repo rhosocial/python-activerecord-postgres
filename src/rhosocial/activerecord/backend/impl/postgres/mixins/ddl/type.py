@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple, Union, cast, TYPE_CHECKING
+from typing import List, Optional, Tuple, cast, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.user_defined_type import UserDefinedTypeMixin
@@ -259,20 +259,6 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
     def supports_type_cascade(self) -> bool:
         return self.supports_drop_type_cascade()
 
-    def format_create_type_enum_statement(
-        self,
-        name: str,
-        values: Sequence[str],
-        schema: Optional[str] = None,
-    ) -> Tuple[str, tuple]:
-        dialect = self._as_dialect()
-        expr = CreateTypeStatement(
-            dialect,
-            Type(dialect, name, schema_name=schema),
-            PostgresEnumTypeDefinition(dialect, values),
-        )
-        return self.format_create_type_statement(expr)
-
     def format_create_type_statement(
         self,
         expr: CreateTypeStatement,
@@ -373,34 +359,11 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts.append(", ".join(action_parts))
         return " ".join(parts), tuple(action_params)
 
-    def format_drop_type_statement(
-        self,
-        expr: Optional[Union[DropTypeStatement, str]] = None,
-        schema_name: Optional[str] = None,
-        if_exists: bool = False,
-        cascade: bool = False,
-        restrict: bool = False,
-        *,
-        schema: Optional[str] = None,
-        name: Optional[str] = None,
-    ) -> Tuple[str, tuple]:
-        if expr is not None and name is not None:
-            raise ValueError("expr and name are mutually exclusive")
-        if expr is None:
-            if name is None:
-                raise TypeError("expr or name is required")
-            expr = name
-        if isinstance(expr, str):
-            if schema is not None and schema_name is not None and schema != schema_name:
-                raise ValueError("schema and schema_name must match when both are provided")
-            resolved_schema = schema if schema is not None else schema_name
-            expr = PostgresDropTypeExpression(
-                self._as_dialect(),
-                Type(self._as_dialect(), expr, schema_name=resolved_schema),
-                if_exists=if_exists,
-                cascade=cascade,
-                restrict=restrict,
-            )
+    def format_drop_type_statement(self, expr: DropTypeStatement) -> Tuple[str, tuple]:
+        """Render a DROP TYPE expression node.
+
+        Scalar argument handling belongs to ``functions.ddl_type.drop_type``.
+        """
         if not self.supports_type_objects() or not self.supports_drop_type():
             raise UnsupportedFeatureError(self.name, "DROP TYPE")
         if not isinstance(expr.type, Type):

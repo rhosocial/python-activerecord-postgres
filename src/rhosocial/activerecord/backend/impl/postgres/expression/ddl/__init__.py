@@ -92,6 +92,11 @@ from .index_definition import (
     PostgresDropIndexExpression,
 )
 from .index_type import PostgresIndexType
+from .procedure import (
+    PostgresCreateProcedureStatement,
+    PostgresDropProcedureStatement,
+    PostgresCallProcedureStatement,
+)
 from .exclude_constraint import PostgresExcludeConstraint
 from .constraint import PostgresAlterConstraintAction
 from .statistics import (
@@ -230,6 +235,9 @@ __all__ = [
     "PostgresPartitionTreeQueryStatement",
     # index
     "PostgresIndexType",
+    "PostgresCreateProcedureStatement",
+    "PostgresDropProcedureStatement",
+    "PostgresCallProcedureStatement",
     "PostgresAlterIndexStatement",
     "PostgresAlterIndexActionType",
     "PostgresReindexStatement",

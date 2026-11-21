@@ -47,6 +47,8 @@ Function modules and their corresponding PostgreSQL documentation:
 
 # Range functions
 from .range import (
+    create_multirange_type,
+    multirange_agg,
     range_contains,
     range_contained_by,
     range_contains_range,
@@ -103,6 +105,10 @@ from .geometric import (
 
 # Enum functions
 from .enum import (
+    enum_type_name,
+    create_enum_type,
+    drop_enum_type,
+    add_enum_value,
     enum_range,
     enum_first,
     enum_last,
@@ -339,6 +345,7 @@ from .pgcrypto import (
 
 # ltree functions
 from .ltree import (
+    ltree_index,
     ltree_literal,
     lquery_literal,
     ltxtquery_literal,
@@ -363,6 +370,15 @@ from .pg_trgm import (
 
 # btree_* index factories
 from .btree_indexes import btree_gin_index, btree_gist_index
+
+# CREATE INDEX factory
+from .ddl_index import create_index_pg
+
+# TYPE DDL factories
+from .ddl_type import create_type_enum, drop_type
+
+# Procedure statement factories
+from .procedure import create_procedure, drop_procedure, call_procedure
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -410,12 +426,22 @@ from .cube import (
 
 # citext functions
 from .citext import (
+    citext_column,
     citext_literal,
 )
+
+# bloom index factory
+from .bloom import bloom_index
 
 # pg_stat_statements functions
 from .pg_stat_statements import (
     pg_stat_statements_reset,
+    query_stats_statement,
+    query_by_id_statement,
+    top_queries_by_time,
+    top_queries_by_calls,
+    top_queries_by_rows,
+    io_stats_statement,
 )
 
 # postgis_raster functions
@@ -442,6 +468,8 @@ from .pgrouting import (
 
 # tablefunc functions
 from .tablefunc import (
+    crosstab_with_definition,
+    connectby_full,
     crosstab,
     connectby,
     normal_rand,
@@ -549,6 +577,8 @@ __all__ = [
     "multirange_difference",
     # Multirange functions
     "range_merge",
+    "create_multirange_type",
+    "multirange_agg",
     "multirange_literal",
     "multirange_constructor",
     # Geometric functions
@@ -574,6 +604,10 @@ __all__ = [
     "enum_le",
     "enum_gt",
     "enum_ge",
+    "enum_type_name",
+    "create_enum_type",
+    "drop_enum_type",
+    "add_enum_value",
     # Bit string functions
     "bit_concat",
     "bit_and",
@@ -740,6 +774,12 @@ __all__ = [
     "intarray_index",
     "btree_gin_index",
     "btree_gist_index",
+    "create_index_pg",
+    "create_type_enum",
+    "drop_type",
+    "create_procedure",
+    "drop_procedure",
+    "call_procedure",
     # PostGIS functions - Construction
     "st_make_point",
     "st_geom_from_text",
@@ -825,8 +865,17 @@ __all__ = [
     "cube_distance",
     # citext functions
     "citext_literal",
+    "citext_column",
+    "ltree_index",
+    "bloom_index",
     # pg_stat_statements functions
     "pg_stat_statements_reset",
+    "query_stats_statement",
+    "query_by_id_statement",
+    "top_queries_by_time",
+    "top_queries_by_calls",
+    "top_queries_by_rows",
+    "io_stats_statement",
     # postgis_raster functions
     "st_rast_from_hexwkb",
     "st_value",
@@ -844,6 +893,8 @@ __all__ = [
     "crosstab",
     "connectby",
     "normal_rand",
+    "crosstab_with_definition",
+    "connectby_full",
     # pg_cron functions
     "cron_schedule",
     "cron_unschedule",

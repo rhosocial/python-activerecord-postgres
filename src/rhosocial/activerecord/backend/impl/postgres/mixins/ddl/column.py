@@ -36,28 +36,28 @@ class PostgresAlterColumnModifierMixin:
         """``DROP CONSTRAINT IF EXISTS`` is supported since PostgreSQL 9.6."""
         return True
 
-    def format_add_column_action(self, action) -> Tuple[str, tuple]:
-        column_sql, column_params = self.format_column_definition(action.column)
-        if getattr(action, "if_not_exists", None) is True:
+    def format_add_column_action(self, expr) -> Tuple[str, tuple]:
+        column_sql, column_params = self.format_column_definition(expr.column)
+        if getattr(expr, "if_not_exists", None) is True:
             return f"ADD COLUMN IF NOT EXISTS {column_sql}", column_params
         return f"ADD COLUMN {column_sql}", column_params
 
-    def format_drop_column_action(self, action) -> Tuple[str, tuple]:
-        if getattr(action, "if_exists", None) is True:
-            return f"DROP COLUMN IF EXISTS {self.format_identifier(action.column_name)}", ()
-        return f"DROP COLUMN {self.format_identifier(action.column_name)}", ()
+    def format_drop_column_action(self, expr) -> Tuple[str, tuple]:
+        if getattr(expr, "if_exists", None) is True:
+            return f"DROP COLUMN IF EXISTS {self.format_identifier(expr.column_name)}", ()
+        return f"DROP COLUMN {self.format_identifier(expr.column_name)}", ()
 
-    def format_drop_table_constraint_action(self, action) -> Tuple[str, tuple]:
+    def format_drop_table_constraint_action(self, expr) -> Tuple[str, tuple]:
         result = "DROP CONSTRAINT"
-        if getattr(action, "if_exists", None) is True:
+        if getattr(expr, "if_exists", None) is True:
             result = f"{result} IF EXISTS"
-        result = f"{result} {self.format_identifier(action.constraint_name)}"
-        if getattr(action, "cascade", None):
+        result = f"{result} {self.format_identifier(expr.constraint_name)}"
+        if getattr(expr, "cascade", None):
             result = f"{result} CASCADE"
         return result, ()
 
-    def format_alter_column_action(self, action) -> Tuple[str, tuple]:
-        """Format an ``ALTER COLUMN`` action, adding ``USING`` conversion.
+    def format_alter_column_action(self, expr) -> Tuple[str, tuple]:
+        """Format an ``ALTER COLUMN`` expr, adding ``USING`` conversion.
 
         The core ``DDLColumnMixin.format_alter_column_action`` renders the
         standard subclauses (SET/DROP DEFAULT, SET/DROP NOT NULL, and
@@ -67,7 +67,7 @@ class PostgresAlterColumnModifierMixin:
         from the PostgreSQL ``PostgresAlterColumnAction`` typed ``using`` field.
 
         Args:
-            action: An ``AlterColumnAction`` action (core ``ddl_alter`` module).
+            expr: An ``AlterColumnAction`` expr (core ``ddl_alter`` module).
 
         Returns:
             Tuple of (SQL string, params tuple).
@@ -77,12 +77,12 @@ class PostgresAlterColumnModifierMixin:
                 than ``SET DATA TYPE`` (the only one PostgreSQL allows it on).
 
         """
-        sql, params = super().format_alter_column_action(action)
-        using = getattr(action, "using", None)
+        sql, params = super().format_alter_column_action(expr)
+        using = getattr(expr, "using", None)
         if using is None:
             return sql, params
 
-        op = getattr(action, "operation", None)
+        op = getattr(expr, "operation", None)
         op_str = op.value if hasattr(op, "value") else str(op)
         if op_str != "SET DATA TYPE":
             raise ValueError(

@@ -47,6 +47,11 @@ from .advisory import (
     AdvisoryLockType,
 )
 from .wildcard import PostgresRowCountWildcard
+from .pg_stat import PostgresPgStatStatement
+from .tablefunc import (
+    PostgresCrosstabWithDefinitionStatement,
+    PostgresConnectbyFullStatement,
+)
 from .copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
@@ -182,6 +187,9 @@ from .types import (
 __all__ = [
     "PostgresEnumType",
     "PostgresSettingsQuery",
+    "PostgresPgStatStatement",
+    "PostgresCrosstabWithDefinitionStatement",
+    "PostgresConnectbyFullStatement",
     "PostgresActivityCountQuery",
     "PostgresShowStatement",
     "PostgresDatabaseListQuery",

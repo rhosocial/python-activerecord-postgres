@@ -8,7 +8,7 @@ For SQL expression generation, use the function factories in
 ``functions/citext.py`` instead of the removed format_* methods.
 """
 
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -32,6 +32,3 @@ class PostgresCitextSupport(Protocol):
         """Whether citext type is supported."""
         ...
 
-    def format_citext_column(self, column_name: str, length: Optional[int] = None) -> str:
-        """Format a citext column definition."""
-        ...

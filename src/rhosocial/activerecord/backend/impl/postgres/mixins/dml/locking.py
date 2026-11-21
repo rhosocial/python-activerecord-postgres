@@ -30,14 +30,14 @@ class PostgresLockingMixin:
         """FOR UPDATE SKIP LOCKED is native feature, PG 9.5+."""
         return self.version_at_least((9, 5, 0))
 
-    def format_for_update_clause(self, clause) -> Tuple[str, tuple]:
-        """Format PostgreSQL-specific FOR UPDATE clause.
+    def format_for_update_clause(self, expr) -> Tuple[str, tuple]:
+        """Format PostgreSQL-specific FOR UPDATE expr.
 
         Handles PostgreSQL-specific lock strengths (FOR NO KEY UPDATE,
         FOR SHARE, FOR KEY SHARE) and options (NOWAIT, SKIP LOCKED).
 
         Args:
-            clause: ForUpdateClause instance.
+            expr: ForUpdateClause instance.
 
         Returns:
             Tuple of (SQL string, parameters tuple)
@@ -47,7 +47,7 @@ class PostgresLockingMixin:
 
         all_params = []
 
-        strength = clause.strength
+        strength = expr.strength
 
         # Check version support for lock strength
         if strength == LockStrength.NO_KEY_UPDATE:
@@ -70,16 +70,16 @@ class PostgresLockingMixin:
                 self.name, f"{strength.value} (unsupported lock strength)"
             )
 
-        # The strength's *word* travels in the artifact; the clause it writes
+        # The strength's *word* travels in the artifact; the expr it writes
         # is a spelling, and ``phrase`` is where core keeps it (``FOR UPDATE``
         # &c.). Interpolating the word instead rendered a bare ``update``,
         # which the server rejects (#14 C).
         sql_parts = [strength.phrase]
 
         # Handle OF columns if specified
-        if clause.of_columns:
+        if expr.of_columns:
             of_parts = []
-            for col in clause.of_columns:
+            for col in expr.of_columns:
                 if isinstance(col, str):
                     of_parts.append(self.format_identifier(col))
                 else:
@@ -91,9 +91,9 @@ class PostgresLockingMixin:
                 sql_parts.append(f"OF {', '.join(of_parts)}")
 
         # Handle NOWAIT/SKIP LOCKED options
-        if clause.nowait:
+        if expr.nowait:
             sql_parts.append("NOWAIT")
-        elif clause.skip_locked:
+        elif expr.skip_locked:
             if not self.supports_for_update_skip_locked():
                 raise UnsupportedFeatureError(
                     self.name, "SKIP LOCKED (requires PostgreSQL 9.5+)"

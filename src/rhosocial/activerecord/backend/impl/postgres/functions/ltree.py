@@ -357,7 +357,38 @@ def ltree_lca(
     return core.FunctionCall(dialect, "lca", *args)
 
 
+def ltree_index(
+    dialect,
+    table_name: str,
+    columns: list,
+    index_name: str,
+    *,
+    index_type: str = "gist",
+    schema: str = None,
+):
+    """Build an ltree index expression."""
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        PostgresCreateIndexExpression,
+        PostgresIndexType,
+    )
+
+    method = PostgresIndexType.normalize(index_type).value
+    if method not in ("gist", "btree"):
+        raise ValueError(
+            f"ltree index_type must be 'gist' or 'btree', got {index_type!r}"
+        )
+    return PostgresCreateIndexExpression(
+        dialect,
+        index=Index(dialect, index_name, schema_name=schema),
+        table=Table(dialect, table_name, schema_name=schema),
+        columns=list(columns),
+        index_type=method,
+    )
+
+
 __all__ = [
+    "ltree_index",
     # Literal constructors
     "ltree_literal",
     "lquery_literal",

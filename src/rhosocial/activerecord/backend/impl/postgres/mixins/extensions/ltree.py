@@ -1,18 +1,8 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/extensions/ltree.py
+"""ltree capability probes.
+
+Index DDL comes from ``functions.ltree.ltree_index``.
 """
-PostgreSQL ltree label tree functionality mixin.
-
-This module provides functionality to check ltree extension features,
-including type support and operators.
-
-For SQL expression generation, use the function factories in
-``functions/ltree.py`` instead of the removed format_* methods.
-For DDL index creation, use ``format_ltree_index_statement``.
-"""
-
-from typing import Optional, Tuple
-
-from rhosocial.activerecord.backend.expression.objects import Table
 
 
 class PostgresLtreeMixin:
@@ -29,23 +19,3 @@ class PostgresLtreeMixin:
     def supports_ltree_index(self) -> bool:
         """Check if ltree supports index."""
         return self.check_extension_feature("ltree", "index")
-
-    def format_ltree_index_statement(
-        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
-    ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for ltree column.
-
-        Args:
-            index_name: Name of the index
-            table_name: Table name
-            column_name: ltree column name
-            index_type: Index type - 'gist' (default) or 'btree'
-            schema: Optional schema name
-
-        Returns:
-            Tuple of (SQL statement, parameters)
-        """
-        full_table, _ = self.format_table_object(Table(self, table_name, schema_name=schema)
-        )
-        sql = f"CREATE INDEX {index_name} ON {full_table} USING {index_type} ({column_name})"
-        return (sql, ())

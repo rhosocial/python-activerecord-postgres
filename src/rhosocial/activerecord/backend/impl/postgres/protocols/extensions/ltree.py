@@ -8,7 +8,7 @@ For SQL expression generation, use the function factories in
 ``functions/ltree.py`` instead of the removed format_* methods.
 """
 
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -47,8 +47,4 @@ class PostgresLtreeSupport(Protocol):
         """Whether ltree indexes are supported."""
         ...
 
-    def format_ltree_index_statement(
-        self, index_name: str, table_name: str, column_name: str, index_type: str = "gist", schema: Optional[str] = None
-    ) -> Tuple[str, tuple]:
-        """Format CREATE INDEX statement for ltree column."""
-        ...
+

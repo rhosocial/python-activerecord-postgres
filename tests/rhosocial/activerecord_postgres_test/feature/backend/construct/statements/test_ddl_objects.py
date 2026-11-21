@@ -8,6 +8,7 @@ including materialized view refresh, comment, and partition expressions.
 import pytest
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.functions import drop_type
 from rhosocial.activerecord.backend.expression.objects import Domain, Type
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
@@ -577,11 +578,11 @@ class TestTypeDDLExpressions:
             expression.to_sql()
 
     def test_legacy_drop_type_name_keyword(self, dialect):
-        sql, params = dialect.format_drop_type_statement(
+        sql, params = drop_type(dialect, 
             name="status",
             schema="app",
             if_exists=True,
-        )
+        ).to_sql()
         assert sql == 'DROP TYPE IF EXISTS "app"."status"'
         assert params == ()
 
