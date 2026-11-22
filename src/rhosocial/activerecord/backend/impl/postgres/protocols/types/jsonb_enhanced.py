@@ -27,7 +27,10 @@ class PostgresJSONBEnhancedSupport(JSONSupport, Protocol):
     classes: this protocol, the core protocol, the core mixin default and the
     implementation. One implementation is not a defect; a second *declaration*
     of the same probe is what put the count over the line, and derivation is
-    what removes it without removing a contract.
+    what removes it without removing a contract. ``supports_json_path`` used to
+    be repeated here too; the core protocol now declares it (its
+    ``format_json_expression`` gates on it), so this protocol inherits it rather
+    than adding a second declaration in the dialect's MRO.
 
     JSONB enhanced features:
     - JSONB type with indexing (PG 9.4+)
@@ -75,16 +78,6 @@ class PostgresJSONBEnhancedSupport(JSONSupport, Protocol):
         Native feature, PostgreSQL 9.4+.
         The JSONB type stores binary-format JSON data with
         indexing support for efficient querying.
-        """
-        ...
-
-    def supports_json_path(self) -> bool:
-        """Whether a JSON path can be read at all.
-
-        Native feature, PostgreSQL 9.3+, which added ``->``, ``->>``, ``#>`` and
-        ``#>>`` for ``json``. The SQL/JSON path language is 12.0 and is a
-        separate capability, :meth:`supports_sql_json_path`; a server can have
-        one without the other, and PostgreSQL has had both since 12.0.
         """
         ...
 

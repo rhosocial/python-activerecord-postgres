@@ -103,7 +103,10 @@ def test_arrow_modes_use_the_operators(mode):
     the caller wants a key.
     """
     sql, _ = _text_expr(_dialect(), mode).to_sql()
-    assert sql == """"t"."data"->>'$.a'"""
+    # The arrow operators take a *key name*, not a jsonpath: the rooted ``$.a``
+    # is split into its single key, so the operator reads ``a``. Emitting
+    # ``->>'$.a'`` would look up a key literally named ``$.a`` and yield NULL.
+    assert sql == """"t"."data"->>'a'"""
 
 
 @pytest.mark.parametrize("mode", [None, "auto", "function"])
@@ -152,7 +155,7 @@ def test_alias_is_appended():
     expr = JSONTextValue(
         dialect, Column(dialect, "data", table="t"), "$.a", "->>", alias="v", mode="arrow"
     )
-    assert expr.to_sql()[0] == """"t"."data"->>'$.a' AS "v\""""
+    assert expr.to_sql()[0] == """"t"."data"->>'a' AS "v\""""
 
 
 # ---------------------------------------------------------------------------
