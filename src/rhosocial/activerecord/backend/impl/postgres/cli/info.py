@@ -10,6 +10,7 @@ import inspect
 import json
 from typing import Any, Dict, List, Optional, Tuple
 
+from rhosocial.activerecord.backend.dialect import capabilities as _cap
 from rhosocial.activerecord.backend.dialect.protocols import (
     WindowFunctionSupport, CTESupport, FilterClauseSupport,
     ReturningSupport, UpsertSupport, LateralJoinSupport, JoinSupport,
@@ -201,6 +202,8 @@ def handle(args):
     dialect = None
     extensions = None
     version_display = None
+    server_variables: Dict[str, Any] = {}
+    server_source = "pg_settings (requires a live connection)"
 
     named_conn = getattr(args, "named_connection", None)
     if named_conn or args.database:
@@ -220,6 +223,17 @@ def handle(args):
             # Get extensions from dialect
             if hasattr(backend.dialect, "_extensions"):
                 extensions = backend.dialect._extensions
+
+            # Read server variables from the existing pg_settings status introspector.
+            # No query is added here: the introspector already owns the catalog read.
+            try:
+                config_items = backend.introspector.status.list_configuration()
+                server_variables = {item.name: item.value for item in config_items}
+                server_source = "pg_settings"
+            except Exception as e:
+                logger.warning("Could not read server variables from pg_settings: %s", e)
+                server_source = "pg_settings (unavailable from this connection)"
+
             is_connected = True
 
             backend.disconnect()
@@ -238,6 +252,16 @@ def handle(args):
         dialect = PostgresDialect(version=version)
         version_display = f"{version[0]}.{version[1]}.{version[2]}"
 
+    # Capability and suggestion reports are built by the shared core helper so
+    # every backend reports origin and suggestion data in the same shape.
+    capabilities = _cap.build_capability_report(
+        dialect,
+        family_groups=PROTOCOL_FAMILY_GROUPS,
+        dialect_specific_groups=DIALECT_SPECIFIC_GROUPS,
+        all_args=SUPPORT_METHOD_ALL_ARGS,
+        verbose=args.verbose,
+    )
+
     # Unified structure for JSON output
     info = {
         "database": {
@@ -246,10 +270,19 @@ def handle(args):
             "version_tuple": list(dialect.version),
             "connected": is_connected,
         },
+        "server": {
+            "version": version_display,
+            "variables": server_variables,
+            "source": server_source,
+            "connected": is_connected,
+        },
         "features": {
             "extensions": {},
         },
-        "protocols": {},
+        "capabilities": capabilities,
+        "suggestions": _cap.build_suggestion_report(dialect, args.verbose),
+        # compatibility alias for one release cycle
+        "protocols": capabilities,
     }
 
     # Process extensions
@@ -265,12 +298,6 @@ def handle(args):
                 ext_data["schema"] = ext_info.schema
             info["features"]["extensions"][name] = ext_data
 
-    # Build protocol support information
-    for group_name, protocols in PROTOCOL_FAMILY_GROUPS.items():
-        info["protocols"][group_name] = _build_protocol_info(
-            dialect, group_name, protocols, args.verbose
-        )
-
     if args.output == "json" or not RICH_AVAILABLE:
         print(json.dumps(info, indent=2))
     else:
@@ -279,8 +306,11 @@ def handle(args):
             "postgresql": info["database"],
             "extensions": info["features"]["extensions"],
             "protocols": info["protocols"],
+            "suggestions": info["suggestions"],
         }
         _display_info_rich(info_legacy, args.verbose, version_display, extensions, is_connected)
+
+    return info
 
 
 # ---------------------------------------------------------------------------
@@ -453,8 +483,10 @@ def _display_protocol_item(
 
     sup = stats["supported"]
     tot = stats["total"]
+    origin = stats.get("origin", "")
+    origin_tag = f" [dim][{origin}][/dim]" if origin else ""
     console.print(
-        f"    [{color}]{symbol}[/{color}] {protocol_name}: "
+        f"    [{color}]{symbol}[/{color}] {protocol_name}{origin_tag}: "
         f"[{color}]{progress_bar}[/{color}] {pct:.0f}% ({sup}/{tot})"
     )
 
@@ -530,5 +562,15 @@ def _display_info_rich(
 
     for group_name, protocols in info["protocols"].items():
         _display_protocol_group(console, group_name, protocols, verbose)
+
+    # Suggestion support (independent of capability support)
+    suggestions = info.get("suggestions", {})
+    if suggestions:
+        console.print("\n[bold green]Suggestion Support:[/bold green]")
+        for proto_name, entry in suggestions.items():
+            supported = entry.get("supported", False)
+            symbol = "[OK]" if supported else "[X]"
+            color = "green" if supported else "red"
+            console.print(f"    [{color}]{symbol}[/{color}] {proto_name}")
 
     console.print()
