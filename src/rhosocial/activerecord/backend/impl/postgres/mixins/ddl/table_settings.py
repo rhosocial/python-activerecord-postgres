@@ -25,7 +25,7 @@ class PostgresAlterTableSettingsMixin:
     """PostgreSQL ALTER TABLE ... SET table-level settings implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_table_logging_switch(self) -> bool:
         """``SET LOGGED/UNLOGGED`` requires PostgreSQL 9.6+ (since 9.5)."""

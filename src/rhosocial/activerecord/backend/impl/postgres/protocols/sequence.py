@@ -3,7 +3,7 @@
 
 Declared here, implemented by
 :class:`~...mixins.sequence.PostgresSequenceMixin`. PostgreSQL is a
-full-support sequence dialect, so this restates every capability switch the
+full-support sequence dialect, so this restates every support switch the
 core sequence protocols declare and answers them True -- except
 ``supports_sequence_order``, because the ``CREATE SEQUENCE`` synopsis has no
 ``ORDER`` / ``NO ORDER`` clause. The one-for-one mirror is enforced by the

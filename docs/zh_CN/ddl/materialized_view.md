@@ -228,10 +228,10 @@ dialect.supports_materialized_view_storage_options()     # PG >= 9.3
 dialect.supports_alter_materialized_view()               # PG >= 9.3
 ```
 
-这些探针全部由 `PostgresMaterializedViewSupport` 声明。所有物化视图格式化器
+这些探针全部由 `PostgresMaterializedViewSupport` 声明。所有物化视图格式化函数
 都位于 `PostgresMaterializedViewMixin`，它在 `PostgresDialect` 的 MRO 中
 **排在**核心 `ViewMixin` **之前**——回归测试会断言该顺序，因为一旦排到核心
-mixin 之后，其格式化器会静默失效。
+mixin 之后，其格式化函数会静默失效。
 
 ## 相关文档
 

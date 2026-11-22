@@ -36,7 +36,7 @@ from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from .connection import add_connection_args, resolve_connection_config_from_args
 from .output import OUTPUT_CHOICES, create_provider
 
-#: CLI type -> the dialect capability switch that answers for it.
+#: CLI type -> the dialect support switch that answers for it.
 #:
 #: The advertised list is derived from this mapping, so a type cannot be
 #: offered without saying which switch decides whether the connected server
@@ -730,7 +730,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
     try:
         await backend.connect()
         # Same reason as the sync handler: the dialect must know the server
-        # before a capability switch -- or a formatter -- can answer.
+        # before a support switch -- or a formatter -- can answer.
         await backend.introspect_and_adapt()
         _require_capability(backend, args)
         _refuse_unused_arguments(args)

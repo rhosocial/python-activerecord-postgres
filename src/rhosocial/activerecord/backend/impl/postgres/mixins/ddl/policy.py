@@ -52,7 +52,7 @@ class PostgresPolicyMixin:
     """PostgreSQL Row-Level Security POLICY implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_create_policy(self) -> bool:
         """CREATE/ALTER/DROP POLICY basic syntax requires PostgreSQL 9.5+."""

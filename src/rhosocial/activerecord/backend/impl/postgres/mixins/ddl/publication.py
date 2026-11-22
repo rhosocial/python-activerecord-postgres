@@ -26,7 +26,7 @@ class PostgresPublicationMixin:
     """PostgreSQL PUBLICATION / SUBSCRIPTION implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_publication(self) -> bool:
         """CREATE/DROP PUBLICATION require PostgreSQL 10+."""

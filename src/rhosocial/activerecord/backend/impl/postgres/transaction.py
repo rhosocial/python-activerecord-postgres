@@ -3,7 +3,7 @@
 
 This module provides simplified transaction management for PostgreSQL.
 All SQL generation is delegated to the dialect's format_* methods via
-the Expression system, ensuring single SQL statement per format method.
+the Expression system, ensuring single SQL statement per format function.
 """
 from typing import Dict, Optional, List, TYPE_CHECKING, Tuple
 import logging

@@ -34,7 +34,7 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 | `supports_index_stats` | `True` | `pg_stat_user_indexes`、`pg_relation_size()` |
 | `supports_table_stats` | `True` | `pg_stat_user_tables` |
 | `supports_unused_indexes_detection` | `True` | `pg_stat_user_indexes.idx_scan` |
-| `supports_partition_info` | `False` | 继承自核心的默认值；没有分区信息格式化方法（见下） |
+| `supports_partition_info` | `False` | 继承自核心的默认值；没有分区信息格式化函数（见下） |
 | `supports_object_dependencies` | `True` | `pg_depend`、`pg_class`、`pg_namespace` |
 | `supports_column_data_profile` | `True` | `pg_stats` |
 | `supports_column_value_sample` | `True` | `pg_stats.most_common_vals` |
@@ -48,9 +48,9 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 
 ### 三个 False 回答
 
-`supports_partition_info` 通过核心的默认值回答 `False`：本方言不覆盖该探针，也没有声明任何分区信息查询表达式或格式化方法。分区表仍然会被回答——表列表会用 `table_type` 标签 `PARTITIONED TABLE` 报告它，来自 `p` 这个 relkind 代码——但那是关系的种类，不是分区树：这里没有任何东西报告父表、子表或边界。分区 DDL 是另一个协议族（`supports_hash_partitioning`、`supports_attach_partition` 及其邻居），不是这个内省探针。
+`supports_partition_info` 通过核心的默认值回答 `False`：本方言不覆盖该探针，也没有声明任何分区信息查询表达式或格式化函数。分区表仍然会被回答——表列表会用 `table_type` 标签 `PARTITIONED TABLE` 报告它，来自 `p` 这个 relkind 代码——但那是关系的种类，不是分区树：这里没有任何东西报告父表、子表或边界。分区 DDL 是另一个协议族（`supports_hash_partitioning`、`supports_attach_partition` 及其邻居），不是这个内省探针。
 
-`supports_ddl_extraction` 回答 `False`，因为本后端不为普通表产生 DDL 文本。`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句，而这次组装目前并不存在。对外宣称该族会承诺一个答案无法产生的文本，所以 CLI 不提供 `ddl` 类型；格式化方法与 `DDLStatement` 仍保留在方言上，等待真正的组装实现。
+`supports_ddl_extraction` 回答 `False`，因为本后端不为普通表产生 DDL 文本。`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句，而这次组装目前并不存在。对外宣称该族会承诺一个答案无法产生的文本，所以 CLI 不提供 `ddl` 类型；格式化函数与 `DDLStatement` 仍保留在方言上，等待真正的组装实现。
 
 `supports_ddl_extraction_native` 回答 `False`。探针自己的文档字符串就是原因：PostgreSQL 没有单一的、原生的 DDL 获取调用。两个探针保持分开，调用方因此能区分“能否获取”与“能否原生获取”，即使今天两者都回答 `False`；方法本身在下文 `get_ddl_statement` 处描述。
 
@@ -329,7 +329,7 @@ PostgreSQL 没有为未使用索引提供厂商视图，所以该列表由计数
 
 ### `list_object_dependencies`
 
-依赖图从 `pg_depend` 读入，按 `refobjid` 连接 `pg_class`，并按 schema 连接 `pg_namespace`。每一行描述一条某关系作为被引用对象的边；给出 `object_name` 时，列表收窄到该关系的边——也就是“删掉它会坏什么”的问题。投影是 `schema_name`、被引用关系的 `relname` 作为 `referenced`、`deptype` 作为 `kind`、`classid` 作为 `referenced_type`。`action` 保持为空：PostgreSQL 没有逐边的 action 列，依赖对象在删除时的行为是它所属类的属性，所以格式化方法不会从 `deptype` 猜测一个。这里也没有 `deptype` 过滤；kind 被报告出来，让读者自己决定要处理哪些边。
+依赖图从 `pg_depend` 读入，按 `refobjid` 连接 `pg_class`，并按 schema 连接 `pg_namespace`。每一行描述一条某关系作为被引用对象的边；给出 `object_name` 时，列表收窄到该关系的边——也就是“删掉它会坏什么”的问题。投影是 `schema_name`、被引用关系的 `relname` 作为 `referenced`、`deptype` 作为 `kind`、`classid` 作为 `referenced_type`。`action` 保持为空：PostgreSQL 没有逐边的 action 列，依赖对象在删除时的行为是它所属类的属性，所以格式化函数不会从 `deptype` 猜测一个。这里也没有 `deptype` 过滤；kind 被报告出来，让读者自己决定要处理哪些边。
 
 ### `get_ddl_statement`
 
@@ -711,7 +711,7 @@ python -m rhosocial.activerecord.backend.impl.postgres introspect table-storage 
 
 有三个类型通过自己的标志询问一列或第二张表。`value-samples` 接受 `--column`，`join-coverage` 接受 `--column`、`--right-table` 与 `--right-column`；缺少其中一个是未完成的调用，会以 `1` 退出。把标志给一个对它没有问题可问的类型，会以 `2` 退出而不是被忽略，规则与 NAME 相同。
 
-本后端不提供 DDL 提取：`supports_ddl_extraction` 对任何 PostgreSQL 服务器都回答 `False`，所以 `ddl` 不在对外列出的类型中。请求它属于 argparse 用法错误——`invalid choice: 'ddl'`——会以 `2` 退出，而不是进入处理器后报告 "not supported by this server"。探针与格式化方法仍保留在方言上，等待真正的组装实现；只有 CLI 表面不再提供该类型。
+本后端不提供 DDL 提取：`supports_ddl_extraction` 对任何 PostgreSQL 服务器都回答 `False`，所以 `ddl` 不在对外列出的类型中。请求它属于 argparse 用法错误——`invalid choice: 'ddl'`——会以 `2` 退出，而不是进入处理器后报告 "not supported by this server"。探针与格式化函数仍保留在方言上，等待真正的组装实现；只有 CLI 表面不再提供该类型。
 
 运行以 `1` 退出表示没能完成——连接失败、查询失败，或名称所指的对象不存在；
 以 `2` 退出表示这个请求在此不成立：未知类型、该类型不接受名称，或本服务器

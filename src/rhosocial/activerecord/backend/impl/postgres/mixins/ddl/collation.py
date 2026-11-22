@@ -26,7 +26,7 @@ class PostgresCollationDDLMixin:
     """PostgreSQL COLLATION object DDL implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_collation_ddl(self) -> bool:
         """CREATE/DROP COLLATION require PostgreSQL 9.6+."""

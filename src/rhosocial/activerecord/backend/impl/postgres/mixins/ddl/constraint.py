@@ -12,7 +12,7 @@ ConstraintMixin (rhosocial.activerecord.backend.dialect.mixins); the switches
 this backend relies on are re-declared locally and carry the measurement that
 fixed them.
 
-Two measured formatting rules that are **not** capability switches, because
+Two measured formatting rules that are **not** support switches, because
 ``supports_*`` cannot express "supported but only in this spelling":
 
 ``NULLS NOT DISTINCT`` must PRECEDE the column list.  PostgreSQL 19beta4::

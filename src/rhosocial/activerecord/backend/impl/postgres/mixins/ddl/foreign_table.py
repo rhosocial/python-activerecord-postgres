@@ -23,7 +23,7 @@ class PostgresForeignTableMixin:
     """PostgreSQL FOREIGN TABLE implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_foreign_table_ddl(self) -> bool:
         """CREATE/DROP FOREIGN TABLE require PostgreSQL 9.6+."""

@@ -20,7 +20,7 @@ class PostgresClusterMixin:
     """PostgreSQL CLUSTER implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_cluster(self) -> bool:
         """CLUSTER is supported on all supported PostgreSQL versions."""

@@ -50,7 +50,7 @@ class PostgresRoutineMixin:
     """
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_function_ddl(self) -> bool:
         """CREATE/DROP FUNCTION require PostgreSQL 9.6+."""

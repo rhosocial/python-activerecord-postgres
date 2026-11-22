@@ -26,7 +26,7 @@ class PostgresRlsConfigMixin:
     """PostgreSQL Row-Level Security table configuration implementation."""
 
     # ------------------------------------------------------------------ #
-    # Capability switches
+    # Support switches
     # ------------------------------------------------------------------ #
     def supports_rls_enable_disable(self) -> bool:
         """``ENABLE/DISABLE ROW LEVEL SECURITY`` requires PostgreSQL 9.5+."""
