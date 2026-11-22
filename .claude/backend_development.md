@@ -322,15 +322,15 @@ different owners and an engine can answer them differently.
 | Protocol | Mixin | Description |
 |----------|-------|-------------|
 | `NamespaceSupport` | `NamespaceMixin` | Whether a name may be qualified, and how it is spelled |
-| `TableObjectSupport` | `TableNameMixin` | Render a `Table` as its name |
-| `ViewObjectSupport` | `ViewNameMixin` | Render a `View` |
-| `MaterializedViewObjectSupport` | `MaterializedViewNameMixin` | Render a `MaterializedView` |
-| `ForeignTableObjectSupport` | `ForeignTableNameMixin` | Render a `ForeignTable` |
-| `IndexObjectSupport` | `IndexNameMixin` | Render an `Index` |
-| `SequenceObjectSupport` | `SequenceNameMixin` | Render a `Sequence` |
-| `TriggerObjectSupport` | `TriggerNameMixin` | Render a `Trigger` |
-| `TypeObjectSupport` | `TypeNameMixin` | Render a `Type` |
-| `RoutineObjectSupport` | `FunctionNameMixin` / `ProcedureNameMixin` | Render a `Function` or `Procedure` |
+| `TableObjectSupport` | `TableObjectMixin` | Render a `Table` as its name |
+| `ViewObjectSupport` | `ViewObjectMixin` | Render a `View` |
+| `MaterializedViewObjectSupport` | `MaterializedViewObjectMixin` | Render a `MaterializedView` |
+| `ForeignTableObjectSupport` | `ForeignTableObjectMixin` | Render a `ForeignTable` |
+| `IndexObjectSupport` | `IndexObjectMixin` | Render an `Index` |
+| `SequenceObjectSupport` | `SequenceObjectMixin` | Render a `Sequence` |
+| `TriggerObjectSupport` | `TriggerObjectMixin` | Render a `Trigger` |
+| `TypeObjectSupport` | `TypeObjectMixin` | Render a `Type` |
+| `RoutineObjectSupport` | `RoutineObjectMixin` / `RoutineObjectMixin` | Render a `Function` or `Procedure` |
 
 `NamespaceSupport` declares two halves that used to be one method:
 

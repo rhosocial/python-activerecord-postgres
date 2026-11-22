@@ -163,7 +163,7 @@ def get_postgres_protocols():
         dialect_protocols.SQLFunctionSupport,
         # Generic protocols Postgres also satisfies.
         dialect_protocols.AlterTableModifierSupport,
-        dialect_protocols.DDLTypeSupport,
+        dialect_protocols.DataTypeSupport,
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.AutoIncrementColumnSupport,
@@ -266,8 +266,8 @@ class TestDialectNegativeProtocolConformance:
     def test_positive_and_negative_lists_partition_all_protocols(self):
         """Every generic protocol must be classified for Postgres."""
         all_protos = set(get_all_generic_protocols())
-        if dialect_protocols.DDLTypeSupport is dialect_protocols.DataTypeSupport:
-            all_protos.discard("DDLTypeSupport")
+        if dialect_protocols.DataTypeSupport is dialect_protocols.DataTypeSupport:
+            all_protos.discard("DataTypeSupport")
         positive = {
         p.__name__
         for p in POSTGRES_PROTOCOLS
@@ -668,7 +668,7 @@ POSTGRES_PROTOCOL_MIXIN_PAIRS = [
     (postgres_protocols.PostgresNamespaceSupport, postgres_mixins.PostgresNamespaceMixin),
     (postgres_protocols.PostgresSequenceSupport, postgres_mixins.PostgresSequenceMixin),
     (postgres_protocols.PostgresIdentitySupport, postgres_mixins.PostgresIdentityColumnMixin),
-    (postgres_protocols.PostgresAutoIncrementSupport, postgres_mixins.PostgresAutoIncrementMixin),
+    (postgres_protocols.PostgresAutoIncrementSupport, postgres_mixins.PostgresAutoIncrementColumnMixin),
     (postgres_protocols.PostgresTransactionSupport, postgres_mixins.PostgresTransactionMixin),
     (postgres_protocols.PostgresViewSupport, postgres_mixins.PostgresViewMixin),
     (postgres_protocols.PostgresXMLSupport, postgres_mixins.PostgresXMLMixin),

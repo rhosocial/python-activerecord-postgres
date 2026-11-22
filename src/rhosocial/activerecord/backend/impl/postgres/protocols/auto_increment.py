@@ -2,7 +2,7 @@
 """PostgreSQL auto-increment marker support protocol.
 
 Declared here, implemented by
-:class:`~...mixins.auto_increment.PostgresAutoIncrementMixin`. PostgreSQL
+:class:`~...mixins.auto_increment.PostgresAutoIncrementColumnMixin`. PostgreSQL
 answers the mechanism probe ``False`` -- ``AUTO_INCREMENT`` is MySQL / MariaDB
 spelling -- so this protocol restates that one switch. The one-for-one mirror
 is enforced by the forward/reverse coverage tests in
@@ -24,7 +24,7 @@ class PostgresAutoIncrementSupport(AutoIncrementColumnSupport, Protocol):
     deliberate overlap it is.
 
     The body below restates the capability question so this protocol mirrors
-    :class:`PostgresAutoIncrementMixin` method for method.
+    :class:`PostgresAutoIncrementColumnMixin` method for method.
     """
 
     def supports_auto_increment_column(self) -> bool: ...

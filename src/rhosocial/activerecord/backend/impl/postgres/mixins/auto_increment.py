@@ -10,10 +10,10 @@ a ``False`` answer is a decision about the backend's grammar, and it should be
 readable here rather than inferred from an inherited default.
 """
 
-from rhosocial.activerecord.backend.dialect.mixins import AutoIncrementMixin
+from rhosocial.activerecord.backend.dialect.mixins import AutoIncrementColumnMixin
 
 
-class PostgresAutoIncrementMixin(AutoIncrementMixin):
+class PostgresAutoIncrementColumnMixin(AutoIncrementColumnMixin):
     """PostgreSQL auto-increment marker override implementation."""
 
     def supports_auto_increment_column(self) -> bool:

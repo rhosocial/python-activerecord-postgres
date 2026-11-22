@@ -20,7 +20,7 @@ from .dql import PostgresDQLMixin
 from .json import PostgresJSONMixin
 from .generated_column import PostgresGeneratedColumnMixin
 from .identity_column import PostgresIdentityColumnMixin
-from .auto_increment import PostgresAutoIncrementMixin
+from .auto_increment import PostgresAutoIncrementColumnMixin
 from .expression import PostgresExpressionMixin
 from .function import PostgresFunctionMixin
 from .literal import PostgresLiteralValueMixin
@@ -146,7 +146,7 @@ __all__ = [
     "PostgresJSONMixin",
     "PostgresGeneratedColumnMixin",
     "PostgresIdentityColumnMixin",
-    "PostgresAutoIncrementMixin",
+    "PostgresAutoIncrementColumnMixin",
     "PostgresExpressionMixin",
     "PostgresFunctionMixin",
     "PostgresLiteralValueMixin",

@@ -7,8 +7,8 @@ import re
 from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DDLTypeMixin
-from rhosocial.activerecord.backend.dialect.protocols import DDLTypeSupport
+from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DataTypeMixin
+from rhosocial.activerecord.backend.dialect.protocols import DataTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
     BigIntType,
@@ -39,10 +39,10 @@ from rhosocial.activerecord.backend.expression.types import (
 )
 from ...expression.types import PostgresArrayType
 
-class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
+class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
     """PostgreSQL DataType formatting and parsing.
 
-    Implements ``DDLTypeSupport`` so the dialect can render ``DataType``
+    Implements ``DataTypeSupport`` so the dialect can render ``DataType``
     expressions to SQL strings and parse raw SQL type strings back into
     ``DataType`` instances.
     """
@@ -52,7 +52,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         version: Tuple[int, int, int]
 
     # ------------------------------------------------------------------
-    # DDLTypeSupport — formatting
+    # DataTypeSupport — formatting
     # ------------------------------------------------------------------
 
     # --- PostgreSQL-specific formatters ---
@@ -1057,7 +1057,7 @@ class PostgresTypeFormatSupportMixin(DDLTypeMixin, DDLTypeSupport):
         return element_sql + "[]" * expr.dimensions, ()
 
     # ------------------------------------------------------------------
-    # DDLTypeSupport — parsing
+    # DataTypeSupport — parsing
     # ------------------------------------------------------------------
 
     _PG_INTEGER_TYPES = re.compile(
