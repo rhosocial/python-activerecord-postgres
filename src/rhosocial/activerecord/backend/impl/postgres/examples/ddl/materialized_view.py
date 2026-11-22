@@ -18,6 +18,10 @@ This example demonstrates:
 14. Introspection: list_materialized_views() with is_populated / has_unique_index
 """
 
+from rhosocial.activerecord.backend.expression.types import DateType, DecimalType, IntegerType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -110,19 +114,19 @@ create_table = CreateTableStatement(
         ColumnDefinition(
             dialect,
             'id',
-            dialect.parse_type('SERIAL'),
+            PostgresSerialType(),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
                 ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
-        ColumnDefinition(dialect, 'product_id', dialect.parse_type('INT'), constraints=[
+        ColumnDefinition(dialect, 'product_id', IntegerType(), constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
-        ColumnDefinition(dialect, 'amount', dialect.parse_type('DECIMAL(10,2)'), constraints=[
+        ColumnDefinition(dialect, 'amount', DecimalType(precision=10, scale=2), constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
-        ColumnDefinition(dialect, 'sale_date', dialect.parse_type('DATE'), constraints=[
+        ColumnDefinition(dialect, 'sale_date', DateType(), constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
     ],

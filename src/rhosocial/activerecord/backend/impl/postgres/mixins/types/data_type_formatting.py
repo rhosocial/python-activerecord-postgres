@@ -1,11 +1,15 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/types/data_type_formatting.py
-"""PostgreSQL DataType formatting and parsing mixin."""
+"""PostgreSQL DataType formatting mixin.
+
+Type-spelling parsing is a backend-local, introspection-only concern; see
+``introspection/type_parser.py``.
+"""
 
 from __future__ import annotations
 
-import re
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.suggestion.definitions import SubstituteTypeSuggestion
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DataTypeMixin
 from rhosocial.activerecord.backend.dialect.protocols import DataTypeSupport
@@ -15,7 +19,6 @@ from rhosocial.activerecord.backend.expression.types import (
     BlobType,
     BooleanType,
     CharType,
-    DataType,
     DateType,
     DateTimeType,
     DecimalType,
@@ -37,14 +40,14 @@ from rhosocial.activerecord.backend.expression.types import (
     VarCharType,
     XmlType,
 )
-from ...expression.types import PostgresArrayType
+
 
 class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
-    """PostgreSQL DataType formatting and parsing.
+    """PostgreSQL DataType formatting.
 
     Implements ``DataTypeSupport`` so the dialect can render ``DataType``
-    expressions to SQL strings and parse raw SQL type strings back into
-    ``DataType`` instances.
+    expressions to SQL strings. Parsing a server-reported type spelling back
+    into a ``DataType`` is handled by ``introspection/type_parser.py``.
     """
 
     if TYPE_CHECKING:
@@ -390,7 +393,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`, which is where the reason is written
         down."""
-        self.check_spelling(expr, TinyIntType)
+        self._check_spelling(expr, TinyIntType)
         self._refuse_unsigned_integer(expr, "SMALLINT")
         return "SMALLINT", ()
 
@@ -400,7 +403,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(expr, SmallIntType)
+        self._check_spelling(expr, SmallIntType)
         self._refuse_unsigned_integer(expr, expr.spelling.upper())
         return expr.spelling.upper(), ()
 
@@ -421,7 +424,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(expr, ("integer", "int"))
+        self._check_spelling(expr, ("integer", "int"))
         self._refuse_unsigned_integer(expr, expr.spelling.upper())
         return expr.spelling.upper(), ()
 
@@ -431,7 +434,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_integer`."""
-        self.check_spelling(expr, BigIntType)
+        self._check_spelling(expr, BigIntType)
         self._refuse_unsigned_integer(expr, expr.spelling.upper())
         return expr.spelling.upper(), ()
 
@@ -483,7 +486,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
 
         ``unsigned`` is refused rather than ignored; see
         :meth:`_refuse_unsigned_numeric`."""
-        self.check_spelling(expr, DoubleType)
+        self._check_spelling(expr, DoubleType)
         self._refuse_unsigned_numeric(expr, "DOUBLE PRECISION")
         return "DOUBLE PRECISION", ()
 
@@ -500,7 +503,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         whether or not it also named numbers this grammar could not have taken.
         The scale-without-precision refusal and the two ``ValueError`` range
         checks below are untouched and still fire for a signed declaration."""
-        self.check_spelling(expr, DecimalType)
+        self._check_spelling(expr, DecimalType)
         self._refuse_unsigned_numeric(expr, "DECIMAL")
         if expr.precision is not None:
             if not (1 <= expr.precision <= 1000):
@@ -551,7 +554,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
     def format_data_type_char(self, expr: CharType) -> Tuple[str, tuple]:
         """``CHARACTER`` is PostgreSQL's own long form and is rendered as
         written, since PostgreSQL emits it back from the catalog."""
-        self.check_spelling(expr, CharType)
+        self._check_spelling(expr, CharType)
         width = f"({expr.length})" if expr.length is not None else ""
         return f"{expr.spelling.upper()}{width}", ()
 
@@ -559,7 +562,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         """PostgreSQL writes this concept both ways — and emits
         ``character varying`` from the catalog, which is why the long form is a
         spelling of the core type rather than a class of its own."""
-        self.check_spelling(expr, VarCharType)
+        self._check_spelling(expr, VarCharType)
         width = f"({expr.length})" if expr.length is not None else ""
         if expr.spelling == "character varying":
             return f"CHARACTER VARYING{width}", ()
@@ -574,12 +577,12 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         something else. The default spelling must always render, or the concept
         would be unusable on this backend.
         """
-        self.check_spelling(expr, ("text",))
+        self._check_spelling(expr, ("text",))
         return "TEXT", ()
 
     def format_data_type_boolean(self, expr: BooleanType) -> Tuple[str, tuple]:
         """``BOOL`` is a PostgreSQL alias, so it is accepted and rendered."""
-        self.check_spelling(expr, BooleanType)
+        self._check_spelling(expr, BooleanType)
         return expr.spelling.upper(), ()
 
     def format_data_type_blob(self, expr: BlobType) -> Tuple[str, tuple]:
@@ -591,7 +594,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         carries. A backend that writes the concept under another name normalises
         the spelling; it does not refuse the request.
         """
-        self.check_spelling(expr, BlobType)
+        self._check_spelling(expr, BlobType)
         return "BYTEA", ()
 
     def format_data_type_date(self, expr: DateType) -> Tuple[str, tuple]:
@@ -959,32 +962,6 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
     def supports_data_type_array(self) -> bool:
         return True
 
-    # ------------------------------------------------------------------
-    # Supported types advertisement
-    # ------------------------------------------------------------------
-
-    def supports_data_types(self) -> dict:
-        """Mapping ``{<name>: concrete type class}`` of every type this
-        dialect renders.
-
-        The formatters a dialect defines **are** the set of types it
-        supports (naming-convention dispatch has no registry), so this
-        derives the mapping from the ``format_data_type_<name>`` methods
-        and checks ``supports_data_type_<name>()`` for each.
-        """
-        result = {}
-        for member_name in dir(type(self)):
-            match = re.match(r"^format_data_type_([a-z][a-z0-9_]*)$", member_name)
-            if not match:
-                continue
-            name = match.group(1)
-            supports = getattr(self, f"supports_data_type_{name}", None)
-            if supports is not None and supports():
-                cls = self.type_class_for(name)
-                if cls is not None:
-                    result[name] = cls
-        return result
-
     def format_data_type_postgres_enum(self, expr) -> Tuple[str, tuple]:
         """Render the reference to a created enum type.
 
@@ -1000,7 +977,7 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
     def supports_data_type_postgres_enum(self) -> bool:
         return True
 
-    def substitute_data_types(self) -> dict:
+    def suggest_substitute_types(self) -> dict:
         """Cross-backend type-consistency suggestion map.
 
         PostgreSQL renders every core type it supports through its own
@@ -1026,11 +1003,11 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
         """
         from ...expression.types import PostgresEnumColumnType
 
-        return {
+        return SubstituteTypeSuggestion(mapping={
             "binary": BlobType,
             "varbinary": BlobType,
             "enum": PostgresEnumColumnType,
-        }
+        })
 
     def format_data_type_uuid(self, expr) -> Tuple[str, tuple]:
         return "UUID", ()
@@ -1055,432 +1032,3 @@ class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
     def format_data_type_array(self, expr: ArrayType) -> Tuple[str, tuple]:
         element_sql, _ = self.format_data_type(expr.element_type)
         return element_sql + "[]" * expr.dimensions, ()
-
-    # ------------------------------------------------------------------
-    # DataTypeSupport — parsing
-    # ------------------------------------------------------------------
-
-    _PG_INTEGER_TYPES = re.compile(
-        r"^(?:SMALLINT|INT2|INT|INTEGER|INT4|BIGINT|INT8)\b",
-        re.IGNORECASE,
-    )
-    _PG_SERIAL_TYPES = re.compile(
-        r"^(?:SMALLSERIAL|SERIAL2|SERIAL|SERIAL4|BIGSERIAL|SERIAL8)\b",
-        re.IGNORECASE,
-    )
-    _PG_FLOAT_TYPES = re.compile(
-        r"^(?:REAL|FLOAT4|FLOAT|DOUBLE)\b",
-        re.IGNORECASE,
-    )
-    _PG_DECIMAL_TYPES = re.compile(
-        r"^(?:DECIMAL|NUMERIC)\b",
-        re.IGNORECASE,
-    )
-    _PG_STRING_TYPES = re.compile(
-        r"^(?:CHARACTER|CHAR|VARCHAR|TEXT|CITEXT)\b",
-        re.IGNORECASE,
-    )
-    _PG_BINARY_TYPES = re.compile(
-        r"^(?:BYTEA|BLOB)\b",
-        re.IGNORECASE,
-    )
-    _PG_DATE_TYPES = re.compile(
-        r"^(?:DATETIME|DATE|TIMESTAMPTZ|TIMESTAMP|TIMETZ|TIME|INTERVAL)\b",
-        re.IGNORECASE,
-    )
-    _PG_JSON_TYPES = re.compile(
-        r"^(?:JSON|JSONB|JSONPATH)\b",
-        re.IGNORECASE,
-    )
-    _PG_UUID_TYPES = re.compile(
-        r"^(?:UUID)\b",
-        re.IGNORECASE,
-    )
-    _PG_NET_TYPES = re.compile(
-        r"^(?:INET|CIDR|MACADDR|MACADDR8)\b",
-        re.IGNORECASE,
-    )
-    _PG_GEOM_TYPES = re.compile(
-        r"^(?:POINT|LINE|LSEG|BOX|PATH|POLYGON|CIRCLE)\b",
-        re.IGNORECASE,
-    )
-    _PG_BIT_TYPES = re.compile(
-        r"^(?:BIT|VARBIT)\b",
-        re.IGNORECASE,
-    )
-    _PG_RANGE_TYPES = re.compile(
-        r"^(?:INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE)\b",
-        re.IGNORECASE,
-    )
-    _PG_MULTIRANGE_TYPES = re.compile(
-        r"^(?:INT4MULTIRANGE|INT8MULTIRANGE|NUMMULTIRANGE|"
-        r"TSMULTIRANGE|TSTZMULTIRANGE|DATEMULTIRANGE)\b",
-        re.IGNORECASE,
-    )
-    _PG_OID_TYPES = re.compile(
-        r"^(?:OID|REGCLASS|REGTYPE|XID|XID8|CID|TID)\b",
-        re.IGNORECASE,
-    )
-    _PG_TS_TYPES = re.compile(
-        r"^(?:TSVECTOR|TSQUERY)\b",
-        re.IGNORECASE,
-    )
-    _PG_MISC_TYPES = re.compile(
-        r"^(?:MONEY|XML|PG_LSN|HSTORE|GEOMETRY|GEOGRAPHY|CUBE|LTREE|LQUERY|"
-        r"LTXTQUERY|RASTER)\b",
-        re.IGNORECASE,
-    )
-    _PG_ARRAY_SUFFIX = re.compile(r"(\[(\d*)\])+\s*$")
-    _PG_ARRAY_KEYWORD = re.compile(r"\s+ARRAY(?:\s*\[\s*(\d+)\s*\])?\s*$", re.IGNORECASE)
-
-    def parse_type(self, raw: str) -> DataType:
-        stripped = raw.strip()
-        upper = stripped.upper()
-
-        # ---- Array detection (must run before any type-specific match) ----
-
-        # Check for ARRAY keyword: e.g. "INTEGER ARRAY" or "INTEGER ARRAY[3]"
-        kw_match = self._PG_ARRAY_KEYWORD.search(upper)
-        if kw_match:
-            base_raw = stripped[:kw_match.start()]
-            element_type = self.parse_type(base_raw)
-            # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type=element_type, dimensions=1, dialect=self)
-
-        # Check for array bracket suffix: e.g. "INTEGER[]", "INTEGER[][]"
-        remaining = stripped
-        while remaining.endswith("[]"):
-            remaining = remaining[:-2]
-        while remaining.endswith("]"):
-            m = self._PG_ARRAY_SUFFIX.search(remaining)
-            if m:
-                remaining = remaining[:m.start()]
-            else:
-                break
-
-        if remaining != stripped:
-            element_type = self.parse_type(remaining)
-            # PG normalises all array declarations to 1-D internally
-            return PostgresArrayType(element_type=element_type, dimensions=1, dialect=self)
-
-        # ---- Standard type dispatch ----
-
-        # Serial family
-        if self._PG_SERIAL_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresBigSerialType,
-                PostgresSerialType,
-                PostgresSmallSerialType,
-            )
-            if upper.startswith("BIGSERIAL") or upper.startswith("SERIAL8"):
-                return PostgresBigSerialType(self)
-            if upper.startswith("SMALLSERIAL") or upper.startswith("SERIAL2"):
-                return PostgresSmallSerialType(self)
-            return PostgresSerialType(self)
-
-        # Integer family
-        if self._PG_INTEGER_TYPES.match(upper):
-            if upper.startswith("SMALLINT") or upper.startswith("INT2"):
-                return SmallIntType(self)
-            if upper.startswith("BIGINT") or upper.startswith("INT8"):
-                return BigIntType(self)
-            return IntegerType(self)
-
-        # Float family
-        if self._PG_FLOAT_TYPES.match(upper):
-            if upper.startswith("DOUBLE"):
-                return DoubleType(dialect=self)
-            if upper.startswith("REAL") or upper.startswith("FLOAT4"):
-                return RealType(dialect=self)
-            nums = re.findall(r"\d+", stripped)
-            precision = int(nums[0]) if nums else None
-            return FloatType(dialect=self, precision=precision)
-
-        # Decimal family
-        if self._PG_DECIMAL_TYPES.match(upper):
-            nums = re.findall(r"\d+", stripped)
-            if len(nums) >= 2:
-                return DecimalType(dialect=self, precision=int(nums[0]), scale=int(nums[1]))
-            if len(nums) == 1:
-                return DecimalType(dialect=self, precision=int(nums[0]))
-            return DecimalType(dialect=self)
-
-        # String family
-        if self._PG_STRING_TYPES.match(upper):
-            length_match = re.search(r"\((\d+)\)", stripped)
-            length = int(length_match.group(1)) if length_match else None
-            if upper.startswith("CHARACTER VARYING"):
-                return VarCharType(dialect=self, length=length,
-                                   spelling="character varying")
-            if upper.startswith("VARCHAR"):
-                return VarCharType(dialect=self, length=length)
-            if upper.startswith("CHARACTER"):
-                return CharType(dialect=self, length=length,
-                                spelling="character")
-            if upper.startswith("CHAR"):
-                return CharType(dialect=self, length=length)
-            # citext: case-insensitive text, a contrib extension with its own
-            # type. A TextType subclass rather than a spelling, because the
-            # comparison semantics differ -- a citext column compares equal
-            # case-insensitively, which text does not, so the differ must see
-            # the difference.
-            if upper.startswith("CITEXT"):
-                from ...expression.types import PostgresCitextType
-                return PostgresCitextType(self)
-            return TextType(dialect=self)
-
-        # Binary
-        if self._PG_BINARY_TYPES.match(upper):
-            return BlobType(dialect=self)
-
-        # Date/time
-        if self._PG_DATE_TYPES.match(upper):
-            if upper.startswith("DATETIME"):
-                return DateTimeType(dialect=self)
-            if upper.startswith("DATE"):
-                return DateType(dialect=self)
-            if upper.startswith("TIMESTAMP"):
-                nums = re.findall(r"\d+", stripped)
-                precision = int(nums[0]) if nums else None
-                if "WITH TIME ZONE" in upper or upper.startswith("TIMESTAMPTZ"):
-                    return TimestampTzType(dialect=self, precision=precision)
-                return TimestampType(dialect=self, precision=precision)
-            if upper.startswith("TIME"):
-                nums = re.findall(r"\d+", stripped)
-                precision = int(nums[0]) if nums else None
-                if "WITH TIME ZONE" in upper or upper.startswith("TIMETZ"):
-                    return TimeTzType(dialect=self, precision=precision)
-                return TimeType(dialect=self, precision=precision)
-            if upper.startswith("INTERVAL"):
-                fields_match = re.search(r"INTERVAL\s+(.*)", upper)
-                fields = fields_match.group(1).strip() if fields_match else None
-                return IntervalType(dialect=self, fields=fields)
-
-        # JSON
-        if self._PG_JSON_TYPES.match(upper):
-            if upper.startswith("JSONB"):
-                return JsonBType(dialect=self)
-            if upper.startswith("JSONPATH"):
-                from ...expression.types import PostgresJsonPathType
-                return PostgresJsonPathType(dialect=self)
-            return JsonType(dialect=self)
-
-        # UUID
-        if self._PG_UUID_TYPES.match(upper):
-            return UUIDType(dialect=self)
-
-        # Boolean
-        if upper.startswith("BOOLEAN") or upper.startswith("BOOL"):
-            return BooleanType(dialect=self)
-
-        # Bit string
-        if self._PG_BIT_TYPES.match(upper):
-            nums = re.findall(r"\d+", stripped)
-            n = int(nums[0]) if nums else None
-            # The variable-length family is tested first: live ``format_type``
-            # emits ``bit varying(n)`` for a varbit column, and that string
-            # starts with ``BIT`` exactly as the fixed-length word does.  A
-            # leading ``startswith("BIT")`` test sent the catalog spelling to
-            # ``PostgresBitType``; ``VARBIT`` and ``BIT VARYING`` are the two
-            # words for the one storage and must answer the same class.
-            if upper.startswith("VARBIT") or re.match(r"BIT\s+VARYING\b", upper):
-                from ...expression.types import PostgresVarBitType
-                return PostgresVarBitType(n=n, dialect=self)
-            from ...expression.types import PostgresBitType
-            return PostgresBitType(n=n, dialect=self)
-
-        # Network address
-        if self._PG_NET_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresCidrType,
-                PostgresInetType,
-                PostgresMacAddr8Type,
-                PostgresMacAddrType,
-            )
-            if upper.startswith("CIDR"):
-                return PostgresCidrType(self)
-            if upper.startswith("MACADDR8"):
-                return PostgresMacAddr8Type(self)
-            if upper.startswith("MACADDR"):
-                return PostgresMacAddrType(self)
-            return PostgresInetType(self)
-
-        # Geometric
-        if self._PG_GEOM_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresBoxType,
-                PostgresCircleType,
-                PostgresLineSegmentType,
-                PostgresLineType,
-                PostgresPathType,
-                PostgresPointType,
-                PostgresPolygonType,
-            )
-            geom_map = {
-                "POINT": PostgresPointType,
-                "LINE": PostgresLineType,
-                "LSEG": PostgresLineSegmentType,
-                "BOX": PostgresBoxType,
-                "PATH": PostgresPathType,
-                "POLYGON": PostgresPolygonType,
-                "CIRCLE": PostgresCircleType,
-            }
-            for name, cls in geom_map.items():
-                if upper.startswith(name):
-                    return cls()
-            return PostgresPointType(self)
-
-        # Range types
-        if self._PG_RANGE_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresDateRangeType,
-                PostgresInt4RangeType,
-                PostgresInt8RangeType,
-                PostgresNumRangeType,
-                PostgresTsRangeType,
-                PostgresTsTzRangeType,
-            )
-            range_map = {
-                "INT4RANGE": PostgresInt4RangeType,
-                "INT8RANGE": PostgresInt8RangeType,
-                "NUMRANGE": PostgresNumRangeType,
-                "TSRANGE": PostgresTsRangeType,
-                "TSTZRANGE": PostgresTsTzRangeType,
-                "DATERANGE": PostgresDateRangeType,
-            }
-            for name, cls in range_map.items():
-                if upper.startswith(name):
-                    return cls()
-            return PostgresInt4RangeType(self)
-
-        # Multirange types
-        if self._PG_MULTIRANGE_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresDateMultirangeType,
-                PostgresInt4MultirangeType,
-                PostgresInt8MultirangeType,
-                PostgresNumMultirangeType,
-                PostgresTsMultirangeType,
-                PostgresTsTzMultirangeType,
-            )
-            mr_map = {
-                "INT4MULTIRANGE": PostgresInt4MultirangeType,
-                "INT8MULTIRANGE": PostgresInt8MultirangeType,
-                "NUMMULTIRANGE": PostgresNumMultirangeType,
-                "TSMULTIRANGE": PostgresTsMultirangeType,
-                "TSTZMULTIRANGE": PostgresTsTzMultirangeType,
-                "DATEMULTIRANGE": PostgresDateMultirangeType,
-            }
-            for name, cls in mr_map.items():
-                if upper.startswith(name):
-                    return cls()
-            return PostgresInt4MultirangeType(self)
-
-        # OID types
-        if self._PG_OID_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresCIDType,
-                PostgresOIDType,
-                PostgresRegClassType,
-                PostgresRegTypeType,
-                PostgresTIDType,
-                PostgresXID8Type,
-                PostgresXIDType,
-            )
-            oid_map = {
-                "OID": PostgresOIDType,
-                "REGCLASS": PostgresRegClassType,
-                "REGTYPE": PostgresRegTypeType,
-                "XID8": PostgresXID8Type,
-                "XID": PostgresXIDType,
-                "CID": PostgresCIDType,
-                "TID": PostgresTIDType,
-            }
-            for name, cls in oid_map.items():
-                if upper.startswith(name):
-                    return cls()
-            return PostgresOIDType(self)
-
-        # Text search
-        if self._PG_TS_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresTSQueryType,
-                PostgresTSVectorType,
-            )
-            if upper.startswith("TSVECTOR"):
-                return PostgresTSVectorType(self)
-            return PostgresTSQueryType(self)
-
-        # Miscellaneous
-        if self._PG_MISC_TYPES.match(upper):
-            from ...expression.types import (
-                PostgresGeographyType,
-                PostgresGeometryType,
-                PostgresHstoreType,
-                PostgresMoneyType,
-                PostgresPgLSNType,
-            )
-            if upper.startswith("MONEY"):
-                return PostgresMoneyType(self)
-            if upper.startswith("XML"):
-                return XmlType(dialect=self)
-            if upper.startswith("PG_LSN"):
-                return PostgresPgLSNType(self)
-            if upper.startswith("HSTORE"):
-                return PostgresHstoreType(self)
-            if upper.startswith("GEOGRAPHY"):
-                return PostgresGeographyType(self)
-            if upper.startswith("GEOMETRY"):
-                return PostgresGeometryType(self)
-            # Extension types with one word each: cube and the ltree family
-            # are contrib extensions, RASTER is PostGIS -- the same home as
-            # HSTORE and GEOMETRY already above them, and ungated for the
-            # same reason they are: the word can only have come from a
-            # server where the extension exists, because a column of the
-            # type requires it.
-            if upper.startswith("CUBE"):
-                from ...expression.types import PostgresCubeType
-                return PostgresCubeType(self)
-            # LTXTQUERY is checked before LQUERY although the words cannot
-            # collide (they differ at the second letter), because the pair
-            # is where a prefix mistake would go if one were ever added.
-            if upper.startswith("LTXTQUERY"):
-                from ...expression.types import PostgresLtxtqueryType
-                return PostgresLtxtqueryType(self)
-            if upper.startswith("LQUERY"):
-                from ...expression.types import PostgresLqueryType
-                return PostgresLqueryType(self)
-            if upper.startswith("LTREE"):
-                from ...expression.types import PostgresLtreeType
-                return PostgresLtreeType(self)
-            if upper.startswith("RASTER"):
-                from ...expression.types import PostgresRasterType
-                return PostgresRasterType(self)
-
-        # Vector types (pgvector)
-        vector_match = re.match(r"^(VECTOR|HALFVEC|SPARSEVEC)\b", upper)
-        if vector_match:
-            if (
-                hasattr(self, "_extensions")
-                and "vector" in self._extensions
-                and not self._extensions["vector"].installed
-            ):
-                raise RuntimeError(
-                    "Cannot use pgvector types: the 'vector' (pgvector) extension "
-                    "is not installed. Run: CREATE EXTENSION IF NOT EXISTS vector;"
-                )
-            nums = re.findall(r"\d+", stripped)
-            dim = int(nums[0]) if nums else 0
-            vector_kind = vector_match.group(1)
-            if vector_kind == "HALFVEC":
-                from ...expression.types import PostgresHalfvecType
-                return PostgresHalfvecType(dim=dim, dialect=self)
-            if vector_kind == "SPARSEVEC":
-                from ...expression.types import PostgresSparsevecType
-                return PostgresSparsevecType(dim=dim, dialect=self)
-            from ...expression.types import PostgresVectorType
-            return PostgresVectorType(dim=dim, dialect=self)
-
-        # Fallback
-        from rhosocial.activerecord.backend.expression.types import CustomType
-        return CustomType(dialect=self, raw=stripped)

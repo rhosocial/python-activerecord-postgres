@@ -65,7 +65,10 @@ from rhosocial.activerecord.backend.adapters import (
     Vector,
 )
 
-from rhosocial.activerecord.backend.dialect.mixins import ColumnTypeMixin
+from rhosocial.activerecord.backend.suggestion.definitions import (
+    ColumnTypeSuggestion,
+    ExtraColumnTypeSuggestion,
+)
 from rhosocial.activerecord.backend.expression.column_types import (
     ArrayColumn,
     BinaryColumn,
@@ -297,7 +300,7 @@ POSTGRES_EXTRA_COLUMN_TYPES: Dict[Any, Type[ColumnBase]] = {
 }
 
 
-class PostgresColumnTypeMixin(ColumnTypeMixin):
+class PostgresColumnTypeMixin:
     """The full framework-modelled-Python-type → column-class table for PostgreSQL.
 
     Composed into :class:`~rhosocial.activerecord.backend.impl.postgres.dialect.PostgresDialect`
@@ -334,17 +337,17 @@ class PostgresColumnTypeMixin(ColumnTypeMixin):
     changes the DDL spelling, not which column class a ``dict`` is.
     """
 
-    def suggested_column_types(self) -> Dict[Any, Optional[Type[ColumnBase]]]:
-        return dict(POSTGRES_COLUMN_TYPES)
+    def suggest_column_types(self) -> Dict[Any, Optional[Type[ColumnBase]]]:
+        return ColumnTypeSuggestion(table=dict(POSTGRES_COLUMN_TYPES))
 
-    def suggested_extra_column_types(self) -> Dict[Any, Type[ColumnBase]]:
+    def suggest_extra_column_types(self) -> Dict[Any, Type[ColumnBase]]:
         """This server's own value classes -> their column classes.
 
         A field annotated with a PostgreSQL value class (``Point``, ``PostgresXML``,
         ``PostgresMoney``) resolves without a declaration. The range wrappers are
         absent on purpose -- see :data:`POSTGRES_EXTRA_COLUMN_TYPES`.
         """
-        return dict(POSTGRES_EXTRA_COLUMN_TYPES)
+        return ExtraColumnTypeSuggestion(table=dict(POSTGRES_EXTRA_COLUMN_TYPES))
 
 
 __all__ = [

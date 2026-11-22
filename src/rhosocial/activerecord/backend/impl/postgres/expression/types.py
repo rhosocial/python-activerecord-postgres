@@ -132,7 +132,7 @@ class PostgresEnumColumnType(EnumType):
         dialect: The dialect that will render the type reference.
         type_name: Name of the created enum type. Required -- a column cannot
             state a PostgreSQL enum without it. That requirement is why the
-            dialect's ``suggested_data_types()["enum"]`` points *here* rather
+            dialect's ``suggest_data_types().table["enum"]`` points *here* rather
             than claiming the generic ``EnumType`` is renderable.
         schema: Optional schema holding it.
         values: The labels, for introspection and equality.

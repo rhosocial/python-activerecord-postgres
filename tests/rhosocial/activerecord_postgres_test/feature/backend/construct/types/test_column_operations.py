@@ -75,8 +75,8 @@ def test_the_area_operators_are_not_offered_on_a_point(dialect):
     """A point has no ``@>``; resolving Point must not hand out a false one."""
     from rhosocial.activerecord.backend.impl.postgres.type_values import Box, Point
 
-    assert dialect.suggested_extra_column_types()[Point] is PostgresGeometryColumn
-    assert dialect.suggested_extra_column_types()[Box] is PostgresAreaGeometryColumn
+    assert dialect.suggest_extra_column_types().table[Point] is PostgresGeometryColumn
+    assert dialect.suggest_extra_column_types().table[Box] is PostgresAreaGeometryColumn
     assert not hasattr(PostgresGeometryColumn(dialect, "p"), "contains")
     assert hasattr(PostgresAreaGeometryColumn(dialect, "b"), "contains")
 
@@ -380,5 +380,5 @@ def test_the_postgis_wrapper_resolves_to_the_extension_class(dialect):
         PostgresGeometry,
     )
 
-    assert dialect.suggested_extra_column_types()[PostgresGeometry] is PostgisGeometryColumn
-    assert dialect.suggested_extra_column_types()[Point] is not PostgisGeometryColumn
+    assert dialect.suggest_extra_column_types().table[PostgresGeometry] is PostgisGeometryColumn
+    assert dialect.suggest_extra_column_types().table[Point] is not PostgisGeometryColumn

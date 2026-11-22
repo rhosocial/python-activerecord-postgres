@@ -89,7 +89,7 @@ class TestArrays:
 
     def test_array_suggestion_is_native_and_not_json(self, native_backend):
         """J9 guard: ``list`` resolves to the array adapter, not JSON text."""
-        suggestions = native_backend.get_default_adapter_suggestions()
+        suggestions = native_backend.suggest_data_adapters().table
         adapter, target = suggestions[list]
         assert target is list
         assert isinstance(adapter, PostgresListAdapter)

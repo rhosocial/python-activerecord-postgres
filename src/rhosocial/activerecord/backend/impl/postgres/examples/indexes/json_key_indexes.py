@@ -6,6 +6,10 @@ Two real access patterns:
   * exact lookup / ordering on a scalar key (``$.user.id``) -> text B-tree
 """
 
+from rhosocial.activerecord.backend.expression.types import JsonBType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -87,10 +91,10 @@ backend.execute(*CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, "events"),
     columns=[
-        ColumnDefinition(dialect, "id", dialect.parse_type("SERIAL"), constraints=[
+        ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
             ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ]),
-        ColumnDefinition(dialect, "payload", dialect.parse_type("JSONB")),
+        ColumnDefinition(dialect, "payload", JsonBType()),
     ],
 ).to_sql())
 

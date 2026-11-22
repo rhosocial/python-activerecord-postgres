@@ -15,6 +15,7 @@ from .data_type_suggestions import (
     POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS,
     PostgresDataTypeSuggestionsMixin,
 )
+from .general_suggestions import PostgresStringConcatenationSuggestionMixin
 from .integer_auto_increment_column_suggestion import (
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "POSTGRES_DATA_TYPE_SUGGESTIONS",
     "POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS",
     "PostgresDataTypeSuggestionsMixin",
+    "PostgresStringConcatenationSuggestionMixin",
     "PostgresIntegerAutoIncrementColumnSuggestionMixin",
     "PostgresPartitionSuggestionBase",
     "PostgresPartitionAddSuggestionMixin",

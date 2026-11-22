@@ -11,6 +11,10 @@ This example demonstrates:
 6. Create HNSW index (via the create_vector_index helper)
 """
 
+from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType, PostgresVectorType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -91,25 +95,25 @@ installed = dialect.is_extension_installed("vector")
 
 if installed:
     # Example 1: Create table with vector column
-    # Column data types are built with dialect.parse_type() (DataType instance).
+    # Column data types are built by constructing expression types directly.
     columns = [
         ColumnDefinition(
             name="id",
-            data_type=dialect.parse_type("SERIAL"),
+            data_type=PostgresSerialType(),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             name="content",
-            data_type=dialect.parse_type("TEXT"),
+            data_type=TextType(),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
             ],
         ),
         ColumnDefinition(
             name="embedding",
-            data_type=dialect.parse_type("VECTOR(3)"),
+            data_type=PostgresVectorType(dim=3),
         ),
     ]
 

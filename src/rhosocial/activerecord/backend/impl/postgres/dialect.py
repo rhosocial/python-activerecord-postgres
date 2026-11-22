@@ -75,6 +75,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     DQLMixin,
     DMLMixin,
     DDLColumnMixin,
+    ColumnAttributeMixin,
     TransactionControlMixin,
     UserDefinedTypeMixin,
     DomainMixin,
@@ -265,6 +266,7 @@ from .mixins import (
 )
 from .suggestion import (
     PostgresDataTypeSuggestionsMixin,
+    PostgresStringConcatenationSuggestionMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
     PostgresPartitionAddSuggestionMixin,
     PostgresPartitionBuildSuggestionMixin,
@@ -391,6 +393,7 @@ class PostgresDialect(
     PostgresPartitionMergeSuggestionMixin,
     PostgresPartitionRetentionSuggestionMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
+    PostgresStringConcatenationSuggestionMixin,
     PostgresPartitionSuggestionBase,
     # The bases below come in bundles: a backend mixin, then the core bundle
     # it stands in for. The backend's answer has to come first -- a mixin
@@ -610,6 +613,7 @@ class PostgresDialect(
     DQLMixin,
     DMLMixin,
     DDLColumnMixin,
+    ColumnAttributeMixin,
     TransactionControlMixin,
     # Protocol supports
     SQLXMLSupport,

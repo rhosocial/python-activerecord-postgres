@@ -6,6 +6,7 @@ from typing import Tuple
 from rhosocial.activerecord.backend.expression import ColumnDefinition
 
 from ...expression.ddl import PostgresCitextColumnExpression
+from ...expression.types import PostgresCitextType
 
 
 class PostgresCitextMixin:
@@ -20,5 +21,5 @@ class PostgresCitextMixin:
         if expr.length is not None:
             raise ValueError("CITEXT has no length modifier in PostgreSQL")
         return ColumnDefinition(
-            self, expr.name, self.parse_type("CITEXT")
+            self, expr.name, PostgresCitextType(self)
         ).to_sql()

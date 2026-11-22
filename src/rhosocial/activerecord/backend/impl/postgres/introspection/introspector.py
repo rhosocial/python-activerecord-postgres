@@ -57,7 +57,6 @@ from rhosocial.activerecord.backend.introspection.types import (
     IntrospectionViewInfo,
     ProfileSource,
 )
-from rhosocial.activerecord.backend.expression.types import DataType
 from .status_introspector import (
     PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
@@ -259,7 +258,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             data_type = row.get("data_type", "")
             # Extract base type (remove array brackets, size specifiers)
             base_type = data_type.split("[")[0].split("(")[0].strip()
-            parsed = DataType.parse_data_type_str(self._backend.dialect, data_type)
+            # Backend-local, introspection-only parser: core's DataType factory
+            # now degrades every spelling to CustomType, so the concrete type is
+            # recovered here instead.
+            from .type_parser import PostgresTypeParser
+            parsed = PostgresTypeParser(self._backend.dialect).parse(data_type)
             default_value = row.get("default_value")
             identity_kind = row.get("identity_kind") or ""
             generated_kind = row.get("generated_kind") or ""

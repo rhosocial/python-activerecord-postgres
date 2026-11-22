@@ -2,8 +2,8 @@
 """Pure-function tests for PostgreSQL DataType formatting and parsing.
 
 These tests exercise ``PostgresTypeFormatSupportMixin`` (the
-``PostgresDialect.format_data_type`` and ``PostgresDialect.parse_type``
-paths) without requiring a live PostgreSQL server.
+``PostgresDialect.format_data_type`` path) and the introspection-only
+``PostgresTypeParser`` without requiring a live PostgreSQL server.
 """
 
 import pytest
@@ -90,6 +90,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresXID8Type,
     PostgresXIDType,
 )
+
+
+from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
+
+
+def parse_type(dialect, raw):
+    """Type-spelling parsing is now an introspection-only concern."""
+    return PostgresTypeParser(dialect).parse(raw)
 
 
 @pytest.fixture
@@ -363,27 +371,27 @@ PARSE_CASES = [
 
 @pytest.mark.parametrize("raw,expected_cls,expected_attrs", PARSE_CASES)
 def test_parse_type(dialect, raw, expected_cls, expected_attrs):
-    result = dialect.parse_type(raw)
+    result = parse_type(dialect, raw)
     assert type(result) is expected_cls
     for attr, value in expected_attrs.items():
         assert getattr(result, attr) == value
 
 
 def test_parse_type_array_bracket_suffix(dialect):
-    result = dialect.parse_type("INTEGER[]")
+    result = parse_type(dialect, "INTEGER[]")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is IntegerType
     assert result.dimensions == 1
 
 
 def test_parse_type_array_multidimensional_brackets(dialect):
-    result = dialect.parse_type("INTEGER[][]")
+    result = parse_type(dialect, "INTEGER[][]")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is IntegerType
 
 
 def test_parse_type_array_with_dimension_bracket(dialect):
-    result = dialect.parse_type("VARCHAR(10)[3]")
+    result = parse_type(dialect, "VARCHAR(10)[3]")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is VarCharType
     assert result.element_type.length == 10
@@ -400,35 +408,35 @@ def test_parse_type_malformed_bracket_suffix_is_rejected(dialect):
     )
 
     with pytest.raises(InvalidTypeNameError):
-        dialect.parse_type("FOO[abc]")
+        parse_type(dialect, "FOO[abc]")
 
 
 def test_parse_type_array_keyword(dialect):
-    result = dialect.parse_type("INTEGER ARRAY")
+    result = parse_type(dialect, "INTEGER ARRAY")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is IntegerType
 
 
 def test_parse_type_array_keyword_with_dimension(dialect):
-    result = dialect.parse_type("INTEGER ARRAY[3]")
+    result = parse_type(dialect, "INTEGER ARRAY[3]")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is IntegerType
 
 
 def test_parse_type_array_nested_element(dialect):
-    result = dialect.parse_type("UUID[]")
+    result = parse_type(dialect, "UUID[]")
     assert type(result) is PostgresArrayType
     assert type(result.element_type) is UUIDType
 
 
 def test_parse_type_unknown_falls_back_to_custom(dialect):
-    result = dialect.parse_type("FOOBARBAZ")
+    result = parse_type(dialect, "FOOBARBAZ")
     assert type(result) is CustomType
     assert result.raw == "FOOBARBAZ"
 
 
 def test_parse_type_case_insensitive(dialect):
-    result = dialect.parse_type("  varchar(25)  ")
+    result = parse_type(dialect, "  varchar(25)  ")
     assert type(result) is VarCharType
     assert result.length == 25
 
@@ -442,11 +450,11 @@ def test_parse_vector_requires_extension(dialect):
         "vector": PostgresExtensionInfo(name="vector", installed=False, available=True)
     }
     with pytest.raises(RuntimeError, match="vector.*extension"):
-        dialect.parse_type("VECTOR(3)")
+        parse_type(dialect, "VECTOR(3)")
     with pytest.raises(RuntimeError, match="vector.*extension"):
-        dialect.parse_type("HALFVEC(3)")
+        parse_type(dialect, "HALFVEC(3)")
     with pytest.raises(RuntimeError, match="vector.*extension"):
-        dialect.parse_type("SPARSEVEC(3)")
+        parse_type(dialect, "SPARSEVEC(3)")
 
 
 def test_parse_vector_allowed_when_extension_installed(dialect):
@@ -456,9 +464,9 @@ def test_parse_vector_allowed_when_extension_installed(dialect):
     dialect._extensions = {
         "vector": PostgresExtensionInfo(name="vector", installed=True)
     }
-    assert type(dialect.parse_type("VECTOR(3)")) is PostgresVectorType
-    assert type(dialect.parse_type("HALFVEC(3)")) is PostgresHalfvecType
-    assert type(dialect.parse_type("SPARSEVEC(3)")) is PostgresSparsevecType
+    assert type(parse_type(dialect, "VECTOR(3)")) is PostgresVectorType
+    assert type(parse_type(dialect, "HALFVEC(3)")) is PostgresHalfvecType
+    assert type(parse_type(dialect, "SPARSEVEC(3)")) is PostgresSparsevecType
 
 
 def test_vector_types_equality_and_hash():
@@ -479,27 +487,6 @@ def test_vector_types_equality_and_hash():
     assert PostgresSparsevecType(dim=5) != PostgresVectorType(dim=5)
     assert PostgresSparsevecType(dim=5) != object()
     assert hash(PostgresSparsevecType(dim=5)) == hash(PostgresSparsevecType(dim=5))
-
-
-# ---------------------------------------------------------------------------
-# supports_data_types
-# ---------------------------------------------------------------------------
-
-
-def test_supports_data_types_registers_all_postgres_types(dialect):
-    supported = dialect.supports_data_types()
-    assert isinstance(supported, dict)
-    assert len(supported) > 0
-    classes = set(supported.values())
-    for expected in (
-        PostgresSerialType,
-        PostgresVectorType,
-        PostgresTsRangeType,
-        ArrayType,
-        JsonBType,
-        IntegerType,
-    ):
-        assert expected in classes
 
 
 class TestVersionGatesAreNotEmpty:

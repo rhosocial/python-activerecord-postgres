@@ -5,6 +5,10 @@ Cosine + HNSW for approximate nearest neighbours, L2 + IVFFLAT for a large
 corpus, and the ``PostgresIndexType`` enum values used by both.
 """
 
+from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType, PostgresVectorType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -100,11 +104,11 @@ if dialect.is_extension_installed("vector"):
         dialect=dialect,
         table=Table(dialect, "documents"),
         columns=[
-            ColumnDefinition(dialect, "id", dialect.parse_type("SERIAL"), constraints=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ]),
-            ColumnDefinition(dialect, "content", dialect.parse_type("TEXT")),
-            ColumnDefinition(dialect, "embedding", dialect.parse_type("VECTOR(3)")),
+            ColumnDefinition(dialect, "content", TextType()),
+            ColumnDefinition(dialect, "embedding", PostgresVectorType(dim=3)),
         ],
     ).to_sql())
 

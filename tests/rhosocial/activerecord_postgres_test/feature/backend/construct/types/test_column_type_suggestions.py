@@ -27,7 +27,7 @@ from typing import Optional
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.mixins import ColumnTypeMixin
+from rhosocial.activerecord.backend.suggestion.protocols import ColumnTypeSuggestionSupport
 from rhosocial.activerecord.backend.expression.column_types import (
     ArrayColumn,
     BinaryColumn,
@@ -74,7 +74,7 @@ def test_the_dialect_carries_the_protocol_mixin(dialect):
     """PostgreSQL has to *have* the mixin; a table on a class nothing reaches is
     documentation. ``Model.c.<field>`` asks the dialect's table on every column
     access, so this is also what makes a model's fields work here."""
-    assert isinstance(dialect, ColumnTypeMixin)
+    assert isinstance(dialect, ColumnTypeSuggestionSupport)
     assert isinstance(dialect, PostgresColumnTypeMixin)
 
 
@@ -87,7 +87,7 @@ def test_every_entry_is_answered(dialect, entry):
     the contract, while a ``None`` is this backend stating that it has no class
     for a value family -- and the protocol wants that stated, not guessed.
     """
-    table = dialect.suggested_column_types()
+    table = dialect.suggest_column_types().table
     assert entry in table, f"PostgreSQL does not answer {entry!r}"
 
     suggested = table[entry]
@@ -98,11 +98,11 @@ def test_every_entry_is_answered(dialect, entry):
 
 def test_the_table_has_no_entry_beyond_the_protocol(dialect):
     """A key of the backend's own is allowed by the protocol, and is reported
-    separately through ``suggested_extra_column_types()`` so "the framework has
+    separately through ``suggest_extra_column_types()`` so "the framework has
     an answer" stays distinguishable from "this backend has one of its own".
     PostgreSQL has neither, and a stray key in the common table would be
     indistinguishable from a framework entry at the call site."""
-    extra = set(dialect.suggested_column_types()) - set(COMMON_TYPES)
+    extra = set(dialect.suggest_column_types().table) - set(COMMON_TYPES)
     assert extra == set()
 
 
@@ -111,10 +111,10 @@ def test_the_backend_declares_its_own_python_types_separately(dialect):
 
     PostgreSQL models value classes beyond them (``Point``, ``PostgresXML``,
     ``PostgresMoney``, the object identifiers), and the protocol reports those
-    through ``suggested_extra_column_types()`` so "the framework has an answer"
+    through ``suggest_extra_column_types()`` so "the framework has an answer"
     stays distinguishable from "this backend has one of its own".
     """
-    extra = dialect.suggested_extra_column_types()
+    extra = dialect.suggest_extra_column_types().table
     assert set(extra) - set(COMMON_TYPES) == set(extra)
     assert extra
 
@@ -123,7 +123,7 @@ def test_every_extra_entry_answers_with_a_column_class(dialect):
     """The same two-state rule as the common table: a class, never a hole."""
     from rhosocial.activerecord.backend.expression.column_types import ColumnBase
 
-    extra = dialect.suggested_extra_column_types()
+    extra = dialect.suggest_extra_column_types().table
     for entry, column_class in extra.items():
         assert isinstance(column_class, type), entry
         assert issubclass(column_class, ColumnBase), entry
@@ -133,7 +133,7 @@ def test_every_extra_class_builds_and_renders(dialect):
     """An extras cell is only real if the column it names can be built."""
     from rhosocial.activerecord.backend.expression.column_types import ColumnBase
 
-    for column_class in dialect.suggested_extra_column_types().values():
+    for column_class in dialect.suggest_extra_column_types().table.values():
         column = column_class(dialect, "c")
         assert isinstance(column, ColumnBase)
         assert column.to_sql() == ('"c"', ())
@@ -145,8 +145,8 @@ def test_the_table_agrees_with_the_module_level_constant(dialect):
     Written as an equality rather than an import-and-call so that a future edit
     which makes the mixin compute something else fails here, naming the drift.
     """
-    assert dialect.suggested_column_types() == POSTGRES_COLUMN_TYPES
-    assert dialect.suggested_column_types() is not POSTGRES_COLUMN_TYPES
+    assert dialect.suggest_column_types().table == POSTGRES_COLUMN_TYPES
+    assert dialect.suggest_column_types().table is not POSTGRES_COLUMN_TYPES
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +266,7 @@ def test_the_interval_entry_names_the_core_interval_class(dialect):
     from rhosocial.activerecord.backend.expression.column_types import IntervalColumn
     from rhosocial.activerecord.backend.impl.dummy.column_type import DUMMY_COLUMN_TYPES
 
-    assert dialect.suggested_column_types()[datetime.timedelta] is IntervalColumn
+    assert dialect.suggest_column_types().table[datetime.timedelta] is IntervalColumn
     assert resolve(dialect, datetime.timedelta) is IntervalColumn
     # Both dialects now answer it, so there is no gap left to refuse.
     assert DUMMY_COLUMN_TYPES[datetime.timedelta] is IntervalColumn
@@ -305,7 +305,7 @@ def test_the_complex_families_name_the_core_column_classes(dialect):
         MacAddress: MacAddressColumn,
     }
     for entry, klass in expected.items():
-        assert dialect.suggested_column_types()[entry] is klass
+        assert dialect.suggest_column_types().table[entry] is klass
         assert resolve(dialect, entry) is klass
 
 
@@ -318,7 +318,7 @@ def test_the_complex_families_are_named_by_this_backend(dialect):
     """
     from rhosocial.activerecord.backend.impl.postgres import column_types as pg
 
-    for column_class in dialect.suggested_extra_column_types().values():
+    for column_class in dialect.suggest_extra_column_types().table.values():
         assert column_class.__module__ == pg.__name__
         assert column_class.__name__.startswith(("Postgres", "Postgis"))
 
@@ -373,8 +373,8 @@ def test_bool_is_its_own_entry_not_an_integer(dialect):
     keeps them apart. Without it a truth-value field would offer integer
     arithmetic -- which MySQL and SQLite would happily execute on 0/1."""
     assert resolve(dialect, bool) is not resolve(dialect, int)
-    assert list(dialect.suggested_column_types()).index(bool) < list(
-        dialect.suggested_column_types()
+    assert list(dialect.suggest_column_types().table).index(bool) < list(
+        dialect.suggest_column_types().table
     ).index(int)
 
 
@@ -408,7 +408,7 @@ def test_the_operation_names_the_contract_uses_are_real_attributes(dialect):
     # hard-coded import that could stop being the answer. A refused entry has no
     # class to name, which is the point of refusing it.
     by_name = {
-        cls.__name__: cls for cls in dialect.suggested_column_types().values() if cls is not None
+        cls.__name__: cls for cls in dialect.suggest_column_types().table.values() if cls is not None
     }
 
     for column_name, ops in expected.items():

@@ -4,6 +4,14 @@ import pytest
 
 
 
+from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
+
+
+def parse_type(dialect, raw):
+    """Type-spelling parsing is now an introspection-only concern."""
+    return PostgresTypeParser(dialect).parse(raw)
+
+
 @pytest.fixture
 def dialect():
     # Import directly to avoid triggering backend init which requires psycopg
@@ -158,7 +166,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        result = dialect.parse_type("INTEGER[]")
+        result = parse_type(dialect, "INTEGER[]")
         assert isinstance(result, PostgresArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, IntegerType)
@@ -168,7 +176,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        result = dialect.parse_type("INTEGER[][]")
+        result = parse_type(dialect, "INTEGER[][]")
         assert isinstance(result, PostgresArrayType)
         # PG normalises all array declarations to 1-D internally
         assert result.dimensions == 1
@@ -179,7 +187,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        result = dialect.parse_type("INTEGER ARRAY")
+        result = parse_type(dialect, "INTEGER ARRAY")
         assert isinstance(result, PostgresArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, IntegerType)
@@ -189,7 +197,7 @@ class TestArrayType:
             PostgresArrayType,
         )
         from rhosocial.activerecord.backend.expression.types import VarCharType
-        result = dialect.parse_type("VARCHAR(255)[]")
+        result = parse_type(dialect, "VARCHAR(255)[]")
         assert isinstance(result, PostgresArrayType)
         assert result.dimensions == 1
         assert isinstance(result.element_type, VarCharType)
@@ -197,7 +205,7 @@ class TestArrayType:
 
     def test_parse_non_array_passthrough(self, dialect):
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        result = dialect.parse_type("INTEGER")
+        result = parse_type(dialect, "INTEGER")
         assert isinstance(result, IntegerType)
 
     def test_is_element_type_equivalent(self, dialect):

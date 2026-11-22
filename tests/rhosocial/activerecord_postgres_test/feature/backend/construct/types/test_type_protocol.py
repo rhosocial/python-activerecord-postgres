@@ -3,8 +3,7 @@
 
 Verifies:
 - format family == supports family (1:1 correspondence)
-- supports_data_types() includes postgres_* + core entries
-- substitute_data_types(): values are DataType classes; keys disjoint from supported
+- suggest_substitute_types(): values are DataType classes; keys disjoint from renderable names
 - dialect_options forwarding and equality
 """
 
@@ -16,34 +15,32 @@ from rhosocial.activerecord.backend.dialect.exceptions import (
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
     BlobType,
-    BooleanType,
     DataType,
     DecimalType,
     DoubleType,
     FloatType,
     IntegerType,
-    JsonBType,
-    JsonType,
     SmallIntType,
-    TextType,
     TimeType,
     TimestampType,
-    VarCharType,
     UUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresBitType,
     PostgresHalfvecType,
-    PostgresInetType,
-    PostgresJsonPathType,
-    PostgresPointType,
-    PostgresSerialType,
     PostgresSparsevecType,
-    PostgresTsRangeType,
     PostgresVarBitType,
     PostgresVectorType,
 )
+
+
+from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
+
+
+def parse_type(dialect, raw):
+    """Type-spelling parsing is now an introspection-only concern."""
+    return PostgresTypeParser(dialect).parse(raw)
 
 
 @pytest.fixture
@@ -125,7 +122,7 @@ def test_format_supports_family_1to1(dialect):
     # Remove non-dispatch names (these are helpers, not type names)
     format_names.discard("custom")
     supports_names.discard("custom")
-    # supports_data_types and format_data_type are the entry points
+    # format_data_type and the per-type probe family are the entry points
     format_names.discard("")
     supports_names.discard("")
 
@@ -143,90 +140,33 @@ def test_format_supports_family_1to1(dialect):
 
 
 # ---------------------------------------------------------------------------
-# W3: supports_data_types() includes postgres_* + core entries
+# W4: suggest_substitute_types()
 # ---------------------------------------------------------------------------
 
 
-def test_supports_data_types_includes_postgres_types(dialect):
-    supported = dialect.supports_data_types()
-    assert isinstance(supported, dict)
-    assert len(supported) > 0
-
-    # Verify a representative sample of postgres-specific types
-    postgres_expected = {
-        "postgres_serial": PostgresSerialType,
-        "postgres_vector": PostgresVectorType,
-        "postgres_tsrange": PostgresTsRangeType,
-        "postgres_inet": PostgresInetType,
-        "postgres_point": PostgresPointType,
-        "postgres_jsonpath": PostgresJsonPathType,
-    }
-    for name, cls in postgres_expected.items():
-        assert name in supported, f"Missing postgres type: {name}"
-        assert supported[name] is cls, (
-            f"Type {name}: expected {cls.__name__}, got {supported[name].__name__}"
-        )
-
-
-def test_supports_data_types_includes_core_types(dialect):
-    supported = dialect.supports_data_types()
-
-    core_expected = {
-        "integer": IntegerType,
-        "bigint": BigIntType,
-        "smallint": SmallIntType,
-        "decimal": DecimalType,
-        "varchar": VarCharType,
-        "text": TextType,
-        "boolean": BooleanType,
-        "blob": BlobType,
-        "date": None,  # DateType
-        "timestamp": None,  # TimestampType
-        "json": JsonType,
-        "jsonb": JsonBType,
-    }
-    for name in core_expected:
-        assert name in supported, f"Missing core type: {name}"
-
-
-def test_supports_data_types_values_are_data_type_classes(dialect):
-    supported = dialect.supports_data_types()
-    for name, cls in supported.items():
-        assert isinstance(cls, type), (
-            f"supports_data_types()[{name!r}] is not a class: {cls!r}"
-        )
-        assert issubclass(cls, DataType), (
-            f"supports_data_types()[{name!r}] = {cls.__name__} is not a DataType subclass"
-        )
-
-
-# ---------------------------------------------------------------------------
-# W4: substitute_data_types()
-# ---------------------------------------------------------------------------
-
-
-def test_substitute_data_types_returns_dict(dialect):
-    result = dialect.substitute_data_types()
+def test_suggest_substitute_types_returns_dict(dialect):
+    result = dialect.suggest_substitute_types().mapping
     assert isinstance(result, dict)
 
 
-def test_substitute_data_types_values_are_classes(dialect):
-    result = dialect.substitute_data_types()
+def test_suggest_substitute_types_values_are_classes(dialect):
+    result = dialect.suggest_substitute_types().mapping
     for name, cls in result.items():
         assert isinstance(cls, type), (
-            f"substitute_data_types()[{name!r}] is not a class: {cls!r}"
+            f"suggest_substitute_types()[{name!r}] is not a class: {cls!r}"
         )
         assert issubclass(cls, DataType), (
-            f"substitute_data_types()[{name!r}] = {cls.__name__} is not a DataType subclass"
+            f"suggest_substitute_types()[{name!r}] = {cls.__name__} is not a DataType subclass"
         )
 
 
-def test_substitute_data_types_keys_disjoint_from_supported(dialect):
-    supported = set(dialect.supports_data_types().keys())
-    suggested = set(dialect.substitute_data_types().keys())
+def test_suggest_substitute_types_keys_disjoint_from_renderable(dialect):
+    # The renderable-name surface is the ``format_data_type_<name>`` family.
+    supported = _get_method_suffixes(dialect, "format_data_type_")
+    suggested = set(dialect.suggest_substitute_types().mapping.keys())
     overlap = supported & suggested
     assert not overlap, (
-        f"substitute_data_types() keys overlap with supports_data_types(): {overlap}"
+        f"suggest_substitute_types() keys overlap with renderable names: {overlap}"
     )
 
 
@@ -279,17 +219,17 @@ def test_catalog_bit_varying_spelling_parses_as_varbit(dialect):
     width.  The rendered-string sweep cannot see this: it only feeds back the
     renderer's own ``VARBIT(16)`` spelling.
     """
-    varying = dialect.parse_type("bit varying(16)")
+    varying = parse_type(dialect, "bit varying(16)")
     assert varying == PostgresVarBitType(dialect, n=16)
     assert varying != PostgresBitType(dialect, n=16)
 
-    bare = dialect.parse_type("bit varying")
+    bare = parse_type(dialect, "bit varying")
     assert bare == PostgresVarBitType(dialect)
     assert bare != PostgresBitType(dialect)
 
     # Keep-pins for the words the renderer emits.
-    assert dialect.parse_type("BIT(8)") == PostgresBitType(dialect, n=8)
-    assert dialect.parse_type("VARBIT(16)") == PostgresVarBitType(dialect, n=16)
+    assert parse_type(dialect, "BIT(8)") == PostgresBitType(dialect, n=8)
+    assert parse_type(dialect, "VARBIT(16)") == PostgresVarBitType(dialect, n=16)
 
 
 def test_vector_type_identity():
@@ -609,7 +549,7 @@ def test_the_catalog_can_never_report_the_attribute_so_parse_type_needs_nothing(
             # Bare FLOAT renders REAL on this backend, which is RealType's word:
             # a pre-existing spelling asymmetry, not an unsigned one.
             continue
-        assert dialect.parse_type(sql) == klass(dialect, **kwargs), sql
+        assert parse_type(dialect, sql) == klass(dialect, **kwargs), sql
 
 
 # ---------------------------------------------------------------------------

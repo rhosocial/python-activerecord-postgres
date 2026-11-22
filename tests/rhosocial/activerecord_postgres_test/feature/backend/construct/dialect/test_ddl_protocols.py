@@ -684,7 +684,9 @@ class TestTypeDomainProtocols:
         for generic in (CreateDomainSupport, AlterDomainSupport, DropDomainSupport):
             assert issubclass(PostgresDomainSupport, generic)
         # Naming a type is separate from declaring one, and both apply here.
-        assert issubclass(PostgresTypeSupport, TypeObjectSupport)
+        # ``issubclass`` refuses protocols with non-method members (the naming
+        # protocols carry ``separator``), so assert the derivation via the MRO.
+        assert TypeObjectSupport in PostgresTypeSupport.__mro__
         dialect = PostgresDialect(version=(14, 0, 0))
         assert isinstance(dialect, PostgresTypeSupport)
         assert isinstance(dialect, TypeObjectSupport)

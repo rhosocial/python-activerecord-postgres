@@ -54,6 +54,14 @@ _MENTIONS_RELATION = re.compile(
 _MENTIONS_INSERT_SOURCE = re.compile(r"\bInsertDataSource\b")
 
 
+from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
+
+
+def parse_type(dialect, raw):
+    """Type-spelling parsing is now an introspection-only concern."""
+    return PostgresTypeParser(dialect).parse(raw)
+
+
 def _empty_container_for(annotation: Any, dialect: Any):
     """Return an empty container for a parameterised alias, else None.
 
@@ -1170,7 +1178,7 @@ def parse_roundtrip_failures(
         except Exception:
             continue  # the matrix's pinned non-renders own this class
         try:
-            parsed = dialect.parse_type(rendered)
+            parsed = parse_type(dialect, rendered)
         except Exception as exc:
             failures.append(
                 "%s renders %r but parse_type raises %s: %s"

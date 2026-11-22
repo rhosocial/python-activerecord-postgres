@@ -16,7 +16,7 @@ The SQL-standard identity clause remains available to a caller that asks for
 it explicitly (``IdentityClause``); it is simply not what an auto-increment
 request means.
 """
-from rhosocial.activerecord.backend.suggestion import IntegerAutoIncrementSuggestionRenderer  # noqa: E402
+from rhosocial.activerecord.base.derivation import integer_auto_increment_parts  # noqa: E402
 
 import pytest
 
@@ -44,7 +44,7 @@ def dialect():
 
 
 def _id_column(dialect, data_type):
-    suggested_type, attributes = IntegerAutoIncrementSuggestionRenderer().parts(dialect, data_type)
+    suggested_type, attributes = integer_auto_increment_parts(dialect, data_type)
     return ColumnDefinition(
         dialect, "id", suggested_type,
         constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],

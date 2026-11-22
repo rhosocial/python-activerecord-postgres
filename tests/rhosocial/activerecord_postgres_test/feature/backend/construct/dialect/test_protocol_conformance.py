@@ -22,6 +22,7 @@ elif sys.version_info >= (3, 12):
 
 import pytest
 from rhosocial.activerecord.backend.dialect import protocols as dialect_protocols
+from rhosocial.activerecord.backend.suggestion import protocols as suggestion_protocols
 from rhosocial.activerecord.backend.impl.postgres import dialect as postgres_dialect
 from rhosocial.activerecord.backend.impl.postgres import mixins as postgres_mixins
 from rhosocial.activerecord.backend.impl.postgres import protocols as postgres_protocols
@@ -77,14 +78,14 @@ def get_postgres_protocols():
     from typing import runtime_checkable  # noqa: F401
 
     protocols = [
-        dialect_protocols.PartitionBuildSuggestionSupport,
-        dialect_protocols.PartitionTableDropSuggestionSupport,
-        dialect_protocols.PartitionTableAlterSuggestionSupport,
-        dialect_protocols.PartitionAddSuggestionSupport,
-        dialect_protocols.PartitionDropSuggestionSupport,
-        dialect_protocols.PartitionSplitSuggestionSupport,
-        dialect_protocols.PartitionMergeSuggestionSupport,
-        dialect_protocols.PartitionRetentionSuggestionSupport,
+        suggestion_protocols.PartitionBuildSuggestionSupport,
+        suggestion_protocols.PartitionTableDropSuggestionSupport,
+        suggestion_protocols.PartitionTableAlterSuggestionSupport,
+        suggestion_protocols.PartitionAddSuggestionSupport,
+        suggestion_protocols.PartitionDropSuggestionSupport,
+        suggestion_protocols.PartitionSplitSuggestionSupport,
+        suggestion_protocols.PartitionMergeSuggestionSupport,
+        suggestion_protocols.PartitionRetentionSuggestionSupport,
         dialect_protocols.SQLXMLSupport,
         dialect_protocols.SQLXMLParsingSupport,
         dialect_protocols.SQLXMLSerializationSupport,
@@ -167,17 +168,17 @@ def get_postgres_protocols():
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.AutoIncrementColumnSupport,
-        dialect_protocols.IntegerAutoIncrementColumnSuggestionSupport,
+        suggestion_protocols.IntegerAutoIncrementColumnSuggestionSupport,
         dialect_protocols.DatabaseAssignedColumnSupport,
         dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,
         # The column-type table: `PostgresColumnTypeMixin` answers
-        # `suggested_column_types()` for all twenty-four Python types and
-        # `suggested_extra_column_types()` with nothing of its own, and the
+        # `suggest_column_types().table` for all twenty-four Python types and
+        # `suggest_extra_column_types().table` with nothing of its own, and the
         # dialect composes the mixin. The table is the model layer's source for
         # which column class a field's annotation resolves to, so PostgreSQL
         # declares it rather than leaving it for another dialect to answer.
-        dialect_protocols.ColumnTypeSupport,
+        suggestion_protocols.ColumnTypeSuggestionSupport,
         # Statement forms PostgreSQL implements through its mixins, so the
         # partition test below can classify them rather than leaving them
         # unclassified.
@@ -189,6 +190,25 @@ def get_postgres_protocols():
         dialect_protocols.DqlOrderSupport,
         dialect_protocols.FulltextIndexSupport,
         dialect_protocols.SynonymObjectSupport,
+        # Protocols added by the core refactor that this dialect already
+        # satisfies through its mixins; classify them as supported rather than
+        # leaving them unclassified.
+        dialect_protocols.AsyncIntrospectionSupport,
+        dialect_protocols.DDLColumnSupport,
+        dialect_protocols.DMLSupport,
+        dialect_protocols.DQLSupport,
+        dialect_protocols.DatabaseNameSupport,
+        dialect_protocols.DateTimeSupport,
+        dialect_protocols.ExpressionSupport,
+        dialect_protocols.FunctionCallSupport,
+        dialect_protocols.LpadSupport,
+        dialect_protocols.PredicateSupport,
+        dialect_protocols.PropertyGraphNameSupport,
+        dialect_protocols.RelationSourceSupport,
+        dialect_protocols.RepeatSupport,
+        dialect_protocols.RpadSupport,
+        dialect_protocols.SchemaNameSupport,
+        dialect_protocols.TrimSupport,
     ]
 
     postgres_mro = postgres_dialect.PostgresDialect.__mro__
@@ -301,7 +321,16 @@ class TestProtocolNonOverlap:
             assert len(members) > 0, f"Protocol {name} has no members defined"
 
         excluded_overlaps = {
-
+            # New-core protocols that intentionally restate members of an
+            # existing protocol, so they are not competing interfaces.
+            ('IntrospectionSupport', 'AsyncIntrospectionSupport'),
+            ('AsyncIntrospectionSupport', 'IntrospectionSupport'),
+            ('DDLColumnSupport', 'PostgresConstraintSupport'),
+            ('PostgresConstraintSupport', 'DDLColumnSupport'),
+            ('DDLColumnSupport', 'PostgresIndexSupport'),
+            ('PostgresIndexSupport', 'DDLColumnSupport'),
+            ('DDLColumnSupport', 'PostgresTableSupport'),
+            ('PostgresTableSupport', 'DDLColumnSupport'),
             # The CTAS bind-parameter probe: the backend's table protocol
 
             # derives from the generic CTAS protocol, so both declare it.
@@ -523,7 +552,10 @@ class TestProtocolDerivation:
         """Backend-specific protocol should derive from its generic counterpart."""
         pg_proto = getattr(postgres_protocols, pg_name)
         generic_proto = getattr(dialect_protocols, generic_name)
-        assert issubclass(pg_proto, generic_proto), (
+        # ``issubclass`` refuses protocols carrying non-method members (the
+        # named-object protocols gained a ``separator``), so assert the
+        # derivation directly through the MRO instead.
+        assert generic_proto in pg_proto.__mro__, (
             f"{pg_name} does not derive from {generic_name}"
         )
 

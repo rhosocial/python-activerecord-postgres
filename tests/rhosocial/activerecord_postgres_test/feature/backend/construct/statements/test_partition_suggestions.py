@@ -8,7 +8,7 @@ real expression nodes that render through the dialect's own formatters.
 
 from datetime import date
 
-from rhosocial.activerecord.backend.dialect.protocols import (
+from rhosocial.activerecord.backend.suggestion.protocols import (
     PartitionAddSuggestionSupport,
     PartitionBuildSuggestionSupport,
     PartitionDropSuggestionSupport,

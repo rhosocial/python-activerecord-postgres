@@ -41,6 +41,12 @@ import enum
 import uuid
 from typing import Any, Dict, Optional
 
+from rhosocial.activerecord.backend.suggestion.definitions import (
+    DataTypeSuggestion,
+    ExtraDataTypeSuggestion,
+    SubstituteAdviceSuggestion,
+)
+
 from rhosocial.activerecord.backend.adapters import (
     BitString,
     Geometry,
@@ -243,11 +249,14 @@ POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
 class PostgresDataTypeSuggestionsMixin:
     """PostgreSQL's answer to "what declaration does a bare field get here"."""
 
-    def suggested_data_types(self) -> Dict[Any, Optional[Any]]:
-        return dict(POSTGRES_DATA_TYPE_SUGGESTIONS)
+    def suggest_data_types(self) -> Dict[Any, Optional[Any]]:
+        return DataTypeSuggestion(table=dict(POSTGRES_DATA_TYPE_SUGGESTIONS))
 
-    def suggested_extra_data_types(self) -> Dict[Any, Optional[Any]]:
-        return dict(POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS)
+    def suggest_extra_data_types(self) -> Dict[Any, Optional[Any]]:
+        return ExtraDataTypeSuggestion(table=dict(POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS))
+
+    def suggest_substitute_advice(self, name: str) -> str:
+        return SubstituteAdviceSuggestion(advice="")
 
 
 __all__ = [

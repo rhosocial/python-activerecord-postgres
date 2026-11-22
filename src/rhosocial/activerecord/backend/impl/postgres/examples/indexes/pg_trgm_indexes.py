@@ -5,6 +5,10 @@
 encodes that pairing in an expression node; the dialect only renders nodes.
 """
 
+from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -72,10 +76,10 @@ if expressions:
         dialect=dialect,
         table=Table(dialect, "products"),
         columns=[
-            ColumnDefinition(dialect, "id", dialect.parse_type("SERIAL"), constraints=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ]),
-            ColumnDefinition(dialect, "title", dialect.parse_type("TEXT")),
+            ColumnDefinition(dialect, "title", TextType()),
         ],
     ).to_sql())
     for statement in expressions:

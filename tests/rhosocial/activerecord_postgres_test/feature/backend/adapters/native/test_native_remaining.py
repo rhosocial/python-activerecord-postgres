@@ -35,7 +35,7 @@ class TestRemainingTypes:
     def test_bytea_has_no_adapter_and_passes_through(self, native_backend):
         """Gap: bytes has no adapter; psycopg binds and returns it unchanged."""
         backend = native_backend
-        suggestions = backend.get_default_adapter_suggestions()
+        suggestions = backend.suggest_data_adapters().table
         assert suggestions.get(bytes) is None
         assert _adapter_keys(backend, bytes) == []
 
@@ -62,7 +62,7 @@ class TestRemainingTypes:
     def test_interval_has_no_adapter_and_passes_through(self, native_backend):
         """Gap: timedelta has no adapter; the driver handles interval natively."""
         backend = native_backend
-        suggestions = backend.get_default_adapter_suggestions()
+        suggestions = backend.suggest_data_adapters().table
         assert suggestions.get(timedelta) is None
         assert _adapter_keys(backend, timedelta) == []
 

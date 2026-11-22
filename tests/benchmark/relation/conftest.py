@@ -74,7 +74,6 @@ DECLARATION = Declaration(
     purpose="Directory-owned PostgreSQL database shared by this test group.",
 )
 
-@pytest.fixture(scope="session")
 # def _redis_client():
 #     redis = pytest.importorskip("redis")
 #     try:

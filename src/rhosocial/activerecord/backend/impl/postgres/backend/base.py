@@ -15,6 +15,10 @@ from psycopg.errors import (
     ProgrammingError as PsycopgProgrammingError,
     DeadlockDetected as PsycopgDeadlockError,
 )
+from rhosocial.activerecord.backend.suggestion.definitions import (
+    DataAdapterSuggestion,
+    ExtraDataAdapterSuggestion,
+)
 from rhosocial.activerecord.backend.errors import (
     ConnectionError,
     ConcurrencyError,
@@ -479,7 +483,7 @@ class PostgresBackendMixin:
         rows = [PostgresExplainPlanLine(line=r.get("QUERY PLAN", "")) for r in raw_rows]
         return PostgresExplainResult(raw_rows=raw_rows, sql=sql, duration=duration, rows=rows)
 
-    def get_default_adapter_suggestions(self) -> Dict[Type, Tuple["SQLTypeAdapter", Type]]:
+    def suggest_data_adapters(self) -> Dict[Type, Tuple["SQLTypeAdapter", Type]]:
         """
         [Backend Implementation] Provides default type adapter suggestions for PostgreSQL.
 
@@ -501,7 +505,14 @@ class PostgresBackendMixin:
             mapping conflicts with the base string handling. Users must explicitly
             specify adapters for these types when needed.
         """
-        base = super().get_default_adapter_suggestions()
+        # Core no longer supplies a default table through ``suggest_data_adapters``
+        # (the base hook raises); build the portable baseline the same way the
+        # other backends do, resolved through this backend's adapter registry.
+        from rhosocial.activerecord.backend.adapters.portable import PORTABLE_TYPE_MAPPINGS
+        from rhosocial.activerecord.backend.base.type_adaption import (
+            merge_adapter_suggestions,
+        )
+        base = merge_adapter_suggestions({}, PORTABLE_TYPE_MAPPINGS, self.adapter_registry)
 
         # Define a list of desired Python type to DB driver type mappings.
         # This list reflects types seen in test fixtures and common usage,
@@ -528,9 +539,6 @@ class PostgresBackendMixin:
         from rhosocial.activerecord.backend.adapters.network import MacAddress
         from rhosocial.activerecord.backend.adapters.range import Multirange, Range
         from rhosocial.activerecord.backend.adapters.vector import Vector
-        from rhosocial.activerecord.backend.base.type_adaption import (
-            merge_adapter_suggestions,
-        )
         from ..type_values.text_search import PostgresTsVector, PostgresTsQuery
         from ..type_values.monetary import PostgresMoney
         from ..type_values.network_address import PostgresMacaddr, PostgresMacaddr8
@@ -634,7 +642,11 @@ class PostgresBackendMixin:
                     "Suggestion will not be provided for this type.",
                 )
 
-        return suggestions
+        return DataAdapterSuggestion(table=suggestions)
+
+    def suggest_extra_data_adapters(self) -> Dict[Type, Tuple["SQLTypeAdapter", Type]]:
+        """No backend-owned extra adapter types."""
+        return ExtraDataAdapterSuggestion(table={})
 
 
 class PostgresConcurrencyMixin:

@@ -6,6 +6,10 @@ expression objects, and the ``PostgresIndexType`` enum that constrains the
 ``USING`` method (including extension methods).
 """
 
+from rhosocial.activerecord.backend.expression.types import IntegerType, TextType, TimestampType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresArrayType, PostgresSerialType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -48,16 +52,16 @@ backend.execute(*CreateTableStatement(
     dialect=dialect,
     table=Table(dialect, "orders"),
     columns=[
-        ColumnDefinition(dialect, "id", dialect.parse_type("SERIAL"), constraints=[
+        ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
             ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ]),
-        ColumnDefinition(dialect, "customer_id", dialect.parse_type("INTEGER"), constraints=[
+        ColumnDefinition(dialect, "customer_id", IntegerType(), constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ]),
-        ColumnDefinition(dialect, "email", dialect.parse_type("TEXT")),
-        ColumnDefinition(dialect, "status", dialect.parse_type("TEXT")),
-        ColumnDefinition(dialect, "created_at", dialect.parse_type("TIMESTAMP")),
-        ColumnDefinition(dialect, "tags", dialect.parse_type("TEXT[]")),
+        ColumnDefinition(dialect, "email", TextType()),
+        ColumnDefinition(dialect, "status", TextType()),
+        ColumnDefinition(dialect, "created_at", TimestampType()),
+        ColumnDefinition(dialect, "tags", PostgresArrayType(element_type=TextType(), dimensions=1)),
     ],
 ).to_sql())
 

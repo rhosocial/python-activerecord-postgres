@@ -9,6 +9,10 @@ This example demonstrates:
 5. Verify table structure using introspector
 """
 
+from rhosocial.activerecord.backend.expression.types import BooleanType, DecimalType, TimestampType, VarCharType
+from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
+
+
 # ============================================================
 # SECTION: Setup (necessary for execution, reference only)
 # ============================================================
@@ -51,43 +55,43 @@ backend.execute(sql, params)
 # ============================================================
 # SECTION: Business Logic (the pattern to learn)
 # ============================================================
-# Column data types are built with dialect.parse_type() (DataType instance).
+# Column data types are built by constructing expression types directly.
 columns = [
     ColumnDefinition(
         name='id',
-        data_type=dialect.parse_type('SERIAL'),
+        data_type=PostgresSerialType(),
         constraints=[
             ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='name',
-        data_type=dialect.parse_type('VARCHAR(200)'),
+        data_type=VarCharType(length=200),
         constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='price',
-        data_type=dialect.parse_type('NUMERIC(10,2)'),
+        data_type=DecimalType(precision=10, scale=2),
         constraints=[
             ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
         ],
     ),
     ColumnDefinition(
         name='category',
-        data_type=dialect.parse_type('VARCHAR(100)'),
+        data_type=VarCharType(length=100),
     ),
     ColumnDefinition(
         name='is_active',
-        data_type=dialect.parse_type('BOOLEAN'),
+        data_type=BooleanType(),
         constraints=[
             ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True)),
         ],
     ),
     ColumnDefinition(
         name='created_at',
-        data_type=dialect.parse_type('TIMESTAMP'),
+        data_type=TimestampType(),
         constraints=[
             ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, F.current_timestamp(dialect))),
         ],
