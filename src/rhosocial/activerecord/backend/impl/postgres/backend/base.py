@@ -538,7 +538,7 @@ class PostgresBackendMixin:
         from ..type_values.geometric import Point, Line, LineSegment, Box, Path, Polygon, Circle
         from rhosocial.activerecord.backend.adapters.bitstring import BitString
         from rhosocial.activerecord.backend.adapters.geometry import Geometry
-        from rhosocial.activerecord.backend.adapters.network import MacAddress
+        from rhosocial.activerecord.backend.adapters.network import IPAddress, MacAddress
         from rhosocial.activerecord.backend.adapters.range import Multirange, Range
         from rhosocial.activerecord.backend.adapters.vector import Vector
         from ..type_values.text_search import PostgresTsVector, PostgresTsQuery
@@ -628,6 +628,7 @@ class PostgresBackendMixin:
             (Range, str),  # PostgreSQL range literal
             (Multirange, str),  # PostgreSQL multirange literal
             (MacAddress, str),  # canonical lowercase colon text
+            (IPAddress, str),  # canonical IPv4/IPv6 text for inet columns
             # Note: PostgresXML and PostgresBitString are NOT included here
             # because they both map to str, which conflicts with base string handling.
             # Users must explicitly specify adapters for these types.

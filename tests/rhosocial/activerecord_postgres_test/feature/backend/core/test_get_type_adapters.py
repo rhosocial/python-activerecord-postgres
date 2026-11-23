@@ -9,6 +9,7 @@ classes once each, and it answers in the same order every time.
 
 import pytest
 
+from rhosocial.activerecord.backend.adapters import IPAddress
 from rhosocial.activerecord.backend.impl.postgres.backend import (
     AsyncPostgresBackend,
     PostgresBackend,
@@ -54,6 +55,16 @@ class TestGetTypeAdapters:
         suggestions = backend.suggest_data_adapters().table
         assert isinstance(suggestions, dict)
         assert suggestions
+
+    def test_ipaddress_maps_to_text_carrier(self, backend):
+        """Neutral IPAddress binds as text for ``inet`` columns on the write path."""
+        suggestions = backend.suggest_data_adapters().table
+        assert IPAddress in suggestions, "missing suggestion for IPAddress"
+        adapter, target_type = suggestions[IPAddress]
+        assert target_type is str
+        value = IPAddress.parse("192.0.2.1")
+        assert adapter.from_database(adapter.to_database(value, str), IPAddress) == value
+
 
 def test_every_extra_value_class_has_an_adapter(backend):
     """An extra suggestion is only usable if the value can also be adapted.
