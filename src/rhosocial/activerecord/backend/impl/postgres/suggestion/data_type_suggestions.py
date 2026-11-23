@@ -48,8 +48,10 @@ from rhosocial.activerecord.backend.suggestion.definitions import (
 )
 
 from rhosocial.activerecord.backend.adapters import (
+    AwareDatetime,
     BitString,
     Geometry,
+    IPAddress,
     MacAddress,
     Multirange,
     Range,
@@ -69,6 +71,7 @@ from rhosocial.activerecord.backend.expression.types import (
     TimeType,
     XmlType,
     TimestampType,
+    TimestampTzType,
     UUIDType,
     VarCharType,
 )
@@ -78,6 +81,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresCircleType,
     PostgresGeometryType,
     PostgresHstoreType,
+    PostgresInetType,
     PostgresJsonPathType,
     PostgresLineSegmentType,
     PostgresLineType,
@@ -168,6 +172,7 @@ POSTGRES_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
     bytearray: BlobType(),
     datetime.date: DateType(),
     datetime.time: TimeType(),
+    AwareDatetime: TimestampTzType(precision=3),
     datetime.datetime: TimestampType(precision=3),
     datetime.timedelta: IntervalType(),
     uuid.UUID: UUIDType(),
@@ -188,6 +193,9 @@ POSTGRES_DATA_TYPE_SUGGESTIONS: Dict[Any, Optional[Any]] = {
     Range: TextType(),
     Multirange: TextType(),
     MacAddress: PostgresMacAddrType(),
+    # Native inet holds both IPv4 and IPv6, the honest carrier for a single
+    # IPAddress field (this is the "framework type -> backend native type" case).
+    IPAddress: PostgresInetType(),
 }
 
 

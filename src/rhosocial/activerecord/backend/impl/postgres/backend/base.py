@@ -286,6 +286,7 @@ class PostgresBackendMixin:
             PostgresMultirangeAdapter,
             PostgresNeutralBitStringAdapter,
             PostgresNeutralGeometryAdapter,
+            PostgresNeutralIPAddressAdapter,
             PostgresNeutralMacAddressAdapter,
             PostgresNeutralRangeAdapter,
             PostgresNeutralVectorAdapter,
@@ -358,6 +359,7 @@ class PostgresBackendMixin:
             PostgresNeutralBitStringAdapter(),
             PostgresNeutralRangeAdapter(),
             PostgresNeutralMacAddressAdapter(),
+            PostgresNeutralIPAddressAdapter(),
         ]
         for adapter in neutral_adapters:
             for py_type, db_types in adapter.supported_types.items():

@@ -190,7 +190,7 @@ def get_postgres_protocols():
         dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,
         # The column-type table: `PostgresColumnTypeMixin` answers
-        # `suggest_column_types().table` for all twenty-four Python types and
+        # `suggest_column_types().table` for all framework-committed Python types and
         # `suggest_extra_column_types().table` with nothing of its own, and the
         # dialect composes the mixin. The table is the model layer's source for
         # which column class a field's annotation resolves to, so PostgreSQL

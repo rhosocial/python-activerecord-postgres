@@ -57,8 +57,10 @@ import uuid
 from typing import Any, Dict, Optional, Type
 
 from rhosocial.activerecord.backend.adapters import (
+    AwareDatetime,
     BitString,
     Geometry,
+    IPAddress,
     MacAddress,
     Multirange,
     Range,
@@ -78,6 +80,7 @@ from rhosocial.activerecord.backend.expression.column_types import (
     GeometryColumn,
     IntegerColumn,
     IntervalColumn,
+    IPAddressColumn,
     JSONColumn,
     MacAddressColumn,
     MultirangeColumn,
@@ -175,6 +178,7 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     # follows the session time zone -- §8.1 `datetime tz` row).
     datetime.date: TimestampColumn,
     datetime.time: TimestampColumn,
+    AwareDatetime: TimestampColumn,
     datetime.datetime: TimestampColumn,
     # PostgreSQL has a real `interval` type -- §1 spells it `INTERVAL` where
     # eight backends have no answer at all -- and it is not a number:
@@ -244,6 +248,7 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
     Range: RangeColumn,
     Multirange: MultirangeColumn,
     MacAddress: MacAddressColumn,
+    IPAddress: IPAddressColumn,
 }
 
 

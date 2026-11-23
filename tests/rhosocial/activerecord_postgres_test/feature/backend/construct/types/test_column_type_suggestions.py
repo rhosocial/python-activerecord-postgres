@@ -5,7 +5,7 @@ The protocol's obligation on a backend is three things
 (``backend/dialect/mixins/column_type.py``, the contract list in
 ``testsuite/feature/query/typed_column/column_helpers.COMMON_TYPES``):
 
-1. **Answer every entry.** All twenty-four of the closed list, none of them
+1. **Answer every entry.** All framework-committed types of the closed list, none of them
    silently absent. A hole is a lie told to the model layer.
 2. **Say so where this backend differs.** Here: native arrays for the four
    sequence entries, where seven backends carry a JSON document.
@@ -107,7 +107,7 @@ def test_the_table_has_no_entry_beyond_the_protocol(dialect):
 
 
 def test_the_backend_declares_its_own_python_types_separately(dialect):
-    """The framework's twenty-four stay in their own table.
+    """The framework-committed types stay in their own table.
 
     PostgreSQL models value classes beyond them (``Point``, ``PostgresXML``,
     ``PostgresMoney``, the object identifiers), and the protocol reports those

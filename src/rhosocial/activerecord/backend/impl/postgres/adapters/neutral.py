@@ -41,6 +41,8 @@ from rhosocial.activerecord.backend.adapters import (
     BitStringAdapterBase,
     Geometry,
     GeometryAdapterBase,
+    IPAddress,
+    IPAddressAdapterBase,
     MacAddress,
     MacAddressAdapterBase,
     Multirange,
@@ -690,9 +692,31 @@ class PostgresNeutralMacAddressAdapter(MacAddressAdapterBase):
         )
 
 
+class PostgresNeutralIPAddressAdapter(IPAddressAdapterBase):
+    """Encode neutral IP addresses as text accepted by PostgreSQL ``inet``.
+
+    The canonical text form is the standard input for an ``inet`` column and
+    covers both IPv4 and IPv6. Psycopg may hand back an ``ipaddress`` object, a
+    backend wrapper, or text; all are accepted on decode.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.register_type(IPAddress, str)
+
+    def _encode(self, ip_addr: IPAddress, target_type: Type, options: Optional[Dict[str, Any]]) -> str:
+        if target_type is not str:
+            raise TypeError("PostgreSQL inet binds as text; target_type must be str")
+        return str(ip_addr)
+
+    def _decode(self, value: Any, options: Optional[Dict[str, Any]]) -> IPAddress:
+        return IPAddress.parse(value)
+
+
 __all__ = [
     "PostgresNeutralBitStringAdapter",
     "PostgresNeutralGeometryAdapter",
+    "PostgresNeutralIPAddressAdapter",
     "PostgresNeutralMacAddressAdapter",
     "PostgresNeutralRangeAdapter",
     "PostgresNeutralVectorAdapter",

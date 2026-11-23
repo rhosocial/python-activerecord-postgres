@@ -91,6 +91,7 @@ from .hstore import PostgresHstoreAdapter
 from .neutral import (
     PostgresNeutralBitStringAdapter,
     PostgresNeutralGeometryAdapter,
+    PostgresNeutralIPAddressAdapter,
     PostgresNeutralMacAddressAdapter,
     PostgresNeutralRangeAdapter,
     PostgresNeutralVectorAdapter,
@@ -138,6 +139,7 @@ __all__ = [
     # Neutral value adapters
     "PostgresNeutralBitStringAdapter",
     "PostgresNeutralGeometryAdapter",
+    "PostgresNeutralIPAddressAdapter",
     "PostgresNeutralMacAddressAdapter",
     "PostgresNeutralRangeAdapter",
     "PostgresNeutralVectorAdapter",
