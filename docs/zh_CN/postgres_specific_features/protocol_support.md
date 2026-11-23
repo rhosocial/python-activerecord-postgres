@@ -2,6 +2,14 @@
 
 本文档提供了 PostgreSQL 后端支持的 SQL 方言协议的完整矩阵，以及特定版本的功能支持。
 
+> **实时查询**：下表的静态矩阵用于阅读；当前连接实际支持情况请以 CLI 的 `info` 命令为准：
+> `rhosocial-activerecord-postgres info -o json`（连接可选，未连接时仍按构造出的方言离线计算）。
+> 其 `capabilities` 段按协议分组，每项含 `supported`/`total`/`percentage` 及 `origin`；
+> `origin` 取值 `reuse`（原样继承 core）、`override`（core 定义、后端覆写）、
+> `proprietary`（后端专有）、`not-supported`（方言未实现该协议）。
+> `suggestions` 段列出方言实现的所有 `*SuggestionSupport` 协议。
+> `server.variables` 来自 `pg_settings`。`protocols` 是 `capabilities` 的兼容别名。
+
 ## 概述
 
 PostgreSQL 方言实现了 `rhosocial.activerecord.backend.dialect.protocols` 模块中的众多协议，为数据库特定功能提供细粒度的特性检测和优雅的错误处理。
