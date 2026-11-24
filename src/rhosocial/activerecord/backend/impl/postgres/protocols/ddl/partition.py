@@ -34,6 +34,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Partition bounds expression (PG 12+)
     - Partitionwise join/aggregate (PG 11+)
     - Primary key on a partitioned table (PG 11+)
+    - MERGE PARTITIONS (PG 14+)
+    - SPLIT PARTITION (PG 17+)
 
     Official Documentation:
     - Partitioning: https://www.postgresql.org/docs/current/ddl-partitioning.html
@@ -49,6 +51,8 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Partition bounds expression: PostgreSQL 12+
     - Partitionwise join: PostgreSQL 11+
     - Partitionwise aggregate: PostgreSQL 11+
+    - MERGE PARTITIONS: PostgreSQL 14+
+    - SPLIT PARTITION: PostgreSQL 17+
     """
 
     def supports_hash_partitioning(self) -> bool:
@@ -136,7 +140,23 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
         ...
 
     def supports_reorganize_partition(self) -> bool:
-        """Whether REORGANIZE PARTITION is supported."""
+        """Whether MySQL-style REORGANIZE PARTITION is supported."""
+        ...
+
+    def supports_merge_partition(self) -> bool:
+        """Whether ``ALTER TABLE ... MERGE PARTITIONS`` is supported.
+
+        Native PostgreSQL feature introduced in 14. When the server version is
+        unknown the answer is conservatively False.
+        """
+        ...
+
+    def supports_split_partition(self) -> bool:
+        """Whether ``ALTER TABLE ... SPLIT PARTITION`` is supported.
+
+        Native PostgreSQL feature introduced in 17. When the server version is
+        unknown the answer is conservatively False.
+        """
         ...
 
     def supports_attach_partition(self) -> bool:

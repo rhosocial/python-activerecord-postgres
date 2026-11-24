@@ -155,14 +155,39 @@ class PostgresPartitionMixin:
         return self.supports_table_partitioning()
 
     def supports_reorganize_partition(self) -> bool:
-        """Check if REORGANIZE PARTITION is supported.
+        """Check if MySQL-style REORGANIZE PARTITION is supported.
 
-        PostgreSQL does not support MySQL-style REORGANIZE PARTITION operation.
+        PostgreSQL has no MySQL-style ``REORGANIZE PARTITION`` statement. Its
+        native equivalents are ``ALTER TABLE ... MERGE PARTITIONS`` (14+) and
+        ``ALTER TABLE ... SPLIT PARTITION`` (17+), reported separately by
+        :meth:`supports_merge_partition` and :meth:`supports_split_partition`.
 
         Returns:
             Always False.
         """
         return False
+
+    def supports_merge_partition(self) -> bool:
+        """Check if ``ALTER TABLE ... MERGE PARTITIONS`` is supported.
+
+        PostgreSQL added ``MERGE PARTITIONS`` in 14. When the server version is
+        not known, the answer is conservatively False.
+
+        Returns:
+            True if PostgreSQL version >= 14.
+        """
+        return self.version_at_least((14, 0, 0))
+
+    def supports_split_partition(self) -> bool:
+        """Check if ``ALTER TABLE ... SPLIT PARTITION`` is supported.
+
+        PostgreSQL added ``SPLIT PARTITION`` in 17. When the server version is
+        not known, the answer is conservatively False.
+
+        Returns:
+            True if PostgreSQL version >= 17.
+        """
+        return self.version_at_least((17, 0, 0))
 
     def supports_attach_partition(self) -> bool:
         """Check if ATTACH PARTITION is supported.
