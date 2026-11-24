@@ -12,6 +12,9 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.schema.differ import SchemaDiffer
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
+from rhosocial.activerecord.backend.suggestion.protocols import (
+    CreateTableLayoutSuggestionSupport,
+)
 from rhosocial.activerecord.backend.dialect.mixins import (
     # Named objects. Each *NameMixin supplies one ``format_<kind>_object`` and
     # subclasses NamespaceMixin, so each has to precede it in the base list.
@@ -265,6 +268,7 @@ from .mixins import (
     PostgresLiteralValueMixin,
 )
 from .suggestion import (
+    PostgresCreateTableLayoutSuggestionMixin,
     PostgresDataTypeSuggestionsMixin,
     PostgresStringConcatenationSuggestionMixin,
     PostgresIntegerAutoIncrementColumnSuggestionMixin,
@@ -384,6 +388,7 @@ class PostgresDialect(
     # Backend suggestions first: no core mixin may shadow their answers. The
     # eight partition answer mixins are one per protocol; their shared helper
     # base is listed once, last among the suggestions, so C3 stays unambiguous.
+    PostgresCreateTableLayoutSuggestionMixin,
     PostgresPartitionBuildSuggestionMixin,
     PostgresPartitionTableDropSuggestionMixin,
     PostgresPartitionTableAlterSuggestionMixin,
@@ -799,6 +804,8 @@ class PostgresDialect(
     TypeObjectSupport,
     RoutineObjectSupport,
     NamespaceSupport,
+    # Suggestion protocol (relocated to backend.suggestion.protocols)
+    CreateTableLayoutSuggestionSupport,
     # DataType Support Protocol
     DataTypeSupport,
     # New feature protocols

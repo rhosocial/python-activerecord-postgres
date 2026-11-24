@@ -40,7 +40,7 @@ from rhosocial.activerecord.base import (
     CollationAttribute,
     DDLAnnotation,
     DDLAnnotationHandler,
-    DDLSource,
+    ModelDDLDeclaration,
     IdentityAttribute,
     UseColumn,
     UseColumnAttributes,
@@ -261,7 +261,7 @@ class AsyncSingleKey(SingleKeyDeclarations, AsyncActiveRecord):
 
 def test_models_satisfy_ddl_source_and_preserve_field_order():
     for model in (SyncDDLSource, AsyncDDLSource):
-        assert isinstance(model, DDLSource)
+        assert isinstance(model, ModelDDLDeclaration)
         assert model.ddl_field_names() == MODEL_FIELDS
         assert model.field_python_type("tenant_id") is str
         assert model.field_is_optional("optional_note") is True
