@@ -23,7 +23,6 @@ from rhosocial.activerecord.base.derivation import integer_auto_increment_parts 
 
 import pytest
 
-from rhosocial.activerecord.base import IdentityAttribute
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.execution_testing import (
     ExecutionOutcome,
@@ -128,7 +127,7 @@ def _identity_table(dialect, table_name, **identity_kwargs):
                 dialect,
                 "id",
                 IntegerType(dialect=dialect),
-                attributes=[IdentityAttribute(**identity_kwargs)],
+                attributes=[IdentityClause(dialect, **identity_kwargs)],
             )
         ],
     )
