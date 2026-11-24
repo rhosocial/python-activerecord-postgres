@@ -1,10 +1,11 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/dialect/test_alter_table_if_exists.py
 """Tests for ALTER TABLE IF [NOT] EXISTS qualifier rendering on PostgreSQL.
 
-PostgreSQL supports the vendor extensions since 9.6:
-  - ADD COLUMN IF NOT EXISTS
-  - DROP COLUMN IF EXISTS
-  - DROP CONSTRAINT IF EXISTS
+PostgreSQL takes these vendor extensions:
+  - ADD COLUMN IF NOT EXISTS (added in 9.6)
+  - DROP COLUMN IF EXISTS (present in the 9.5 synopsis, so every supported
+    version has it)
+  - DROP CONSTRAINT IF EXISTS (same as DROP COLUMN)
 
 The qualifiers are opt-in via ``if_not_exists`` / ``if_exists`` on the
 ``AddColumnAction`` / ``DropColumnAction`` / ``DropTableConstraintAction``

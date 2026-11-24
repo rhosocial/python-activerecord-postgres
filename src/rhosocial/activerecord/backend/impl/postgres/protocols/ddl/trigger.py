@@ -78,9 +78,12 @@ class PostgresTriggerSupport(
         ...
 
     def supports_trigger_if_not_exists(self) -> bool:
-        """Whether CREATE TRIGGER IF NOT EXISTS is supported.
+        """Whether ``CREATE TRIGGER IF NOT EXISTS`` is supported.
 
-        Native feature, PostgreSQL 9.5+.
+        Not a PostgreSQL clause, on any version: the ``CREATE TRIGGER``
+        synopsis is ``CREATE [ OR REPLACE ] [ CONSTRAINT ] TRIGGER ...``, and
+        this probe answers ``False``. ``CREATE OR REPLACE TRIGGER``
+        (PostgreSQL 14+) is a different clause, carried by a different field.
         """
         ...
 

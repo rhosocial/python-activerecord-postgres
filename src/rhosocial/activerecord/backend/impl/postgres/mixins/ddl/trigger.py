@@ -1,6 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl/trigger.py
 from typing import Tuple
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.objects import Table, Trigger
 
 
@@ -40,8 +41,24 @@ class PostgresTriggerMixin:
         return True
 
     def supports_trigger_if_not_exists(self) -> bool:
-        """IF NOT EXISTS is supported since PostgreSQL 9.5."""
-        return self.version_at_least((9, 5, 0))
+        """PostgreSQL has no ``CREATE TRIGGER IF NOT EXISTS`` clause.
+
+        The ``CREATE TRIGGER`` synopsis is ``CREATE [ OR REPLACE ]
+        [ CONSTRAINT ] TRIGGER name ...`` on every version up to and
+        including PostgreSQL 18; no release ever carried ``IF NOT EXISTS``.
+        ``OR REPLACE`` (PostgreSQL 14+) is a different clause and a different
+        expression field, not a spelling of this one.
+        """
+        return False
+
+    def supports_trigger_if_exists(self) -> bool:
+        """``DROP TRIGGER IF EXISTS`` is supported on every supported version.
+
+        The synopsis is ``DROP TRIGGER [ IF EXISTS ] name ON table_name
+        [ CASCADE | RESTRICT ]`` in the PostgreSQL 9.6 documentation (this
+        backend's baseline) and in the current documentation.
+        """
+        return True
 
     def format_create_trigger_statement(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TRIGGER statement (PostgreSQL syntax).
@@ -50,7 +67,8 @@ class PostgresTriggerMixin:
 
         Supported expression attributes:
 
-        - ``expr.if_not_exists`` — add ``IF NOT EXISTS`` (PG 9.5+).
+        - ``expr.if_not_exists`` — refused: PostgreSQL's ``CREATE TRIGGER``
+          synopsis has no ``IF NOT EXISTS`` clause on any version.
         - ``expr.trigger`` — the trigger being created, which renders its own name.
         - ``expr.timing`` — ``BEFORE``, ``AFTER``, or ``INSTEAD OF``.
         - ``expr.events`` — list of event types (``INSERT``, ``UPDATE``, ``DELETE``, ``TRUNCATE``).
@@ -68,11 +86,21 @@ class PostgresTriggerMixin:
         Returns:
             Tuple of (SQL string, params tuple)
 
+        Raises:
+            UnsupportedFeatureError: ``expr.if_not_exists`` is set. PostgreSQL
+                has no ``CREATE TRIGGER IF NOT EXISTS`` clause, so the
+                statement is refused rather than rendered without the
+                qualifier the caller asked for.
         """
         parts = ["CREATE TRIGGER"]
 
-        if expr.if_not_exists and self.supports_trigger_if_not_exists():
-            parts.append("IF NOT EXISTS")
+        if expr.if_not_exists:
+            raise UnsupportedFeatureError(
+                self.name,
+                "CREATE TRIGGER IF NOT EXISTS",
+                f"{self.name} has no CREATE TRIGGER IF NOT EXISTS clause; "
+                f"the CREATE TRIGGER synopsis takes OR REPLACE instead.",
+            )
 
         parts.append(expr.trigger.to_sql()[0])
 
@@ -123,6 +151,8 @@ class PostgresTriggerMixin:
                 ``expr.table`` is set and is not a :class:`Table`. The table slot
                 is optional -- PostgreSQL's ``DROP TRIGGER`` can name the trigger
                 alone -- so its check is on kind, not on presence.
+            UnsupportedFeatureError: ``expr.if_exists`` is set and the probe says
+                the dialect has no ``IF EXISTS`` clause.
         """
         if not isinstance(expr.trigger, Trigger):
             raise TypeError(
@@ -137,6 +167,12 @@ class PostgresTriggerMixin:
         parts = ["DROP TRIGGER"]
 
         if expr.if_exists:
+            if not self.supports_trigger_if_exists():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "DROP TRIGGER IF EXISTS",
+                    f"{self.name} does not support DROP TRIGGER IF EXISTS.",
+                )
             parts.append("IF EXISTS")
 
         parts.append(expr.trigger.to_sql()[0])

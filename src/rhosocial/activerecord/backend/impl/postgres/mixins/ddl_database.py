@@ -35,12 +35,23 @@ class PostgresDatabaseMixin:
         return True
 
     def supports_database_if_not_exists(self) -> bool:
-        """PostgreSQL 13+ supports IF NOT EXISTS."""
-        return self.version_at_least((13, 0, 0))
+        """PostgreSQL has no ``CREATE DATABASE IF NOT EXISTS`` clause.
+
+        The ``CREATE DATABASE`` synopsis has no such qualifier in the
+        PostgreSQL 13 documentation, where the probe used to claim it, nor in
+        the current documentation. ``CREATE DATABASE`` is not idempotent.
+        """
+        return False
 
     def supports_database_if_exists(self) -> bool:
-        """PostgreSQL 13+ supports IF EXISTS."""
-        return self.version_at_least((13, 0, 0))
+        """``DROP DATABASE IF EXISTS`` is supported on every supported version.
+
+        The synopsis is ``DROP DATABASE [ IF EXISTS ] name`` in the
+        PostgreSQL 9.6 documentation (this backend's baseline) and in the
+        current documentation. The earlier ``13+`` floor was wrong and made
+        every supported server below 13 drop the qualifier silently.
+        """
+        return True
 
     def supports_database_owner(self) -> bool:
         """PostgreSQL supports OWNER TO."""
@@ -67,8 +78,15 @@ class PostgresDatabaseMixin:
         return True
 
     def supports_database_force_drop(self) -> bool:
-        """PostgreSQL supports DROP DATABASE WITH (FORCE)."""
-        return True
+        """``DROP DATABASE ... WITH (FORCE)`` arrived in PostgreSQL 13.
+
+        The PostgreSQL 9.6 synopsis is ``DROP DATABASE [ IF EXISTS ] name``;
+        the ``[ [ WITH ] ( option [, ...] ) ]`` tail with ``FORCE`` appears
+        from 13 on. Versions 9.6 through 12 are supported by this backend and
+        do not have it, so this answer must be version-gated rather than
+        unconditional.
+        """
+        return self.version_at_least((13, 0, 0))
 
     def format_create_database_statement(
         self, expr: CreateDatabaseStatement
@@ -83,11 +101,20 @@ class PostgresDatabaseMixin:
 
         Raises:
             TypeError: ``expr.database`` is not a :class:`Database`.
+            UnsupportedFeatureError: ``expr.if_not_exists`` is set. PostgreSQL
+                has no ``CREATE DATABASE IF NOT EXISTS`` clause, so the
+                qualifier is refused by name rather than silently dropped.
         """
         if not isinstance(expr.database, Database):
             raise TypeError(
                 f"CreateDatabaseStatement.database must be a Database, "
                 f"got {type(expr.database).__name__}"
+            )
+        if expr.if_not_exists:
+            raise UnsupportedFeatureError(
+                self.name,
+                "CREATE DATABASE IF NOT EXISTS",
+                f"{self.name} has no CREATE DATABASE IF NOT EXISTS clause.",
             )
         parts = ["CREATE DATABASE"]
         parts.append(expr.database.to_sql()[0])
@@ -112,6 +139,10 @@ class PostgresDatabaseMixin:
 
         Raises:
             TypeError: ``expr.database`` is not a :class:`Database`.
+            UnsupportedFeatureError: ``expr.if_exists`` is set and the probe
+                says the dialect has no ``DROP DATABASE IF EXISTS`` clause;
+                or ``expr.force`` is set on a version below 13, which has no
+                ``WITH (FORCE)`` tail.
         """
         if not isinstance(expr.database, Database):
             raise TypeError(
@@ -119,10 +150,22 @@ class PostgresDatabaseMixin:
                 f"got {type(expr.database).__name__}"
             )
         parts = ["DROP DATABASE"]
-        if expr.if_exists and self.supports_database_if_exists():
+        if expr.if_exists:
+            if not self.supports_database_if_exists():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "DROP DATABASE IF EXISTS",
+                    f"{self.name} does not support DROP DATABASE IF EXISTS.",
+                )
             parts.append("IF EXISTS")
         parts.append(expr.database.to_sql()[0])
-        if expr.force and self.supports_database_force_drop():
+        if expr.force:
+            if not self.supports_database_force_drop():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    "DROP DATABASE WITH (FORCE)",
+                    f"{self.name} has no WITH (FORCE) tail before PostgreSQL 13.",
+                )
             parts.append("WITH (FORCE)")
         return " ".join(parts), ()
 

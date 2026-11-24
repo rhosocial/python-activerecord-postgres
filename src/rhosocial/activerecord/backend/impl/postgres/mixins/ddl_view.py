@@ -3,6 +3,7 @@
 
 from typing import Tuple, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.objects import View
 
 if TYPE_CHECKING:
@@ -19,12 +20,16 @@ class PostgresViewMixin:
         return True
 
     def supports_if_not_exists_view(self) -> bool:
-        """PostgreSQL does not support IF NOT EXISTS for views."""
+        """PostgreSQL has no ``CREATE VIEW IF NOT EXISTS`` clause.
+
+        The synopsis is ``CREATE [ OR REPLACE ] [ TEMP | TEMPORARY ]
+        [ RECURSIVE ] VIEW ...``. ``OR REPLACE`` is the available way to
+        tolerate an existing view, and it is a different statement form.
+        """
         return False
 
     def supports_temporary_view(self) -> bool:
         return True
-
 
     def supports_create_view_bind_parameters(self) -> bool:
         """PostgreSQL refuses bind parameters in a view body.
@@ -34,7 +39,15 @@ class PostgresViewMixin:
         later, where a bound value has no meaning.
         """
         return False
+
     def supports_if_exists_view(self) -> bool:
+        """``DROP VIEW IF EXISTS`` is supported on every supported version.
+
+        The synopsis is ``DROP VIEW [ IF EXISTS ] name [, ...]
+        [ CASCADE | RESTRICT ]`` in the PostgreSQL 9.6 documentation (this
+        backend's baseline) and in the current documentation. The
+        ``DropViewMixin`` formatter renders the clause through this probe.
+        """
         return True
 
     def supports_view_check_option(self) -> bool:
@@ -57,6 +70,7 @@ class PostgresViewMixin:
 
         - ``expr.temporary`` — add ``TEMPORARY``.
         - ``expr.replace`` — add ``OR REPLACE``.
+        - ``expr.if_not_exists`` — refused: PostgreSQL has no such clause.
         - ``expr.view`` — the view being created, which renders its own name.
         - ``expr.column_aliases`` — optional list of column aliases.
         - ``expr.query`` — source SELECT expression.
@@ -73,11 +87,21 @@ class PostgresViewMixin:
                 Another object kind would have had its own name rendered as the
                 view's, because ``to_sql`` dispatches on the object's own
                 ``format_method``.
+            UnsupportedFeatureError: ``expr.if_not_exists`` is set. PostgreSQL
+                has no ``CREATE VIEW IF NOT EXISTS`` clause, so the qualifier
+                is refused by name rather than silently dropped.
         """
         if not isinstance(expr.view, View):
             raise TypeError(
                 f"CreateViewStatement.view must be a View, "
                 f"got {type(expr.view).__name__}"
+            )
+        if expr.if_not_exists:
+            raise UnsupportedFeatureError(
+                self.name,
+                "CREATE VIEW IF NOT EXISTS",
+                f"{self.name} has no CREATE VIEW IF NOT EXISTS clause; "
+                f"CREATE OR REPLACE VIEW is the available alternative.",
             )
         parts = ["CREATE"]
 

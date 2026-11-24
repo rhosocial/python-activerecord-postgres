@@ -12,10 +12,11 @@ from typing import Tuple
 class PostgresAlterColumnModifierMixin:
     """PostgreSQL IF [NOT] EXISTS qualifiers for ALTER TABLE actions.
 
-    PostgreSQL has supported these qualifiers since 9.6:
-      - ADD [COLUMN] [IF NOT EXISTS]
-      - DROP [COLUMN] [IF EXISTS]
-      - DROP CONSTRAINT [IF EXISTS]
+    PostgreSQL takes these qualifiers:
+      - ADD [COLUMN] [IF NOT EXISTS] (added in 9.6)
+      - DROP [COLUMN] [IF EXISTS] (present in the 9.5 synopsis; every
+        version this backend supports has it)
+      - DROP CONSTRAINT [IF EXISTS] (same as DROP COLUMN)
 
     The qualifiers are vendor extensions (not in ISO/IEC 9075-2 §11.10);
     applications opt in by passing ``if_not_exists`` / ``if_exists`` on
@@ -25,15 +26,15 @@ class PostgresAlterColumnModifierMixin:
     """
 
     def supports_add_column_if_not_exists(self) -> bool:
-        """``ADD COLUMN IF NOT EXISTS`` is supported since PostgreSQL 9.6."""
-        return True
+        """``ADD COLUMN IF NOT EXISTS`` arrived in PostgreSQL 9.6."""
+        return self.version_at_least((9, 6, 0))
 
     def supports_drop_column_if_exists(self) -> bool:
-        """``DROP COLUMN IF EXISTS`` is supported since PostgreSQL 9.6."""
+        """``DROP COLUMN IF EXISTS`` is on every version this backend supports."""
         return True
 
     def supports_drop_constraint_if_exists(self) -> bool:
-        """``DROP CONSTRAINT IF EXISTS`` is supported since PostgreSQL 9.6."""
+        """``DROP CONSTRAINT IF EXISTS`` is on every version this backend supports."""
         return True
 
     def format_add_column_action(self, expr) -> Tuple[str, tuple]:

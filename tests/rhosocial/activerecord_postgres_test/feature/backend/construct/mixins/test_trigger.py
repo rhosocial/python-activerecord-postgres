@@ -64,14 +64,24 @@ class TestTriggerFeatureDetection:
         assert dialect.supports_instead_of_trigger() is True
 
     def test_supports_trigger_if_not_exists_pg9(self):
-        """PostgreSQL 9.4 does not support IF NOT EXISTS."""
-        dialect = PostgresDialect((9, 4, 0))
+        """PostgreSQL 9.5 has no CREATE TRIGGER IF NOT EXISTS clause."""
+        dialect = PostgresDialect((9, 5, 0))
         assert dialect.supports_trigger_if_not_exists() is False
 
-    def test_supports_trigger_if_not_exists_pg95(self):
-        """PostgreSQL 9.5 supports IF NOT EXISTS."""
-        dialect = PostgresDialect((9, 5, 0))
-        assert dialect.supports_trigger_if_not_exists() is True
+    def test_supports_trigger_if_not_exists_pg18(self):
+        """The clause never existed, so PostgreSQL 18 answers False too."""
+        dialect = PostgresDialect((18, 0, 0))
+        assert dialect.supports_trigger_if_not_exists() is False
+
+    def test_supports_trigger_if_exists_pg96(self):
+        """DROP TRIGGER IF EXISTS is in the PostgreSQL 9.6 synopsis."""
+        dialect = PostgresDialect((9, 6, 0))
+        assert dialect.supports_trigger_if_exists() is True
+
+    def test_supports_trigger_if_exists_pg18(self):
+        """DROP TRIGGER IF EXISTS is still in the PostgreSQL 18 synopsis."""
+        dialect = PostgresDialect((18, 0, 0))
+        assert dialect.supports_trigger_if_exists() is True
 
 
 class TestFormatCreateTriggerStatement:
@@ -168,7 +178,16 @@ class TestFormatCreateTriggerStatement:
         assert "FOR EACH STATEMENT" in sql
 
     def test_create_trigger_if_not_exists(self):
-        """Test CREATE TRIGGER IF NOT EXISTS."""
+        """CREATE TRIGGER IF NOT EXISTS is refused, not rendered.
+
+        PostgreSQL's CREATE TRIGGER synopsis has no such clause on any
+        version; dropping it silently would hand back a statement the caller
+        did not ask for.
+        """
+        from rhosocial.activerecord.backend.dialect.exceptions import (
+            UnsupportedFeatureError,
+        )
+
         dialect = PostgresDialect((14, 0, 0))
         expr = CreateTriggerStatement(
             dialect,
@@ -179,8 +198,8 @@ class TestFormatCreateTriggerStatement:
             function=Function(dialect, 'test_func'),
             if_not_exists=True
         )
-        sql, params = expr.to_sql()
-        assert 'CREATE TRIGGER IF NOT EXISTS "test_trigger"' in sql
+        with pytest.raises(UnsupportedFeatureError, match="CREATE TRIGGER IF NOT EXISTS"):
+            expr.to_sql()
 
     def test_create_trigger_with_referencing_pg10(self):
         """Test CREATE TRIGGER with REFERENCING clause on PG 10."""
@@ -316,3 +335,12 @@ class TestTriggerMixinDirect:
 
     def test_supports_trigger_if_not_exists_low(self):
         assert self._TriggerMixinLow().supports_trigger_if_not_exists() is False
+
+    def test_supports_trigger_if_not_exists_high(self):
+        assert self._TriggerMixin().supports_trigger_if_not_exists() is False
+
+    def test_supports_trigger_if_exists_low(self):
+        assert self._TriggerMixinLow().supports_trigger_if_exists() is True
+
+    def test_supports_trigger_if_exists_high(self):
+        assert self._TriggerMixin().supports_trigger_if_exists() is True

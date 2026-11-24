@@ -1,7 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/dialect/test_ddl_improvements.py
 """Tests for PostgreSQL DDL improvements: capability gating, UnsupportedFeatureError."""
 import pytest
-from unittest.mock import patch, PropertyMock
 
 from rhosocial.activerecord.backend.expression import (
     Column,
@@ -9,7 +8,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateViewStatement,
     DropViewStatement,
 )
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Table, View
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -26,6 +25,31 @@ class TestViewCapabilityGating:
         """PostgreSQL supports DROP VIEW IF EXISTS."""
         dialect = PostgresDialect()
         assert dialect.supports_if_exists_view() is True
+
+    def test_drop_view_if_exists_renders(self):
+        """The probe and the formatter agree: the clause is rendered."""
+        dialect = PostgresDialect((18, 0, 0))
+        expr = DropViewStatement(dialect, view=View(dialect, "v"), if_exists=True)
+        sql, params = expr.to_sql()
+        assert sql == 'DROP VIEW IF EXISTS "v"'
+        assert params == ()
+
+    def test_create_view_if_not_exists_refused(self):
+        """PostgreSQL has no CREATE VIEW IF NOT EXISTS; the clause is refused."""
+        dialect = PostgresDialect((18, 0, 0))
+        query = QueryStatement(
+            dialect,
+            select=[Column(dialect, "id")],
+            from_=Table(dialect, "t"),
+        )
+        expr = CreateViewStatement(
+            dialect,
+            view=View(dialect, "v"),
+            query=query,
+            if_not_exists=True,
+        )
+        with pytest.raises(UnsupportedFeatureError, match="CREATE VIEW IF NOT EXISTS"):
+            expr.to_sql()
 
     def test_drop_view_cascade_supported(self):
         """PostgreSQL supports DROP VIEW CASCADE."""

@@ -20,7 +20,12 @@ class TestTableSupport:
         assert PostgresDialect((9, 5, 0)).supports_if_not_exists_table() is True
 
     def test_supports_if_not_exists_table_pg94(self):
-        assert PostgresDialect((9, 4, 0)).supports_if_not_exists_table() is False
+        """CREATE TABLE IF NOT EXISTS arrived in 9.1, so 9.4 has it."""
+        assert PostgresDialect((9, 4, 0)).supports_if_not_exists_table() is True
+
+    def test_supports_if_not_exists_table_pg90(self):
+        """The 9.0 synopsis has no IF NOT EXISTS."""
+        assert PostgresDialect((9, 0, 0)).supports_if_not_exists_table() is False
 
     def test_supports_if_exists_table(self):
         assert PostgresDialect().supports_if_exists_table() is True
@@ -45,7 +50,7 @@ class TestTableMixinDirect:
             return self.version >= floor
 
     class _LowHost:
-        version = (9, 4, 0)
+        version = (9, 0, 0)
 
         def version_at_least(self, floor):
             return self.version >= floor

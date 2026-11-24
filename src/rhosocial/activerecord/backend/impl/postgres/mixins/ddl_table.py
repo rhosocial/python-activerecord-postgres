@@ -49,8 +49,13 @@ class PostgresTableMixin:
         )
 
     def supports_if_not_exists_table(self) -> bool:
-        """CREATE TABLE IF NOT EXISTS is supported since PostgreSQL 9.5+."""
-        return self.version_at_least((9, 5, 0))
+        """``CREATE TABLE IF NOT EXISTS`` arrived in PostgreSQL 9.1.
+
+        The qualifier is absent from the 9.0 synopsis and present from 9.1
+        on; the earlier ``9.5`` floor here was wrong. Every supported version
+        (9.6 is the baseline) has it.
+        """
+        return self.version_at_least((9, 1, 0))
 
     def supports_if_exists_table(self) -> bool:
         """DROP TABLE IF EXISTS is supported in all versions."""
