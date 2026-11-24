@@ -271,7 +271,7 @@ from .suggestion import (
     PostgresCreateTableLayoutSuggestionMixin,
     PostgresDataTypeSuggestionsMixin,
     PostgresStringConcatenationSuggestionMixin,
-    PostgresIntegerAutoIncrementColumnSuggestionMixin,
+    PostgresGeneratedValueSuggestionMixin,
     PostgresPartitionAddSuggestionMixin,
     PostgresPartitionBuildSuggestionMixin,
     PostgresPartitionDropSuggestionMixin,
@@ -397,7 +397,7 @@ class PostgresDialect(
     PostgresPartitionSplitSuggestionMixin,
     PostgresPartitionMergeSuggestionMixin,
     PostgresPartitionRetentionSuggestionMixin,
-    PostgresIntegerAutoIncrementColumnSuggestionMixin,
+    PostgresGeneratedValueSuggestionMixin,
     PostgresStringConcatenationSuggestionMixin,
     PostgresPartitionSuggestionBase,
     # The bases below come in bundles: a backend mixin, then the core bundle

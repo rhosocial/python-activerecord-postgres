@@ -185,7 +185,7 @@ def get_postgres_protocols():
         dialect_protocols.GraphTableSupport,
         dialect_protocols.ILIKESupport,
         dialect_protocols.AutoIncrementColumnSupport,
-        suggestion_protocols.IntegerAutoIncrementColumnSuggestionSupport,
+        suggestion_protocols.GeneratedValueSuggestionSupport,
         dialect_protocols.DatabaseAssignedColumnSupport,
         dialect_protocols.IdentityColumnSupport,
         dialect_protocols.GeneratedColumnSupport,

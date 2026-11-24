@@ -19,9 +19,7 @@ from .general_suggestions import (
     PostgresCreateTableLayoutSuggestionMixin,
     PostgresStringConcatenationSuggestionMixin,
 )
-from .integer_auto_increment_column_suggestion import (
-    PostgresIntegerAutoIncrementColumnSuggestionMixin,
-)
+from .generated_value_suggestion import PostgresGeneratedValueSuggestionMixin
 from .partition_add_suggestion import PostgresPartitionAddSuggestionMixin
 from .partition_build_suggestion import PostgresPartitionBuildSuggestionMixin
 from .partition_drop_suggestion import PostgresPartitionDropSuggestionMixin
@@ -37,7 +35,7 @@ __all__ = [
     "PostgresDataTypeSuggestionsMixin",
     "PostgresCreateTableLayoutSuggestionMixin",
     "PostgresStringConcatenationSuggestionMixin",
-    "PostgresIntegerAutoIncrementColumnSuggestionMixin",
+    "PostgresGeneratedValueSuggestionMixin",
     "PostgresPartitionSuggestionBase",
     "PostgresPartitionAddSuggestionMixin",
     "PostgresPartitionBuildSuggestionMixin",

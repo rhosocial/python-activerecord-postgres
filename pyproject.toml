@@ -72,6 +72,12 @@ Documentation = "https://docs.python-activerecord.dev.rho.social"
 Repository = "https://github.com/rhosocial/python-activerecord-postgres.git"
 Issues = "https://github.com/rhosocial/python-activerecord-postgres/issues"
 
+# Console script for the PostgreSQL backend CLI, mirroring the core's
+# `rhosocial-activerecord-sqlite` entry point. Registered here (not in core)
+# because the backend owns its own namespace implementation.
+[project.scripts]
+rhosocial-activerecord-postgres = "rhosocial.activerecord.backend.impl.postgres.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 namespaces = true
