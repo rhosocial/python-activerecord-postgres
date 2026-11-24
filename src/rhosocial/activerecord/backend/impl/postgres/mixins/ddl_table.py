@@ -89,8 +89,12 @@ class PostgresTableMixin:
         """TABLESPACE specification is supported in all versions."""
         return True
 
-    def supports_alter_column_properties(self) -> bool:
-        """PostgreSQL supports ALTER COLUMN property changes."""
+    def supports_alter_column_default(self) -> bool:
+        """PostgreSQL supports ALTER COLUMN SET/DROP DEFAULT."""
+        return True
+
+    def supports_alter_column_nullability(self) -> bool:
+        """PostgreSQL supports ALTER COLUMN SET/DROP NOT NULL."""
         return True
 
     def supports_create_table_like(self) -> bool:
