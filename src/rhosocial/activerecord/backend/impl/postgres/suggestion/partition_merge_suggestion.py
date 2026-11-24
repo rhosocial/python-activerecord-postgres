@@ -1,16 +1,16 @@
 # src/rhosocial/activerecord/backend/impl/postgres/suggestion/partition_merge_suggestion.py
 """PostgreSQL's partition merge suggestion.
 
-PostgreSQL gained ``ALTER TABLE ... MERGE PARTITIONS`` in 14, so claiming the
-engine has no merge mechanism at all is wrong on every modern server. The
-conservative ``unsupported`` answer is only correct on PostgreSQL 13 and older
-(or when the server version is unknown).
+Community PostgreSQL has no ``MERGE PARTITIONS`` statement on any version: the
+``ALTER TABLE`` reference lists only ATTACH PARTITION and DETACH PARTITION for
+partition maintenance, and MERGE is spelled by detaching the sources and
+attaching the replacement partition. ``MERGE PARTITIONS`` is Oracle Database
+syntax; Oracle-compatible forks such as EDB Postgres Advanced Server carry it,
+which is where the earlier claim that PostgreSQL gained it in 14 came from.
+Do not restore that claim for this backend.
 
-This backend has no expression node that renders ``MERGE PARTITIONS``, and the
-expression and dialect layers forbid inventing one or embedding a raw SQL
-string here. On servers that do support the statement the answer is therefore
-``None`` (no operations to apply), not ``False`` (no mechanism): the true
-capability is reported by ``supports_merge_partition()``.
+The engine-neutral answer is therefore the explicit "no such mechanism"
+(``False``), not "no action needed" (``None``).
 """
 
 from typing import TYPE_CHECKING
@@ -26,17 +26,16 @@ __all__ = ["PostgresPartitionMergeSuggestionMixin"]
 
 
 class PostgresPartitionMergeSuggestionMixin(PostgresPartitionSuggestionBase):
-    """Report PostgreSQL's partition merge capability honestly by version."""
+    """Report community PostgreSQL's lack of a partition merge statement."""
 
     def suggest_partition_merge(
         self, strategy: "PartitionByClause", plan: object
     ) -> PartitionMergeSuggestion:
-        """Return ``False`` only where the server truly has no merge statement.
+        """Report that community PostgreSQL has no ``MERGE PARTITIONS`` DDL.
 
-        PostgreSQL 14+ supports ``MERGE PARTITIONS`` but this backend has no
-        expression node to render it, so those servers yield no operations
-        rather than a false "no mechanism" answer.
+        The ``ALTER TABLE`` reference exposes only ATTACH PARTITION and DETACH
+        PARTITION for partition maintenance, so a merge has to be performed as
+        detached sources plus an attached replacement partition. The answer is
+        the explicit "no such mechanism" on every server version.
         """
-        if not self.supports_merge_partition():
-            return PartitionMergeSuggestion(False)
-        return PartitionMergeSuggestion(None)
+        return PartitionMergeSuggestion(False)

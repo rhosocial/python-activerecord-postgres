@@ -131,11 +131,10 @@ def test_table_drop_renders_drop_table():
 
 
 def test_no_mechanism_points_are_false():
-    """On 14, only genuinely unsupported points report the explicit False.
+    """Every point community PostgreSQL cannot express reports explicit False.
 
-    MERGE PARTITIONS exists on 14+, so it must not claim "no mechanism"; it
-    reports no operations (None) because this backend cannot render the node.
-    SPLIT PARTITION needs 17+, so it is still honestly False on 14.
+    MERGE PARTITIONS and SPLIT PARTITION are Oracle syntax, not community
+    PostgreSQL, so both are honestly False -- never "no action" (None).
     """
     dialect = _dialect()
     plan = _range_plan()
@@ -151,12 +150,12 @@ def test_no_mechanism_points_are_false():
     )
     assert (
         dialect.suggest_partition_merge(_strategy(dialect, "RANGE", "created_at"), plan).operations
-        is None
+        is False
     )
 
 
-def test_merge_capability_and_suggestion_are_version_gated():
-    """MERGE PARTITIONS is 14+; unset/old versions stay conservatively False."""
+def test_merge_capability_and_suggestion_are_always_false():
+    """Community PostgreSQL has no MERGE PARTITIONS at any version."""
     plan = _range_plan()
 
     unset = PostgresDialect()
@@ -167,28 +166,19 @@ def test_merge_capability_and_suggestion_are_version_gated():
         is False
     )
 
-    old = PostgresDialect(version=(13, 0, 0))
-    assert old.supports_merge_partition() is False
-    assert (
-        old.suggest_partition_merge(_strategy(old, "RANGE", "created_at"), plan).operations
-        is False
-    )
-
-    for version in ((14, 0, 0), (14, 1, 0), (17, 0, 0)):
+    for version in ((13, 0, 0), (14, 0, 0), (14, 1, 0), (17, 0, 0), (18, 0, 0)):
         dialect = PostgresDialect(version=version)
-        assert dialect.supports_merge_partition() is True
-        # Supported by the server, but no expression node renders the statement,
-        # so no operations are suggested (not a false "no mechanism").
+        assert dialect.supports_merge_partition() is False
         assert (
             dialect.suggest_partition_merge(
                 _strategy(dialect, "RANGE", "created_at"), plan
             ).operations
-            is None
+            is False
         )
 
 
-def test_split_capability_and_suggestion_are_version_gated():
-    """SPLIT PARTITION is 17+; unset/old versions stay conservatively False."""
+def test_split_capability_and_suggestion_are_always_false():
+    """Community PostgreSQL has no SPLIT PARTITION at any version."""
     plan = _range_plan()
 
     unset = PostgresDialect()
@@ -199,7 +189,7 @@ def test_split_capability_and_suggestion_are_version_gated():
         is False
     )
 
-    for version in ((14, 0, 0), (16, 4, 0)):
+    for version in ((14, 0, 0), (16, 4, 0), (17, 0, 0), (18, 0, 0)):
         dialect = PostgresDialect(version=version)
         assert dialect.supports_split_partition() is False
         assert (
@@ -207,16 +197,6 @@ def test_split_capability_and_suggestion_are_version_gated():
                 _strategy(dialect, "RANGE", "created_at"), plan
             ).operations
             is False
-        )
-
-    for version in ((17, 0, 0), (18, 0, 0)):
-        dialect = PostgresDialect(version=version)
-        assert dialect.supports_split_partition() is True
-        assert (
-            dialect.suggest_partition_split(
-                _strategy(dialect, "RANGE", "created_at"), plan
-            ).operations
-            is None
         )
 
 

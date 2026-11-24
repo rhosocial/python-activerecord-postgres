@@ -157,10 +157,12 @@ class PostgresPartitionMixin:
     def supports_reorganize_partition(self) -> bool:
         """Check if MySQL-style REORGANIZE PARTITION is supported.
 
-        PostgreSQL has no MySQL-style ``REORGANIZE PARTITION`` statement. Its
-        native equivalents are ``ALTER TABLE ... MERGE PARTITIONS`` (14+) and
-        ``ALTER TABLE ... SPLIT PARTITION`` (17+), reported separately by
-        :meth:`supports_merge_partition` and :meth:`supports_split_partition`.
+        Community PostgreSQL has no ``REORGANIZE PARTITION`` statement, and it
+        has no ``MERGE PARTITIONS`` / ``SPLIT PARTITION`` statement either --
+        those are Oracle Database commands (carried by Oracle-compatible forks
+        such as EDB Postgres Advanced Server), not community PostgreSQL. A
+        partition is reshaped by detaching it, creating the replacement
+        partitions, and attaching them; retiring one is DETACH + DROP.
 
         Returns:
             Always False.
@@ -170,24 +172,32 @@ class PostgresPartitionMixin:
     def supports_merge_partition(self) -> bool:
         """Check if ``ALTER TABLE ... MERGE PARTITIONS`` is supported.
 
-        PostgreSQL added ``MERGE PARTITIONS`` in 14. When the server version is
-        not known, the answer is conservatively False.
+        Community PostgreSQL has no such statement on any version: the
+        ``ALTER TABLE`` reference lists only ATTACH PARTITION and DETACH
+        PARTITION for partition maintenance. ``MERGE PARTITIONS`` is Oracle
+        Database syntax (also carried by Oracle-compatible forks such as EDB
+        Postgres Advanced Server), so the answer is always False rather than a
+        version question.
 
         Returns:
-            True if PostgreSQL version >= 14.
+            Always False.
         """
-        return self.version_at_least((14, 0, 0))
+        return False
 
     def supports_split_partition(self) -> bool:
         """Check if ``ALTER TABLE ... SPLIT PARTITION`` is supported.
 
-        PostgreSQL added ``SPLIT PARTITION`` in 17. When the server version is
-        not known, the answer is conservatively False.
+        Community PostgreSQL has no such statement on any version: the
+        ``ALTER TABLE`` reference lists only ATTACH PARTITION and DETACH
+        PARTITION for partition maintenance. ``SPLIT PARTITION`` is Oracle
+        Database syntax (also carried by Oracle-compatible forks such as EDB
+        Postgres Advanced Server), so the answer is always False rather than a
+        version question.
 
         Returns:
-            True if PostgreSQL version >= 17.
+            Always False.
         """
-        return self.version_at_least((17, 0, 0))
+        return False
 
     def supports_attach_partition(self) -> bool:
         """Check if ATTACH PARTITION is supported.

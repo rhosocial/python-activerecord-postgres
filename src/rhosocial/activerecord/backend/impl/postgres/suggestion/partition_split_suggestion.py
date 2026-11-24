@@ -1,17 +1,18 @@
 # src/rhosocial/activerecord/backend/impl/postgres/suggestion/partition_split_suggestion.py
 """PostgreSQL's partition split suggestion.
 
-PostgreSQL gained ``ALTER TABLE ... SPLIT PARTITION`` in 17, so claiming the
-engine has no split mechanism at all is wrong on modern servers. The
-conservative ``unsupported`` answer is only correct on PostgreSQL 16 and older
-(or when the server version is unknown). This is unrelated to the MySQL-style
-``REORGANIZE PARTITION`` operation exposed by ``supports_reorganize_partition``.
+Community PostgreSQL has no ``SPLIT PARTITION`` statement on any version: the
+``ALTER TABLE`` reference lists only ATTACH PARTITION and DETACH PARTITION for
+partition maintenance, and a split is spelled by detaching the source and
+attaching the replacement partitions. ``SPLIT PARTITION`` is Oracle Database
+syntax; Oracle-compatible forks such as EDB Postgres Advanced Server carry it,
+which is where the earlier claim that PostgreSQL gained it in 17 came from.
+Do not restore that claim for this backend. This is also unrelated to the
+MySQL-style ``REORGANIZE PARTITION`` operation reported by
+``supports_reorganize_partition``.
 
-This backend has no expression node that renders ``SPLIT PARTITION``, and the
-expression and dialect layers forbid inventing one or embedding a raw SQL
-string here. On servers that do support the statement the answer is therefore
-``None`` (no operations to apply), not ``False`` (no mechanism): the true
-capability is reported by ``supports_split_partition()``.
+The engine-neutral answer is therefore the explicit "no such mechanism"
+(``False``), not "no action needed" (``None``).
 """
 
 from typing import TYPE_CHECKING
@@ -27,17 +28,16 @@ __all__ = ["PostgresPartitionSplitSuggestionMixin"]
 
 
 class PostgresPartitionSplitSuggestionMixin(PostgresPartitionSuggestionBase):
-    """Report PostgreSQL's partition split capability honestly by version."""
+    """Report community PostgreSQL's lack of a partition split statement."""
 
     def suggest_partition_split(
         self, strategy: "PartitionByClause", plan: object
     ) -> PartitionSplitSuggestion:
-        """Return ``False`` only where the server truly has no split statement.
+        """Report that community PostgreSQL has no ``SPLIT PARTITION`` DDL.
 
-        PostgreSQL 17+ supports ``SPLIT PARTITION`` but this backend has no
-        expression node to render it, so those servers yield no operations
-        rather than a false "no mechanism" answer.
+        The ``ALTER TABLE`` reference exposes only ATTACH PARTITION and DETACH
+        PARTITION for partition maintenance, so a split has to be performed as
+        a detached source plus attached replacement partitions. The answer is
+        the explicit "no such mechanism" on every server version.
         """
-        if not self.supports_split_partition():
-            return PartitionSplitSuggestion(False)
-        return PartitionSplitSuggestion(None)
+        return PartitionSplitSuggestion(False)
