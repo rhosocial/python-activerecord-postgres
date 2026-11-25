@@ -15,7 +15,6 @@ from rhosocial.activerecord.backend.dialect.exceptions import (
 )
 from rhosocial.activerecord.backend.expression.core import Literal
 from rhosocial.activerecord.backend.expression.serialization import (
-    default_registry,
     deserialize,
     deserialize_json,
     deserialize_xml,
@@ -90,22 +89,18 @@ from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics
     PostgresExtendedStatisticsMixin,  # noqa: F401
 )
 
-# The kind whitelist is an assembly decision (core commit ee5f4b55): the
-# default registry is populated by walking the core, sqlite and dummy
-# expression packages, so a backend's own kinds are entered by whoever reads
-# them back. These tests deserialize the two TYPE definitions below, so those
-# two go into the default registry here. Registration is idempotent:
-# registering the same class again is a no-op, and a same-named different
-# class is a hard error either way.
+# The kinds these tests read back are this backend's own. Deserialisation
+# resolves them through the dialect's artifact registry --
+# ``backend_registry()``, frozen and cached -- so the decode calls below name
+# it explicitly. Nothing is entered into a process-global table: the class
+# behind a kind belongs to the package that ships it, and the registry is
+# assembled from that package, not from whichever test imported first.
 #
-# Only the two node kinds are registered. The composite definition's attribute
-# dataclass and the base definition's ``UNSET`` sentinel used to be registered
-# through their own tables (``register_dataclass`` / ``register_enum``); core
-# dropped both, because an artifact is plain JSON now and neither carries a
-# class path any more.
-_PG_ROUNDTRIP_REGISTRY = default_registry()
-_PG_ROUNDTRIP_REGISTRY.register_node(PostgresBaseTypeDefinition)
-_PG_ROUNDTRIP_REGISTRY.register_node(PostgresCompositeTypeDefinition)
+# Only node kinds are involved. The composite definition's attribute dataclass
+# and the base definition's ``UNSET`` sentinel used to be registered through
+# their own tables (``register_dataclass`` / ``register_enum``); core dropped
+# both, because an artifact is plain JSON now and neither carries a class path
+# any more.
 
 
 class TestDomainExpression:
@@ -349,9 +344,9 @@ class TestTypeDDLExpressions:
             [PostgresCompositeTypeAttribute("id", IntegerType(dialect))],
         )
         restored = (
-            deserialize(serialize(definition), dialect),
-            deserialize_json(serialize_json(definition), dialect),
-            deserialize_xml(serialize_xml(definition), dialect),
+            deserialize(serialize(definition), dialect, registry=dialect.artifact_registry()),
+            deserialize_json(serialize_json(definition), dialect, registry=dialect.artifact_registry()),
+            deserialize_xml(serialize_xml(definition), dialect, registry=dialect.artifact_registry()),
         )
         assert all(item.get_params() == definition.get_params() for item in restored)
 
@@ -362,9 +357,9 @@ class TestTypeDDLExpressions:
             output_function="box_out",
         )
         restored = (
-            deserialize(serialize(definition), dialect),
-            deserialize_json(serialize_json(definition), dialect),
-            deserialize_xml(serialize_xml(definition), dialect),
+            deserialize(serialize(definition), dialect, registry=dialect.artifact_registry()),
+            deserialize_json(serialize_json(definition), dialect, registry=dialect.artifact_registry()),
+            deserialize_xml(serialize_xml(definition), dialect, registry=dialect.artifact_registry()),
         )
         assert all(item.get_params() == definition.get_params() for item in restored)
 
@@ -415,7 +410,7 @@ class TestTypeDDLExpressions:
         ))
         assert wire["params"]["default"] == "UNSET"
 
-        restored = deserialize(wire, dialect)
+        restored = deserialize(wire, dialect, registry=dialect.artifact_registry())
         assert restored.has_default is False
         assert PostgresBaseTypeDefinition(
             dialect,

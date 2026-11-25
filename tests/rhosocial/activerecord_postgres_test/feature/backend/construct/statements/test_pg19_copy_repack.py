@@ -17,7 +17,6 @@ from rhosocial.activerecord.backend.expression import (
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.serialization import (
-    default_registry,
     deserialize,
     serialize,
 )
@@ -39,23 +38,6 @@ from rhosocial.activerecord.backend.impl.postgres.protocols import (
     PostgresCopySupport,
     PostgresRepackSupport,
 )
-
-
-#: This backend's own artifact kinds. The framework's default registry carries
-#: core plus the *built-in* backends; a deployment that wants to read this
-#: backend's artifacts registers its kinds through the public entry point, and
-#: the round-trip case below is this test process doing exactly that. It used
-#: to pass only when a sibling module had already registered them in-process
-#: (the registry is process-global), which made the test order-dependent.
-_PG_ARTIFACT_CLASSES = (
-    PostgresCopyToStatement,
-    PostgresCopyFromStatement,
-    PostgresRepackStatement,
-)
-
-for _pg_class in _PG_ARTIFACT_CLASSES:
-    default_registry().register_node(_pg_class)
-del _pg_class
 
 
 class SyncCopy:
@@ -571,7 +553,7 @@ def test_protocol_mro_and_serialization():
     assert PostgresDialect.__mro__.index(PostgresRepackMixin) < PostgresDialect.__mro__.index(PostgresRepackSupport)
 
     original = PostgresCopyToStatement(dialect, query=select_query(dialect))
-    restored = deserialize(serialize(original), dialect)
+    restored = deserialize(serialize(original), dialect, registry=dialect.artifact_registry())
     assert isinstance(restored, PostgresCopyToStatement)
     assert restored.to_sql() == original.to_sql()
 

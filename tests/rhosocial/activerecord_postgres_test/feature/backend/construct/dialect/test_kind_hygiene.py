@@ -77,10 +77,12 @@ def backend_classes():
 def core_kinds():
     """Core's kind set, walked from core's own package.
 
-    *Not* read from ``default_registry()``: that instance is process-global and
-    the matrix registers this backend's classes into it, so the answer would
-    depend on which test module imported first -- precisely the import-order
-    coupling this file exists to remove.
+    *Not* read from ``core_registry()``: that table is core's own frozen set,
+    and a backend's classes are deliberately absent from it. Walking the
+    package answers "what core defines", which is the question here -- not
+    "what a registry happens to carry after some test module registered its
+    kinds into a process-global table", an answer that would depend on
+    import order.
     """
     return {cls.kind() for cls in _walk(CORE_EXPR_PKG).values()}
 

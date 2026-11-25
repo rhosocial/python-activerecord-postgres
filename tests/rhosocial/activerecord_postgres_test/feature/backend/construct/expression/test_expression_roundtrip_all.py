@@ -184,7 +184,6 @@ from rhosocial.activerecord.backend.expression.predicates import (
 )
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.serialization import (
-    default_registry,
     deserialize,
     deserialize_json,
     deserialize_xml,
@@ -380,9 +379,9 @@ def _collect_matrix_classes():
 
     Two packages, walked rather than read out of the kind registry -- see the
     module docstring. Registration is a separate concern handled beside the
-    collection: the framework's default registry walks the core and built-in
-    backend packages itself, and the classes this backend defines are entered
-    by :func:`register_all` below.
+    collection: the backend's own frozen ``backend_registry()`` already carries
+    core's kinds plus this backend's, and :func:`register_all` takes a mutable
+    twin of it to add the trusted-artifact opt-ins the matrix covers.
     """
     collected: Dict[str, type] = {}
     for package in (PG_EXPR_PKG, CORE_EXPR_PKG):
@@ -399,7 +398,10 @@ def _collect_matrix_classes():
 
 
 REGISTERED = _collect_matrix_classes()
-register_all(REGISTERED)
+# The registry these reads resolve kinds through: the backend's frozen table
+# plus a local twin carrying the trusted-artifact opt-ins. Never the
+# process-global table -- see :func:`register_all`.
+MATRIX_REGISTRY = register_all(REGISTERED)
 # Node kinds only. The registry once carried enum and dataclass tables too,
 # because an artifact named those by class path; an artifact is plain JSON
 # now, so a value is named by its kind and a host object has no name at all --
@@ -1593,7 +1595,7 @@ _CODEC_GAPS = {
 }
 
 
-def _channels_that_lose_params(fqn, instance, dialect):
+def _channels_that_lose_params(fqn, instance, dialect, registry):
     """The encodings whose round-trip does not restore ``get_params()``.
 
     Returns ``{channel: why}``. An empty dict means the class round-trips
@@ -1614,7 +1616,7 @@ def _channels_that_lose_params(fqn, instance, dialect):
         ("xml", serialize_xml, deserialize_xml),
     ):
         try:
-            decoded = dec(enc(instance), dialect)
+            decoded = dec(enc(instance), dialect, registry=registry)
         except Exception as exc:  # noqa: BLE001
             lost[channel] = f"{type(exc).__name__}: {exc}"
             continue
@@ -1630,7 +1632,7 @@ def _channels_that_lose_params(fqn, instance, dialect):
 # ---------------------------------------------------------------------------
 
 
-def assert_sql_roundtrip_classified(fqn, instance, dialect):
+def assert_sql_roundtrip_classified(fqn, instance, dialect, registry):
     """Assert an expression's SQL survives the round-trip, or say precisely why not.
 
     Four outcomes, each asserted:
@@ -1709,7 +1711,7 @@ def assert_sql_roundtrip_classified(fqn, instance, dialect):
             # (``_CODEC_RENDER_GAPS``). Both are pinned; asserting SQL on a tree
             # the codec mangled would assert the mangling.
             continue
-        decoded = dec(enc(instance), dialect)
+        decoded = dec(enc(instance), dialect, registry=registry)
         decoded_sql, decoded_params = decoded.to_sql()
         assert decoded_sql == expected_sql, (
             f"{fqn}: {channel} round-trip changed the SQL.\n"
@@ -1749,7 +1751,7 @@ class TestExpressionRoundtripAll:
 
     def test_get_params_roundtrip_across_encodings(self, expr_case, postgres_dialect):
         fqn, instance = expr_case
-        lost = _channels_that_lose_params(fqn, instance, postgres_dialect)
+        lost = _channels_that_lose_params(fqn, instance, postgres_dialect, MATRIX_REGISTRY)
         pinned = _CODEC_GAPS.get(fqn, {})
         assert sorted(lost) == sorted(pinned), (
             f"{fqn} lost {sorted(lost)} but _CODEC_GAPS pins {sorted(pinned)}.\n"
@@ -1765,7 +1767,7 @@ class TestExpressionRoundtripAll:
     def test_to_sql_roundtrip_classified(self, expr_case, postgres_dialect):
         """A render must survive the round-trip; a non-render must be classified."""
         fqn, instance = expr_case
-        assert_sql_roundtrip_classified(fqn, instance, postgres_dialect)
+        assert_sql_roundtrip_classified(fqn, instance, postgres_dialect, MATRIX_REGISTRY)
 
 
 class TestMatrixIntegrity:
@@ -2022,12 +2024,13 @@ class TestMatrixIntegrity:
     def test_every_covered_class_is_registered_for_deserialization(self):
         """A class in the matrix can be found again when deserializing.
 
-        Deserialisation resolves a node's kind through the framework's
-        registry whitelist, so a class the matrix renders but the registry
-        cannot resolve would round-trip into the wrong thing or nothing at
-        all.
+        Deserialisation resolves a node's kind through the registry the read
+        names, so a class the matrix renders but that registry cannot resolve
+        would round-trip into the wrong thing or nothing at all. The matrix's
+        own registry is the backend's frozen table plus the trusted opt-ins,
+        which is exactly the set these reads use.
         """
-        registry = default_registry()
+        registry = MATRIX_REGISTRY
         unresolved = []
         for fqn, cls in sorted(REGISTERED.items()):
             try:
@@ -2049,7 +2052,9 @@ class TestMatrixIntegrity:
                 census["pinned-unconstructible"] = census.get("pinned-unconstructible", 0) + 1
                 continue
             constructible.append(fqn)
-            branch = assert_sql_roundtrip_classified(fqn, instance, postgres_dialect)
+            branch = assert_sql_roundtrip_classified(
+                fqn, instance, postgres_dialect, MATRIX_REGISTRY
+            )
             census[branch] = census.get(branch, 0) + 1
         assert constructible
         summary = ", ".join(f"{count} {name}" for name, count in sorted(census.items()))

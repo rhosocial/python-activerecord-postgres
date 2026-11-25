@@ -37,6 +37,10 @@ from enum import Enum
 from typing import Any, Callable, Dict, Optional, Type
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
+
+if typing.TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.registry import ExpressionRegistry
 
 # Annotation fragments that mean "this parameter names a relation object".
 # Word boundaries matter: ``TableConstraint`` and ``AddTableConstraintAction`` are
@@ -52,9 +56,6 @@ _MENTIONS_RELATION = re.compile(
 # An INSERT's data source. It is an expression now, so it needs a real one --
 # the generic placeholder cannot invent the rows a VALUES list is made of.
 _MENTIONS_INSERT_SOURCE = re.compile(r"\bInsertDataSource\b")
-
-
-from rhosocial.activerecord.backend.impl.postgres.introspection.type_parser import PostgresTypeParser
 
 
 def parse_type(dialect, raw):
@@ -1022,16 +1023,23 @@ def collect_expression_classes(package_path: str) -> Dict[str, Type[BaseExpressi
     return classes
 
 
-def register_all(classes: Dict[str, Type[BaseExpression]]) -> None:
-    """Hand the collected classes to the deserialization kind whitelist.
+def register_all(classes: Dict[str, Type[BaseExpression]]) -> "ExpressionRegistry":
+    """Build the registry this matrix's reads resolve kinds through.
 
-    Core split the class index out of the serialization module into a
-    registry: deserialization resolves a node to its class through the
-    framework's default registry, not through the ``(dialect, kind)`` render
-    registry -- the two are separate mechanisms and only the former names
-    expression classes. Core and the built-in backends populate that registry
-    on first use; registering one of those classes again is a no-op, and the
-    backend classes collected by the matrix are what this call adds.
+    The backend's own table is :func:`backend_registry` -- core's kinds plus
+    every ``postgres_*`` kind the expression package declares. It is frozen,
+    because it is a published value: no reader may widen it for another.
+
+    The matrix still covers a few kinds the default assembly deliberately
+    leaves out -- ``RawSQL`` / ``RawSQLPredicate`` opt out through
+    ``REGISTER_BY_DEFAULT = False`` because admitting them would let an
+    untrusted artifact choose raw SQL. This harness *does* trust its
+    artifacts (it built them itself a line earlier), so it starts from
+    ``backend_registry().twin()`` and registers the collected classes there,
+    plus the two inert dummy-backend placeholders its own constructors put in
+    type-DDL trees. The twin is mutable and local to this matrix; the
+    process-global table is never touched, which is what keeps test order from
+    deciding what a later module can read.
 
     Node kinds only. The registry used to carry enum and dataclass tables as
     well, because an artifact once named those by class path; an artifact is
@@ -1040,11 +1048,30 @@ def register_all(classes: Dict[str, Type[BaseExpression]]) -> None:
     has to become a value or a node in the node that owns it -- the
     PostgreSQL composite type attribute is the worked example.
     """
-    from rhosocial.activerecord.backend.expression.serialization import default_registry
+    from rhosocial.activerecord.backend.impl.postgres.registry import backend_registry
 
-    registry = default_registry()
-    for cls in classes.values():
+    registry = backend_registry().twin()
+    for cls in (*classes.values(), *_matrix_placeholder_classes()):
         registry.register_node(cls)
+    return registry
+
+
+def _matrix_placeholder_classes():
+    """The inert placeholder nodes this harness's own constructors put in trees.
+
+    ``CreateTypeStatement`` / ``AlterTypeStatement`` need a definition or an
+    action, and the dummy backend ships the two no-op placeholders the harness
+    uses for them. They are *not* PostgreSQL kinds, so they are absent from
+    ``backend_registry()`` -- deliberately: a dialect's table carries only its
+    own backend's kinds. The matrix builds trees that name them, so its local
+    registry admits them explicitly; no global table is widened.
+    """
+    from rhosocial.activerecord.backend.impl.dummy.expression import (
+        _DummyTypeAlterAction,
+        _DummyTypeDefinition,
+    )
+
+    return (_DummyTypeDefinition, _DummyTypeAlterAction)
 
 
 def assert_params_equal(a: Any, b: Any, path: str = "params") -> None:
@@ -1093,42 +1120,58 @@ def assert_params_equal(a: Any, b: Any, path: str = "params") -> None:
     assert a == b, f"{path}: {a!r} != {b!r}"
 
 
-def roundtrip_expression(fqn: str, instance: BaseExpression, dialect: Any) -> None:
+def roundtrip_expression(
+    fqn: str,
+    instance: BaseExpression,
+    dialect: Any,
+    *,
+    registry: Optional["ExpressionRegistry"] = None,
+) -> None:
     """Assert an instance round-trips losslessly through dict / JSON / XML."""
     original = instance.get_params()
     for restored in (
-        _rt_dict(instance, dialect),
-        _rt_json(instance, dialect),
-        _rt_xml(instance, dialect),
+        _rt_dict(instance, dialect, registry),
+        _rt_json(instance, dialect, registry),
+        _rt_xml(instance, dialect, registry),
     ):
         assert_params_equal(restored.get_params(), original, fqn)
 
 
-def _rt_dict(instance, dialect):
+def _rt_dict(instance, dialect, registry=None):
     from rhosocial.activerecord.backend.expression.serialization import deserialize, serialize
 
-    return deserialize(serialize(instance), dialect)
+    return deserialize(serialize(instance), dialect, registry=registry)
 
 
-def _rt_json(instance, dialect):
+def _rt_json(instance, dialect, registry=None):
     from rhosocial.activerecord.backend.expression.serialization import deserialize_json, serialize_json
 
-    return deserialize_json(serialize_json(instance), dialect)
+    return deserialize_json(serialize_json(instance), dialect, registry=registry)
 
 
-def _rt_xml(instance, dialect):
+def _rt_xml(instance, dialect, registry=None):
     from rhosocial.activerecord.backend.expression.serialization import deserialize_xml, serialize_xml
 
-    return deserialize_xml(serialize_xml(instance), dialect)
+    return deserialize_xml(serialize_xml(instance), dialect, registry=registry)
 
 
-def sql_consistent(fqn: str, instance: BaseExpression, dialect: Any) -> None:
+def sql_consistent(
+    fqn: str,
+    instance: BaseExpression,
+    dialect: Any,
+    *,
+    registry: Optional["ExpressionRegistry"] = None,
+) -> None:
     """Assert to_sql is identical after round-trip, when the dialect supports it."""
     try:
         expected = instance.to_sql()
     except Exception:
         return
-    for restored in (_rt_dict(instance, dialect), _rt_json(instance, dialect), _rt_xml(instance, dialect)):
+    for restored in (
+        _rt_dict(instance, dialect, registry),
+        _rt_json(instance, dialect, registry),
+        _rt_xml(instance, dialect, registry),
+    ):
         assert restored.to_sql() == expected, fqn
 
 

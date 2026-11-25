@@ -43,15 +43,6 @@ from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_r
     assert_params_equal,
 )
 
-# Deserialisation resolves a kind through the framework's registry, which ships
-# core and the built-in backends. A PostgreSQL class is registered by the code
-# that ships it, so this module -- the one that reads such an artifact back --
-# is where the class is entered.
-from rhosocial.activerecord.backend.expression.serialization import default_registry
-
-default_registry().register_node(PostgresCreateDomainExpression)
-
-
 
 @pytest.fixture
 def dialect():
@@ -80,8 +71,8 @@ def _round_trip(expr, dialect):
     )
 
     for restored in (
-        deserialize(serialize(expr), dialect),
-        deserialize_json(serialize_json(expr), dialect),
+        deserialize(serialize(expr), dialect, registry=dialect.artifact_registry()),
+        deserialize_json(serialize_json(expr), dialect, registry=dialect.artifact_registry()),
     ):
         rebuilt = type(expr)(dialect, **restored.get_params())
         assert_params_equal(rebuilt.get_params(), expr.get_params())
