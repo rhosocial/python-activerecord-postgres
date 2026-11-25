@@ -31,6 +31,18 @@ def _named(values: Tuple[Any, ...]) -> Optional[Dict[str, Any]]:
     return named
 
 
+def _live_by_name(values: Tuple[Any, ...], cls: Any) -> Dict[str, Any]:
+    """Index live declaration nodes by name, skipping unusable entries."""
+    named: Dict[str, Any] = {}
+    for value in values or ():
+        if not isinstance(value, cls):
+            continue
+        name = getattr(value, "name", None)
+        if isinstance(name, str) and name:
+            named[name] = value
+    return named
+
+
 class PostgresTableIndexChangeSuggestionMixin:
     """Answer an index change with standalone CREATE/DROP INDEX statements."""
 
@@ -41,15 +53,17 @@ class PostgresTableIndexChangeSuggestionMixin:
 
         Drops come first, then creates, one statement per operation. A frozen
         declaration projection keeps plain column names, flags and the index
-        method; it loses expression columns and a partial-index predicate. When
-        the change needs either of those as a frozen value, there is no honest
-        node to build and the answer is ``False``. Live nodes are reused
-        directly instead of being reconstructed from their projections.
+        method; it loses expression columns and a partial-index predicate. The
+        enriched point also carries live ``IndexDefinition`` declarations, so a
+        change that needs either of those reuses the live node directly instead
+        of rebuilding it from a projection that cannot state it. Options this
+        dialect cannot spell still make the answer ``False``.
         """
         from rhosocial.activerecord.backend.expression.objects import Index, Table
         from rhosocial.activerecord.backend.expression.statements import (
             CreateIndexStatement,
             DropIndexStatement,
+            IndexDefinition,
         )
 
         if not (self.supports_create_index() and self.supports_drop_index()):
@@ -71,10 +85,12 @@ class PostgresTableIndexChangeSuggestionMixin:
         if not removed and not added:
             return TableIndexChangeSuggestion(operations=None)
 
+        old_live = _live_by_name(point.old_index_declarations, IndexDefinition)
+        new_live = _live_by_name(point.new_index_declarations, IndexDefinition)
         table = Table(self, point.table_name)
         chain = []
         for name in removed:
-            params = declaration_params(old[name]) or {}
+            params = declaration_params(old_live.get(name, old[name])) or {}
             if_exists = bool(params.get("if_exists", False))
             concurrent = bool(params.get("concurrent", False))
             if if_exists and not self.supports_index_if_exists():
@@ -89,7 +105,7 @@ class PostgresTableIndexChangeSuggestionMixin:
             )
 
         for name in added:
-            params = declaration_params(new[name])
+            params = declaration_params(new_live.get(name, new[name]))
             if params is None:
                 return TableIndexChangeSuggestion(operations=False)
             columns = params.get("columns") or ()
