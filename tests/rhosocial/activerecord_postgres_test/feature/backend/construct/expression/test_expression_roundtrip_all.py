@@ -195,6 +195,7 @@ from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AddColumnAction,
     AddTableConstraintAction,
+    DropTableConstraintAction,
     ValidateConstraintAction,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_database import (
@@ -600,6 +601,14 @@ def register_specials():
     register_special_constructor(
         "statements.ddl_alter.AddTableConstraintAction",
         lambda d: AddTableConstraintAction(d, _primary_key_constraint(d)),
+    )
+    # ``constraint_name`` is optional on this action now: a dialect that spells
+    # the drop by kind may address the constraint through ``constraint`` instead.
+    # The introspective guess therefore leaves the name unset and builds an action
+    # with no address at all. PostgreSQL spells the drop by name only, so name one.
+    register_special_constructor(
+        "statements.ddl_alter.DropTableConstraintAction",
+        lambda d: DropTableConstraintAction(d, constraint_name="c"),
     )
     register_special_constructor(
         "statements.ddl_table.ColumnConstraint",

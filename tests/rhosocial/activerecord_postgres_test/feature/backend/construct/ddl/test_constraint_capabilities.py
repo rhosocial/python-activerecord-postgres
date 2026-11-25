@@ -349,3 +349,28 @@ class TestAddAndDropAndRenameRender:
         sql, params = DropTableConstraintAction(d, "ck", if_exists=True).to_sql()
         assert sql == 'DROP CONSTRAINT IF EXISTS "ck"'
         assert params == ()
+
+    @pytest.mark.parametrize("constraint_name", (None, "uq"))
+    def test_drop_constraint_by_kind_is_refused(self, constraint_name):
+        """PostgreSQL spells the drop by name only, so a declaration is refused.
+
+        Core lets an action carry a ``constraint`` declaration for dialects that
+        spell the drop by kind (``DROP PRIMARY KEY`` / ``DROP UNIQUE (<cols>)``).
+        PostgreSQL has no such form -- its grammar takes a name -- so the
+        declaration is refused rather than silently ignored, whether or not a
+        name is also supplied.
+        """
+        d = _dialect()
+        declaration = TableConstraint(
+            d, branch=TableUniqueConstraint(d, ["a"]), name="uq"
+        )
+        action = DropTableConstraintAction(
+            d, constraint_name=constraint_name, constraint=declaration
+        )
+        with pytest.raises(UnsupportedFeatureError, match="DROP CONSTRAINT by kind"):
+            action.to_sql()
+
+    def test_drop_constraint_by_kind_stays_unadvertised(self):
+        """The kind-based probe stays at core's default ``False``."""
+        d = _dialect()
+        assert d.supports_drop_constraint_by_kind() is False
