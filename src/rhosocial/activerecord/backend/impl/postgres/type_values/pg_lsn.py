@@ -29,10 +29,8 @@ see adapters.pg_lsn.PostgresLsnAdapter.
 """
 
 from dataclasses import dataclass
-import re
 
-
-_LSN_PATTERN = re.compile(r"^([0-9A-Fa-f]+)/([0-9A-Fa-f]+)$")
+from .._scan import is_hex_run
 
 
 @dataclass
@@ -76,12 +74,12 @@ class PostgresLsn:
             ValueError: If string format is invalid
         """
         lsn_str = lsn_str.strip()
-        match = _LSN_PATTERN.match(lsn_str)
-        if not match:
+        high_text, separator, low_text = lsn_str.partition("/")
+        if not separator or not is_hex_run(high_text) or not is_hex_run(low_text):
             raise ValueError(f"Invalid LSN format: '{lsn_str}'. Expected format: XXXXXXXX/YYYYYYYY")
 
-        high = int(match.group(1), 16)
-        low = int(match.group(2), 16)
+        high = int(high_text, 16)
+        low = int(low_text, 16)
         value = (high << 32) | low
         return cls(value)
 

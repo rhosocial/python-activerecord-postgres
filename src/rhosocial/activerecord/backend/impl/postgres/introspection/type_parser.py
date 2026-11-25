@@ -8,7 +8,7 @@ delegated ``DataType.parse_data_type_str`` to ``CustomType``). It lives under
 PostgreSQL introspection and is used only when reading back a column's declared
 type; it is NOT a dialect protocol member.
 """
-import re
+from typing import Optional
 
 from ....expression.types import (
     BigIntType,
@@ -37,84 +37,221 @@ from ....expression.types import (
     VarCharType,
     XmlType,
 )
+from .._scan import digit_runs, read_digits, starts_with_word
 from ..expression.types import PostgresArrayType
+
+
+def _first_integer_in_parentheses(text: str) -> Optional[int]:
+    """Read the number of the first ``(digits)`` group in ``text``."""
+    index = 0
+    while True:
+        index = text.find("(", index)
+        if index < 0:
+            return None
+        digits, end = read_digits(text, index + 1)
+        if digits and end < len(text) and text[end] == ")":
+            return int(digits)
+        index += 1
+
+
+def _interval_fields(upper: str) -> Optional[str]:
+    """Return the fields spelling that follows ``INTERVAL``, if any.
+
+    The fields are the rest of the line after the whitespace that follows
+    the keyword, upper-cased and stripped, which is what
+    ``INTERVAL\\s+(.*)`` read.
+    """
+    marker = "INTERVAL"
+    start = upper.find(marker)
+    if start < 0:
+        return None
+    index = start + len(marker)
+    if index >= len(upper) or not upper[index].isspace():
+        return None
+    while index < len(upper) and upper[index].isspace():
+        index += 1
+    line_end = upper.find("\n", index)
+    fields = upper[index:] if line_end < 0 else upper[index:line_end]
+    return fields.strip()
+
+
+def _strip_array_bracket_suffix(text: str) -> Optional[str]:
+    """Drop one trailing ``[digits]`` group from ``text``."""
+    open_index = text.rfind("[", 0, len(text) - 1)
+    if open_index < 0:
+        return None
+    inner = text[open_index + 1 : -1]
+    if not all(char.isdecimal() for char in inner):
+        return None
+    return text[:open_index]
+
+
+def _strip_array_keyword_suffix(upper: str) -> Optional[str]:
+    """Drop a trailing `` ARRAY`` spelling, with its optional ``[count]``.
+
+    The spelling is ``\\s+ARRAY(?:\\s*\\[\\s*\\d+\\s*\\])?\\s*$``: at least one
+    whitespace character before ``ARRAY``, and a bracketed count that is
+    optional but, when present, needs at least one digit.
+    Returns the base spelling, or ``None`` when the suffix is not there.
+    """
+    core = upper[: len(upper.rstrip())]
+    if core.endswith("]"):
+        open_index = core.rfind("[", 0, len(core) - 1)
+        if open_index < 0:
+            return None
+        inner = core[open_index + 1 : -1]
+        start = 0
+        while start < len(inner) and inner[start].isspace():
+            start += 1
+        digits, digits_end = read_digits(inner, start)
+        if not digits or inner[digits_end:].strip():
+            return None
+        core = core[:open_index]
+    trimmed = core.rstrip()
+    if not trimmed.endswith("ARRAY"):
+        return None
+    index = len(trimmed) - len("ARRAY")
+    if index == 0 or not trimmed[index - 1].isspace():
+        return None
+    while index > 0 and trimmed[index - 1].isspace():
+        index -= 1
+    return upper[:index]
+
+
+def _starts_with_bit_varying(upper: str) -> bool:
+    """Return whether ``upper`` begins with ``BIT`` then ``VARYING``."""
+    if starts_with_word(upper, ("BIT",)) is None:
+        return False
+    index = len("BIT")
+    if index >= len(upper) or not upper[index].isspace():
+        return False
+    while index < len(upper) and upper[index].isspace():
+        index += 1
+    return starts_with_word(upper[index:], ("VARYING",)) is not None
 
 
 class PostgresTypeParser:
     """Parse a raw PostgreSQL type spelling into a ``DataType``, bound to a dialect."""
 
-    _PG_INTEGER_TYPES = re.compile(
-        r"^(?:SMALLINT|INT2|INT|INTEGER|INT4|BIGINT|INT8)\b",
-        re.IGNORECASE,
+    _PG_INTEGER_WORDS = (
+        "SMALLINT",
+        "INT2",
+        "INT",
+        "INTEGER",
+        "INT4",
+        "BIGINT",
+        "INT8",
     )
-    _PG_SERIAL_TYPES = re.compile(
-        r"^(?:SMALLSERIAL|SERIAL2|SERIAL|SERIAL4|BIGSERIAL|SERIAL8)\b",
-        re.IGNORECASE,
+    _PG_SERIAL_WORDS = (
+        "SMALLSERIAL",
+        "SERIAL2",
+        "SERIAL",
+        "SERIAL4",
+        "BIGSERIAL",
+        "SERIAL8",
     )
-    _PG_FLOAT_TYPES = re.compile(
-        r"^(?:REAL|FLOAT4|FLOAT|DOUBLE)\b",
-        re.IGNORECASE,
+    _PG_FLOAT_WORDS = (
+        "REAL",
+        "FLOAT4",
+        "FLOAT",
+        "DOUBLE",
     )
-    _PG_DECIMAL_TYPES = re.compile(
-        r"^(?:DECIMAL|NUMERIC)\b",
-        re.IGNORECASE,
+    _PG_DECIMAL_WORDS = (
+        "DECIMAL",
+        "NUMERIC",
     )
-    _PG_STRING_TYPES = re.compile(
-        r"^(?:CHARACTER|CHAR|VARCHAR|TEXT|CITEXT)\b",
-        re.IGNORECASE,
+    _PG_STRING_WORDS = (
+        "CHARACTER",
+        "CHAR",
+        "VARCHAR",
+        "TEXT",
+        "CITEXT",
     )
-    _PG_BINARY_TYPES = re.compile(
-        r"^(?:BYTEA|BLOB)\b",
-        re.IGNORECASE,
+    _PG_BINARY_WORDS = (
+        "BYTEA",
+        "BLOB",
     )
-    _PG_DATE_TYPES = re.compile(
-        r"^(?:DATETIME|DATE|TIMESTAMPTZ|TIMESTAMP|TIMETZ|TIME|INTERVAL)\b",
-        re.IGNORECASE,
+    _PG_DATE_WORDS = (
+        "DATETIME",
+        "DATE",
+        "TIMESTAMPTZ",
+        "TIMESTAMP",
+        "TIMETZ",
+        "TIME",
+        "INTERVAL",
     )
-    _PG_JSON_TYPES = re.compile(
-        r"^(?:JSON|JSONB|JSONPATH)\b",
-        re.IGNORECASE,
+    _PG_JSON_WORDS = (
+        "JSON",
+        "JSONB",
+        "JSONPATH",
     )
-    _PG_UUID_TYPES = re.compile(
-        r"^(?:UUID)\b",
-        re.IGNORECASE,
+    _PG_UUID_WORDS = ("UUID",)
+    _PG_NET_WORDS = (
+        "INET",
+        "CIDR",
+        "MACADDR",
+        "MACADDR8",
     )
-    _PG_NET_TYPES = re.compile(
-        r"^(?:INET|CIDR|MACADDR|MACADDR8)\b",
-        re.IGNORECASE,
+    _PG_GEOM_WORDS = (
+        "POINT",
+        "LINE",
+        "LSEG",
+        "BOX",
+        "PATH",
+        "POLYGON",
+        "CIRCLE",
     )
-    _PG_GEOM_TYPES = re.compile(
-        r"^(?:POINT|LINE|LSEG|BOX|PATH|POLYGON|CIRCLE)\b",
-        re.IGNORECASE,
+    _PG_BIT_WORDS = (
+        "BIT",
+        "VARBIT",
     )
-    _PG_BIT_TYPES = re.compile(
-        r"^(?:BIT|VARBIT)\b",
-        re.IGNORECASE,
+    _PG_RANGE_WORDS = (
+        "INT4RANGE",
+        "INT8RANGE",
+        "NUMRANGE",
+        "TSRANGE",
+        "TSTZRANGE",
+        "DATERANGE",
     )
-    _PG_RANGE_TYPES = re.compile(
-        r"^(?:INT4RANGE|INT8RANGE|NUMRANGE|TSRANGE|TSTZRANGE|DATERANGE)\b",
-        re.IGNORECASE,
+    _PG_MULTIRANGE_WORDS = (
+        "INT4MULTIRANGE",
+        "INT8MULTIRANGE",
+        "NUMMULTIRANGE",
+        "TSMULTIRANGE",
+        "TSTZMULTIRANGE",
+        "DATEMULTIRANGE",
     )
-    _PG_MULTIRANGE_TYPES = re.compile(
-        r"^(?:INT4MULTIRANGE|INT8MULTIRANGE|NUMMULTIRANGE|"
-        r"TSMULTIRANGE|TSTZMULTIRANGE|DATEMULTIRANGE)\b",
-        re.IGNORECASE,
+    _PG_OID_WORDS = (
+        "OID",
+        "REGCLASS",
+        "REGTYPE",
+        "XID",
+        "XID8",
+        "CID",
+        "TID",
     )
-    _PG_OID_TYPES = re.compile(
-        r"^(?:OID|REGCLASS|REGTYPE|XID|XID8|CID|TID)\b",
-        re.IGNORECASE,
+    _PG_TS_WORDS = (
+        "TSVECTOR",
+        "TSQUERY",
     )
-    _PG_TS_TYPES = re.compile(
-        r"^(?:TSVECTOR|TSQUERY)\b",
-        re.IGNORECASE,
+    _PG_MISC_WORDS = (
+        "MONEY",
+        "XML",
+        "PG_LSN",
+        "HSTORE",
+        "GEOMETRY",
+        "GEOGRAPHY",
+        "CUBE",
+        "LTREE",
+        "LQUERY",
+        "LTXTQUERY",
+        "RASTER",
     )
-    _PG_MISC_TYPES = re.compile(
-        r"^(?:MONEY|XML|PG_LSN|HSTORE|GEOMETRY|GEOGRAPHY|CUBE|LTREE|LQUERY|"
-        r"LTXTQUERY|RASTER)\b",
-        re.IGNORECASE,
+    _PG_VECTOR_WORDS = (
+        "VECTOR",
+        "HALFVEC",
+        "SPARSEVEC",
     )
-    _PG_ARRAY_SUFFIX = re.compile(r"(\[(\d*)\])+\s*$")
-    _PG_ARRAY_KEYWORD = re.compile(r"\s+ARRAY(?:\s*\[\s*(\d+)\s*\])?\s*$", re.IGNORECASE)
 
     def __init__(self, dialect):
         self.dialect = dialect
@@ -127,10 +264,9 @@ class PostgresTypeParser:
         # ---- Array detection (must run before any type-specific match) ----
 
         # Check for ARRAY keyword: e.g. "INTEGER ARRAY" or "INTEGER ARRAY[3]"
-        kw_match = self._PG_ARRAY_KEYWORD.search(upper)
-        if kw_match:
-            base_raw = stripped[:kw_match.start()]
-            element_type = self.parse(base_raw)
+        base_raw = _strip_array_keyword_suffix(upper)
+        if base_raw is not None:
+            element_type = self.parse(stripped[: len(base_raw)])
             # PG normalises all array declarations to 1-D internally
             return PostgresArrayType(element_type=element_type, dimensions=1, dialect=dialect)
 
@@ -139,11 +275,10 @@ class PostgresTypeParser:
         while remaining.endswith("[]"):
             remaining = remaining[:-2]
         while remaining.endswith("]"):
-            m = self._PG_ARRAY_SUFFIX.search(remaining)
-            if m:
-                remaining = remaining[:m.start()]
-            else:
+            bracket_base = _strip_array_bracket_suffix(remaining)
+            if bracket_base is None:
                 break
+            remaining = bracket_base
 
         if remaining != stripped:
             element_type = self.parse(remaining)
@@ -153,7 +288,7 @@ class PostgresTypeParser:
         # ---- Standard type dispatch ----
 
         # Serial family
-        if self._PG_SERIAL_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_SERIAL_WORDS) is not None:
             from ..expression.types import (
                 PostgresBigSerialType,
                 PostgresSerialType,
@@ -166,7 +301,7 @@ class PostgresTypeParser:
             return PostgresSerialType(dialect)
 
         # Integer family
-        if self._PG_INTEGER_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_INTEGER_WORDS) is not None:
             if upper.startswith("SMALLINT") or upper.startswith("INT2"):
                 return SmallIntType(dialect)
             if upper.startswith("BIGINT") or upper.startswith("INT8"):
@@ -174,18 +309,18 @@ class PostgresTypeParser:
             return IntegerType(dialect)
 
         # Float family
-        if self._PG_FLOAT_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_FLOAT_WORDS) is not None:
             if upper.startswith("DOUBLE"):
                 return DoubleType(dialect=dialect)
             if upper.startswith("REAL") or upper.startswith("FLOAT4"):
                 return RealType(dialect=dialect)
-            nums = re.findall(r"\d+", stripped)
+            nums = digit_runs(stripped)
             precision = int(nums[0]) if nums else None
             return FloatType(dialect=dialect, precision=precision)
 
         # Decimal family
-        if self._PG_DECIMAL_TYPES.match(upper):
-            nums = re.findall(r"\d+", stripped)
+        if starts_with_word(upper, self._PG_DECIMAL_WORDS) is not None:
+            nums = digit_runs(stripped)
             if len(nums) >= 2:
                 return DecimalType(dialect=dialect, precision=int(nums[0]), scale=int(nums[1]))
             if len(nums) == 1:
@@ -193,9 +328,8 @@ class PostgresTypeParser:
             return DecimalType(dialect=dialect)
 
         # String family
-        if self._PG_STRING_TYPES.match(upper):
-            length_match = re.search(r"\((\d+)\)", stripped)
-            length = int(length_match.group(1)) if length_match else None
+        if starts_with_word(upper, self._PG_STRING_WORDS) is not None:
+            length = _first_integer_in_parentheses(stripped)
             if upper.startswith("CHARACTER VARYING"):
                 return VarCharType(dialect=dialect, length=length,
                                    spelling="character varying")
@@ -217,34 +351,33 @@ class PostgresTypeParser:
             return TextType(dialect=dialect)
 
         # Binary
-        if self._PG_BINARY_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_BINARY_WORDS) is not None:
             return BlobType(dialect=dialect)
 
         # Date/time
-        if self._PG_DATE_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_DATE_WORDS) is not None:
             if upper.startswith("DATETIME"):
                 return DateTimeType(dialect=dialect)
             if upper.startswith("DATE"):
                 return DateType(dialect=dialect)
             if upper.startswith("TIMESTAMP"):
-                nums = re.findall(r"\d+", stripped)
+                nums = digit_runs(stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMESTAMPTZ"):
                     return TimestampTzType(dialect=dialect, precision=precision)
                 return TimestampType(dialect=dialect, precision=precision)
             if upper.startswith("TIME"):
-                nums = re.findall(r"\d+", stripped)
+                nums = digit_runs(stripped)
                 precision = int(nums[0]) if nums else None
                 if "WITH TIME ZONE" in upper or upper.startswith("TIMETZ"):
                     return TimeTzType(dialect=dialect, precision=precision)
                 return TimeType(dialect=dialect, precision=precision)
             if upper.startswith("INTERVAL"):
-                fields_match = re.search(r"INTERVAL\s+(.*)", upper)
-                fields = fields_match.group(1).strip() if fields_match else None
+                fields = _interval_fields(upper)
                 return IntervalType(dialect=dialect, fields=fields)
 
         # JSON
-        if self._PG_JSON_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_JSON_WORDS) is not None:
             if upper.startswith("JSONB"):
                 return JsonBType(dialect=dialect)
             if upper.startswith("JSONPATH"):
@@ -253,7 +386,7 @@ class PostgresTypeParser:
             return JsonType(dialect=dialect)
 
         # UUID
-        if self._PG_UUID_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_UUID_WORDS) is not None:
             return UUIDType(dialect=dialect)
 
         # Boolean
@@ -261,8 +394,8 @@ class PostgresTypeParser:
             return BooleanType(dialect=dialect)
 
         # Bit string
-        if self._PG_BIT_TYPES.match(upper):
-            nums = re.findall(r"\d+", stripped)
+        if starts_with_word(upper, self._PG_BIT_WORDS) is not None:
+            nums = digit_runs(stripped)
             n = int(nums[0]) if nums else None
             # The variable-length family is tested first: live ``format_type``
             # emits ``bit varying(n)`` for a varbit column, and that string
@@ -270,14 +403,14 @@ class PostgresTypeParser:
             # leading ``startswith("BIT")`` test sent the catalog spelling to
             # ``PostgresBitType``; ``VARBIT`` and ``BIT VARYING`` are the two
             # words for the one storage and must answer the same class.
-            if upper.startswith("VARBIT") or re.match(r"BIT\s+VARYING\b", upper):
+            if upper.startswith("VARBIT") or _starts_with_bit_varying(upper):
                 from ..expression.types import PostgresVarBitType
                 return PostgresVarBitType(n=n, dialect=dialect)
             from ..expression.types import PostgresBitType
             return PostgresBitType(n=n, dialect=dialect)
 
         # Network address
-        if self._PG_NET_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_NET_WORDS) is not None:
             from ..expression.types import (
                 PostgresCidrType,
                 PostgresInetType,
@@ -293,7 +426,7 @@ class PostgresTypeParser:
             return PostgresInetType(dialect)
 
         # Geometric
-        if self._PG_GEOM_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_GEOM_WORDS) is not None:
             from ..expression.types import (
                 PostgresBoxType,
                 PostgresCircleType,
@@ -318,7 +451,7 @@ class PostgresTypeParser:
             return PostgresPointType(dialect)
 
         # Range types
-        if self._PG_RANGE_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_RANGE_WORDS) is not None:
             from ..expression.types import (
                 PostgresDateRangeType,
                 PostgresInt4RangeType,
@@ -341,7 +474,7 @@ class PostgresTypeParser:
             return PostgresInt4RangeType(dialect)
 
         # Multirange types
-        if self._PG_MULTIRANGE_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_MULTIRANGE_WORDS) is not None:
             from ..expression.types import (
                 PostgresDateMultirangeType,
                 PostgresInt4MultirangeType,
@@ -364,7 +497,7 @@ class PostgresTypeParser:
             return PostgresInt4MultirangeType(dialect)
 
         # OID types
-        if self._PG_OID_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_OID_WORDS) is not None:
             from ..expression.types import (
                 PostgresCIDType,
                 PostgresOIDType,
@@ -389,7 +522,7 @@ class PostgresTypeParser:
             return PostgresOIDType(dialect)
 
         # Text search
-        if self._PG_TS_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_TS_WORDS) is not None:
             from ..expression.types import (
                 PostgresTSQueryType,
                 PostgresTSVectorType,
@@ -399,7 +532,7 @@ class PostgresTypeParser:
             return PostgresTSQueryType(dialect)
 
         # Miscellaneous
-        if self._PG_MISC_TYPES.match(upper):
+        if starts_with_word(upper, self._PG_MISC_WORDS) is not None:
             from ..expression.types import (
                 PostgresGeographyType,
                 PostgresGeometryType,
@@ -445,8 +578,8 @@ class PostgresTypeParser:
                 return PostgresRasterType(dialect)
 
         # Vector types (pgvector)
-        vector_match = re.match(r"^(VECTOR|HALFVEC|SPARSEVEC)\b", upper)
-        if vector_match:
+        vector_kind = starts_with_word(upper, self._PG_VECTOR_WORDS)
+        if vector_kind is not None:
             if (
                 hasattr(dialect, "_extensions")
                 and "vector" in dialect._extensions
@@ -456,9 +589,8 @@ class PostgresTypeParser:
                     "Cannot use pgvector types: the 'vector' (pgvector) extension "
                     "is not installed. Run: CREATE EXTENSION IF NOT EXISTS vector;"
                 )
-            nums = re.findall(r"\d+", stripped)
+            nums = digit_runs(stripped)
             dim = int(nums[0]) if nums else 0
-            vector_kind = vector_match.group(1)
             if vector_kind == "HALFVEC":
                 from ..expression.types import PostgresHalfvecType
                 return PostgresHalfvecType(dim=dim, dialect=dialect)

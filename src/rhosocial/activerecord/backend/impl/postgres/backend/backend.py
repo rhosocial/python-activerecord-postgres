@@ -38,6 +38,7 @@ from rhosocial.activerecord.backend.errors import (
 from rhosocial.activerecord.backend.options import ExecutionOptions, StatementType
 from rhosocial.activerecord.backend.result import QueryResult
 from rhosocial.activerecord.logging.redaction import unwrap_sensitive
+from .._scan import parse_postgres_version
 from ..config import PostgresConnectionConfig
 from ..dialect import PostgresDialect
 from .base import PostgresBackendMixin, PostgresConcurrencyMixin
@@ -451,17 +452,11 @@ class PostgresBackend(
             version_str = result[0]
 
             # Extract version from string like "PostgreSQL 13.2..."
-            import re
-
-            match = re.search(r"PostgreSQL (\d+)(?:\.(\d+))?(?:[^\d]*(\d+))?", version_str)
-            if match:
-                major = int(match.group(1))
-                minor = int(match.group(2)) if match.group(2) else 0
-                patch = int(match.group(3)) if match.group(3) else 0
-                return (major, minor, patch)
-            else:
-                self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}")
-                return None
+            version = parse_postgres_version(version_str)
+            if version is not None:
+                return version
+            self.log(logging.WARNING, f"Could not parse PostgreSQL version: {version_str}")
+            return None
         except Exception as e:
             self.log(logging.WARNING, f"Could not determine PostgreSQL version: {str(e)}")
             return None

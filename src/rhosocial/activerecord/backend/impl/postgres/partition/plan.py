@@ -23,11 +23,11 @@ Policies describe the partitions *below* their parent. ``RangePolicy``,
 labels; naming and DDL rendering are the maintenance executor's job.
 """
 
-import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
+from .._scan import collapse_non_alnum
 from .bounds import default_label, iter_range_bounds, normalize_interval
 
 __all__ = [
@@ -71,7 +71,10 @@ def _normalise_method(method: Any) -> str:
 
 def _label_from_values(values: Tuple[Any, ...]) -> str:
     text = "_".join(str(value) for value in values)
-    label = re.sub(r"[^0-9A-Za-z]+", "_", text).strip("_")
+    # Runs of anything outside [0-9A-Za-z] collapse to one underscore, and
+    # leading/trailing underscores are trimmed; an all-punctuation label
+    # falls back to "value".
+    label = collapse_non_alnum(text).strip("_")
     return label or "value"
 
 

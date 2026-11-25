@@ -22,7 +22,6 @@ see adapters.network_address module.
 
 from dataclasses import dataclass
 from typing import Union
-import re
 
 
 @dataclass
@@ -64,7 +63,7 @@ class PostgresMacaddr:
     def _parse(self, addr: str) -> list:
         """Parse MAC address string to list of integers."""
         addr = addr.strip().lower()
-        addr = re.sub(r"[:\-\.]", "", addr)
+        addr = "".join(char for char in addr if char not in ":-.")
 
         if len(addr) != 12:
             raise ValueError(f"Invalid MAC address length: {len(addr)} hex digits (expected 12 for EUI-48)")
@@ -141,7 +140,7 @@ class PostgresMacaddr8:
     def _parse(self, addr: str) -> list:
         """Parse MAC address string to list of integers."""
         addr = addr.strip().lower()
-        addr = re.sub(r"[:\-.]", "", addr)
+        addr = "".join(char for char in addr if char not in ":-.")
 
         if len(addr) == 12:
             addr = addr[:6] + "fffe" + addr[6:]

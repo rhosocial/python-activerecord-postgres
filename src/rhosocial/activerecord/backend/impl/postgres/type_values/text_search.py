@@ -33,7 +33,40 @@ see adapters.text_search module.
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
-import re
+
+from .._scan import read_digits
+
+
+def _split_quoted_prefix(value: str) -> Optional[Tuple[str, str]]:
+    """Split one leading ``'...'`` literal off ``value``.
+
+    Returns the literal's text and the remainder after the closing quote, or
+    ``None`` when the value does not begin with a closed literal.  These
+    spellings have no escape inside the quotes, so the literal ends at the
+    first quote after the opening one, exactly as ``'([^']*)'`` reads it.
+    """
+    if not value.startswith("'"):
+        return None
+    closing = value.find("'", 1)
+    if closing < 0:
+        return None
+    return value[1:closing], value[closing + 1 :]
+
+
+def _is_position_list(text: str) -> bool:
+    """Return whether ``text`` is ``\\d+[A-D]?`` joined by commas."""
+    if not text:
+        return False
+    for part in text.split(","):
+        digits, index = read_digits(part, 0)
+        if not digits:
+            return False
+        if index == len(part):
+            continue
+        if index == len(part) - 1 and part[index] in "ABCD":
+            continue
+        return False
+    return True
 
 
 @dataclass
@@ -89,20 +122,20 @@ class TsVectorLexeme:
         """
         value = value.strip()
 
-        # Match pattern: 'word':positions or just 'word'
-        match = re.match(r"'([^']+)':(\d+[A-D]?(?:,\d+[A-D]?)*)$|'([^']+)'$", value)
+        # The spelling is 'word':positions or just 'word'. A tsvector lexeme
+        # is never empty, so an empty literal is not a lexeme at all.
+        prefix = _split_quoted_prefix(value)
+        if prefix is None:
+            raise ValueError(f"Invalid tsvector lexeme format: {value}")
+        lexeme, remainder = prefix
+        if not lexeme:
+            raise ValueError(f"Invalid tsvector lexeme format: {value}")
 
-        if match:
-            if match.group(1):
-                lexeme = match.group(1)
-                positions_str = match.group(2)
-                positions = cls._parse_positions(positions_str)
-            else:
-                lexeme = match.group(3)
-                positions = []
-            return cls(lexeme=lexeme, positions=positions)
-
-        raise ValueError(f"Invalid tsvector lexeme format: {value}")
+        if not remainder:
+            return cls(lexeme=lexeme, positions=[])
+        if not remainder.startswith(":") or not _is_position_list(remainder[1:]):
+            raise ValueError(f"Invalid tsvector lexeme format: {value}")
+        return cls(lexeme=lexeme, positions=cls._parse_positions(remainder[1:]))
 
     @staticmethod
     def _parse_positions(positions_str: str) -> List[Tuple[int, Optional[str]]]:
@@ -112,14 +145,16 @@ class TsVectorLexeme:
             part = part.strip()
             if not part:
                 continue
-            # Extract position number and optional weight
-            pos_match = re.match(r"(\d+)([A-D])?$", part)
-            if pos_match:
-                pos = int(pos_match.group(1))
-                weight = pos_match.group(2) if pos_match.group(2) else None
-                positions.append((pos, weight))
-            else:
+            # Extract position number and optional weight: digits, then at
+            # most one weight letter, then the end of the part.
+            digits, index = read_digits(part, 0)
+            weight = None
+            if index < len(part) and part[index] in "ABCD":
+                weight = part[index]
+                index += 1
+            if not digits or index != len(part):
                 raise ValueError(f"Invalid position format: {part}")
+            positions.append((int(digits), weight))
         return positions
 
     def __eq__(self, other: object) -> bool:
@@ -318,15 +353,33 @@ class TsQueryLexeme(TsQueryNode):
         """Parse PostgreSQL tsquery lexeme."""
         value = value.strip()
 
-        # Remove quotes and parse modifiers
-        match = re.match(r"'([^']*)'(?::\*([A-D]+)|:([A-D]+)|:\*)?", value)
-        if match:
-            lexeme = match.group(1)
-            weight = match.group(2) or match.group(3) if match.group(2) or match.group(3) else None
-            prefix = bool(match.group(0) and ":*" in match.group(0))
-            return cls(lexeme=lexeme, weight=weight, prefix=prefix)
+        # 'lexeme', optionally followed by one modifier: :*weights, :weights
+        # or the bare :* prefix marker.  The spelling is not anchored at the
+        # end, so text after the modifier is ignored, as it always has been.
+        prefix = _split_quoted_prefix(value)
+        if prefix is None:
+            raise ValueError(f"Invalid tsquery lexeme: {value}")
+        lexeme, remainder = prefix
 
-        raise ValueError(f"Invalid tsquery lexeme: {value}")
+        weight = None
+        # The old spelling decided "prefix" by looking for ":*" anywhere in
+        # the matched text, which includes the lexeme itself; a lexeme that
+        # carries ":*" therefore also set it. That quirk is kept here.
+        is_prefix = ":*" in lexeme
+        if remainder.startswith(":*"):
+            is_prefix = True
+            end = 2
+            while end < len(remainder) and remainder[end] in "ABCD":
+                end += 1
+            if end > 2:
+                weight = remainder[2:end]
+        elif remainder.startswith(":"):
+            end = 1
+            while end < len(remainder) and remainder[end] in "ABCD":
+                end += 1
+            if end > 1:
+                weight = remainder[1:end]
+        return cls(lexeme=lexeme, weight=weight, prefix=is_prefix)
 
 
 @dataclass

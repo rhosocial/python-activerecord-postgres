@@ -1,7 +1,6 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/dml/copy.py
 """PostgreSQL COPY statement formatting and version gates."""
 
-import re
 from enum import Enum
 from typing import Any, List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
@@ -10,6 +9,40 @@ from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
+
+
+def _dollar_quote_tag(sql: str, index: int) -> Optional[str]:
+    """Read the dollar-quote tag that opens at ``index``, if one does.
+
+    The tag is ``$$`` or ``$identifier$``, the identifier being an ASCII
+    letter or underscore followed by ASCII letters, digits or underscores.
+    ``$1`` is a bind marker rather than a tag and answers ``None``, which is
+    how the caller tells the two apart.
+    """
+    start = index
+    index += 1
+    if index < len(sql) and sql[index] == "$":
+        return sql[start : index + 1]
+    if not (
+        index < len(sql) and sql[index].isascii() and (sql[index].isalpha() or sql[index] == "_")
+    ):
+        return None
+    index += 1
+    while index < len(sql) and sql[index].isascii() and (sql[index].isalnum() or sql[index] == "_"):
+        index += 1
+    if index < len(sql) and sql[index] == "$":
+        return sql[start : index + 1]
+    return None
+
+
+def _is_encoding_name(text: str) -> bool:
+    """Return whether ``text`` is ``[A-Za-z0-9][A-Za-z0-9_-]*``."""
+    if not text:
+        return False
+    first = text[0]
+    if not (first.isascii() and first.isalnum()):
+        return False
+    return all(char.isascii() and (char.isalnum() or char in "_-") for char in text[1:])
 
 
 class PostgresCopyMixin:
@@ -122,9 +155,8 @@ class PostgresCopyMixin:
                     raise ValueError("COPY SQL contains an unterminated quoted identifier")
                 continue
             if sql[index] == "$":
-                match = re.match(r"\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$", sql[index:])
-                if match:
-                    tag = match.group(0)
+                tag = _dollar_quote_tag(sql, index)
+                if tag is not None:
                     end = sql.find(tag, index + len(tag))
                     if end < 0:
                         raise ValueError("COPY SQL contains an unterminated dollar string")
@@ -579,7 +611,7 @@ class PostgresCopyMixin:
             options.append(f"REJECT_LIMIT {expr.reject_limit}")
         if expr.encoding is not None:
             encoding = self._copy_string(expr.encoding, "encoding", allow_empty=False)
-            if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", encoding) is None:
+            if not _is_encoding_name(encoding):
                 raise ValueError("encoding must be a PostgreSQL encoding name")
             options.append(f"ENCODING {self._format_copy_string(encoding, 'encoding')}")
         if expr.log_verbosity is not None:

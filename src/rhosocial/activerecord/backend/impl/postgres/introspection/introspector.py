@@ -27,7 +27,6 @@ Design principle: Sync and Async are separate and cannot coexist.
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import json
-import re
 
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
@@ -57,6 +56,7 @@ from rhosocial.activerecord.backend.introspection.types import (
     IntrospectionViewInfo,
     ProfileSource,
 )
+from .._scan import balanced_content, find_ci, is_pg_identifier, read_digits, split_top_level
 from .status_introspector import (
     PostgreSQLStatusIntrospector,
     AsyncPostgreSQLStatusIntrospector,
@@ -89,6 +89,121 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresOperatorFamilyListQueryStatement,
     )
     from ..expression.status import PostgresExtensionListQuery
+
+
+_PARTITION_KEY_WORDS = ("RANGE", "LIST", "HASH")
+
+
+def _balanced_group_after(text: str, marker: str) -> Optional[Tuple[str, int]]:
+    """Read the balanced parenthesis group that follows ``marker``.
+
+    The marker may occur more than once; the first occurrence followed by
+    optional whitespace and an opening parenthesis that actually closes is
+    the one reported, which is what a left-to-right search for the whole
+    spelling finds.  The second element is the index of the closing
+    parenthesis, so the caller can continue from it.
+    """
+    start = 0
+    while True:
+        start = find_ci(text, marker, start)
+        if start < 0:
+            return None
+        open_index = start + len(marker)
+        while open_index < len(text) and text[open_index].isspace():
+            open_index += 1
+        if open_index < len(text) and text[open_index] == "(":
+            group = balanced_content(text, open_index)
+            if group is not None:
+                return group
+        start += 1
+
+
+def _range_bound_after(text: str) -> Optional[Tuple[str, str]]:
+    """Read ``FOR VALUES FROM (...) TO (...)`` into its two endpoint texts."""
+    marker = "FOR VALUES FROM"
+    start = 0
+    while True:
+        start = find_ci(text, marker, start)
+        if start < 0:
+            return None
+        open_index = start + len(marker)
+        while open_index < len(text) and text[open_index].isspace():
+            open_index += 1
+        if open_index < len(text) and text[open_index] == "(":
+            lower_group = balanced_content(text, open_index)
+            if lower_group is not None:
+                lower, closing = lower_group
+                position = closing + 1
+                while position < len(text) and text[position].isspace():
+                    position += 1
+                if text[position : position + 2].upper() == "TO":
+                    position += 2
+                    while position < len(text) and text[position].isspace():
+                        position += 1
+                    if position < len(text) and text[position] == "(":
+                        upper_group = balanced_content(text, position)
+                        if upper_group is not None:
+                            if lower and upper_group[0]:
+                                return lower, upper_group[0]
+        start += 1
+
+
+def _partition_key_group(text: str) -> Optional[Tuple[str, str]]:
+    """Find the first ``RANGE (...)`` / ``LIST (...)`` / ``HASH (...)`` group.
+
+    The strategy word is matched wherever it occurs, not only at a word
+    boundary: the spelling this replaces had no boundary, and the text comes
+    from ``pg_get_partkeydef``, whose first word is the strategy.  The word
+    is returned upper-cased with the group's content.
+    """
+    for index in range(len(text)):
+        for word in _PARTITION_KEY_WORDS:
+            if text[index : index + len(word)].upper() != word:
+                continue
+            position = index + len(word)
+            while position < len(text) and text[position].isspace():
+                position += 1
+            if position >= len(text) or text[position] != "(":
+                continue
+            group = balanced_content(text, position)
+            if group is None:
+                continue
+            return word, group[0]
+    return None
+
+
+def _integer_after_keyword(text: str, keyword: str) -> Optional[int]:
+    """Read ``keyword <digits>`` as the whole of one comma-separated part."""
+    stripped = text.strip()
+    if stripped[: len(keyword)].upper() != keyword:
+        return None
+    index = len(keyword)
+    if index >= len(stripped) or not stripped[index].isspace():
+        return None
+    while index < len(stripped) and stripped[index].isspace():
+        index += 1
+    digits, end = read_digits(stripped, index)
+    if not digits or end != len(stripped):
+        return None
+    return int(digits)
+
+
+def _hash_modulus_remainder(group: str) -> Optional[Tuple[int, int]]:
+    """Read ``MODULUS n, REMAINDER r`` out of a ``FOR VALUES WITH`` group."""
+    modulus = None
+    remainder = None
+    modulus_index = -1
+    remainder_index = -1
+    for index, part in enumerate(split_top_level(group)):
+        value = _integer_after_keyword(part, "MODULUS")
+        if value is not None:
+            modulus, modulus_index = value, index
+        value = _integer_after_keyword(part, "REMAINDER")
+        if value is not None:
+            remainder, remainder_index = value, index
+    if modulus is None or remainder is None or modulus_index > remainder_index:
+        return None
+    return modulus, remainder
 
 
 class PostgreSQLIntrospectorMixin(IntrospectorMixin):
@@ -801,48 +916,6 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     # Schema-object families: partitions, routines, types, operators
     # ------------------------------------------------------------------ #
 
-    #: ``FOR VALUES FROM (...) TO (...)`` on a RANGE partition.
-    _RANGE_BOUND = re.compile(r"FOR VALUES FROM\s*\((.+)\)\s*TO\s*\((.+)\)", re.I | re.S)
-    #: ``FOR VALUES IN (...)`` on a LIST partition.
-    _LIST_BOUND = re.compile(r"FOR VALUES IN\s*\((.+)\)", re.I | re.S)
-    #: ``FOR VALUES WITH (MODULUS n, REMAINDER r)`` on a HASH partition.
-    _HASH_BOUND = re.compile(
-        r"FOR VALUES WITH\s*\(\s*MODULUS\s+(\d+)\s*,\s*REMAINDER\s+(\d+)\s*\)",
-        re.I,
-    )
-    #: ``RANGE (created_at)`` / ``LIST (status)`` / ``HASH (user_id)``.
-    _PARTITION_KEY = re.compile(r"(RANGE|LIST|HASH)\s*\((.*)\)", re.I | re.S)
-
-    @staticmethod
-    def _split_top_level(text: str) -> List[str]:
-        """Split a comma-separated SQL fragment outside parentheses/quotes."""
-        parts: List[str] = []
-        current: List[str] = []
-        depth = 0
-        quote: Optional[str] = None
-        for char in text:
-            if quote:
-                current.append(char)
-                if char == quote:
-                    quote = None
-            elif char in ("'", '"'):
-                quote = char
-                current.append(char)
-            elif char == "(":
-                depth += 1
-                current.append(char)
-            elif char == ")":
-                depth = max(depth - 1, 0)
-                current.append(char)
-            elif char == "," and depth == 0:
-                parts.append("".join(current).strip())
-                current = []
-            else:
-                current.append(char)
-        if current:
-            parts.append("".join(current).strip())
-        return [part for part in parts if part]
-
     @staticmethod
     def _unquote_bound_value(value: str) -> str:
         """Strip the SQL quotes a bound literal carries, if it is quoted."""
@@ -866,17 +939,19 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         """
         if not key:
             return PostgresPartitionStrategy.UNKNOWN, [], None
-        match = cls._PARTITION_KEY.search(str(key))
-        if match is None:
-            return PostgresPartitionStrategy.UNKNOWN, [], str(key)
+        text = str(key)
+        found = _partition_key_group(text)
+        if found is None:
+            return PostgresPartitionStrategy.UNKNOWN, [], text
+        word, group = found
         strategy = {
             "RANGE": PostgresPartitionStrategy.RANGE,
             "LIST": PostgresPartitionStrategy.LIST,
             "HASH": PostgresPartitionStrategy.HASH,
-        }.get(match.group(1).upper(), PostgresPartitionStrategy.UNKNOWN)
-        inner = match.group(2).strip()
-        parts = cls._split_top_level(inner)
-        simple = all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$]*", part) for part in parts)
+        }.get(word, PostgresPartitionStrategy.UNKNOWN)
+        inner = group.strip()
+        parts = split_top_level(inner)
+        simple = all(is_pg_identifier(part) for part in parts)
         if simple:
             return strategy, parts, None
         return strategy, [], inner or None
@@ -895,29 +970,33 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         text = str(bound).strip()
         if text.upper() == "DEFAULT":
             return PostgresPartitionBound(text=text)
-        match = cls._RANGE_BOUND.search(text)
-        if match:
+        endpoints = _range_bound_after(text)
+        if endpoints is not None:
+            lower, upper = endpoints
             return PostgresPartitionBound(
-                lower=cls._unquote_bound_value(match.group(1)),
-                upper=cls._unquote_bound_value(match.group(2)),
+                lower=cls._unquote_bound_value(lower),
+                upper=cls._unquote_bound_value(upper),
                 text=text,
             )
-        match = cls._LIST_BOUND.search(text)
-        if match:
+        group = _balanced_group_after(text, "FOR VALUES IN")
+        if group is not None and group[0]:
             return PostgresPartitionBound(
                 values=[
                     cls._unquote_bound_value(value)
-                    for value in cls._split_top_level(match.group(1))
+                    for value in split_top_level(group[0])
                 ],
                 text=text,
             )
-        match = cls._HASH_BOUND.search(text)
-        if match:
-            return PostgresPartitionBound(
-                modulus=int(match.group(1)),
-                remainder=int(match.group(2)),
-                text=text,
-            )
+        group = _balanced_group_after(text, "FOR VALUES WITH")
+        if group is not None:
+            hash_parts = _hash_modulus_remainder(group[0])
+            if hash_parts is not None:
+                modulus, remainder = hash_parts
+                return PostgresPartitionBound(
+                    modulus=modulus,
+                    remainder=remainder,
+                    text=text,
+                )
         return PostgresPartitionBound(text=text)
 
     def parse_partitions(

@@ -31,7 +31,6 @@ Wire formats:
 from __future__ import annotations
 
 import math
-import re
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple, Type
@@ -52,15 +51,13 @@ from rhosocial.activerecord.backend.adapters import (
     VectorAdapterBase,
 )
 
+from .._scan import is_hex_text, is_int_text, is_number_text
 from ..type_values.bit_string import PostgresBitString
 from ..type_values.network_address import PostgresMacaddr, PostgresMacaddr8
 from ..type_values.pgvector import PostgresVector
 from ..type_values.postgis import PostgresGeometry
 from ..type_values.range import PostgresMultirange, PostgresRange
 
-_HEX_TEXT_RE = re.compile(r"^(?:0[xX])?[0-9A-Fa-f]+$")
-_INT_TEXT_RE = re.compile(r"^[+-]?\d+$")
-_NUMBER_TEXT_RE = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
 _NON_FINITE_NAMES = {
     "nan": float("nan"),
     "infinity": float("inf"),
@@ -110,7 +107,7 @@ _ELEMENT_TYPE_ALIASES = {
 
 def _looks_like_ewkb_hex(text: str) -> bool:
     """Return whether ``text`` is PostGIS's default hex EWKB output."""
-    return bool(_HEX_TEXT_RE.match(text)) and len(text) >= 10
+    return is_hex_text(text) and len(text) >= 10
 
 
 class PostgresNeutralGeometryAdapter(GeometryAdapterBase):
@@ -466,7 +463,7 @@ def _parse_element(text: str, label: Optional[str]) -> Any:
         except ValueError:
             raise ValueError("invalid time range bound: {!r}".format(text)) from None
     if label == "int":
-        if not _INT_TEXT_RE.match(text):
+        if not is_int_text(text):
             raise ValueError("invalid integer range bound: {!r}".format(text))
         return int(text)
     if label == "decimal":
@@ -486,9 +483,9 @@ def _parse_element(text: str, label: Optional[str]) -> Any:
     lower = text.lower()
     if lower in _NON_FINITE_NAMES:
         return _NON_FINITE_NAMES[lower]
-    if _INT_TEXT_RE.match(text):
+    if is_int_text(text):
         return int(text)
-    if _NUMBER_TEXT_RE.match(text):
+    if is_number_text(text):
         try:
             return Decimal(text)
         except InvalidOperation:

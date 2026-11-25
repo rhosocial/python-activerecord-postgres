@@ -35,7 +35,6 @@ supported code, and the same wording on every version measured (17 / 18 / 19)::
 :meth:`PostgresConstraintMixin.supports_fk_match`.
 """
 
-import re
 from typing import Any, List, Tuple, TYPE_CHECKING, cast
 
 from rhosocial.activerecord.backend.expression.statements import (
@@ -70,6 +69,17 @@ else:
 
     class _ConstraintMixinBase:
         pass
+
+
+#: The alphabet an EXCLUDE element operator is spelled with. PostgreSQL's own
+#: operator names use exactly these characters, and anything outside the set
+#: would let an operator value change the statement's shape.
+_EXCLUDE_OPERATOR_CHARACTERS = "abcdefghijklmnopqrstuvwxyz0123456789_+-*/<>=~!@#%^&|?$"
+
+
+def _is_exclude_operator(text: str) -> bool:
+    """Return whether ``text`` is a non-empty run of operator characters."""
+    return bool(text) and all(char in _EXCLUDE_OPERATOR_CHARACTERS for char in text)
 
 
 class PostgresConstraintMixin(_ConstraintMixinBase):
@@ -853,9 +863,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             if not isinstance(operator, str):
                 raise ValueError("EXCLUDE operator must be a string")
             operator = "".join(operator.strip().lower().split())
-            if operator in {"is", "isnot"} or re.fullmatch(
-                r"[a-z0-9_+\-*/<>=~!@#%^&|?$]+", operator
-            ) is None:
+            if operator in {"is", "isnot"} or not _is_exclude_operator(operator):
                 raise ValueError(f"Invalid exclude operator '{operator}'")
             if isinstance(expression, str):
                 if not expression.strip():

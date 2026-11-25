@@ -1,5 +1,4 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/ddl_table.py
-import re
 from typing import Any, Dict, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
@@ -22,6 +21,22 @@ SERIAL_TYPES: Dict[type, str] = {
     IntegerType: "SERIAL",
     BigIntType: "BIGSERIAL",
 }
+
+
+def _is_column_type_sql(text: str) -> bool:
+    """Return whether ``text`` may be interpolated as a column type.
+
+    The accepted alphabet is the one a ``to_sql()`` type spelling uses: ASCII
+    letters and digits, underscore, whitespace, parentheses, comma and
+    square brackets. Anything else would let a type spelling change the
+    statement's shape, so it is refused rather than escaped.
+    """
+    if not text:
+        return False
+    return all(
+        (char.isascii() and char.isalnum()) or char == "_" or char.isspace() or char in "(),[]"
+        for char in text
+    )
 
 
 class PostgresTableMixin:
@@ -252,7 +267,7 @@ class PostgresTableMixin:
 
         all_params: List[Any] = []
         type_sql, _ = expr.data_type.to_sql()
-        if not re.fullmatch(r"[A-Za-z0-9_\s(),\[\]]+", type_sql):
+        if not _is_column_type_sql(type_sql):
             raise ValueError(
                 f"Invalid data type '{type_sql}': "
                 "must contain only alphanumeric characters, underscores, spaces, "

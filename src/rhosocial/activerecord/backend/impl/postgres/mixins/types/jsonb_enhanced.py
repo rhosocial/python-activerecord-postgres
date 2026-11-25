@@ -5,8 +5,7 @@ PostgreSQL JSONB enhanced mixin.
 Implements the PostgresJSONBEnhancedSupport protocol.
 """
 
-import re
-from typing import Tuple, Union, TYPE_CHECKING
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
@@ -38,18 +37,13 @@ if TYPE_CHECKING:
 #: wildcards, arithmetic, ``last`` -- has no spelling here, and
 #: :func:`_jsonpath_key_array` refuses rather than approximate it.
 #:
-#: The three alternatives are exactly PostgreSQL's lax-mode accessor syntax:
+#: The three shapes are exactly PostgreSQL's lax-mode accessor syntax:
 #: ``.key`` for an unquoted key, ``."key"`` for anything else (a space, a dash,
 #: a leading digit), and ``[0]`` for a subscript. ``$.tags[0]`` therefore
 #: translates to ``("tags", "0")``, which is what ``#> '{tags,0}'`` walks.
-_JSONPATH_ACCESSOR = re.compile(
-    r"""
-      \.\s*(?P<key>[A-Za-z_][A-Za-z0-9_]*)      # .key
-    | \.\s*"(?P<quoted>(?:[^"\\]|\\.)*)"        # ."a key with spaces"
-    | \[\s*(?P<index>[0-9]+)\s*\]              # [0]
-    """,
-    re.VERBOSE,
-)
+_JSONPATH_KEY_START = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+_JSONPATH_KEY_BODY = _JSONPATH_KEY_START + "0123456789"
+_JSONPATH_INDEX_DIGITS = "0123456789"
 
 #: Constructs a jsonpath can contain that a key array cannot express, each with
 #: the clause to use when refusing it. Looked for in this order because some of
@@ -86,12 +80,72 @@ def _describe_untranslatable_path(fragment: str) -> str:
     return f"is not a path the -> and #> operators can express: {fragment.strip()!r}"
 
 
+def _scan_jsonpath_accessor(text: str, position: int) -> Optional[Tuple[str, str, int]]:
+    """Read the accessor at ``position`` as ``(kind, text, end)``.
+
+    The three accepted shapes are the ones a key array can hold: ``.key`` (an
+    unquoted name), ``."quoted"`` (anything else, kept as written with its
+    backslash escapes) and ``[0]`` (a subscript). Whitespace is allowed around
+    the key and the subscript, as the jsonpath language allows it. ``None``
+    means the text at ``position`` is not an accessor at all.
+    """
+    if position >= len(text):
+        return None
+    marker = text[position]
+    if marker == ".":
+        index = position + 1
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text):
+            return None
+        if text[index] == '"':
+            start = index + 1
+            index = start
+            while index < len(text):
+                char = text[index]
+                if char == "\\":
+                    # An escape consumes the next character; a backslash at
+                    # the end of the text, or before a newline, is not an
+                    # escape the accessor syntax accepts.
+                    if index + 1 >= len(text) or text[index + 1] == "\n":
+                        return None
+                    index += 2
+                    continue
+                if char == '"':
+                    return "quoted", text[start:index], index + 1
+                index += 1
+            return None
+        if text[index] in _JSONPATH_KEY_START:
+            start = index
+            index += 1
+            while index < len(text) and text[index] in _JSONPATH_KEY_BODY:
+                index += 1
+            return "key", text[start:index], index
+        return None
+    if marker == "[":
+        index = position + 1
+        while index < len(text) and text[index].isspace():
+            index += 1
+        start = index
+        while index < len(text) and text[index] in _JSONPATH_INDEX_DIGITS:
+            index += 1
+        digits = text[start:index]
+        if not digits:
+            return None
+        while index < len(text) and text[index].isspace():
+            index += 1
+        if index >= len(text) or text[index] != "]":
+            return None
+        return "index", digits, index + 1
+    return None
+
+
 def _jsonpath_accessors(text: str) -> Tuple[Tuple[str, str], ...]:
     """Walk an accessor chain into ``(kind, text)`` pairs.
 
     ``kind`` is ``"index"`` (``[0]``), ``"key"`` (``.a``) or ``"quoted"``
-    (``."a b"``), one per alternative of :data:`_JSONPATH_ACCESSOR`; ``text``
-    is the match as written, so a quoted key keeps its backslash escapes.
+    (``."a b"``), one per shape :func:`_scan_jsonpath_accessor` reads; ``text``
+    is the accessor as written, so a quoted key keeps its backslash escapes.
 
     This is the one walk both spellings of a path are built from.
     :func:`_jsonpath_key_array` takes the values, and
@@ -107,16 +161,11 @@ def _jsonpath_accessors(text: str) -> Tuple[Tuple[str, str], ...]:
     accessors = []
     position = 0
     while position < len(text):
-        accessor = _JSONPATH_ACCESSOR.match(text, position)
+        accessor = _scan_jsonpath_accessor(text, position)
         if accessor is None:
             raise ValueError(_describe_untranslatable_path(text[position:]))
-        position = accessor.end()
-        if accessor.group("index") is not None:
-            accessors.append(("index", accessor.group("index")))
-        elif accessor.group("key") is not None:
-            accessors.append(("key", accessor.group("key")))
-        else:
-            accessors.append(("quoted", accessor.group("quoted")))
+        kind, value, position = accessor
+        accessors.append((kind, value))
     return tuple(accessors)
 
 

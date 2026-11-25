@@ -21,7 +21,22 @@ see adapters.json.PostgresJsonPathAdapter.
 
 from dataclasses import dataclass
 from typing import Union
-import re
+
+from .._scan import is_ascii_identifier
+
+_JSONPATH_CHARACTERS = "$.[]@*?()'\"<>!=&|"
+
+
+def _is_jsonpath_character(char: str) -> bool:
+    """Return whether ``char`` belongs to the accepted jsonpath alphabet.
+
+    This is the ``[$.\\[\\]@*?\\(\\)'\\"\\w\\s<>!=&|]`` class: the listed
+    punctuation, a word character (letters, digits, underscore -- Unicode,
+    as ``\\w`` is) or whitespace.
+    """
+    if char in _JSONPATH_CHARACTERS:
+        return True
+    return char.isalnum() or char == "_" or char.isspace()
 
 
 @dataclass
@@ -102,8 +117,7 @@ class PostgresJsonPath:
 
         path = self.path
 
-        valid_chars = r"[$.\[\]@*?\(\)'\"\w\s<>!=&|]"
-        if not re.match(f"^{valid_chars}+$", path):
+        if not all(_is_jsonpath_character(char) for char in path):
             return False
 
         bracket_count = 0
@@ -136,7 +150,7 @@ class PostgresJsonPath:
         Examples:
             PostgresJsonPath('$').key('name')  # -> '$.name'
         """
-        if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", key):
+        if is_ascii_identifier(key):
             return PostgresJsonPath(f"{self.path}.{key}")
         else:
             return PostgresJsonPath(f'{self.path}."{key}"')

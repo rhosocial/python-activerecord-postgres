@@ -134,7 +134,6 @@ class PostgresMoneyAdapter:
         Returns:
             Decimal amount
         """
-        import re
         from decimal import Decimal, InvalidOperation
 
         value = value.strip()
@@ -163,8 +162,9 @@ class PostgresMoneyAdapter:
             else:
                 value = value.replace(",", "")
 
-        MONEY_PATTERN = re.compile(r"[^\d.-]")
-        cleaned = MONEY_PATTERN.sub("", value)
+        # Keep only the digits, the decimal point and the sign; ``\d`` in a
+        # str pattern is ``str.isdecimal``, which is what a Decimal accepts.
+        cleaned = "".join(char for char in value if char.isdecimal() or char in ".-")
 
         if is_negative:
             cleaned = "-" + cleaned.replace("-", "")
