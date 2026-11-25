@@ -8,10 +8,10 @@ formatters. Exact SQL strings pin the PostgreSQL spelling of every supported
 chain.
 """
 import dataclasses
+import re
 
 import pytest
 from rhosocial.activerecord.backend.expression import Column
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     DropTableStatement,
@@ -307,27 +307,29 @@ def test_create_index_concurrently_version_gate(version):
 # ----------------------------------------------------------- partition scheme
 
 
-def test_scheme_adoption_reuses_build_clause():
+def test_scheme_adoption_is_explicitly_unsupported_not_a_clause_fragment():
     dialect = _dialect()
     point = PartitionSchemeChangeSuggestion(
         table_name="events", new_partition=_freeze(_partition(dialect))
     )
-    operations = dialect.suggest_partition_scheme_change(point).operations
-    assert isinstance(operations, tuple) and len(operations) == 1
-    assert isinstance(operations[0], PartitionClause)
-    assert _sql(operations)[0].strip() == 'PARTITION BY HASH ("id")'
-    assert all(isinstance(op, BaseExpression) for op in operations)
+    answer = dialect.suggest_partition_scheme_change(point)
+    assert answer.operations is False
+    assert answer.state == "unaddressable"
+    doc = dialect.suggest_partition_scheme_change.__doc__
+    assert "CREATE TABLE" in doc and "standalone" in doc
 
 
-def test_scheme_removal_reuses_table_drop_statement():
+def test_scheme_removal_is_explicitly_unsupported_not_a_drop_table():
     dialect = _dialect()
     point = PartitionSchemeChangeSuggestion(
         table_name="events", old_partition=_freeze(_partition(dialect))
     )
-    operations = dialect.suggest_partition_scheme_change(point).operations
-    assert isinstance(operations, tuple) and len(operations) == 1
-    assert isinstance(operations[0], DropTableStatement)
-    assert _sql(operations) == ['DROP TABLE IF EXISTS "events"']
+    answer = dialect.suggest_partition_scheme_change(point)
+    assert answer.operations is False
+    assert answer.state == "unaddressable"
+    doc = dialect.suggest_partition_scheme_change.__doc__
+    for word in ("data-preserving rebuild", "CREATE TABLE", "copy", "swap", "authorized"):
+        assert word in doc
 
 
 def test_scheme_switch_is_false_because_postgres_cannot_alter_partitioning():
@@ -378,3 +380,129 @@ def test_community_postgres_has_no_merge_or_split_partition(version):
         new_partition=_freeze(_partition(dialect, "RANGE", "id")),
     )
     assert dialect.suggest_partition_scheme_change(point).operations is False
+
+
+# ------------------------------------------------------------ safety invariant
+
+# resolve_suggestions appends every returned expression verbatim to
+# plan.statements, which MigrationContext.apply renders and executes. A drop of
+# a data-bearing object (or a truncate/delete) can never be a chain member.
+# Dropping an index/constraint/trigger is recoverable and stays allowed.
+_BENIGN_DROP_CLASSES = {
+    "DropTableConstraintAction",
+    "DropIndexAction",
+    "DropIndexStatement",
+    "DropFulltextIndexStatement",
+    "PostgresDropIndexExpression",
+    "DropTriggerStatement",
+    "DropDomainDefaultAction",
+    "DropDomainNotNullAction",
+    "DropDomainCheckAction",
+    "PostgresDropDomainCheckAction",
+    "PostgresDropPolicyStatement",
+    "PostgresDropTypeAttributeAction",
+}
+_ROW_DESTROYING_CLASSES = {"TruncateStatement", "DeleteStatement"}
+_DESTRUCTIVE_SQL = re.compile(
+    r"\b(?:DROP\s+(?:TABLE|SCHEMA|DATABASE|DOMAIN|FUNCTION|SEQUENCE|TYPE|"
+    r"MATERIALIZED\s+VIEW|VIEW|COLUMN|FOREIGN\s+TABLE)|TRUNCATE|DELETE\s+FROM)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_destructive_class(class_name):
+    if class_name in _ROW_DESTROYING_CLASSES:
+        return True
+    return (
+        class_name.startswith(("Drop", "PostgresDrop"))
+        and class_name not in _BENIGN_DROP_CLASSES
+    )
+
+
+def _change_point_cases(dialect):
+    """Representative points for all four consumed change-point protocols."""
+    frozen_partition = _freeze(_partition(dialect))
+    frozen_constraint = _freeze(_constraint(dialect))
+    frozen_index = _freeze(_index(dialect))
+    return [
+        (
+            "suggest_column_reorder",
+            ColumnReorderSuggestion(
+                table_name="events",
+                old_order=("id",),
+                new_order=("name",),
+                reordered_columns=("id",),
+            ),
+        ),
+        (
+            "suggest_table_constraint_change",
+            TableConstraintChangeSuggestion(
+                table_name="events", old_constraints=(frozen_constraint,), new_constraints=()
+            ),
+        ),
+        (
+            "suggest_table_constraint_change",
+            TableConstraintChangeSuggestion(
+                table_name="events", old_constraints=(), new_constraints=(_constraint(dialect),)
+            ),
+        ),
+        (
+            "suggest_table_index_change",
+            TableIndexChangeSuggestion(
+                table_name="events", old_indexes=(frozen_index,), new_indexes=()
+            ),
+        ),
+        (
+            "suggest_table_index_change",
+            TableIndexChangeSuggestion(
+                table_name="events", old_indexes=(), new_indexes=(frozen_index,)
+            ),
+        ),
+        (
+            "suggest_partition_scheme_change",  # adopt
+            PartitionSchemeChangeSuggestion(
+                table_name="events", new_partition=frozen_partition
+            ),
+        ),
+        (
+            "suggest_partition_scheme_change",  # abandon
+            PartitionSchemeChangeSuggestion(
+                table_name="events", old_partition=frozen_partition
+            ),
+        ),
+        (
+            "suggest_partition_scheme_change",  # switch
+            PartitionSchemeChangeSuggestion(
+                table_name="events",
+                old_partition=frozen_partition,
+                new_partition=_freeze(_partition(dialect, "RANGE", "created_at")),
+            ),
+        ),
+    ]
+
+
+def _chain_nodes(expression):
+    """A statement plus any composite actions it carries."""
+    yield expression
+    actions = getattr(expression, "actions", ())
+    if isinstance(actions, (list, tuple)):
+        for action in actions:
+            yield from _chain_nodes(action)
+
+
+@pytest.mark.parametrize("version", [None, (14, 0, 0), (18, 0, 0)])
+def test_no_change_suggestion_chain_contains_destructive_ddl(version):
+    """No returned chain may carry a destructive DDL statement."""
+    dialect = _dialect(version) if version else PostgresDialect()
+    for method_name, point in _change_point_cases(dialect):
+        operations = getattr(dialect, method_name)(point).operations
+        if not isinstance(operations, (list, tuple)):
+            continue
+        for operation in operations:
+            for node in _chain_nodes(operation):
+                class_name = type(node).__name__
+                rendered = node.to_sql()[0] if hasattr(node, "to_sql") else ""
+                where = f"{method_name}: {class_name} -> {rendered}"
+                assert not isinstance(node, DropTableStatement), where
+                assert not _is_destructive_class(class_name), where
+                assert not _DESTRUCTIVE_SQL.search(rendered), where

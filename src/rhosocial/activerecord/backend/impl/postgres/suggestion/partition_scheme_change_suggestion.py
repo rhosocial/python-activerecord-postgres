@@ -2,18 +2,21 @@
 """PostgreSQL's partition-scheme change answer.
 
 This protocol answers *scheme* changes from the old/new declarations in the
-point; it delegates to the eight partition answers already implemented on this
-dialect instead of restating partition DDL. A frozen ``PartitionClause``
-projection carries the method and the key columns, nothing about a concrete
-partition: so ``add`` / ``drop`` / ``retention`` cannot name a partition and
-``split`` / ``merge`` have no community PostgreSQL statement at all (those two
-are always ``False``; see their own modules for the measured evidence).
+point. A frozen ``PartitionClause`` projection carries the method and the key
+columns, nothing about a concrete partition: so ``add`` / ``drop`` /
+``retention`` cannot name a partition and ``split`` / ``merge`` have no community
+PostgreSQL statement at all (those two are always ``False``; see their own
+modules for the measured evidence).
 
-Only three cases have a PostgreSQL mechanism here: adopting a scheme (the
-``PARTITION BY`` clause from ``build``), abandoning the partitioned parent (the
-``DROP TABLE`` from ``table_drop``), and no change. Switching between two
-schemes is a rebuild and is answered by ``table_alter``, which is ``False`` on
-PostgreSQL. A maintenance chain is never smuggled into a scheme answer.
+None of the three scheme transitions yields a safe, standalone executable
+statement here. Adopting a scheme would only produce the ``PARTITION BY`` clause
+from ``build`` -- a CREATE TABLE fragment, not a statement that
+``resolve_suggestions`` could append to the executable ``plan.statements`` list.
+Abandoning a scheme would produce the ``DROP TABLE`` from ``table_drop``, which
+destroys the table's data. Switching between two schemes is a rebuild and
+PostgreSQL cannot ALTER a parent's scheme in place (the ``table_alter`` answer
+is ``False``). All three therefore answer ``False`` (explicitly unsupported);
+``None`` is reserved for no change.
 """
 from types import SimpleNamespace
 from typing import Any, Dict, Optional, Tuple
@@ -50,7 +53,7 @@ def _partition_projection(value: Any) -> Optional[Tuple[Any, ...]]:
 
 
 class PostgresPartitionSchemeChangeSuggestionMixin:
-    """Answer a partition-scheme change by delegating to the eight partition answers."""
+    """Answer a partition-scheme change without offering destructive or fragmentary DDL."""
 
     def _scheme_context(self, table_name: str, value: Any) -> Any:
         """Build ``(strategy, plan)`` for the existing partition suggest methods.
@@ -68,8 +71,8 @@ class PostgresPartitionSchemeChangeSuggestionMixin:
         if params is None:
             return _UNUSABLE
         # Keep the declared word, even when it is outside RANGE/LIST/HASH: the
-        # existing build/table-alter answers own that decision. Only a live
-        # strategy clause needs its word unwrapped first.
+        # partition answers own that decision. Only a live strategy clause needs
+        # its word unwrapped first.
         word = params.get("method")
         if not isinstance(word, str):
             word = self._suggestion_strategy(word, None)
@@ -100,11 +103,14 @@ class PostgresPartitionSchemeChangeSuggestionMixin:
         return strategy, plan
 
     def _scheme_answers(self, context: Any) -> Dict[str, Any]:
-        """Ask each of the eight partition protocols; never restate their DDL."""
+        """Ask the maintenance and table-alter protocols; never restate their DDL.
+
+        ``build`` and ``table_drop`` are deliberately absent: the former returns
+        a CREATE TABLE clause fragment, the latter a destructive DROP TABLE.
+        Neither belongs in an executable suggestion chain.
+        """
         strategy, plan = context
         return {
-            "build": self.suggest_partition_build(strategy, plan),
-            "table_drop": self.suggest_partition_table_drop(strategy, plan),
             "table_alter": self.suggest_partition_table_alter(strategy, plan),
             "add": self.suggest_partition_add(strategy, plan),
             "drop": self.suggest_partition_drop(strategy, plan),
@@ -116,7 +122,20 @@ class PostgresPartitionSchemeChangeSuggestionMixin:
     def suggest_partition_scheme_change(
         self, point: PartitionSchemeChangeSuggestion
     ) -> PartitionSchemeChangeSuggestion:
-        """Use only real, supported partition operations from the eight answers."""
+        """Answer only with safe, standalone executable statements.
+
+        Adopting a partition scheme would yield the parent's ``PARTITION BY``
+        clause from the build answer -- a fragment that belongs in ``CREATE
+        TABLE``, not a standalone statement ``MigrationContext.apply`` could
+        execute -- so the answer is ``False`` here.
+
+        Removing partitioning requires a data-preserving rebuild
+        (``CREATE TABLE new ...`` -> copy the rows -> swap the table -> drop the
+        old table). That rebuild is outside a suggestion chain and must be an
+        explicitly authorized migration plan, so the answer is ``False`` rather
+        than a destructive ``DROP TABLE``. Switching between two schemes is a
+        rebuild too: PostgreSQL cannot ALTER a parent's scheme in place.
+        """
         old = self._scheme_context(point.table_name, point.old_partition)
         new = self._scheme_context(point.table_name, point.new_partition)
         if old is _UNUSABLE or new is _UNUSABLE:
@@ -138,10 +157,10 @@ class PostgresPartitionSchemeChangeSuggestionMixin:
             # reported as the scheme change's action chain.
             return PartitionSchemeChangeSuggestion(operations=False)
 
-        if old is None:
-            return PartitionSchemeChangeSuggestion(operations=answers["build"].operations)
-        if new is None:
-            return PartitionSchemeChangeSuggestion(operations=answers["table_drop"].operations)
+        if old is None or new is None:
+            # Adopt: only a CREATE TABLE clause fragment. Abandon: only a data
+            # destroying DROP TABLE. Neither is a safe executable statement.
+            return PartitionSchemeChangeSuggestion(operations=False)
         if projection(point.old_partition) == projection(point.new_partition):
             return PartitionSchemeChangeSuggestion(operations=None)
         # Both sides declare partitioning but differ: PostgreSQL cannot ALTER a
