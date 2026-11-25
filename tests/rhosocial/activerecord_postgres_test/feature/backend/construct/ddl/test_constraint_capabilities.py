@@ -338,6 +338,7 @@ class TestAddAndDropAndRenameRender:
         assert params == ()
 
     def test_drop_constraint_renders(self):
+        """The name-only address is unchanged: a bare name still renders alone."""
         d = _dialect()
         sql, params = DropTableConstraintAction(d, "ck").to_sql()
         assert sql == 'DROP CONSTRAINT "ck"'
@@ -350,25 +351,59 @@ class TestAddAndDropAndRenameRender:
         assert sql == 'DROP CONSTRAINT IF EXISTS "ck"'
         assert params == ()
 
-    @pytest.mark.parametrize("constraint_name", (None, "uq"))
-    def test_drop_constraint_by_kind_is_refused(self, constraint_name):
-        """PostgreSQL spells the drop by name only, so a declaration is refused.
+    @pytest.mark.parametrize("if_exists", (None, True))
+    def test_drop_constraint_confirmed_by_equal_declaration_renders(self, if_exists):
+        """A declaration carrying the same name only confirms it; the drop is by name.
 
-        Core lets an action carry a ``constraint`` declaration for dialects that
-        spell the drop by kind (``DROP PRIMARY KEY`` / ``DROP UNIQUE (<cols>)``).
-        PostgreSQL has no such form -- its grammar takes a name -- so the
-        declaration is refused rather than silently ignored, whether or not a
-        name is also supplied.
+        Core refuses to pick an address by preference: when both a name and a
+        declaration are given, the declaration's name must equal the name.  Equal
+        names mean one address, so PostgreSQL renders its name-only form -- the
+        same bytes as the name-only action, ``IF EXISTS`` gate included.
+        """
+        d = _dialect()
+        declaration = TableConstraint(d, branch=TableUniqueConstraint(d, ["a"]), name="uq")
+        action = DropTableConstraintAction(
+            d, "uq", constraint=declaration, if_exists=if_exists
+        )
+        sql, params = action.to_sql()
+        expected = (
+            'DROP CONSTRAINT IF EXISTS "uq"' if if_exists else 'DROP CONSTRAINT "uq"'
+        )
+        assert sql == expected
+        assert params == ()
+
+    @pytest.mark.parametrize("declaration_name", ("other", None), ids=("differing", "unnamed"))
+    def test_drop_constraint_disagreeing_addresses_are_ambiguous(self, declaration_name):
+        """A name plus a declaration that does not confirm it is refused.
+
+        A differing name and an unnamed declaration are both two addresses that
+        disagree, so core's single rule refuses them as ambiguous.  PostgreSQL
+        never silently drops one of the two.
         """
         d = _dialect()
         declaration = TableConstraint(
-            d, branch=TableUniqueConstraint(d, ["a"]), name="uq"
+            d, branch=TableUniqueConstraint(d, ["a"]), name=declaration_name
         )
-        action = DropTableConstraintAction(
-            d, constraint_name=constraint_name, constraint=declaration
-        )
-        with pytest.raises(UnsupportedFeatureError, match="DROP CONSTRAINT by kind"):
+        action = DropTableConstraintAction(d, "uq", constraint=declaration)
+        with pytest.raises(UnsupportedFeatureError) as excinfo:
             action.to_sql()
+        assert excinfo.value.feature_name == "DROP CONSTRAINT address"
+        assert "DROP CONSTRAINT address" in str(excinfo.value)
+
+    def test_drop_constraint_by_kind_is_refused(self):
+        """A declaration-only action is a kind address, which PostgreSQL lacks.
+
+        The resolver answers ``kind`` only when the dialect advertises
+        ``supports_drop_constraint_by_kind()``; PostgreSQL leaves that at core's
+        default ``False``, so the address is refused by name before this
+        formatter would have to spell a kind.
+        """
+        d = _dialect()
+        declaration = TableConstraint(d, branch=TableUniqueConstraint(d, ["a"]), name="uq")
+        with pytest.raises(UnsupportedFeatureError) as excinfo:
+            DropTableConstraintAction(d, constraint=declaration).to_sql()
+        assert excinfo.value.feature_name == "DROP CONSTRAINT by kind"
+        assert "DROP CONSTRAINT by kind" in str(excinfo.value)
 
     def test_drop_constraint_by_kind_stays_unadvertised(self):
         """The kind-based probe stays at core's default ``False``."""

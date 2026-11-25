@@ -8,8 +8,6 @@ which the core ``DDLColumnMixin`` does not emit.
 
 from typing import Tuple
 
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-
 
 class PostgresAlterColumnModifierMixin:
     """PostgreSQL IF [NOT] EXISTS qualifiers for ALTER TABLE actions.
@@ -53,16 +51,18 @@ class PostgresAlterColumnModifierMixin:
     def format_drop_table_constraint_action(self, expr) -> Tuple[str, tuple]:
         # PostgreSQL spells the drop by name only: the grammar is
         # ``ALTER TABLE ... DROP CONSTRAINT [IF EXISTS] <name>``, with no
-        # ``DROP PRIMARY KEY`` / ``DROP UNIQUE (<cols>)`` form.  Core lets a dialect
-        # carry a constraint declaration on the action for kind-based spellings;
-        # this one has none, so a declaration is refused explicitly rather than
-        # silently ignored.
-        if getattr(expr, "constraint", None) is not None:
-            raise UnsupportedFeatureError(
-                self.name,
-                "DROP CONSTRAINT by kind",
-                f"{self.name} spells DROP CONSTRAINT by name only; "
-                f"address the constraint by name instead.",
+        # ``DROP PRIMARY KEY`` / ``DROP UNIQUE (<cols>)`` form.  Core's resolver
+        # decides which address the action names the constraint by -- the name,
+        # or the declaration's kind -- and refuses an ambiguous address (a name
+        # plus a declaration that does not confirm it) before any spelling is
+        # attempted.  This formatter has no kind form, so ask for the name and
+        # refuse a kind address explicitly.
+        address = self._resolve_drop_constraint_address(expr)
+        if address != "name":
+            raise NotImplementedError(
+                f"{self.name} spells DROP CONSTRAINT by name only and does not "
+                f"override format_drop_table_constraint_action with a kind form; "
+                f"address the constraint by name instead."
             )
         result = "DROP CONSTRAINT"
         if getattr(expr, "if_exists", None) is True:
