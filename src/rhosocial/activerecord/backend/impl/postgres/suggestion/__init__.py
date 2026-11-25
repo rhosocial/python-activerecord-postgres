@@ -6,10 +6,13 @@ Suggestions are not expressions: the immutable suggestion values live in
 concrete answer mixins -- which the dialect installs ahead of the core mixins
 so no portable default can shadow them. The eight partition answer mixins each
 live in their own module and share the helpers on
-:class:`PostgresPartitionSuggestionBase`.
+:class:`PostgresPartitionSuggestionBase`; the four migration change-point
+mixins (column reorder, constraint/index change, partition scheme change) answer
+the frozen points added by core's change planner.
 """
 
 from ._common import PostgresPartitionSuggestionBase
+from .column_reorder_suggestion import PostgresColumnReorderSuggestionMixin
 from .data_type_suggestions import (
     POSTGRES_DATA_TYPE_SUGGESTIONS,
     POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS,
@@ -28,10 +31,14 @@ from .partition_retention_suggestion import PostgresPartitionRetentionSuggestion
 from .partition_split_suggestion import PostgresPartitionSplitSuggestionMixin
 from .partition_table_alter_suggestion import PostgresPartitionTableAlterSuggestionMixin
 from .partition_table_drop_suggestion import PostgresPartitionTableDropSuggestionMixin
+from .partition_scheme_change_suggestion import PostgresPartitionSchemeChangeSuggestionMixin
+from .table_constraint_change_suggestion import PostgresTableConstraintChangeSuggestionMixin
+from .table_index_change_suggestion import PostgresTableIndexChangeSuggestionMixin
 
 __all__ = [
     "POSTGRES_DATA_TYPE_SUGGESTIONS",
     "POSTGRES_EXTRA_DATA_TYPE_SUGGESTIONS",
+    "PostgresColumnReorderSuggestionMixin",
     "PostgresDataTypeSuggestionsMixin",
     "PostgresCreateTableLayoutSuggestionMixin",
     "PostgresStringConcatenationSuggestionMixin",
@@ -45,4 +52,7 @@ __all__ = [
     "PostgresPartitionSplitSuggestionMixin",
     "PostgresPartitionTableAlterSuggestionMixin",
     "PostgresPartitionTableDropSuggestionMixin",
+    "PostgresPartitionSchemeChangeSuggestionMixin",
+    "PostgresTableConstraintChangeSuggestionMixin",
+    "PostgresTableIndexChangeSuggestionMixin",
 ]

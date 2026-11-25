@@ -103,6 +103,11 @@ def get_postgres_protocols():
         suggestion_protocols.PartitionSplitSuggestionSupport,
         suggestion_protocols.PartitionMergeSuggestionSupport,
         suggestion_protocols.PartitionRetentionSuggestionSupport,
+        # Migration change-point answers from core's change planner.
+        suggestion_protocols.ColumnReorderSuggestionSupport,
+        suggestion_protocols.TableConstraintChangeSuggestionSupport,
+        suggestion_protocols.TableIndexChangeSuggestionSupport,
+        suggestion_protocols.PartitionSchemeChangeSuggestionSupport,
         dialect_protocols.SQLXMLSupport,
         dialect_protocols.SQLXMLParsingSupport,
         dialect_protocols.SQLXMLSerializationSupport,

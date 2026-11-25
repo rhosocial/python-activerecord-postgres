@@ -13,7 +13,11 @@ if TYPE_CHECKING:
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.suggestion.protocols import (
+    ColumnReorderSuggestionSupport,
     CreateTableLayoutSuggestionSupport,
+    PartitionSchemeChangeSuggestionSupport,
+    TableConstraintChangeSuggestionSupport,
+    TableIndexChangeSuggestionSupport,
 )
 from rhosocial.activerecord.backend.dialect.mixins import (
     # Named objects. Each *NameMixin supplies one ``format_<kind>_object`` and
@@ -268,11 +272,13 @@ from .mixins import (
     PostgresLiteralValueMixin,
 )
 from .suggestion import (
+    PostgresColumnReorderSuggestionMixin,
     PostgresCreateTableLayoutSuggestionMixin,
     PostgresDataTypeSuggestionsMixin,
     PostgresStringConcatenationSuggestionMixin,
     PostgresGeneratedValueSuggestionMixin,
     PostgresPartitionAddSuggestionMixin,
+    PostgresPartitionSchemeChangeSuggestionMixin,
     PostgresPartitionBuildSuggestionMixin,
     PostgresPartitionDropSuggestionMixin,
     PostgresPartitionMergeSuggestionMixin,
@@ -281,6 +287,8 @@ from .suggestion import (
     PostgresPartitionSuggestionBase,
     PostgresPartitionTableAlterSuggestionMixin,
     PostgresPartitionTableDropSuggestionMixin,
+    PostgresTableConstraintChangeSuggestionMixin,
+    PostgresTableIndexChangeSuggestionMixin,
 )
 
 from .protocols.ddl.type import PostgresTypeSupport
@@ -397,6 +405,11 @@ class PostgresDialect(
     PostgresPartitionSplitSuggestionMixin,
     PostgresPartitionMergeSuggestionMixin,
     PostgresPartitionRetentionSuggestionMixin,
+    # Migration change points: the scheme answer delegates to the eight above.
+    PostgresPartitionSchemeChangeSuggestionMixin,
+    PostgresColumnReorderSuggestionMixin,
+    PostgresTableConstraintChangeSuggestionMixin,
+    PostgresTableIndexChangeSuggestionMixin,
     PostgresGeneratedValueSuggestionMixin,
     PostgresStringConcatenationSuggestionMixin,
     PostgresPartitionSuggestionBase,
@@ -804,8 +817,12 @@ class PostgresDialect(
     TypeObjectSupport,
     RoutineObjectSupport,
     NamespaceSupport,
-    # Suggestion protocol (relocated to backend.suggestion.protocols)
+    # Suggestion protocols (relocated to backend.suggestion.protocols)
     CreateTableLayoutSuggestionSupport,
+    ColumnReorderSuggestionSupport,
+    TableConstraintChangeSuggestionSupport,
+    TableIndexChangeSuggestionSupport,
+    PartitionSchemeChangeSuggestionSupport,
     # DataType Support Protocol
     DataTypeSupport,
     # New feature protocols
