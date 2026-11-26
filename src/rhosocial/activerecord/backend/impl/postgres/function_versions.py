@@ -354,6 +354,25 @@ UNACCENT_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "unaccent": FunctionVersionRequirement(extension="unaccent", ext_feature="function"),
 }
 
+DIAGNOSTICS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "bt_index_check": FunctionVersionRequirement(extension="amcheck", ext_feature="integrity"),
+    "bt_index_parent_check": FunctionVersionRequirement(extension="amcheck", ext_feature="integrity"),
+    "verify_heapam": FunctionVersionRequirement(extension="amcheck", ext_feature="integrity"),
+    "get_raw_page": FunctionVersionRequirement(extension="pageinspect", ext_feature="page"),
+    "page_header": FunctionVersionRequirement(extension="pageinspect", ext_feature="page"),
+    "bt_page_stats": FunctionVersionRequirement(extension="pageinspect", ext_feature="page"),
+    "heap_page_items": FunctionVersionRequirement(extension="pageinspect", ext_feature="page"),
+    "pgstattuple": FunctionVersionRequirement(extension="pgstattuple", ext_feature="tuple_stats"),
+    "pgstatindex": FunctionVersionRequirement(extension="pgstattuple", ext_feature="tuple_stats"),
+    "pg_relpages": FunctionVersionRequirement(extension="pgstattuple", ext_feature="tuple_stats"),
+    "pg_get_logical_snapshot_meta": FunctionVersionRequirement(
+        extension="pg_logicalinspect", ext_feature="snapshot", min_pg_version=(18, 0, 0)
+    ),
+    "pg_get_logical_snapshot_info": FunctionVersionRequirement(
+        extension="pg_logicalinspect", ext_feature="snapshot", min_pg_version=(18, 0, 0)
+    ),
+}
+
 POSTGIS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "st_make_point": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
     "st_geom_from_text": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
@@ -398,6 +417,7 @@ _ALL_CATEGORIES = [
     PGROONGA_FUNCTION_VERSIONS,
     PG_HINT_PLAN_FUNCTION_VERSIONS,
     UNACCENT_FUNCTION_VERSIONS,
+    DIAGNOSTICS_FUNCTION_VERSIONS,
     POSTGIS_FUNCTION_VERSIONS,
 ]
 

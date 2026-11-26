@@ -74,6 +74,10 @@ from .extensions.pg_trgm import PostgresPgTrgmMixin
 from .extensions.pgroonga import PostgresPgroongaMixin
 from .extensions.pg_hint_plan import PostgresPgHintPlanMixin
 from .extensions.unaccent import PostgresUnaccentMixin
+from .extensions.amcheck import PostgresAmcheckMixin
+from .extensions.pageinspect import PostgresPageinspectMixin
+from .extensions.pgstattuple import PostgresPgstattupleMixin
+from .extensions.pg_logicalinspect import PostgresPgLogicalinspectMixin
 from .extensions.earthdistance import PostgresEarthdistanceMixin
 from .extensions.tablefunc import PostgresTablefuncMixin
 from .extensions.pg_stat_statements import PostgresPgStatStatementsMixin
@@ -199,6 +203,10 @@ __all__ = [
     "PostgresPgroongaMixin",
     "PostgresPgHintPlanMixin",
     "PostgresUnaccentMixin",
+    "PostgresAmcheckMixin",
+    "PostgresPageinspectMixin",
+    "PostgresPgstattupleMixin",
+    "PostgresPgLogicalinspectMixin",
     "PostgresEarthdistanceMixin",
     "PostgresTablefuncMixin",
     "PostgresPgStatStatementsMixin",

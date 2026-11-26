@@ -11,6 +11,7 @@ PostgreSQL 扩展系统允许安装额外的功能模块，如：
 - **PGroonga**: 多语言全文检索（中/日/韩文）
 - **pg_hint_plan**: 优化器提示
 - **unaccent**: 重音不敏感的文本归一化
+- **amcheck / pageinspect / pgstattuple / pg_logicalinspect**: 诊断类扩展
 - **hstore**: 键值对存储
 
 ## 内省与适配
@@ -93,6 +94,10 @@ Dialect 维护以下已知扩展的定义：
 | pgroonga | 2.0 | text | PGroonga 多语言全文检索 |
 | pg_hint_plan | 1.3 | performance | 通过 /*+ ... */ 给出优化器提示 |
 | unaccent | 1.0 | text | 重音不敏感的文本归一化 |
+| amcheck | 1.0 | monitoring | 索引完整性检查 |
+| pageinspect | 1.0 | monitoring | 页面级检查 |
+| pgstattuple | 1.0 | monitoring | 元组级统计 |
+| pg_logicalinspect | 1.0 | replication | 逻辑快照检查（PG18+） |
 | hstore | 1.0 | data | 键值对存储 |
 | uuid-ossp | 1.0 | utility | UUID 生成函数 |
 | pgcrypto | 1.0 | security | 加密函数 |
@@ -134,6 +139,7 @@ backend.introspect_and_adapt()
 - **[PGroonga](./pgroonga.md)**: 多语言全文检索
 - **[pg_hint_plan](./pg_hint_plan.md)**: 优化器提示
 - **[unaccent](./unaccent.md)**: 重音不敏感文本
+- **[amcheck](./amcheck.md)** / **[pageinspect](./pageinspect.md)** / **[pgstattuple](./pgstattuple.md)** / **[pg_logicalinspect](./pg_logicalinspect.md)**: 诊断类扩展
 - **[hstore](./hstore.md)**: 键值存储
 
 💡 *AI 提示词：* "PostgreSQL 的扩展机制相比 MySQL 的插件系统有什么优势？"

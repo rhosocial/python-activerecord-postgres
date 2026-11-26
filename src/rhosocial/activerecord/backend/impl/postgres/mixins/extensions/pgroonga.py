@@ -10,23 +10,15 @@ helper, so the dialect keeps its one-expression-one-formatter contract.
 For SQL expression generation use the factories in ``functions/pgroonga.py``.
 """
 
-import re
 from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
 from ...expression.ddl.index_definition import PostgresCreateIndexExpression
 
-# Groonga plugin option values are SQL string literals built here, so keep a
-# conservative allow-list instead of interpolating arbitrary user text.
-_IDENTIFIER = r"[A-Za-z][A-Za-z0-9_]*"
-_TOKENIZER_RE = re.compile(
-    rf"^({_IDENTIFIER})(?:\([^'\\\n\r]*\))?$"
-)
-_TOKEN_FILTERS_RE = re.compile(
-    rf"^{_IDENTIFIER}(?:\s*,\s*{_IDENTIFIER})*$"
-)
-_PLUGINS_RE = re.compile(r"^[A-Za-z0-9_/-]+(?:\s*,\s*[A-Za-z0-9_/-]+)*$")
+# Groonga option values are SQL string literals built here. Validation is a
+# character-level scan against allow-lists -- the backend's src tree contains
+# no regular expressions.
 
 _TOKENIZERS = frozenset(
     {
@@ -55,33 +47,50 @@ _PLUGINS = frozenset(
 )
 
 
+_NORMALIZERS = frozenset(
+    {"NormalizerAuto", "NormalizerNFKC100", "NormalizerNFKC130", "NormalizerNFKC150"}
+)
+
+
+def _scan_named_list(value: str, allowed: frozenset) -> None:
+    """Validate a comma-separated list of names without a regular expression."""
+    parts = value.split(",")
+    if not parts:
+        raise ValueError(f"Empty PGroonga option list: {value!r}")
+    for part in parts:
+        name = part.strip()
+        if name not in allowed:
+            raise ValueError(f"Unknown PGroonga option value: {name!r}")
+
+
+def _scan_tokenizer(value: str, allowed: frozenset) -> None:
+    """Validate ``Name`` or ``Name(arguments)`` with a character-level scan."""
+    open_at = value.find("(")
+    head = value if open_at < 0 else value[:open_at]
+    if not head.isidentifier() or head not in allowed:
+        raise ValueError(f"Unknown PGroonga option: {value!r}")
+    if open_at < 0:
+        return
+    if not value.endswith(")"):
+        raise ValueError(f"Unbalanced PGroonga option arguments: {value!r}")
+    arguments = value[open_at + 1 : -1]
+    for char in arguments:
+        if not (char.isalnum() or char in ' ",._+-'):
+            raise ValueError(f"Unsafe PGroonga option arguments: {value!r}")
+
+
 def _quote_option(name: str, value: str) -> str:
     """Validate a Groonga option value and return an SQL string literal."""
     if "'" in value or "\\" in value or "\n" in value or "\r" in value:
         raise ValueError(f"Invalid PGroonga option value for {name}: {value!r}")
     if name == "tokenizer":
-        match = _TOKENIZER_RE.fullmatch(value)
-        if not match or match.group(1) not in _TOKENIZERS:
-            raise ValueError(f"Unknown PGroonga tokenizer: {value!r}")
+        _scan_tokenizer(value, _TOKENIZERS)
     elif name == "token_filters":
-        if not _TOKEN_FILTERS_RE.fullmatch(value) or not set(value.split(",")).issubset(
-            _TOKEN_FILTERS
-        ):
-            raise ValueError(f"Unknown PGroonga token filter: {value!r}")
+        _scan_named_list(value, _TOKEN_FILTERS)
     elif name == "plugins":
-        if not _PLUGINS_RE.fullmatch(value) or not set(
-            part.strip() for part in value.split(",")
-        ).issubset(_PLUGINS):
-            raise ValueError(f"Unknown PGroonga plugin: {value!r}")
+        _scan_named_list(value, _PLUGINS)
     elif name == "normalizers":
-        match = _TOKENIZER_RE.fullmatch(value)
-        if not match or match.group(1) not in {
-            "NormalizerAuto",
-            "NormalizerNFKC100",
-            "NormalizerNFKC130",
-            "NormalizerNFKC150",
-        }:
-            raise ValueError(f"Unknown PGroonga normalizer: {value!r}")
+        _scan_tokenizer(value, _NORMALIZERS)
     return f"'{value}'"
 
 
