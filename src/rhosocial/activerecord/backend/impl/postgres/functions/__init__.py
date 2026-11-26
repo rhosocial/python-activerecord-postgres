@@ -27,6 +27,10 @@ Function modules and their corresponding PostgreSQL documentation:
 - pgroonga: Multilingual full text search (v2 operators, scoring, snippets) - https://pgroonga.github.io/reference/
 - pg_hint_plan: Optimizer hint phrase builders - https://github.com/ossc-db/pg_hint_plan
 - unaccent: Accent-insensitive text normalization - https://www.postgresql.org/docs/current/unaccent.html
+- amcheck: Index integrity checking - https://www.postgresql.org/docs/current/amcheck.html
+- pageinspect: Low-level page inspection - https://www.postgresql.org/docs/current/pageinspect.html
+- pgstattuple: Tuple-level statistics - https://www.postgresql.org/docs/current/pgstattuple.html
+- pg_logicalinspect: Logical snapshot inspection - https://www.postgresql.org/docs/current/pglogicalinspect.html
 - fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
 - earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
 - hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
@@ -423,6 +427,12 @@ from .pg_hint_plan import (
 
 # unaccent functions
 from .unaccent import unaccent
+
+# diagnostics functions
+from .amcheck import SkipMode, bt_index_check, bt_index_parent_check, verify_heapam
+from .pageinspect import get_raw_page, page_header, bt_page_stats, heap_page_items
+from .pgstattuple import pgstattuple, pgstatindex, pg_relpages
+from .pg_logicalinspect import pg_get_logical_snapshot_meta, pg_get_logical_snapshot_info
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -910,6 +920,20 @@ __all__ = [
     "load_pg_hint_plan",
     # unaccent functions
     "unaccent",
+    # diagnostics functions
+    "SkipMode",
+    "bt_index_check",
+    "bt_index_parent_check",
+    "verify_heapam",
+    "get_raw_page",
+    "page_header",
+    "bt_page_stats",
+    "heap_page_items",
+    "pgstattuple",
+    "pgstatindex",
+    "pg_relpages",
+    "pg_get_logical_snapshot_meta",
+    "pg_get_logical_snapshot_info",
     # fuzzystrmatch functions
     "levenshtein",
     "levenshtein_less_equal",

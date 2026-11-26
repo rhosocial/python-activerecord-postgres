@@ -11,6 +11,7 @@ PostgreSQL extension system allows installing additional modules, such as:
 - **PGroonga**: Multilingual full text search (Chinese/Japanese/Korean)
 - **pg_hint_plan**: Optimizer hints
 - **unaccent**: Accent-insensitive text normalization
+- **amcheck / pageinspect / pgstattuple / pg_logicalinspect**: Diagnostics
 - **hstore**: Key-value pair storage
 
 ## Introspection and Adaptation
@@ -93,6 +94,10 @@ The dialect maintains definitions for the following known extensions:
 | pgroonga | 2.0 | text | PGroonga multilingual full text search |
 | pg_hint_plan | 1.3 | performance | Optimizer hints via /*+ ... */ |
 | unaccent | 1.0 | text | Accent-insensitive text normalization |
+| amcheck | 1.0 | monitoring | Index integrity checking |
+| pageinspect | 1.0 | monitoring | Low-level page inspection |
+| pgstattuple | 1.0 | monitoring | Tuple-level statistics |
+| pg_logicalinspect | 1.0 | replication | Logical snapshot inspection (PG18+) |
 | hstore | 1.0 | data | Key-value pair storage |
 | uuid-ossp | 1.0 | utility | UUID generation functions |
 | pgcrypto | 1.0 | security | Cryptographic functions |
@@ -134,6 +139,7 @@ backend.introspect_and_adapt()
 - **[PGroonga](./pgroonga.md)**: Multilingual full text search
 - **[pg_hint_plan](./pg_hint_plan.md)**: Optimizer hints
 - **[unaccent](./unaccent.md)**: Accent-insensitive text
+- **[amcheck](./amcheck.md)** / **[pageinspect](./pageinspect.md)** / **[pgstattuple](./pgstattuple.md)** / **[pg_logicalinspect](./pg_logicalinspect.md)**: Diagnostics
 - **[hstore](./hstore.md)**: Key-value storage
 
 💡 *AI Prompt:* "What advantages does PostgreSQL's extension mechanism have over MySQL's plugin system?"

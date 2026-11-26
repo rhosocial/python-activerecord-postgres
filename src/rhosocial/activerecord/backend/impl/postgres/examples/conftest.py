@@ -449,6 +449,14 @@ EXAMPLES_META = {
         'max_version': '18',
         'note': 'Requires pg_hint_plan (PG12-18 postgres-exts images) and contrib unaccent',
     },
+    'extensions/diagnostics.py': {
+        'title': 'Diagnostics Extensions: amcheck, pageinspect, pgstattuple',
+        'dialect_protocols': [],
+        'priority': 3,
+        'min_version': '12',
+        'max_version': '19',
+        'note': 'Requires contrib diagnostics extensions; most functions need superuser',
+    },
     'schema_diff/table_changes.py': {
         'title': 'Schema Diff — Table Add/Remove',
         'dialect_protocols': [],

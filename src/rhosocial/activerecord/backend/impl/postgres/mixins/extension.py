@@ -317,7 +317,9 @@ class PostgresExtensionMixin:
             "description": "Index integrity checking",
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/amcheck.html",
-            "features": {},
+            "features": {
+                "integrity": {"min_version": "1.0"},
+            },
             "requires_dialect": False,
         },
         "pageinspect": {
@@ -325,8 +327,19 @@ class PostgresExtensionMixin:
             "description": "Page-level inspection",
             "category": "monitoring",
             "documentation": "https://www.postgresql.org/docs/current/pageinspect.html",
-            "features": {},
+            "features": {
+                "page": {"min_version": "1.0"},
+            },
             "requires_dialect": False,
+        },
+        "pgstattuple": {
+            "min_version": "1.0",
+            "description": "Tuple-level statistics",
+            "category": "monitoring",
+            "documentation": "https://www.postgresql.org/docs/current/pgstattuple.html",
+            "features": {
+                "tuple_stats": {"min_version": "1.0"},
+            },
         },
         # Replication
         "pglogical": {
@@ -342,7 +355,10 @@ class PostgresExtensionMixin:
             "min_version": "1.0",
             "description": "Logical replication inspection",
             "category": "replication",
-            "features": {},
+            "documentation": "https://www.postgresql.org/docs/current/pglogicalinspect.html",
+            "features": {
+                "snapshot": {"min_version": "1.0"},
+            },
             "requires_dialect": False,
         },
         # Security & Auditing

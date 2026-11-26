@@ -10,6 +10,10 @@ from .pg_trgm import PostgresPgTrgmSupport
 from .pgroonga import PostgresPgRoongaSupport
 from .pg_hint_plan import PostgresPgHintPlanSupport
 from .unaccent import PostgresUnaccentSupport
+from .amcheck import PostgresAmcheckSupport
+from .pageinspect import PostgresPageinspectSupport
+from .pgstattuple import PostgresPgstattupleSupport
+from .pg_logicalinspect import PostgresPgLogicalinspectSupport
 from .earthdistance import PostgresEarthdistanceSupport
 from .tablefunc import PostgresTablefuncSupport
 from .pg_stat_statements import PostgresPgStatStatementsSupport
@@ -44,6 +48,10 @@ __all__ = [
     "PostgresPgRoongaSupport",
     "PostgresPgHintPlanSupport",
     "PostgresUnaccentSupport",
+    "PostgresAmcheckSupport",
+    "PostgresPageinspectSupport",
+    "PostgresPgstattupleSupport",
+    "PostgresPgLogicalinspectSupport",
     "PostgresEarthdistanceSupport",
     "PostgresTablefuncSupport",
     "PostgresPgStatStatementsSupport",
