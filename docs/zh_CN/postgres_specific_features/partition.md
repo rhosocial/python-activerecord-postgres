@@ -113,8 +113,12 @@ retention = dialect.suggest_partition_retention(
   方法、边界与层级。
 * `suggest_partition_build` / `suggest_partition_add` / `suggest_partition_drop`
   及其它建议协议返回 DDL 表达式节点，按普通后端表达式的方式执行即可。
-* `backend.list_partitions("logs")`（内省）递归读取 `pg_inherits` / `pg_class`，
-  返回 `PostgresPartitionInfo` 行，并原样保留服务器给出的 bound 文本。
+* `backend.introspector.get_partition_state("logs")`（内省）从 `pg_inherits` /
+  `pg_class` 读取父表及其子分区，返回一个 `PartitionState`：父表的 `scheme`
+  与分区键列，以及每个子分区一个 `PartitionBound`，其 `lower`/`upper`（RANGE）、
+  `values`（LIST）、`modulus`/`remainder`（HASH）与 `is_default`（DEFAULT）
+  承载结构化事实；服务器原始的 bound 拼写保留在 `state.raw["partitions"]` 的
+  `{name, text}` 行中。
 * 单层计划（只给 `policy=RangePolicy(...)`、不给 `branches`）生成按月日志表
   所需的扁平形态。
 

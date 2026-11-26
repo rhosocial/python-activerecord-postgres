@@ -116,9 +116,13 @@ retention = dialect.suggest_partition_retention(
 * `suggest_partition_build` / `suggest_partition_add` / `suggest_partition_drop`
   and the other suggestion protocols return DDL expression nodes; execute the
   nodes the same way as any other backend expression.
-* `backend.list_partitions("logs")` (introspection) reads `pg_inherits` /
-  `pg_class` recursively and returns `PostgresPartitionInfo` rows with the
-  server's bound text kept verbatim.
+* `backend.introspector.get_partition_state("logs")` (introspection) reads the
+  parent and its children from `pg_inherits` / `pg_class` and returns one
+  `PartitionState`: the parent's `scheme` and key columns, plus a
+  `PartitionBound` per child whose `lower`/`upper` (RANGE), `values` (LIST),
+  `modulus`/`remainder` (HASH) and `is_default` (DEFAULT) carry the structured
+  facts. The server's own bound spelling stays verbatim in
+  `state.raw["partitions"]` as `{name, text}` rows.
 * A flat plan (`policy=RangePolicy(...)` with no `branches`) produces the
   single-level shape used by monthly log tables.
 

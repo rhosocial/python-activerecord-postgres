@@ -650,6 +650,14 @@ when declarative partitioning and its catalog columns exist. The `partitions`
 CLI type and `get_partition_state()` read that family; they do not read a
 separate backend-local introspection switch.
 
+`get_partition_state()` returns the neutral `PartitionState`: `scheme`, the key
+columns, `has_default`, and one `PartitionBound` per child. A bound's structured
+fields answer RANGE (`lower`/`upper`), LIST (`values`) and HASH
+(`modulus`/`remainder`), and `is_default` marks the DEFAULT partition.
+`state.raw["partitions"]` holds only `{name, text}` rows: the server's own bound
+spelling, still the only lossless record for a multi-column endpoint, an
+expression partition or a `MAXVALUE` bound.
+
 ## Best Practices
 
 ### 1. Use Caching

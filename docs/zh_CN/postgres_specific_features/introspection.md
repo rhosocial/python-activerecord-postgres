@@ -464,6 +464,8 @@ backend.introspector.invalidate_cache(
 
 分区元数据同样受版本门控，由核心分区协议的 `supports_partition_metadata_introspection` 回答：它是 PG 10+，因为声明式分区及其目录列从那时才存在。CLI 的 `partitions` 类型与 `get_partition_state()` 读取这一族；它们不读取任何后端本地的内省开关。
 
+`get_partition_state()` 返回中立的 `PartitionState`：`scheme`、分区键列、`has_default`，以及每个子分区一个 `PartitionBound`。`PartitionBound` 的结构化字段按策略回答：RANGE 用 `lower`/`upper`，LIST 用 `values`，HASH 用 `modulus`/`remainder`，`is_default` 标记 DEFAULT 分区。`state.raw["partitions"]` 只保留 `{name, text}` 行，即服务器给出的原始 bound 拼写——多列端点、表达式分区或 `MAXVALUE` 边界只有这里能无损读取。
+
 ## 最佳实践
 
 ### 1. 使用缓存

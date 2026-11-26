@@ -13,6 +13,7 @@ pin the consequences this backend depends on:
 """
 
 import importlib
+from pathlib import Path
 
 import pytest
 
@@ -107,3 +108,43 @@ class TestFamilyProtocolImports:
         for name in ("IntrospectionSupport", "AsyncIntrospectionSupport"):
             assert not hasattr(core_protocols, name)
             assert not hasattr(core_dialect, name)
+
+
+def _repository_root() -> Path:
+    """Walk up to the root that owns both ``docs/`` and ``pyproject.toml``."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").is_file() and (parent / "docs").is_dir():
+            return parent
+    raise AssertionError("repository root not found from the test directory")
+
+
+class TestDocsDoNotTeachRemovedNames:
+    """The docs must not present a deleted API as current usage.
+
+    A hit is allowed only on a line that says the name was removed — English
+    "removed"/"no longer", or Chinese "已移除"/"不再". A bare mention reads as
+    a live call and sends callers to an attribute that does not exist.
+    """
+
+    REMOVED_NAMES = ("list_partitions", "supports_partition_info")
+    REMOVAL_WORDS = ("removed", "no longer", "已移除", "不再")
+
+    def test_docs_mention_removed_names_only_when_recording_the_removal(self):
+        docs = _repository_root() / "docs"
+        offenders = []
+        for path in sorted(docs.rglob("*.md")):
+            for lineno, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), 1
+            ):
+                lowered = line.lower()
+                for name in self.REMOVED_NAMES:
+                    if name not in line:
+                        continue
+                    if any(word in lowered for word in self.REMOVAL_WORDS):
+                        continue
+                    offenders.append(
+                        f"{path.relative_to(docs.parent)}:{lineno}: {line.strip()}"
+                    )
+        assert not offenders, "docs present removed names as live API:\n" + "\n".join(
+            offenders
+        )
