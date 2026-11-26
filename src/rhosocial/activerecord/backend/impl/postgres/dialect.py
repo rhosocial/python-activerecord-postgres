@@ -15,7 +15,6 @@ from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.suggestion.protocols import (
     ColumnReorderSuggestionSupport,
     CreateTableLayoutSuggestionSupport,
-    FunctionSuggestionSupport,
     PartitionSchemeChangeSuggestionSupport,
     TableConstraintChangeSuggestionSupport,
     TableIndexChangeSuggestionSupport,
@@ -824,7 +823,6 @@ class PostgresDialect(
     TableIndexChangeSuggestionSupport,
     PartitionSchemeChangeSuggestionSupport,
     # The function catalogue: a suggestion, not a capability flag
-    FunctionSuggestionSupport,
     # DataType Support Protocol
     DataTypeSupport,
     # New feature protocols
