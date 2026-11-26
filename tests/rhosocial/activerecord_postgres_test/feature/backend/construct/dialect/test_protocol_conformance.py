@@ -172,8 +172,11 @@ def get_postgres_protocols():
         dialect_protocols.DropDomainSupport,
         dialect_protocols.CreateSchemaSupport,
         dialect_protocols.DropSchemaSupport,
-        dialect_protocols.CreateDatabaseSupport,
-        dialect_protocols.DropDatabaseSupport,
+        # CREATE/DROP DATABASE themselves are PostgreSQL forms, but both
+        # protocols also declare a qualifier only other engines spell: OR
+        # REPLACE and an inline COMMENT on CREATE, and UNDROP on DROP. No mixin
+        # answers those switches, so the protocols are listed under
+        # POSTGRES_NOT_IMPLEMENTED rather than here.
         dialect_protocols.AlterDatabaseSupport,
         dialect_protocols.CreateRoutineSupport,
         dialect_protocols.DropRoutineSupport,
@@ -276,6 +279,17 @@ POSTGRES_NOT_IMPLEMENTED = [
     # PIVOT is not a PostgreSQL statement form. A dialect that reports support
     # has to render one, and nothing here does.
     dialect_protocols.PivotSupport,
+    # CREATE/DROP DATABASE are PostgreSQL forms and PostgresDatabaseMixin
+    # renders both, but these protocols also declare a qualifier PostgreSQL
+    # does not spell inline: CREATE DATABASE OR REPLACE and a COMMENT clause
+    # (PostgreSQL spells comments as a separate COMMENT ON statement), and
+    # DROP DATABASE UNDROP. The mixin answers none of those switches, so the
+    # dialect does not satisfy the protocols structurally. It used to look
+    # satisfied only because the protocols were base classes whose ellipsis
+    # bodies answered everything truthily; the bases are gone, and the
+    # statement formatters do not need them.
+    dialect_protocols.CreateDatabaseSupport,
+    dialect_protocols.DropDatabaseSupport,
 ]
 
 

@@ -11,6 +11,15 @@ to ``supports_*``. A name-keyed catalogue is a suggestion and belongs under
 The walk is over this backend's ``src/**/*.py``, so a new protocol or mixin
 that reintroduces an argument-taking probe, or a probe whose annotation is not
 ``bool``, fails here rather than at the call site that no longer expects one.
+
+The same walk also holds the protocol side of the contract: a ``*Dialect``
+class must not inherit a ``*Support`` protocol. A ``runtime_checkable``
+Protocol is satisfied structurally, so inheriting one only adds its
+ellipsis-bodied members to the dialect -- and ``...`` is truthy, so an
+unimplemented switch answered "yes" through the stub. ``isinstance`` then
+reported support for a dialect that had never implemented the member. The
+protocol's real answer has to come from a mixin, so a base class is never the
+way to declare conformance.
 """
 
 import ast
@@ -76,11 +85,56 @@ def _violations(tree, label):
     return found
 
 
+def _support_bases(node):
+    """The base names on ``node`` that name a ``*Support`` protocol.
+
+    Only the bare name ``FooSupport`` counts: ``FooSupportMixin`` is an
+    implementation, and that is exactly the shape that should be inherited.
+    A base spelled through an attribute (``module.FooSupport``) counts by its
+    final attribute, since both are the same class.
+    """
+    names = []
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            names.append(base.id)
+        elif isinstance(base, ast.Attribute):
+            names.append(base.attr)
+    return [name for name in names if name.endswith("Support")]
+
+
+def _dialect_class_names(tree):
+    """Every class in the module whose name ends in ``Dialect``."""
+    return [
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef) and node.name.endswith("Dialect")
+    ]
+
+
+def _support_base_violations(tree, label):
+    """Every ``*Dialect`` that inherits a ``*Support`` protocol."""
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef) or not node.name.endswith("Dialect"):
+            continue
+        for base in _support_bases(node):
+            found.append(f"{label}:{node.lineno} {node.name}({base}, ...)")
+    return found
+
+
 def _scan():
     violations = []
     for path in SOURCE_FILES:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         violations.extend(_violations(tree, str(path.relative_to(PROJECT_ROOT))))
+    return violations
+
+
+def _scan_support_bases():
+    violations = []
+    for path in SOURCE_FILES:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        violations.extend(_support_base_violations(tree, str(path.relative_to(PROJECT_ROOT))))
     return violations
 
 
@@ -156,3 +210,54 @@ class TestSupportSwitchesTakeNoArguments:
             'class P:\n    def supports_thing(self) -> "bool":\n        return False\n',
         )
         assert not _violations(tree, "probe")
+
+
+class TestDialectsDoNotInheritSupportProtocols:
+    """A ``*Dialect`` must answer protocols structurally, never by inheriting."""
+
+    def test_the_walk_finds_the_dialect_classes(self):
+        """No ``*Dialect`` under src would make the base guard vacuous."""
+        names = []
+        for path in SOURCE_FILES:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for name in _dialect_class_names(tree):
+                names.append(f"{path.relative_to(PROJECT_ROOT)}:{name}")
+        assert names, f"no *Dialect class found under {SRC}"
+
+    def test_no_dialect_inherits_a_support_protocol(self):
+        offenders = _scan_support_bases()
+        assert not offenders, (
+            "a *Dialect inherits a *Support protocol; a runtime_checkable "
+            "Protocol is satisfied structurally, and inheriting it only adds "
+            "ellipsis stubs:\n" + "\n".join(offenders)
+        )
+
+    def test_the_scan_flags_a_dialect_inheriting_a_support_protocol(self, tmp_path):
+        tree = _probe(
+            tmp_path,
+            "class DummyDialect(PivotSupport, SQLDialectBase):\n" "    pass\n",
+        )
+        found = _support_base_violations(tree, "probe")
+        assert any("DummyDialect(PivotSupport" in message for message in found), found
+
+    def test_the_scan_flags_a_dialect_inheriting_through_an_attribute(self, tmp_path):
+        tree = _probe(
+            tmp_path,
+            "class DummyDialect(core.PivotSupport):\n" "    pass\n",
+        )
+        assert _support_base_violations(tree, "probe")
+
+    def test_the_scan_accepts_a_clean_control(self, tmp_path):
+        """A dialect with mixins only, plus a non-dialect base, is clean.
+
+        The second class shows the guard is scoped: a helper may inherit a
+        protocol, because it is not the dialect declaring conformance.
+        """
+        tree = _probe(
+            tmp_path,
+            "class DummyDialect(SomeMixin, SomeSupportMixin, SQLDialectBase):\n"
+            "    pass\n"
+            "class Helper(PivotSupport):\n"
+            "    pass\n",
+        )
+        assert not _support_base_violations(tree, "probe")

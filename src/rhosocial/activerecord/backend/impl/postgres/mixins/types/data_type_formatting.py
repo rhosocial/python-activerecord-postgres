@@ -12,7 +12,6 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.suggestion.definitions import SubstituteTypeSuggestion
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_type import DataTypeMixin
-from rhosocial.activerecord.backend.dialect.protocols import DataTypeSupport
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
     BigIntType,
@@ -42,12 +41,16 @@ from rhosocial.activerecord.backend.expression.types import (
 )
 
 
-class PostgresTypeFormatSupportMixin(DataTypeMixin, DataTypeSupport):
+class PostgresTypeFormatSupportMixin(DataTypeMixin):
     """PostgreSQL DataType formatting.
 
-    Implements ``DataTypeSupport`` so the dialect can render ``DataType``
-    expressions to SQL strings. Parsing a server-reported type spelling back
-    into a ``DataType`` is handled by ``introspection/type_parser.py``.
+    Satisfies ``DataTypeSupport`` structurally, through the formatters below,
+    so the dialect can render ``DataType`` expressions to SQL strings. It is
+    not a base class here: a ``runtime_checkable`` Protocol only checks for the
+    members, and inheriting it would add ellipsis stubs that answer for a
+    method this class does not implement. Parsing a server-reported type
+    spelling back into a ``DataType`` is handled by
+    ``introspection/type_parser.py``.
     """
 
     if TYPE_CHECKING:

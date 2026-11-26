@@ -30,10 +30,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresRepackStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.mixins import (
-    PostgresCopyMixin,
-    PostgresRepackMixin,
-)
 from rhosocial.activerecord.backend.impl.postgres.protocols import (
     PostgresCopySupport,
     PostgresRepackSupport,
@@ -549,8 +545,10 @@ def test_protocol_mro_and_serialization():
     dialect = PostgresDialect((19, 0, 0))
     assert isinstance(dialect, PostgresCopySupport)
     assert isinstance(dialect, PostgresRepackSupport)
-    assert PostgresDialect.__mro__.index(PostgresCopyMixin) < PostgresDialect.__mro__.index(PostgresCopySupport)
-    assert PostgresDialect.__mro__.index(PostgresRepackMixin) < PostgresDialect.__mro__.index(PostgresRepackSupport)
+    # The protocols are satisfied structurally by the mixins; they are not
+    # bases, so the MRO carries the real methods rather than ellipsis stubs.
+    assert PostgresCopySupport not in PostgresDialect.__mro__
+    assert PostgresRepackSupport not in PostgresDialect.__mro__
 
     original = PostgresCopyToStatement(dialect, query=select_query(dialect))
     restored = deserialize(serialize(original), dialect, registry=dialect.artifact_registry())

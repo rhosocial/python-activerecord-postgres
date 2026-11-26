@@ -692,12 +692,17 @@ class TestTypeDomainProtocols:
         assert isinstance(dialect, TypeObjectSupport)
         assert isinstance(dialect, PostgresDomainSupport)
 
-    def test_postgres_mixins_and_protocols_precede_core_mro(self):
+    def test_postgres_mixins_precede_core_mro(self):
         mro = PostgresDialect.__mro__
         assert mro.index(PostgresTypeMixin) < mro.index(UserDefinedTypeMixin)
         assert mro.index(PostgresDomainMixin) < mro.index(DomainMixin)
-        assert mro.index(PostgresTypeSupport) < mro.index(CreateTypeSupport)
-        assert mro.index(PostgresDomainSupport) < mro.index(CreateDomainSupport)
+        # The protocols are declarations, not bases. They are satisfied
+        # structurally by the mixins above, so listing them would only add
+        # ellipsis stubs to the MRO -- and a stub is not an implementation.
+        assert PostgresTypeSupport not in mro
+        assert PostgresDomainSupport not in mro
+        assert CreateTypeSupport not in mro
+        assert CreateDomainSupport not in mro
 
     def test_dialect_initializes_core_validation_state(self) -> None:
         dialect = PostgresDialect(version=(14, 0, 0))

@@ -6,12 +6,7 @@ from rhosocial.activerecord.backend.suggestion.definitions import (
     ConcatenationFunctionSuggestion,
     CreateTableLayoutSuggestion,
 )
-from rhosocial.activerecord.backend.suggestion.protocols import (
-    CreateTableLayoutSuggestionSupport,
-)
-
-
-class PostgresCreateTableLayoutSuggestionMixin(CreateTableLayoutSuggestionSupport):
+class PostgresCreateTableLayoutSuggestionMixin:
     """PostgreSQL renders indexes and comments as standalone statements."""
 
     def suggest_create_table_layout(self) -> CreateTableLayoutSuggestion:

@@ -2,8 +2,14 @@
 """
 PostgreSQL backend SQL dialect implementation.
 
-This dialect implements protocols for features that PostgreSQL actually supports,
+This dialect answers protocols for features that PostgreSQL actually supports,
 based on the PostgreSQL version provided at initialization.
+
+Conformance is structural: the mixins below provide every protocol member, so
+``isinstance(dialect, SomeSupport)`` passes without any Protocol class being a
+base. A ``runtime_checkable`` Protocol is a declaration, and inheriting one
+would only add its ellipsis-bodied members to the MRO -- members that answer
+truthily and make ``isinstance`` pass for behaviour nothing implements.
 """
 
 from typing import Mapping, Tuple, Optional, cast, TYPE_CHECKING
@@ -12,13 +18,6 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.schema.differ import SchemaDiffer
 
 from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
-from rhosocial.activerecord.backend.suggestion.protocols import (
-    ColumnReorderSuggestionSupport,
-    CreateTableLayoutSuggestionSupport,
-    PartitionSchemeChangeSuggestionSupport,
-    TableConstraintChangeSuggestionSupport,
-    TableIndexChangeSuggestionSupport,
-)
 from rhosocial.activerecord.backend.dialect.mixins import (
     # Named objects. Each *NameMixin supplies one ``format_<kind>_object`` and
     # subclasses NamespaceMixin, so each has to precede it in the base list.
@@ -86,73 +85,6 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     TransactionControlMixin,
     UserDefinedTypeMixin,
     DomainMixin,
-)
-from rhosocial.activerecord.backend.dialect.protocols import (
-    AlterDatabaseSupport,
-    AlterDomainSupport,
-    AlterTableSupport,
-    AlterTypeSupport,
-    CreateDatabaseSupport,
-    CreateDomainSupport,
-    CreateIndexSupport,
-    CreateRoutineSupport,
-    CreateSchemaSupport,
-    CreateTableSupport,
-    CreateTriggerSupport,
-    CreateTypeSupport,
-    CreateViewSupport,
-    DropDatabaseSupport,
-    DropDomainSupport,
-    DropIndexSupport,
-    DropRoutineSupport,
-    DropSchemaSupport,
-    DropTableSupport,
-    DropTriggerSupport,
-    DropTypeSupport,
-    DropViewSupport,
-    FulltextIndexSupport,
-    MaterializedViewObjectSupport,
-    MaterializedViewSupport,
-    NamespaceSupport,
-    RoutineObjectSupport,
-    SequenceObjectSupport,
-    TableObjectSupport,
-    TriggerObjectSupport,
-    TypeObjectSupport,
-    IndexObjectSupport,
-    ViewObjectSupport,
-    ForeignTableObjectSupport,
-    SQLXMLSupport,
-    SQLXMLParsingSupport,
-    SQLXMLSerializationSupport,
-    SQLXMLConstructionSupport,
-    SQLXMLAggregationSupport,
-    SQLXMLQueryingSupport,
-    CollationSupport,
-    CTESupport,
-    FilterClauseSupport,
-    WindowFunctionSupport,
-    ReturningSupport,
-    AdvancedGroupingSupport,
-    ArraySupport,
-    ExplainSupport,
-    GraphSupport,
-    GraphTableSupport,
-    MergeSupport,
-    OrderedSetAggregationSupport,
-    QualifyClauseSupport,
-    TemporalTableSupport,
-    UpsertSupport,
-    LateralJoinSupport,
-    WildcardSupport,
-    JoinSupport,
-    SetOperationSupport,
-    TruncateSupport,
-    ILIKESupport,
-    IntrospectionSupport,
-    TransactionControlSupport,
-    TransactionalDDLSupport,
-    DataTypeSupport,
 )
 from .mixins import (
     PostgresObjectNameMixin,
@@ -290,105 +222,7 @@ from .suggestion import (
     PostgresTableIndexChangeSuggestionMixin,
 )
 
-from .protocols.ddl.type import PostgresTypeSupport
-from .protocols.ddl.domain import PostgresDomainSupport
 from .reserved_words import POSTGRESQL_RESERVED_WORDS
-
-# PostgreSQL-specific imports
-from .protocols import (
-    PostgresExtensionSupport,
-    PostgresMaterializedViewSupport,
-    PostgresTableSupport,
-    PostgresPgvectorSupport,
-    PostgresPostGISSupport,
-    PostgresPostgisRasterSupport,
-    PostgresPgroutingSupport,
-    PostgresPgTrgmSupport,
-    PostgresHstoreSupport,
-    # Native feature protocols
-    PostgresPartitionSupport,
-    PostgresIndexSupport,
-    PostgresVacuumSupport,
-    PostgresCopySupport,
-    PostgresQueryOptimizationSupport,
-    PostgresDataTypeSupport,
-    PostgresLogicalReplicationSupport,
-    # Per-feature protocols
-    PostgresCTESupport,
-    PostgresWindowSupport,
-    PostgresFilterSupport,
-    PostgresReturningSupport,
-    PostgresGroupingSupport,
-    PostgresExplainSupport,
-    PostgresMergeSupport,
-    PostgresUpsertSupport,
-    PostgresLateralJoinSupport,
-    PostgresSetOperationSupport,
-    PostgresILIKESupport,
-    PostgresJoinSupport,
-    PostgresTruncateSupport,
-    PostgresSchemaSupport,
-    PostgresNamespaceSupport,
-    PostgresSequenceSupport,
-    PostgresIdentitySupport,
-    PostgresAutoIncrementSupport,
-    PostgresTransactionSupport,
-    PostgresViewSupport,
-    PostgresXMLSupport,
-    PostgresCollationSupport,
-    PostgresOrderedSetAggSupport,
-    PostgresFeaturesSupport,
-    # Extension feature protocols
-    PostgresLtreeSupport,
-    PostgresIntarraySupport,
-    PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport,
-    PostgresPgStatStatementsSupport,
-    PostgresCitextSupport,
-    PostgresPgcryptoSupport,
-    PostgresFuzzystrmatchSupport,
-    PostgresCubeSupport,
-    PostgresUuidOssSupport,
-    PostgresBloomSupport,
-    PostgresBtreeGinSupport,
-    PostgresBtreeGistSupport,
-    PostgresPgCronSupport,
-    PostgresPgPartmanSupport,
-    PostgresPgSurgerySupport,
-    PostgresPgWalinspectSupport,
-    PostgresPgLogicalSupport,
-    PostgresPgauditSupport,
-    PostgresPgRepackSupport,
-    PostgresHypoPgSupport,
-    PostgresOrafceSupport,
-    PostgresAddressStandardizerSupport,
-    # DDL feature protocols
-    PostgresTriggerSupport,
-    PostgresCommentSupport,
-    PostgresConstraintSupport,
-    PostgresPolicySupport,
-    PostgresRlsConfigSupport,
-    PostgresAlterTableSettingsSupport,
-    PostgresClusterSupport,
-    PostgresRepackSupport,
-    PostgresCollationDDLSupport,
-    PostgresForeignTableDDLSupport,
-    PostgresRoutineDDLSupport,
-    PostgresPublicationSupport,
-    # Type feature protocols
-    PostgresMultirangeSupport,
-    PostgresEnumTypeSupport,
-    PostgresFullTextSearchSupport,
-    PostgresRangeTypeSupport,
-    PostgresJSONBEnhancedSupport,
-    PostgresArrayEnhancedSupport,
-    # New feature protocols
-    PostgresParallelQuerySupport,
-    PostgresStoredProcedureSupport,
-    PostgresExtendedStatisticsSupport,
-    PostgresAdvisoryLockSupport,
-    PostgresLockingSupport,
-)
 
 
 class PostgresDialect(
@@ -632,205 +466,6 @@ class PostgresDialect(
     DDLColumnMixin,
     ColumnAttributeMixin,
     TransactionControlMixin,
-    # Protocol supports
-    SQLXMLSupport,
-    SQLXMLParsingSupport,
-    SQLXMLSerializationSupport,
-    SQLXMLConstructionSupport,
-    SQLXMLAggregationSupport,
-    SQLXMLQueryingSupport,
-    CollationSupport,
-    SetOperationSupport,
-    TruncateSupport,
-    ILIKESupport,
-    CTESupport,
-    FilterClauseSupport,
-    WindowFunctionSupport,
-    # JSONSupport is not listed: PostgresJSONBEnhancedSupport derives from it
-    # below, and listing a base ahead of its own subclass is not a consistent
-    # MRO. This is the shape every other derived protocol uses here --
-    # PostgresTableSupport(TableSupport), PostgresIndexSupport(IndexSupport) --
-    # and JSONSupport still reaches the MRO, so isinstance(dialect, JSONSupport)
-    # is unchanged. Listing both, while each was standalone, also put
-    # supports_json_type in the MRO four times: two abstract protocol
-    # declarations, the core mixin default, and the one implementation.
-    ReturningSupport,
-    AdvancedGroupingSupport,
-    ArraySupport,
-    ExplainSupport,
-    GraphSupport,
-    GraphTableSupport,
-    MergeSupport,
-    OrderedSetAggregationSupport,
-    QualifyClauseSupport,
-    TemporalTableSupport,
-    UpsertSupport,
-    LateralJoinSupport,
-    WildcardSupport,
-    JoinSupport,
-    # Type and domain DDL protocols. These derive TypeObjectSupport, so they
-    # precede the object protocols further down.
-    PostgresTypeSupport,
-    PostgresDomainSupport,
-    # These three declare the PostgreSQL-only additions to the per-statement
-    # protocols below, so they derive Create/Drop/AlterTableSupport,
-    # Create/DropIndexSupport + FulltextIndexSupport and
-    # Create/DropTriggerSupport. A subclass precedes its base (C3), so each
-    # has to come before the core protocols it extends.
-    PostgresTableSupport,
-    PostgresIndexSupport,
-    PostgresTriggerSupport,
-    # Per-statement DDL protocols. Core split each former umbrella protocol
-    # into one protocol per statement expression, so a dialect that implements
-    # CREATE/DROP TABLE declares those two rather than the old umbrella.
-    CreateTableSupport,
-    DropTableSupport,
-    AlterTableSupport,
-    CreateViewSupport,
-    DropViewSupport,
-    MaterializedViewSupport,
-    CreateIndexSupport,
-    DropIndexSupport,
-    FulltextIndexSupport,
-    # CREATE/DROP/ALTER SEQUENCE are declared once, on PostgresSequenceSupport,
-    # which derives from the three core per-statement protocols. Listing them
-    # here as well would put a base before the subclass that restates it and
-    # break C3; the dialect still satisfies each through that derivation.
-    CreateTriggerSupport,
-    DropTriggerSupport,
-    CreateTypeSupport,
-    AlterTypeSupport,
-    DropTypeSupport,
-    CreateDomainSupport,
-    AlterDomainSupport,
-    DropDomainSupport,
-    CreateSchemaSupport,
-    DropSchemaSupport,
-    CreateDatabaseSupport,
-    DropDatabaseSupport,
-    AlterDatabaseSupport,
-    CreateRoutineSupport,
-    DropRoutineSupport,
-    # Introspection protocol
-    IntrospectionSupport,
-    # Transaction control protocol
-    TransactionControlSupport,
-    TransactionalDDLSupport,
-    # PostgreSQL-specific protocols
-    PostgresExtensionSupport,
-    PostgresMaterializedViewSupport,
-    PostgresPgvectorSupport,
-    PostgresPostGISSupport,
-    PostgresPostgisRasterSupport,
-    PostgresPgroutingSupport,
-    PostgresPgTrgmSupport,
-    PostgresHstoreSupport,
-    # Native feature protocols
-    PostgresPartitionSupport,
-    PostgresVacuumSupport,
-    PostgresCopySupport,
-    PostgresQueryOptimizationSupport,
-    PostgresDataTypeSupport,
-    PostgresLogicalReplicationSupport,
-    # Per-feature protocols
-    PostgresCTESupport,
-    PostgresWindowSupport,
-    PostgresFilterSupport,
-    PostgresReturningSupport,
-    PostgresGroupingSupport,
-    PostgresExplainSupport,
-    PostgresMergeSupport,
-    PostgresUpsertSupport,
-    PostgresLateralJoinSupport,
-    PostgresSetOperationSupport,
-    PostgresILIKESupport,
-    PostgresJoinSupport,
-    PostgresTruncateSupport,
-    PostgresSchemaSupport,
-    PostgresNamespaceSupport,
-    PostgresSequenceSupport,
-    PostgresIdentitySupport,
-    PostgresAutoIncrementSupport,
-    PostgresTransactionSupport,
-    PostgresViewSupport,
-    PostgresXMLSupport,
-    PostgresCollationSupport,
-    PostgresOrderedSetAggSupport,
-    PostgresFeaturesSupport,
-    # Extension feature protocols
-    PostgresLtreeSupport,
-    PostgresIntarraySupport,
-    PostgresEarthdistanceSupport,
-    PostgresTablefuncSupport,
-    PostgresPgStatStatementsSupport,
-    PostgresCitextSupport,
-    PostgresPgcryptoSupport,
-    PostgresFuzzystrmatchSupport,
-    PostgresCubeSupport,
-    PostgresUuidOssSupport,
-    PostgresBloomSupport,
-    PostgresBtreeGinSupport,
-    PostgresBtreeGistSupport,
-    PostgresPgCronSupport,
-    PostgresPgPartmanSupport,
-    PostgresPgSurgerySupport,
-    PostgresPgWalinspectSupport,
-    PostgresPgLogicalSupport,
-    PostgresPgauditSupport,
-    PostgresPgRepackSupport,
-    PostgresHypoPgSupport,
-    PostgresOrafceSupport,
-    PostgresAddressStandardizerSupport,
-    # DDL feature protocols
-    PostgresCommentSupport,
-    PostgresConstraintSupport,
-    PostgresPolicySupport,
-    PostgresRlsConfigSupport,
-    PostgresAlterTableSettingsSupport,
-    PostgresClusterSupport,
-    PostgresRepackSupport,
-    PostgresCollationDDLSupport,
-    PostgresForeignTableDDLSupport,
-    PostgresRoutineDDLSupport,
-    PostgresPublicationSupport,
-    # Type feature protocols
-    PostgresMultirangeSupport,
-    PostgresEnumTypeSupport,
-    PostgresFullTextSearchSupport,
-    PostgresRangeTypeSupport,
-    PostgresJSONBEnhancedSupport,
-    PostgresArrayEnhancedSupport,
-    # Type and domain DDL protocols. These derive TypeObjectSupport /
-    # NamespaceSupport, so they precede the object protocols below.
-    # Named objects. Each derives NamespaceSupport, and PostgresTableSupport,
-    # PostgresIndexSupport and PostgresTriggerSupport derive from three of
-    # them, so the whole block sits after the PostgreSQL-specific protocols
-    # that restate them.
-    ViewObjectSupport,
-    MaterializedViewObjectSupport,
-    TableObjectSupport,
-    ForeignTableObjectSupport,
-    IndexObjectSupport,
-    SequenceObjectSupport,
-    TriggerObjectSupport,
-    TypeObjectSupport,
-    RoutineObjectSupport,
-    NamespaceSupport,
-    # Suggestion protocols (relocated to backend.suggestion.protocols)
-    CreateTableLayoutSuggestionSupport,
-    ColumnReorderSuggestionSupport,
-    TableConstraintChangeSuggestionSupport,
-    TableIndexChangeSuggestionSupport,
-    PartitionSchemeChangeSuggestionSupport,
-    # The function catalogue: a suggestion, not a capability flag
-    # DataType Support Protocol
-    DataTypeSupport,
-    # New feature protocols
-    PostgresParallelQuerySupport,
-    PostgresStoredProcedureSupport,
-    PostgresExtendedStatisticsSupport,
-    PostgresAdvisoryLockSupport,
-    PostgresLockingSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.

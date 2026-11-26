@@ -376,9 +376,11 @@ class TestPostgresEnumTypeSupport:
     def test_dialect_implements_postgres_enum_type_support(self):
         """Test that PostgresDialect implements PostgresEnumTypeSupport."""
         dialect = PostgresDialect(version=(14, 0, 0))
-        # Check via MRO
-        from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport  # noqa: F811
-        assert PostgresEnumTypeSupport in dialect.__class__.__mro__
+        # A runtime_checkable Protocol is satisfied structurally, which is
+        # exactly what the dialect relies on: the protocol is a declaration,
+        # not a base, so no ellipsis stub can answer for the real methods.
+        assert PostgresEnumTypeSupport not in dialect.__class__.__mro__
+        assert isinstance(dialect, PostgresEnumTypeSupport)
 
     def test_create_enum_type_method(self):
         """Test create_enum_type method."""
