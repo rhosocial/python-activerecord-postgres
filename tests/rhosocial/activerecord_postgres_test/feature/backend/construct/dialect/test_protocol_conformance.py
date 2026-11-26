@@ -183,7 +183,8 @@ def get_postgres_protocols():
         dialect_protocols.TransactionalDDLSupport,
         dialect_protocols.IntrospectionSupport,
         dialect_protocols.TransactionControlSupport,
-        dialect_protocols.SQLFunctionSupport,
+        # The function catalogue is a suggestion protocol, relocated in core.
+        suggestion_protocols.FunctionSuggestionSupport,
         # Generic protocols Postgres also satisfies.
         dialect_protocols.AlterTableModifierSupport,
         dialect_protocols.DataTypeSupport,

@@ -3,6 +3,8 @@
 
 from typing import Dict, TYPE_CHECKING
 
+from rhosocial.activerecord.backend.suggestion.definitions import FunctionSuggestion
+
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.impl.postgres.function_versions import (
         FunctionSupportInfo,
@@ -12,10 +14,10 @@ if TYPE_CHECKING:
 class PostgresFunctionMixin:
     """PostgreSQL function support detection."""
 
-    def supports_functions(self) -> Dict[str, "FunctionSupportInfo"]:
-        """Return supported SQL functions with detailed support information.
+    def suggest_functions(self) -> "FunctionSuggestion":
+        """Return the SQL function catalogue this dialect renders.
 
-        This method combines:
+        This suggestion combines:
         1. Core functions from rhosocial.activerecord.backend.expression.functions
         2. PostgreSQL-specific functions from rhosocial.activerecord.backend.impl.postgres.functions
 
@@ -23,8 +25,9 @@ class PostgresFunctionMixin:
         - Whether the function is supported
         - If not, the reason why (PG version, extension status, etc.)
 
-        Returns:
-            Dict mapping function names to FunctionSupportInfo.
+        The per-name records are handed back unchanged: the catalogue's values
+        are backend-owned, so this dialect's richer answer is not flattened to
+        a bool.
 
         """
         from ..function_versions import FunctionSupportInfo
@@ -58,7 +61,7 @@ class PostgresFunctionMixin:
             if func_name not in result:
                 result[func_name] = self._check_function_support(func_name)
 
-        return result
+        return FunctionSuggestion(result)
 
     def _check_function_support(self, func_name: str) -> "FunctionSupportInfo":
         """Check function support status and return detailed information.

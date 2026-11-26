@@ -6,7 +6,7 @@ Tests for:
 - FunctionSupportInfo dataclass
 - POSTGRES_FUNCTION_VERSIONS assembly
 - _check_function_support() detailed support info
-- supports_functions() return type
+- suggest_functions() return type
 """
 
 import pytest
@@ -211,7 +211,7 @@ class TestPostgresFunctionVersionsAssembly:
             assert req.extension == "postgis"
 
 
-# ── supports_functions(): function availability ─────────────
+# ── suggest_functions(): function availability ─────────────
 
 
 class TestSupportsFunctionsAvailability:
@@ -220,7 +220,7 @@ class TestSupportsFunctionsAvailability:
     These assertions ran against a private boolean fork
     (``_is_postgres_function_supported``) that no production code called and that
     duplicated the version and extension checks with a coarser answer. The
-    public ``supports_functions()`` answers the same question and names the
+    public ``suggest_functions()`` answers the same question and names the
     reason, so each case below asserts the verdict *and* the reason: a check
     that starts failing for a different cause fails here instead of reading as
     the same answer.
@@ -231,7 +231,7 @@ class TestSupportsFunctionsAvailability:
     """
 
     def _support(self, dialect, func_name):
-        return dialect.supports_functions()[func_name]
+        return dialect.suggest_functions().functions[func_name]
 
     def test_core_function_version_ok(self):
         """Built-in function with sufficient PG version is supported."""
@@ -260,7 +260,7 @@ class TestSupportsFunctionsAvailability:
         the caller can tell "unknown" from "supported".
         """
         dialect = PostgresDialect((14, 0, 0))
-        assert dialect.supports_functions().get("unknown_function_xyz") is None
+        assert dialect.suggest_functions().functions.get("unknown_function_xyz") is None
 
     def test_extension_function_not_probed(self):
         """An extension function is refused until the extensions are probed."""
@@ -331,7 +331,7 @@ class TestSupportsFunctionsAvailability:
     def test_core_function_works_without_extensions(self):
         """Built-ins are answered without probing anything."""
         dialect = PostgresDialect((14, 0, 0))
-        table = dialect.supports_functions()
+        table = dialect.suggest_functions().functions
         for name in ("geometry_distance", "range_contains", "bit_concat"):
             assert table[name].supported is True, name
 
@@ -401,16 +401,16 @@ class TestCheckFunctionSupport:
         assert info.reason is None
 
 
-# ── supports_functions ─────────────────────────────────────
+# ── suggest_functions ─────────────────────────────────────
 
 
 class TestSupportsFunctions:
-    """Tests for supports_functions() return type and values."""
+    """Tests for suggest_functions() return type and values."""
 
     def test_returns_dict_of_function_support_info(self):
         """Return type is Dict[str, FunctionSupportInfo]."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.supports_functions()
+        result = dialect.suggest_functions().functions
         assert isinstance(result, dict)
         assert len(result) > 0
         for name, info in result.items():
@@ -419,14 +419,14 @@ class TestSupportsFunctions:
     def test_all_entries_have_support_info(self):
         """Every entry has a valid FunctionSupportInfo."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.supports_functions()
+        result = dialect.suggest_functions().functions
         for name, info in result.items():
             assert isinstance(info.supported, bool), f"{name}.supported is not bool"
 
     def test_extension_functions_not_probed(self):
         """Extension functions are marked as extension_not_probed without _extensions."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.supports_functions()
+        result = dialect.suggest_functions().functions
         # hstore functions should be not probed
         if "hstore_from_record" in result:
             info = result["hstore_from_record"]
@@ -439,7 +439,7 @@ class TestSupportsFunctions:
         dialect._extensions = {
             "hstore": PostgresExtensionInfo(name="hstore", installed=True, version="1.8"),
         }
-        result = dialect.supports_functions()
+        result = dialect.suggest_functions().functions
         if "hstore_from_record" in result:
             info = result["hstore_from_record"]
             assert info.supported is True
@@ -448,7 +448,7 @@ class TestSupportsFunctions:
     def test_core_functions_always_checked(self):
         """Core built-in functions are checked regardless of _extensions."""
         dialect = PostgresDialect((14, 0, 0))
-        result = dialect.supports_functions()
+        result = dialect.suggest_functions().functions
         # Core functions should be supported
         if "geometry_distance" in result:
             assert result["geometry_distance"].supported is True

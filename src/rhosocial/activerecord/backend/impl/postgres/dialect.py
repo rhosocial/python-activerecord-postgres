@@ -15,6 +15,7 @@ from rhosocial.activerecord.backend.dialect.base import SQLDialectBase
 from rhosocial.activerecord.backend.suggestion.protocols import (
     ColumnReorderSuggestionSupport,
     CreateTableLayoutSuggestionSupport,
+    FunctionSuggestionSupport,
     PartitionSchemeChangeSuggestionSupport,
     TableConstraintChangeSuggestionSupport,
     TableIndexChangeSuggestionSupport,
@@ -152,7 +153,6 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     IntrospectionSupport,
     TransactionControlSupport,
     TransactionalDDLSupport,
-    SQLFunctionSupport,
     DataTypeSupport,
 )
 from .mixins import (
@@ -823,6 +823,8 @@ class PostgresDialect(
     TableConstraintChangeSuggestionSupport,
     TableIndexChangeSuggestionSupport,
     PartitionSchemeChangeSuggestionSupport,
+    # The function catalogue: a suggestion, not a capability flag
+    FunctionSuggestionSupport,
     # DataType Support Protocol
     DataTypeSupport,
     # New feature protocols
@@ -831,8 +833,6 @@ class PostgresDialect(
     PostgresExtendedStatisticsSupport,
     PostgresAdvisoryLockSupport,
     PostgresLockingSupport,
-    # Function support protocol
-    SQLFunctionSupport,
 ):
     """
     PostgreSQL dialect implementation that adapts to the PostgreSQL version.
