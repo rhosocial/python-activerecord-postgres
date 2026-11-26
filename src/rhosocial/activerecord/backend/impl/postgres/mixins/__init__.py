@@ -71,6 +71,7 @@ from .extensions.hstore import PostgresHstoreMixin
 from .extensions.ltree import PostgresLtreeMixin
 from .extensions.intarray import PostgresIntarrayMixin
 from .extensions.pg_trgm import PostgresPgTrgmMixin
+from .extensions.pgroonga import PostgresPgroongaMixin
 from .extensions.earthdistance import PostgresEarthdistanceMixin
 from .extensions.tablefunc import PostgresTablefuncMixin
 from .extensions.pg_stat_statements import PostgresPgStatStatementsMixin
@@ -193,6 +194,7 @@ __all__ = [
     "PostgresLtreeMixin",
     "PostgresIntarrayMixin",
     "PostgresPgTrgmMixin",
+    "PostgresPgroongaMixin",
     "PostgresEarthdistanceMixin",
     "PostgresTablefuncMixin",
     "PostgresPgStatStatementsMixin",

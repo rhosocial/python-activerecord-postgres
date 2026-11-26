@@ -8,6 +8,7 @@ PostgreSQL 扩展系统允许安装额外的功能模块，如：
 - **PostGIS**: 空间数据库功能
 - **pgvector**: 向量相似性搜索（AI 应用）
 - **pg_trgm**: 三元组相似性搜索
+- **PGroonga**: 多语言全文检索（中/日/韩文）
 - **hstore**: 键值对存储
 
 ## 内省与适配
@@ -87,6 +88,7 @@ Dialect 维护以下已知扩展的定义：
 | postgis | 2.0 | spatial | PostGIS 空间数据库扩展 |
 | vector | 0.1 | vector | pgvector 向量相似性搜索 |
 | pg_trgm | 1.0 | text | 三元组相似性搜索 |
+| pgroonga | 2.0 | text | PGroonga 多语言全文检索 |
 | hstore | 1.0 | data | 键值对存储 |
 | uuid-ossp | 1.0 | utility | UUID 生成函数 |
 | pgcrypto | 1.0 | security | 加密函数 |
@@ -101,6 +103,9 @@ CREATE EXTENSION postgis;
 
 -- 安装 pgvector
 CREATE EXTENSION vector;
+
+-- 安装 PGroonga（需先在服务器端安装包）
+CREATE EXTENSION pgroonga;
 
 -- 安装 hstore
 CREATE EXTENSION hstore;
@@ -118,6 +123,7 @@ backend.introspect_and_adapt()
 - **[PostGIS](./postgis.md)**: 空间数据库功能
 - **[pgvector](./pgvector.md)**: 向量相似性搜索
 - **[pg_trgm](./pg_trgm.md)**: 三元组相似性
+- **[PGroonga](./pgroonga.md)**: 多语言全文检索
 - **[hstore](./hstore.md)**: 键值存储
 
 💡 *AI 提示词：* "PostgreSQL 的扩展机制相比 MySQL 的插件系统有什么优势？"

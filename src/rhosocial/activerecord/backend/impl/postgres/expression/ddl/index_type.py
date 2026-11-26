@@ -6,7 +6,7 @@ writes ``USING gin``, and the four-language artifact carries that string. What
 this enum adds is the closed set of spellings the backend knows how to render:
 a caller can no longer hand an arbitrary word to ``CREATE INDEX``.
 
-Extension access methods (HNSW, IVFFLAT, BLOOM) are in the same enum because
+Extension access methods (HNSW, IVFFLAT, BLOOM, PGROONGA) are in the same enum because
 they are legal ``USING`` clauses; ``is_native`` / ``is_extension`` keep the two
 groups distinguishable without a second vocabulary.
 """
@@ -39,6 +39,7 @@ class PostgresIndexType(str, Enum):
     HNSW = "hnsw"
     IVFFLAT = "ivfflat"
     BLOOM = "bloom"
+    PGROONGA = "pgroonga"
 
     @property
     def is_native(self) -> bool:
@@ -100,6 +101,7 @@ _EXTENSION = frozenset(
         PostgresIndexType.HNSW,
         PostgresIndexType.IVFFLAT,
         PostgresIndexType.BLOOM,
+        PostgresIndexType.PGROONGA,
     )
 )
 

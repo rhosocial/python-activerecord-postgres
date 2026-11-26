@@ -433,6 +433,14 @@ EXAMPLES_META = {
         'max_version': '18',
         'note': 'Requires superuser or pg_read_server_files role; only available in PG15+ docker images',
     },
+    'extensions/pgroonga.py': {
+        'title': 'PGroonga Multilingual Full Text Search',
+        'dialect_protocols': [],
+        'priority': 4,
+        'min_version': '12',
+        'max_version': '18',
+        'note': 'Requires the pgroonga extension; available in postgres-exts images for PG12/14-18',
+    },
     'schema_diff/table_changes.py': {
         'title': 'Schema Diff — Table Add/Remove',
         'dialect_protocols': [],
