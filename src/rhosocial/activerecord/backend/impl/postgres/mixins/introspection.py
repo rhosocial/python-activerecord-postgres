@@ -55,6 +55,11 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresSequenceInfoQueryStatement,
         PostgresSequenceListQueryStatement,
         PostgresPartitionListQueryStatement,
+        PostgresTableStateQueryStatement,
+        PostgresIndexStateQueryStatement,
+        PostgresConstraintStateQueryStatement,
+        PostgresSequenceStateQueryStatement,
+        PostgresSchemaListQueryStatement,
         PostgresRoutineListQueryStatement,
         PostgresTypeListQueryStatement,
         PostgresOperatorListQueryStatement,
@@ -3226,6 +3231,16 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self._catalog_column("inhrelid", "i"),
             ),
         )
+        source = source.join(
+            self._catalog_relation("pg_tablespace", "ts"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("reltablespace", "ch"),
+                self._catalog_column("oid", "ts"),
+            ),
+        )
 
         projection = [
             self._catalog_column("relname", "pc", alias="parent_table"),
@@ -3253,6 +3268,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                         self._catalog_column("oid", "ch"),
                         alias="comment",
                     ),
+                    self._catalog_column("spcname", "ts", alias="tablespace"),
                 ]
             )
             if include_statistics:
@@ -3283,6 +3299,529 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         ]
         order_by = [self._catalog_column("relname", "ch")] if include_partitions else None
         return self._catalog_select(projection, source, conditions, order_by)
+
+    def format_table_state_query_statement(
+        self, expr: "PostgresTableStateQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the one-row neutral table-state read.
+
+        ``relkind`` and ``relpersistence`` answer the kind; ``reloptions`` the
+        storage parameters; ``reltablespace`` the tablespace and ``relam`` the
+        access method. ``pg_catalog.obj_description`` carries the comment. The
+        tablespace and access-method joins are LEFT joins because a relation
+        with the default tablespace, or a view with no access method, still has
+        a row and a state.
+
+        Args:
+            expr: Table-state expression with the table name and schema.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        table_name = params.get("table_name", "")
+        schema = params.get("schema") or self.default_schema
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_tablespace", "ts"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("reltablespace", "c"),
+                self._catalog_column("oid", "ts"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_am", "am"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relam", "c"),
+                self._catalog_column("oid", "am"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("relname", "c", alias="table_name"),
+            self._catalog_column("relkind", "c", alias="relkind"),
+            self._catalog_column("relpersistence", "c", alias="relpersistence"),
+            self._catalog_column("reloptions", "c", alias="reloptions"),
+            FunctionCall(
+                self,
+                "pg_catalog.obj_description",
+                self._catalog_column("oid", "c"),
+                self._catalog_literal("pg_class"),
+                alias="comment",
+            ),
+            self._catalog_column("spcname", "ts", alias="tablespace"),
+            self._catalog_column("amname", "am", alias="access_method"),
+        ]
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "c"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+        )
+
+    def format_index_state_query_statement(
+        self, expr: "PostgresIndexStateQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the neutral index-state read for one table.
+
+        ``indisvalid`` is the neutral ``usable`` flag; ``indisready`` and
+        ``indislive`` travel in ``raw`` because they say *where* a failed
+        build stopped rather than whether the index can serve a query. The
+        predicate is rendered by ``pg_get_expr`` and the backing constraint is
+        a LEFT join, because a plain index has none.
+
+        Args:
+            expr: Index-state expression with the table name and schema.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+        )
+        from rhosocial.activerecord.backend.expression.predicates import InPredicate
+
+        params = expr.get_params()
+        table_name = params.get("table_name", "")
+        schema = params.get("schema") or self.default_schema
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_index", "ix"),
+            right_table=self._catalog_relation("pg_class", "t"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("indrelid", "ix"),
+                self._catalog_column("oid", "t"),
+            ),
+        )
+        for relation, alias, left_side, right_side in (
+            ("pg_class", "i", ("indexrelid", "ix"), ("oid", "i")),
+            ("pg_namespace", "n", ("relnamespace", "t"), ("oid", "n")),
+            ("pg_am", "am", ("relam", "i"), ("oid", "am")),
+        ):
+            source = source.join(
+                self._catalog_relation(relation, alias),
+                join_type="JOIN",
+                condition=ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column(*left_side),
+                    self._catalog_column(*right_side),
+                ),
+            )
+        source = source.join(
+            self._catalog_relation("pg_constraint", "con"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("conindid", "con"),
+                    self._catalog_column("oid", "i"),
+                ),
+                InPredicate(
+                    self,
+                    self._catalog_column("contype", "con"),
+                    self._catalog_literal(("p", "u")),
+                ),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("relname", "i", alias="index_name"),
+            self._catalog_column("relname", "t", alias="table_name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("indisunique", "ix", alias="is_unique"),
+            self._catalog_column("indisvalid", "ix", alias="is_valid"),
+            self._catalog_column("indisready", "ix", alias="is_ready"),
+            self._catalog_column("indislive", "ix", alias="is_live"),
+            self._catalog_column("amname", "am", alias="method"),
+            FunctionCall(
+                self,
+                "pg_catalog.pg_get_expr",
+                self._catalog_column("indpred", "ix"),
+                self._catalog_column("indrelid", "ix"),
+                alias="predicate",
+            ),
+            self._catalog_column("conname", "con", alias="backs_constraint"),
+        ]
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "t"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+            [self._catalog_column("relname", "i")],
+        )
+
+    def format_constraint_state_query_statement(
+        self, expr: "PostgresConstraintStateQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the neutral constraint-state read for one table.
+
+        ``convalidated`` is the neutral ``validated`` flag. ``contype`` is
+        spelled as the word the record uses rather than the catalog's one-letter
+        code, and ``pg_get_constraintdef`` keeps the engine's own definition in
+        ``raw``. The backing index is a LEFT join: check constraints have none.
+
+        Args:
+            expr: Constraint-state expression with the table name and schema.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+        )
+
+        params = expr.get_params()
+        table_name = params.get("table_name", "")
+        schema = params.get("schema") or self.default_schema
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_constraint", "con"),
+            right_table=self._catalog_relation("pg_class", "t"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("conrelid", "con"),
+                self._catalog_column("oid", "t"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "t"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_class", "ci"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("conindid", "con"),
+                self._catalog_column("oid", "ci"),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("conname", "con", alias="name"),
+            self._catalog_column("relname", "t", alias="table_name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            self._catalog_column("contype", "con", alias="constraint_type"),
+            self._catalog_column("convalidated", "con", alias="is_validated"),
+            self._catalog_column("condeferrable", "con", alias="is_deferrable"),
+            self._catalog_column("condeferred", "con", alias="is_deferred"),
+            FunctionCall(
+                self,
+                "pg_catalog.pg_get_constraintdef",
+                self._catalog_column("oid", "con"),
+                alias="definition",
+            ),
+            self._catalog_column("relname", "ci", alias="backing_index"),
+        ]
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relname", "t"),
+                    self._catalog_value(table_name),
+                ),
+            ],
+            [self._catalog_column("conname", "con")],
+        )
+
+    def format_sequence_state_query_statement(
+        self, expr: "PostgresSequenceStateQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the neutral sequence-state read for one schema.
+
+        ``pg_class`` is the object list on every supported release;
+        ``pg_sequence`` supplies ``seqstart``/``seqincrement`` on PostgreSQL
+        10+, and its join is omitted on 9.x so the slots are absent rather
+        than read from a relation that does not exist. Ownership is read from
+        ``pg_depend``: the dependency's ``refobjid``/``refobjsubid`` name the
+        owning table and column.
+
+        Args:
+            expr: Sequence-state expression with the schema.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import (
+            ComparisonPredicate,
+            FunctionCall,
+            JoinClause,
+            LogicalPredicate,
+        )
+        from rhosocial.activerecord.backend.expression.predicates import InPredicate
+
+        params = expr.get_params()
+        schema = params.get("schema") or self.default_schema
+        has_pg_sequence = self.version_at_least((10, 0, 0))
+
+        source = JoinClause(
+            self,
+            left_table=self._catalog_relation("pg_class", "c"),
+            right_table=self._catalog_relation("pg_namespace", "n"),
+            join_type="JOIN",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "c"),
+                self._catalog_column("oid", "n"),
+            ),
+        )
+        if has_pg_sequence:
+            source = source.join(
+                self._catalog_relation("pg_sequence", "s"),
+                join_type="LEFT",
+                condition=ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("seqrelid", "s"),
+                    self._catalog_column("oid", "c"),
+                ),
+            )
+        source = source.join(
+            self._catalog_relation("pg_depend", "d"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("objid", "d"),
+                    self._catalog_column("oid", "c"),
+                ),
+                InPredicate(
+                    self,
+                    self._catalog_column("deptype", "d"),
+                    self._catalog_literal(("a", "i")),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("classid", "d"),
+                    self._catalog_literal("pg_class"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("refclassid", "d"),
+                    self._catalog_literal("pg_class"),
+                ),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_class", "tc"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("oid", "tc"),
+                self._catalog_column("refobjid", "d"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_namespace", "tn"),
+            join_type="LEFT",
+            condition=ComparisonPredicate(
+                self,
+                "eq",
+                self._catalog_column("relnamespace", "tc"),
+                self._catalog_column("oid", "tn"),
+            ),
+        )
+        source = source.join(
+            self._catalog_relation("pg_attribute", "a"),
+            join_type="LEFT",
+            condition=LogicalPredicate(
+                self,
+                "AND",
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attrelid", "a"),
+                    self._catalog_column("refobjid", "d"),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("attnum", "a"),
+                    self._catalog_column("refobjsubid", "d"),
+                ),
+            ),
+        )
+
+        projection = [
+            self._catalog_column("relname", "c", alias="name"),
+            self._catalog_column("nspname", "n", alias="schema_name"),
+            FunctionCall(
+                self,
+                "pg_catalog.concat_ws",
+                self._catalog_literal("."),
+                self._catalog_column("nspname", "tn"),
+                self._catalog_column("relname", "tc"),
+                self._catalog_column("attname", "a"),
+                alias="owned_by",
+            ),
+        ]
+        if has_pg_sequence:
+            projection.extend(
+                [
+                    self._catalog_column("seqstart", "s", alias="start"),
+                    self._catalog_column("seqincrement", "s", alias="increment"),
+                ]
+            )
+
+        return self._catalog_select(
+            projection,
+            source,
+            [
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("nspname", "n"),
+                    self._catalog_value(schema),
+                ),
+                ComparisonPredicate(
+                    self,
+                    "eq",
+                    self._catalog_column("relkind", "c"),
+                    self._catalog_literal("S"),
+                ),
+            ],
+            [self._catalog_column("relname", "c")],
+        )
+
+    def format_schema_list_query_statement(
+        self, expr: "PostgresSchemaListQueryStatement"
+    ) -> Tuple[str, tuple]:
+        """Format the schema listing.
+
+        The system namespaces and the session's temporary namespace are left
+        out: they exist on every server and are not schemas a caller created.
+        ``item_exists`` reads the catalog directly for a caller that needs to
+        ask about one of them.
+
+        Args:
+            expr: Schema list expression.
+
+        Returns:
+            Tuple of (SQL string, parameters tuple).
+        """
+        from rhosocial.activerecord.backend.expression import LogicalPredicate
+        from rhosocial.activerecord.backend.expression.predicates import (
+            InPredicate,
+            LikeOperator,
+            LikePredicate,
+        )
+
+        return self._catalog_select(
+            [self._catalog_column("nspname", "n", alias="name")],
+            self._catalog_relation("pg_namespace", "n"),
+            [
+                LogicalPredicate(
+                    self,
+                    "AND",
+                    LogicalPredicate(
+                        self,
+                        "NOT",
+                        InPredicate(
+                            self,
+                            self._catalog_column("nspname", "n"),
+                            self._catalog_literal(self._SYSTEM_SCHEMAS),
+                        ),
+                    ),
+                    LikePredicate(
+                        self,
+                        LikeOperator.NOT_LIKE,
+                        self._catalog_column("nspname", "n"),
+                        self._catalog_literal(self._TEMP_SCHEMA_PREFIX),
+                    ),
+                )
+            ],
+            [self._catalog_column("nspname", "n")],
+        )
 
     def format_routine_list_query_statement(
         self, expr: "PostgresRoutineListQueryStatement"

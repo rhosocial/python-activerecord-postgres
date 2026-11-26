@@ -42,6 +42,8 @@ from typing import Any, Dict
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.introspection import IntrospectionNotSupportedError
+from rhosocial.activerecord.backend.introspection.errors import ObjectNotFoundError
+from rhosocial.activerecord.backend.introspection.types import ItemKind
 
 
 # The names deliberately do not exist. A server validates the statement before
@@ -81,6 +83,8 @@ def _probe_arguments_for(method) -> Dict[str, Any]:
             kwargs[name] = PROBE_LIMIT
         elif "type" in lowered:
             kwargs[name] = "table"
+        elif "kind" in lowered:
+            kwargs[name] = ItemKind.SCHEMA
         elif "name" in lowered:
             kwargs[name] = PROBE_OBJECT
         else:
@@ -126,13 +130,21 @@ def test_every_family_answers_or_refuses_by_name(postgres_backend):
         kwargs = _probe_arguments_for(method)
         try:
             method(**kwargs)
-        except (IntrospectionNotSupportedError, UnsupportedFeatureError) as error:
+        except (
+            IntrospectionNotSupportedError,
+            UnsupportedFeatureError,
+            ObjectNotFoundError,
+        ) as error:
             # A refusal is an answer: the engine or its dialect does not serve
             # the family, and it says so by a typed refusal rather than by
             # sending a statement the server rejects. Both classes are the
             # contract's own vocabulary -- the capability gate is the
             # dialect's, the family gate is the introspector's -- so the
             # group key keeps them apart without treating either as a defect.
+            # ``ObjectNotFoundError`` belongs here too: this walk asks every
+            # family for a deliberately non-existent object, and a typed
+            # "not found" is the family's answer to that question, not a
+            # statement the server refused.
             refused[_refusal_name(error)].append(name)
         except Exception as error:  # noqa: BLE001 — the census classifies, not swallows
             # Grouped by (family, first line): a version-skew defect then reads

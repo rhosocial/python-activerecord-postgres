@@ -28,6 +28,8 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import json
 
+from dataclasses import replace
+
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
     AbstractIntrospector,
@@ -35,12 +37,16 @@ from rhosocial.activerecord.backend.introspection.base import (
 )
 from rhosocial.activerecord.backend.introspection.cache import IntrospectionCache
 from rhosocial.activerecord.backend.introspection.defaults import VALUE_SAMPLE_LIMIT
+from rhosocial.activerecord.backend.introspection.errors import ObjectNotFoundError
 from rhosocial.activerecord.backend.introspection.executor import (
     IntrospectorExecutor,
     AsyncIntrospectorExecutor,
 )
 from rhosocial.activerecord.backend.introspection.status import ExtensionInfo
 from rhosocial.activerecord.backend.introspection.types import (
+    ConstraintState,
+    DerivedObjectState,
+    IndexState,
     IntrospectionColumnInfo,
     ColumnNullable,
     IntrospectionDatabaseInfo,
@@ -49,7 +55,14 @@ from rhosocial.activerecord.backend.introspection.types import (
     IndexInfo,
     IndexType,
     IntrospectionScope,
+    ItemKind,
+    PartitionBound,
+    PartitionScheme,
+    PartitionState,
     ReferentialAction,
+    SequenceState,
+    StorageOptionsState,
+    TableState,
     IntrospectionTableInfo,
     TableType,
     IntrospectionTriggerInfo,
@@ -65,7 +78,6 @@ from .types import (
     SequenceInfo,
     PostgresPartitionStrategy,
     PostgresPartitionBound,
-    PostgresPartitionInfo,
     PostgresRoutineKind,
     PostgresRoutineInfo,
     PostgresTypeKind,
@@ -82,6 +94,11 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresSequenceInfoQueryStatement,
         PostgresSequenceListQueryStatement,
         PostgresPartitionListQueryStatement,
+        PostgresTableStateQueryStatement,
+        PostgresIndexStateQueryStatement,
+        PostgresConstraintStateQueryStatement,
+        PostgresSequenceStateQueryStatement,
+        PostgresSchemaListQueryStatement,
         PostgresRoutineListQueryStatement,
         PostgresTypeListQueryStatement,
         PostgresOperatorListQueryStatement,
@@ -999,46 +1016,349 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 )
         return PostgresPartitionBound(text=text)
 
-    def parse_partitions(
+    @staticmethod
+    def _reloptions(options: Any) -> Dict[str, Any]:
+        """Read ``pg_class.reloptions`` as a key/value mapping.
+
+        psycopg usually hands a ``text[]`` back as a list, but the same fact
+        can arrive as the array's text form; both are read here. A flag stored
+        without a value becomes ``True``, so "present but not set" is not
+        written as an empty string.
+        """
+        if options is None:
+            return {}
+        items = options
+        if isinstance(items, str):
+            text = items.strip()
+            if text.startswith("{") and text.endswith("}"):
+                text = text[1:-1]
+            items = [part for part in text.split(",") if part] if text else []
+        if not isinstance(items, (list, tuple)):
+            return {}
+        found: Dict[str, Any] = {}
+        for item in items:
+            if not isinstance(item, str):
+                continue
+            key, separator, value = item.partition("=")
+            key = key.strip()
+            if not key:
+                continue
+            found[key] = value.strip() if separator else True
+        return found
+
+    def parse_table_state(
         self,
         rows: List[Dict[str, Any]],
         table_name: str,
         schema: str,
-    ) -> List[PostgresPartitionInfo]:
-        """Turn the parent/child rows into one record per child partition."""
-        partitions: List[PostgresPartitionInfo] = []
-        strategy = PostgresPartitionStrategy.UNKNOWN
-        key_columns: List[str] = []
-        key_expression: Optional[str] = None
-        for row in rows or []:
+    ) -> Optional[TableState]:
+        """Turn the one relation row into its neutral state.
+
+        ``kind`` answers persistence (regular/unlogged/temporary) and the
+        relation's own family; a partitioned parent keeps ``regular`` and says
+        so in ``traits``, because "partitioned" is a compound trait rather than
+        a fourth persistence. ``raw`` keeps the catalog's spelling of the kind
+        and persistence so a caller can tell a temporary view from a temporary
+        table.
+        """
+        if not rows:
+            return None
+        row = rows[0]
+        relkind = str(row.get("relkind") or "r")
+        persistence = str(row.get("relpersistence") or "p")
+        kind = {
+            "r": "regular",
+            "p": "regular",
+            "v": "view",
+            "m": "materialized_view",
+            "f": "foreign",
+            "S": "sequence",
+        }.get(relkind, "other")
+        if persistence == "u":
+            kind = "unlogged"
+        elif persistence == "t":
+            kind = "temporary"
+        traits: Tuple[str, ...] = ("partitioned",) if relkind == "p" else ()
+        options = self._reloptions(row.get("reloptions"))
+        storage = StorageOptionsState(
+            engine=row.get("access_method"),
+            compression=options.get("compress") or options.get("compression"),
+            tablespace=row.get("tablespace"),
+            raw={"reloptions": options},
+        )
+        return TableState(
+            name=str(row.get("table_name") or table_name),
+            schema=row.get("schema_name") or schema,
+            kind=kind,
+            traits=traits,
+            storage=storage,
+            comment=row.get("comment"),
+            raw={"relkind": relkind, "relpersistence": persistence},
+        )
+
+    def parse_partition_state(
+        self,
+        rows: List[Dict[str, Any]],
+        table_name: str,
+        schema: str,
+    ) -> Optional[PartitionState]:
+        """Turn the parent row and its children into one neutral state.
+
+        A partitioned parent with no children still answers: ``pg_inherits``
+        is LEFT-joined, so the parent's key is present on the row whose child
+        columns are NULL. ``scheme`` therefore comes from the parent's key, not
+        from the number of children.
+
+        The neutral :class:`PartitionBound` carries the range upper endpoint,
+        the list values and the default/max-value flags. The lower endpoint and
+        the hash modulus/remainder have no slot of their own there, so they stay
+        structured in ``raw['partitions']`` beside the engine's original text
+        rather than being flattened into a field that means something else.
+        """
+        if not rows:
+            return None
+        first = rows[0]
+        key_text = str(first.get("partition_key") or "")
+        strategy, key_columns, key_expression = self._parse_partition_key(key_text)
+        scheme = {
+            PostgresPartitionStrategy.RANGE: PartitionScheme.RANGE,
+            PostgresPartitionStrategy.LIST: PartitionScheme.LIST,
+            PostgresPartitionStrategy.HASH: PartitionScheme.HASH,
+        }.get(strategy, PartitionScheme.EXPRESSION)
+
+        bounds: List[PartitionBound] = []
+        detail: List[Dict[str, Any]] = []
+        has_default = False
+        for row in rows:
             name = row.get("name")
             if not name:
                 continue
-            if not partitions:
-                strategy, key_columns, key_expression = self._parse_partition_key(
-                    row.get("partition_key")
-                )
+            bound = self._parse_partition_bound(row.get("bound"))
+            is_default = bool(
+                bound is not None
+                and bound.text is not None
+                and bound.text.strip().upper() == "DEFAULT"
+            )
+            is_maxvalue = bool(
+                bound is not None
+                and bound.text is not None
+                and "MAXVALUE" in bound.text.upper()
+            )
             row_count = row.get("row_count")
             if row_count is not None and row_count < 0:
                 row_count = None
             elif row_count is not None:
                 row_count = int(row_count)
-            partitions.append(
-                PostgresPartitionInfo(
-                    table=row.get("parent_table") or table_name,
+            bounds.append(
+                PartitionBound(
                     name=str(name),
-                    schema=row.get("schema_name") or schema,
-                    strategy=strategy,
-                    key_columns=key_columns,
-                    key_expression=key_expression,
-                    parent=row.get("parent_table") or table_name,
-                    bound=self._parse_partition_bound(row.get("bound")),
+                    upper=bound.upper if bound is not None else None,
+                    values=tuple(bound.values) if bound is not None else (),
+                    is_default=is_default,
+                    is_maxvalue=is_maxvalue,
                     row_count=row_count,
                     size_bytes=row.get("size_bytes"),
-                    comment=row.get("comment"),
+                    tablespace=row.get("tablespace"),
                 )
             )
-        return partitions
+            detail.append(
+                {
+                    "name": str(name),
+                    "lower": bound.lower if bound is not None else None,
+                    "upper": bound.upper if bound is not None else None,
+                    "values": list(bound.values) if bound is not None else [],
+                    "modulus": bound.modulus if bound is not None else None,
+                    "remainder": bound.remainder if bound is not None else None,
+                    "text": bound.text if bound is not None else None,
+                }
+            )
+            has_default = has_default or is_default
+
+        return PartitionState(
+            scheme=scheme,
+            key_expression=key_expression or "",
+            key_columns=tuple(key_columns),
+            has_default=has_default,
+            bounds=tuple(bounds),
+            raw={
+                "parent_table": first.get("parent_table") or table_name,
+                "partition_key": key_text,
+                "partitions": detail,
+            },
+        )
+
+    def parse_index_states(
+        self,
+        rows: List[Dict[str, Any]],
+        table_name: str,
+        schema: str,
+    ) -> List[IndexState]:
+        """Turn each ``pg_index`` row into its neutral state.
+
+        ``indisvalid`` is the usability answer. ``indisready`` and
+        ``indislive`` stay in ``raw``: they tell a caller how far a failed
+        concurrent build got, which is not the same question as whether the
+        index can serve a query now.
+        """
+        found: List[IndexState] = []
+        by_name: Dict[str, int] = {}
+        for row in rows or []:
+            name = row.get("index_name") or row.get("name")
+            if not name:
+                continue
+            valid = row.get("is_valid")
+            if valid is None:
+                valid = row.get("indisvalid", True)
+            unique = row.get("is_unique")
+            if unique is None:
+                unique = row.get("indisunique", False)
+            state = IndexState(
+                name=str(name),
+                table=str(row.get("table_name") or table_name),
+                schema=row.get("schema_name") or schema,
+                unique=bool(unique),
+                method=row.get("method"),
+                predicate=row.get("predicate")
+                if row.get("predicate") is not None
+                else row.get("filter_condition"),
+                visible=bool(row.get("is_visible", True)),
+                usable=bool(valid),
+                backs_constraint=row.get("backs_constraint"),
+                raw={
+                    key: row[key]
+                    for key in ("is_ready", "is_live", "indisready", "indislive")
+                    if key in row and row[key] is not None
+                },
+            )
+            position = by_name.get(state.name)
+            if position is None:
+                by_name[state.name] = len(found)
+                found.append(state)
+            elif (
+                found[position].backs_constraint is None
+                and state.backs_constraint is not None
+            ):
+                # One index can back more than one constraint; the join would
+                # otherwise report it once per constraint. Keep one row and
+                # fill the backing name rather than duplicating the index.
+                found[position] = replace(
+                    found[position], backs_constraint=state.backs_constraint
+                )
+        return found
+
+    def parse_constraint_states(
+        self,
+        rows: List[Dict[str, Any]],
+        table_name: str,
+        schema: str,
+    ) -> List[ConstraintState]:
+        """Turn each ``pg_constraint`` row into its neutral state.
+
+        ``convalidated`` is the validated answer. PostgreSQL has no
+        "not enforced" constraint and no disabled constraint state on the
+        table's own constraints, so those neutral slots stay at their defaults
+        rather than being guessed from an unrelated flag.
+        """
+        kind_map = {
+            "p": "primary_key",
+            "u": "unique",
+            "f": "foreign_key",
+            "c": "check",
+            "x": "exclusion",
+            "t": "trigger",
+        }
+        found: List[ConstraintState] = []
+        for row in rows or []:
+            name = row.get("name") or row.get("constraint_name")
+            if not name:
+                continue
+            catalog_kind = row.get("constraint_type")
+            if catalog_kind is None:
+                catalog_kind = row.get("contype")
+            kind = kind_map.get(catalog_kind, catalog_kind or "")
+            validated = row.get("is_validated")
+            if validated is None:
+                validated = row.get("convalidated", True)
+            deferred = row.get("is_deferred")
+            if deferred is None:
+                deferred = row.get("condeferred", False)
+            raw: Dict[str, Any] = {}
+            definition = row.get("definition")
+            if definition is not None:
+                raw["definition"] = definition
+            found.append(
+                ConstraintState(
+                    name=str(name),
+                    table=str(row.get("table_name") or table_name),
+                    kind=str(kind),
+                    schema=row.get("schema_name") or schema,
+                    validated=bool(validated),
+                    enforced=bool(row.get("is_enforced", True)),
+                    deferred=bool(deferred),
+                    disabled=bool(row.get("is_disabled", False)),
+                    backing_index=row.get("backing_index"),
+                    raw=raw,
+                )
+            )
+        return found
+
+    @staticmethod
+    def derived_backing_indexes(states: List[ConstraintState]) -> List[DerivedObjectState]:
+        """The primary-key and unique constraints' indexes, as derived objects.
+
+        PostgreSQL creates an index for each of those constraints and names it
+        after the constraint's table; a caller planning a change must know the
+        index is there even though it never declared it. Constraints whose
+        backing index is absent (a check constraint) are not derived objects.
+        """
+        return [
+            DerivedObjectState(
+                kind="backing_index",
+                name=str(state.backing_index),
+                owned_by=state.name,
+                raw={"constraint_kind": state.kind},
+            )
+            for state in states
+            if state.kind in ("primary_key", "unique") and state.backing_index
+        ]
+
+    def parse_sequence_states(
+        self,
+        rows: List[Dict[str, Any]],
+        schema: str,
+    ) -> List[SequenceState]:
+        """Turn each ``pg_class`` sequence row into its neutral state."""
+        found: List[SequenceState] = []
+        for row in rows or []:
+            name = row.get("name") or row.get("sequence_name")
+            if not name:
+                continue
+            start = row.get("start")
+            if start is None:
+                start = row.get("start_value")
+            increment = row.get("increment")
+            if increment is None:
+                increment = row.get("increment_by")
+            found.append(
+                SequenceState(
+                    name=str(name),
+                    schema=row.get("schema_name") or schema,
+                    owned_by=row.get("owned_by"),
+                    start=start,
+                    increment=increment,
+                )
+            )
+        return found
+
+    @staticmethod
+    def parse_schemas(rows: List[Dict[str, Any]]) -> List[str]:
+        """Reduce the schema rows to the names they carry."""
+        names: List[str] = []
+        for row in rows or []:
+            value = row.get("name") if isinstance(row, dict) else row
+            if value:
+                names.append(str(value))
+        return names
 
     @staticmethod
     def parse_routine(row: Dict[str, Any], default_schema: str) -> PostgresRoutineInfo:
@@ -1226,6 +1546,46 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             include_partitions=include_partitions,
             include_statistics=include_statistics,
         )
+
+    def table_state_statement(
+        self, *, table_name: str, schema: Optional[str]
+    ) -> "PostgresTableStateQueryStatement":
+        """Return the statement that reads one relation's neutral state."""
+        from ..expression.introspection import PostgresTableStateQueryStatement
+
+        return PostgresTableStateQueryStatement(self.dialect, table_name, schema=schema)
+
+    def index_state_statement(
+        self, *, table_name: str, schema: Optional[str]
+    ) -> "PostgresIndexStateQueryStatement":
+        """Return the statement that reads one table's index states."""
+        from ..expression.introspection import PostgresIndexStateQueryStatement
+
+        return PostgresIndexStateQueryStatement(self.dialect, table_name, schema=schema)
+
+    def constraint_state_statement(
+        self, *, table_name: str, schema: Optional[str]
+    ) -> "PostgresConstraintStateQueryStatement":
+        """Return the statement that reads one table's constraint states."""
+        from ..expression.introspection import PostgresConstraintStateQueryStatement
+
+        return PostgresConstraintStateQueryStatement(
+            self.dialect, table_name, schema=schema
+        )
+
+    def sequence_state_statement(
+        self, *, schema: Optional[str]
+    ) -> "PostgresSequenceStateQueryStatement":
+        """Return the statement that reads one schema's sequence states."""
+        from ..expression.introspection import PostgresSequenceStateQueryStatement
+
+        return PostgresSequenceStateQueryStatement(self.dialect, schema=schema)
+
+    def schema_list_statement(self) -> "PostgresSchemaListQueryStatement":
+        """Return the statement that lists the exposed schema names."""
+        from ..expression.introspection import PostgresSchemaListQueryStatement
+
+        return PostgresSchemaListQueryStatement(self.dialect)
 
     def routine_list_statement(
         self, *, schema: Optional[str], routine_name: Optional[str] = None
@@ -1564,31 +1924,23 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         return self.get_sequence_info(sequence_name, schema) is not None
 
     # ------------------------------------------------------------------ #
-    # Partitions, routines, types, operators
+    # Neutral object state, partitions, routines, types, operators
     # ------------------------------------------------------------------ #
 
-    def list_partitions(
+    def _partition_state(
         self,
         table_name: str,
-        schema: Optional[str] = None,
-        include_partitions: bool = True,
-        include_statistics: bool = True,
-    ) -> List[PostgresPartitionInfo]:
-        """List one partitioned table's child partitions.
-
-        Args:
-            table_name: The partitioned parent table.
-            schema: Schema to inspect. Defaults to the connection default schema.
-            include_partitions: Whether to list the children (default True).
-            include_statistics: Whether to fill each child's row/size (default True).
-
-        Returns:
-            One record per child partition, ordered by name. An empty list is
-            a real answer: the table may be partitioned with no children yet.
-        """
+        schema: Optional[str],
+        include_stats: bool,
+    ) -> Optional[PartitionState]:
+        """Read the partition state once the caller has confirmed the table is partitioned."""
         target = schema if schema is not None else self.default_schema
         key = self._schema_family_cache_key(
-            self._cache, "partitions", schema, name=table_name
+            self._cache,
+            "partition-state",
+            schema,
+            name=table_name,
+            extra=str(include_stats),
         )
         cached = self._cache.get(key)
         if cached is not None:
@@ -1596,12 +1948,199 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         sql, params = self.partition_list_statement(
             table_name=table_name,
             schema=schema,
-            include_partitions=include_partitions,
-            include_statistics=include_statistics,
+            include_partitions=True,
+            include_statistics=include_stats,
         ).to_sql()
-        result = self.parse_partitions(self._executor.execute(sql, params), table_name, target)
+        result = self.parse_partition_state(
+            self._executor.execute(sql, params), table_name, target
+        )
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    def get_table_state(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> TableState:
+        """Read the table's kind, storage options, comment and partition scheme.
+
+        A partitioned parent is recognised from its kind, not from whether it
+        has children yet: a table created ``PARTITION BY`` with no partitions
+        still answers with a scheme.
+        """
+        target = schema if schema is not None else self.default_schema
+        key = self._cache.key(
+            IntrospectionScope.TABLE, table_name, schema=schema, extra="state"
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.table_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        state = self.parse_table_state(
+            self._executor.execute(sql, params), table_name, target
+        )
+        if state is None:
+            raise ObjectNotFoundError("table", table_name, target)
+        if "partitioned" in state.traits:
+            state = replace(
+                state, partitioning=self._partition_state(table_name, schema, False)
+            )
+        self._cache.set(key, state)
+        return state
+
+    def get_partition_state(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+        include_stats: bool = False,
+    ) -> Optional[PartitionState]:
+        """Read the table's partition scheme and bounds.
+
+        ``None`` answers "not partitioned". Whether the table is partitioned is
+        read from its kind (``TableType.PARTITIONED_TABLE``, ``relkind = 'p'``),
+        never from the child list being non-empty: a partitioned table with no
+        children still answers with a scheme and no bounds.
+        """
+        table = next(
+            (t for t in self.list_tables(schema) if t.name == table_name), None
+        )
+        if table is None or table.table_type is not TableType.PARTITIONED_TABLE:
+            return None
+        return self._partition_state(table_name, schema, include_stats)
+
+    def list_index_states(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[IndexState]:
+        """Read every index on the table, including usability and visibility."""
+        target = schema if schema is not None else self.default_schema
+        key = self._cache.key(
+            IntrospectionScope.INDEX, table_name, "states", schema=schema
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.index_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        result = self.parse_index_states(
+            self._executor.execute(sql, params), table_name, target
+        )
         self._cache.set(key, result)
         return result
+
+    def list_constraint_states(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[ConstraintState]:
+        """Read every constraint on the table, including its validation state."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "constraint-states", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.constraint_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        result = self.parse_constraint_states(
+            self._executor.execute(sql, params), table_name, target
+        )
+        self._cache.set(key, result)
+        return result
+
+    def list_sequence_states(
+        self,
+        schema: Optional[str] = None,
+    ) -> List[SequenceState]:
+        """Read the sequences this schema holds, with their owning columns."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "sequence-states", schema, extra="states"
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.sequence_state_statement(schema=schema).to_sql()
+        result = self.parse_sequence_states(
+            self._executor.execute(sql, params), target
+        )
+        self._cache.set(key, result)
+        return result
+
+    def list_schemas(self) -> List[str]:
+        """Read the schema/namespace names the server exposes."""
+        key = self._cache.key(IntrospectionScope.SCHEMA, "*", extra="schemas")
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.schema_list_statement().to_sql()
+        result = self.parse_schemas(self._executor.execute(sql, params))
+        self._cache.set(key, result)
+        return result
+
+    def list_derived_objects(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[DerivedObjectState]:
+        """Read the objects the engine created for a declaration on this table."""
+        key = self._schema_family_cache_key(
+            self._cache, "derived-objects", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        result = self.derived_backing_indexes(
+            self.list_constraint_states(table_name, schema)
+        )
+        self._cache.set(key, result)
+        return result
+
+    def item_exists(
+        self,
+        kind: ItemKind,
+        name: str,
+        schema: Optional[str] = None,
+    ) -> bool:
+        """Whether a shared object of this kind exists.
+
+        Answered for the four kinds this backend promises: a schema, a type (or
+        a domain), a sequence and an extension. The other kinds in
+        :class:`ItemKind` have no PostgreSQL catalog to ask, and refusing is
+        clearer than answering a false that reads as "the object is absent".
+        """
+        kind = ItemKind(kind)
+        if kind is ItemKind.SCHEMA:
+            return name in self.list_schemas()
+        if kind in (ItemKind.TYPE, ItemKind.DOMAIN):
+            for found_type in self.list_types(schema=schema, type_name=name):
+                if found_type.name != name:
+                    continue
+                if kind is ItemKind.DOMAIN and found_type.kind is not PostgresTypeKind.DOMAIN:
+                    continue
+                return True
+            return False
+        if kind is ItemKind.SEQUENCE:
+            return any(
+                sequence.name == name
+                for sequence in self.list_sequences(schema=schema)
+            )
+        if kind is ItemKind.EXTENSION:
+            return any(extension.name == name for extension in self.list_extensions())
+        from ..dialect.exceptions import UnsupportedFeatureError
+
+        raise UnsupportedFeatureError(
+            self.dialect.name,
+            f"item_exists for {kind.value}",
+            "PostgreSQL has no catalog object of this kind.",
+        )
 
     def list_routines(
         self,
@@ -1992,20 +2531,23 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         return await self.get_sequence_info(sequence_name, schema) is not None
 
     # ------------------------------------------------------------------ #
-    # Partitions, routines, types, operators
+    # Neutral object state, partitions, routines, types, operators
     # ------------------------------------------------------------------ #
 
-    async def list_partitions(
+    async def _partition_state(
         self,
         table_name: str,
-        schema: Optional[str] = None,
-        include_partitions: bool = True,
-        include_statistics: bool = True,
-    ) -> List[PostgresPartitionInfo]:
-        """List one partitioned table's child partitions (async counterpart)."""
+        schema: Optional[str],
+        include_stats: bool,
+    ) -> Optional[PartitionState]:
+        """Read the partition state once the caller has confirmed the table is partitioned."""
         target = schema if schema is not None else self.default_schema
         key = self._schema_family_cache_key(
-            self._cache, "partitions", schema, name=table_name
+            self._cache,
+            "partition-state",
+            schema,
+            name=table_name,
+            extra=str(include_stats),
         )
         cached = self._cache.get(key)
         if cached is not None:
@@ -2013,13 +2555,182 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         sql, params = self.partition_list_statement(
             table_name=table_name,
             schema=schema,
-            include_partitions=include_partitions,
-            include_statistics=include_statistics,
+            include_partitions=True,
+            include_statistics=include_stats,
         ).to_sql()
         rows = await self._executor.execute(sql, params)
-        result = self.parse_partitions(rows, table_name, target)
+        result = self.parse_partition_state(rows, table_name, target)
+        if result is not None:
+            self._cache.set(key, result)
+        return result
+
+    async def get_table_state(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> TableState:
+        """Read the table's kind, storage options, comment and partition scheme."""
+        target = schema if schema is not None else self.default_schema
+        key = self._cache.key(
+            IntrospectionScope.TABLE, table_name, schema=schema, extra="state"
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.table_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        state = self.parse_table_state(rows, table_name, target)
+        if state is None:
+            raise ObjectNotFoundError("table", table_name, target)
+        if "partitioned" in state.traits:
+            state = replace(
+                state,
+                partitioning=await self._partition_state(table_name, schema, False),
+            )
+        self._cache.set(key, state)
+        return state
+
+    async def get_partition_state(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+        include_stats: bool = False,
+    ) -> Optional[PartitionState]:
+        """Read the table's partition scheme and bounds (async counterpart)."""
+        table = next(
+            (t for t in await self.list_tables(schema) if t.name == table_name), None
+        )
+        if table is None or table.table_type is not TableType.PARTITIONED_TABLE:
+            return None
+        return await self._partition_state(table_name, schema, include_stats)
+
+    async def list_index_states(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[IndexState]:
+        """Read every index on the table, including usability and visibility."""
+        target = schema if schema is not None else self.default_schema
+        key = self._cache.key(
+            IntrospectionScope.INDEX, table_name, "states", schema=schema
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.index_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_index_states(rows, table_name, target)
         self._cache.set(key, result)
         return result
+
+    async def list_constraint_states(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[ConstraintState]:
+        """Read every constraint on the table, including its validation state."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "constraint-states", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.constraint_state_statement(
+            table_name=table_name, schema=schema
+        ).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_constraint_states(rows, table_name, target)
+        self._cache.set(key, result)
+        return result
+
+    async def list_sequence_states(
+        self,
+        schema: Optional[str] = None,
+    ) -> List[SequenceState]:
+        """Read the sequences this schema holds, with their owning columns."""
+        target = schema if schema is not None else self.default_schema
+        key = self._schema_family_cache_key(
+            self._cache, "sequence-states", schema, extra="states"
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.sequence_state_statement(schema=schema).to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_sequence_states(rows, target)
+        self._cache.set(key, result)
+        return result
+
+    async def list_schemas(self) -> List[str]:
+        """Read the schema/namespace names the server exposes."""
+        key = self._cache.key(IntrospectionScope.SCHEMA, "*", extra="schemas")
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        sql, params = self.schema_list_statement().to_sql()
+        rows = await self._executor.execute(sql, params)
+        result = self.parse_schemas(rows)
+        self._cache.set(key, result)
+        return result
+
+    async def list_derived_objects(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+    ) -> List[DerivedObjectState]:
+        """Read the objects the engine created for a declaration on this table."""
+        key = self._schema_family_cache_key(
+            self._cache, "derived-objects", schema, name=table_name
+        )
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+        result = self.derived_backing_indexes(
+            await self.list_constraint_states(table_name, schema)
+        )
+        self._cache.set(key, result)
+        return result
+
+    async def item_exists(
+        self,
+        kind: ItemKind,
+        name: str,
+        schema: Optional[str] = None,
+    ) -> bool:
+        """Whether a shared object of this kind exists (async counterpart)."""
+        kind = ItemKind(kind)
+        if kind is ItemKind.SCHEMA:
+            return name in await self.list_schemas()
+        if kind in (ItemKind.TYPE, ItemKind.DOMAIN):
+            for found_type in await self.list_types(schema=schema, type_name=name):
+                if found_type.name != name:
+                    continue
+                if kind is ItemKind.DOMAIN and found_type.kind is not PostgresTypeKind.DOMAIN:
+                    continue
+                return True
+            return False
+        if kind is ItemKind.SEQUENCE:
+            return any(
+                sequence.name == name
+                for sequence in await self.list_sequences(schema=schema)
+            )
+        if kind is ItemKind.EXTENSION:
+            return any(
+                extension.name == name
+                for extension in await self.list_extensions()
+            )
+        from ..dialect.exceptions import UnsupportedFeatureError
+
+        raise UnsupportedFeatureError(
+            self.dialect.name,
+            f"item_exists for {kind.value}",
+            "PostgreSQL has no catalog object of this kind.",
+        )
 
     async def list_routines(
         self,

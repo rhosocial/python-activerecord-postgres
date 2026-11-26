@@ -562,9 +562,17 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
 
         elif args.type == "partitions":
             # The parent table is the question, so NAME was already required
-            # by _validate_name; the listing carries each child's bound.
-            partitions = introspector.list_partitions(args.name, schema=None)
-            data = _serialize_for_output(partitions)
+            # by _validate_name. The neutral state answers the scheme and every
+            # partition's bound; ``None`` is the table saying it is not
+            # partitioned at all, which a listing of children could not say.
+            state = introspector.get_partition_state(args.name, schema=None)
+            if state is None:
+                print(
+                    f"Error: Table '{args.name}' is not partitioned",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            data = _serialize_for_output([state])
             provider.display_results(data, title=f"Partitions of {args.name}")
 
         elif args.type == "routines":
@@ -832,8 +840,14 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
                 provider.display_results(data, title="Sequences")
 
         elif args.type == "partitions":
-            partitions = await introspector.list_partitions(args.name, schema=None)
-            data = _serialize_for_output(partitions)
+            state = await introspector.get_partition_state(args.name, schema=None)
+            if state is None:
+                print(
+                    f"Error: Table '{args.name}' is not partitioned",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            data = _serialize_for_output([state])
             provider.display_results(data, title=f"Partitions of {args.name}")
 
         elif args.type == "routines":

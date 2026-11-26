@@ -116,13 +116,11 @@ class FakeIntrospector:
     # The schema-object families added for catalogue coverage. Each answers a
     # listing; the optional name narrows rather than selects.
 
-    def list_partitions(
-        self, table_name, schema=None, include_partitions=True, include_statistics=True
-    ):
+    def get_partition_state(self, table_name, schema=None, include_stats=False):
         self._record(
-            "list_partitions", table_name, schema, include_partitions, include_statistics
+            "get_partition_state", table_name, schema, include_stats
         )
-        return [{"name": "orders_p2026_11", "table": table_name}]
+        return {"scheme": "range", "bounds": [{"name": "orders_p2026_11"}]}
 
     def list_routines(self, schema=None, routine_name=None):
         self._record("list_routines", schema, routine_name)
@@ -273,7 +271,7 @@ _FIRST_CALL = {
     "extensions": "list_extensions",
     "materialized-views": "list_materialized_views",
     "sequences": "list_sequences",
-    "partitions": "list_partitions",
+    "partitions": "get_partition_state",
     "routines": "list_routines",
     "types": "list_types",
     "operators": "list_operators",
@@ -478,7 +476,7 @@ class TestTheFamiliesTheDialectAnswers:
 
     def test_partitions_asks_for_the_named_parent(self, run_cli):
         assert self._calls(run_cli, ["partitions", "orders"]) == [
-            ("list_partitions", "orders", None, True, True)
+            ("get_partition_state", "orders", None, False)
         ]
 
     def test_routines_list_and_narrow_by_name(self, run_cli):

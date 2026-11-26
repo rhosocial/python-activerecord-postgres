@@ -8,9 +8,19 @@ and the record each row becomes.
 """
 
 from types import SimpleNamespace
+from typing import List
 
 import pytest
 
+from rhosocial.activerecord.backend.introspection.types import (
+    ConstraintState,
+    DerivedObjectState,
+    IndexState,
+    ItemKind,
+    PartitionScheme,
+    SequenceState,
+    TableState,
+)
 from rhosocial.activerecord.backend.impl.postgres.cli.introspect import (
     INTROSPECT_TYPES,
     _NAME_RULE,
@@ -18,16 +28,22 @@ from rhosocial.activerecord.backend.impl.postgres.cli.introspect import (
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
+    PostgresConstraintStateQueryStatement,
+    PostgresIndexStateQueryStatement,
     PostgresOperatorClassListQueryStatement,
     PostgresOperatorFamilyListQueryStatement,
     PostgresOperatorListQueryStatement,
     PostgresPartitionListQueryStatement,
     PostgresRoutineListQueryStatement,
+    PostgresSchemaListQueryStatement,
     PostgresSequenceInfoQueryStatement,
     PostgresSequenceListQueryStatement,
+    PostgresSequenceStateQueryStatement,
+    PostgresTableStateQueryStatement,
     PostgresTypeListQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
+    PostgreSQLIntrospector,
     PostgreSQLIntrospectorMixin,
 )
 from rhosocial.activerecord.backend.impl.postgres.introspection.types import (
@@ -35,7 +51,6 @@ from rhosocial.activerecord.backend.impl.postgres.introspection.types import (
     PostgresOperatorFamilyInfo,
     PostgresOperatorInfo,
     PostgresPartitionBound,
-    PostgresPartitionInfo,
     PostgresPartitionStrategy,
     PostgresRoutineInfo,
     PostgresRoutineKind,
@@ -53,7 +68,11 @@ class _FakeBackend:
     def __init__(self, dialect, database="app"):
         self.dialect = dialect
         self._cached_version = None
-        self.config = SimpleNamespace(database=database)
+        self.config = SimpleNamespace(
+            database=database,
+            default_schema="public",
+            search_path=None,
+        )
 
     def get_cached_server_version(self):
         return self._cached_version
@@ -68,6 +87,44 @@ class _ParsingIntrospector(PostgreSQLIntrospectorMixin):
 
 def _parser(version=(17, 0, 0)):
     return _ParsingIntrospector(_FakeBackend(_dialect(version)))
+
+
+class _ScriptedExecutor:
+    """An executor that answers whichever statement's marker matches."""
+
+    def __init__(self, script):
+        self.script = script
+        self.seen: List[str] = []
+
+    def execute(self, sql, params):
+        self.seen.append(sql)
+        matches = [
+            (marker, rows) for marker, rows in self.script if marker in sql
+        ]
+        if matches:
+            # Several catalog queries share a relation name; the longest
+            # marker is the one that names the family, not a join it happens
+            # to contain.
+            return max(matches, key=lambda match: len(match[0]))[1]
+        return []
+
+
+def _scripted(script, version=(17, 0, 0)):
+    backend = _FakeBackend(_dialect(version))
+    return PostgreSQLIntrospector(backend, _ScriptedExecutor(script))
+
+
+def _table_row(name, table_type):
+    return {
+        "table_name": name,
+        "table_type": table_type,
+        "comment": None,
+        "row_count": 0,
+        "live_row_count": 0,
+        "size_bytes": 0,
+        "data_size_bytes": 0,
+        "index_size_bytes": 0,
+    }
 
 
 class TestSequenceSource:
@@ -274,7 +331,7 @@ class TestPartitions:
         assert parsed.modulus == bound.modulus
         assert parsed.remainder == bound.remainder
 
-    def test_rows_become_one_record_per_child(self):
+    def test_rows_become_one_neutral_state(self):
         rows = [
             {
                 "parent_table": "orders",
@@ -295,17 +352,36 @@ class TestPartitions:
                 "size_bytes": 4096,
             },
         ]
-        partitions = _parser().parse_partitions(rows, "orders", "public")
-        assert [p.name for p in partitions] == ["orders_p2026_11", "orders_p2026_12"]
-        assert all(isinstance(p, PostgresPartitionInfo) for p in partitions)
-        assert partitions[0].strategy is PostgresPartitionStrategy.RANGE
-        assert partitions[0].key_columns == ["created_at"]
-        assert partitions[0].parent == "orders"
-        assert partitions[0].bound.lower == "2026-11-01"
-        assert partitions[0].row_count == 10
-        assert partitions[1].row_count is None
+        state = _parser().parse_partition_state(rows, "orders", "public")
+        assert state is not None
+        assert state.scheme is PartitionScheme.RANGE
+        assert state.key_columns == ("created_at",)
+        assert [bound.name for bound in state.bounds] == [
+            "orders_p2026_11",
+            "orders_p2026_12",
+        ]
+        assert state.bounds[0].upper == "2026-12-01"
+        assert state.bounds[0].row_count == 10
+        assert state.bounds[1].row_count is None
+        # Lower and hash facts have no slot on the neutral bound; they stay
+        # structured beside the engine's own text.
+        assert state.raw["partitions"][0]["lower"] == "2026-11-01"
 
-    def test_a_parent_with_no_child_is_an_empty_list(self):
+    def test_a_default_partition_is_named_as_such(self):
+        rows = [
+            {
+                "parent_table": "orders",
+                "partition_key": "LIST (status)",
+                "name": "orders_default",
+                "bound": "DEFAULT",
+            }
+        ]
+        state = _parser().parse_partition_state(rows, "orders", "public")
+        assert state is not None
+        assert state.has_default is True
+        assert state.bounds[0].is_default is True
+
+    def test_a_parent_with_no_child_still_answers_its_scheme(self):
         rows = [
             {
                 "parent_table": "orders",
@@ -313,7 +389,331 @@ class TestPartitions:
                 "name": None,
             }
         ]
-        assert _parser().parse_partitions(rows, "orders", "public") == []
+        state = _parser().parse_partition_state(rows, "orders", "public")
+        assert state is not None
+        assert state.scheme is PartitionScheme.RANGE
+        assert state.bounds == ()
+
+
+class TestNeutralObjectState:
+    """The neutral object-state families, rendered and parsed."""
+
+    def test_table_state_statement_reads_kind_and_storage(self):
+        sql, params = PostgresTableStateQueryStatement(
+            _dialect(), "orders", schema="public"
+        ).to_sql()
+        assert '"relpersistence"' in sql
+        assert '"reloptions"' in sql
+        assert "pg_tablespace AS ts" in sql
+        assert "pg_am AS am" in sql
+        assert params == ("public", "orders")
+
+    def test_table_state_is_regular_unlogged_or_partitioned(self):
+        parser = _parser()
+        regular = parser.parse_table_state(
+            [{"table_name": "orders", "relkind": "r", "relpersistence": "p"}],
+            "orders",
+            "public",
+        )
+        assert isinstance(regular, TableState)
+        assert regular.kind == "regular"
+        assert regular.traits == ()
+
+        unlogged = parser.parse_table_state(
+            [
+                {
+                    "table_name": "cache",
+                    "relkind": "r",
+                    "relpersistence": "u",
+                    "reloptions": ["fillfactor=70"],
+                    "tablespace": "fast",
+                    "access_method": "heap",
+                    "comment": "scratch",
+                }
+            ],
+            "cache",
+            "public",
+        )
+        assert unlogged is not None
+        assert unlogged.kind == "unlogged"
+        assert unlogged.storage.tablespace == "fast"
+        assert unlogged.storage.engine == "heap"
+        assert unlogged.storage.raw["reloptions"] == {"fillfactor": "70"}
+        assert unlogged.comment == "scratch"
+
+        partitioned = parser.parse_table_state(
+            [{"table_name": "orders", "relkind": "p", "relpersistence": "p"}],
+            "orders",
+            "public",
+        )
+        assert partitioned is not None
+        assert partitioned.traits == ("partitioned",)
+
+    def test_table_state_missing_table_is_none_at_the_parser(self):
+        assert _parser().parse_table_state([], "orders", "public") is None
+
+    def test_index_state_statement_reads_validity_and_backing_constraint(self):
+        sql, params = PostgresIndexStateQueryStatement(
+            _dialect(), "orders", schema="public"
+        ).to_sql()
+        assert "ix.indisvalid" in sql
+        assert '"backs_constraint"' in sql
+        assert "pg_constraint AS con" in sql
+        assert params == ("public", "orders")
+
+    def test_index_state_maps_indisvalid_to_usable(self):
+        rows = [
+            {
+                "index_name": "orders_pkey",
+                "table_name": "orders",
+                "is_unique": True,
+                "is_valid": False,
+                "method": "btree",
+                "backs_constraint": "orders_pkey",
+            }
+        ]
+        states = _parser().parse_index_states(rows, "orders", "public")
+        assert len(states) == 1
+        assert isinstance(states[0], IndexState)
+        assert states[0].usable is False
+        assert states[0].backs_constraint == "orders_pkey"
+
+    def test_constraint_state_statement_reads_validation(self):
+        sql, params = PostgresConstraintStateQueryStatement(
+            _dialect(), "orders", schema="public"
+        ).to_sql()
+        assert "con.convalidated" in sql
+        assert '"backing_index"' in sql
+        assert params == ("public", "orders")
+
+    def test_constraint_state_maps_convalidated_to_validated(self):
+        rows = [
+            {
+                "name": "orders_total_check",
+                "table_name": "orders",
+                "constraint_type": "c",
+                "is_validated": False,
+                "definition": "CHECK (total >= 0) NOT VALID",
+            }
+        ]
+        states = _parser().parse_constraint_states(rows, "orders", "public")
+        assert len(states) == 1
+        assert isinstance(states[0], ConstraintState)
+        assert states[0].kind == "check"
+        assert states[0].validated is False
+        assert states[0].raw["definition"] == "CHECK (total >= 0) NOT VALID"
+
+    def test_primary_key_backing_index_is_a_derived_object(self):
+        states = [
+            ConstraintState(
+                name="orders_pkey",
+                table="orders",
+                kind="primary_key",
+                backing_index="orders_pkey_idx",
+            ),
+            ConstraintState(name="orders_total_check", table="orders", kind="check"),
+        ]
+        derived = _parser().derived_backing_indexes(states)
+        assert derived == [
+            DerivedObjectState(
+                kind="backing_index",
+                name="orders_pkey_idx",
+                owned_by="orders_pkey",
+                raw={"constraint_kind": "primary_key"},
+            )
+        ]
+
+    def test_sequence_state_statement_reads_ownership(self):
+        sql, params = PostgresSequenceStateQueryStatement(
+            _dialect(), schema="public"
+        ).to_sql()
+        assert "pg_depend AS d" in sql
+        assert '"owned_by"' in sql
+        assert "pg_sequence AS s" in sql
+        assert params == ("public",)
+
+    def test_sequence_state_on_nine_drops_the_pg_sequence_join(self):
+        sql, _ = PostgresSequenceStateQueryStatement(
+            _dialect((9, 6, 0)), schema="public"
+        ).to_sql()
+        assert "pg_sequence" not in sql
+
+    def test_sequence_state_carries_the_owning_column(self):
+        states = _parser().parse_sequence_states(
+            [
+                {
+                    "name": "orders_id_seq",
+                    "schema_name": "public",
+                    "owned_by": "public.orders.id",
+                    "start": 1,
+                    "increment": 1,
+                }
+            ],
+            "public",
+        )
+        assert len(states) == 1
+        assert isinstance(states[0], SequenceState)
+        assert states[0].owned_by == "public.orders.id"
+        assert states[0].start == 1
+
+    def test_schema_list_statement_skips_the_system_namespaces(self):
+        sql, params = PostgresSchemaListQueryStatement(_dialect()).to_sql()
+        assert "pg_namespace AS n" in sql
+        assert "pg_catalog" in sql and "information_schema" in sql and "pg_toast" in sql
+        assert params == ()
+
+    def test_schema_rows_reduce_to_names(self):
+        assert _parser().parse_schemas(
+            [{"name": "public"}, {"name": "app"}]
+        ) == ["public", "app"]
+
+    def test_partition_method_answers_for_a_parent_with_no_children(self):
+        introspector = _scripted(
+            [
+                ("pg_stat_user_tables", [_table_row("orders", "PARTITIONED TABLE")]),
+                (
+                    "pg_inherits",
+                    [
+                        {
+                            "parent_table": "orders",
+                            "partition_key": "RANGE (created_at)",
+                            "name": None,
+                        }
+                    ],
+                ),
+            ]
+        )
+        state = introspector.get_partition_state("orders")
+        assert state is not None
+        assert state.scheme is PartitionScheme.RANGE
+        assert state.bounds == ()
+
+    def test_partition_method_answers_none_for_a_plain_table(self):
+        introspector = _scripted(
+            [("pg_stat_user_tables", [_table_row("users", "BASE TABLE")])]
+        )
+        assert introspector.get_partition_state("users") is None
+        assert all("pg_inherits" not in sql for sql in introspector._executor.seen)
+
+    def test_table_state_fills_partitioning_from_the_kind(self):
+        introspector = _scripted(
+            [
+                (
+                    "relpersistence",
+                    [
+                        {
+                            "table_name": "orders",
+                            "relkind": "p",
+                            "relpersistence": "p",
+                        }
+                    ],
+                ),
+                (
+                    "pg_inherits",
+                    [
+                        {
+                            "parent_table": "orders",
+                            "partition_key": "LIST (status)",
+                            "name": "orders_active",
+                            "bound": "FOR VALUES IN ('active')",
+                        }
+                    ],
+                ),
+            ]
+        )
+        state = introspector.get_table_state("orders")
+        assert state.traits == ("partitioned",)
+        assert state.partitioning is not None
+        assert state.partitioning.scheme is PartitionScheme.LIST
+        assert state.partitioning.bounds[0].values == ("active",)
+
+    def test_table_state_reads_unlogged(self):
+        introspector = _scripted(
+            [
+                (
+                    "relpersistence",
+                    [
+                        {
+                            "table_name": "cache",
+                            "relkind": "r",
+                            "relpersistence": "u",
+                            "reloptions": ["fillfactor=70"],
+                        }
+                    ],
+                )
+            ]
+        )
+        state = introspector.get_table_state("cache")
+        assert state.kind == "unlogged"
+        assert state.partitioning is None
+
+    def test_derived_objects_are_the_constraint_backing_indexes(self):
+        introspector = _scripted(
+            [
+                (
+                    "convalidated",
+                    [
+                        {
+                            "name": "orders_pkey",
+                            "table_name": "orders",
+                            "constraint_type": "p",
+                            "is_validated": True,
+                            "backing_index": "orders_pkey",
+                        },
+                        {
+                            "name": "orders_total_check",
+                            "table_name": "orders",
+                            "constraint_type": "c",
+                            "is_validated": True,
+                            "backing_index": None,
+                        },
+                    ],
+                )
+            ]
+        )
+        derived = introspector.list_derived_objects("orders")
+        assert [item.name for item in derived] == ["orders_pkey"]
+        assert derived[0].owned_by == "orders_pkey"
+
+    def test_item_exists_asks_the_listing_for_each_kind(self):
+        introspector = _scripted(
+            [
+                ("pg_namespace AS n", [{"name": "public"}, {"name": "app"}]),
+                (
+                    "pg_type AS t JOIN pg_namespace AS n",
+                    [
+                        {
+                            "name": "order_status",
+                            "schema_name": "public",
+                            "type_code": "e",
+                        },
+                        {
+                            "name": "positive_total",
+                            "schema_name": "public",
+                            "type_code": "d",
+                        },
+                    ],
+                ),
+                (
+                    "pg_sequences AS p",
+                    [
+                        {
+                            "schema_name": "public",
+                            "sequence_name": "orders_id_seq",
+                            "data_type": "bigint",
+                        }
+                    ],
+                ),
+                ("pg_extension AS e LEFT JOIN pg_namespace", [{"name": "pgcrypto"}]),
+            ]
+        )
+        assert introspector.item_exists(ItemKind.SCHEMA, "app") is True
+        assert introspector.item_exists(ItemKind.SCHEMA, "missing") is False
+        assert introspector.item_exists(ItemKind.TYPE, "order_status") is True
+        assert introspector.item_exists(ItemKind.DOMAIN, "order_status") is False
+        assert introspector.item_exists(ItemKind.DOMAIN, "positive_total") is True
+        assert introspector.item_exists(ItemKind.SEQUENCE, "orders_id_seq") is True
+        assert introspector.item_exists(ItemKind.EXTENSION, "pgcrypto") is True
 
 
 class TestRoutines:

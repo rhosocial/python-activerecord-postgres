@@ -21,7 +21,6 @@ __all__ = [
     "PostgresColumnDataProfile",
     "PostgresPartitionStrategy",
     "PostgresPartitionBound",
-    "PostgresPartitionInfo",
     "PostgresRoutineKind",
     "PostgresRoutineInfo",
     "PostgresTypeKind",
@@ -101,34 +100,6 @@ class PostgresPartitionBound:
     modulus: Optional[int] = None
     remainder: Optional[int] = None
     text: Optional[str] = None
-
-
-@dataclass(frozen=True)
-class PostgresPartitionInfo:
-    """One child partition of a partitioned PostgreSQL table.
-
-    The parent is the table a model should map to; ``name`` is the physical
-    child. ``strategy`` and ``key_columns`` come from the parent's
-    ``pg_get_partkeydef`` text, and ``bound`` from the child's own
-    ``relpartbound`` expression. ``row_count`` and ``size_bytes`` are the
-    child's own storage facts, when the query was asked for them.
-
-    ``extra`` carries catalog facts this common shape has no slot for, such as
-    the parent OID or the child's ``relkind``.
-    """
-
-    table: str
-    name: str
-    schema: Optional[str] = None
-    strategy: PostgresPartitionStrategy = PostgresPartitionStrategy.UNKNOWN
-    key_columns: List[str] = field(default_factory=list)
-    key_expression: Optional[str] = None
-    parent: Optional[str] = None
-    bound: Optional[PostgresPartitionBound] = None
-    row_count: Optional[int] = None
-    size_bytes: Optional[int] = None
-    comment: Optional[str] = None
-    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 class PostgresRoutineKind(str, Enum):

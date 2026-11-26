@@ -29,6 +29,11 @@ __all__ = [
     "PostgresSequenceInfoQueryStatement",
     "PostgresSequenceListQueryStatement",
     "PostgresPartitionListQueryStatement",
+    "PostgresTableStateQueryStatement",
+    "PostgresIndexStateQueryStatement",
+    "PostgresConstraintStateQueryStatement",
+    "PostgresSequenceStateQueryStatement",
+    "PostgresSchemaListQueryStatement",
     "PostgresRoutineListQueryStatement",
     "PostgresTypeListQueryStatement",
     "PostgresOperatorListQueryStatement",
@@ -204,6 +209,152 @@ class PostgresPartitionListQueryStatement(IntrospectionExpression):
     def format_method(self) -> str:
         """The dialect formatting method that renders this expression."""
         return "format_partition_list_query_statement"
+
+
+class PostgresTableStateQueryStatement(IntrospectionExpression):
+    """Read one relation's neutral state: kind, storage options and comment.
+
+    The listing's projection answers the type and the size; this one asks the
+    facts a caller needs to reproduce the object: ``relkind`` names the kind,
+    ``relpersistence`` separates an unlogged or temporary table from a regular
+    one, ``reloptions`` carries the storage parameters the declaration set,
+    ``reltablespace`` names the tablespace, and ``relam`` names the access
+    method (PostgreSQL 12+). One row answers all of them, so the state is one
+    read rather than four.
+
+    Example:
+        >>> expr = PostgresTableStateQueryStatement(dialect, "orders", schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect, schema=schema)
+        if not table_name:
+            raise ValueError("table_name must not be empty")
+        self.table_name = table_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_table_state_query_statement"
+
+
+class PostgresIndexStateQueryStatement(IntrospectionExpression):
+    """Read one table's indexes, including whether each is still usable.
+
+    ``indisvalid`` is the flag that answers usability: a ``CREATE INDEX
+    CONCURRENTLY`` that failed leaves the index present but invalid, and a
+    caller deciding whether the index can serve a query must see that. The
+    backing constraint is joined from ``pg_constraint.conindid`` so a caller
+    need not correlate the two catalogues itself.
+
+    Example:
+        >>> expr = PostgresIndexStateQueryStatement(dialect, "orders", schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect, schema=schema)
+        if not table_name:
+            raise ValueError("table_name must not be empty")
+        self.table_name = table_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_index_state_query_statement"
+
+
+class PostgresConstraintStateQueryStatement(IntrospectionExpression):
+    """Read one table's constraints, including their validation state.
+
+    ``convalidated`` is what separates a constraint the engine has checked
+    against every row from one declared ``NOT VALID``: both enforce new rows,
+    only one is a promise about the existing ones. ``pg_get_constraintdef`` is
+    the engine's own spelling of the definition, kept in ``raw`` rather than
+    flattened into columns no other engine spells the same way.
+
+    Example:
+        >>> expr = PostgresConstraintStateQueryStatement(dialect, "orders", schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect, schema=schema)
+        if not table_name:
+            raise ValueError("table_name must not be empty")
+        self.table_name = table_name
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_constraint_state_query_statement"
+
+
+class PostgresSequenceStateQueryStatement(IntrospectionExpression):
+    """Read one schema's sequences, with the column that owns each.
+
+    Ownership lives in ``pg_depend`` (``deptype`` ``'a'`` for a ``serial``
+    sequence, ``'i'`` for an identity one), not in ``pg_class``; the join names
+    the owning table and column as ``schema.table.column`` so the answer does
+    not depend on the caller already knowing the relationship.
+
+    ``pg_sequence`` is PostgreSQL 10+; on 9.x the start and increment slots are
+    reported absent rather than guessed.
+
+    Example:
+        >>> expr = PostgresSequenceStateQueryStatement(dialect, schema="public")
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect, schema=schema)
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_sequence_state_query_statement"
+
+
+class PostgresSchemaListQueryStatement(IntrospectionExpression):
+    """List the schema names this database exposes.
+
+    The system namespaces and the session's temporary namespace are omitted:
+    they exist on every server and are not schemas a caller created or can
+    use. A caller asking whether a schema exists still gets an answer from
+    :meth:`item_exists`.
+
+    Example:
+        >>> expr = PostgresSchemaListQueryStatement(dialect)
+        >>> sql, params = expr.to_sql()
+    """
+
+    def __init__(self, dialect: "SQLDialectBase"):
+        super().__init__(dialect)
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_schema_list_query_statement"
 
 
 class PostgresRoutineListQueryStatement(IntrospectionExpression):

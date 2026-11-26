@@ -700,7 +700,7 @@ _SYNC_CASES = [
         False,
     ),
     ("sequences", None, "list_sequences", dict(schema=None), "Sequences", False),
-    ("partitions", "orders", "list_partitions", dict(schema=None), "Partitions of orders", False),
+    ("partitions", "orders", "get_partition_state", dict(schema=None), "Partitions of orders", True),
     ("routines", None, "list_routines", dict(schema=None, routine_name=None), "Routines", False),
     ("types", None, "list_types", dict(schema=None, type_name=None), "Types", False),
     (
@@ -765,7 +765,7 @@ class TestIntrospectSyncHandler:
             "list_columns",
             "list_indexes",
             "list_foreign_keys",
-            "list_partitions",
+            "get_partition_state",
             "list_column_data_profiles",
         ):
             getattr(backend.introspector, method).assert_called_once_with(name, **kwargs)
