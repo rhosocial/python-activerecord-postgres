@@ -466,6 +466,8 @@ backend.introspector.invalidate_cache(
 
 `get_partition_state()` 返回中立的 `PartitionState`：`scheme`、分区键列、`has_default`，以及每个子分区一个 `PartitionBound`。`PartitionBound` 的结构化字段按策略回答：RANGE 用 `lower`/`upper`，LIST 用 `values`，HASH 用 `modulus`/`remainder`，`is_default` 标记 DEFAULT 分区。`state.raw["partitions"]` 只保留 `{name, text}` 行，即服务器给出的原始 bound 拼写——多列端点、表达式分区或 `MAXVALUE` 边界只有这里能无损读取。
 
+不是声明式分区父表的表则回答空的 `PartitionState`：`scheme` 为 `None`、`bounds` 为空。这个 `scheme=None` 就是“未分区”的唯一中立答案——方法本身不返回 `None`——`TableState.partitioning` 对每张表都带着同一个空状态，因此调用方不必、也不应针对 `None` 做判断。schema 中不存在的表按名字报错，而不是被读成“未分区”。
+
 ## 最佳实践
 
 ### 1. 使用缓存

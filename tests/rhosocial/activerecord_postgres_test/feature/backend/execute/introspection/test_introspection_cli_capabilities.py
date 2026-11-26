@@ -19,7 +19,12 @@ from rhosocial.activerecord.backend.errors import ConnectionError, QueryError
 from rhosocial.activerecord.backend.impl.postgres.cli import introspect as introspect_mod
 from rhosocial.activerecord.backend.impl.postgres.cli.introspect import INTROSPECT_TYPES
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.introspection.types import JoinCoverage
+from rhosocial.activerecord.backend.introspection.types import (
+    JoinCoverage,
+    PartitionBound,
+    PartitionScheme,
+    PartitionState,
+)
 
 
 def parse_introspect_args(argv):
@@ -120,7 +125,12 @@ class FakeIntrospector:
         self._record(
             "get_partition_state", table_name, schema, include_stats
         )
-        return {"scheme": "range", "bounds": [{"name": "orders_p2026_11"}]}
+        # The neutral answer, not a bare listing: the CLI reads
+        # ``state.scheme is None`` to tell "not partitioned" from a scheme.
+        return PartitionState(
+            scheme=PartitionScheme.RANGE,
+            bounds=(PartitionBound(name="orders_p2026_11"),),
+        )
 
     def list_routines(self, schema=None, routine_name=None):
         self._record("list_routines", schema, routine_name)

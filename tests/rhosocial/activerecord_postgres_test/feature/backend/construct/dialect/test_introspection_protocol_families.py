@@ -13,6 +13,8 @@ pin the consequences this backend depends on:
 """
 
 import importlib
+import inspect
+import re
 from pathlib import Path
 
 import pytest
@@ -22,6 +24,11 @@ from rhosocial.activerecord.backend.dialect import protocols as core_protocols
 from rhosocial.activerecord.backend.impl.postgres import mixins as postgres_mixins
 from rhosocial.activerecord.backend.impl.postgres.cli import introspect as introspect_mod
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
+    AsyncPostgreSQLIntrospector,
+    PostgreSQLIntrospector,
+)
+from rhosocial.activerecord.backend.introspection.types import PartitionState
 
 pytestmark = [pytest.mark.feature]
 
@@ -86,6 +93,50 @@ class TestPartitionProbeResolution:
         # Identical predicate: declarative partitioning is when the family
         # starts existing, so the two answers cannot drift apart.
         assert dialect.supports_table_partitioning() is dialect.supports_partition_metadata_introspection()
+
+
+class TestPartitioningIsNeverOptional:
+    """``partitioning`` is a ``PartitionState``; ``scheme=None`` is the only "no".
+
+    Core made ``TableState.partitioning`` non-optional: an unpartitioned table
+    answers the empty ``PartitionState`` whose ``scheme`` is ``None``. Writing
+    a second, meaningless "not asked" answer beside that one is the hole the
+    core commit closed, so neither this backend's source nor its tests may
+    reintroduce it.
+    """
+
+    #: ``partitioning`` assigned or compared to ``None``. Built from parts so
+    #: this guard's own source is not a hit when it scans itself.
+    WRITE_NONE = re.compile("partitioning" + r"\s*(?:=\s*None\b|is\s+None\b)")
+
+    def test_nothing_answers_or_tests_none_for_partitioning(self):
+        root = _repository_root()
+        guard = Path(__file__).resolve()
+        offenders = []
+        for tree in ("src", "tests"):
+            for path in sorted((root / tree).rglob("*.py")):
+                if path.resolve() == guard:
+                    continue
+                for lineno, line in enumerate(
+                    path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+                ):
+                    if self.WRITE_NONE.search(line):
+                        offenders.append(
+                            f"{path.relative_to(root)}:{lineno}: {line.strip()}"
+                        )
+        assert not offenders, (
+            "partitioning must never be None; an empty PartitionState whose "
+            "scheme is None is the only answer:\n"
+            + "\n".join(f"  - {o}" for o in offenders)
+        )
+
+    @pytest.mark.parametrize(
+        "cls", [PostgreSQLIntrospector, AsyncPostgreSQLIntrospector]
+    )
+    def test_get_partition_state_answers_a_partition_state(self, cls):
+        """The public answer's annotation is the state itself, not Optional."""
+        annotation = inspect.signature(cls.get_partition_state).return_annotation
+        assert annotation is PartitionState, annotation
 
 
 class TestFamilyProtocolImports:

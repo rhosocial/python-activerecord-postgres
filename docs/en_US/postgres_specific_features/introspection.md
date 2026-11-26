@@ -658,6 +658,13 @@ fields answer RANGE (`lower`/`upper`), LIST (`values`) and HASH
 spelling, still the only lossless record for a multi-column endpoint, an
 expression partition or a `MAXVALUE` bound.
 
+A table that is not a declarative-partitioned parent answers the empty
+`PartitionState`: `scheme` is `None` and `bounds` is empty. That `scheme=None` is
+the single neutral answer for "not partitioned" -- the method does not answer
+`None` itself -- and `TableState.partitioning` carries the same empty state for
+every table, so a caller never tests either for `None`. A name the schema does
+not contain is reported by name rather than read as an unpartitioned table.
+
 ## Best Practices
 
 ### 1. Use Caching

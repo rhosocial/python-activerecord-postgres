@@ -21,6 +21,11 @@ from rhosocial.activerecord.backend.impl.postgres.cli import introspect as intro
 from rhosocial.activerecord.backend.impl.postgres.cli import query as query_mod
 from rhosocial.activerecord.backend.impl.postgres.cli import status as status_mod
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+from rhosocial.activerecord.backend.introspection.types import (
+    PartitionBound,
+    PartitionScheme,
+    PartitionState,
+)
 from rhosocial.activerecord.backend.introspection.status import (
     ConnectionInfo,
     DatabaseBriefInfo,
@@ -756,6 +761,13 @@ class TestIntrospectSyncHandler:
         backend = MagicMock()
         backend._connection = False
         sample = [{"k": "v"}]
+        if method == "get_partition_state":
+            # The family reads the neutral state's scheme, so the fake answers
+            # a PartitionState rather than the bare listing it used to.
+            sample = PartitionState(
+                scheme=PartitionScheme.RANGE,
+                bounds=(PartitionBound(name="orders_p2026_11"),),
+            )
         getattr(backend.introspector, method).return_value = sample
         provider = MagicMock()
         introspect_mod._handle_introspect_sync(_args(type=kind, name=name), backend, provider)
@@ -772,7 +784,22 @@ class TestIntrospectSyncHandler:
         else:
             getattr(backend.introspector, method).assert_called_once_with(**kwargs)
         expected = [sample] if wrapped else sample
-        provider.display_results.assert_called_once_with(expected, title=title)
+        provider.display_results.assert_called_once_with(
+            introspect_mod._serialize_for_output(expected), title=title
+        )
+
+    def test_partitions_reports_an_unpartitioned_table(self):
+        """``scheme=None`` is the "not partitioned" answer; ``None`` is not one."""
+        backend = MagicMock()
+        backend._connection = False
+        backend.introspector.get_partition_state.return_value = PartitionState(
+            scheme=None
+        )
+        with pytest.raises(SystemExit) as exc:
+            introspect_mod._handle_introspect_sync(
+                _args(type="partitions", name="users"), backend, MagicMock()
+            )
+        assert exc.value.code == 1
 
     def test_extensions_family(self):
         backend = MagicMock()

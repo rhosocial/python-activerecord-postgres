@@ -7,18 +7,21 @@ halves that used to be hand-written SQL: the expression each family renders,
 and the record each row becomes.
 """
 
+import asyncio
 from types import SimpleNamespace
 from typing import List
 
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+from rhosocial.activerecord.backend.introspection.errors import ObjectNotFoundError
 from rhosocial.activerecord.backend.introspection.types import (
     ConstraintState,
     DerivedObjectState,
     IndexState,
     ItemKind,
     PartitionScheme,
+    PartitionState,
     SequenceState,
     TableState,
 )
@@ -44,6 +47,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.introspection impor
     PostgresTypeListQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (
+    AsyncPostgreSQLIntrospector,
     PostgreSQLIntrospector,
     PostgreSQLIntrospectorMixin,
 )
@@ -113,6 +117,28 @@ class _ScriptedExecutor:
 def _scripted(script, version=(17, 0, 0)):
     backend = _FakeBackend(_dialect(version))
     return PostgreSQLIntrospector(backend, _ScriptedExecutor(script))
+
+
+class _AsyncScriptedExecutor:
+    """The async twin: the same markers, answered without a server."""
+
+    def __init__(self, script):
+        self.script = script
+        self.seen: List[str] = []
+
+    async def execute(self, sql, params):
+        self.seen.append(sql)
+        matches = [
+            (marker, rows) for marker, rows in self.script if marker in sql
+        ]
+        if matches:
+            return max(matches, key=lambda match: len(match[0]))[1]
+        return []
+
+
+def _scripted_async(script, version=(17, 0, 0)):
+    backend = _FakeBackend(_dialect(version))
+    return AsyncPostgreSQLIntrospector(backend, _AsyncScriptedExecutor(script))
 
 
 def _table_row(name, table_type):
@@ -690,12 +716,21 @@ class TestNeutralObjectState:
         assert state.scheme is PartitionScheme.RANGE
         assert state.bounds == ()
 
-    def test_partition_method_answers_none_for_a_plain_table(self):
+    def test_partition_method_answers_the_empty_state_for_a_plain_table(self):
         introspector = _scripted(
             [("pg_stat_user_tables", [_table_row("users", "BASE TABLE")])]
         )
-        assert introspector.get_partition_state("users") is None
+        state = introspector.get_partition_state("users")
+        assert isinstance(state, PartitionState)
+        assert state.scheme is None
+        assert state.bounds == ()
         assert all("pg_inherits" not in sql for sql in introspector._executor.seen)
+
+    def test_partition_method_reports_a_missing_table(self):
+        """A table nobody can see is reported, not read as unpartitioned."""
+        introspector = _scripted([("pg_stat_user_tables", [])])
+        with pytest.raises(ObjectNotFoundError):
+            introspector.get_partition_state("missing")
 
     def test_table_state_fills_partitioning_from_the_kind(self):
         introspector = _scripted(
@@ -747,7 +782,68 @@ class TestNeutralObjectState:
         )
         state = introspector.get_table_state("cache")
         assert state.kind == "unlogged"
-        assert state.partitioning is None
+        assert state.partitioning is not None
+        assert state.partitioning.scheme is None
+        assert state.partitioning.bounds == ()
+
+    def test_table_state_partitioning_scheme_answers_unpartitioned(self):
+        """``TableState.partitioning`` is filled, and ``scheme=None`` answers it.
+
+        A regular table is never asked for partitions, so the empty
+        ``PartitionState`` the row produces is the whole answer: `scheme` is
+        `None` and ``bounds`` is empty. No partition query is run.
+        """
+        introspector = _scripted(
+            [
+                (
+                    "relpersistence",
+                    [
+                        {
+                            "table_name": "users",
+                            "relkind": "r",
+                            "relpersistence": "p",
+                        }
+                    ],
+                )
+            ]
+        )
+        state = introspector.get_table_state("users")
+        assert state.partitioning is not None
+        assert isinstance(state.partitioning, PartitionState)
+        assert state.partitioning.scheme is None
+        assert state.partitioning.bounds == ()
+        assert all("pg_inherits" not in sql for sql in introspector._executor.seen)
+
+    def test_async_partition_method_answers_the_empty_state(self):
+        """The async twin answers the same empty state for a plain table."""
+        introspector = _scripted_async(
+            [("pg_stat_user_tables", [_table_row("users", "BASE TABLE")])]
+        )
+        state = asyncio.run(introspector.get_partition_state("users"))
+        assert isinstance(state, PartitionState)
+        assert state.scheme is None
+        assert state.bounds == ()
+
+    def test_async_table_state_partitioning_answers_unpartitioned(self):
+        """The async twin keeps ``TableState.partitioning`` filled too."""
+        introspector = _scripted_async(
+            [
+                (
+                    "relpersistence",
+                    [
+                        {
+                            "table_name": "users",
+                            "relkind": "r",
+                            "relpersistence": "p",
+                        }
+                    ],
+                )
+            ]
+        )
+        state = asyncio.run(introspector.get_table_state("users"))
+        assert state.partitioning is not None
+        assert state.partitioning.scheme is None
+        assert state.partitioning.bounds == ()
 
     def test_derived_objects_are_the_constraint_backing_indexes(self):
         introspector = _scripted(

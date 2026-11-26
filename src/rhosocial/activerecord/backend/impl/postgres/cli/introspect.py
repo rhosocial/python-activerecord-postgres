@@ -568,10 +568,10 @@ def _handle_introspect_sync(args, backend: PostgresBackend, provider):
         elif args.type == "partitions":
             # The parent table is the question, so NAME was already required
             # by _validate_name. The neutral state answers the scheme and every
-            # partition's bound; ``None`` is the table saying it is not
+            # partition's bound; ``scheme=None`` is the table saying it is not
             # partitioned at all, which a listing of children could not say.
             state = introspector.get_partition_state(args.name, schema=None)
-            if state is None:
+            if state.scheme is None:
                 print(
                     f"Error: Table '{args.name}' is not partitioned",
                     file=sys.stderr,
@@ -846,7 +846,7 @@ async def _handle_introspect_async(args, backend: AsyncPostgresBackend, provider
 
         elif args.type == "partitions":
             state = await introspector.get_partition_state(args.name, schema=None)
-            if state is None:
+            if state.scheme is None:
                 print(
                     f"Error: Table '{args.name}' is not partitioned",
                     file=sys.stderr,

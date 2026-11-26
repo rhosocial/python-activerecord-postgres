@@ -1091,6 +1091,12 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         a fourth persistence. ``raw`` keeps the catalog's spelling of the kind
         and persistence so a caller can tell a temporary view from a temporary
         table.
+
+        ``partitioning`` starts as the empty :class:`PartitionState`:
+        ``scheme=None`` is the single answer for "not partitioned", so this
+        row alone already answers the question. ``get_table_state`` fills the
+        real scheme and bounds for a partitioned parent, whose parts are not
+        on this row.
         """
         if not rows:
             return None
@@ -1124,6 +1130,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             traits=traits,
             storage=storage,
             comment=row.get("comment"),
+            partitioning=PartitionState(scheme=None),
             raw={"relkind": relkind, "relpersistence": persistence},
         )
 
@@ -1132,13 +1139,20 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         rows: List[Dict[str, Any]],
         table_name: str,
         schema: str,
-    ) -> Optional[PartitionState]:
+    ) -> PartitionState:
         """Turn the parent row and its children into one neutral state.
 
         A partitioned parent with no children still answers: ``pg_inherits``
         is LEFT-joined, so the parent's key is present on the row whose child
         columns are NULL. ``scheme`` therefore comes from the parent's key, not
         from the number of children.
+
+        No rows means the query found no declarative-partitioned parent, and
+        the answer is the empty :class:`PartitionState`: ``scheme=None`` with
+        empty bounds. ``None`` is never an answer here, because the caller
+        resolves whether the table exists separately and the two facts -- "no
+        such partitioned parent" and "not partitioned" -- share that one
+        neutral spelling.
 
         The neutral :class:`PartitionBound` now carries every structured fact
         the server states: either the range endpoints, the list values or the
@@ -1148,7 +1162,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         ``MAXVALUE`` bound can be read verbatim.
         """
         if not rows:
-            return None
+            return PartitionState(scheme=None)
         first = rows[0]
         key_text = str(first.get("partition_key") or "")
         strategy, key_columns, key_expression = self._parse_partition_key(key_text)
@@ -1967,8 +1981,13 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         table_name: str,
         schema: Optional[str],
         include_stats: bool,
-    ) -> Optional[PartitionState]:
-        """Read the partition state once the caller has confirmed the table is partitioned."""
+    ) -> PartitionState:
+        """Read the partition state once the caller has confirmed the table is partitioned.
+
+        A table with no partition rows answers the empty
+        :class:`PartitionState`: ``scheme=None`` is the single neutral answer
+        for "not partitioned", and this method never answers ``None``.
+        """
         target = schema if schema is not None else self.default_schema
         key = self._schema_family_cache_key(
             self._cache,
@@ -1989,8 +2008,7 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         result = self.parse_partition_state(
             self._executor.execute(sql, params), table_name, target
         )
-        if result is not None:
-            self._cache.set(key, result)
+        self._cache.set(key, result)
         return result
 
     def get_table_state(
@@ -2002,7 +2020,9 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
 
         A partitioned parent is recognised from its kind, not from whether it
         has children yet: a table created ``PARTITION BY`` with no partitions
-        still answers with a scheme.
+        still answers with a scheme. Every other table keeps the empty
+        :class:`PartitionState` ``parse_table_state`` put on the state, so
+        ``partitioning`` is never ``None``.
         """
         target = schema if schema is not None else self.default_schema
         key = self._cache.key(
@@ -2031,19 +2051,26 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
         table_name: str,
         schema: Optional[str] = None,
         include_stats: bool = False,
-    ) -> Optional[PartitionState]:
+    ) -> PartitionState:
         """Read the table's partition scheme and bounds.
 
-        ``None`` answers "not partitioned". Whether the table is partitioned is
-        read from its kind (``TableType.PARTITIONED_TABLE``, ``relkind = 'p'``),
-        never from the child list being non-empty: a partitioned table with no
-        children still answers with a scheme and no bounds.
+        ``PartitionState.scheme`` is the single answer: ``None`` for a table
+        that is not partitioned, with empty bounds, and the RANGE/LIST/HASH/
+        EXPRESSION scheme for a declarative-partitioned parent. Whether the
+        table is partitioned is read from its kind
+        (``TableType.PARTITIONED_TABLE``, ``relkind = 'p'``), never from the
+        child list being non-empty: a partitioned table with no children still
+        answers with a scheme and no bounds. A table this schema does not
+        contain is reported by name rather than read as an unpartitioned one.
         """
         table = next(
             (t for t in self.list_tables(schema) if t.name == table_name), None
         )
-        if table is None or table.table_type is not TableType.PARTITIONED_TABLE:
-            return None
+        if table is None:
+            target = schema if schema is not None else self.default_schema
+            raise ObjectNotFoundError("table", table_name, target)
+        if table.table_type is not TableType.PARTITIONED_TABLE:
+            return PartitionState(scheme=None)
         return self._partition_state(table_name, schema, include_stats)
 
     def list_index_states(
@@ -2577,8 +2604,13 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         table_name: str,
         schema: Optional[str],
         include_stats: bool,
-    ) -> Optional[PartitionState]:
-        """Read the partition state once the caller has confirmed the table is partitioned."""
+    ) -> PartitionState:
+        """Read the partition state once the caller has confirmed the table is partitioned.
+
+        A table with no partition rows answers the empty
+        :class:`PartitionState`: ``scheme=None`` is the single neutral answer
+        for "not partitioned", and this method never answers ``None``.
+        """
         target = schema if schema is not None else self.default_schema
         key = self._schema_family_cache_key(
             self._cache,
@@ -2598,8 +2630,7 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         ).to_sql()
         rows = await self._executor.execute(sql, params)
         result = self.parse_partition_state(rows, table_name, target)
-        if result is not None:
-            self._cache.set(key, result)
+        self._cache.set(key, result)
         return result
 
     async def get_table_state(
@@ -2635,13 +2666,20 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         table_name: str,
         schema: Optional[str] = None,
         include_stats: bool = False,
-    ) -> Optional[PartitionState]:
-        """Read the table's partition scheme and bounds (async counterpart)."""
+    ) -> PartitionState:
+        """Read the table's partition scheme and bounds (async counterpart).
+
+        ``scheme=None`` with empty bounds answers "not partitioned"; a missing
+        table is reported by name. ``None`` is not an answer here.
+        """
         table = next(
             (t for t in await self.list_tables(schema) if t.name == table_name), None
         )
-        if table is None or table.table_type is not TableType.PARTITIONED_TABLE:
-            return None
+        if table is None:
+            target = schema if schema is not None else self.default_schema
+            raise ObjectNotFoundError("table", table_name, target)
+        if table.table_type is not TableType.PARTITIONED_TABLE:
+            return PartitionState(scheme=None)
         return await self._partition_state(table_name, schema, include_stats)
 
     async def list_index_states(
