@@ -22,6 +22,13 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     IndexObjectSupport, LockingSupport, MergeSupport,
     OrderedSetAggregationSupport, QualifyClauseSupport,
     NamespaceSupport, SequenceObjectSupport, TemporalTableSupport,
+    # The introspection surface is four same-stem families; the CLI reports
+    # each on its own line so a family whose probes answer False (DDL
+    # extraction here) reads as an absent family, not as a missing protocol.
+    StructureIntrospectionSupport,
+    OperationalStatsIntrospectionSupport,
+    DataProfileIntrospectionSupport,
+    DdlExtractionIntrospectionSupport,
 )
 from rhosocial.activerecord.backend.impl.postgres.protocols import (
     PostgresExtensionInfo,
@@ -101,6 +108,13 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
     "DDL - Schema & Index": [NamespaceSupport, IndexObjectSupport],
     "DDL - Sequence & Trigger": [SequenceObjectSupport, TriggerObjectSupport, RoutineObjectSupport],
     "String Matching": [ILIKESupport],
+    # Introspection's four families, one group each: the split is what lets
+    # a reader see that PostgreSQL answers structure, behaviour and data
+    # while refusing to produce DDL text.
+    "Introspection - Structure": [StructureIntrospectionSupport],
+    "Introspection - Operational Stats": [OperationalStatsIntrospectionSupport],
+    "Introspection - Data Profile": [DataProfileIntrospectionSupport],
+    "Introspection - DDL Extraction": [DdlExtractionIntrospectionSupport],
     "PostgreSQL Native": [
         PostgresPartitionSupport, PostgresIndexSupport,
         PostgresVacuumSupport, PostgresQueryOptimizationSupport,

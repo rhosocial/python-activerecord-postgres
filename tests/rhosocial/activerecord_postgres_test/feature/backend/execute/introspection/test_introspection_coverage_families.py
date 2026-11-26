@@ -1107,7 +1107,7 @@ class TestCliVocabulary:
     @pytest.mark.parametrize(
         "type_name,switch",
         [
-            ("partitions", "supports_partition_introspection"),
+            ("partitions", "supports_partition_metadata_introspection"),
             ("routines", "supports_routine_introspection"),
             ("types", "supports_type_introspection"),
             ("operators", "supports_operator_introspection"),

@@ -34,7 +34,6 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 | `supports_index_stats` | `True` | `pg_stat_user_indexes`、`pg_relation_size()` |
 | `supports_table_stats` | `True` | `pg_stat_user_tables` |
 | `supports_unused_indexes_detection` | `True` | `pg_stat_user_indexes.idx_scan` |
-| `supports_partition_info` | `False` | 继承自核心的默认值；没有分区信息格式化函数（见下） |
 | `supports_object_dependencies` | `True` | `pg_depend`、`pg_class`、`pg_namespace` |
 | `supports_column_data_profile` | `True` | `pg_stats` |
 | `supports_column_value_sample` | `True` | `pg_stats.most_common_vals` |
@@ -44,11 +43,9 @@ PostgreSQL 内省系统位于 `backend.introspector` 属性中，提供：
 | `supports_table_storage_introspection` | `True` | `pg_total_relation_size()`、`pg_relation_size()`、`pg_indexes_size()` |
 | `supports_ddl_extraction_native` | `False` | 没有单一的原生 DDL 获取调用（见下） |
 
-有三个回答是 `False`。其中两个原因写在探针自己身上；第三个继承自核心的默认值，默认值没有写出的部分在下文说明。
+有两个回答是 `False`。原因分别写在探针自己身上；默认值没有写出的部分在下文说明。
 
-### 三个 False 回答
-
-`supports_partition_info` 通过核心的默认值回答 `False`：本方言不覆盖该探针，也没有声明任何分区信息查询表达式或格式化函数。分区表仍然会被回答——表列表会用 `table_type` 标签 `PARTITIONED TABLE` 报告它，来自 `p` 这个 relkind 代码——但那是关系的种类，不是分区树：这里没有任何东西报告父表、子表或边界。分区 DDL 是另一个协议族（`supports_hash_partitioning`、`supports_attach_partition` 及其邻居），不是这个内省探针。
+### 两个 False 回答
 
 `supports_ddl_extraction` 回答 `False`，因为本后端不为普通表产生 DDL 文本。`pg_get_expr` 与 `pg_get_viewdef` 能恢复表达式，但一个忠实的 `CREATE TABLE` 还需要存储参数、表空间以及目录只分开保存的逐列子句，而这次组装目前并不存在。对外宣称该族会承诺一个答案无法产生的文本，所以 CLI 不提供 `ddl` 类型；格式化函数与 `DDLStatement` 仍保留在方言上，等待真正的组装实现。
 
@@ -463,9 +460,9 @@ backend.introspector.invalidate_cache(
 
 ## 版本兼容性
 
-本页上只有一个内省答案取决于服务器版本。`pg_sequences` 在 PostgreSQL 10 才出现，所以 `list_sequences()` 仅在 `server_version` 至少为 `(10, 0, 0)` 时才读取它；在更旧的服务器上，语句会略去该视图，`cache_size` 与 `last_value` 缺席，这是“未测量”而不是零。版本未知时同样采用较窄的形式：内省器不会假定一个它尚未识别的服务器带有更新的目录。
+本页上有两个内省答案取决于服务器版本。`pg_sequences` 在 PostgreSQL 10 才出现，所以 `list_sequences()` 仅在 `server_version` 至少为 `(10, 0, 0)` 时才读取它；在更旧的服务器上，语句会略去该视图，`cache_size` 与 `last_value` 缺席，这是“未测量”而不是零。版本未知时同样采用较窄的形式：内省器不会假定一个它尚未识别的服务器带有更新的目录。
 
-本页其余语句都没有版本门控。`supports_partition_info` 在任何版本上都是 `False`，不只是旧版本：版本差异改变的是分区 DDL，那是另一个协议族，而不是给分区表打标签的内省列表。
+分区元数据同样受版本门控，由核心分区协议的 `supports_partition_metadata_introspection` 回答：它是 PG 10+，因为声明式分区及其目录列从那时才存在。CLI 的 `partitions` 类型与 `get_partition_state()` 读取这一族；它们不读取任何后端本地的内省开关。
 
 ## 最佳实践
 

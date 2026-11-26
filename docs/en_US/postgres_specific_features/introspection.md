@@ -37,7 +37,6 @@ them, with the catalogue view or statement each answer is read from.
 | `supports_index_stats` | `True` | `pg_stat_user_indexes`, `pg_relation_size()` |
 | `supports_table_stats` | `True` | `pg_stat_user_tables` |
 | `supports_unused_indexes_detection` | `True` | `pg_stat_user_indexes.idx_scan` |
-| `supports_partition_info` | `False` | Inherited core default; no partition-information formatter (see below) |
 | `supports_object_dependencies` | `True` | `pg_depend`, `pg_class`, `pg_namespace` |
 | `supports_column_data_profile` | `True` | `pg_stats` |
 | `supports_column_value_sample` | `True` | `pg_stats.most_common_vals` |
@@ -47,20 +46,10 @@ them, with the catalogue view or statement each answer is read from.
 | `supports_table_storage_introspection` | `True` | `pg_total_relation_size()`, `pg_relation_size()`, `pg_indexes_size()` |
 | `supports_ddl_extraction_native` | `False` | No single native DDL retrieval call (see below) |
 
-Three answers are `False`. Two reasons are written in the probes themselves;
-the third is inherited from core's default, and what the default leaves out is
-stated below.
+Two answers are `False`. The reason for each is written in the probe itself;
+what the default leaves out is stated below.
 
-### The Three False Answers
-
-`supports_partition_info` answers `False` through core's default: this dialect
-does not override the probe and declares no partition-information query
-expression or formatter. A partitioned table is still answered — the table
-listing reports it with the `table_type` label `PARTITIONED TABLE`, from the
-`p` relkind code — but that is the relation's kind, not the partition tree:
-nothing here reports the parent, the children or the bounds. Partition DDL is a
-separate protocol family (`supports_hash_partitioning`, `supports_attach_partition`
-and their neighbours), not this introspection probe.
+### The Two False Answers
 
 `supports_ddl_extraction` answers `False` because this backend produces no DDL
 text for an ordinary table. `pg_get_expr` and `pg_get_viewdef` recover
@@ -648,17 +637,18 @@ backend.introspector.invalidate_cache(
 
 ## Version Compatibility
 
-One answer on this page depends on the server's version. `pg_sequences` arrived
+Two answers on this page depend on the server's version. `pg_sequences` arrived
 in PostgreSQL 10, so `list_sequences()` reads it only when `server_version` is
 at least `(10, 0, 0)`; on an older server the statement omits the view and
 `cache_size` and `last_value` are absent, which is "not measured" rather than
 zero. An unknown version takes the narrower form too: the introspector does not
 assume a server it has not identified carries the newer catalogue.
 
-Every other statement on this page has no version gate. `supports_partition_info`
-is `False` at every version, not only on old ones: what the version differences
-change is partition DDL, which is a separate protocol family, not the listing
-that labels a partitioned table.
+Partition metadata is gated the same way, by the core partition protocol's
+`supports_partition_metadata_introspection`: it answers PG 10+, because that is
+when declarative partitioning and its catalog columns exist. The `partitions`
+CLI type and `get_partition_state()` read that family; they do not read a
+separate backend-local introspection switch.
 
 ## Best Practices
 

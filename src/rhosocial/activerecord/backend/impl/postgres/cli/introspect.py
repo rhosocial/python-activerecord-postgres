@@ -60,7 +60,12 @@ _TYPE_CAPABILITIES = {
     "sequences": "supports_sequence_introspection",
     # The schema-object families that were previously reachable only through
     # hand-written catalog SQL. Each reads its own pg_catalog relation.
-    "partitions": "supports_partition_introspection",
+    # Partition metadata is the one family whose switch lives in the partition
+    # protocol rather than this introspection mixin: core asks every dialect
+    # ``supports_partition_metadata_introspection`` there, PostgreSQL answers
+    # PG 10+, and this listing is the question that switch gates. There is no
+    # second partition spelling here.
+    "partitions": "supports_partition_metadata_introspection",
     "routines": "supports_routine_introspection",
     "types": "supports_type_introspection",
     "operators": "supports_operator_introspection",

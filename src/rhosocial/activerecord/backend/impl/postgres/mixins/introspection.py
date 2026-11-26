@@ -147,24 +147,6 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         """PostgreSQL supports trigger introspection via pg_trigger."""
         return True
 
-    def supports_partition_introspection(self) -> bool:
-        """PostgreSQL answers child partitions from ``pg_inherits``.
-
-        Declarative partitioning arrived in PostgreSQL 10, which is also when
-        the catalog began carrying ``pg_get_partkeydef`` and
-        ``relpartbound`` for it. Before that a partitioned table cannot exist,
-        so the family is absent rather than empty.
-        """
-        return self.supports_table_partitioning()
-
-    def supports_partition_info(self) -> bool:
-        """Core's name for the partition family, delegating to PostgreSQL's.
-
-        Core declares the probe; this backend answers it. Kept as a delegation
-        rather than a second ``True`` so both spellings are one fact.
-        """
-        return self.supports_partition_introspection()
-
     def supports_routine_introspection(self) -> bool:
         """PostgreSQL supports routine introspection via ``pg_proc``."""
         return True
@@ -207,8 +189,8 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         introspection capability mixin: the cross-engine probes live together
         here, and `PostgresExtensionSupport` -- the protocol the extension
         mixin is paired with -- must not declare a method the core
-        `IntrospectionSupport` already names, or one capability reads as two
-        answers again.
+        `StructureIntrospectionSupport` already names, or one capability reads
+        as two answers again.
 
         It delegates rather than re-declaring `True` so the answer is one
         fact: `supports_extension_introspection` on the extension mixin is

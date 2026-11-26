@@ -184,7 +184,15 @@ def get_postgres_protocols():
         dialect_protocols.ConstraintSupport,
         dialect_protocols.TruncateSupport,
         dialect_protocols.TransactionalDDLSupport,
-        dialect_protocols.IntrospectionSupport,
+        # Introspection split into four families, each declared and answered
+        # separately. All four are structurally present here (the dialect
+        # composes each family's mixin); whether a family is *answered* is the
+        # per-family probe decision tested in TestIntrospectionFamilyAnswer
+        # below -- DDL extraction is structurally present and refuses.
+        dialect_protocols.StructureIntrospectionSupport,
+        dialect_protocols.OperationalStatsIntrospectionSupport,
+        dialect_protocols.DataProfileIntrospectionSupport,
+        dialect_protocols.DdlExtractionIntrospectionSupport,
         dialect_protocols.TransactionControlSupport,
         # The function catalogue is a suggestion protocol, relocated in core.
         suggestion_protocols.FunctionSuggestionSupport,
@@ -219,7 +227,13 @@ def get_postgres_protocols():
         # Protocols added by the core refactor that this dialect already
         # satisfies through its mixins; classify them as supported rather than
         # leaving them unclassified.
-        dialect_protocols.AsyncIntrospectionSupport,
+        # The async twins of the four introspection families. Each declares
+        # the same members as its sync twin, so they are structural restatements
+        # rather than competing interfaces; the overlap is listed below.
+        dialect_protocols.AsyncStructureIntrospectionSupport,
+        dialect_protocols.AsyncOperationalStatsIntrospectionSupport,
+        dialect_protocols.AsyncDataProfileIntrospectionSupport,
+        dialect_protocols.AsyncDdlExtractionIntrospectionSupport,
         dialect_protocols.DDLColumnSupport,
         dialect_protocols.DMLSupport,
         dialect_protocols.DQLSupport,
@@ -343,6 +357,83 @@ class TestDialectNegativeProtocolConformance:
         )
 
 
+class TestIntrospectionFamilyAnswer:
+    """Per-family: is the question answered, or explicitly refused?
+
+    Structural presence and an answer are different facts. PostgreSQL composes
+    all four family mixins, so every family protocol is satisfied; the DDL
+    family's switches then answer False because no text can be produced for an
+    ordinary table yet. That is the refusal the split makes expressible: the
+    family is present, the answer is "no", and nothing has to be deleted to
+    say so.
+    """
+
+    # (protocol, answered, probe names whose answers decide it)
+    FAMILY_ANSWERS = [
+        (
+            dialect_protocols.StructureIntrospectionSupport,
+            True,
+            (
+                "supports_introspection",
+                "supports_database_info",
+                "supports_table_introspection",
+                "supports_column_introspection",
+                "supports_index_introspection",
+                "supports_foreign_key_introspection",
+                "supports_view_introspection",
+                "supports_trigger_introspection",
+                "supports_extensions",
+                "supports_table_storage_introspection",
+            ),
+        ),
+        (
+            dialect_protocols.OperationalStatsIntrospectionSupport,
+            True,
+            (
+                "supports_runtime_stats",
+                "supports_index_stats",
+                "supports_table_stats",
+                "supports_unused_indexes_detection",
+                "supports_object_dependencies",
+            ),
+        ),
+        (
+            dialect_protocols.DataProfileIntrospectionSupport,
+            True,
+            (
+                "supports_column_data_profile",
+                "supports_column_value_sample",
+                "supports_join_coverage",
+            ),
+        ),
+        (
+            dialect_protocols.DdlExtractionIntrospectionSupport,
+            False,
+            ("supports_ddl_extraction", "supports_ddl_extraction_native"),
+        ),
+    ]
+
+    @pytest.fixture
+    def dialect(self):
+        return postgres_dialect.PostgresDialect()
+
+    @pytest.mark.parametrize("protocol,answered,probes", FAMILY_ANSWERS)
+    def test_family_is_structurally_present(self, dialect, protocol, answered, probes):
+        """All four families are composed, whatever their answers are."""
+        assert isinstance(dialect, protocol)
+
+    @pytest.mark.parametrize("protocol,answered,probes", FAMILY_ANSWERS)
+    def test_probe_answers_match_the_family_classification(
+        self, dialect, protocol, answered, probes
+    ):
+        """A family is answered only when every one of its probes says so."""
+        answers = {name: getattr(dialect, name)() for name in probes}
+        assert set(answers.values()) == {answered}, (
+            f"{protocol.__name__} is classified answered={answered}, "
+            f"but its probes answer {answers}"
+        )
+
+
 class TestProtocolNonOverlap:
     """Assert protocols do not have overlapping method names."""
 
@@ -360,8 +451,16 @@ class TestProtocolNonOverlap:
         excluded_overlaps = {
             # New-core protocols that intentionally restate members of an
             # existing protocol, so they are not competing interfaces.
-            ('IntrospectionSupport', 'AsyncIntrospectionSupport'),
-            ('AsyncIntrospectionSupport', 'IntrospectionSupport'),
+            # Each introspection family's async twin declares exactly its sync
+            # twin's members: the pair differs only in stem.
+            ('StructureIntrospectionSupport', 'AsyncStructureIntrospectionSupport'),
+            ('AsyncStructureIntrospectionSupport', 'StructureIntrospectionSupport'),
+            ('OperationalStatsIntrospectionSupport', 'AsyncOperationalStatsIntrospectionSupport'),
+            ('AsyncOperationalStatsIntrospectionSupport', 'OperationalStatsIntrospectionSupport'),
+            ('DataProfileIntrospectionSupport', 'AsyncDataProfileIntrospectionSupport'),
+            ('AsyncDataProfileIntrospectionSupport', 'DataProfileIntrospectionSupport'),
+            ('DdlExtractionIntrospectionSupport', 'AsyncDdlExtractionIntrospectionSupport'),
+            ('AsyncDdlExtractionIntrospectionSupport', 'DdlExtractionIntrospectionSupport'),
             ('DDLColumnSupport', 'PostgresConstraintSupport'),
             ('PostgresConstraintSupport', 'DDLColumnSupport'),
             ('DDLColumnSupport', 'PostgresIndexSupport'),

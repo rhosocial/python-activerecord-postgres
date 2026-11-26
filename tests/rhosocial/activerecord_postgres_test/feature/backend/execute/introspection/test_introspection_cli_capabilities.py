@@ -356,21 +356,18 @@ class TestTypeVocabulary:
     def test_every_family_the_dialect_answers_for_is_askable(self):
         """The other direction: no answerable family is left without a type.
 
-        A switch that returns False is a different statement. PostgreSQL
-        declares ``supports_partition_metadata_introspection`` because the
-        protocol asks every dialect, and on the versions that have it the
-        answer is True -- but partition metadata has no introspector question
-        of its own: it is read as part of the DDL a partitioned table carries,
-        so there is no family to list and no type to give it.
+        A switch that returns False is a different statement and stays out of
+        this set. ``supports_partition_metadata_introspection`` is answerable
+        on PG 10+, and ``partitions`` is the type it gates -- the listing asks
+        one parent table for its children and bounds, which is the question
+        the switch names.
         """
-        no_question = {"supports_partition_metadata_introspection"}
         dialect = PostgresDialect(version=(16, 0))
         answerable = {
             name
             for name in dir(PostgresDialect)
             if name.startswith("supports_")
             and name.endswith("_introspection")
-            and name not in no_question
             and name != "supports_introspection"
             and getattr(dialect, name)()
         }
@@ -383,7 +380,7 @@ class TestTypeVocabulary:
     def test_the_new_families_have_a_supported_switch(self):
         dialect = PostgresDialect(version=(16, 0))
         for switch in (
-            "supports_partition_introspection",
+            "supports_partition_metadata_introspection",
             "supports_routine_introspection",
             "supports_type_introspection",
             "supports_operator_introspection",
@@ -392,10 +389,18 @@ class TestTypeVocabulary:
         ):
             assert getattr(dialect, switch)() is True
 
-    def test_partition_info_delegates_to_the_family_switch(self):
+    def test_partitions_are_gated_by_the_core_partition_probe(self):
+        """One spelling: the partition protocol's probe, not a local alias.
+
+        ``supports_partition_info`` and ``supports_partition_introspection``
+        were backend-local names for the same PG 10+ fact; the family is now
+        gated by the probe core's ``PartitionSupport`` declares.
+        """
         dialect = PostgresDialect(version=(16, 0))
-        assert dialect.supports_partition_info() is True
-        assert PostgresDialect(version=(9, 6)).supports_partition_info() is False
+        assert dialect.supports_partition_metadata_introspection() is True
+        assert PostgresDialect(version=(9, 6)).supports_partition_metadata_introspection() is False
+        assert not hasattr(dialect, "supports_partition_info")
+        assert not hasattr(dialect, "supports_partition_introspection")
 
     def test_ddl_is_not_advertised_when_no_text_is_produced(self):
         """I-05: the family that returns None for ordinary tables says so."""
